@@ -1,0 +1,1054 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Liquidación - Taller Automotriz</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary-500: #0057B7;
+            --primary-100: #D6E4F8;
+            --primary-700: #00438E;
+            --success: #198754;
+            --warning: #FFC107;
+            --error: #DC3545;
+            --neutral-50: #F8F9FA;
+            --neutral-100: #FFFFFF;
+            --neutral-400: #CED4DA;
+            --neutral-600: #6C757D;
+            --neutral-900: #212529;
+            --xs: 8px;
+            --sm: 16px;
+            --md: 24px;
+            --lg: 32px;
+            --xl: 48px;
+            --xxl: 64px;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--neutral-50);
+            color: var(--neutral-900);
+            line-height: 1.5;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 var(--md);
+        }
+
+        .header {
+            background: var(--neutral-100);
+            border-bottom: 1px solid var(--neutral-400);
+            padding: var(--sm) 0;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--primary-500);
+        }
+
+        .section {
+            padding: var(--xxl) 0;
+        }
+
+        .section-title {
+            font-size: 30px;
+            font-weight: 700;
+            margin-bottom: var(--sm);
+        }
+
+        .section-subtitle {
+            color: var(--neutral-600);
+            font-size: 16px;
+            margin-bottom: var(--xl);
+        }
+
+        .tabs {
+            display: flex;
+            gap: var(--sm);
+            margin-bottom: var(--xl);
+            border-bottom: 2px solid var(--neutral-400);
+        }
+
+        .tab {
+            padding: var(--sm) var(--md);
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        .tab.active {
+            color: var(--primary-500);
+            border-bottom-color: var(--primary-500);
+        }
+
+        .tab:hover {
+            background: var(--neutral-100);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .card {
+            background: var(--neutral-100);
+            border-radius: 12px;
+            padding: var(--md);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+            margin-bottom: var(--lg);
+        }
+
+        .card-title {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: var(--sm);
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 500;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: var(--xs);
+        }
+
+        .btn-primary {
+            background: var(--primary-500);
+            color: var(--neutral-100);
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-700);
+            transform: translateY(-1px);
+        }
+
+        .btn-secondary {
+            background: var(--neutral-100);
+            color: var(--neutral-900);
+            border: 1px solid var(--neutral-400);
+        }
+
+        .btn-secondary:hover {
+            background: var(--neutral-50);
+        }
+
+        .btn-success {
+            background: var(--success);
+            color: white;
+        }
+
+        .btn-warning {
+            background: var(--warning);
+            color: var(--neutral-900);
+        }
+
+        .btn-error {
+            background: var(--error);
+            color: white;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: var(--sm);
+            margin-bottom: var(--md);
+        }
+
+        .form-group {
+            margin-bottom: var(--sm);
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: var(--xs);
+            font-weight: 500;
+            font-size: 14px;
+        }
+
+        .form-input, .form-select {
+            width: 100%;
+            padding: 12px 16px;
+            border: 1px solid var(--neutral-400);
+            border-radius: 12px;
+            font-size: 16px;
+        }
+
+        .form-input:focus, .form-select:focus {
+            outline: none;
+            border-color: var(--primary-500);
+            box-shadow: 0 0 0 3px rgba(0, 87, 183, 0.15);
+        }
+
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: var(--sm);
+        }
+
+        .table th, .table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid var(--neutral-400);
+        }
+
+        .table th {
+            background: var(--neutral-50);
+            font-weight: 600;
+        }
+
+        .amount {
+            font-weight: 600;
+            color: var(--primary-500);
+        }
+
+        .status-badge {
+            padding: 4px 8px;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .status-pendiente {
+            background: rgba(220, 53, 69, 0.15);
+            color: var(--error);
+        }
+
+        .status-completado {
+            background: rgba(25, 135, 84, 0.15);
+            color: var(--success);
+        }
+
+        .calculator {
+            background: var(--neutral-100);
+            border-radius: 12px;
+            padding: var(--md);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+        }
+
+        .result-display {
+            background: var(--primary-100);
+            border-radius: 8px;
+            padding: var(--sm);
+            margin-top: var(--sm);
+            border-left: 4px solid var(--primary-500);
+        }
+
+        .row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: var(--xs);
+        }
+
+        .row.total {
+            font-weight: 700;
+            font-size: 18px;
+            color: var(--primary-500);
+            border-top: 2px solid var(--primary-500);
+            padding-top: var(--xs);
+            margin-top: var(--sm);
+        }
+
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: var(--lg);
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: var(--sm);
+            margin-bottom: var(--lg);
+        }
+
+        .stat-card {
+            background: var(--neutral-100);
+            padding: var(--sm);
+            border-radius: 12px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--primary-500);
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: var(--neutral-600);
+            margin-top: var(--xs);
+        }
+
+        @media (max-width: 768px) {
+            .grid-2 {
+                grid-template-columns: 1fr;
+            }
+            .tabs {
+                flex-wrap: wrap;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="container">
+            <div class="header-content">
+                <div class="logo">
+                    🔧 Sistema de Liquidación - Taller Automotriz
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="container">
+        <section class="section">
+            <h1 class="section-title">Sistema Avanzado de Liquidación</h1>
+            <p class="section-subtitle">Múltiples métodos de cálculo y liquidación para mecánicos</p>
+
+            <div class="tabs">
+                <div class="tab active" onclick="showTab('calculator')">🧮 Calculadora</div>
+                <div class="tab" onclick="showTab('config')">⚙️ Configuración</div>
+                <div class="tab" onclick="showTab('timesheets')">⏰ Control de Tiempo</div>
+                <div class="tab" onclick="showTab('settlements')">💰 Liquidaciones</div>
+                <div class="tab" onclick="showTab('reports')">📊 Reportes</div>
+            </div>
+
+            <!-- Calculadora -->
+            <div class="tab-content active" id="tab-calculator">
+                <div class="grid-2">
+                    <div class="card">
+                        <h3 class="card-title">Calculadora de Liquidación</h3>
+                        
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label class="form-label">Método de Cálculo</label>
+                                <select class="form-select" id="calcMethod" onchange="updateCalculator()">
+                                    <option value="hourly">Tarifa por Hora</option>
+                                    <option value="commission">Base + Comisión</option>
+                                    <option value="fixed">Tarifa Fija por Trabajo</option>
+                                    <option value="complexity">Por Complejidad</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Mecánico</label>
+                                <select class="form-select" id="calcMechanic" onchange="updateCalculator()">
+                                    <option value="1">Juan Pérez - General</option>
+                                    <option value="2">Carlos Rodríguez - Especialista</option>
+                                    <option value="3">Luis García - Master</option>
+                                </select>
+                            </div>
+                            <div class="form-group" id="hoursGroup">
+                                <label class="form-label">Horas Trabajadas</label>
+                                <input type="number" class="form-input" id="calcHours" step="0.25" value="2.5" onchange="updateCalculator()">
+                            </div>
+                            <div class="form-group" id="valueGroup" style="display: none;">
+                                <label class="form-label">Valor del Trabajo</label>
+                                <input type="number" class="form-input" id="calcValue" step="0.01" value="150000" onchange="updateCalculator()">
+                            </div>
+                            <div class="form-group" id="fixedGroup" style="display: none;">
+                                <label class="form-label">Tarifa Fija</label>
+                                <input type="number" class="form-input" id="calcFixed" step="0.01" value="75000" onchange="updateCalculator()">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Tipo de Trabajo</label>
+                                <select class="form-select" id="calcComplexity" onchange="updateCalculator()">
+                                    <option value="basic">Básico (x1.0)</option>
+                                    <option value="intermediate">Intermedio (x1.3)</option>
+                                    <option value="advanced">Avanzado (x1.6)</option>
+                                    <option value="specialized">Especializado (x2.0)</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="result-display" id="calcResult">
+                            <div class="row">
+                                <span>Base:</span>
+                                <span id="baseAmount">$0</span>
+                            </div>
+                            <div class="row" id="commissionRow" style="display: none;">
+                                <span>Comisión:</span>
+                                <span id="commissionAmount">$0</span>
+                            </div>
+                            <div class="row" id="bonusRow" style="display: none;">
+                                <span>Bonus:</span>
+                                <span id="bonusAmount">$0</span>
+                            </div>
+                            <div class="row total">
+                                <span>Total a Pagar:</span>
+                                <span id="totalAmount">$0</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <h3 class="card-title">Historial de Cálculos</h3>
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Fecha</th>
+                                    <th>Mecánico</th>
+                                    <th>Método</th>
+                                    <th>Total</th>
+                                </tr>
+                            </thead>
+                            <tbody id="calcHistory">
+                                <tr>
+                                    <td>2025-11-08</td>
+                                    <td>Juan Pérez</td>
+                                    <td>Tarifa/Hora</td>
+                                    <td class="amount">$45,000</td>
+                                </tr>
+                                <tr>
+                                    <td>2025-11-08</td>
+                                    <td>Carlos Rodríguez</td>
+                                    <td>Comisión</td>
+                                    <td class="amount">$67,500</td>
+                                </tr>
+                                <tr>
+                                    <td>2025-11-07</td>
+                                    <td>Luis García</td>
+                                    <td>Especializado</td>
+                                    <td class="amount">$96,000</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Configuración -->
+            <div class="tab-content" id="tab-config">
+                <div class="grid-2">
+                    <div class="card">
+                        <h3 class="card-title">Configuración de Mecánicos</h3>
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Mecánico</th>
+                                    <th>Tarifa/Hora</th>
+                                    <th>Base Comisión</th>
+                                    <th>Especialidad</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>Juan Pérez</td>
+                                    <td><input type="number" class="form-input" value="20000" style="width: 80px;"></td>
+                                    <td><input type="number" class="form-input" value="12" style="width: 60px;">%</td>
+                                    <td>General</td>
+                                </tr>
+                                <tr>
+                                    <td>Carlos Rodríguez</td>
+                                    <td><input type="number" class="form-input" value="30000" style="width: 80px;"></td>
+                                    <td><input type="number" class="form-input" value="15" style="width: 60px;">%</td>
+                                    <td>Frenos/Transmisión</td>
+                                </tr>
+                                <tr>
+                                    <td>Luis García</td>
+                                    <td><input type="number" class="form-input" value="40000" style="width: 80px;"></td>
+                                    <td><input type="number" class="form-input" value="18" style="width: 60px;">%</td>
+                                    <td>Motor/Diagnóstico</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="card">
+                        <h3 class="card-title">Configuración de Tarifas por Complejidad</h3>
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label class="form-label">Básico (x1.0)</label>
+                                <input type="number" class="form-input" value="20000" id="rateBasic">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Intermedio (x1.3)</label>
+                                <input type="number" class="form-input" value="26000" id="rateIntermediate">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Avanzado (x1.6)</label>
+                                <input type="number" class="form-input" value="32000" id="rateAdvanced">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Especializado (x2.0)</label>
+                                <input type="number" class="form-input" value="40000" id="rateSpecialized">
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">Bonus por Eficiencia (reducir tiempo estimado)</label>
+                            <div class="form-grid">
+                                <div>
+                                    <label class="form-label">0-10% más rápido</label>
+                                    <input type="number" class="form-input" value="5" id="bonusSpeed1">%
+                                </div>
+                                <div>
+                                    <label class="form-label">11-20% más rápido</label>
+                                    <input type="number" class="form-input" value="10" id="bonusSpeed2">%
+                                </div>
+                                <div>
+                                    <label class="form-label">21%+ más rápido</label>
+                                    <input type="number" class="form-input" value="15" id="bonusSpeed3">%
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Control de Tiempo -->
+            <div class="tab-content" id="tab-timesheets">
+                <div class="card">
+                    <h3 class="card-title">Control de Tiempo por Trabajo</h3>
+                    
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label class="form-label">Mecánico</label>
+                            <select class="form-select">
+                                <option value="">Seleccionar mecánico</option>
+                                <option value="1">Juan Pérez</option>
+                                <option value="2">Carlos Rodríguez</option>
+                                <option value="3">Luis García</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Trabajo</label>
+                            <select class="form-select">
+                                <option value="">Seleccionar trabajo</option>
+                                <option value="1">ABC123 - Cambio aceite</option>
+                                <option value="2">XYZ789 - Reparación frenos</option>
+                                <option value="3">DEF456 - Diagnóstico eléctrico</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Tiempo Inicio</label>
+                            <input type="datetime-local" class="form-input">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Tiempo Fin</label>
+                            <input type="datetime-local" class="form-input">
+                        </div>
+                    </div>
+
+                    <div style="display: flex; gap: var(--sm);">
+                        <button class="btn btn-primary" onclick="startWork()">⏱️ Iniciar</button>
+                        <button class="btn btn-success" onclick="stopWork()">⏹️ Finalizar</button>
+                        <button class="btn btn-warning" onclick="pauseWork()">⏸️ Pausar</button>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3 class="card-title">Registros de Tiempo del Día</h3>
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Hora Inicio</th>
+                                <th>Hora Fin</th>
+                                <th>Duración</th>
+                                <th>Mecánico</th>
+                                <th>Trabajo</th>
+                                <th>Estado</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>08:00</td>
+                                <td>10:30</td>
+                                <td>2.5h</td>
+                                <td>Juan Pérez</td>
+                                <td>ABC123 - Cambio aceite</td>
+                                <td><span class="status-badge status-completado">Completado</span></td>
+                                <td>
+                                    <button class="btn-secondary" style="padding: 4px 8px; font-size: 12px;">Editar</button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>10:45</td>
+                                <td>12:15</td>
+                                <td>1.5h</td>
+                                <td>Carlos Rodríguez</td>
+                                <td>XYZ789 - Reparación frenos</td>
+                                <td><span class="status-badge status-pendiente">En Proceso</span></td>
+                                <td>
+                                    <button class="btn-secondary" style="padding: 4px 8px; font-size: 12px;">Editar</button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Liquidaciones -->
+            <div class="tab-content" id="tab-settlements">
+                <div class="card">
+                    <h3 class="card-title">Nueva Liquidación</h3>
+                    
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label class="form-label">Mecánico</label>
+                            <select class="form-select" id="settlementMechanic" onchange="loadSettlementData()">
+                                <option value="">Seleccionar mecánico</option>
+                                <option value="1">Juan Pérez</option>
+                                <option value="2">Carlos Rodríguez</option>
+                                <option value="3">Luis García</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Período de Liquidación</label>
+                            <select class="form-select" id="settlementPeriod">
+                                <option value="weekly">Semanal</option>
+                                <option value="biweekly">Quincenal</option>
+                                <option value="monthly">Mensual</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Fecha Inicio</label>
+                            <input type="date" class="form-input" id="settlementStart">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Fecha Fin</label>
+                            <input type="date" class="form-input" id="settlementEnd">
+                        </div>
+                    </div>
+
+                    <button class="btn btn-primary" onclick="generateSettlement()">📄 Generar Liquidación</button>
+                </div>
+
+                <div class="card" id="settlementResult" style="display: none;">
+                    <h3 class="card-title">Detalle de Liquidación</h3>
+                    
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-value" id="settlementTotal">$0</div>
+                            <div class="stat-label">Total Trabajos</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="settlementHours">0h</div>
+                            <div class="stat-label">Total Horas</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="settlementWorks">0</div>
+                            <div class="stat-label">Trabajos Completados</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="settlementAverage">$0</div>
+                            <div class="stat-label">Promedio por Hora</div>
+                        </div>
+                    </div>
+
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Fecha</th>
+                                <th>Trabajo</th>
+                                <th>Método</th>
+                                <th>Horas</th>
+                                <th>Base</th>
+                                <th>Comisión</th>
+                                <th>Bonus</th>
+                                <th>Total</th>
+                            </tr>
+                        </thead>
+                        <tbody id="settlementDetails">
+                        </tbody>
+                    </table>
+
+                    <div class="result-display" style="margin-top: var(--md);">
+                        <div class="row">
+                            <span>Subtotal Trabajos:</span>
+                            <span id="subtotal">$0</span>
+                        </div>
+                        <div class="row">
+                            <span>Menos: Adelantos:</span>
+                            <span style="color: var(--error);" id="advance">-$0</span>
+                        </div>
+                        <div class="row">
+                            <span>Menos: Préstamos:</span>
+                            <span style="color: var(--error);" id="loans">-$0</span>
+                        </div>
+                        <div class="row">
+                            <span>Más: Descuentos:</span>
+                            <span style="color: var(--success);" id="discounts">+$0</span>
+                        </div>
+                        <div class="row total">
+                            <span>NETO A PAGAR:</span>
+                            <span id="netAmount">$0</span>
+                        </div>
+                    </div>
+
+                    <div style="display: flex; gap: var(--sm); margin-top: var(--md);">
+                        <button class="btn btn-primary" onclick="printSettlement()">🖨️ Imprimir</button>
+                        <button class="btn btn-success" onclick="markSettlementPaid()">✅ Marcar como Pagado</button>
+                        <button class="btn btn-secondary" onclick="exportSettlement()">📊 Exportar</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Reportes -->
+            <div class="tab-content" id="tab-reports">
+                <div class="grid-2">
+                    <div class="card">
+                        <h3 class="card-title">Resumen de Costos Laborales</h3>
+                        <div class="stats-grid">
+                            <div class="stat-card">
+                                <div class="stat-value">$2,450,000</div>
+                                <div class="stat-label">Total Pagado (Mes)</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-value">$32,500</div>
+                                <div class="stat-label">Promedio/Hora</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-value">75.4h</div>
+                                <div class="stat-label">Promedio/Mecánico</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-value">18.2%</div>
+                                <div class="stat-label">Margen de Ganancia</div>
+                            </div>
+                        </div>
+
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Mecánico</th>
+                                    <th>Trabajos</th>
+                                    <th>Horas</th>
+                                    <th>Total Pagado</th>
+                                    <th>Eficiencia</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>Juan Pérez</td>
+                                    <td>24</td>
+                                    <td>78.5h</td>
+                                    <td class="amount">$1,570,000</td>
+                                    <td><span class="status-badge status-completado">95%</span></td>
+                                </tr>
+                                <tr>
+                                    <td>Carlos Rodríguez</td>
+                                    <td>18</td>
+                                    <td>65.0h</td>
+                                    <td class="amount">$1,950,000</td>
+                                    <td><span class="status-badge status-completado">102%</span></td>
+                                </tr>
+                                <tr>
+                                    <td>Luis García</td>
+                                    <td>12</td>
+                                    <td>48.0h</td>
+                                    <td class="amount">$1,920,000</td>
+                                    <td><span class="status-badge status-completado">108%</span></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="card">
+                        <h3 class="card-title">Análisis de Productividad</h3>
+                        <div class="calculator">
+                            <h4>Comparativa de Métodos de Pago</h4>
+                            <div class="result-display">
+                                <div class="row">
+                                    <span>Tarifa por Hora (Juan):</span>
+                                    <span class="amount">$1,570,000</span>
+                                </div>
+                                <div class="row">
+                                    <span>Base + Comisión (Juan):</span>
+                                    <span class="amount">$1,884,000</span>
+                                </div>
+                                <div class="row">
+                                    <span>Diferencia:</span>
+                                    <span class="amount" style="color: var(--success);">+$314,000</span>
+                                </div>
+                            </div>
+
+                            <div class="result-display" style="margin-top: var(--sm);">
+                                <div class="row">
+                                    <span>Tarifa por Hora (Carlos):</span>
+                                    <span class="amount">$1,950,000</span>
+                                </div>
+                                <div class="row">
+                                    <span>Base + Comisión (Carlos):</span>
+                                    <span class="amount">$2,437,500</span>
+                                </div>
+                                <div class="row">
+                                    <span>Diferencia:</span>
+                                    <span class="amount" style="color: var(--success);">+$487,500</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        // Datos de ejemplo
+        const mechanics = {
+            1: { name: 'Juan Pérez', baseRate: 20000, commission: 12, specialty: 'General' },
+            2: { name: 'Carlos Rodríguez', baseRate: 30000, commission: 15, specialty: 'Frenos/Transmisión' },
+            3: { name: 'Luis García', baseRate: 40000, commission: 18, specialty: 'Motor/Diagnóstico' }
+        };
+
+        const complexityRates = {
+            basic: 20000,
+            intermediate: 26000,
+            advanced: 32000,
+            specialized: 40000
+        };
+
+        // Funciones de navegación
+        function showTab(tabName) {
+            // Ocultar todos los contenidos
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            
+            // Quitar active de todas las tabs
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // Mostrar contenido seleccionado
+            document.getElementById('tab-' + tabName).classList.add('active');
+            
+            // Activar tab seleccionada
+            event.target.classList.add('active');
+        }
+
+        // Calculadora
+        function updateCalculator() {
+            const method = document.getElementById('calcMethod').value;
+            const mechanicId = document.getElementById('calcMechanic').value;
+            const mechanic = mechanics[mechanicId];
+            const complexity = document.getElementById('calcComplexity').value;
+            
+            let baseAmount = 0;
+            let commissionAmount = 0;
+            let bonusAmount = 0;
+            let totalAmount = 0;
+            
+            // Mostrar/ocultar campos según método
+            document.getElementById('hoursGroup').style.display = method === 'hourly' || method === 'commission' ? 'block' : 'none';
+            document.getElementById('valueGroup').style.display = method === 'commission' ? 'block' : 'none';
+            document.getElementById('fixedGroup').style.display = method === 'fixed' ? 'block' : 'none';
+            document.getElementById('commissionRow').style.display = method === 'commission' ? 'flex' : 'none';
+            document.getElementById('bonusRow').style.display = method === 'commission' ? 'flex' : 'none';
+            
+            if (method === 'hourly') {
+                const hours = parseFloat(document.getElementById('calcHours').value) || 0;
+                baseAmount = hours * mechanic.baseRate;
+                totalAmount = baseAmount;
+            } else if (method === 'commission') {
+                const hours = parseFloat(document.getElementById('calcHours').value) || 0;
+                const value = parseFloat(document.getElementById('calcValue').value) || 0;
+                
+                baseAmount = hours * mechanic.baseRate;
+                commissionAmount = (value * mechanic.commission) / 100;
+                
+                // Bonus por eficiencia (simulado)
+                if (hours > 0) {
+                    const estimatedValue = value;
+                    if (estimatedValue > 100000) {
+                        bonusAmount = baseAmount * 0.1; // 10% bonus
+                    }
+                }
+                
+                totalAmount = baseAmount + commissionAmount + bonusAmount;
+            } else if (method === 'fixed') {
+                const fixed = parseFloat(document.getElementById('calcFixed').value) || 0;
+                baseAmount = fixed;
+                totalAmount = fixed;
+            } else if (method === 'complexity') {
+                const hours = parseFloat(document.getElementById('calcHours').value) || 0;
+                const rate = complexityRates[complexity];
+                baseAmount = hours * rate;
+                totalAmount = baseAmount;
+            }
+            
+            // Actualizar display
+            document.getElementById('baseAmount').textContent = formatCurrency(baseAmount);
+            document.getElementById('commissionAmount').textContent = formatCurrency(commissionAmount);
+            document.getElementById('bonusAmount').textContent = formatCurrency(bonusAmount);
+            document.getElementById('totalAmount').textContent = formatCurrency(totalAmount);
+        }
+
+        // Control de tiempo
+        function startWork() {
+            alert('⏱️ Trabajo iniciado - El sistema registrará automáticamente el tiempo');
+        }
+
+        function stopWork() {
+            alert('⏹️ Trabajo finalizado - Tiempo registrado correctamente');
+        }
+
+        function pauseWork() {
+            alert('⏸️ Trabajo pausado - Tiempo no comptabilizado');
+        }
+
+        // Liquidaciones
+        function loadSettlementData() {
+            const mechanicId = document.getElementById('settlementMechanic').value;
+            if (mechanicId) {
+                const today = new Date();
+                const startDate = new Date(today.getFullYear(), today.getMonth(), 1);
+                const endDate = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+                
+                document.getElementById('settlementStart').value = startDate.toISOString().split('T')[0];
+                document.getElementById('settlementEnd').value = endDate.toISOString().split('T')[0];
+            }
+        }
+
+        function generateSettlement() {
+            const mechanicId = document.getElementById('settlementMechanic').value;
+            const mechanic = mechanics[mechanicId];
+            
+            if (!mechanicId) {
+                alert('Selecciona un mecánico');
+                return;
+            }
+            
+            // Simular datos de liquidación
+            const settlements = {
+                1: {
+                    total: 1570000,
+                    hours: 78.5,
+                    works: 24,
+                    average: 20000,
+                    details: [
+                        { date: '2025-11-01', work: 'ABC123 - Cambio aceite', method: 'Tarifa/Hora', hours: 2, base: 40000, commission: 0, bonus: 0, total: 40000 },
+                        { date: '2025-11-02', work: 'XYZ789 - Reparación frenos', method: 'Comisión', hours: 4, base: 80000, commission: 18000, bonus: 5000, total: 103000 },
+                        { date: '2025-11-03', work: 'DEF456 - Diagnóstico', method: 'Especializado', hours: 3, base: 120000, commission: 0, bonus: 0, total: 120000 }
+                    ],
+                    advance: 200000,
+                    loans: 50000,
+                    discounts: 25000
+                },
+                2: {
+                    total: 1950000,
+                    hours: 65.0,
+                    works: 18,
+                    average: 30000,
+                    details: [
+                        { date: '2025-11-01', work: 'GHI789 - Transmisión', method: 'Especializado', hours: 6, base: 240000, commission: 0, bonus: 24000, total: 264000 },
+                        { date: '2025-11-02', work: 'JKL012 - Frenos', method: 'Comisión', hours: 3, base: 90000, commission: 45000, bonus: 0, total: 135000 }
+                    ],
+                    advance: 150000,
+                    loans: 0,
+                    discounts: 50000
+                },
+                3: {
+                    total: 1920000,
+                    hours: 48.0,
+                    works: 12,
+                    average: 40000,
+                    details: [
+                        { date: '2025-11-01', work: 'MNO345 - Motor completo', method: 'Especializado', hours: 8, base: 320000, commission: 0, bonus: 32000, total: 352000 },
+                        { date: '2025-11-02', work: 'PQR678 - Diagnóstico avanzado', method: 'Especializado', hours: 5, base: 200000, commission: 0, bonus: 20000, total: 220000 }
+                    ],
+                    advance: 100000,
+                    loans: 100000,
+                    discounts: 75000
+                }
+            };
+            
+            const data = settlements[mechanicId];
+            if (!data) return;
+            
+            // Mostrar resultados
+            document.getElementById('settlementResult').style.display = 'block';
+            document.getElementById('settlementTotal').textContent = formatCurrency(data.total);
+            document.getElementById('settlementHours').textContent = data.hours + 'h';
+            document.getElementById('settlementWorks').textContent = data.works;
+            document.getElementById('settlementAverage').textContent = formatCurrency(data.average);
+            
+            // Detalles
+            const tbody = document.getElementById('settlementDetails');
+            tbody.innerHTML = data.details.map(detail => `
+                <tr>
+                    <td>${detail.date}</td>
+                    <td>${detail.work}</td>
+                    <td>${detail.method}</td>
+                    <td>${detail.hours}h</td>
+                    <td>${formatCurrency(detail.base)}</td>
+                    <td>${formatCurrency(detail.commission)}</td>
+                    <td>${formatCurrency(detail.bonus)}</td>
+                    <td class="amount">${formatCurrency(detail.total)}</td>
+                </tr>
+            `).join('');
+            
+            // Resumen
+            const subtotal = data.total;
+            const netAmount = subtotal - data.advance - data.loans + data.discounts;
+            
+            document.getElementById('subtotal').textContent = formatCurrency(subtotal);
+            document.getElementById('advance').textContent = formatCurrency(data.advance);
+            document.getElementById('loans').textContent = formatCurrency(data.loans);
+            document.getElementById('discounts').textContent = formatCurrency(data.discounts);
+            document.getElementById('netAmount').textContent = formatCurrency(netAmount);
+        }
+
+        function printSettlement() {
+            alert('🖨️ Generando liquidación para imprimir...');
+        }
+
+        function markSettlementPaid() {
+            alert('✅ Liquidación marcada como pagada');
+        }
+
+        function exportSettlement() {
+            alert('📊 Exportando liquidación a Excel/PDF...');
+        }
+
+        // Utilidades
+        function formatCurrency(amount) {
+            return new Intl.NumberFormat('es-CO', {
+                style: 'currency',
+                currency: 'COP',
+                minimumFractionDigits: 0
+            }).format(amount);
+        }
+
+        // Inicializar
+        document.addEventListener('DOMContentLoaded', function() {
+            updateCalculator();
+            loadSettlementData();
+        });
+    </script>
+</body>
+</html>
