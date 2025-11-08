@@ -1,0 +1,704 @@
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="container">
+            <div class="header-content">
+                <div class="logo">
+                    <span>🔧</span>
+                    <span>Taller Automotriz</span>
+                </div>
+                <div class="user-menu">
+                    <div class="user-info">
+                        <div class="user-name" id="userName">Admin</div>
+                        <div class="user-role" id="userRole">Administrador</div>
+                    </div>
+                    <button class="btn-logout" onclick="logout()">Cerrar Sesión</button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Navegación -->
+    <nav class="nav">
+        <div class="container">
+            <div class="nav-content">
+                <div class="nav-item active" onclick="showSection('dashboard')" id="nav-dashboard">
+                    📊 Dashboard
+                </div>
+                <div class="nav-item" onclick="showSection('jobs')" id="nav-jobs">
+                    🔨 Trabajos
+                </div>
+                <div class="nav-item" onclick="showSection('mechanics')" id="nav-mechanics">
+                    👥 Mecánicos
+                </div>
+                <div class="nav-item" onclick="showSection('finances')" id="nav-finances">
+                    💰 Finanzas
+                </div>
+                <div class="nav-item" onclick="showSection('settlement')" id="nav-settlement">
+                    💼 Liquidación
+                </div>
+                <div class="nav-item" onclick="showSection('reception')" id="nav-reception">
+                    📋 Recepción
+                </div>
+                <div class="nav-item" onclick="showSection('quotes')" id="nav-quotes">
+                    💰 Cotizaciones
+                </div>
+                <div class="nav-item" onclick="showSection('calendar')" id="nav-calendar">
+                    📅 Calendario
+                </div>
+                <div class="nav-item" onclick="showSection('vehicle-history')" id="nav-vehicle-history">
+                    🚗 Historial Vehículo
+                </div>
+                <div class="nav-item" onclick="showSection('notifications')" id="nav-notifications">
+                    🔔 Notificaciones
+                </div>
+                <div class="nav-item" onclick="showSection('reports')" id="nav-reports">
+                    📈 Reportes
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Contenido Principal -->
+    <main class="container">
+        <!-- Sección Dashboard -->
+        <section class="section active" id="section-dashboard">
+            <div class="section-header">
+                <h1 class="section-title">Dashboard</h1>
+                <p class="section-subtitle">Resumen general del taller</p>
+            </div>
+
+            <div class="dashboard-grid">
+                <div class="stat-card">
+                    <div class="stat-value" id="totalJobs">0</div>
+                    <div class="stat-label">Total Trabajos</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value text-success" id="completedJobs">0</div>
+                    <div class="stat-label">Completados</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value text-warning" id="inProgressJobs">0</div>
+                    <div class="stat-label">En Progreso</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value text-primary" id="totalRevenue">$0</div>
+                    <div class="stat-label">Ingresos del Mes</div>
+                </div>
+            </div>
+
+            <div class="jobs-grid" id="recentJobs">
+                <!-- Trabajos recientes se cargan aquí -->
+            </div>
+        </section>
+
+        <!-- Sección Trabajos -->
+        <section class="section" id="section-jobs">
+            <div class="section-header">
+                <h1 class="section-title">Gestión de Trabajos</h1>
+                <p class="section-subtitle">Administra todos los trabajos del taller</p>
+            </div>
+
+            <div class="filters">
+                <input type="text" class="search-input" id="searchJobs" placeholder="Buscar por placa o descripción..." onkeyup="filterJobs()">
+                <select class="filter-select" id="filterStatus" onchange="filterJobs()">
+                    <option value="">Todos los estados</option>
+                    <option value="pendiente">Pendiente</option>
+                    <option value="enprogreso">En Progreso</option>
+                    <option value="completado">Completado</option>
+                    <option value="entregado">Entregado</option>
+                </select>
+                <select class="filter-select" id="filterMechanic" onchange="filterJobs()">
+                    <option value="">Todos los mecánicos</option>
+                </select>
+                <button class="btn btn-primary" onclick="openJobModal()">
+                    <span>+</span> Nuevo Trabajo
+                </button>
+            </div>
+
+            <div class="jobs-grid" id="jobsList">
+                <!-- Lista de trabajos se carga aquí -->
+            </div>
+        </section>
+
+        <!-- Sección Mecánicos -->
+        <section class="section" id="section-mechanics">
+            <div class="section-header">
+                <h1 class="section-title">Gestión de Mecánicos</h1>
+                <p class="section-subtitle">Administra el equipo de trabajo</p>
+            </div>
+
+            <div class="filters">
+                <button class="btn btn-primary" onclick="openMechanicModal()">
+                    <span>+</span> Nuevo Mecánico
+                </button>
+            </div>
+
+            <div class="jobs-grid" id="mechanicsList">
+                <!-- Lista de mecánicos se carga aquí -->
+            </div>
+        </section>
+
+        <!-- Sección Finanzas -->
+        <section class="section" id="section-finances">
+            <div class="section-header">
+                <h1 class="section-title">Control Financiero</h1>
+                <p class="section-subtitle">Gestión de pagos a mecánicos</p>
+            </div>
+
+            <div class="dashboard-grid">
+                <div class="stat-card">
+                    <div class="stat-value" id="totalPayments">$0</div>
+                    <div class="stat-label">Total Pagado</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value text-warning" id="totalAdvance">$0</div>
+                    <div class="stat-label">Adelantos</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value text-error" id="totalLoans">$0</div>
+                    <div class="stat-label">Préstamos</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value text-success" id="totalDiscounts">$0</div>
+                    <div class="stat-label">Descuentos</div>
+                </div>
+            </div>
+
+            <div class="filters">
+                <select class="filter-select" id="filterPaymentMechanic" onchange="filterPayments()">
+                    <option value="">Todos los mecánicos</option>
+                </select>
+                <button class="btn btn-primary" onclick="openPaymentModal()">
+                    <span>+</span> Nuevo Pago
+                </button>
+            </div>
+
+            <div class="jobs-grid" id="paymentsList">
+                <!-- Lista de pagos se carga aquí -->
+            </div>
+        </section>
+
+        <!-- Sección Reportes -->
+        <section class="section" id="section-reports">
+            <div class="section-header">
+                <h1 class="section-title">Reportes</h1>
+                <p class="section-subtitle">Análisis y estadísticas del taller</p>
+            </div>
+
+            <div class="dashboard-grid">
+                <div class="stat-card">
+                    <div class="stat-value" id="monthlyJobs">0</div>
+                    <div class="stat-label">Trabajos del Mes</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="monthlyRevenue">$0</div>
+                    <div class="stat-label">Ingresos del Mes</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="averageJobValue">$0</div>
+                    <div class="stat-label">Valor Promedio</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="topMechanic">-</div>
+                    <div class="stat-label">Mecánico Top</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Sección Liquidación -->
+        <section class="section" id="section-settlement">
+            <div class="section-header">
+                <h1 class="section-title">Liquidación de Trabajos</h1>
+                <p class="section-subtitle">Cálculo automático del 40% de mano de obra para técnicos</p>
+            </div>
+
+            <div class="dashboard-grid">
+                <div class="stat-card">
+                    <div class="stat-value" id="totalPendingSettlement">$0</div>
+                    <div class="stat-label">Por Liquidar (40%)</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value text-warning" id="totalAdvances">$0</div>
+                    <div class="stat-label">Adelantos Pendientes</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value text-error" id="totalLoans">$0</div>
+                    <div class="stat-label">Préstamos Pendientes</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value text-success" id="netPayable">$0</div>
+                    <div class="stat-label">Neto a Pagar</div>
+                </div>
+            </div>
+
+            <div class="filters">
+                <select class="filter-select" id="filterSettlementMechanic" onchange="filterSettlementJobs()">
+                    <option value="">Todos los técnicos</option>
+                </select>
+                <select class="filter-select" id="filterSettlementStatus" onchange="filterSettlementJobs()">
+                    <option value="">Todos los estados</option>
+                    <option value="completado">Solo Completados</option>
+                    <option value="entregado">Solo Entregados</option>
+                </select>
+                <button class="btn btn-primary" onclick="generateSettlement()">
+                    💼 Generar Liquidación
+                </button>
+                <button class="btn btn-secondary" onclick="viewPendingJobs()">
+                    👀 Ver Trabajos Pendientes
+                </button>
+            </div>
+
+            <div class="jobs-grid" id="settlementJobsList">
+                <!-- Lista de trabajos para liquidación se carga aquí -->
+            </div>
+        </section>
+
+        <!-- Sección Recepción -->
+        <section class="section" id="section-reception">
+            <div class="section-header">
+                <h1 class="section-title">Recepción de Vehículos</h1>
+                <p class="section-subtitle">Crear órdenes de trabajo desde la recepción del cliente</p>
+            </div>
+
+            <div class="actions-header">
+                <button class="btn btn-primary" onclick="openReceptionModal()">
+                    ➕ Nueva Recepción
+                </button>
+            </div>
+
+            <div class="jobs-grid" id="receptionList">
+                <!-- Lista de recepciones se carga aquí -->
+            </div>
+        </section>
+
+        <!-- Sección Cotizaciones -->
+        <section class="section" id="section-quotes">
+            <div class="section-header">
+                <h1 class="section-title">Cotizaciones y Presupuestos</h1>
+                <p class="section-subtitle">Generar presupuestos detallados para aprobación del cliente</p>
+            </div>
+
+            <div class="dashboard-grid">
+                <div class="stat-card">
+                    <div class="stat-value" id="pendingQuotes">0</div>
+                    <div class="stat-label">Cotizaciones Pendientes</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="approvedQuotes">0</div>
+                    <div class="stat-label">Cotizaciones Aprobadas</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="totalQuoteValue">$0</div>
+                    <div class="stat-label">Valor Total Cotizaciones</div>
+                </div>
+            </div>
+
+            <div class="actions-header">
+                <button class="btn btn-primary" onclick="openQuoteModal()">
+                    💰 Nueva Cotización
+                </button>
+                <button class="btn btn-secondary" onclick="generateQuoteReport()">
+                    📄 Generar Reporte
+                </button>
+            </div>
+
+            <div class="jobs-grid" id="quotesList">
+                <!-- Lista de cotizaciones se carga aquí -->
+            </div>
+        </section>
+
+        <!-- Sección Calendario -->
+        <section class="section" id="section-calendar">
+            <div class="section-header">
+                <h1 class="section-title">Calendario de Técnicos</h1>
+                <p class="section-subtitle">8 calendarios independientes para asignación de trabajos</p>
+            </div>
+
+            <div class="calendar-container">
+                <div class="calendar-controls">
+                    <button class="btn btn-primary" onclick="showPreviousWeek()">◀ Semana Anterior</button>
+                    <span class="calendar-week" id="currentWeek">Semana actual</span>
+                    <button class="btn btn-primary" onclick="showNextWeek()">Siguiente Semana ▶</button>
+                </div>
+                
+                <div class="calendar-grid" id="calendarGrid">
+                    <!-- Calendario de 8 técnicos se genera aquí -->
+                </div>
+            </div>
+        </section>
+
+        <!-- Sección Historial Vehículo -->
+        <section class="section" id="section-vehicle-history">
+            <div class="section-header">
+                <h1 class="section-title">Historial Completo por Vehículo</h1>
+                <p class="section-subtitle">Consultar todo el historial de servicios por placa de vehículo</p>
+            </div>
+
+            <div class="form-group" style="max-width: 400px; margin-bottom: 20px;">
+                <label class="form-label">Buscar por Placa del Vehículo *</label>
+                <input type="text" class="form-input" id="searchVehiclePlate" placeholder="ABC123" oninput="searchVehicleHistory()">
+            </div>
+
+            <div class="vehicle-history-container" id="vehicleHistoryContainer">
+                <div class="empty-state">
+                    <div class="empty-state-icon">🚗</div>
+                    <p>Ingresa una placa para ver el historial completo del vehículo</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Sección Notificaciones -->
+        <section class="section" id="section-notifications">
+            <div class="section-header">
+                <h1 class="section-title">Sistema de Notificaciones</h1>
+                <p class="section-subtitle">Recordatorios de mantenimiento y alertas del sistema</p>
+            </div>
+
+            <div class="dashboard-grid">
+                <div class="stat-card">
+                    <div class="stat-value" id="pendingMaintenance">0</div>
+                    <div class="stat-label">Mantenimientos Pendientes</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="lowStockAlerts">0</div>
+                    <div class="stat-label">Alertas Stock Bajo</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="followUpCalls">0</div>
+                    <div class="stat-label">Seguimientos Pendientes</div>
+                </div>
+            </div>
+
+            <div class="actions-header">
+                <button class="btn btn-primary" onclick="sendMaintenanceReminders()">
+                    📧 Enviar Recordatorios
+                </button>
+                <button class="btn btn-secondary" onclick="checkStockAlerts()">
+                    🔍 Verificar Stock
+                </button>
+            </div>
+
+            <div class="notifications-list" id="notificationsList">
+                <!-- Lista de notificaciones se carga aquí -->
+            </div>
+        </section>
+    </main>
+
+    <!-- Modal Trabajos -->
+    <div class="modal" id="jobModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title" id="jobModalTitle">Nuevo Trabajo</h2>
+                <button class="btn-close" onclick="closeJobModal()">&times;</button>
+            </div>
+            <form class="form" id="jobForm" onsubmit="saveJob(event)">
+                <input type="hidden" id="jobId">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label class="form-label">Placa del Vehículo *</label>
+                        <input type="text" class="form-input" id="jobPlate" required placeholder="ABC123">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Kilometraje *</label>
+                        <input type="number" class="form-input" id="jobMileage" required placeholder="50000">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Mecánico Asignado *</label>
+                        <select class="form-select" id="jobMechanic" required>
+                            <option value="">Seleccionar mecánico</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Estado</label>
+                        <select class="form-select" id="jobStatus">
+                            <option value="pendiente">Pendiente</option>
+                            <option value="enprogreso">En Progreso</option>
+                            <option value="completado">Completado</option>
+                            <option value="entregado">Entregado</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Descripción del Trabajo *</label>
+                    <textarea class="form-textarea" id="jobDescription" required placeholder="Describe el trabajo realizado..."></textarea>
+                </div>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label class="form-label">Repuestos/Insumos</label>
+                        <input type="text" class="form-input" id="jobParts" placeholder="Lista de repuestos...">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Costo Repuestos</label>
+                        <input type="number" class="form-input" id="jobPartsCost" placeholder="0" step="0.01">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Costo Mano de Obra *</label>
+                        <input type="number" class="form-input" id="jobLaborCost" required placeholder="0" step="0.01">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Valor de Venta *</label>
+                        <input type="number" class="form-input" id="jobSalePrice" required placeholder="0" step="0.01">
+                    </div>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeJobModal()">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Mecánicos -->
+    <div class="modal" id="mechanicModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title" id="mechanicModalTitle">Nuevo Mecánico</h2>
+                <button class="btn-close" onclick="closeMechanicModal()">&times;</button>
+            </div>
+            <form class="form" id="mechanicForm" onsubmit="saveMechanic(event)">
+                <input type="hidden" id="mechanicId">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label class="form-label">Nombre *</label>
+                        <input type="text" class="form-input" id="mechanicName" required placeholder="Juan Pérez">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Especialidad</label>
+                        <input type="text" class="form-input" id="mechanicSpecialty" placeholder="Motor, Frenos, etc.">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Teléfono</label>
+                        <input type="tel" class="form-input" id="mechanicPhone" placeholder="300 123 4567">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Tarifa por Hora</label>
+                        <input type="number" class="form-input" id="mechanicHourlyRate" placeholder="0" step="0.01">
+                    </div>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeMechanicModal()">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Pagos -->
+    <div class="modal" id="paymentModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title" id="paymentModalTitle">Nuevo Pago</h2>
+                <button class="btn-close" onclick="closePaymentModal()">&times;</button>
+            </div>
+            <form class="form" id="paymentForm" onsubmit="savePayment(event)">
+                <input type="hidden" id="paymentId">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label class="form-label">Mecánico *</label>
+                        <select class="form-select" id="paymentMechanic" required>
+                            <option value="">Seleccionar mecánico</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Tipo de Movimiento</label>
+                        <select class="form-select" id="paymentType" onchange="updatePaymentLabel()">
+                            <option value="pago">Pago</option>
+                            <option value="adelanto">Adelanto</option>
+                            <option value="prestamo">Préstamo</option>
+                            <option value="descuento">Descuento</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" id="paymentAmountLabel">Monto *</label>
+                        <input type="number" class="form-input" id="paymentAmount" required placeholder="0" step="0.01">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Fecha</label>
+                        <input type="date" class="form-input" id="paymentDate">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Descripción</label>
+                    <textarea class="form-textarea" id="paymentDescription" placeholder="Concepto del pago..."></textarea>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closePaymentModal()">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Login -->
+    <div class="modal active" id="loginModal">
+        <div class="modal-content" style="max-width: 400px;">
+            <div class="modal-header">
+                <h2 class="modal-title">Iniciar Sesión</h2>
+            </div>
+            <form class="form" onsubmit="login(event)">
+                <div class="form-group">
+                    <label class="form-label">Usuario</label>
+                    <input type="text" class="form-input" id="loginUser" required placeholder="admin o mecanico">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Contraseña</label>
+                    <input type="password" class="form-input" id="loginPassword" required placeholder="admin o mecanico">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Rol</label>
+                    <select class="form-select" id="loginRole" required>
+                        <option value="admin">Administrador</option>
+                        <option value="mechanic">Mecánico</option>
+                    </select>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary" style="width: 100%;">Ingresar</button>
+                </div>
+                <p class="text-center mt-sm" style="font-size: 12px; color: var(--neutral-600);">
+                    Usuarios de prueba: admin/admin o mecanico/mecanico
+                </p>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Recepción -->
+    <div class="modal" id="receptionModal">
+        <div class="modal-content" style="max-width: 600px;">
+            <div class="modal-header">
+                <h2 class="modal-title" id="receptionModalTitle">Nueva Recepción</h2>
+                <button class="btn-close" onclick="closeReceptionModal()">&times;</button>
+            </div>
+            <form class="form" id="receptionForm" onsubmit="saveReception(event)">
+                <input type="hidden" id="receptionId">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label class="form-label">Número de Orden</label>
+                        <input type="text" class="form-input" id="receptionOrderNumber" placeholder="ORD-2025-XXX" readonly>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Nombre del Cliente *</label>
+                        <input type="text" class="form-input" id="receptionClientName" required placeholder="Nombre completo">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Teléfono *</label>
+                        <input type="tel" class="form-input" id="receptionClientPhone" required placeholder="300 123 4567">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Email</label>
+                        <input type="email" class="form-input" id="receptionClientEmail" placeholder="cliente@email.com">
+                    </div>
+                </div>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label class="form-label">Placa del Vehículo *</label>
+                        <input type="text" class="form-input" id="receptionVehiclePlate" required placeholder="ABC123">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Marca *</label>
+                        <input type="text" class="form-input" id="receptionVehicleBrand" required placeholder="Toyota">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Modelo *</label>
+                        <input type="text" class="form-input" id="receptionVehicleModel" required placeholder="Corolla">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Año *</label>
+                        <input type="number" class="form-input" id="receptionVehicleYear" required placeholder="2020" min="1900" max="2030">
+                    </div>
+                </div>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label class="form-label">Kilometraje *</label>
+                        <input type="number" class="form-input" id="receptionMileage" required placeholder="50000">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Técnico Asignado *</label>
+                        <select class="form-select" id="receptionAssignedMechanic" required>
+                            <option value="">Seleccionar técnico</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Prioridad</label>
+                        <select class="form-select" id="receptionPriority">
+                            <option value="baja">Baja</option>
+                            <option value="media" selected>Media</option>
+                            <option value="alta">Alta</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Tiempo Estimado</label>
+                        <input type="text" class="form-input" id="receptionEstimatedTime" placeholder="2 horas">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Descripción del Problema *</label>
+                    <textarea class="form-textarea" id="receptionProblemDescription" required placeholder="Describe detalladamente el problema reportado por el cliente..."></textarea>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeReceptionModal()">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Crear Recepción</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Cotización -->
+    <div class="modal" id="quoteModal">
+        <div class="modal-content" style="max-width: 700px;">
+            <div class="modal-header">
+                <h2 class="modal-title" id="quoteModalTitle">Nueva Cotización</h2>
+                <button class="btn-close" onclick="closeQuoteModal()">&times;</button>
+            </div>
+            <form class="form" id="quoteForm" onsubmit="saveQuote(event)">
+                <input type="hidden" id="quoteId">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label class="form-label">Número de Cotización</label>
+                        <input type="text" class="form-input" id="quoteNumber" placeholder="COT-2025-XXX" readonly>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Cliente *</label>
+                        <input type="text" class="form-input" id="quoteClientName" required placeholder="Nombre del cliente">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Vehículo *</label>
+                        <input type="text" class="form-input" id="quoteVehiclePlate" required placeholder="Placa del vehículo">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Fecha de Válidez</label>
+                        <input type="date" class="form-input" id="quoteValidUntil">
+                    </div>
+                </div>
+                
+                <div class="quote-items">
+                    <h4>Items de la Cotización</h4>
+                    <div id="quoteItemsList">
+                        <!-- Items se agregan dinámicamente -->
+                    </div>
+                    <button type="button" class="btn btn-sm btn-secondary mt-sm" onclick="addQuoteItem()">➕ Agregar Item</button>
+                </div>
+                
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label class="form-label">Costo Total Mano de Obra</label>
+                        <input type="number" class="form-input" id="quoteLaborCost" placeholder="0" step="0.01">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Costo Total Repuestos</label>
+                        <input type="number" class="form-input" id="quotePartsCost" placeholder="0" step="0.01">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">TOTAL</label>
+                        <input type="number" class="form-input" id="quoteTotal" readonly placeholder="0">
+                    </div>
+                </div>
+                
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeQuoteModal()">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Crear Cotización</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
