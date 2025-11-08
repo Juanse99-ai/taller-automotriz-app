@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Taller Automotriz - Sistema de Gestión</title>
+    
+    <!-- CSS de Google Fonts con preload optimizado para Safari -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="preconnect" href="https://unpkg.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Meta para Safari -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Taller Automotriz">
+    
+    <style>
+        /* Estilos embebidos como fallback */
+        #loadingScreen {
+            position: fixed; 
+            top: 0; 
+            left: 0; 
+            width: 100%; 
+            height: 100%; 
+            background: linear-gradient(135deg, #0057B7 0%, #003372 100%);
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            color: white; 
+            z-index: 9999;
+            flex-direction: column;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .spinner {
+            width: 50px; 
+            height: 50px; 
+            border: 4px solid rgba(255,255,255,0.3);
+            border-top: 4px solid white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+    </style>
+    
+    <link rel="stylesheet" href="./assets/css/styles.css">
+</head>
+<body>
+    <div id="app">
+        <!-- Pantalla de carga para Safari -->
+        <div id="loadingScreen">
+            <div style="text-align: center;">
+                <h2 style="margin-bottom: 20px; font-size: 24px;">🏭 Taller Automotriz</h2>
+                <p style="margin-bottom: 20px;">Cargando aplicación...</p>
+                <div class="spinner"></div>
+            </div>
+        </div>
+        
+        <!-- Contenido principal de la aplicación -->
+        <div id="mainApp" style="display: none;">
+            <!-- Contenido principal se carga desde JavaScript -->
+        </div>
+    </div>
+    
+    <!-- Scripts con fallbacks -->
+    <script>
+        // Detectar Safari y macOS
+        const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+        
+        console.log('🌐 Detección:', {
+            userAgent: navigator.userAgent,
+            isSafari: isSafari,
+            timestamp: new Date().toISOString()
+        });
+        
+        // Sistema de carga con timeout para Safari
+        let loadTimeout = setTimeout(() => {
+            console.log('⚠️ Timeout de carga, mostrando mensaje de error');
+            showErrorMessage();
+        }, 10000); // 10 segundos timeout
+        
+        function showErrorMessage() {
+            const loading = document.getElementById('loadingScreen');
+            if (loading) {
+                loading.innerHTML = `
+                    <div style="text-align: center; max-width: 500px; padding: 2rem;">
+                        <h2 style="margin-bottom: 20px; color: #ff6b6b;">⚠️ Problema de Carga</h2>
+                        <p style="margin-bottom: 20px;">La aplicación tuvo problemas para cargar correctamente.</p>
+                        <div style="background: rgba(255,255,255,0.1); padding: 1rem; border-radius: 8px; margin-bottom: 20px;">
+                            <p><strong>Para solucionarlo:</strong></p>
+                            <ol style="text-align: left; margin: 0.5rem 0; padding-left: 1.5rem;">
+                                <li>Prueba con <a href="SAFARI.html" style="color: #ffcc00;">SAFARI.html</a></li>
+                                <li>O con <a href="index-SAFARI.html" style="color: #ffcc00;">index-SAFARI.html</a></li>
+                                <li>Verifica que los archivos estén en las rutas correctas</li>
+                            </ol>
+                        </div>
+                        <button onclick="location.reload()" style="background: #28a745; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; margin-right: 10px;">🔄 Reintentar</button>
+                        <a href="SAFARI.html" style="background: #007bff; color: white; border: none; padding: 10px 20px; border-radius: 5px; text-decoration: none;">📱 Versión Safari</a>
+                    </div>
+                `;
+            }
+        }
+        
+        // Ocultar pantalla de carga cuando la app esté lista
+        function hideLoading() {
+            clearTimeout(loadTimeout);
+            const loading = document.getElementById('loadingScreen');
+            const main = document.getElementById('mainApp');
+            
+            if (loading && main) {
+                setTimeout(() => {
+                    loading.style.display = 'none';
+                    main.style.display = 'block';
+                    console.log('✅ Aplicación iniciada');
+                }, 1000);
+            }
+        }
+        
+        // Monitorear carga de la aplicación
+        setTimeout(() => {
+            // Si después de 5 segundos no se ha ocultado la carga, hay problema
+            const loading = document.getElementById('loadingScreen');
+            if (loading && loading.style.display !== 'none') {
+                console.log('⚠️ La aplicación no se inició correctamente');
+                if (isSafari) {
+                    console.log('🔄 Detected Safari - using fallback');
+                    window.location.href = 'SAFARI.html';
+                }
+            }
+        }, 5000);
+    </script>
+    
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    <script src="./assets/js/app.js"></script>
+    
+    <script>
+        // Fallback final
+        setTimeout(() => {
+            const loading = document.getElementById('loadingScreen');
+            if (loading && loading.style.display !== 'none') {
+                console.log('🚨 Fallback activado - redirección a SAFARI.html');
+                window.location.href = 'SAFARI.html';
+            }
+        }, 15000);
+    </script>
+</body>
+</html>
