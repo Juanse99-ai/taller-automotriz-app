@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Diagnóstico - Taller Automotriz</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Arial', sans-serif; line-height: 1.6; padding: 20px; background: #f5f5f5; }
+        .container { max-width: 800px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .test-item { margin: 15px 0; padding: 15px; border-left: 4px solid #ccc; background: #f9f9f9; }
+        .test-pass { border-color: #28a745; background: #d4edda; }
+        .test-fail { border-color: #dc3545; background: #f8d7da; }
+        .test-warning { border-color: #ffc107; background: #fff3cd; }
+        .file-content { background: #f8f9fa; padding: 10px; border-radius: 5px; margin: 10px 0; font-family: monospace; font-size: 12px; max-height: 200px; overflow-y: auto; }
+        .error { color: #dc3545; }
+        .success { color: #28a745; }
+        .warning { color: #ffc107; }
+        .button { display: inline-block; background: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; margin: 10px 5px; }
+        .button:hover { background: #0056b3; }
+        .code { background: #e9ecef; padding: 2px 6px; border-radius: 3px; font-family: monospace; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 Diagnóstico del Sistema Taller Automotriz</h1>
+        <p><strong>Fecha:</strong> <span id="current-time"></span></p>
+        
+        <h2>1. Verificación de Archivos</h2>
+        <div id="file-tests"></div>
+        
+        <h2>2. Carga de Recursos</h2>
+        <div id="resource-tests"></div>
+        
+        <h2>3. JavaScript - Variables Globales</h2>
+        <div id="js-vars"></div>
+        
+        <h2>4. LocalStorage</h2>
+        <div id="storage-test"></div>
+        
+        <h2>5. Acceso Directo</h2>
+        <a href="index.html" class="button">🚀 Abrir Aplicación Principal</a>
+        <a href="demo.html" class="button">📋 Ver Demo</a>
+        
+        <h2>6. Logs de Errores</h2>
+        <div id="error-log" class="file-content"></div>
+    </div>
+
+    <script>
+        document.getElementById('current-time').textContent = new Date().toLocaleString('es-ES');
+        
+        const errorLog = [];
+        
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const logMessage = `[${timestamp}] ${message}`;
+            errorLog.push(logMessage);
+            
+            const logDiv = document.getElementById('error-log');
+            const line = document.createElement('div');
+            line.textContent = logMessage;
+            if (type === 'error') line.style.color = '#dc3545';
+            if (type === 'success') line.style.color = '#28a745';
+            if (type === 'warning') line.style.color = '#ffc107';
+            logDiv.appendChild(line);
+        }
+        
+        // Test 1: Verificar archivos
+        function testFiles() {
+            const files = [
+                { name: 'index.html', path: './index.html' },
+                { name: 'assets/css/styles.css', path: './assets/css/styles.css' },
+                { name: 'assets/js/app.js', path: './assets/js/app.js' }
+            ];
+            
+            const results = document.getElementById('file-tests');
+            
+            files.forEach(file => {
+                const testDiv = document.createElement('div');
+                testDiv.className = 'test-item test-warning';
+                
+                const img = new Image();
+                img.onload = function() {
+                    testDiv.className = 'test-item test-pass';
+                    testDiv.innerHTML = `✅ <strong>${file.name}</strong> - Existe y es accesible`;
+                    log(`Archivo ${file.name} cargado correctamente`, 'success');
+                };
+                img.onerror = function() {
+                    testDiv.className = 'test-item test-fail';
+                    testDiv.innerHTML = `❌ <strong>${file.name}</strong> - No se puede acceder al archivo`;
+                    log(`Error: No se puede cargar ${file.name}`, 'error');
+                };
+                
+                // Test con fetch para archivos
+                fetch(file.path)
+                    .then(response => {
+                        if (response.ok) {
+                            testDiv.className = 'test-item test-pass';
+                            testDiv.innerHTML = `✅ <strong>${file.name}</strong> - Accesible (${response.status})`;
+                            log(`Archivo ${file.name} verificado`, 'success');
+                        } else {
+                            testDiv.className = 'test-item test-fail';
+                            testDiv.innerHTML = `❌ <strong>${file.name}</strong> - Error ${response.status}`;
+                            log(`Error ${response.status} al acceder a ${file.name}`, 'error');
+                        }
+                    })
+                    .catch(err => {
+                        testDiv.className = 'test-item test-fail';
+                        testDiv.innerHTML = `❌ <strong>${file.name}</strong> - Error de red: ${err.message}`;
+                        log(`Error de red: ${err.message}`, 'error');
+                    });
+                
+                results.appendChild(testDiv);
+                img.src = file.path;
+            });
+        }
+        
+        // Test 2: Cargar recursos
+        function testResources() {
+            const results = document.getElementById('resource-tests');
+            
+            // CSS
+            const cssTest = document.createElement('div');
+            cssTest.className = 'test-item test-warning';
+            cssTest.innerHTML = '⏳ Cargando CSS...';
+            results.appendChild(cssTest);
+            
+            const cssLink = document.createElement('link');
+            cssLink.rel = 'stylesheet';
+            cssLink.href = './assets/css/styles.css';
+            cssLink.onload = () => {
+                cssTest.className = 'test-item test-pass';
+                cssTest.innerHTML = '✅ CSS cargado correctamente';
+                log('CSS cargado', 'success');
+            };
+            cssLink.onerror = () => {
+                cssTest.className = 'test-item test-fail';
+                cssTest.innerHTML = '❌ Error al cargar CSS';
+                log('Error al cargar CSS', 'error');
+            };
+            document.head.appendChild(cssLink);
+            
+            // JavaScript
+            const jsTest = document.createElement('div');
+            jsTest.className = 'test-item test-warning';
+            jsTest.innerHTML = '⏳ Cargando JavaScript...';
+            results.appendChild(jsTest);
+            
+            const jsScript = document.createElement('script');
+            jsScript.src = './assets/js/app.js';
+            jsScript.onload = () => {
+                jsTest.className = 'test-item test-pass';
+                jsTest.innerHTML = '✅ JavaScript cargado correctamente';
+                log('JavaScript cargado', 'success');
+                
+                // Mostrar variables disponibles
+                if (typeof jobs !== 'undefined') {
+                    document.getElementById('js-vars').innerHTML = `
+                        <div class="test-item test-pass">
+                            ✅ Variables JavaScript disponibles:<br>
+                            - <span class="code">jobs</span>: ${typeof jobs}<br>
+                            - <span class="code">mechanics</span>: ${typeof mechanics}<br>
+                            - <span class="code">currentUser</span>: ${typeof currentUser}<br>
+                            - <span class="code">users</span>: ${typeof users}
+                        </div>
+                    `;
+                }
+            };
+            jsScript.onerror = (err) => {
+                jsTest.className = 'test-item test-fail';
+                jsTest.innerHTML = `❌ Error al cargar JavaScript: ${err.message}`;
+                log(`Error al cargar JavaScript: ${err.message}`, 'error');
+            };
+            document.body.appendChild(jsScript);
+        }
+        
+        // Test 3: LocalStorage
+        function testStorage() {
+            const results = document.getElementById('storage-test');
+            const testItem = document.createElement('div');
+            
+            try {
+                localStorage.setItem('test', 'ok');
+                localStorage.removeItem('test');
+                testItem.className = 'test-item test-pass';
+                testItem.innerHTML = '✅ LocalStorage disponible y funcional';
+                log('LocalStorage funcionando', 'success');
+            } catch (err) {
+                testItem.className = 'test-item test-fail';
+                testItem.innerHTML = `❌ LocalStorage no disponible: ${err.message}`;
+                log(`Error LocalStorage: ${err.message}`, 'error');
+            }
+            
+            results.appendChild(testItem);
+        }
+        
+        // Ejecutar todos los tests
+        setTimeout(() => {
+            testFiles();
+            testResources();
+            testStorage();
+        }, 100);
+        
+        window.onerror = function(msg, url, line, col, error) {
+            log(`Error JavaScript: ${msg} en ${url}:${line}:${col}`, 'error');
+            return false;
+        };
+        
+        log('Diagnóstico iniciado', 'info');
+    </script>
+</body>
+</html>

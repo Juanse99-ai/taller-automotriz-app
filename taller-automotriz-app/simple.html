@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Taller Automotriz - Versión Simple</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: Arial, sans-serif; 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .container { 
+            background: white;
+            padding: 40px;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            max-width: 400px;
+            width: 100%;
+        }
+        h1 { 
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+            font-size: 28px;
+        }
+        .form-group { margin-bottom: 20px; }
+        label { 
+            display: block;
+            margin-bottom: 5px;
+            color: #555;
+            font-weight: 500;
+        }
+        input { 
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e1e1e1;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+        input:focus { 
+            outline: none;
+            border-color: #667eea;
+        }
+        .button { 
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        .button:hover { transform: translateY(-2px); }
+        .status { 
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        .success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .loading { background: #fff3cd; color: #856404; border: 1px solid #ffeaa7; }
+        .links { 
+            margin-top: 20px;
+            text-align: center;
+        }
+        .links a { 
+            color: #667eea;
+            text-decoration: none;
+            margin: 0 10px;
+        }
+        .links a:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🏭 Taller Automotriz</h1>
+        <p style="text-align: center; color: #666; margin-bottom: 30px;">Versión Simplificada para Pruebas</p>
+        
+        <form id="loginForm">
+            <div class="form-group">
+                <label for="username">Usuario:</label>
+                <input type="text" id="username" value="admin" placeholder="Ingresa tu usuario">
+            </div>
+            
+            <div class="form-group">
+                <label for="password">Contraseña:</label>
+                <input type="password" id="password" value="admin" placeholder="Ingresa tu contraseña">
+            </div>
+            
+            <button type="submit" class="button">🔐 Iniciar Sesión</button>
+        </form>
+        
+        <div id="status" class="status" style="display: none;"></div>
+        
+        <div class="links">
+            <a href="diagnostico.html">🔧 Diagnóstico</a>
+            <a href="index.html">📱 App Completa</a>
+            <a href="demo.html">📋 Demo</a>
+        </div>
+    </div>
+
+    <script>
+        const users = {
+            'admin': { password: 'admin', role: 'admin', name: 'Administrador' },
+            'mecanico': { password: 'mecanico', role: 'mechanic', name: 'Juan Pérez' }
+        };
+        
+        function showStatus(message, type) {
+            const status = document.getElementById('status');
+            status.textContent = message;
+            status.className = `status ${type}`;
+            status.style.display = 'block';
+        }
+        
+        function showLoading() {
+            showStatus('🔄 Verificando credenciales...', 'loading');
+        }
+        
+        function showError(message) {
+            showStatus(`❌ ${message}`, 'error');
+        }
+        
+        function showSuccess(message) {
+            showStatus(`✅ ${message}`, 'success');
+        }
+        
+        document.getElementById('loginForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const username = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value;
+            
+            if (!username || !password) {
+                showError('Por favor completa todos los campos');
+                return;
+            }
+            
+            showLoading();
+            
+            // Simular verificación
+            setTimeout(() => {
+                if (users[username] && users[username].password === password) {
+                    const user = users[username];
+                    localStorage.setItem('currentUser', JSON.stringify(user));
+                    showSuccess(`¡Bienvenido ${user.name}!`);
+                    
+                    setTimeout(() => {
+                        showStatus('🚀 Redirigiendo a la aplicación completa...', 'success');
+                        setTimeout(() => {
+                            window.location.href = 'index.html';
+                        }, 1000);
+                    }, 1000);
+                } else {
+                    showError('Usuario o contraseña incorrectos');
+                }
+            }, 500);
+        });
+        
+        // Verificar si ya hay usuario logueado
+        window.addEventListener('load', function() {
+            const currentUser = localStorage.getItem('currentUser');
+            if (currentUser) {
+                try {
+                    const user = JSON.parse(currentUser);
+                    showSuccess(`Ya tienes una sesión activa como ${user.name}`);
+                } catch (e) {
+                    localStorage.removeItem('currentUser');
+                }
+            }
+        });
+        
+        console.log('✅ Página simple cargada correctamente');
+        console.log('👥 Usuarios disponibles:', Object.keys(users));
+    </script>
+</body>
+</html>
