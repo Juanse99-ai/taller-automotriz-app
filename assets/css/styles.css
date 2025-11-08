@@ -1,15 +1,17 @@
-        * {
+* {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
         }
 
         :root {
-            /* Colores tema claro */
-            --primary-500: #0057B7;
-            --primary-100: #D6E4F8;
-            --primary-700: #00438E;
-            --primary-400: #4D94FF;
+            /* Colores corporativos MultidiagnÃ³sticos AS */
+            --primary-500: #1E3A8A;
+            --primary-100: #DBEAFE;
+            --primary-700: #1E40AF;
+            --primary-400: #60A5FA;
+            --accent-red: #DC2626;
+            --accent-blue: #1E40AF;
             
             --neutral-50: #F8F9FA;
             --neutral-100: #FFFFFF;
@@ -30,7 +32,7 @@
             --xl: 48px;
             --xxl: 64px;
             
-            /* Tipografía */
+            /* TipografÃ­a */
             --font-family: 'Inter', sans-serif;
         }
 
@@ -47,13 +49,14 @@
             padding: 0 var(--md);
         }
 
-        /* Header */
+        /* Header con branding MultidiagnÃ³sticos AS */
         .header {
-            background: var(--neutral-100);
-            border-bottom: 1px solid var(--neutral-400);
+            background: linear-gradient(135deg, var(--primary-500) 0%, var(--accent-blue) 50%, var(--accent-red) 100%);
+            color: white;
             position: sticky;
             top: 0;
             z-index: 100;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
         }
 
         .header-content {
@@ -66,10 +69,16 @@
         .logo {
             font-size: 24px;
             font-weight: 700;
-            color: var(--primary-500);
+            color: white;
             display: flex;
             align-items: center;
             gap: var(--xs);
+        }
+        
+        .logo img {
+            width: 40px;
+            height: 40px;
+            object-fit: contain;
         }
 
         .user-menu {
@@ -102,7 +111,7 @@
             font-size: 14px;
         }
 
-        /* Navegación */
+        /* NavegaciÃ³n */
         .nav {
             background: var(--neutral-100);
             border-bottom: 1px solid var(--neutral-400);
@@ -598,7 +607,7 @@
             background: var(--primary-600);
         }
 
-        /* Estilos para Historial de Vehículos */
+        /* Estilos para Historial de VehÃ­culos */
         .vehicle-history-container {
             background: var(--surface);
             border-radius: var(--border-radius);
