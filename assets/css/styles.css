@@ -1,11 +1,11 @@
-* {
+        * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
         }
 
         :root {
-            /* Colores corporativos MultidiagnÃ³sticos AS */
+            /* Colores corporativos Multidiagnósticos AS */
             --primary-500: #1E3A8A;
             --primary-100: #DBEAFE;
             --primary-700: #1E40AF;
@@ -32,7 +32,7 @@
             --xl: 48px;
             --xxl: 64px;
             
-            /* TipografÃ­a */
+            /* Tipografía */
             --font-family: 'Inter', sans-serif;
         }
 
@@ -49,7 +49,7 @@
             padding: 0 var(--md);
         }
 
-        /* Header con branding MultidiagnÃ³sticos AS */
+        /* Header con branding Multidiagnósticos AS */
         .header {
             background: linear-gradient(135deg, var(--primary-500) 0%, var(--accent-blue) 50%, var(--accent-red) 100%);
             color: white;
@@ -111,7 +111,7 @@
             font-size: 14px;
         }
 
-        /* NavegaciÃ³n */
+        /* Navegación */
         .nav {
             background: var(--neutral-100);
             border-bottom: 1px solid var(--neutral-400);
@@ -607,7 +607,7 @@
             background: var(--primary-600);
         }
 
-        /* Estilos para Historial de VehÃ­culos */
+        /* Estilos para Historial de Vehículos */
         .vehicle-history-container {
             background: var(--surface);
             border-radius: var(--border-radius);
