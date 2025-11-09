@@ -211,6 +211,12 @@
             flex-direction: column;
         }
         
+        .content {
+            flex: 1;
+            padding: 24px;
+            overflow-y: auto;
+        }
+        
         .main-content.sidebar-collapsed {
             margin-left: 60px;
         }
@@ -1250,7 +1256,7 @@
     </div>
 
     <!-- Contenido Principal -->
-    <main class="container">
+    <div class="content" style="flex: 1; padding: 24px;">
         <!-- Sección Dashboard -->
         <section class="section active" id="section-dashboard">
             <div class="section-header">
@@ -1573,7 +1579,7 @@
                 <!-- Lista de notificaciones se carga aquí -->
             </div>
         </section>
-    </main>
+    </div>
 </div>
 
     <!-- Modal Trabajos -->
