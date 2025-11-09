@@ -14,6 +14,9 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://unpkg.com/lucide@latest/dist/umd/lucide.js">
+    
+    <!-- Supabase -->
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <style>
         * {
             margin: 0;
@@ -61,9 +64,16 @@
         }
 
         .container {
-            max-width: 1200px;
+            max-width: 1600px;
             margin: 0 auto;
             padding: 0 var(--md);
+        }
+        
+        /* Centrado mejorado para mejor distribución */
+        .main-wrapper {
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: var(--sm);
         }
         
         /* Layout principal mejorado */
@@ -148,8 +158,10 @@
         .nav-content {
             display: flex;
             gap: var(--sm);
-            justify-content: center;
+            justify-content: space-between;
+            align-items: center;
             flex-wrap: wrap;
+            padding: var(--sm) 0;
         }
 
         .nav-item {
@@ -4858,6 +4870,302 @@ Estado: ${appointment.status}
 
 	console.log('🔧 SOLUCIÓN QUIRÚRGICA: Script cargado - ES MUY CONSERVADOR');
 	console.log('💡 MAC: Abrir consola con Cmd + Option + I');
+	
+	// ===== INTEGRACIÓN SUPABASE =====
+	// Configuración de Supabase
+	const SUPABASE_URL = 'https://crtdentsfumgrotgvwdj.supabase.co';
+	const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNydGRlbnRzZnVtZ3JvdGd2d2RqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI2NTU5NTIsImV4cCI6MjA3ODIzMTk1Mn0.7T_Fd_L1gn3MtkvgqSCePrlK-ZUhp-8gbT5fG8GZoW4';
+	
+	// Inicializar Supabase
+	let supabaseClient = null;
+	
+	async function initSupabase() {
+		try {
+			if (typeof supabase !== 'undefined') {
+				supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+				console.log('✅ Supabase inicializado correctamente');
+				return supabaseClient;
+			} else {
+				console.warn('⚠️  Supabase no disponible, usando modo offline');
+				return null;
+			}
+		} catch (error) {
+			console.error('❌ Error inicializando Supabase:', error);
+			return null;
+		}
+	}
+	
+	// Servicio de Supabase mejorado
+	const SupabaseService = {
+		// Sincronizar datos desde Supabase
+		async syncData() {
+			try {
+				if (!supabaseClient) return false;
+				
+				// Sincronizar clientes
+				const { data: clientes } = await supabaseClient.from('clientes').select('*');
+				if (clientes) {
+					localStorage.setItem('taller-clients', JSON.stringify(clientes));
+					console.log(`✅ Sincronizados ${clientes.length} clientes desde Supabase`);
+				}
+				
+				// Sincronizar inventario
+				const { data: inventario } = await supabaseClient.from('inventario').select('*');
+				if (inventario) {
+					localStorage.setItem('taller-inventory', JSON.stringify(inventario));
+					console.log(`✅ Sincronizado ${inventario.length} productos desde Supabase`);
+				}
+				
+				// Sincronizar trabajos
+				const { data: trabajos } = await supabaseClient.from('trabajos').select('*');
+				if (trabajos) {
+					localStorage.setItem('taller-jobs', JSON.stringify(trabajos));
+					console.log(`✅ Sincronizados ${trabajos.length} trabajos desde Supabase`);
+				}
+				
+				return true;
+			} catch (error) {
+				console.error('❌ Error sincronizando con Supabase:', error);
+				return false;
+			}
+		},
+		
+		// Guardar en Supabase y localStorage
+		async saveJob(jobData) {
+			try {
+				// Guardar en localStorage como siempre
+				const trabajos = JSON.parse(localStorage.getItem('taller-jobs') || '[]');
+				const existingIndex = trabajos.findIndex(t => t.id === jobData.id);
+				
+				if (existingIndex >= 0) {
+					trabajos[existingIndex] = jobData;
+				} else {
+					trabajos.push(jobData);
+				}
+				
+				localStorage.setItem('taller-jobs', JSON.stringify(trabajos));
+				
+				// Sincronizar con Supabase si está disponible
+				if (supabaseClient) {
+					const supabaseData = {
+						ot_number: jobData.ot_number || `OT-${Date.now()}`,
+						cliente_id: jobData.cliente_id || null,
+						fecha_inicio: jobData.fecha_inicio || new Date().toISOString(),
+						fecha_fin: jobData.fecha_fin || null,
+						estado: jobData.status || 'En Proceso',
+						descripcion: jobData.description || '',
+						observaciones: jobData.observaciones || '',
+						subtotal: parseFloat(jobData.subtotal) || 0,
+						descuento: parseFloat(jobData.descuento) || 0,
+						total: parseFloat(jobData.salePrice) || 0,
+						tipo_pago: jobData.tipo_pago || 'Efectivo',
+						estado_pago: jobData.estado_pago || 'Pendiente',
+						comision_total: parseFloat(jobData.comision_total) || 0,
+						estado_liquidacion: jobData.estado_liquidacion || 'Pendiente'
+					};
+					
+					if (existingIndex >= 0) {
+						await supabaseClient.from('trabajos').update(supabaseData).eq('ot_number', jobData.ot_number);
+					} else {
+						await supabaseClient.from('trabajos').insert([supabaseData]);
+					}
+				}
+				
+				return true;
+			} catch (error) {
+				console.error('❌ Error guardando trabajo:', error);
+				return false;
+			}
+		}
+	};
+	
+	// Función mejorada de liquidación con 5 opciones
+	function settleJob(jobId) {
+		const job = jobs.find(j => j.id === jobId);
+		if (!job) {
+			alert('Trabajo no encontrado');
+			return;
+		}
+		
+		if (job.status === 'liquidado') {
+			alert('Este trabajo ya está liquidado');
+			return;
+		}
+		
+		const total = job.salePrice || 0;
+		
+		// Mostrar opciones de liquidación
+		const opciones = `
+			OPCIONES DE LIQUIDACIÓN - OT ${job.ot_number || job.id}
+			==============================================
+			
+			Trabajo: ${job.description}
+			Total: $${total.toLocaleString()}
+			
+			1️⃣ LIQUIDACIÓN COMPLETA (Equipo completo)
+			   - Pedro Barraza: 20%
+			   - Víctor Padilla: 20% 
+			   Total comisión: $${(total * 0.40).toLocaleString()}
+			
+			2️⃣ LIQUIDACIÓN INDIVIDUAL - PEDRO BARRAZA
+			   - Pedro Barraza: 20%
+			   - Víctor Padilla: 0%
+			   Comisión: $${(total * 0.20).toLocaleString()}
+			
+			3️⃣ LIQUIDACIÓN INDIVIDUAL - VÍCTOR PADILLA
+			   - Pedro Barraza: 0%
+			   - Víctor Padilla: 20%
+			   Comisión: $${(total * 0.20).toLocaleString()}
+			
+			4️⃣ LIQUIDACIÓN CONJUNTA (Pedro + Víctor)
+			   - Pedro Barraza: 20%
+			   - Víctor Padilla: 20%
+			   Total comisión: $${(total * 0.40).toLocaleString()}
+			
+			5️⃣ LIQUIDACIÓN PERSONALIZADA
+			   - Ingresar porcentajes manualmente
+			
+			Selecciona una opción (1-5):`;
+		
+		const opcion = prompt(opciones);
+		if (!opcion) return;
+		
+		let pedroPorcentaje = 0;
+		let victorPorcentaje = 0;
+		let descripcion = '';
+		
+		switch(opcion.trim()) {
+			case '1':
+			case '4': // Opción 1 y 4 son iguales
+				pedroPorcentaje = 20;
+				victorPorcentaje = 20;
+				descripcion = 'Liquicación completa Pedro + Víctor';
+				break;
+			case '2':
+				pedroPorcentaje = 20;
+				victorPorcentaje = 0;
+				descripcion = 'Liquidación individual Pedro';
+				break;
+			case '3':
+				pedroPorcentaje = 0;
+				victorPorcentaje = 20;
+				descripcion = 'Liquidación individual Víctor';
+				break;
+			case '5':
+				const pedroInput = prompt('Porcentaje para Pedro Barraza (0-100):');
+				const victorInput = prompt('Porcentaje para Víctor Padilla (0-100):');
+				pedroPorcentaje = parseFloat(pedroInput) || 0;
+				victorPorcentaje = parseFloat(victorInput) || 0;
+				descripcion = 'Liquidación personalizada';
+				break;
+			default:
+				alert('Opción inválida');
+				return;
+		}
+		
+		// Calcular comisiones
+		const pedroComision = total * (pedroPorcentaje / 100);
+		const victorComision = total * (victorPorcentaje / 100);
+		const totalComision = pedroComision + victorComision;
+		
+		// Actualizar trabajo
+		job.commission = totalComision;
+		job.status = 'liquidado';
+		job.commissionDetails = {
+			pedro: { porcentaje: pedroPorcentaje, comision: pedroComision },
+			victor: { porcentaje: victorPorcentaje, comision: victorComision }
+		};
+		job.liquidacionFecha = new Date().toISOString();
+		
+		// Guardar cambios
+		localStorage.setItem('taller-jobs', JSON.stringify(jobs));
+		
+		// Sincronizar con Supabase
+		SupabaseService.saveJob(job);
+		
+		// Mostrar resumen
+		alert(`
+			LIQUIDACIÓN COMPLETADA
+			======================
+			
+			OT: ${job.ot_number || job.id}
+			Total trabajo: $${total.toLocaleString()}
+			
+			DISTRIBUCIÓN:
+			• Pedro Barraza: ${pedroPorcentaje}% = $${pedroComision.toLocaleString()}
+			• Víctor Padilla: ${victorPorcentaje}% = $${victorComision.toLocaleString()}
+			
+			Total comisiones: $${totalComision.toLocaleString()}
+			Fecha: ${new Date().toLocaleDateString()}
+		`);
+		
+		// Recargar la vista
+		loadJobs();
+	}
+	
+	// Función de búsqueda mejorada de clientes
+	function searchClient(query) {
+		const clients = JSON.parse(localStorage.getItem('taller-clients') || '[]');
+		const searchQuery = query.toLowerCase().trim();
+		
+		if (!searchQuery) return [];
+		
+		return clients.filter(client => 
+			client.cedula && client.cedula.toLowerCase().includes(searchQuery) ||
+			client.name && client.name.toLowerCase().includes(searchQuery) ||
+			client.identificacion && client.identificacion.toLowerCase().includes(searchQuery) ||
+			client.nombre && client.nombre.toLowerCase().includes(searchQuery)
+		);
+	}
+	
+	// Función de búsqueda mejorada de inventario
+	function searchInventory(query) {
+		const inventory = JSON.parse(localStorage.getItem('taller-inventory') || '[]');
+		const searchQuery = query.toLowerCase().trim();
+		
+		if (!searchQuery) return [];
+		
+		return inventory.filter(item => 
+			item.codigo_barras && item.codigo_barras.toLowerCase().includes(searchQuery) ||
+			item.barcode && item.barcode.toLowerCase().includes(searchQuery) ||
+			item.codigo_referencia && item.codigo_referencia.toLowerCase().includes(searchQuery) ||
+			item.code && item.code.toLowerCase().includes(searchQuery) ||
+			item.name && item.name.toLowerCase().includes(searchQuery) ||
+			item.nombre && item.nombre.toLowerCase().includes(searchQuery) ||
+			item.description && item.description.toLowerCase().includes(searchQuery) ||
+			item.descripcion && item.descripcion.toLowerCase().includes(searchQuery)
+		);
+	}
+	
+	// Inicializar Supabase al cargar
+	document.addEventListener('DOMContentLoaded', async function() {
+		await initSupabase();
+		
+		// Sincronizar datos si está disponible Supabase
+		if (supabaseClient) {
+			const synced = await SupabaseService.syncData();
+			if (synced) {
+				console.log('✅ Datos sincronizados desde Supabase');
+			}
+		}
+		
+		// Recargar datos si cambió la fuente
+		if (supabaseClient) {
+			setTimeout(() => {
+				loadJobs();
+				loadClients();
+				loadInventory();
+			}, 1000);
+		}
+	});
+	
+	// Hacer funciones disponibles globalmente
+	window.settleJob = settleJob;
+	window.searchClient = searchClient;
+	window.searchInventory = searchInventory;
+	window.SupabaseService = SupabaseService;
+	
+	console.log('✅ Integración Supabase cargada');
 </script>
 </body>
 </html>
