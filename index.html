@@ -61,9 +61,27 @@
         }
 
         .container {
-            max-width: 1440px;
+            max-width: 1200px;
             margin: 0 auto;
             padding: 0 var(--md);
+        }
+        
+        /* Layout principal mejorado */
+        .main-layout {
+            display: flex;
+            min-height: calc(100vh - 120px);
+        }
+        
+        .sidebar {
+            width: 250px;
+            background: var(--neutral-100);
+            border-right: 1px solid var(--neutral-400);
+            padding: var(--sm);
+        }
+        
+        .main-content {
+            flex: 1;
+            padding: var(--md);
         }
 
         /* Header */
@@ -121,7 +139,7 @@
             font-size: 14px;
         }
 
-        /* Navegación */
+        /* Navegación mejorada */
         .nav {
             background: var(--neutral-100);
             border-bottom: 1px solid var(--neutral-400);
@@ -129,7 +147,9 @@
 
         .nav-content {
             display: flex;
-            gap: var(--lg);
+            gap: var(--sm);
+            justify-content: center;
+            flex-wrap: wrap;
         }
 
         .nav-item {
@@ -138,15 +158,20 @@
             border-bottom: 2px solid transparent;
             transition: all 0.2s;
             font-weight: 500;
+            border-radius: var(--xs);
+            min-width: 100px;
+            text-align: center;
         }
 
         .nav-item.active {
             color: var(--primary-500);
             border-bottom-color: var(--primary-500);
+            background: var(--primary-100);
         }
 
         .nav-item:hover {
             background: var(--neutral-50);
+        }
         }
 
         /* Secciones */
@@ -441,6 +466,166 @@
             gap: var(--sm);
             justify-content: flex-end;
             margin-top: var(--md);
+        }
+        
+        /* Nuevos estilos para formulario mejorado */
+        .form-section {
+            border: 1px solid var(--neutral-400);
+            border-radius: var(--xs);
+            padding: var(--sm);
+            margin-bottom: var(--sm);
+            background: var(--neutral-50);
+        }
+        
+        .form-section-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--primary-500);
+            margin-bottom: var(--sm);
+            display: flex;
+            align-items: center;
+            gap: var(--xs);
+        }
+        
+        .search-container {
+            position: relative;
+            width: 100%;
+        }
+        
+        .search-input {
+            position: relative;
+            z-index: 1;
+        }
+        
+        .search-results {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: var(--neutral-100);
+            border: 1px solid var(--neutral-400);
+            border-top: none;
+            border-radius: 0 0 var(--xs) var(--xs);
+            max-height: 200px;
+            overflow-y: auto;
+            z-index: 10;
+            display: none;
+        }
+        
+        .search-results.show {
+            display: block;
+        }
+        
+        .search-item {
+            padding: var(--xs) var(--sm);
+            border-bottom: 1px solid var(--neutral-100);
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        
+        .search-item:hover {
+            background-color: var(--primary-100);
+        }
+        
+        .search-item:last-child {
+            border-bottom: none;
+        }
+        
+        .search-item.highlighted {
+            background-color: var(--primary-100);
+            font-weight: 600;
+        }
+        
+        .inventory-search-container {
+            border: 1px solid var(--neutral-400);
+            border-radius: var(--xs);
+            background: var(--neutral-100);
+        }
+        
+        .selected-items {
+            max-height: 150px;
+            overflow-y: auto;
+            border-top: 1px solid var(--neutral-400);
+            background: var(--neutral-50);
+        }
+        
+        .selected-item {
+            padding: var(--xs) var(--sm);
+            border-bottom: 1px solid var(--neutral-400);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .selected-item:last-child {
+            border-bottom: none;
+        }
+        
+        .selected-item-info {
+            flex: 1;
+        }
+        
+        .selected-item-name {
+            font-weight: 600;
+            color: var(--primary-700);
+        }
+        
+        .selected-item-details {
+            font-size: 12px;
+            color: var(--neutral-600);
+        }
+        
+        .selected-item-price {
+            font-weight: 600;
+            color: var(--success);
+        }
+        
+        .remove-item {
+            background: var(--error);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            margin-left: var(--xs);
+        }
+        
+        .no-items {
+            text-align: center;
+            color: var(--neutral-600);
+            font-style: italic;
+            padding: var(--sm);
+        }
+        
+        .checkbox-group {
+            display: flex;
+            flex-direction: column;
+            gap: var(--xs);
+        }
+        
+        .checkbox-label {
+            display: flex;
+            align-items: center;
+            gap: var(--xs);
+            cursor: pointer;
+            padding: var(--xs);
+            border-radius: var(--xs);
+            transition: background-color 0.2s;
+        }
+        
+        .checkbox-label:hover {
+            background-color: var(--primary-100);
+        }
+        
+        .checkbox-label input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
         }
 
         /* Modal */
@@ -1193,29 +1378,134 @@
             </div>
             <form class="form" id="jobForm" onsubmit="saveJob(event)">
                 <input type="hidden" id="jobId">
-                <div class="form-grid">
-                    <div class="form-group">
-                        <label class="form-label">Placa del Vehículo *</label>
-                        <input type="text" class="form-input" id="jobPlate" required placeholder="ABC123">
+                
+                <!-- Información del Cliente -->
+                <div class="form-section">
+                    <h3 class="form-section-title">👤 Información del Cliente</h3>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label class="form-label">Cliente *</label>
+                            <div class="search-container">
+                                <input type="text" class="form-input search-input" id="jobClientName" required placeholder="Buscar cliente por nombre o cédula...">
+                                <div class="search-results" id="clientSearchResults"></div>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Teléfono</label>
+                            <input type="tel" class="form-input" id="jobClientPhone" placeholder="300 123 4567">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Cédula</label>
+                            <input type="text" class="form-input" id="jobClientCedula" placeholder="12345678">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Email</label>
+                            <input type="email" class="form-input" id="jobClientEmail" placeholder="cliente@email.com">
+                        </div>
                     </div>
-                    <div class="form-group">
-                        <label class="form-label">Kilometraje *</label>
-                        <input type="number" class="form-input" id="jobMileage" required placeholder="50000">
+                </div>
+                
+                <!-- Información del Vehículo -->
+                <div class="form-section">
+                    <h3 class="form-section-title">🚗 Información del Vehículo</h3>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label class="form-label">Placa del Vehículo *</label>
+                            <input type="text" class="form-input" id="jobPlate" required placeholder="ABC123">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Marca</label>
+                            <input type="text" class="form-input" id="jobVehicleBrand" placeholder="Toyota, Ford, etc.">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Modelo</label>
+                            <input type="text" class="form-input" id="jobVehicleModel" placeholder="Corolla, Focus, etc.">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Año</label>
+                            <input type="number" class="form-input" id="jobVehicleYear" placeholder="2020">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Kilometraje *</label>
+                            <input type="number" class="form-input" id="jobMileage" required placeholder="50000">
+                        </div>
                     </div>
-                    <div class="form-group">
-                        <label class="form-label">Mecánico Asignado *</label>
-                        <select class="form-select" id="jobMechanic" required>
-                            <option value="">Seleccionar mecánico</option>
-                        </select>
+                </div>
+                
+                <!-- Información del Trabajo -->
+                <div class="form-section">
+                    <h3 class="form-section-title">🔧 Información del Trabajo</h3>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label class="form-label">Mecánico Asignado *</label>
+                            <select class="form-select" id="jobMechanic" required>
+                                <option value="">Seleccionar mecánico</option>
+                                <option value="1">Pedro Barraza</option>
+                                <option value="2">Víctor Padilla</option>
+                                <option value="3">Ismael Cervantes</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Estado</label>
+                            <select class="form-select" id="jobStatus">
+                                <option value="pendiente">Pendiente</option>
+                                <option value="enprogreso">En Progreso</option>
+                                <option value="completado">Completado</option>
+                                <option value="entregado">Entregado</option>
+                            </select>
+                        </div>
                     </div>
+                </div>
+                
+                <!-- Descripción y Repuestos -->
+                <div class="form-section">
+                    <h3 class="form-section-title">📋 Detalles del Trabajo</h3>
                     <div class="form-group">
-                        <label class="form-label">Estado</label>
-                        <select class="form-select" id="jobStatus">
-                            <option value="pendiente">Pendiente</option>
-                            <option value="enprogreso">En Progreso</option>
-                            <option value="completado">Completado</option>
-                            <option value="entregado">Entregado</option>
-                        </select>
+                        <label class="form-label">Descripción del Trabajo *</label>
+                        <textarea class="form-textarea" id="jobDescription" required placeholder="Describe el trabajo realizado..."></textarea>
+                    </div>
+                    
+                    <!-- Buscador de Inventario -->
+                    <div class="form-group">
+                        <label class="form-label">Repuestos del Inventario</label>
+                        <div class="inventory-search-container">
+                            <div class="search-container">
+                                <input type="text" class="form-input search-input" id="inventorySearch" placeholder="Buscar repuesto por nombre o código...">
+                                <div class="search-results" id="inventorySearchResults"></div>
+                            </div>
+                            <div class="selected-items" id="selectedInventoryItems">
+                                <p class="no-items">No hay repuestos seleccionados</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Repuestos Manuales -->
+                    <div class="form-group">
+                        <label class="form-label">Repuestos Adicionales (Manual)</label>
+                        <input type="text" class="form-input" id="jobParts" placeholder="Lista de repuestos adicionales...">
+                    </div>
+                </div>
+                
+                <!-- Costos -->
+                <div class="form-section">
+                    <h3 class="form-section-title">💰 Costos y Precios</h3>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label class="form-label">Costo Repuestos del Inventario</label>
+                            <input type="number" class="form-input" id="jobInventoryPartsCost" placeholder="0" step="0.01" readonly>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Costo Repuestos Adicionales</label>
+                            <input type="number" class="form-input" id="jobPartsCost" placeholder="0" step="0.01">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Costo Mano de Obra *</label>
+                            <input type="number" class="form-input" id="jobLaborCost" required placeholder="0" step="0.01">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Valor de Venta *</label>
+                            <input type="number" class="form-input" id="jobSalePrice" required placeholder="0" step="0.01">
+                        </div>
                     </div>
                 </div>
                 <div class="form-group">
@@ -1240,9 +1530,34 @@
                         <input type="number" class="form-input" id="jobSalePrice" required placeholder="0" step="0.01">
                     </div>
                 </div>
+                <!-- Técinos Adicionales (para trabajos conjuntos) -->
+                <div class="form-section">
+                    <h3 class="form-section-title">👥 Técnicos Adicionales</h3>
+                    <div class="form-group">
+                        <label class="form-label">Técnicos adicionales (Pedro + Víctor = 20% cada uno)</label>
+                        <div class="checkbox-group">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="additionalMechanic1" value="1">
+                                <span class="checkmark"></span>
+                                Pedro Barraza
+                            </label>
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="additionalMechanic2" value="2">
+                                <span class="checkmark"></span>
+                                Víctor Padilla
+                            </label>
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="additionalMechanic3" value="3">
+                                <span class="checkmark"></span>
+                                Ismael Cervantes
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                
                 <div class="form-actions">
                     <button type="button" class="btn btn-secondary" onclick="closeJobModal()">Cancelar</button>
-                    <button type="submit" class="btn btn-primary">Guardar</button>
+                    <button type="submit" class="btn btn-primary">Guardar Trabajo</button>
                 </div>
             </form>
         </div>
@@ -1514,6 +1829,9 @@
         let calendarAppointments = JSON.parse(localStorage.getItem('taller-calendar') || '[]');
         let vehicleHistory = JSON.parse(localStorage.getItem('taller-vehicle-history') || '[]');
         let notifications = JSON.parse(localStorage.getItem('taller-notifications') || '[]');
+        let clients = JSON.parse(localStorage.getItem('taller-clients') || '[]');
+        let inventory = JSON.parse(localStorage.getItem('taller-inventory') || '[]');
+        let selectedInventoryItems = []; // Para repuestos seleccionados en el formulario
 
         // Usuarios de prueba
         const users = {
@@ -1795,6 +2113,39 @@
                 }
             ];
             localStorage.setItem('taller-notifications', JSON.stringify(notifications));
+
+            // Datos de clientes para búsqueda
+            let clients = [
+                { id: 1, name: 'Juan Pérez', cedula: '12345678', phone: '3001112233', email: 'juan.perez@email.com' },
+                { id: 2, name: 'María González', cedula: '87654321', phone: '3004445566', email: 'maria.gonzalez@email.com' },
+                { id: 3, name: 'Carlos Rodríguez', cedula: '11223344', phone: '3007778899', email: 'carlos.rodriguez@email.com' },
+                { id: 4, name: 'Ana Martínez', cedula: '55667788', phone: '3001113344', email: 'ana.martinez@email.com' },
+                { id: 5, name: 'Luis Sánchez', cedula: '99887766', phone: '3005556677', email: 'luis.sanchez@email.com' },
+                { id: 6, name: 'Patricia López', cedula: '33445566', phone: '3002223344', email: 'patricia.lopez@email.com' },
+                { id: 7, name: 'Fernando Castro', cedula: '77889900', phone: '3008889900', email: 'fernando.castro@email.com' },
+                { id: 8, name: 'Sandra Moreno', cedula: '44556677', phone: '3006667788', email: 'sandra.moreno@email.com' }
+            ];
+            localStorage.setItem('taller-clients', JSON.stringify(clients));
+
+            // Inventario de repuestos para búsqueda POS con códigos de barras
+            let inventory = [
+                { id: 1, code: 'FO001', barcode: '7891234567890', name: 'Filtro de aceite', brand: 'Mann', price: 25000, stock: 15, category: 'Filtros', description: 'Filtro aceite motor', minStock: 5 },
+                { id: 2, code: 'FA001', barcode: '7891234567891', name: 'Filtro de aire', brand: 'Mann', price: 18000, stock: 12, category: 'Filtros', description: 'Filtro aire motor', minStock: 3 },
+                { id: 3, code: 'CO001', barcode: '7891234567892', name: 'Correa de distribución', brand: 'Gates', price: 85000, stock: 8, category: 'Motor', description: 'Correa 134 dientes', minStock: 2 },
+                { id: 4, code: 'PA001', barcode: '7891234567893', name: 'Pastillas de freno', brand: 'Brembo', price: 35000, stock: 20, category: 'Frenos', description: 'Pastillas delanteras', minStock: 10 },
+                { id: 5, code: 'DI001', barcode: '7891234567894', name: 'Disco de freno', brand: 'Brembo', price: 80000, stock: 10, category: 'Frenos', description: 'Disco ventilación', minStock: 5 },
+                { id: 6, code: 'LI001', barcode: '7891234567895', name: 'Aceite motor 5W30', brand: 'Mobil', price: 45000, stock: 25, category: 'Lubricantes', description: 'Aceite sintético 4L', minStock: 10 },
+                { id: 7, code: 'BA001', barcode: '7891234567896', name: 'Batería 12V 60Ah', brand: 'LTH', price: 180000, stock: 5, category: 'Eléctrico', description: 'Batería libre mantenimiento', minStock: 2 },
+                { id: 8, code: 'BO001', barcode: '7891234567897', name: 'Bomba de agua', brand: 'Saleri', price: 120000, stock: 6, category: 'Motor', description: 'Bomba agua completa', minStock: 2 },
+                { id: 9, code: 'SP001', barcode: '7891234567898', name: 'Sensor de presión', brand: 'Bosch', price: 65000, stock: 3, category: 'Eléctrico', description: 'Sensor presión aceite', minStock: 1 },
+                { id: 10, code: 'AM001', barcode: '7891234567899', name: 'Amortiguador', brand: 'Monroe', price: 95000, stock: 8, category: 'Suspensión', description: 'Amortiguador delantero', minStock: 4 },
+                { id: 11, code: 'NE001', barcode: '7891234567900', name: 'Neumático 195/65R15', brand: 'Michelin', price: 180000, stock: 12, category: 'Neumáticos', description: 'Neumático todo terreno', minStock: 8 },
+                { id: 12, code: 'CA001', barcode: '7891234567901', name: 'Cables de bujía', brand: 'NGK', price: 35000, stock: 15, category: 'Eléctrico', description: 'Juego cables bujía', minStock: 5 },
+                { id: 13, code: 'AB001', barcode: '7891234567902', name: 'Abrehuja', brand: 'Stanley', price: 15000, stock: 20, category: 'Herramientas', description: 'Abrehuja universal', minStock: 5 },
+                { id: 14, code: 'CL001', barcode: '7891234567903', name: 'Clavija de contacto', brand: 'Bosch', price: 28000, stock: 10, category: 'Eléctrico', description: 'Clavija arranque', minStock: 3 },
+                { id: 15, code: 'FR001', barcode: '7891234567904', name: 'Radiador', brand: 'Nissens', price: 220000, stock: 2, category: 'Motor', description: 'Radiador aluminio', minStock: 1 }
+            ];
+            localStorage.setItem('taller-inventory', JSON.stringify(inventory));
 
             // Trabajos de ejemplo
             jobs = [
@@ -2918,31 +3269,116 @@ NETO A PAGAR: ${formatCurrency(netAmount)}
             const job = jobs.find(j => j.id === jobId);
             if (!job) return;
             
-            const mechanic = mechanics.find(m => m.id == job.mechanicId);
+            // Verificar si tiene técnicos adicionales para trabajos conjuntos
+            const mainMechanic = mechanics.find(m => m.id == job.mechanicId);
+            const additionalMechanics = [];
             
-            // Verificar que sea Pedro o Víctor (Ismael no participa en liquidación)
-            const activeTechnicians = ['Pedro Barraza', 'Víctor Padilla'];
-            if (!activeTechnicians.includes(mechanic.name)) {
-                alert('Este técnico no participa en la liquidación del 20%');
+            // Buscar mecánicos adicionales en el trabajo
+            if (job.additionalMechanics) {
+                job.additionalMechanics.forEach(mechanicId => {
+                    const mechanic = mechanics.find(m => m.id == mechanicId);
+                    if (mechanic) {
+                        additionalMechanics.push(mechanic);
+                    }
+                });
+            }
+            
+            // Combinar mecánico principal con adicionales
+            const allTechnicians = [mainMechanic, ...additionalMechanics];
+            const activeTechnicians = allTechnicians.filter(m => 
+                m && (m.name === 'Pedro Barraza' || m.name === 'Víctor Padilla')
+            );
+            
+            // Verificar que al menos uno de Pedro o Víctor esté involucrado
+            if (activeTechnicians.length === 0) {
+                alert('Este trabajo no involucra a Pedro o Víctor para la liquidación del 20%');
                 return;
             }
-
-            const laborShare = (job.laborCost || 0) * 0.20; // 20% para cada técnico
             
-            const message = `
+            // Mostrar opciones de liquidación
+            const options = `
 LIQUIDAR TRABAJO: ${job.plate}
 ====================================
 
-Técnico: ${mechanic.name}
+Técnicos involucrados: ${allTechnicians.map(m => m.name).join(', ')}
 Trabajo: ${job.description}
-20% Mano de Obra: ${formatCurrency(laborShare)}
+Mano de Obra: ${formatCurrency(job.laborCost || 0)}
 
-¿Liquidar este trabajo?`;
+Selecciona el tipo de liquidación:
+1. Liquidación completa (todos los técnicos)
+2. Solo Pedro Barraza (20%)
+3. Solo Víctor Padilla (20%)
+4. Pedro + Víctor (20% cada uno)
+5. Liquidación personalizada
+
+Ingresa el número de opción (1-5):`;
             
-            if (confirm(message)) {
+            const choice = prompt(options);
+            
+            if (!choice || !['1', '2', '3', '4', '5'].includes(choice)) {
+                return; // Cancelado
+            }
+            
+            let settlementDetails = '';
+            let techniciansToPay = [];
+            
+            switch (choice) {
+                case '1': // Liquidación completa
+                    const totalShare = (job.laborCost || 0) * 0.40;
+                    const individualShare = totalShare / 3; // Dividir entre 3
+                    techniciansToPay = allTechnicians;
+                    settlementDetails = `40% Total: ${formatCurrency(totalShare)}\nDividido entre 3: ${formatCurrency(individualShare)} c/u`;
+                    break;
+                    
+                case '2': // Solo Pedro
+                    const pedroShare = (job.laborCost || 0) * 0.20;
+                    techniciansToPay = activeTechnicians.filter(m => m.name === 'Pedro Barraza');
+                    settlementDetails = `20% Solo Pedro: ${formatCurrency(pedroShare)}`;
+                    break;
+                    
+                case '3': // Solo Víctor
+                    const victorShare = (job.laborCost || 0) * 0.20;
+                    techniciansToPay = activeTechnicians.filter(m => m.name === 'Víctor Padilla');
+                    settlementDetails = `20% Solo Víctor: ${formatCurrency(victorShare)}`;
+                    break;
+                    
+                case '4': // Pedro + Víctor
+                    const jointShare = (job.laborCost || 0) * 0.20; // 20% cada uno
+                    techniciansToPay = activeTechnicians.filter(m => 
+                        m.name === 'Pedro Barraza' || m.name === 'Víctor Padilla'
+                    );
+                    settlementDetails = `20% cada uno (40% total): ${formatCurrency(jointShare)} c/u`;
+                    break;
+                    
+                case '5': // Personalizado
+                    const customPercent = prompt('Ingresa el porcentaje para el técnico (ej: 15, 20, 25):');
+                    if (!customPercent || isNaN(customPercent)) {
+                        alert('Porcentaje inválido');
+                        return;
+                    }
+                    const customShare = (job.laborCost || 0) * (customPercent / 100);
+                    techniciansToPay = activeTechnicians;
+                    settlementDetails = `${customPercent}%: ${formatCurrency(customShare)}`;
+                    break;
+            }
+            
+            const confirmMessage = `
+CONFIRMAR LIQUIDACIÓN: ${job.plate}
+====================================
+${settlementDetails}
+
+¿Confirmar liquidación?`;
+            
+            if (confirm(confirmMessage)) {
+                // Procesar liquidación
                 job.settled = true;
                 job.settledDate = new Date().toISOString().split('T')[0];
-                job.settledAmount = laborShare;
+                job.settledAmount = techniciansToPay.length > 0 ? techniciansToPay.reduce((sum, tech) => {
+                    const techShare = (job.laborCost || 0) * 0.20; // 20% base
+                    return sum + techShare;
+                }, 0) : 0;
+                job.settledTechnicians = techniciansToPay.map(m => m.id);
+                job.settlementType = choice;
                 
                 localStorage.setItem('taller-jobs', JSON.stringify(jobs));
                 loadSettlement();
@@ -3555,6 +3991,262 @@ Estado: ${appointment.status}
     </script>
     
     <script>
+    // FUNCIONALIDAD MEJORADA DEL FORMULARIO - BÚSQUEDAS Y POS
+    
+    // Variables para búsquedas
+    let clientSearchTimeout = null;
+    let inventorySearchTimeout = null;
+    
+    // Event listeners cuando se carga la página
+    document.addEventListener('DOMContentLoaded', function() {
+        // Inicializar búsquedas
+        setupClientSearch();
+        setupInventorySearch();
+        
+        // Event listeners para cálculo automático de inventario
+        document.getElementById('jobPartsCost')?.addEventListener('input', updateTotalInventoryCost);
+        document.getElementById('jobLaborCost')?.addEventListener('input', updateTotalInventoryCost);
+        document.getElementById('jobSalePrice')?.addEventListener('input', updateTotalInventoryCost);
+    });
+    
+    // Configurar búsqueda de clientes
+    function setupClientSearch() {
+        const searchInput = document.getElementById('jobClientName');
+        if (!searchInput) return;
+        
+        searchInput.addEventListener('input', function() {
+            clearTimeout(clientSearchTimeout);
+            const query = this.value.trim();
+            
+            if (query.length < 2) {
+                hideClientSearchResults();
+                return;
+            }
+            
+            clientSearchTimeout = setTimeout(() => {
+                searchClients(query);
+            }, 300);
+        });
+        
+        // Ocultar resultados al hacer click fuera
+        document.addEventListener('click', function(e) {
+            if (!searchInput.contains(e.target) && !document.getElementById('clientSearchResults').contains(e.target)) {
+                hideClientSearchResults();
+            }
+        });
+    }
+    
+    // Buscar clientes por nombre o cédula
+    function searchClients(query) {
+        const results = clients.filter(client => 
+            client.name.toLowerCase().includes(query.toLowerCase()) ||
+            client.cedula.includes(query) ||
+            client.phone.includes(query)
+        ).slice(0, 5); // Mostrar máximo 5 resultados
+        
+        showClientSearchResults(results);
+    }
+    
+    // Mostrar resultados de búsqueda de clientes
+    function showClientSearchResults(results) {
+        const container = document.getElementById('clientSearchResults');
+        if (!container) return;
+        
+        if (results.length === 0) {
+            container.innerHTML = '<div class="search-item">No se encontraron clientes</div>';
+        } else {
+            container.innerHTML = results.map(client => `
+                <div class="search-item" onclick="selectClient('${client.id}', '${client.name}', '${client.phone}', '${client.cedula}', '${client.email}')">
+                    <strong>${client.name}</strong><br>
+                    <small>Cédula: ${client.cedula} | Tel: ${client.phone}</small>
+                </div>
+            `).join('');
+        }
+        
+        container.classList.add('show');
+    }
+    
+    // Ocultar resultados de búsqueda de clientes
+    function hideClientSearchResults() {
+        const container = document.getElementById('clientSearchResults');
+        if (container) {
+            container.classList.remove('show');
+        }
+    }
+    
+    // Seleccionar cliente de los resultados
+    function selectClient(id, name, phone, cedula, email) {
+        document.getElementById('jobClientName').value = name;
+        document.getElementById('jobClientPhone').value = phone;
+        document.getElementById('jobClientCedula').value = cedula;
+        document.getElementById('jobClientEmail').value = email;
+        hideClientSearchResults();
+    }
+    
+    // Configurar búsqueda de inventario
+    function setupInventorySearch() {
+        const searchInput = document.getElementById('inventorySearch');
+        if (!searchInput) return;
+        
+        searchInput.addEventListener('input', function() {
+            clearTimeout(inventorySearchTimeout);
+            const query = this.value.trim();
+            
+            if (query.length < 2) {
+                hideInventorySearchResults();
+                return;
+            }
+            
+            inventorySearchTimeout = setTimeout(() => {
+                searchInventory(query);
+            }, 300);
+        });
+        
+        // Ocultar resultados al hacer click fuera
+        document.addEventListener('click', function(e) {
+            if (!searchInput.contains(e.target) && !document.getElementById('inventorySearchResults').contains(e.target)) {
+                hideInventorySearchResults();
+            }
+        });
+    }
+    
+    // Buscar inventario por nombre, código, código de barras o referencia
+    function searchInventory(query) {
+        const results = inventory.filter(item => 
+            item.name.toLowerCase().includes(query.toLowerCase()) ||
+            item.code.toLowerCase().includes(query.toLowerCase()) ||
+            item.barcode.includes(query) ||
+            item.brand.toLowerCase().includes(query.toLowerCase()) ||
+            item.category.toLowerCase().includes(query.toLowerCase()) ||
+            item.description.toLowerCase().includes(query.toLowerCase())
+        ).slice(0, 8); // Mostrar máximo 8 resultados
+        
+        // Si hay exactamente 1 resultado y coincide por código de barras, agregarlo automáticamente
+        if (results.length === 1 && results[0].barcode === query) {
+            addInventoryItem(results[0].id, results[0].name, results[0].price, results[0].stock);
+            document.getElementById('inventorySearch').value = '';
+            hideInventorySearchResults();
+            return;
+        }
+        
+        showInventorySearchResults(results);
+    }
+    
+    // Mostrar resultados de búsqueda de inventario
+    function showInventorySearchResults(results) {
+        const container = document.getElementById('inventorySearchResults');
+        if (!container) return;
+        
+        if (results.length === 0) {
+            container.innerHTML = '<div class="search-item">No se encontraron repuestos</div>';
+        } else {
+            container.innerHTML = results.map(item => `
+                <div class="search-item" onclick="addInventoryItem('${item.id}', '${item.name}', '${item.price}', '${item.stock}')">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <strong>${item.name}</strong><br>
+                            <small>Código: ${item.code} | Barras: ${item.barcode} | ${item.brand}</small><br>
+                            <small>Categoría: ${item.category} | Stock: ${item.stock}</small>
+                        </div>
+                        <div style="text-align: right;">
+                            <strong style="color: var(--success);">${formatCurrency(item.price)}</strong><br>
+                            <small style="color: ${item.stock <= item.minStock ? 'var(--error)' : 'var(--neutral-600)'}">
+                                ${item.stock <= item.minStock ? '⚠️ Stock bajo' : '✅ Disponible'}
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        container.classList.add('show');
+    }
+    
+    // Ocultar resultados de búsqueda de inventario
+    function hideInventorySearchResults() {
+        const container = document.getElementById('inventorySearchResults');
+        if (container) {
+            container.classList.remove('show');
+        }
+    }
+    
+    // Agregar item de inventario seleccionado
+    function addInventoryItem(id, name, price, stock) {
+        const item = inventory.find(i => i.id == id);
+        if (!item || selectedInventoryItems.find(selected => selected.id == id)) {
+            return; // Item no encontrado o ya seleccionado
+        }
+        
+        selectedInventoryItems.push({
+            ...item,
+            quantity: 1
+        });
+        
+        updateSelectedInventoryItems();
+        updateTotalInventoryCost();
+        
+        // Limpiar búsqueda
+        document.getElementById('inventorySearch').value = '';
+        hideInventorySearchResults();
+    }
+    
+    // Remover item de inventario seleccionado
+    function removeInventoryItem(id) {
+        selectedInventoryItems = selectedInventoryItems.filter(item => item.id != id);
+        updateSelectedInventoryItems();
+        updateTotalInventoryCost();
+    }
+    
+    // Actualizar lista de items seleccionados
+    function updateSelectedInventoryItems() {
+        const container = document.getElementById('selectedInventoryItems');
+        if (!container) return;
+        
+        if (selectedInventoryItems.length === 0) {
+            container.innerHTML = '<p class="no-items">No hay repuestos seleccionados</p>';
+            return;
+        }
+        
+        container.innerHTML = selectedInventoryItems.map(item => `
+            <div class="selected-item">
+                <div class="selected-item-info">
+                    <div class="selected-item-name">${item.name}</div>
+                    <div class="selected-item-details">${item.code} | ${item.brand} | Stock: ${item.stock}</div>
+                </div>
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <input type="number" 
+                           class="form-input" 
+                           style="width: 60px; padding: 4px;" 
+                           value="${item.quantity}" 
+                           min="1" 
+                           max="${item.stock}"
+                           onchange="updateInventoryItemQuantity('${item.id}', this.value)">
+                    <div class="selected-item-price">${formatCurrency(item.price * item.quantity)}</div>
+                    <button class="remove-item" onclick="removeInventoryItem('${item.id}')">×</button>
+                </div>
+            </div>
+        `).join('');
+    }
+    
+    // Actualizar cantidad de item de inventario
+    function updateInventoryItemQuantity(id, quantity) {
+        const item = selectedInventoryItems.find(item => item.id == id);
+        if (item) {
+            item.quantity = Math.max(1, Math.min(quantity, item.stock));
+            updateSelectedInventoryItems();
+            updateTotalInventoryCost();
+        }
+    }
+    
+    // Calcular costo total de inventario
+    function updateTotalInventoryCost() {
+        const totalCost = selectedInventoryItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+        const inventoryCostInput = document.getElementById('jobInventoryPartsCost');
+        if (inventoryCostInput) {
+            inventoryCostInput.value = totalCost;
+        }
+    }
+    
     // CORRECCIÓN DE BOTONES - MANTENER ESTE CÓDIGO
     console.log('🔧 Aplicando corrección a botones de trabajo...');
     
@@ -3769,64 +4461,127 @@ Estado: ${appointment.status}
 	            }
 	        };
 	        
-	        // 3. FORZAR función para guardar trabajo
-	        window.saveJob = function() {
-	            console.log('🔧 FORZADA: saveJob ejecutada');
-	            
-	            try {
-	                const modal = document.getElementById('jobModal');
-	                if (!modal) {
-	                    alert('Error: Modal no encontrado');
-	                    return;
-	                }
+	        // 3. FORZAR función para guardar trabajo mejorado
+	        window.saveJob = function(event) {
+                if (event) {
+                    event.preventDefault();
+                }
+                
+                console.log('🔧 MEJORADA: saveJob ejecutada');
+                
+                try {
+                    // Obtener datos del formulario mejorado
+                    const jobId = document.getElementById('jobId').value;
+                    const jobData = {
+                        id: jobId || Date.now(),
+                        // Información del cliente
+                        clientName: document.getElementById('jobClientName').value.trim(),
+                        clientPhone: document.getElementById('jobClientPhone').value.trim(),
+                        clientCedula: document.getElementById('jobClientCedula').value.trim(),
+                        clientEmail: document.getElementById('jobClientEmail').value.trim(),
+                        // Información del vehículo
+                        plate: document.getElementById('jobPlate').value.trim().toUpperCase(),
+                        vehicleBrand: document.getElementById('jobVehicleBrand').value.trim(),
+                        vehicleModel: document.getElementById('jobVehicleModel').value.trim(),
+                        vehicleYear: document.getElementById('jobVehicleYear').value,
+                        mileage: parseInt(document.getElementById('jobMileage').value) || 0,
+                        // Información del trabajo
+                        mechanicId: document.getElementById('jobMechanic').value,
+                        status: document.getElementById('jobStatus').value,
+                        description: document.getElementById('jobDescription').value.trim(),
+                        // Repuestos
+                        inventoryItems: selectedInventoryItems.map(item => ({
+                            id: item.id,
+                            name: item.name,
+                            code: item.code,
+                            price: item.price,
+                            quantity: item.quantity,
+                            total: item.price * item.quantity
+                        })),
+                        inventoryPartsCost: selectedInventoryItems.reduce((sum, item) => sum + (item.price * item.quantity), 0),
+                        additionalParts: document.getElementById('jobParts').value.trim(),
+                        additionalPartsCost: parseFloat(document.getElementById('jobPartsCost').value) || 0,
+                        // Costos
+                        laborCost: parseFloat(document.getElementById('jobLaborCost').value) || 0,
+                        salePrice: parseFloat(document.getElementById('jobSalePrice').value) || 0,
+                        // Técnicos adicionales
+                        additionalMechanics: getAdditionalMechanics(),
+                        // Fechas
+                        date: new Date().toISOString().split('T')[0],
+                        createdAt: new Date().toISOString()
+                    };
+                    
+                    // Validaciones
+                    if (!jobData.clientName) {
+                        alert('Por favor ingresa el nombre del cliente');
+                        return;
+                    }
+                    
+                    if (!jobData.plate) {
+                        alert('Por favor ingresa la placa del vehículo');
+                        return;
+                    }
+                    
+                    if (!jobData.mechanicId) {
+                        alert('Por favor selecciona un mecánico');
+                        return;
+                    }
+                    
+                    if (!jobData.description) {
+                        alert('Por favor describe el trabajo a realizar');
+                        return;
+                    }
+                    
+                    // Obtener trabajos existentes
+                    let existingJobs = JSON.parse(localStorage.getItem('taller-jobs') || '[]');
+                    
+                    if (jobId) {
+                        // Editar trabajo existente
+                        const index = existingJobs.findIndex(job => job.id == jobId);
+                        if (index !== -1) {
+                            existingJobs[index] = { ...existingJobs[index], ...jobData };
+                        }
+                    } else {
+                        // Nuevo trabajo
+                        existingJobs.push(jobData);
+                    }
+                    
+                    localStorage.setItem('taller-jobs', JSON.stringify(existingJobs));
+                    
+                    // Limpiar variables temporales
+                    selectedInventoryItems = [];
+                    
+                    console.log('✅ MEJORADA: Trabajo guardado:', jobData);
+                    
+                    // Cerrar modal y actualizar vista
+                    window.closeJobModal();
+                    setTimeout(() => {
+                        if (typeof loadJobs === 'function') {
+                            loadJobs();
+                        } else {
+                            location.reload();
+                        }
+                    }, 500);
 	                
-	                // Obtener datos del formulario
-	                const form = modal.querySelector('form');
-	                if (!form) {
-	                    alert('Error: Formulario no encontrado');
-	                    return;
-	                }
-	                
-	                const formData = new FormData(form);
-	                const jobData = {
-	                    id: Date.now().toString(),
-	                    clientName: formData.get('clientName') || '',
-	                    phone: formData.get('phone') || '',
-	                    vehicle: formData.get('vehicle') || '',
-	                    plate: formData.get('plate') || '',
-	                    service: formData.get('service') || '',
-	                    mechanic: formData.get('mechanic') || '',
-	                    arrivalDate: formData.get('arrivalDate') || new Date().toISOString().split('T')[0],
-	                    status: 'En proceso',
-	                    createdAt: new Date().toISOString()
-	                };
-	                
-	                // Validar datos básicos
-	                if (!jobData.clientName.trim()) {
-	                    alert('Por favor ingresa el nombre del cliente');
-	                    return;
-	                }
-	                
-	                // Obtener trabajos existentes
-	                const existingJobs = JSON.parse(localStorage.getItem('taller-jobs') || '[]');
-	                existingJobs.push(jobData);
-	                localStorage.setItem('taller-jobs', JSON.stringify(existingJobs));
-	                
-	                console.log('✅ FORZADA: Trabajo guardado:', jobData);
-	                
-	                // Cerrar modal y recargar
-	                window.closeJobModal();
-	                setTimeout(() => {
-	                    location.reload();
-	                }, 500);
-	                
-	                alert('✅ Trabajo guardado exitosamente');
+	                alert('✅ Trabajo guardado exitosamente con formulario mejorado');
 	                
 	            } catch (error) {
-	                console.error('❌ FORZADA: Error en saveJob:', error);
+	                console.error('❌ MEJORADA: Error en saveJob:', error);
 	                alert('Error al guardar: ' + error.message);
 	            }
 	        };
+	        
+	        // Función auxiliar para obtener técnicos adicionales
+	        function getAdditionalMechanics() {
+            const additionalMechanics = [];
+            for (let i = 1; i <= 3; i++) {
+                const checkbox = document.getElementById(`additionalMechanic${i}`);
+                if (checkbox && checkbox.checked) {
+                    additionalMechanics.push(parseInt(checkbox.value));
+                }
+            }
+            return additionalMechanics;
+        }
 	        
 	        // 4. FORZAR función de debug
 	        window.debugJobs = function() {
