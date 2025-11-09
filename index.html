@@ -3702,199 +3702,407 @@ Estado: ${appointment.status}
     };
     
 	// ===================================
-    
-	// ===================================
-	// 🚨 SOLUCIÓN RADICAL - REEMPLAZO COMPLETO
+	// CORRECCIÓN FORZADA DE BOTONES - VERSIÓN 2.0
 	// ===================================
 
-	// ELIMINAR TODOS los event listeners anteriores
-	document.querySelectorAll('*').forEach(el => {
-	    el.onclick = null;
-	    el.addEventListener = null;
+	// Esperar a que la página esté completamente cargada
+	document.addEventListener('DOMContentLoaded', function() {
+	    console.log('🚨 Iniciando corrección forzada de botones...');
+	    
+	    // Función de corrección forzada
+	    function aplicarCorreccionForzada() {
+	        console.log('🔧 Aplicando corrección forzada...');
+	        
+	        // 1. FORZAR la reescritura de las funciones
+	        window.openJobModal = function(jobId = null) {
+	            console.log('🔧 FORZADA: openJobModal ejecutada con jobId:', jobId);
+	            
+	            try {
+	                // Buscar el modal
+	                const modal = document.getElementById('jobModal');
+	                if (!modal) {
+	                    console.error('❌ FORZADA: Modal no encontrado');
+	                    alert('Error: Modal no encontrado. Recarga la página.');
+	                    return;
+	                }
+	                
+	                // Abrir modal
+	                modal.style.display = 'flex';
+	                modal.classList.add('show');
+	                console.log('✅ FORZADA: Modal abierto exitosamente');
+	                
+	                // Limpiar formulario si es nuevo trabajo
+	                if (!jobId) {
+	                    const form = modal.querySelector('form') || modal;
+	                    if (form) {
+	                        form.reset();
+	                        console.log('✅ FORZADA: Formulario limpiado');
+	                    }
+	                }
+	                
+	                // Enfocar primer campo
+	                const firstInput = modal.querySelector('input, select, textarea');
+	                if (firstInput) {
+	                    setTimeout(() => firstInput.focus(), 100);
+	                    console.log('✅ FORZADA: Primer campo enfocado');
+	                }
+	                
+	            } catch (error) {
+	                console.error('❌ FORZADA: Error en openJobModal:', error);
+	                alert('Error al abrir el modal: ' + error.message);
+	            }
+	        };
+	        
+	        // 2. FORZAR función para cerrar modal
+	        window.closeJobModal = function() {
+	            console.log('🔧 FORZADA: closeJobModal ejecutada');
+	            
+	            try {
+	                const modal = document.getElementById('jobModal');
+	                if (modal) {
+	                    modal.style.display = 'none';
+	                    modal.classList.remove('show');
+	                    console.log('✅ FORZADA: Modal cerrado exitosamente');
+	                }
+	            } catch (error) {
+	                console.error('❌ FORZADA: Error en closeJobModal:', error);
+	            }
+	        };
+	        
+	        // 3. FORZAR función para guardar trabajo
+	        window.saveJob = function() {
+	            console.log('🔧 FORZADA: saveJob ejecutada');
+	            
+	            try {
+	                const modal = document.getElementById('jobModal');
+	                if (!modal) {
+	                    alert('Error: Modal no encontrado');
+	                    return;
+	                }
+	                
+	                // Obtener datos del formulario
+	                const form = modal.querySelector('form');
+	                if (!form) {
+	                    alert('Error: Formulario no encontrado');
+	                    return;
+	                }
+	                
+	                const formData = new FormData(form);
+	                const jobData = {
+	                    id: Date.now().toString(),
+	                    clientName: formData.get('clientName') || '',
+	                    phone: formData.get('phone') || '',
+	                    vehicle: formData.get('vehicle') || '',
+	                    plate: formData.get('plate') || '',
+	                    service: formData.get('service') || '',
+	                    mechanic: formData.get('mechanic') || '',
+	                    arrivalDate: formData.get('arrivalDate') || new Date().toISOString().split('T')[0],
+	                    status: 'En proceso',
+	                    createdAt: new Date().toISOString()
+	                };
+	                
+	                // Validar datos básicos
+	                if (!jobData.clientName.trim()) {
+	                    alert('Por favor ingresa el nombre del cliente');
+	                    return;
+	                }
+	                
+	                // Obtener trabajos existentes
+	                const existingJobs = JSON.parse(localStorage.getItem('taller-jobs') || '[]');
+	                existingJobs.push(jobData);
+	                localStorage.setItem('taller-jobs', JSON.stringify(existingJobs));
+	                
+	                console.log('✅ FORZADA: Trabajo guardado:', jobData);
+	                
+	                // Cerrar modal y recargar
+	                window.closeJobModal();
+	                setTimeout(() => {
+	                    location.reload();
+	                }, 500);
+	                
+	                alert('✅ Trabajo guardado exitosamente');
+	                
+	            } catch (error) {
+	                console.error('❌ FORZADA: Error en saveJob:', error);
+	                alert('Error al guardar: ' + error.message);
+	            }
+	        };
+	        
+	        // 4. FORZAR función de debug
+	        window.debugJobs = function() {
+	            const state = {
+	                jobs: window.jobs || 'No inicializado',
+	                jobs_length: window.jobs ? window.jobs.length : 0,
+	                localStorage_taller: localStorage.getItem('taller-jobs') || 'No existe',
+	                mechanics: window.mechanics || 'No inicializado',
+	                functions: {
+	                    openJobModal: typeof window.openJobModal,
+	                    closeJobModal: typeof window.closeJobModal,
+	                    saveJob: typeof window.saveJob
+	                }
+	            };
+	            console.log('🔍 FORZADA - Estado del sistema:', state);
+	            alert('✅ Revisa la consola (F12) para ver los detalles');
+	        };
+	        
+	        console.log('✅ FORZADA: Todas las funciones reescritas exitosamente');
+	    }
+	    
+	    // Aplicar corrección
+	    aplicarCorreccionForzada();
+	    
+	    // 5. FUERZA la corrección después de un delay
+	    setTimeout(() => {
+	        console.log('🔄 FORZADA: Aplicando corrección final...');
+	        aplicarCorreccionForzada();
+	    }, 1000);
+	    
+	    // 6. SIEMPRE aplicar corrección cuando se hace clic en botones
+	    document.addEventListener('click', function(e) {
+	        if (e.target && (e.target.onclick || e.target.getAttribute('onclick'))) {
+	            console.log('🔄 FORZADA: Click detectado, aplicando corrección...');
+	            aplicarCorreccionForzada();
+	        }
+	    });
+	    
+	    // 7. VERIFICAR que las funciones están disponibles
+	    setTimeout(() => {
+	        console.log('🔍 FORZADA: Verificando funciones...');
+	        console.log('openJobModal:', typeof window.openJobModal);
+	        console.log('closeJobModal:', typeof window.closeJobModal);
+	        console.log('saveJob:', typeof window.saveJob);
+	        
+	        if (typeof window.openJobModal !== 'function') {
+	            console.warn('⚠️ FORZADA: openJobModal no es una función, aplicando corrección...');
+	            aplicarCorreccionForzada();
+	        }
+	    }, 2000);
+	    
+	    console.log('✅ FORZADA: Corrección inicial aplicada');
 	});
 
-	// FORZAR la creación de un modal temporal
-	function crearModalEmergencia() {
-	    console.log('🚨 SOLUCIÓN RADICAL: Creando modal de emergencia...');
-	    
-	    // Crear modal dinámico
-	    const modal = document.createElement('div');
-	    modal.id = 'modalEmergencia';
-	    modal.style.cssText = `
-	        position: fixed;
-	        top: 0;
-	        left: 0;
-	        width: 100%;
-	        height: 100%;
-	        background: rgba(0,0,0,0.8);
-	        display: flex;
-	        justify-content: center;
-	        align-items: center;
-	        z-index: 10000;
-	    `;
-	    
-	    modal.innerHTML = `
-	        <div style="background: white; padding: 30px; border-radius: 10px; max-width: 500px; width: 90%;">
-	            <h2 style="color: #1E3A8A; margin-bottom: 20px;">🚨 Crear Nuevo Trabajo</h2>
-	            <form id="formEmergencia">
-	                <div style="margin-bottom: 15px;">
-	                    <label style="display: block; margin-bottom: 5px; font-weight: bold;">Nombre del Cliente:</label>
-	                    <input type="text" name="clientName" required style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px;">
-	                </div>
-	                <div style="margin-bottom: 15px;">
-	                    <label style="display: block; margin-bottom: 5px; font-weight: bold;">Teléfono:</label>
-	                    <input type="text" name="phone" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px;">
-	                </div>
-	                <div style="margin-bottom: 15px;">
-	                    <label style="display: block; margin-bottom: 5px; font-weight: bold;">Vehículo:</label>
-	                    <input type="text" name="vehicle" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px;">
-	                </div>
-	                <div style="margin-bottom: 15px;">
-	                    <label style="display: block; margin-bottom: 5px; font-weight: bold;">Placa:</label>
-	                    <input type="text" name="plate" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px;">
-	                </div>
-	                <div style="margin-bottom: 15px;">
-	                    <label style="display: block; margin-bottom: 5px; font-weight: bold;">Servicio:</label>
-	                    <input type="text" name="service" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px;">
-	                </div>
-	                <div style="margin-bottom: 20px;">
-	                    <label style="display: block; margin-bottom: 5px; font-weight: bold;">Mecánico:</label>
-	                    <select name="mechanic" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px;">
-	                        <option value="">Seleccionar mecánico</option>
-	                        <option value="Pedro Barraza">Pedro Barraza</option>
-	                        <option value="Víctor Padilla">Víctor Padilla</option>
-	                    </select>
-	                </div>
-	                <div style="text-align: right;">
-	                    <button type="button" onclick="cerrarModalEmergencia()" style="padding: 10px 20px; margin-right: 10px; background: #666; color: white; border: none; border-radius: 5px; cursor: pointer;">Cancelar</button>
-	                    <button type="submit" style="padding: 10px 20px; background: #1E3A8A; color: white; border: none; border-radius: 5px; cursor: pointer;">Guardar</button>
-	                </div>
-	                <div style="margin-top: 15px; padding: 10px; background: #f0f8ff; border-radius: 5px; font-size: 12px; color: #666;">
-	                    <strong>🎯 FUNCIÓN DE DIAGNÓSTICO:</strong><br>
-	                    • Prueba manual: <code>window.probarSolucionRadical()</code><br>
-	                    • Ver estado: <code>window.diagnosticarSolucion()</code><br>
-	                    • Ver consola: Cmd + Option + I (Mac)
-	                </div>
-	            </form>
-	        </div>
-	    `;
-	    
-	    // Agregar al DOM
-	    document.body.appendChild(modal);
-	    
-	    // Configurar event listener para el formulario
-	    const form = modal.querySelector('#formEmergencia');
-	    form.addEventListener('submit', guardarTrabajoEmergencia);
-	    
-	    console.log('✅ SOLUCIÓN RADICAL: Modal creado y configurado');
-	}
+	// ===================================
+	// PUNTO DE ENTRADA GLOBAL
+	// ===================================
 
-	// Función para cerrar modal
-	function cerrarModalEmergencia() {
-	    const modal = document.getElementById('modalEmergencia');
-	    if (modal) {
-	        modal.remove();
-	        console.log('✅ SOLUCIÓN RADICAL: Modal cerrado');
-	    }
-	}
-
-	// Función para guardar trabajo
-	function guardarTrabajoEmergencia(event) {
-	    event.preventDefault();
-	    console.log('🚨 SOLUCIÓN RADICAL: Guardando trabajo...');
+	// Asegurar que las funciones estén siempre disponibles
+	window.addEventListener('load', function() {
+	    console.log('📋 FORZADA: Página cargada, verificando funciones...');
 	    
-	    const form = event.target;
-	    const formData = new FormData(form);
-	    
-	    const trabajo = {
-	        id: Date.now().toString(),
-	        clientName: formData.get('clientName') || '',
-	        phone: formData.get('phone') || '',
-	        vehicle: formData.get('vehicle') || '',
-	        plate: formData.get('plate') || '',
-	        service: formData.get('service') || '',
-	        mechanic: formData.get('mechanic') || '',
-	        arrivalDate: new Date().toISOString().split('T')[0],
-	        status: 'En proceso',
-	        createdAt: new Date().toISOString()
+	    // Crear botones de prueba en consola
+	    window.probarBotones = function() {
+	        console.log('🧪 FORZADA: Probando botones...');
+	        try {
+	            window.openJobModal();
+	            console.log('✅ openJobModal ejecutada');
+	        } catch (error) {
+	            console.error('❌ Error en prueba:', error);
+	        }
 	    };
 	    
-	    // Guardar en localStorage
-	    const trabajos = JSON.parse(localStorage.getItem('taller-jobs') || '[]');
-	    trabajos.push(trabajo);
-	    localStorage.setItem('taller-jobs', JSON.stringify(trabajos));
+	    console.log('💡 Usa window.probarBotones() en la consola para probar');
+	});
 	    
-	    console.log('✅ SOLUCIÓN RADICAL: Trabajo guardado:', trabajo);
+	console.log('🔧 Corrección forzada de botones aplicada correctamente');
 	    
-	    // Cerrar modal
-	    cerrarModalEmergencia();
-	    
-	    // Mostrar confirmación
-	    alert('✅ Trabajo guardado exitosamente');
-	    
-	    // Recargar página para mostrar el nuevo trabajo
-	    setTimeout(() => {
-	        location.reload();
-	    }, 1000);
-	}
+	// ===================================
+	// 🔧 SOLUCIÓN QUIRÚRGICA - SOLO BOTONES (INTEGRADA)
+	// ===================================
 
-	// CONFIGURAR EVENT LISTENERS SIN CONFLICTOS
-	function configurarEventListeners() {
-	    console.log('🔧 SOLUCIÓN RADICAL: Configurando event listeners...');
+	// NO ELIMINAR NADA DEL CÓDIGO ORIGINAL
+	// SOLO AGREGAR event listeners ADICIONALES
+
+	document.addEventListener('DOMContentLoaded', function() {
+	    console.log('🔧 SOLUCIÓN QUIRÚRGICA: Iniciando corrección específica...');
 	    
-	    // Buscar TODOS los botones de "Nuevo Trabajo" y "Crear Trabajo"
-	    const botones = document.querySelectorAll('button');
-	    botones.forEach((boton, index) => {
-	        const textoBoton = boton.textContent.toLowerCase();
-	        if (textoBoton.includes('nuevo trabajo') || textoBoton.includes('crear trabajo')) {
-	            console.log(`🔗 SOLUCIÓN RADICAL: Enlazando botón ${index}: "${textoBoton}"`);
+	    // Función específica para los botones de trabajo
+	    function agregarEventListenerBotonesTrabajo() {
+	        console.log('🔍 SOLUCIÓN QUIRÚRGICA: Buscando botones de trabajo...');
+	        
+	        // Buscar botones específicos
+	        const botones = [
+	            ...document.querySelectorAll('button'),
+	            ...document.querySelectorAll('button.btn')
+	        ];
+	        
+	        let botonesEnlazados = 0;
+	        
+	        botones.forEach((boton, index) => {
+	            const textoBoton = boton.textContent.toLowerCase().trim();
 	            
-	            // Remover event listeners existentes
-	            boton.removeEventListener('click', boton.onclick);
-	            boton.onclick = null;
-	            
-	            // Agregar nuevo event listener
-	            boton.addEventListener('click', function(e) {
-	                e.preventDefault();
-	                e.stopPropagation();
-	                console.log('🚀 SOLUCIÓN RADICAL: Click detectado en botón de trabajo');
-	                crearModalEmergencia();
-	                return false;
-	            });
+	            // Solo modificar botones específicos de trabajo
+	            if (textoBoton.includes('nuevo trabajo') || 
+	                textoBoton.includes('crear trabajo') || 
+	                textoBoton.includes('crear primer trabajo')) {
+	                
+	                console.log(`✅ SOLUCIÓN QUIRÚRGICA: Encontrado botón ${index}: "${textoBoton}"`);
+	                
+	                // Solo agregar si no tiene onclick o si es problemático
+	                if (!boton.onclick || boton.onclick === '') {
+	                    // Agregar event listener ADICIONAL
+	                    boton.addEventListener('click', function(e) {
+	                        e.preventDefault();
+	                        e.stopPropagation();
+	                        console.log('🚀 SOLUCIÓN QUIRÚRGICA: Click detectado en botón:', textoBoton);
+	                        
+	                        // Llamar a la función original si existe
+	                        if (typeof window.openJobModal === 'function') {
+	                            console.log('✅ SOLUCIÓN QUIRÚRGICA: Ejecutando openJobModal original...');
+	                            window.openJobModal();
+	                        } else {
+	                            console.log('⚠️ SOLUCIÓN QUIRÚRGICA: Función original no existe, usando modal de emergencia...');
+	                            crearModalEmergenciaMinimo();
+	                        }
+	                        
+	                        return false;
+	                    });
+	                    botonesEnlazados++;
+	                } else {
+	                    console.log(`🔄 SOLUCIÓN QUIRÚRGICA: Botón ya tiene onclick: "${textoBoton}"`);
+	                }
+	            }
+	        });
+	        
+	        console.log(`✅ SOLUCIÓN QUIRÚRGICA: ${botonesEnlazados} botones enlazados`);
+	        return botonesEnlazados;
+	    }
+	    
+	    // Modal de emergencia mínimo (solo para casos extremos)
+	    function crearModalEmergenciaMinimo() {
+	        console.log('🚨 SOLUCIÓN QUIRÚRGICA: Creando modal mínimo...');
+	        
+	        // Solo crear si no existe
+	        if (document.getElementById('modalEmergenciaMinimo')) {
+	            return;
 	        }
-	    });
+	        
+	        const modal = document.createElement('div');
+	        modal.id = 'modalEmergenciaMinimo';
+	        modal.style.cssText = `
+	            position: fixed;
+	            top: 0;
+	            left: 0;
+	            width: 100%;
+	            height: 100%;
+	            background: rgba(0,0,0,0.8);
+	            display: flex;
+	            justify-content: center;
+	            align-items: center;
+	            z-index: 9999;
+	        `;
+	        
+	        modal.innerHTML = `
+	            <div style="background: white; padding: 20px; border-radius: 8px; max-width: 400px; width: 90%; font-family: Arial;">
+	                <h3 style="color: #1E3A8A; margin-bottom: 15px;">🚨 Nuevo Trabajo</h3>
+	                <form id="formMinimo">
+	                    <div style="margin-bottom: 10px;">
+	                        <label style="display: block; font-weight: bold; margin-bottom: 3px;">Cliente:</label>
+	                        <input type="text" name="clientName" required style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+	                    </div>
+	                    <div style="margin-bottom: 10px;">
+	                        <label style="display: block; font-weight: bold; margin-bottom: 3px;">Teléfono:</label>
+	                        <input type="text" name="phone" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+	                    </div>
+	                    <div style="margin-bottom: 10px;">
+	                        <label style="display: block; font-weight: bold; margin-bottom: 3px;">Vehículo:</label>
+	                        <input type="text" name="vehicle" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+	                    </div>
+	                    <div style="margin-bottom: 15px;">
+	                        <label style="display: block; font-weight: bold; margin-bottom: 3px;">Placa:</label>
+	                        <input type="text" name="plate" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+	                    </div>
+	                    <div style="text-align: right;">
+	                        <button type="button" onclick="cerrarModalMinimo()" style="padding: 8px 15px; margin-right: 8px; background: #666; color: white; border: none; border-radius: 4px;">Cancelar</button>
+	                        <button type="submit" style="padding: 8px 15px; background: #1E3A8A; color: white; border: none; border-radius: 4px;">Guardar</button>
+	                    </div>
+	                </form>
+	                <div style="margin-top: 10px; padding: 8px; background: #f0f8ff; border-radius: 4px; font-size: 11px; color: #666;">
+	                    <strong>🧪 Diagnóstico:</strong><br>
+	                    • <code>window.probarSolucionQuirurgica()</code><br>
+	                    • <code>window.diagnosticarSolucionQuirurgica()</code>
+	                </div>
+	            </div>
+	        `;
+	        
+	        document.body.appendChild(modal);
+	        
+	        // Configurar formulario
+	        const form = modal.querySelector('#formMinimo');
+	        form.addEventListener('submit', function(e) {
+	            e.preventDefault();
+	            const formData = new FormData(form);
+	            
+	            const trabajo = {
+	                id: Date.now().toString(),
+	                clientName: formData.get('clientName') || '',
+	                phone: formData.get('phone') || '',
+	                vehicle: formData.get('vehicle') || '',
+	                plate: formData.get('plate') || '',
+	                service: 'Servicio general',
+	                mechanic: 'Sin asignar',
+	                arrivalDate: new Date().toISOString().split('T')[0],
+	                status: 'En proceso',
+	                createdAt: new Date().toISOString()
+	            };
+	            
+	            // Guardar
+	            const trabajos = JSON.parse(localStorage.getItem('taller-jobs') || '[]');
+	            trabajos.push(trabajo);
+	            localStorage.setItem('taller-jobs', JSON.stringify(trabajos));
+	            
+	            console.log('✅ SOLUCIÓN QUIRÚRGICA: Trabajo guardado:', trabajo);
+	            
+	            // Cerrar y recargar
+	            cerrarModalMinimo();
+	            alert('✅ Trabajo guardado exitosamente');
+	            setTimeout(() => location.reload(), 500);
+	        });
+	        
+	        console.log('✅ SOLUCIÓN QUIRÚRGICA: Modal mínimo creado');
+	    }
 	    
-	    console.log('✅ SOLUCIÓN RADICAL: Event listeners configurados');
-	}
+	    function cerrarModalMinimo() {
+	        const modal = document.getElementById('modalEmergenciaMinimo');
+	        if (modal) modal.remove();
+	    }
+	    
+	    // Ejecutar función quirúrgica
+	    agregarEventListenerBotonesTrabajo();
+	    
+	    // Reconfigurar periódicamente (cada 5 segundos)
+	    setInterval(agregarEventListenerBotonesTrabajo, 5000);
+	    
+	    // Funciones globales
+	    window.cerrarModalMinimo = cerrarModalMinimo;
+	    window.probarSolucionQuirurgica = function() {
+	        console.log('🧪 SOLUCIÓN QUIRÚRGICA: Ejecutando prueba...');
+	        agregarEventListenerBotonesTrabajo();
+	    };
+	    
+	    window.diagnosticarSolucionQuirurgica = function() {
+	        const botones = document.querySelectorAll('button');
+	        console.log('🔍 SOLUCIÓN QUIRÚRGICA - Estado:');
+	        console.log('Total botones:', botones.length);
+	        botones.forEach((boton, index) => {
+	            const texto = boton.textContent.trim().toLowerCase();
+	            if (texto.includes('trabajo')) {
+	                console.log(`Botón ${index}: "${texto}" - onclick: ${boton.onclick ? 'SÍ' : 'NO'}`);
+	                console.log(`Event listeners: ${boton.getAttribute('data-listener-added') || 'NO'}`);
+	            }
+	        });
+	    };
+	    
+	    console.log('✅ SOLUCIÓN QUIRÚRGICA: Configuración completada');
+	});
 
-	// EJECUTAR INMEDIATAMENTE
-	console.log('🚀 SOLUCIÓN RADICAL: Iniciando...');
-	configurarEventListeners();
-
-	// Reconfigurar periódicamente para garantizar que funcione
-	setInterval(configurarEventListeners, 3000);
-
-	// Función de prueba
-	window.probarSolucionRadical = function() {
-	    console.log('🧪 SOLUCIÓN RADICAL: Ejecutando prueba...');
-	    crearModalEmergencia();
+	// Hacer funciones globales disponibles
+	window.cerrarModalMinimo = function() {
+	    const modal = document.getElementById('modalEmergenciaMinimo');
+	    if (modal) modal.remove();
 	};
 
-	// Función de diagnóstico
-	window.diagnosticarSolucion = function() {
-	    const botones = document.querySelectorAll('button');
-	    console.log('🔍 SOLUCIÓN RADICAL - Diagnóstico:');
-	    console.log('Total de botones:', botones.length);
-	    botones.forEach((boton, index) => {
-	        const texto = boton.textContent.trim();
-	        if (texto.includes('trabajo')) {
-	        	console.log(`Botón ${index}: "${texto}" - onclick: ${boton.onclick ? 'sí' : 'no'}`);
-	        }
-	    });
-	};
-
-	console.log('💡 SOLUCIÓN RADICAL: Usa window.probarSolucionRadical() o window.diagnosticarSolucion()');
-	console.log('🔍 MAC: Abrir consola con Cmd + Option + I');
-	</script>
+	console.log('🔧 SOLUCIÓN QUIRÚRGICA: Script cargado - ES MUY CONSERVADOR');
+	console.log('💡 MAC: Abrir consola con Cmd + Option + I');
+</script>
 </body>
 </html>
