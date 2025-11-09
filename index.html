@@ -79,19 +79,191 @@
         /* Layout principal mejorado */
         .main-layout {
             display: flex;
-            min-height: calc(100vh - 120px);
+            min-height: calc(100vh - 80px);
         }
         
+        /* Sidebar Navigation */
         .sidebar {
-            width: 250px;
+            width: 280px;
             background: var(--neutral-100);
             border-right: 1px solid var(--neutral-400);
-            padding: var(--sm);
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            position: fixed;
+            height: calc(100vh - 80px);
+            z-index: 1000;
+            transition: all 0.3s ease;
         }
         
+        .sidebar.collapsed {
+            width: 60px;
+        }
+        
+        .sidebar.collapsed .logo-text,
+        .sidebar.collapsed .nav-text,
+        .sidebar.collapsed .nav-section-title {
+            display: none;
+        }
+        
+        .sidebar.collapsed .nav-item {
+            justify-content: center;
+        }
+        
+        .sidebar-header {
+            padding: var(--md);
+            border-bottom: 1px solid var(--neutral-400);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .logo {
+            display: flex;
+            align-items: center;
+            font-weight: 600;
+            color: var(--primary-500);
+        }
+        
+        .logo-text {
+            font-size: 16px;
+            margin-left: 8px;
+        }
+        
+        .sidebar-toggle {
+            background: none;
+            border: none;
+            font-size: 18px;
+            cursor: pointer;
+            padding: 4px;
+            border-radius: 4px;
+            color: var(--neutral-600);
+            transition: all 0.2s;
+        }
+        
+        .sidebar-toggle:hover {
+            background: var(--neutral-100);
+            color: var(--primary-500);
+        }
+        
+        .sidebar-nav {
+            flex: 1;
+            padding: var(--sm) 0;
+            overflow-y: auto;
+        }
+        
+        .nav-section {
+            margin-bottom: var(--md);
+        }
+        
+        .nav-section-title {
+            padding: var(--xs) var(--md);
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--neutral-600);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: var(--xs);
+        }
+        
+        .nav-item {
+            display: flex;
+            align-items: center;
+            padding: var(--sm) var(--md);
+            cursor: pointer;
+            transition: all 0.2s;
+            border-left: 3px solid transparent;
+        }
+        
+        .nav-item:hover {
+            background: var(--primary-100);
+            color: var(--primary-500);
+        }
+        
+        .nav-item.active {
+            background: var(--primary-500);
+            color: white;
+            border-left-color: var(--primary-700);
+        }
+        
+        .nav-item.active:hover {
+            background: var(--primary-600);
+        }
+        
+        .nav-icon {
+            font-size: 18px;
+            width: 24px;
+            text-align: center;
+            margin-right: 12px;
+        }
+        
+        .nav-text {
+            font-size: 14px;
+            font-weight: 500;
+        }
+        
+        /* Main Content */
         .main-content {
             flex: 1;
-            padding: var(--md);
+            margin-left: 280px;
+            transition: margin-left 0.3s ease;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .main-content.sidebar-collapsed {
+            margin-left: 60px;
+        }
+        
+        /* Header mejorado */
+        .header {
+            background: var(--neutral-100);
+            border-bottom: 1px solid var(--neutral-400);
+            padding: var(--sm) var(--md);
+        }
+        
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .page-title h1 {
+            font-size: 24px;
+            font-weight: 600;
+            color: var(--neutral-900);
+            margin: 0;
+        }
+        
+        .page-title p {
+            font-size: 14px;
+            color: var(--neutral-600);
+            margin: 0;
+        }
+        
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .sidebar {
+                transform: translateX(-100%);
+            }
+            
+            .sidebar.mobile-open {
+                transform: translateX(0);
+            }
+            
+            .main-content {
+                margin-left: 0;
+            }
+            
+            .main-content.sidebar-collapsed {
+                margin-left: 0;
+            }
+            
+            .header-content {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: var(--sm);
+            }
         }
 
         /* Header */
@@ -149,26 +321,7 @@
             font-size: 14px;
         }
 
-        /* Navegación mejorada */
-        .nav {
-            background: var(--neutral-100);
-            border-bottom: 1px solid var(--neutral-400);
-        }
-
-        .nav-content {
-            display: flex;
-            gap: var(--sm);
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            padding: var(--sm) 0;
-        }
-
-        .nav-item {
-            padding: var(--sm) var(--md);
-            cursor: pointer;
-            border-bottom: 2px solid transparent;
-            transition: all 0.2s;
+        /* Navegación mejorada - Eliminada la navegación horizontal */
             font-weight: 500;
             border-radius: var(--xs);
             min-width: 100px;
@@ -995,65 +1148,106 @@
     </style>
 </head>
 <body>
-    <!-- Header -->
-    <header class="header">
-        <div class="container">
-            <div class="header-content">
+    <!-- Layout Principal con Sidebar -->
+    <div class="main-layout">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
                 <div class="logo">
                     <img src="assets/images/logo-multidiagnosticos.png" alt="Multidiagnósticos AS" style="width: 40px; height: 40px; border-radius: 8px; margin-right: 8px;">
-                    <span>Multidiagnósticos AS</span>
+                    <span class="logo-text">Multidiagnósticos AS</span>
                 </div>
-                <div class="user-menu">
-                    <div class="user-info">
-                        <div class="user-name" id="userName">Admin</div>
-                        <div class="user-role" id="userRole">Administrador</div>
+                <button class="sidebar-toggle" onclick="toggleSidebar()">
+                    ☰
+                </button>
+            </div>
+            
+            <nav class="sidebar-nav">
+                <!-- Dashboard -->
+                <div class="nav-section">
+                    <div class="nav-item active" onclick="showSection('dashboard')" id="nav-dashboard">
+                        <span class="nav-icon">📊</span>
+                        <span class="nav-text">Dashboard</span>
                     </div>
-                    <button class="btn-logout" onclick="logout()">Cerrar Sesión</button>
                 </div>
-            </div>
-        </div>
-    </header>
-
-    <!-- Navegación -->
-    <nav class="nav">
-        <div class="container">
-            <div class="nav-content">
-                <div class="nav-item active" onclick="showSection('dashboard')" id="nav-dashboard">
-                    📊 Dashboard
+                
+                <!-- Gestión de Taller -->
+                <div class="nav-section">
+                    <div class="nav-section-title">Gestión del Taller</div>
+                    <div class="nav-item" onclick="showSection('jobs')" id="nav-jobs">
+                        <span class="nav-icon">🔨</span>
+                        <span class="nav-text">Trabajos</span>
+                    </div>
+                    <div class="nav-item" onclick="showSection('mechanics')" id="nav-mechanics">
+                        <span class="nav-icon">👥</span>
+                        <span class="nav-text">Mecánicos</span>
+                    </div>
+                    <div class="nav-item" onclick="showSection('reception')" id="nav-reception">
+                        <span class="nav-icon">📋</span>
+                        <span class="nav-text">Recepción</span>
+                    </div>
                 </div>
-                <div class="nav-item" onclick="showSection('jobs')" id="nav-jobs">
-                    🔨 Trabajos
+                
+                <!-- Ventas y Finanzas -->
+                <div class="nav-section">
+                    <div class="nav-section-title">Ventas y Finanzas</div>
+                    <div class="nav-item" onclick="showSection('quotes')" id="nav-quotes">
+                        <span class="nav-icon">💰</span>
+                        <span class="nav-text">Cotizaciones</span>
+                    </div>
+                    <div class="nav-item" onclick="showSection('finances')" id="nav-finances">
+                        <span class="nav-icon">💳</span>
+                        <span class="nav-text">Finanzas</span>
+                    </div>
+                    <div class="nav-item" onclick="showSection('settlement')" id="nav-settlement">
+                        <span class="nav-icon">💼</span>
+                        <span class="nav-text">Liquidación</span>
+                    </div>
                 </div>
-                <div class="nav-item" onclick="showSection('mechanics')" id="nav-mechanics">
-                    👥 Mecánicos
+                
+                <!-- Herramientas -->
+                <div class="nav-section">
+                    <div class="nav-section-title">Herramientas</div>
+                    <div class="nav-item" onclick="showSection('calendar')" id="nav-calendar">
+                        <span class="nav-icon">📅</span>
+                        <span class="nav-text">Calendario</span>
+                    </div>
+                    <div class="nav-item" onclick="showSection('vehicle-history')" id="nav-vehicle-history">
+                        <span class="nav-icon">🚗</span>
+                        <span class="nav-text">Historial Vehículo</span>
+                    </div>
+                    <div class="nav-item" onclick="showSection('notifications')" id="nav-notifications">
+                        <span class="nav-icon">🔔</span>
+                        <span class="nav-text">Notificaciones</span>
+                    </div>
+                    <div class="nav-item" onclick="showSection('reports')" id="nav-reports">
+                        <span class="nav-icon">📊</span>
+                        <span class="nav-text">Reportes</span>
+                    </div>
                 </div>
-                <div class="nav-item" onclick="showSection('finances')" id="nav-finances">
-                    💰 Finanzas
+            </nav>
+        </aside>
+        
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Header -->
+            <header class="header">
+                <div class="header-content">
+                    <div class="page-title">
+                        <h1 id="pageTitle">Dashboard</h1>
+                        <p id="pageSubtitle">Resumen general del taller</p>
+                    </div>
+                    <div class="user-menu">
+                        <div class="user-info">
+                            <div class="user-name" id="userName">Admin</div>
+                            <div class="user-role" id="userRole">Administrador</div>
+                        </div>
+                        <button class="btn-logout" onclick="logout()">Cerrar Sesión</button>
+                    </div>
                 </div>
-                <div class="nav-item" onclick="showSection('settlement')" id="nav-settlement">
-                    💼 Liquidación
-                </div>
-                <div class="nav-item" onclick="showSection('reception')" id="nav-reception">
-                    📋 Recepción
-                </div>
-                <div class="nav-item" onclick="showSection('quotes')" id="nav-quotes">
-                    💰 Cotizaciones
-                </div>
-                <div class="nav-item" onclick="showSection('calendar')" id="nav-calendar">
-                    📅 Calendario
-                </div>
-                <div class="nav-item" onclick="showSection('vehicle-history')" id="nav-vehicle-history">
-                    🚗 Historial Vehículo
-                </div>
-                <div class="nav-item" onclick="showSection('notifications')" id="nav-notifications">
-                    🔔 Notificaciones
-                </div>
-                <div class="nav-item" onclick="showSection('reports')" id="nav-reports">
-                    📈 Reportes
-                </div>
-            </div>
-        </div>
-    </nav>
+            </header>
+        </main>
+    </div>
 
     <!-- Contenido Principal -->
     <main class="container">
@@ -1380,6 +1574,7 @@
             </div>
         </section>
     </main>
+</div>
 
     <!-- Modal Trabajos -->
     <div class="modal" id="jobModal">
@@ -1881,7 +2076,30 @@
             document.getElementById('loginModal').classList.add('active');
         }
 
-        // Funciones de navegación
+        // Funciones de navegación mejoradas
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const mainContent = document.querySelector('.main-content');
+            
+            sidebar.classList.toggle('collapsed');
+            mainContent.classList.toggle('sidebar-collapsed');
+        }
+        
+        // Títulos de las páginas
+        const pageTitles = {
+            'dashboard': { title: 'Dashboard', subtitle: 'Resumen general del taller' },
+            'jobs': { title: 'Gestión de Trabajos', subtitle: 'Administra las órdenes de trabajo' },
+            'mechanics': { title: 'Gestión de Mecánicos', subtitle: 'Administra el personal técnico' },
+            'finances': { title: 'Finanzas', subtitle: 'Control financiero del taller' },
+            'settlement': { title: 'Liquidación', subtitle: 'Gestión de comisiones' },
+            'reception': { title: 'Recepción', subtitle: 'Recepción de vehículos' },
+            'quotes': { title: 'Cotizaciones', subtitle: 'Gestión de cotizaciones' },
+            'calendar': { title: 'Calendario', subtitle: 'Agenda de citas y trabajos' },
+            'vehicle-history': { title: 'Historial de Vehículos', subtitle: 'Historial de servicios por vehículo' },
+            'notifications': { title: 'Notificaciones', subtitle: 'Alertas y notificaciones' },
+            'reports': { title: 'Reportes', subtitle: 'Reportes y estadísticas' }
+        };
+        
         function showSection(sectionName) {
             // Ocultar todas las secciones
             document.querySelectorAll('.section').forEach(section => {
@@ -1889,13 +2107,29 @@
             });
             
             // Mostrar sección seleccionada
-            document.getElementById('section-' + sectionName).classList.add('active');
+            const targetSection = document.getElementById('section-' + sectionName);
+            if (targetSection) {
+                targetSection.classList.add('active');
+            } else {
+                console.warn('Sección no encontrada: section-' + sectionName);
+            }
             
             // Actualizar navegación
             document.querySelectorAll('.nav-item').forEach(item => {
                 item.classList.remove('active');
             });
-            document.getElementById('nav-' + sectionName).classList.add('active');
+            
+            const navItem = document.getElementById('nav-' + sectionName);
+            if (navItem) {
+                navItem.classList.add('active');
+            }
+            
+            // Actualizar títulos de página
+            const pageInfo = pageTitles[sectionName];
+            if (pageInfo) {
+                document.getElementById('pageTitle').textContent = pageInfo.title;
+                document.getElementById('pageSubtitle').textContent = pageInfo.subtitle;
+            }
             
             // Cargar datos de la sección
             if (sectionName === 'dashboard') {
@@ -5160,6 +5394,8 @@ Estado: ${appointment.status}
 	});
 	
 	// Hacer funciones disponibles globalmente
+	window.toggleSidebar = toggleSidebar;
+	window.showSection = showSection;
 	window.settleJob = settleJob;
 	window.searchClient = searchClient;
 	window.searchInventory = searchInventory;
