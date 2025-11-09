@@ -3553,5 +3553,348 @@ Estado: ${appointment.status}
             }
         });
     </script>
+    
+    <script>
+    // CORRECCIÓN DE BOTONES - MANTENER ESTE CÓDIGO
+    console.log('🔧 Aplicando corrección a botones de trabajo...');
+    
+    window.openJobModal = function(jobId = null) {
+        console.log('🔧 openJobModal ejecutada:', jobId);
+        
+        const modal = document.getElementById('jobModal');
+        if (!modal) {
+            console.error('❌ Modal no encontrado');
+            alert('Error: Modal no encontrado. Recarga la página.');
+            return;
+        }
+        
+        const form = document.getElementById('jobForm');
+        if (!form) {
+            console.error('❌ Formulario no encontrado');
+            alert('Error: Formulario no encontrado.');
+            return;
+        }
+        
+        // Limpiar formulario
+        form.reset();
+        
+        if (jobId) {
+            // EDITAR trabajo existente
+            const job = window.jobs.find(j => j.id == jobId);
+            if (job) {
+                console.log('✅ Editando trabajo:', job);
+                document.getElementById('jobModalTitle').textContent = 'Editar Trabajo';
+                document.getElementById('jobId').value = job.id;
+                document.getElementById('jobPlate').value = job.plate || '';
+                document.getElementById('jobMileage').value = job.mileage || '';
+                document.getElementById('jobMechanic').value = job.mechanicId || '';
+                document.getElementById('jobStatus').value = job.status || 'pendiente';
+                document.getElementById('jobDescription').value = job.description || '';
+                document.getElementById('jobParts').value = job.parts || '';
+                document.getElementById('jobPartsCost').value = job.partsCost || 0;
+                document.getElementById('jobLaborCost').value = job.laborCost || 0;
+                document.getElementById('jobSalePrice').value = job.salePrice || 0;
+            } else {
+                console.error('❌ Trabajo no encontrado:', jobId);
+                alert('Error: Trabajo no encontrado.');
+                return;
+            }
+        } else {
+            // NUEVO trabajo
+            console.log('✅ Creando nuevo trabajo');
+            document.getElementById('jobModalTitle').textContent = 'Nuevo Trabajo';
+            document.getElementById('jobId').value = '';
+            document.getElementById('jobStatus').value = 'pendiente';
+            document.getElementById('jobDate').value = new Date().toISOString().split('T')[0];
+        }
+        
+        // Mostrar modal
+        modal.classList.add('active');
+        console.log('✅ Modal abierto correctamente');
+    };
+    
+    window.closeJobModal = function() {
+        console.log('🔧 Cerrando modal');
+        const modal = document.getElementById('jobModal');
+        if (modal) {
+            modal.classList.remove('active');
+            console.log('✅ Modal cerrado');
+        }
+    };
+    
+    window.saveJob = function(event) {
+        console.log('🔧 Guardando trabajo...');
+        event.preventDefault();
+        
+        const form = document.getElementById('jobForm');
+        if (!form) {
+            console.error('❌ Formulario no encontrado');
+            alert('Error: Formulario no encontrado.');
+            return;
+        }
+        
+        const jobId = document.getElementById('jobId').value;
+        
+        // Crear objeto trabajo
+        const job = {
+            id: jobId ? parseInt(jobId) : Date.now(),
+            plate: form.jobPlate.value.trim(),
+            mileage: parseInt(form.jobMileage.value) || 0,
+            mechanicId: parseInt(form.jobMechanic.value),
+            status: form.jobStatus.value,
+            description: form.jobDescription.value.trim(),
+            parts: form.jobParts.value.trim(),
+            partsCost: parseFloat(form.jobPartsCost.value) || 0,
+            laborCost: parseFloat(form.jobLaborCost.value) || 0,
+            salePrice: parseFloat(form.jobSalePrice.value) || 0,
+            date: form.jobDate.value || new Date().toISOString().split('T')[0]
+        };
+        
+        // Validaciones
+        if (!job.plate) {
+            alert('Error: La placa es obligatoria');
+            return;
+        }
+        
+        if (!job.mechanicId) {
+            alert('Error: Debes seleccionar un mecánico');
+            return;
+        }
+        
+        console.log('✅ Datos del trabajo:', job);
+        
+        // Inicializar array si no existe
+        if (!window.jobs) {
+            window.jobs = JSON.parse(localStorage.getItem('taller-jobs') || '[]');
+        }
+        
+        if (jobId) {
+            // ACTUALIZAR trabajo existente
+            const index = window.jobs.findIndex(j => j.id == jobId);
+            if (index !== -1) {
+                window.jobs[index] = job;
+                console.log('✅ Trabajo actualizado');
+            } else {
+                console.error('❌ Índice de trabajo no encontrado');
+            }
+        } else {
+            // CREAR nuevo trabajo
+            window.jobs.push(job);
+            console.log('✅ Nuevo trabajo creado');
+        }
+        
+        // Guardar en localStorage
+        localStorage.setItem('taller-jobs', JSON.stringify(window.jobs));
+        
+        // Cerrar modal y recargar vista
+        closeJobModal();
+        
+        if (typeof loadJobs === 'function') {
+            loadJobs();
+        }
+        
+        if (typeof loadDashboard === 'function') {
+            loadDashboard();
+        }
+        
+        alert('✅ Trabajo guardado exitosamente');
+        console.log('✅ Proceso completado');
+    };
+    
+	// ===================================
+    
+	// ===================================
+	// 🚨 SOLUCIÓN RADICAL - REEMPLAZO COMPLETO
+	// ===================================
+
+	// ELIMINAR TODOS los event listeners anteriores
+	document.querySelectorAll('*').forEach(el => {
+	    el.onclick = null;
+	    el.addEventListener = null;
+	});
+
+	// FORZAR la creación de un modal temporal
+	function crearModalEmergencia() {
+	    console.log('🚨 SOLUCIÓN RADICAL: Creando modal de emergencia...');
+	    
+	    // Crear modal dinámico
+	    const modal = document.createElement('div');
+	    modal.id = 'modalEmergencia';
+	    modal.style.cssText = `
+	        position: fixed;
+	        top: 0;
+	        left: 0;
+	        width: 100%;
+	        height: 100%;
+	        background: rgba(0,0,0,0.8);
+	        display: flex;
+	        justify-content: center;
+	        align-items: center;
+	        z-index: 10000;
+	    `;
+	    
+	    modal.innerHTML = `
+	        <div style="background: white; padding: 30px; border-radius: 10px; max-width: 500px; width: 90%;">
+	            <h2 style="color: #1E3A8A; margin-bottom: 20px;">🚨 Crear Nuevo Trabajo</h2>
+	            <form id="formEmergencia">
+	                <div style="margin-bottom: 15px;">
+	                    <label style="display: block; margin-bottom: 5px; font-weight: bold;">Nombre del Cliente:</label>
+	                    <input type="text" name="clientName" required style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px;">
+	                </div>
+	                <div style="margin-bottom: 15px;">
+	                    <label style="display: block; margin-bottom: 5px; font-weight: bold;">Teléfono:</label>
+	                    <input type="text" name="phone" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px;">
+	                </div>
+	                <div style="margin-bottom: 15px;">
+	                    <label style="display: block; margin-bottom: 5px; font-weight: bold;">Vehículo:</label>
+	                    <input type="text" name="vehicle" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px;">
+	                </div>
+	                <div style="margin-bottom: 15px;">
+	                    <label style="display: block; margin-bottom: 5px; font-weight: bold;">Placa:</label>
+	                    <input type="text" name="plate" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px;">
+	                </div>
+	                <div style="margin-bottom: 15px;">
+	                    <label style="display: block; margin-bottom: 5px; font-weight: bold;">Servicio:</label>
+	                    <input type="text" name="service" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px;">
+	                </div>
+	                <div style="margin-bottom: 20px;">
+	                    <label style="display: block; margin-bottom: 5px; font-weight: bold;">Mecánico:</label>
+	                    <select name="mechanic" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px;">
+	                        <option value="">Seleccionar mecánico</option>
+	                        <option value="Pedro Barraza">Pedro Barraza</option>
+	                        <option value="Víctor Padilla">Víctor Padilla</option>
+	                    </select>
+	                </div>
+	                <div style="text-align: right;">
+	                    <button type="button" onclick="cerrarModalEmergencia()" style="padding: 10px 20px; margin-right: 10px; background: #666; color: white; border: none; border-radius: 5px; cursor: pointer;">Cancelar</button>
+	                    <button type="submit" style="padding: 10px 20px; background: #1E3A8A; color: white; border: none; border-radius: 5px; cursor: pointer;">Guardar</button>
+	                </div>
+	                <div style="margin-top: 15px; padding: 10px; background: #f0f8ff; border-radius: 5px; font-size: 12px; color: #666;">
+	                    <strong>🎯 FUNCIÓN DE DIAGNÓSTICO:</strong><br>
+	                    • Prueba manual: <code>window.probarSolucionRadical()</code><br>
+	                    • Ver estado: <code>window.diagnosticarSolucion()</code><br>
+	                    • Ver consola: Cmd + Option + I (Mac)
+	                </div>
+	            </form>
+	        </div>
+	    `;
+	    
+	    // Agregar al DOM
+	    document.body.appendChild(modal);
+	    
+	    // Configurar event listener para el formulario
+	    const form = modal.querySelector('#formEmergencia');
+	    form.addEventListener('submit', guardarTrabajoEmergencia);
+	    
+	    console.log('✅ SOLUCIÓN RADICAL: Modal creado y configurado');
+	}
+
+	// Función para cerrar modal
+	function cerrarModalEmergencia() {
+	    const modal = document.getElementById('modalEmergencia');
+	    if (modal) {
+	        modal.remove();
+	        console.log('✅ SOLUCIÓN RADICAL: Modal cerrado');
+	    }
+	}
+
+	// Función para guardar trabajo
+	function guardarTrabajoEmergencia(event) {
+	    event.preventDefault();
+	    console.log('🚨 SOLUCIÓN RADICAL: Guardando trabajo...');
+	    
+	    const form = event.target;
+	    const formData = new FormData(form);
+	    
+	    const trabajo = {
+	        id: Date.now().toString(),
+	        clientName: formData.get('clientName') || '',
+	        phone: formData.get('phone') || '',
+	        vehicle: formData.get('vehicle') || '',
+	        plate: formData.get('plate') || '',
+	        service: formData.get('service') || '',
+	        mechanic: formData.get('mechanic') || '',
+	        arrivalDate: new Date().toISOString().split('T')[0],
+	        status: 'En proceso',
+	        createdAt: new Date().toISOString()
+	    };
+	    
+	    // Guardar en localStorage
+	    const trabajos = JSON.parse(localStorage.getItem('taller-jobs') || '[]');
+	    trabajos.push(trabajo);
+	    localStorage.setItem('taller-jobs', JSON.stringify(trabajos));
+	    
+	    console.log('✅ SOLUCIÓN RADICAL: Trabajo guardado:', trabajo);
+	    
+	    // Cerrar modal
+	    cerrarModalEmergencia();
+	    
+	    // Mostrar confirmación
+	    alert('✅ Trabajo guardado exitosamente');
+	    
+	    // Recargar página para mostrar el nuevo trabajo
+	    setTimeout(() => {
+	        location.reload();
+	    }, 1000);
+	}
+
+	// CONFIGURAR EVENT LISTENERS SIN CONFLICTOS
+	function configurarEventListeners() {
+	    console.log('🔧 SOLUCIÓN RADICAL: Configurando event listeners...');
+	    
+	    // Buscar TODOS los botones de "Nuevo Trabajo" y "Crear Trabajo"
+	    const botones = document.querySelectorAll('button');
+	    botones.forEach((boton, index) => {
+	        const textoBoton = boton.textContent.toLowerCase();
+	        if (textoBoton.includes('nuevo trabajo') || textoBoton.includes('crear trabajo')) {
+	            console.log(`🔗 SOLUCIÓN RADICAL: Enlazando botón ${index}: "${textoBoton}"`);
+	            
+	            // Remover event listeners existentes
+	            boton.removeEventListener('click', boton.onclick);
+	            boton.onclick = null;
+	            
+	            // Agregar nuevo event listener
+	            boton.addEventListener('click', function(e) {
+	                e.preventDefault();
+	                e.stopPropagation();
+	                console.log('🚀 SOLUCIÓN RADICAL: Click detectado en botón de trabajo');
+	                crearModalEmergencia();
+	                return false;
+	            });
+	        }
+	    });
+	    
+	    console.log('✅ SOLUCIÓN RADICAL: Event listeners configurados');
+	}
+
+	// EJECUTAR INMEDIATAMENTE
+	console.log('🚀 SOLUCIÓN RADICAL: Iniciando...');
+	configurarEventListeners();
+
+	// Reconfigurar periódicamente para garantizar que funcione
+	setInterval(configurarEventListeners, 3000);
+
+	// Función de prueba
+	window.probarSolucionRadical = function() {
+	    console.log('🧪 SOLUCIÓN RADICAL: Ejecutando prueba...');
+	    crearModalEmergencia();
+	};
+
+	// Función de diagnóstico
+	window.diagnosticarSolucion = function() {
+	    const botones = document.querySelectorAll('button');
+	    console.log('🔍 SOLUCIÓN RADICAL - Diagnóstico:');
+	    console.log('Total de botones:', botones.length);
+	    botones.forEach((boton, index) => {
+	        const texto = boton.textContent.trim();
+	        if (texto.includes('trabajo')) {
+	        	console.log(`Botón ${index}: "${texto}" - onclick: ${boton.onclick ? 'sí' : 'no'}`);
+	        }
+	    });
+	};
+
+	console.log('💡 SOLUCIÓN RADICAL: Usa window.probarSolucionRadical() o window.diagnosticarSolucion()');
+	console.log('🔍 MAC: Abrir consola con Cmd + Option + I');
+	</script>
 </body>
 </html>
