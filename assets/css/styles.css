@@ -5,7 +5,7 @@
 }
 
 :root {
-    /* Colores corporativos Multidiagnósticos AS */
+    /* Colores corporativos MultidiagnÃ³sticos AS */
     --primary-500: #1E3A8A;
     --primary-100: #DBEAFE;
     --primary-700: #1E40AF;
@@ -32,7 +32,7 @@
     --xl: 48px;
     --xxl: 64px;
     
-    /* Tipografía */
+    /* TipografÃ­a */
     --font-family: 'Inter', sans-serif;
 }
 
@@ -49,7 +49,7 @@ body {
     padding: 0 var(--md);
 }
 
-/* Centrado mejorado para mejor distribución */
+/* Centrado mejorado para mejor distribuciÃ³n */
 .main-wrapper {
     max-width: 1600px;
     margin: 0 auto;
@@ -258,7 +258,7 @@ body {
     }
     
     .header {
-        left: 0 !important; /* Header ocupa toda la pantalla en móvil */
+        left: 0 !important; /* Header ocupa toda la pantalla en mÃ³vil */
     }
     
     .header-content {
@@ -323,7 +323,7 @@ body {
     font-size: 14px;
 }
 
-/* Navegación mejorada - Eliminada la navegación horizontal */
+/* NavegaciÃ³n mejorada - Eliminada la navegaciÃ³n horizontal */
     font-weight: 500;
     border-radius: var(--xs);
     min-width: 100px;
@@ -969,7 +969,7 @@ body {
     background: var(--primary-600);
 }
 
-/* Estilos para Historial de Vehículos */
+/* Estilos para Historial de VehÃ­culos */
 .vehicle-history-container {
     background: var(--surface);
     border-radius: var(--border-radius);
