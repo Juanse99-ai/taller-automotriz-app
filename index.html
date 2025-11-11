@@ -10,9 +10,6 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="apple-mobile-web-app-title" content="Multidiagnósticos AS">
     
-    <!-- CSS -->
-    <link rel="stylesheet" href="assets/css/styles.css">
-    
     <!-- Fuentes -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -20,6 +17,477 @@
     
     <!-- Supabase -->
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    
+    <style>
+/* ===== CSS COMPLETO EMBEBIDO ===== */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+:root {
+    /* Colores corporativos Multidiagnósticos AS */
+    --primary-500: #1E3A8A;
+    --primary-100: #DBEAFE;
+    --primary-700: #1E40AF;
+    --primary-400: #60A5FA;
+    --accent-red: #DC2626;
+    --accent-blue: #1E40AF;
+    
+    --neutral-50: #F8F9FA;
+    --neutral-100: #FFFFFF;
+    --neutral-400: #CED4DA;
+    --neutral-600: #6C757D;
+    --neutral-900: #212529;
+    
+    --success: #198754;
+    --warning: #FFC107;
+    --error: #DC3545;
+    --info: #0D6EFD;
+    
+    /* Espaciado */
+    --xs: 8px;
+    --sm: 16px;
+    --md: 24px;
+    --lg: 32px;
+    --xl: 48px;
+    --xxl: 64px;
+    
+    /* Tipografía */
+    --font-family: 'Inter', sans-serif;
+}
+
+body {
+    font-family: var(--font-family);
+    background-color: var(--neutral-50);
+    color: var(--neutral-900);
+    line-height: 1.5;
+}
+
+.container {
+    max-width: 1600px;
+    margin: 0 auto;
+    padding: 0 var(--md);
+}
+
+.main-wrapper {
+    max-width: 1600px;
+    margin: 0 auto;
+    padding: var(--sm);
+}
+
+.main-layout {
+    display: flex;
+    min-height: calc(100vh - 80px);
+}
+
+/* Sidebar Navigation */
+.sidebar {
+    width: 280px;
+    background: var(--neutral-100);
+    border-right: 1px solid var(--neutral-400);
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    position: fixed;
+    height: calc(100vh - 80px);
+    z-index: 1000;
+    transition: all 0.3s ease;
+}
+
+.sidebar.collapsed {
+    width: 60px;
+}
+
+.sidebar.collapsed .logo-text,
+.sidebar.collapsed .nav-text,
+.sidebar.collapsed .nav-section-title {
+    display: none;
+}
+
+.sidebar.collapsed .nav-item {
+    justify-content: center;
+}
+
+.sidebar-header {
+    padding: var(--md);
+    border-bottom: 1px solid var(--neutral-400);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.logo {
+    display: flex;
+    align-items: center;
+    font-weight: 600;
+    color: var(--primary-500);
+}
+
+.logo-text {
+    font-size: 16px;
+    margin-left: 8px;
+}
+
+.sidebar-toggle {
+    background: none;
+    border: none;
+    font-size: 18px;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 4px;
+    color: var(--neutral-600);
+    transition: all 0.2s;
+}
+
+.sidebar-toggle:hover {
+    background: var(--neutral-100);
+    color: var(--primary-500);
+}
+
+.sidebar-nav {
+    flex: 1;
+    padding: var(--sm) 0;
+    overflow-y: auto;
+}
+
+.nav-section {
+    margin-bottom: var(--md);
+}
+
+.nav-section-title {
+    padding: var(--xs) var(--md);
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--neutral-600);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: var(--xs);
+}
+
+.nav-item {
+    display: flex;
+    align-items: center;
+    padding: var(--sm) var(--md);
+    cursor: pointer;
+    transition: all 0.2s;
+    border-left: 3px solid transparent;
+}
+
+.nav-item:hover {
+    background: var(--primary-100);
+    color: var(--primary-500);
+}
+
+.nav-item.active {
+    background: var(--primary-500);
+    color: white;
+    border-left-color: var(--primary-700);
+}
+
+.nav-item.active:hover {
+    background: var(--primary-600);
+}
+
+.nav-icon {
+    font-size: 18px;
+    width: 24px;
+    text-align: center;
+    margin-right: 12px;
+}
+
+.nav-text {
+    font-size: 14px;
+    font-weight: 500;
+}
+
+/* Main Content */
+.main-content {
+    flex: 1;
+    margin-left: 280px;
+    transition: margin-left 0.3s ease;
+    display: flex;
+    flex-direction: column;
+}
+
+.content {
+    flex: 1;
+    padding: 24px;
+    overflow-y: auto;
+}
+
+.main-content.sidebar-collapsed {
+    margin-left: 60px;
+}
+
+/* Header */
+.header {
+    background: var(--neutral-100);
+    border-bottom: 1px solid var(--neutral-400);
+    padding: var(--sm) var(--md);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+
+.header-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--sm) 0;
+}
+
+.page-title h1 {
+    font-size: 24px;
+    font-weight: 600;
+    color: var(--neutral-900);
+    margin: 0;
+}
+
+.page-title p {
+    font-size: 14px;
+    color: var(--neutral-600);
+    margin: 0;
+}
+
+.user-menu {
+    display: flex;
+    align-items: center;
+    gap: var(--sm);
+}
+
+.user-info {
+    text-align: right;
+}
+
+.user-name {
+    font-weight: 600;
+    font-size: 14px;
+}
+
+.user-role {
+    font-size: 12px;
+    color: var(--neutral-600);
+}
+
+/* Botones */
+.btn {
+    padding: 12px 24px;
+    border: none;
+    border-radius: 12px;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: 500;
+    transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--xs);
+    text-decoration: none;
+}
+
+.btn-primary {
+    background: var(--primary-500);
+    color: var(--neutral-100);
+}
+
+.btn-primary:hover {
+    background: var(--primary-700);
+    transform: translateY(-1px);
+}
+
+.btn-outline {
+    background: transparent;
+    color: var(--neutral-900);
+    border: 1px solid var(--neutral-400);
+}
+
+.btn-outline:hover {
+    background: var(--neutral-50);
+}
+
+.btn-secondary {
+    background: var(--neutral-100);
+    color: var(--neutral-900);
+    border: 1px solid var(--neutral-400);
+}
+
+.btn-secondary:hover {
+    background: var(--neutral-50);
+}
+
+.btn-success {
+    background: var(--success);
+    color: white;
+}
+
+.btn-warning {
+    background: var(--warning);
+    color: var(--neutral-900);
+}
+
+.btn-error {
+    background: var(--error);
+    color: white;
+}
+
+/* Secciones */
+.section {
+    display: none;
+    padding: var(--xxl) 0;
+}
+
+.section.active {
+    display: block;
+}
+
+/* Cards y Dashboard */
+.dashboard-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: var(--md);
+    margin-bottom: var(--xl);
+}
+
+.card {
+    background: var(--neutral-100);
+    border-radius: 12px;
+    padding: var(--md);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+    border: 1px solid var(--neutral-400);
+}
+
+.card-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--neutral-900);
+    margin-bottom: var(--sm);
+}
+
+.metric {
+    text-align: center;
+}
+
+.metric-value {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: var(--primary-500);
+    display: block;
+    margin-bottom: var(--xs);
+}
+
+.metric-label {
+    font-size: 14px;
+    color: var(--neutral-600);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Tablas */
+.table-container {
+    overflow-x: auto;
+    margin-top: var(--md);
+}
+
+.table {
+    width: 100%;
+    border-collapse: collapse;
+    background: var(--neutral-100);
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+}
+
+.table th {
+    background: var(--primary-500);
+    color: white;
+    padding: var(--sm);
+    text-align: left;
+    font-weight: 600;
+}
+
+.table td {
+    padding: var(--sm);
+    border-bottom: 1px solid var(--neutral-400);
+}
+
+.table tbody tr:hover {
+    background: var(--neutral-50);
+}
+
+/* Estados */
+.status-badge {
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 500;
+    text-transform: uppercase;
+}
+
+.status-pending { background: #FFF3CD; color: #856404; }
+.status-progress { background: #CCE5FF; color: #004085; }
+.status-completed { background: #D4EDDA; color: #155724; }
+.status-cancelled { background: #F8D7DA; color: #721C24; }
+.status-en-progreso { background: #CCE5FF; color: #004085; }
+
+/* Responsive */
+@media (max-width: 768px) {
+    .sidebar {
+        transform: translateX(-100%);
+    }
+    
+    .sidebar.mobile-open {
+        transform: translateX(0);
+    }
+    
+    .main-content {
+        margin-left: 0;
+    }
+    
+    .main-content.sidebar-collapsed {
+        margin-left: 0;
+    }
+    
+    .header-content {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: var(--sm);
+    }
+    
+    .dashboard-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Utilidades */
+.hidden { display: none; }
+.text-center { text-align: center; }
+.mt-4 { margin-top: var(--sm); }
+.mb-4 { margin-bottom: var(--sm); }
+.grid { display: grid; gap: var(--sm); }
+.grid-cols-1 { grid-template-columns: repeat(1, 1fr); }
+.grid-cols-2 { grid-template-columns: repeat(2, 1fr); }
+.grid-cols-3 { grid-template-columns: repeat(3, 1fr); }
+.grid-cols-4 { grid-template-columns: repeat(4, 1fr); }
+
+/* Mobile menu toggle */
+.mobile-menu-toggle {
+    display: none;
+}
+
+@media (max-width: 768px) {
+    .mobile-menu-toggle {
+        display: block;
+        background: var(--primary-500);
+        color: white;
+        border: none;
+        border-radius: 8px;
+        padding: 8px 12px;
+        font-size: 16px;
+        cursor: pointer;
+    }
+}
+    </style>
 </head>
 <body>
     <!-- Layout Principal con Sidebar -->
@@ -537,7 +1005,585 @@
         </div>
     </div>
 
-    <!-- JavaScript -->
-    <script src="assets/js/app.js"></script>
+    <!-- JavaScript Embebido -->
+    <script>
+// ===== JAVASCRIPT COMPLETO EMBEBIDO ===== 
+// Supabase Configuration
+const SUPABASE_URL = 'https://crtdentsfumgrotgvwdj.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNydGRlbnRzZnVtZ3JvdGd2d2RqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI2NTU5NTIsImV4cCI6MjA3ODIzMTk1Mn0.7T_Fd_L1gn3MtkvgqSCePrlK-ZUhp-8gbT5fG8GZoW4';
+
+// Initialize Supabase
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+// Global state
+let currentSection = 'dashboard';
+let sidebarCollapsed = false;
+
+// Demo data
+const demoData = {
+    dashboard: {
+        totalJobs: 12,
+        completedJobs: 8,
+        inProgressJobs: 3,
+        monthlyRevenue: '$1,250,000',
+        recentJobs: [
+            { id: 'TR-001', cliente: 'Juan Pérez', vehiculo: 'Toyota Corolla 2020', servicio: 'Cambio de aceite y filtro', estado: 'Completado', fecha: '2025-01-10' },
+            { id: 'TR-002', cliente: 'María García', vehiculo: 'Honda Civic 2019', servicio: 'Frenos delanteros', estado: 'En Progreso', fecha: '2025-01-11' },
+            { id: 'TR-003', cliente: 'Carlos López', vehiculo: 'Nissan Sentra 2021', servicio: 'Revisión general', estado: 'Pendiente', fecha: '2025-01-12' }
+        ]
+    },
+    trabajos: {
+        total: 12,
+        completed: 8,
+        inProgress: 3,
+        pending: 1,
+        list: [
+            { id: 'TR-001', cliente: 'Juan Pérez', vehiculo: 'Toyota Corolla 2020', servicio: 'Cambio de aceite y filtro', mecanico: 'Carlos Rodríguez', estado: 'Completado' },
+            { id: 'TR-002', cliente: 'María García', vehiculo: 'Honda Civic 2019', servicio: 'Frenos delanteros', mecanico: 'Ana Martínez', estado: 'En Progreso' },
+            { id: 'TR-003', cliente: 'Carlos López', vehiculo: 'Nissan Sentra 2021', servicio: 'Revisión general', mecanico: 'Miguel Hernández', estado: 'Pendiente' }
+        ]
+    },
+    mecanicos: {
+        total: 4,
+        active: 3,
+        avgExperience: 8.5,
+        list: [
+            { id: 'MC-001', nombre: 'Carlos Rodríguez', especialidad: 'Frenos y Suspensión', experiencia: '12 años', estado: 'Activo', trabajos: 2 },
+            { id: 'MC-002', nombre: 'Ana Martínez', especialidad: 'Motor y Transmisión', experiencia: '8 años', estado: 'Activo', trabajos: 1 },
+            { id: 'MC-003', nombre: 'Miguel Hernández', especialidad: 'Sistema Eléctrico', experiencia: '6 años', estado: 'Activo', trabajos: 0 },
+            { id: 'MC-004', nombre: 'Laura Sánchez', especialidad: 'Diagnóstico Computarizado', experiencia: '10 años', estado: 'Disponible', trabajos: 0 }
+        ]
+    }
+};
+
+// DOM Content Loaded
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('🚀 Multidiagnósticos AS - Sistema iniciado');
+    console.log('📱 Versión completa embebida para máxima compatibilidad');
+    
+    // Initialize application
+    initializeApp();
+    
+    // Set default section
+    showSection('dashboard');
+    
+    // Update dashboard with demo data
+    updateDashboardData();
+});
+
+// Initialize application
+function initializeApp() {
+    console.log('📋 Inicializando aplicación...');
+    
+    // Setup mobile responsive
+    setupMobileResponsive();
+    
+    console.log('✅ Aplicación inicializada correctamente');
+}
+
+// Mobile responsive setup
+function setupMobileResponsive() {
+    // Add mobile menu toggle if on mobile
+    if (window.innerWidth <= 768) {
+        addMobileMenuToggle();
+    }
+    
+    // Handle window resize
+    window.addEventListener('resize', function() {
+        if (window.innerWidth <= 768) {
+            addMobileMenuToggle();
+        }
+    });
+}
+
+// Add mobile menu toggle
+function addMobileMenuToggle() {
+    const header = document.querySelector('.header-content');
+    if (header && !header.querySelector('.mobile-menu-toggle')) {
+        const mobileToggle = document.createElement('button');
+        mobileToggle.className = 'mobile-menu-toggle btn btn-primary';
+        mobileToggle.innerHTML = '☰';
+        mobileToggle.onclick = toggleSidebar;
+        header.appendChild(mobileToggle);
+    }
+}
+
+// Toggle sidebar
+function toggleSidebar() {
+    const sidebar = document.getElementById('sidebar');
+    const mainContent = document.querySelector('.main-content');
+    
+    if (sidebar && mainContent) {
+        sidebar.classList.toggle('collapsed');
+        mainContent.classList.toggle('sidebar-collapsed');
+        sidebarCollapsed = !sidebarCollapsed;
+        
+        console.log('🔄 Sidebar toggled:', sidebarCollapsed ? 'collapsed' : 'expanded');
+    }
+}
+
+// Show section
+function showSection(sectionName) {
+    console.log('📄 Cambiando a sección:', sectionName);
+    
+    // Hide all sections
+    const sections = document.querySelectorAll('.section');
+    sections.forEach(section => {
+        section.classList.remove('active');
+        section.style.display = 'none';
+    });
+    
+    // Show target section
+    const targetSection = document.getElementById(sectionName);
+    if (targetSection) {
+        targetSection.classList.add('active');
+        targetSection.style.display = 'block';
+        currentSection = sectionName;
+        
+        // Update page title
+        updatePageTitle(sectionName);
+        
+        // Load section data
+        loadSectionData(sectionName);
+        
+        console.log('✅ Sección mostrada:', sectionName);
+    } else {
+        console.error('❌ Sección no encontrada:', sectionName);
+    }
+    
+    // Update active nav item
+    updateActiveNavItem(sectionName);
+    
+    // Close mobile sidebar if open
+    if (window.innerWidth <= 768) {
+        const sidebar = document.getElementById('sidebar');
+        if (sidebar) {
+            sidebar.classList.remove('mobile-open');
+        }
+    }
+}
+
+// Update page title
+function updatePageTitle(sectionName) {
+    const pageTitle = document.getElementById('pageTitle');
+    const pageSubtitle = document.getElementById('pageSubtitle');
+    
+    const titles = {
+        'dashboard': { title: 'Dashboard', subtitle: 'Resumen general del taller' },
+        'trabajos': { title: 'Gestión de Trabajos', subtitle: 'Administra todos los trabajos del taller' },
+        'mecanicos': { title: 'Mecánicos', subtitle: 'Gestiona el equipo de mecánicos' },
+        'recepcion': { title: 'Recepción', subtitle: 'Procesa recepciones de vehículos' },
+        'cotizaciones': { title: 'Cotizaciones', subtitle: 'Crea y gestiona cotizaciones' },
+        'finanzas': { title: 'Finanzas', subtitle: 'Control financiero del taller' },
+        'liquidacion': { title: 'Liquidación', subtitle: 'Finaliza y liquida trabajos' },
+        'calendario': { title: 'Calendario', subtitle: 'Programa citas y trabajos' },
+        'historial': { title: 'Historial', subtitle: 'Historial de servicios' },
+        'notificaciones': { title: 'Notificaciones', subtitle: 'Alertas y notificaciones' },
+        'reportes': { title: 'Reportes', subtitle: 'Reportes y estadísticas' }
+    };
+    
+    const titleData = titles[sectionName] || titles['dashboard'];
+    
+    if (pageTitle) pageTitle.textContent = titleData.title;
+    if (pageSubtitle) pageSubtitle.textContent = titleData.subtitle;
+}
+
+// Update active nav item
+function updateActiveNavItem(sectionName) {
+    const navItems = document.querySelectorAll('.nav-item');
+    navItems.forEach(item => {
+        item.classList.remove('active');
+    });
+    
+    // Find and activate the current nav item
+    const currentNavItem = document.querySelector(`[onclick="showSection('${sectionName}')"]`);
+    if (currentNavItem) {
+        currentNavItem.classList.add('active');
+    }
+}
+
+// Load section data
+function loadSectionData(sectionName) {
+    console.log('📊 Cargando datos para sección:', sectionName);
+    
+    // This would typically fetch data from Supabase
+    // For now, we'll just log the action
+    switch (sectionName) {
+        case 'dashboard':
+            loadDashboardData();
+            break;
+        case 'trabajos':
+            loadTrabajosData();
+            break;
+        case 'mecanicos':
+            loadMecanicosData();
+            break;
+        case 'recepcion':
+            loadRecepcionData();
+            break;
+        case 'cotizaciones':
+            loadCotizacionesData();
+            break;
+        case 'finanzas':
+            loadFinanzasData();
+            break;
+        case 'liquidacion':
+            loadLiquidacionData();
+            break;
+        case 'calendario':
+            loadCalendarioData();
+            break;
+        case 'historial':
+            loadHistorialData();
+            break;
+        case 'notificaciones':
+            loadNotificacionesData();
+            break;
+        case 'reportes':
+            loadReportesData();
+            break;
+        default:
+            console.log('No data loading function for section:', sectionName);
+    }
+}
+
+// Update dashboard with demo data
+function updateDashboardData() {
+    const data = demoData.dashboard;
+    
+    // Update metrics
+    if (document.getElementById('totalJobs')) {
+        document.getElementById('totalJobs').textContent = data.totalJobs;
+    }
+    if (document.getElementById('completedJobs')) {
+        document.getElementById('completedJobs').textContent = data.completedJobs;
+    }
+    if (document.getElementById('inProgressJobs')) {
+        document.getElementById('inProgressJobs').textContent = data.inProgressJobs;
+    }
+    if (document.getElementById('monthlyRevenue')) {
+        document.getElementById('monthlyRevenue').textContent = data.monthlyRevenue;
+    }
+    
+    // Update recent jobs table
+    const tbody = document.getElementById('trabajosRecientes');
+    if (tbody) {
+        tbody.innerHTML = '';
+        data.recentJobs.forEach(job => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${job.id}</td>
+                <td>${job.cliente}</td>
+                <td>${job.vehiculo}</td>
+                <td>${job.servicio}</td>
+                <td><span class="status-badge status-${job.estado.toLowerCase().replace(' ', '-')}">${job.estado}</span></td>
+                <td>${job.fecha}</td>
+            `;
+            tbody.appendChild(row);
+        });
+    }
+    
+    console.log('✅ Dashboard actualizado con datos demo');
+}
+
+// Data loading functions
+function loadDashboardData() {
+    console.log('📊 Cargando datos del dashboard...');
+    updateDashboardData();
+}
+
+function loadTrabajosData() {
+    console.log('🔧 Cargando datos de trabajos...');
+    const data = demoData.trabajos;
+    
+    // Update metrics in trabajos section
+    const totalElement = document.getElementById('trabajosTotal');
+    const completadosElement = document.getElementById('trabajosCompletados');
+    const enProgresoElement = document.getElementById('trabajosEnProgreso');
+    const pendientesElement = document.getElementById('trabajosPendientes');
+    
+    if (totalElement) totalElement.textContent = data.total;
+    if (completadosElement) completadosElement.textContent = data.completed;
+    if (enProgresoElement) enProgresoElement.textContent = data.inProgress;
+    if (pendientesElement) pendientesElement.textContent = data.pending;
+    
+    // Update trabajos table
+    const tbody = document.getElementById('trabajosTable');
+    if (tbody) {
+        tbody.innerHTML = '';
+        data.list.forEach(trabajo => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${trabajo.id}</td>
+                <td>${trabajo.cliente}</td>
+                <td>${trabajo.vehiculo}</td>
+                <td>${trabajo.servicio}</td>
+                <td>${trabajo.mecanico}</td>
+                <td><span class="status-badge status-${trabajo.estado.toLowerCase().replace(' ', '-')}">${trabajo.estado}</span></td>
+                <td>
+                    <button class="btn btn-outline" onclick="verTrabajo('${trabajo.id}')">Ver</button>
+                </td>
+            `;
+            tbody.appendChild(row);
+        });
+    }
+}
+
+function loadMecanicosData() {
+    console.log('👨‍🔧 Cargando datos de mecánicos...');
+    const data = demoData.mecanicos;
+    
+    // Update metrics in mecanicos section
+    const totalElement = document.getElementById('mecanicosTotal');
+    const activosElement = document.getElementById('mecanicosActivos');
+    const experienciaElement = document.getElementById('mecanicosExperiencia');
+    
+    if (totalElement) totalElement.textContent = data.total;
+    if (activosElement) activosElement.textContent = data.active;
+    if (experienciaElement) experienciaElement.textContent = data.avgExperience;
+    
+    // Update mecanicos table
+    const tbody = document.getElementById('mecanicosTable');
+    if (tbody) {
+        tbody.innerHTML = '';
+        data.list.forEach(mecanico => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${mecanico.id}</td>
+                <td>${mecanico.nombre}</td>
+                <td>${mecanico.especialidad}</td>
+                <td>${mecanico.experiencia}</td>
+                <td><span class="status-badge status-${mecanico.estado.toLowerCase()}">${mecanico.estado}</span></td>
+                <td>${mecanico.trabajos}</td>
+            `;
+            tbody.appendChild(row);
+        });
+    }
+}
+
+function loadRecepcionData() {
+    console.log('📋 Cargando datos de recepción...');
+    // Add demo data for reception section
+    const receptionData = {
+        enCola: 25,
+        atendidosHoy: 8,
+        promedioDiario: 15,
+        satisfaccion: '92%'
+    };
+    
+    if (document.getElementById('enCola')) document.getElementById('enCola').textContent = receptionData.enCola;
+    if (document.getElementById('atendidosHoy')) document.getElementById('atendidosHoy').textContent = receptionData.atendidosHoy;
+    if (document.getElementById('promedioDiario')) document.getElementById('promedioDiario').textContent = receptionData.promedioDiario;
+    if (document.getElementById('satisfaccion')) document.getElementById('satisfaccion').textContent = receptionData.satisfaccion;
+}
+
+function loadCotizacionesData() {
+    console.log('💰 Cargando datos de cotizaciones...');
+    // Add demo data for cotizaciones section
+    const cotizacionData = {
+        activas: 18,
+        valorTotal: '$450,000',
+        tasaConversion: '75%'
+    };
+    
+    if (document.getElementById('cotizacionesActivas')) document.getElementById('cotizacionesActivas').textContent = cotizacionData.activas;
+    if (document.getElementById('valorTotal')) document.getElementById('valorTotal').textContent = cotizacionData.valorTotal;
+    if (document.getElementById('tasaConversion')) document.getElementById('tasaConversion').textContent = cotizacionData.tasaConversion;
+}
+
+function loadFinanzasData() {
+    console.log('💳 Cargando datos de finanzas...');
+    // Add demo data for finanzas section
+    const finanzasData = {
+        ingresos: '$1,250,000',
+        gastos: '$875,000',
+        ganancia: '$375,000',
+        margen: '30%'
+    };
+    
+    if (document.getElementById('ingresosMes')) document.getElementById('ingresosMes').textContent = finanzasData.ingresos;
+    if (document.getElementById('gastos')) document.getElementById('gastos').textContent = finanzasData.gastos;
+    if (document.getElementById('gananciaNeta')) document.getElementById('gananciaNeta').textContent = finanzasData.ganancia;
+    if (document.getElementById('margen')) document.getElementById('margen').textContent = finanzasData.margen;
+}
+
+function loadLiquidacionData() {
+    console.log('📝 Cargando datos de liquidación...');
+    // Add demo data for liquidacion section
+    const liquidacionData = {
+        paraLiquidar: 8,
+        montoTotal: '$650,000',
+        diasPromedio: 2.5
+    };
+    
+    if (document.getElementById('paraLiquidar')) document.getElementById('paraLiquidar').textContent = liquidacionData.paraLiquidar;
+    if (document.getElementById('montoTotal')) document.getElementById('montoTotal').textContent = liquidacionData.montoTotal;
+    if (document.getElementById('diasPromedio')) document.getElementById('diasPromedio').textContent = liquidacionData.diasPromedio;
+}
+
+function loadCalendarioData() {
+    console.log('📅 Cargando datos del calendario...');
+    // Add demo data for calendario section
+    const calendarioData = {
+        citasHoy: 15,
+        completadas: 8,
+        pendientes: 5,
+        canceladas: 2
+    };
+    
+    if (document.getElementById('citasHoy')) document.getElementById('citasHoy').textContent = calendarioData.citasHoy;
+    if (document.getElementById('citasCompletadas')) document.getElementById('citasCompletadas').textContent = calendarioData.completadas;
+    if (document.getElementById('citasPendientes')) document.getElementById('citasPendientes').textContent = calendarioData.pendientes;
+    if (document.getElementById('citasCanceladas')) document.getElementById('citasCanceladas').textContent = calendarioData.canceladas;
+}
+
+function loadHistorialData() {
+    console.log('📚 Cargando datos del historial...');
+    // Add demo data for historial section
+    const historialData = {
+        totalServicios: 2847,
+        totalClientes: 1245,
+        calificacion: 4.8
+    };
+    
+    if (document.getElementById('totalServicios')) document.getElementById('totalServicios').textContent = historialData.totalServicios;
+    if (document.getElementById('totalClientes')) document.getElementById('totalClientes').textContent = historialData.totalClientes;
+    if (document.getElementById('calificacion')) document.getElementById('calificacion').textContent = historialData.calificacion;
+}
+
+function loadNotificacionesData() {
+    console.log('🔔 Cargando datos de notificaciones...');
+    // Add demo data for notificaciones section
+    const notificacionData = {
+        urgentes: 3,
+        informacion: 7,
+        recordatorios: 5
+    };
+    
+    if (document.getElementById('urgentes')) document.getElementById('urgentes').textContent = notificacionData.urgentes;
+    if (document.getElementById('informacion')) document.getElementById('informacion').textContent = notificacionData.informacion;
+    if (document.getElementById('recordatorios')) document.getElementById('recordatorios').textContent = notificacionData.recordatorios;
+}
+
+function loadReportesData() {
+    console.log('📈 Cargando datos de reportes...');
+    // Add demo data for reportes section
+    const reportesData = {
+        productividad: '92%',
+        satisfaccion: 4.6,
+        promedioDiario: '$42,000',
+        retencion: '87%'
+    };
+    
+    if (document.getElementById('productividad')) document.getElementById('productividad').textContent = reportesData.productividad;
+    if (document.getElementById('satisfaccionReportes')) document.getElementById('satisfaccionReportes').textContent = reportesData.satisfaccion;
+    if (document.getElementById('promedioDiarioReportes')) document.getElementById('promedioDiarioReportes').textContent = reportesData.promedioDiario;
+    if (document.getElementById('retencion')) document.getElementById('retencion').textContent = reportesData.retencion;
+}
+
+// Action functions
+function nuevoTrabajo() {
+    console.log('➕ Nuevo trabajo');
+    showNotification('Función: Nuevo Trabajo\nEn la versión completa se abriría un formulario para crear un nuevo trabajo.', 'info');
+}
+
+function verTrabajo(id) {
+    console.log('👁️ Ver trabajo:', id);
+    showNotification(`Función: Ver Trabajo ${id}\nEn la versión completa se mostrarían los detalles completos del trabajo.`, 'info');
+}
+
+function nuevoMecanico() {
+    console.log('➕ Nuevo mecánico');
+    showNotification('Función: Agregar Mecánico\nEn la versión completa se abriría un formulario para agregar un mecánico.', 'info');
+}
+
+function nuevaRecepcion() {
+    console.log('➕ Nueva recepción');
+    showNotification('Función: Nueva Recepción\nEn la versión completa se abriría un formulario para registrar un vehículo.', 'info');
+}
+
+function nuevaCotizacion() {
+    console.log('➕ Nueva cotización');
+    showNotification('Función: Nueva Cotización\nEn la versión completa se abriría un formulario para crear una cotización.', 'info');
+}
+
+// Utility functions
+function showNotification(message, type = 'info') {
+    console.log(`🔔 [${type.toUpperCase()}] ${message}`);
+    
+    // Create a simple notification
+    const notification = document.createElement('div');
+    notification.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: ${type === 'error' ? 'var(--error)' : type === 'success' ? 'var(--success)' : 'var(--primary-500)'};
+        color: white;
+        padding: 16px 24px;
+        border-radius: 8px;
+        z-index: 10000;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        max-width: 400px;
+        font-size: 14px;
+        line-height: 1.4;
+    `;
+    notification.innerHTML = message.replace(/\n/g, '<br>');
+    
+    document.body.appendChild(notification);
+    
+    setTimeout(() => {
+        if (document.body.contains(notification)) {
+            document.body.removeChild(notification);
+        }
+    }, 4000);
+}
+
+function showLoading(section) {
+    console.log(`⏳ Cargando sección: ${section}...`);
+}
+
+function hideLoading() {
+    console.log('✅ Carga completada');
+}
+
+// Logout function
+function logout() {
+    console.log('👋 Cerrando sesión...');
+    
+    // Show confirmation
+    if (confirm('¿Estás seguro de que quieres cerrar sesión?')) {
+        // Here you would typically clear user session
+        console.log('✅ Sesión cerrada');
+        
+        // Redirect to login or reload
+        window.location.reload();
+    }
+}
+
+// Error handling
+window.addEventListener('error', function(event) {
+    console.error('❌ Error en la aplicación:', event.error);
+    showNotification('Ha ocurrido un error en la aplicación', 'error');
+});
+
+window.addEventListener('unhandledrejection', function(event) {
+    console.error('❌ Promise rechazada:', event.reason);
+    showNotification('Error de conexión o promesa no resuelta', 'error');
+});
+
+// Export functions for global access
+window.showSection = showSection;
+window.toggleSidebar = toggleSidebar;
+window.logout = logout;
+window.nuevoTrabajo = nuevoTrabajo;
+window.verTrabajo = verTrabajo;
+window.nuevoMecanico = nuevoMecanico;
+window.nuevaRecepcion = nuevaRecepcion;
+window.nuevaCotizacion = nuevaCotizacion;
+
+console.log('🎉 JavaScript embebido cargado completamente');
+console.log('✅ Sistema completo embebido funcionando perfectamente');
+console.log('🚀 ¡Listo para usar!');
+    </script>
 </body>
 </html>
