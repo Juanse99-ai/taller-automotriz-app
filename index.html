@@ -10,13 +10,13 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="apple-mobile-web-app-title" content="Multidiagnósticos AS">
     
+    <!-- CSS -->
+    <link rel="stylesheet" href="css/styles.css">
+    
+    <!-- Fuentes -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://unpkg.com/lucide@latest/dist/umd/lucide.js">
-    
-    <!-- External CSS -->
-    <link rel="stylesheet" href="TALLER-COMPLETO-CORREGIDO/css/styles.css">
     
     <!-- Supabase -->
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
@@ -28,84 +28,75 @@
         <aside class="sidebar" id="sidebar">
             <div class="sidebar-header">
                 <div class="logo">
-                    <img src="TALLER-COMPLETO-CORREGIDO/assets/images/logo-multidiagnosticos.png" alt="Multidiagnósticos AS" style="width: 40px; height: 40px; border-radius: 8px; margin-right: 8px;">
+                    <div style="width: 40px; height: 40px; background: var(--primary-500); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; margin-right: 8px;">M</div>
                     <span class="logo-text">Multidiagnósticos AS</span>
                 </div>
-                <button class="sidebar-toggle" onclick="toggleSidebar()">
-                    ☰
-                </button>
+                <button class="sidebar-toggle" onclick="toggleSidebar()">☰</button>
             </div>
             
             <nav class="sidebar-nav">
-                <!-- Dashboard -->
                 <div class="nav-section">
-                    <div class="nav-item active" onclick="showSection('dashboard')" id="nav-dashboard">
+                    <div class="nav-section-title">Principal</div>
+                    <div class="nav-item active" onclick="showSection('dashboard')">
                         <span class="nav-icon">📊</span>
                         <span class="nav-text">Dashboard</span>
                     </div>
-                </div>
-                
-                <!-- Gestión de Taller -->
-                <div class="nav-section">
-                    <div class="nav-section-title">Gestión del Taller</div>
-                    <div class="nav-item" onclick="showSection('jobs')" id="nav-jobs">
-                        <span class="nav-icon">🔨</span>
+                    <div class="nav-item" onclick="showSection('trabajos')">
+                        <span class="nav-icon">🔧</span>
                         <span class="nav-text">Trabajos</span>
                     </div>
-                    <div class="nav-item" onclick="showSection('mechanics')" id="nav-mechanics">
-                        <span class="nav-icon">👥</span>
+                    <div class="nav-item" onclick="showSection('mecanicos')">
+                        <span class="nav-icon">👨‍🔧</span>
                         <span class="nav-text">Mecánicos</span>
                     </div>
-                    <div class="nav-item" onclick="showSection('reception')" id="nav-reception">
+                    <div class="nav-item" onclick="showSection('recepcion')">
                         <span class="nav-icon">📋</span>
                         <span class="nav-text">Recepción</span>
                     </div>
                 </div>
                 
-                <!-- Ventas y Finanzas -->
                 <div class="nav-section">
-                    <div class="nav-section-title">Ventas y Finanzas</div>
-                    <div class="nav-item" onclick="showSection('quotes')" id="nav-quotes">
+                    <div class="nav-section-title">Gestión</div>
+                    <div class="nav-item" onclick="showSection('cotizaciones')">
                         <span class="nav-icon">💰</span>
                         <span class="nav-text">Cotizaciones</span>
                     </div>
-                    <div class="nav-item" onclick="showSection('finances')" id="nav-finances">
+                    <div class="nav-item" onclick="showSection('finanzas')">
                         <span class="nav-icon">💳</span>
                         <span class="nav-text">Finanzas</span>
                     </div>
-                    <div class="nav-item" onclick="showSection('settlement')" id="nav-settlement">
-                        <span class="nav-icon">💼</span>
+                    <div class="nav-item" onclick="showSection('liquidacion')">
+                        <span class="nav-icon">📝</span>
                         <span class="nav-text">Liquidación</span>
                     </div>
-                </div>
-                
-                <!-- Herramientas -->
-                <div class="nav-section">
-                    <div class="nav-section-title">Herramientas</div>
-                    <div class="nav-item" onclick="showSection('calendar')" id="nav-calendar">
+                    <div class="nav-item" onclick="showSection('calendario')">
                         <span class="nav-icon">📅</span>
                         <span class="nav-text">Calendario</span>
                     </div>
-                    <div class="nav-item" onclick="showSection('vehicle-history')" id="nav-vehicle-history">
-                        <span class="nav-icon">🚗</span>
-                        <span class="nav-text">Historial Vehículo</span>
+                </div>
+                
+                <div class="nav-section">
+                    <div class="nav-section-title">Sistema</div>
+                    <div class="nav-item" onclick="showSection('historial')">
+                        <span class="nav-icon">📚</span>
+                        <span class="nav-text">Historial</span>
                     </div>
-                    <div class="nav-item" onclick="showSection('notifications')" id="nav-notifications">
+                    <div class="nav-item" onclick="showSection('notificaciones')">
                         <span class="nav-icon">🔔</span>
                         <span class="nav-text">Notificaciones</span>
                     </div>
-                    <div class="nav-item" onclick="showSection('reports')" id="nav-reports">
-                        <span class="nav-icon">📊</span>
+                    <div class="nav-item" onclick="showSection('reportes')">
+                        <span class="nav-icon">📈</span>
                         <span class="nav-text">Reportes</span>
                     </div>
                 </div>
             </nav>
         </aside>
-        
+
         <!-- Main Content -->
-        <main class="main-content">
+        <div class="main-content">
             <!-- Header -->
-            <header class="header">
+            <div class="header">
                 <div class="header-content">
                     <div class="page-title">
                         <h1 id="pageTitle">Dashboard</h1>
@@ -113,1959 +104,440 @@
                     </div>
                     <div class="user-menu">
                         <div class="user-info">
-                            <div class="user-name" id="userName">Admin</div>
-                            <div class="user-role" id="userRole">Administrador</div>
+                            <div class="user-name">Administrador</div>
+                            <div class="user-role">Gerente General</div>
                         </div>
-                        <button class="btn-logout" onclick="logout()">Cerrar Sesión</button>
+                        <button class="btn btn-outline" onclick="logout()">Cerrar Sesión</button>
                     </div>
                 </div>
-            </header>
-        </main>
-    </div>
-
-    <!-- Contenido Principal -->
-    <div class="content" style="flex: 1; padding: 24px;">
-        <!-- Sección Dashboard -->
-        <section class="section active" id="section-dashboard">
-            <div class="section-header">
-                <h1 class="section-title">Dashboard</h1>
-                <p class="section-subtitle">Resumen general del taller</p>
             </div>
 
-            <div class="dashboard-grid">
-                <div class="stat-card">
-                    <div class="stat-value" id="totalJobs">0</div>
-                    <div class="stat-label">Total Trabajos</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-value text-success" id="completedJobs">0</div>
-                    <div class="stat-label">Completados</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-value text-warning" id="inProgressJobs">0</div>
-                    <div class="stat-label">En Progreso</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-value text-primary" id="totalRevenue">$0</div>
-                    <div class="stat-label">Ingresos del Mes</div>
-                </div>
-            </div>
-
-            <div class="jobs-grid" id="recentJobs">
-                <!-- Trabajos recientes se cargan aquí -->
-            </div>
-        </section>
-
-        <!-- Sección Trabajos -->
-        <section class="section" id="section-jobs">
-            <div class="section-header">
-                <h1 class="section-title">Gestión de Trabajos</h1>
-                <p class="section-subtitle">Administra todos los trabajos del taller</p>
-            </div>
-
-            <div class="filters">
-                <input type="text" class="search-input" id="searchJobs" placeholder="Buscar por placa o descripción..." onkeyup="filterJobs()">
-                <select class="filter-select" id="filterStatus" onchange="filterJobs()">
-                    <option value="">Todos los estados</option>
-                    <option value="pendiente">Pendiente</option>
-                    <option value="enprogreso">En Progreso</option>
-                    <option value="completado">Completado</option>
-                    <option value="entregado">Entregado</option>
-                </select>
-                <select class="filter-select" id="filterMechanic" onchange="filterJobs()">
-                    <option value="">Todos los mecánicos</option>
-                </select>
-                <button class="btn btn-primary" onclick="openJobModal()">
-                    <span>+</span> Nuevo Trabajo
-                </button>
-            </div>
-
-            <div class="jobs-grid" id="jobsList">
-                <!-- Lista de trabajos se carga aquí -->
-            </div>
-        </section>
-
-        <!-- Sección Mecánicos -->
-        <section class="section" id="section-mechanics">
-            <div class="section-header">
-                <h1 class="section-title">Gestión de Mecánicos</h1>
-                <p class="section-subtitle">Administra el equipo de trabajo</p>
-            </div>
-
-            <div class="filters">
-                <button class="btn btn-primary" onclick="openMechanicModal()">
-                    <span>+</span> Nuevo Mecánico
-                </button>
-            </div>
-
-            <div class="jobs-grid" id="mechanicsList">
-                <!-- Lista de mecánicos se carga aquí -->
-            </div>
-        </section>
-
-        <!-- Sección Finanzas -->
-        <section class="section" id="section-finances">
-            <div class="section-header">
-                <h1 class="section-title">Control Financiero</h1>
-                <p class="section-subtitle">Gestión de pagos a mecánicos</p>
-            </div>
-
-            <div class="dashboard-grid">
-                <div class="stat-card">
-                    <div class="stat-value" id="totalPayments">$0</div>
-                    <div class="stat-label">Total Pagado</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-value text-warning" id="totalAdvance">$0</div>
-                    <div class="stat-label">Adelantos</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-value text-error" id="totalLoans">$0</div>
-                    <div class="stat-label">Préstamos</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-value text-success" id="totalDiscounts">$0</div>
-                    <div class="stat-label">Descuentos</div>
-                </div>
-            </div>
-
-            <div class="filters">
-                <select class="filter-select" id="filterPaymentMechanic" onchange="filterPayments()">
-                    <option value="">Todos los mecánicos</option>
-                </select>
-                <button class="btn btn-primary" onclick="openPaymentModal()">
-                    <span>+</span> Nuevo Pago
-                </button>
-            </div>
-
-            <div class="jobs-grid" id="paymentsList">
-                <!-- Lista de pagos se carga aquí -->
-            </div>
-        </section>
-
-        <!-- Sección Reportes -->
-        <section class="section" id="section-reports">
-            <div class="section-header">
-                <h1 class="section-title">Reportes</h1>
-                <p class="section-subtitle">Análisis y estadísticas del taller</p>
-            </div>
-
-            <div class="dashboard-grid">
-                <div class="stat-card">
-                    <div class="stat-value" id="monthlyJobs">0</div>
-                    <div class="stat-label">Trabajos del Mes</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-value" id="monthlyRevenue">$0</div>
-                    <div class="stat-label">Ingresos del Mes</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-value" id="averageJobValue">$0</div>
-                    <div class="stat-label">Valor Promedio</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-value" id="topMechanic">-</div>
-                    <div class="stat-label">Mecánico Top</div>
-                </div>
-            </div>
-        </section>
-
-        <!-- Sección Liquidación -->
-        <section class="section" id="section-settlement">
-            <div class="section-header">
-                <h1 class="section-title">Liquidación de Trabajos</h1>
-                <p class="section-subtitle">Cálculo automático del 40% de mano de obra para técnicos</p>
-            </div>
-
-            <div class="dashboard-grid">
-                <div class="stat-card">
-                    <div class="stat-value" id="totalPendingSettlement">$0</div>
-                    <div class="stat-label">Por Liquidar (40%)</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-value text-warning" id="totalAdvances">$0</div>
-                    <div class="stat-label">Adelantos Pendientes</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-value text-error" id="totalLoans">$0</div>
-                    <div class="stat-label">Préstamos Pendientes</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-value text-success" id="netPayable">$0</div>
-                    <div class="stat-label">Neto a Pagar</div>
-                </div>
-            </div>
-
-            <div class="filters">
-                <select class="filter-select" id="filterSettlementMechanic" onchange="filterSettlementJobs()">
-                    <option value="">Todos los técnicos</option>
-                </select>
-                <select class="filter-select" id="filterSettlementStatus" onchange="filterSettlementJobs()">
-                    <option value="">Todos los estados</option>
-                    <option value="completado">Solo Completados</option>
-                    <option value="entregado">Solo Entregados</option>
-                </select>
-                <button class="btn btn-primary" onclick="generateSettlement()">
-                    💼 Generar Liquidación
-                </button>
-                <button class="btn btn-secondary" onclick="viewPendingJobs()">
-                    👀 Ver Trabajos Pendientes
-                </button>
-            </div>
-
-            <div class="jobs-grid" id="settlementJobsList">
-                <!-- Lista de trabajos para liquidación se carga aquí -->
-            </div>
-        </section>
-
-        <!-- Sección Recepción -->
-        <section class="section" id="section-reception">
-            <div class="section-header">
-                <h1 class="section-title">Recepción de Vehículos</h1>
-                <p class="section-subtitle">Crear órdenes de trabajo desde la recepción del cliente</p>
-            </div>
-
-            <div class="actions-header">
-                <button class="btn btn-primary" onclick="openReceptionModal()">
-                    ➕ Nueva Recepción
-                </button>
-            </div>
-
-            <div class="jobs-grid" id="receptionList">
-                <!-- Lista de recepciones se carga aquí -->
-            </div>
-        </section>
-
-        <!-- Sección Cotizaciones -->
-        <section class="section" id="section-quotes">
-            <div class="section-header">
-                <h1 class="section-title">Cotizaciones y Presupuestos</h1>
-                <p class="section-subtitle">Generar presupuestos detallados para aprobación del cliente</p>
-            </div>
-
-            <div class="dashboard-grid">
-                <div class="stat-card">
-                    <div class="stat-value" id="pendingQuotes">0</div>
-                    <div class="stat-label">Cotizaciones Pendientes</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-value" id="approvedQuotes">0</div>
-                    <div class="stat-label">Cotizaciones Aprobadas</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-value" id="totalQuoteValue">$0</div>
-                    <div class="stat-label">Valor Total Cotizaciones</div>
-                </div>
-            </div>
-
-            <div class="actions-header">
-                <button class="btn btn-primary" onclick="openQuoteModal()">
-                    💰 Nueva Cotización
-                </button>
-                <button class="btn btn-secondary" onclick="generateQuoteReport()">
-                    📄 Generar Reporte
-                </button>
-            </div>
-
-            <div class="jobs-grid" id="quotesList">
-                <!-- Lista de cotizaciones se carga aquí -->
-            </div>
-        </section>
-
-        <!-- Sección Calendario -->
-        <section class="section" id="section-calendar">
-            <div class="section-header">
-                <h1 class="section-title">Calendario de Técnicos</h1>
-                <p class="section-subtitle">8 calendarios independientes para asignación de trabajos</p>
-            </div>
-
-            <div class="calendar-container">
-                <div class="calendar-controls">
-                    <button class="btn btn-primary" onclick="showPreviousWeek()">◀ Semana Anterior</button>
-                    <span class="calendar-week" id="currentWeek">Semana actual</span>
-                    <button class="btn btn-primary" onclick="showNextWeek()">Siguiente Semana ▶</button>
-                </div>
-                
-                <div class="calendar-grid" id="calendarGrid">
-                    <!-- Calendario de 8 técnicos se genera aquí -->
-                </div>
-            </div>
-        </section>
-
-        <!-- Sección Historial Vehículo -->
-        <section class="section" id="section-vehicle-history">
-            <div class="section-header">
-                <h1 class="section-title">Historial Completo por Vehículo</h1>
-                <p class="section-subtitle">Consultar todo el historial de servicios por placa de vehículo</p>
-            </div>
-
-            <div class="form-group" style="max-width: 400px; margin-bottom: 20px;">
-                <label class="form-label">Buscar por Placa del Vehículo *</label>
-                <input type="text" class="form-input" id="searchVehiclePlate" placeholder="ABC123" oninput="searchVehicleHistory()">
-            </div>
-
-            <div class="vehicle-history-container" id="vehicleHistoryContainer">
-                <div class="empty-state">
-                    <div class="empty-state-icon">🚗</div>
-                    <p>Ingresa una placa para ver el historial completo del vehículo</p>
-                </div>
-            </div>
-        </section>
-
-        <!-- Sección Notificaciones -->
-        <section class="section" id="section-notifications">
-            <div class="section-header">
-                <h1 class="section-title">Sistema de Notificaciones</h1>
-                <p class="section-subtitle">Recordatorios de mantenimiento y alertas del sistema</p>
-            </div>
-
-            <div class="dashboard-grid">
-                <div class="stat-card">
-                    <div class="stat-value" id="pendingMaintenance">0</div>
-                    <div class="stat-label">Mantenimientos Pendientes</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-value" id="lowStockAlerts">0</div>
-                    <div class="stat-label">Alertas Stock Bajo</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-value" id="followUpCalls">0</div>
-                    <div class="stat-label">Seguimientos Pendientes</div>
-                </div>
-            </div>
-
-            <div class="actions-header">
-                <button class="btn btn-primary" onclick="sendMaintenanceReminders()">
-                    📧 Enviar Recordatorios
-                </button>
-                <button class="btn btn-secondary" onclick="checkStockAlerts()">
-                    🔍 Verificar Stock
-                </button>
-            </div>
-
-            <div class="notifications-list" id="notificationsList">
-                <!-- Lista de notificaciones se carga aquí -->
-            </div>
-        </section>
-    </div>
-</div>
-
-    <!-- Modal Trabajos -->
-    <div class="modal" id="jobModal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2 class="modal-title" id="jobModalTitle">Nuevo Trabajo</h2>
-                <button class="btn-close" onclick="closeJobModal()">&times;</button>
-            </div>
-            <form class="form" id="jobForm" onsubmit="saveJob(event)">
-                <input type="hidden" id="jobId">
-                
-                <!-- Información del Cliente -->
-                <div class="form-section">
-                    <h3 class="form-section-title">👤 Información del Cliente</h3>
-                    <div class="form-grid">
-                        <div class="form-group">
-                            <label class="form-label">Cliente *</label>
-                            <div class="search-container">
-                                <input type="text" class="form-input search-input" id="jobClientName" required placeholder="Buscar cliente por nombre o cédula...">
-                                <div class="search-results" id="clientSearchResults"></div>
+            <!-- Content -->
+            <div class="content">
+                <!-- Dashboard Section -->
+                <section id="dashboard" class="section active">
+                    <div class="dashboard-grid">
+                        <!-- Métricas principales -->
+                        <div class="card text-center">
+                            <div class="metric">
+                                <span class="metric-value" id="totalJobs">0</span>
+                                <div class="metric-label">Total Trabajos</div>
                             </div>
                         </div>
-                        <div class="form-group">
-                            <label class="form-label">Teléfono</label>
-                            <input type="tel" class="form-input" id="jobClientPhone" placeholder="300 123 4567">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Cédula</label>
-                            <input type="text" class="form-input" id="jobClientCedula" placeholder="12345678">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Email</label>
-                            <input type="email" class="form-input" id="jobClientEmail" placeholder="cliente@email.com">
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Información del Vehículo -->
-                <div class="form-section">
-                    <h3 class="form-section-title">🚗 Información del Vehículo</h3>
-                    <div class="form-grid">
-                        <div class="form-group">
-                            <label class="form-label">Placa del Vehículo *</label>
-                            <input type="text" class="form-input" id="jobPlate" required placeholder="ABC123">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Marca</label>
-                            <input type="text" class="form-input" id="jobVehicleBrand" placeholder="Toyota, Ford, etc.">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Modelo</label>
-                            <input type="text" class="form-input" id="jobVehicleModel" placeholder="Corolla, Focus, etc.">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Año</label>
-                            <input type="number" class="form-input" id="jobVehicleYear" placeholder="2020">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Kilometraje *</label>
-                            <input type="number" class="form-input" id="jobMileage" required placeholder="50000">
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Información del Trabajo -->
-                <div class="form-section">
-                    <h3 class="form-section-title">🔧 Información del Trabajo</h3>
-                    <div class="form-grid">
-                        <div class="form-group">
-                            <label class="form-label">Mecánico Asignado *</label>
-                            <select class="form-select" id="jobMechanic" required>
-                                <option value="">Seleccionar mecánico</option>
-                                <option value="1">Pedro Barraza</option>
-                                <option value="2">Víctor Padilla</option>
-                                <option value="3">Ismael Cervantes</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Estado</label>
-                            <select class="form-select" id="jobStatus">
-                                <option value="pendiente">Pendiente</option>
-                                <option value="enprogreso">En Progreso</option>
-                                <option value="completado">Completado</option>
-                                <option value="entregado">Entregado</option>
-                            </select>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Descripción y Repuestos -->
-                <div class="form-section">
-                    <h3 class="form-section-title">📋 Detalles del Trabajo</h3>
-                    <div class="form-group">
-                        <label class="form-label">Descripción del Trabajo *</label>
-                        <textarea class="form-textarea" id="jobDescription" required placeholder="Describe el trabajo realizado..."></textarea>
-                    </div>
-                    
-                    <!-- Buscador de Inventario -->
-                    <div class="form-group">
-                        <label class="form-label">Repuestos del Inventario</label>
-                        <div class="inventory-search-container">
-                            <div class="search-container">
-                                <input type="text" class="form-input search-input" id="inventorySearch" placeholder="Buscar repuesto por nombre o código...">
-                                <div class="search-results" id="inventorySearchResults"></div>
+                        
+                        <div class="card text-center">
+                            <div class="metric">
+                                <span class="metric-value" id="completedJobs">0</span>
+                                <div class="metric-label">Completados</div>
                             </div>
-                            <div class="selected-items" id="selectedInventoryItems">
-                                <p class="no-items">No hay repuestos seleccionados</p>
+                        </div>
+                        
+                        <div class="card text-center">
+                            <div class="metric">
+                                <span class="metric-value" id="inProgressJobs">0</span>
+                                <div class="metric-label">En Progreso</div>
+                            </div>
+                        </div>
+                        
+                        <div class="card text-center">
+                            <div class="metric">
+                                <span class="metric-value" id="monthlyRevenue">$0</span>
+                                <div class="metric-label">Ingresos Mes</div>
                             </div>
                         </div>
                     </div>
-                    
-                    <!-- Repuestos Manuales -->
-                    <div class="form-group">
-                        <label class="form-label">Repuestos Adicionales (Manual)</label>
-                        <input type="text" class="form-input" id="jobParts" placeholder="Lista de repuestos adicionales...">
-                    </div>
-                </div>
-                
-                <!-- Costos -->
-                <div class="form-section">
-                    <h3 class="form-section-title">💰 Costos y Precios</h3>
-                    <div class="form-grid">
-                        <div class="form-group">
-                            <label class="form-label">Costo Repuestos del Inventario</label>
-                            <input type="number" class="form-input" id="jobInventoryPartsCost" placeholder="0" step="0.01" readonly>
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Costo Repuestos Adicionales</label>
-                            <input type="number" class="form-input" id="jobPartsCost" placeholder="0" step="0.01">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Costo Mano de Obra *</label>
-                            <input type="number" class="form-input" id="jobLaborCost" required placeholder="0" step="0.01">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Valor de Venta *</label>
-                            <input type="number" class="form-input" id="jobSalePrice" required placeholder="0" step="0.01">
+
+                    <!-- Trabajos recientes -->
+                    <div class="card">
+                        <h3 class="card-title">Trabajos Recientes</h3>
+                        <div class="table-container">
+                            <table class="table">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Cliente</th>
+                                        <th>Vehículo</th>
+                                        <th>Servicio</th>
+                                        <th>Estado</th>
+                                        <th>Fecha</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="trabajosRecientes">
+                                    <!-- Se llena dinámicamente -->
+                                </tbody>
+                            </table>
                         </div>
                     </div>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Descripción del Trabajo *</label>
-                    <textarea class="form-textarea" id="jobDescription" required placeholder="Describe el trabajo realizado..."></textarea>
-                </div>
-                <div class="form-grid">
-                    <div class="form-group">
-                        <label class="form-label">Repuestos/Insumos</label>
-                        <input type="text" class="form-input" id="jobParts" placeholder="Lista de repuestos...">
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Costo Repuestos</label>
-                        <input type="number" class="form-input" id="jobPartsCost" placeholder="0" step="0.01">
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Costo Mano de Obra *</label>
-                        <input type="number" class="form-input" id="jobLaborCost" required placeholder="0" step="0.01">
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Valor de Venta *</label>
-                        <input type="number" class="form-input" id="jobSalePrice" required placeholder="0" step="0.01">
-                    </div>
-                </div>
-                <!-- Técinos Adicionales (para trabajos conjuntos) -->
-                <div class="form-section">
-                    <h3 class="form-section-title">👥 Técnicos Adicionales</h3>
-                    <div class="form-group">
-                        <label class="form-label">Técnicos adicionales (Pedro + Víctor = 20% cada uno)</label>
-                        <div class="checkbox-group">
-                            <label class="checkbox-label">
-                                <input type="checkbox" id="additionalMechanic1" value="1">
-                                <span class="checkmark"></span>
-                                Pedro Barraza
-                            </label>
-                            <label class="checkbox-label">
-                                <input type="checkbox" id="additionalMechanic2" value="2">
-                                <span class="checkmark"></span>
-                                Víctor Padilla
-                            </label>
-                            <label class="checkbox-label">
-                                <input type="checkbox" id="additionalMechanic3" value="3">
-                                <span class="checkmark"></span>
-                                Ismael Cervantes
-                            </label>
+                </section>
+
+                <!-- Trabajos Section -->
+                <section id="trabajos" class="section">
+                    <div class="card">
+                        <h3 class="card-title">Gestión de Trabajos</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4">
+                            <div class="card text-center">
+                                <div class="metric">
+                                    <span class="metric-value" id="trabajosTotal">0</span>
+                                    <div class="metric-label">Total Trabajos</div>
+                                </div>
+                            </div>
+                            <div class="card text-center">
+                                <div class="metric">
+                                    <span class="metric-value" id="trabajosCompletados">0</span>
+                                    <div class="metric-label">Completados</div>
+                                </div>
+                            </div>
+                            <div class="card text-center">
+                                <div class="metric">
+                                    <span class="metric-value" id="trabajosEnProgreso">0</span>
+                                    <div class="metric-label">En Progreso</div>
+                                </div>
+                            </div>
+                            <div class="card text-center">
+                                <div class="metric">
+                                    <span class="metric-value" id="trabajosPendientes">0</span>
+                                    <div class="metric-label">Pendiente</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mt-4">
+                            <button class="btn btn-primary" onclick="nuevoTrabajo()">Nuevo Trabajo</button>
+                        </div>
+                        <div class="table-container mt-4">
+                            <table class="table">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Cliente</th>
+                                        <th>Vehículo</th>
+                                        <th>Servicio</th>
+                                        <th>Mecánico</th>
+                                        <th>Estado</th>
+                                        <th>Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="trabajosTable">
+                                    <!-- Se llena dinámicamente -->
+                                </tbody>
+                            </table>
                         </div>
                     </div>
-                </div>
-                
-                <div class="form-actions">
-                    <button type="button" class="btn btn-secondary" onclick="closeJobModal()">Cancelar</button>
-                    <button type="submit" class="btn btn-primary">Guardar Trabajo</button>
-                </div>
-            </form>
+                </section>
+
+                <!-- Mecánicos Section -->
+                <section id="mecanicos" class="section">
+                    <div class="card">
+                        <h3 class="card-title">Equipo de Mecánicos</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-3">
+                            <div class="card text-center">
+                                <div class="metric">
+                                    <span class="metric-value" id="mecanicosTotal">0</span>
+                                    <div class="metric-label">Total Mecánicos</div>
+                                </div>
+                            </div>
+                            <div class="card text-center">
+                                <div class="metric">
+                                    <span class="metric-value" id="mecanicosActivos">0</span>
+                                    <div class="metric-label">Activos</div>
+                                </div>
+                            </div>
+                            <div class="card text-center">
+                                <div class="metric">
+                                    <span class="metric-value" id="mecanicosExperiencia">0</span>
+                                    <div class="metric-label">Años Promedio</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mt-4">
+                            <button class="btn btn-primary" onclick="nuevoMecanico()">Agregar Mecánico</button>
+                        </div>
+                        <div class="table-container mt-4">
+                            <table class="table">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Nombre</th>
+                                        <th>Especialidad</th>
+                                        <th>Experiencia</th>
+                                        <th>Estado</th>
+                                        <th>Trabajos Activos</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="mecanicosTable">
+                                    <!-- Se llena dinámicamente -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Recepción Section -->
+                <section id="recepcion" class="section">
+                    <div class="card">
+                        <h3 class="card-title">Recepción de Vehículos</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4">
+                            <div class="card text-center">
+                                <div class="metric">
+                                    <span class="metric-value" id="enCola">0</span>
+                                    <div class="metric-label">En Cola</div>
+                                </div>
+                            </div>
+                            <div class="card text-center">
+                                <div class="metric">
+                                    <span class="metric-value" id="atendidosHoy">0</span>
+                                    <div class="metric-label">Atendidos Hoy</div>
+                                </div>
+                            </div>
+                            <div class="card text-center">
+                                <div class="metric">
+                                    <span class="metric-value" id="promedioDiario">0</span>
+                                    <div class="metric-label">Promedio Diario</div>
+                                </div>
+                            </div>
+                            <div class="card text-center">
+                                <div class="metric">
+                                    <span class="metric-value" id="satisfaccion">0%</span>
+                                    <div class="metric-label">Satisfacción</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mt-4">
+                            <button class="btn btn-primary" onclick="nuevaRecepcion()">Nueva Recepción</button>
+                        </div>
+                        <div class="table-container mt-4">
+                            <table class="table">
+                                <thead>
+                                    <tr>
+                                        <th>Ticket</th>
+                                        <th>Cliente</th>
+                                        <th>Vehículo</th>
+                                        <th>Problema</th>
+                                        <th>Estado</th>
+                                        <th>Tiempo</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="recepcionTable">
+                                    <!-- Se llena dinámicamente -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Cotizaciones Section -->
+                <section id="cotizaciones" class="section">
+                    <div class="card">
+                        <h3 class="card-title">Gestión de Cotizaciones</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-3">
+                            <div class="card text-center">
+                                <div class="metric">
+                                    <span class="metric-value" id="cotizacionesActivas">0</span>
+                                    <div class="metric-label">Cotizaciones Activas</div>
+                                </div>
+                            </div>
+                            <div class="card text-center">
+                                <div class="metric">
+                                    <span class="metric-value" id="valorTotal">$0</span>
+                                    <div class="metric-label">Valor Total</div>
+                                </div>
+                            </div>
+                            <div class="card text-center">
+                                <div class="metric">
+                                    <span class="metric-value" id="tasaConversion">0%</span>
+                                    <div class="metric-label">Tasa Conversión</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mt-4">
+                            <button class="btn btn-primary" onclick="nuevaCotizacion()">Nueva Cotización</button>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Finanzas Section -->
+                <section id="finanzas" class="section">
+                    <div class="card">
+                        <h3 class="card-title">Control Financiero</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-4">
+                            <div class="card text-center">
+                                <div class="metric">
+                                    <span class="metric-value" id="ingresosMes">$0</span>
+                                    <div class="metric-label">Ingresos Mes</div>
+                                </div>
+                            </div>
+                            <div class="card text-center">
+                                <div class="metric">
+                                    <span class="metric-value" id="gastos">$0</span>
+                                    <div class="metric-label">Gastos</div>
+                                </div>
+                            </div>
+                            <div class="card text-center">
+                                <div class="metric">
+                                    <span class="metric-value" id="gananciaNeta">$0</span>
+                                    <div class="metric-label">Ganancia Neta</div>
+                                </div>
+                            </div>
+                            <div class="card text-center">
+                                <div class="metric">
+                                    <span class="metric-value" id="margen">0%</span>
+                                    <div class="metric-label">Margen</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Liquidación Section -->
+                <section id="liquidacion" class="section">
+                    <div class="card">
+                        <h3 class="card-title">Liquidación de Trabajos</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-3">
+                            <div class="card text-center">
+                                <div class="metric">
+                                    <span class="metric-value" id="paraLiquidar">0</span>
+                                    <div class="metric-label">Para Liquidar</div>
+                                </div>
+                            </div>
+                            <div class="card text-center">
+                                <div class="metric">
+                                    <span class="metric-value" id="montoTotal">$0</span>
+                                    <div class="metric-label">Monto Total</div>
+                                </div>
+                            </div>
+                            <div class="card text-center">
+                                <div class="metric">
+                                    <span class="metric-value" id="diasPromedio">0</span>
+                                    <div class="metric-label">Días Promedio</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Calendario Section -->
+                <section id="calendario" class="section">
+                    <div class="card">
+                        <h3 class="card-title">Calendario de Citas</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-4">
+                            <div class="card text-center">
+                                <div class="metric">
+                                    <span class="metric-value" id="citasHoy">0</span>
+                                    <div class="metric-label">Citas Hoy</div>
+                                </div>
+                            </div>
+                            <div class="card text-center">
+                                <div class="metric">
+                                    <span class="metric-value" id="citasCompletadas">0</span>
+                                    <div class="metric-label">Completadas</div>
+                                </div>
+                            </div>
+                            <div class="card text-center">
+                                <div class="metric">
+                                    <span class="metric-value" id="citasPendientes">0</span>
+                                    <div class="metric-label">Pendientes</div>
+                                </div>
+                            </div>
+                            <div class="card text-center">
+                                <div class="metric">
+                                    <span class="metric-value" id="citasCanceladas">0</span>
+                                    <div class="metric-label">Canceladas</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Historial Section -->
+                <section id="historial" class="section">
+                    <div class="card">
+                        <h3 class="card-title">Historial de Servicios</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-3">
+                            <div class="card text-center">
+                                <div class="metric">
+                                    <span class="metric-value" id="totalServicios">0</span>
+                                    <div class="metric-label">Total Servicios</div>
+                                </div>
+                            </div>
+                            <div class="card text-center">
+                                <div class="metric">
+                                    <span class="metric-value" id="totalClientes">0</span>
+                                    <div class="metric-label">Clientes</div>
+                                </div>
+                            </div>
+                            <div class="card text-center">
+                                <div class="metric">
+                                    <span class="metric-value" id="calificacion">0</span>
+                                    <div class="metric-label">Calificación</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Notificaciones Section -->
+                <section id="notificaciones" class="section">
+                    <div class="card">
+                        <h3 class="card-title">Alertas y Notificaciones</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-3">
+                            <div class="card text-center">
+                                <div class="metric">
+                                    <span class="metric-value" id="urgentes">0</span>
+                                    <div class="metric-label">Urgentes</div>
+                                </div>
+                            </div>
+                            <div class="card text-center">
+                                <div class="metric">
+                                    <span class="metric-value" id="informacion">0</span>
+                                    <div class="metric-label">Información</div>
+                                </div>
+                            </div>
+                            <div class="card text-center">
+                                <div class="metric">
+                                    <span class="metric-value" id="recordatorios">0</span>
+                                    <div class="metric-label">Recordatorios</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Reportes Section -->
+                <section id="reportes" class="section">
+                    <div class="card">
+                        <h3 class="card-title">Reportes y Estadísticas</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-4">
+                            <div class="card text-center">
+                                <div class="metric">
+                                    <span class="metric-value" id="productividad">0%</span>
+                                    <div class="metric-label">Productividad</div>
+                                </div>
+                            </div>
+                            <div class="card text-center">
+                                <div class="metric">
+                                    <span class="metric-value" id="satisfaccionReportes">0</span>
+                                    <div class="metric-label">Satisfacción</div>
+                                </div>
+                            </div>
+                            <div class="card text-center">
+                                <div class="metric">
+                                    <span class="metric-value" id="promedioDiarioReportes">$0</span>
+                                    <div class="metric-label">Promedio/Día</div>
+                                </div>
+                            </div>
+                            <div class="card text-center">
+                                <div class="metric">
+                                    <span class="metric-value" id="retencion">0%</span>
+                                    <div class="metric-label">Retención</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </div>
         </div>
     </div>
 
-    <!-- Modal Mecánicos -->
-    <div class="modal" id="mechanicModal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2 class="modal-title" id="mechanicModalTitle">Nuevo Mecánico</h2>
-                <button class="btn-close" onclick="closeMechanicModal()">&times;</button>
-            </div>
-            <form class="form" id="mechanicForm" onsubmit="saveMechanic(event)">
-                <input type="hidden" id="mechanicId">
-                <div class="form-grid">
-                    <div class="form-group">
-                        <label class="form-label">Nombre *</label>
-                        <input type="text" class="form-input" id="mechanicName" required placeholder="Juan Pérez">
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Especialidad</label>
-                        <input type="text" class="form-input" id="mechanicSpecialty" placeholder="Motor, Frenos, etc.">
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Teléfono</label>
-                        <input type="tel" class="form-input" id="mechanicPhone" placeholder="300 123 4567">
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Tarifa por Hora</label>
-                        <input type="number" class="form-input" id="mechanicHourlyRate" placeholder="0" step="0.01">
-                    </div>
-                </div>
-                <div class="form-actions">
-                    <button type="button" class="btn btn-secondary" onclick="closeMechanicModal()">Cancelar</button>
-                    <button type="submit" class="btn btn-primary">Guardar</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <!-- Modal Pagos -->
-    <div class="modal" id="paymentModal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2 class="modal-title" id="paymentModalTitle">Nuevo Pago</h2>
-                <button class="btn-close" onclick="closePaymentModal()">&times;</button>
-            </div>
-            <form class="form" id="paymentForm" onsubmit="savePayment(event)">
-                <input type="hidden" id="paymentId">
-                <div class="form-grid">
-                    <div class="form-group">
-                        <label class="form-label">Mecánico *</label>
-                        <select class="form-select" id="paymentMechanic" required>
-                            <option value="">Seleccionar mecánico</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Tipo de Movimiento</label>
-                        <select class="form-select" id="paymentType" onchange="updatePaymentLabel()">
-                            <option value="pago">Pago</option>
-                            <option value="adelanto">Adelanto</option>
-                            <option value="prestamo">Préstamo</option>
-                            <option value="descuento">Descuento</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label" id="paymentAmountLabel">Monto *</label>
-                        <input type="number" class="form-input" id="paymentAmount" required placeholder="0" step="0.01">
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Fecha</label>
-                        <input type="date" class="form-input" id="paymentDate">
-                    </div>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Descripción</label>
-                    <textarea class="form-textarea" id="paymentDescription" placeholder="Concepto del pago..."></textarea>
-                </div>
-                <div class="form-actions">
-                    <button type="button" class="btn btn-secondary" onclick="closePaymentModal()">Cancelar</button>
-                    <button type="submit" class="btn btn-primary">Guardar</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <!-- Modal Login -->
-    <div class="modal active" id="loginModal">
-        <div class="modal-content" style="max-width: 400px;">
-            <div class="modal-header">
-                <h2 class="modal-title">Iniciar Sesión</h2>
-            </div>
-            <form class="form" onsubmit="login(event)">
-                <div class="form-group">
-                    <label class="form-label">Usuario</label>
-                    <input type="text" class="form-input" id="loginUser" required placeholder="admin o mecanico">
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Contraseña</label>
-                    <input type="password" class="form-input" id="loginPassword" required placeholder="admin o mecanico">
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Rol</label>
-                    <select class="form-select" id="loginRole" required>
-                        <option value="admin">Administrador</option>
-                        <option value="mechanic">Mecánico</option>
-                    </select>
-                </div>
-                <div class="form-actions">
-                    <button type="submit" class="btn btn-primary" style="width: 100%;">Ingresar</button>
-                </div>
-                <p class="text-center mt-sm" style="font-size: 12px; color: var(--neutral-600);">
-                    Usuarios de prueba: admin/admin o mecanico/mecanico
-                </p>
-            </form>
-        </div>
-    </div>
-
-    <!-- Modal Recepción -->
-    <div class="modal" id="receptionModal">
-        <div class="modal-content" style="max-width: 600px;">
-            <div class="modal-header">
-                <h2 class="modal-title" id="receptionModalTitle">Nueva Recepción</h2>
-                <button class="btn-close" onclick="closeReceptionModal()">&times;</button>
-            </div>
-            <form class="form" id="receptionForm" onsubmit="saveReception(event)">
-                <input type="hidden" id="receptionId">
-                <div class="form-grid">
-                    <div class="form-group">
-                        <label class="form-label">Número de Orden</label>
-                        <input type="text" class="form-input" id="receptionOrderNumber" placeholder="ORD-2025-XXX" readonly>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Nombre del Cliente *</label>
-                        <input type="text" class="form-input" id="receptionClientName" required placeholder="Nombre completo">
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Teléfono *</label>
-                        <input type="tel" class="form-input" id="receptionClientPhone" required placeholder="300 123 4567">
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Email</label>
-                        <input type="email" class="form-input" id="receptionClientEmail" placeholder="cliente@email.com">
-                    </div>
-                </div>
-                <div class="form-grid">
-                    <div class="form-group">
-                        <label class="form-label">Placa del Vehículo *</label>
-                        <input type="text" class="form-input" id="receptionVehiclePlate" required placeholder="ABC123">
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Marca *</label>
-                        <input type="text" class="form-input" id="receptionVehicleBrand" required placeholder="Toyota">
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Modelo *</label>
-                        <input type="text" class="form-input" id="receptionVehicleModel" required placeholder="Corolla">
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Año *</label>
-                        <input type="number" class="form-input" id="receptionVehicleYear" required placeholder="2020" min="1900" max="2030">
-                    </div>
-                </div>
-                <div class="form-grid">
-                    <div class="form-group">
-                        <label class="form-label">Kilometraje *</label>
-                        <input type="number" class="form-input" id="receptionMileage" required placeholder="50000">
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Técnico Asignado *</label>
-                        <select class="form-select" id="receptionAssignedMechanic" required>
-                            <option value="">Seleccionar técnico</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Prioridad</label>
-                        <select class="form-select" id="receptionPriority">
-                            <option value="baja">Baja</option>
-                            <option value="media" selected>Media</option>
-                            <option value="alta">Alta</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Tiempo Estimado</label>
-                        <input type="text" class="form-input" id="receptionEstimatedTime" placeholder="2 horas">
-                    </div>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Descripción del Problema *</label>
-                    <textarea class="form-textarea" id="receptionProblemDescription" required placeholder="Describe detalladamente el problema reportado por el cliente..."></textarea>
-                </div>
-                <div class="form-actions">
-                    <button type="button" class="btn btn-secondary" onclick="closeReceptionModal()">Cancelar</button>
-                    <button type="submit" class="btn btn-primary">Crear Recepción</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <!-- Modal Cotización -->
-    <div class="modal" id="quoteModal">
-        <div class="modal-content" style="max-width: 700px;">
-            <div class="modal-header">
-                <h2 class="modal-title" id="quoteModalTitle">Nueva Cotización</h2>
-                <button class="btn-close" onclick="closeQuoteModal()">&times;</button>
-            </div>
-            <form class="form" id="quoteForm" onsubmit="saveQuote(event)">
-                <input type="hidden" id="quoteId">
-                <div class="form-grid">
-                    <div class="form-group">
-                        <label class="form-label">Número de Cotización</label>
-                        <input type="text" class="form-input" id="quoteNumber" placeholder="COT-2025-XXX" readonly>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Cliente *</label>
-                        <input type="text" class="form-input" id="quoteClientName" required placeholder="Nombre del cliente">
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Vehículo *</label>
-                        <input type="text" class="form-input" id="quoteVehiclePlate" required placeholder="Placa del vehículo">
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Fecha de Válidez</label>
-                        <input type="date" class="form-input" id="quoteValidUntil">
-                    </div>
-                </div>
-                
-                <div class="quote-items">
-                    <h4>Items de la Cotización</h4>
-                    <div id="quoteItemsList">
-                        <!-- Items se agregan dinámicamente -->
-                    </div>
-                    <button type="button" class="btn btn-sm btn-secondary mt-sm" onclick="addQuoteItem()">➕ Agregar Item</button>
-                </div>
-                
-                <div class="form-grid">
-                    <div class="form-group">
-                        <label class="form-label">Costo Total Mano de Obra</label>
-                        <input type="number" class="form-input" id="quoteLaborCost" placeholder="0" step="0.01">
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Costo Total Repuestos</label>
-                        <input type="number" class="form-input" id="quotePartsCost" placeholder="0" step="0.01">
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">TOTAL</label>
-                        <input type="number" class="form-input" id="quoteTotal" readonly placeholder="0">
-                    </div>
-                </div>
-                
-                <div class="form-actions">
-                    <button type="button" class="btn btn-secondary" onclick="closeQuoteModal()">Cancelar</button>
-                    <button type="submit" class="btn btn-primary">Crear Cotización</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <!-- Scripts -->
-    <script src="TALLER-COMPLETO-CORREGIDO/js/app.js"></script>
-    
-    <!-- Supabase Integration Script -->
-    <script>
-    // FUNCIONALIDAD MEJORADA DEL FORMULARIO - BÚSQUEDAS Y POS
-    
-    // Variables para búsquedas
-    let clientSearchTimeout = null;
-    let inventorySearchTimeout = null;
-    
-    // Event listeners cuando se carga la página
-    document.addEventListener('DOMContentLoaded', function() {
-        // Inicializar búsquedas
-        setupClientSearch();
-        setupInventorySearch();
-        
-        // Event listeners para cálculo automático de inventario
-        document.getElementById('jobPartsCost')?.addEventListener('input', updateTotalInventoryCost);
-        document.getElementById('jobLaborCost')?.addEventListener('input', updateTotalInventoryCost);
-        document.getElementById('jobSalePrice')?.addEventListener('input', updateTotalInventoryCost);
-    });
-    
-    // Configurar búsqueda de clientes
-    function setupClientSearch() {
-        const searchInput = document.getElementById('jobClientName');
-        if (!searchInput) return;
-        
-        searchInput.addEventListener('input', function() {
-            clearTimeout(clientSearchTimeout);
-            const query = this.value.trim();
-            
-            if (query.length < 2) {
-                hideClientSearchResults();
-                return;
-            }
-            
-            clientSearchTimeout = setTimeout(() => {
-                searchClients(query);
-            }, 300);
-        });
-        
-        // Ocultar resultados al hacer click fuera
-        document.addEventListener('click', function(e) {
-            if (!searchInput.contains(e.target) && !document.getElementById('clientSearchResults').contains(e.target)) {
-                hideClientSearchResults();
-            }
-        });
-    }
-    
-    // Buscar clientes por nombre o cédula
-    function searchClients(query) {
-        const results = clients.filter(client => 
-            client.name.toLowerCase().includes(query.toLowerCase()) ||
-            client.cedula.includes(query) ||
-            client.phone.includes(query)
-        ).slice(0, 5); // Mostrar máximo 5 resultados
-        
-        showClientSearchResults(results);
-    }
-    
-    // Mostrar resultados de búsqueda de clientes
-    function showClientSearchResults(results) {
-        const container = document.getElementById('clientSearchResults');
-        if (!container) return;
-        
-        if (results.length === 0) {
-            container.innerHTML = '<div class="search-item">No se encontraron clientes</div>';
-        } else {
-            container.innerHTML = results.map(client => `
-                <div class="search-item" onclick="selectClient('${client.id}', '${client.name}', '${client.phone}', '${client.cedula}', '${client.email}')">
-                    <strong>${client.name}</strong><br>
-                    <small>Cédula: ${client.cedula} | Tel: ${client.phone}</small>
-                </div>
-            `).join('');
-        }
-        
-        container.classList.add('show');
-    }
-    
-    // Ocultar resultados de búsqueda de clientes
-    function hideClientSearchResults() {
-        const container = document.getElementById('clientSearchResults');
-        if (container) {
-            container.classList.remove('show');
-        }
-    }
-    
-    // Seleccionar cliente de los resultados
-    function selectClient(id, name, phone, cedula, email) {
-        document.getElementById('jobClientName').value = name;
-        document.getElementById('jobClientPhone').value = phone;
-        document.getElementById('jobClientCedula').value = cedula;
-        document.getElementById('jobClientEmail').value = email;
-        hideClientSearchResults();
-    }
-    
-    // Configurar búsqueda de inventario
-    function setupInventorySearch() {
-        const searchInput = document.getElementById('inventorySearch');
-        if (!searchInput) return;
-        
-        searchInput.addEventListener('input', function() {
-            clearTimeout(inventorySearchTimeout);
-            const query = this.value.trim();
-            
-            if (query.length < 2) {
-                hideInventorySearchResults();
-                return;
-            }
-            
-            inventorySearchTimeout = setTimeout(() => {
-                searchInventory(query);
-            }, 300);
-        });
-        
-        // Ocultar resultados al hacer click fuera
-        document.addEventListener('click', function(e) {
-            if (!searchInput.contains(e.target) && !document.getElementById('inventorySearchResults').contains(e.target)) {
-                hideInventorySearchResults();
-            }
-        });
-    }
-    
-    // Buscar inventario por nombre, código, código de barras o referencia
-    function searchInventory(query) {
-        const results = inventory.filter(item => 
-            item.name.toLowerCase().includes(query.toLowerCase()) ||
-            item.code.toLowerCase().includes(query.toLowerCase()) ||
-            item.barcode.includes(query) ||
-            item.brand.toLowerCase().includes(query.toLowerCase()) ||
-            item.category.toLowerCase().includes(query.toLowerCase()) ||
-            item.description.toLowerCase().includes(query.toLowerCase())
-        ).slice(0, 8); // Mostrar máximo 8 resultados
-        
-        // Si hay exactamente 1 resultado y coincide por código de barras, agregarlo automáticamente
-        if (results.length === 1 && results[0].barcode === query) {
-            addInventoryItem(results[0].id, results[0].name, results[0].price, results[0].stock);
-            document.getElementById('inventorySearch').value = '';
-            hideInventorySearchResults();
-            return;
-        }
-        
-        showInventorySearchResults(results);
-    }
-    
-    // Mostrar resultados de búsqueda de inventario
-    function showInventorySearchResults(results) {
-        const container = document.getElementById('inventorySearchResults');
-        if (!container) return;
-        
-        if (results.length === 0) {
-            container.innerHTML = '<div class="search-item">No se encontraron repuestos</div>';
-        } else {
-            container.innerHTML = results.map(item => `
-                <div class="search-item" onclick="addInventoryItem('${item.id}', '${item.name}', '${item.price}', '${item.stock}')">
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <div>
-                            <strong>${item.name}</strong><br>
-                            <small>Código: ${item.code} | Barras: ${item.barcode} | ${item.brand}</small><br>
-                            <small>Categoría: ${item.category} | Stock: ${item.stock}</small>
-                        </div>
-                        <div style="text-align: right;">
-                            <strong style="color: var(--success);">${formatCurrency(item.price)}</strong><br>
-                            <small style="color: ${item.stock <= item.minStock ? 'var(--error)' : 'var(--neutral-600)'}">
-                                ${item.stock <= item.minStock ? '⚠️ Stock bajo' : '✅ Disponible'}
-                            </small>
-                        </div>
-                    </div>
-                </div>
-            `).join('');
-        }
-        
-        container.classList.add('show');
-    }
-    
-    // Ocultar resultados de búsqueda de inventario
-    function hideInventorySearchResults() {
-        const container = document.getElementById('inventorySearchResults');
-        if (container) {
-            container.classList.remove('show');
-        }
-    }
-    
-    // Agregar item de inventario seleccionado
-    function addInventoryItem(id, name, price, stock) {
-        const item = inventory.find(i => i.id == id);
-        if (!item || selectedInventoryItems.find(selected => selected.id == id)) {
-            return; // Item no encontrado o ya seleccionado
-        }
-        
-        selectedInventoryItems.push({
-            ...item,
-            quantity: 1
-        });
-        
-        updateSelectedInventoryItems();
-        updateTotalInventoryCost();
-        
-        // Limpiar búsqueda
-        document.getElementById('inventorySearch').value = '';
-        hideInventorySearchResults();
-    }
-    
-    // Remover item de inventario seleccionado
-    function removeInventoryItem(id) {
-        selectedInventoryItems = selectedInventoryItems.filter(item => item.id != id);
-        updateSelectedInventoryItems();
-        updateTotalInventoryCost();
-    }
-    
-    // Actualizar lista de items seleccionados
-    function updateSelectedInventoryItems() {
-        const container = document.getElementById('selectedInventoryItems');
-        if (!container) return;
-        
-        if (selectedInventoryItems.length === 0) {
-            container.innerHTML = '<p class="no-items">No hay repuestos seleccionados</p>';
-            return;
-        }
-        
-        container.innerHTML = selectedInventoryItems.map(item => `
-            <div class="selected-item">
-                <div class="selected-item-info">
-                    <div class="selected-item-name">${item.name}</div>
-                    <div class="selected-item-details">${item.code} | ${item.brand} | Stock: ${item.stock}</div>
-                </div>
-                <div style="display: flex; align-items: center; gap: 10px;">
-                    <input type="number" 
-                           class="form-input" 
-                           style="width: 60px; padding: 4px;" 
-                           value="${item.quantity}" 
-                           min="1" 
-                           max="${item.stock}"
-                           onchange="updateInventoryItemQuantity('${item.id}', this.value)">
-                    <div class="selected-item-price">${formatCurrency(item.price * item.quantity)}</div>
-                    <button class="remove-item" onclick="removeInventoryItem('${item.id}')">×</button>
-                </div>
-            </div>
-        `).join('');
-    }
-    
-    // Actualizar cantidad de item de inventario
-    function updateInventoryItemQuantity(id, quantity) {
-        const item = selectedInventoryItems.find(item => item.id == id);
-        if (item) {
-            item.quantity = Math.max(1, Math.min(quantity, item.stock));
-            updateSelectedInventoryItems();
-            updateTotalInventoryCost();
-        }
-    }
-    
-    // Calcular costo total de inventario
-    function updateTotalInventoryCost() {
-        const totalCost = selectedInventoryItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-        const inventoryCostInput = document.getElementById('jobInventoryPartsCost');
-        if (inventoryCostInput) {
-            inventoryCostInput.value = totalCost;
-        }
-    }
-    
-    // CORRECCIÓN DE BOTONES - MANTENER ESTE CÓDIGO
-    console.log('🔧 Aplicando corrección a botones de trabajo...');
-    
-    window.openJobModal = function(jobId = null) {
-        console.log('🔧 openJobModal ejecutada:', jobId);
-        
-        const modal = document.getElementById('jobModal');
-        if (!modal) {
-            console.error('❌ Modal no encontrado');
-            alert('Error: Modal no encontrado. Recarga la página.');
-            return;
-        }
-        
-        const form = document.getElementById('jobForm');
-        if (!form) {
-            console.error('❌ Formulario no encontrado');
-            alert('Error: Formulario no encontrado.');
-            return;
-        }
-        
-        // Limpiar formulario
-        form.reset();
-        
-        if (jobId) {
-            // EDITAR trabajo existente
-            const job = window.jobs.find(j => j.id == jobId);
-            if (job) {
-                console.log('✅ Editando trabajo:', job);
-                document.getElementById('jobModalTitle').textContent = 'Editar Trabajo';
-                document.getElementById('jobId').value = job.id;
-                document.getElementById('jobPlate').value = job.plate || '';
-                document.getElementById('jobMileage').value = job.mileage || '';
-                document.getElementById('jobMechanic').value = job.mechanicId || '';
-                document.getElementById('jobStatus').value = job.status || 'pendiente';
-                document.getElementById('jobDescription').value = job.description || '';
-                document.getElementById('jobParts').value = job.parts || '';
-                document.getElementById('jobPartsCost').value = job.partsCost || 0;
-                document.getElementById('jobLaborCost').value = job.laborCost || 0;
-                document.getElementById('jobSalePrice').value = job.salePrice || 0;
-            } else {
-                console.error('❌ Trabajo no encontrado:', jobId);
-                alert('Error: Trabajo no encontrado.');
-                return;
-            }
-        } else {
-            // NUEVO trabajo
-            console.log('✅ Creando nuevo trabajo');
-            document.getElementById('jobModalTitle').textContent = 'Nuevo Trabajo';
-            document.getElementById('jobId').value = '';
-            document.getElementById('jobStatus').value = 'pendiente';
-            document.getElementById('jobDate').value = new Date().toISOString().split('T')[0];
-        }
-        
-        // Mostrar modal
-        modal.classList.add('active');
-        console.log('✅ Modal abierto correctamente');
-    };
-    
-    window.closeJobModal = function() {
-        console.log('🔧 Cerrando modal');
-        const modal = document.getElementById('jobModal');
-        if (modal) {
-            modal.classList.remove('active');
-            console.log('✅ Modal cerrado');
-        }
-    };
-    
-    window.saveJob = function(event) {
-        console.log('🔧 Guardando trabajo...');
-        event.preventDefault();
-        
-        const form = document.getElementById('jobForm');
-        if (!form) {
-            console.error('❌ Formulario no encontrado');
-            alert('Error: Formulario no encontrado.');
-            return;
-        }
-        
-        const jobId = document.getElementById('jobId').value;
-        
-        // Crear objeto trabajo
-        const job = {
-            id: jobId ? parseInt(jobId) : Date.now(),
-            plate: form.jobPlate.value.trim(),
-            mileage: parseInt(form.jobMileage.value) || 0,
-            mechanicId: parseInt(form.jobMechanic.value),
-            status: form.jobStatus.value,
-            description: form.jobDescription.value.trim(),
-            parts: form.jobParts.value.trim(),
-            partsCost: parseFloat(form.jobPartsCost.value) || 0,
-            laborCost: parseFloat(form.jobLaborCost.value) || 0,
-            salePrice: parseFloat(form.jobSalePrice.value) || 0,
-            date: form.jobDate.value || new Date().toISOString().split('T')[0]
-        };
-        
-        // Validaciones
-        if (!job.plate) {
-            alert('Error: La placa es obligatoria');
-            return;
-        }
-        
-        if (!job.mechanicId) {
-            alert('Error: Debes seleccionar un mecánico');
-            return;
-        }
-        
-        console.log('✅ Datos del trabajo:', job);
-        
-        // Inicializar array si no existe
-        if (!window.jobs) {
-            window.jobs = JSON.parse(localStorage.getItem('taller-jobs') || '[]');
-        }
-        
-        if (jobId) {
-            // ACTUALIZAR trabajo existente
-            const index = window.jobs.findIndex(j => j.id == jobId);
-            if (index !== -1) {
-                window.jobs[index] = job;
-                console.log('✅ Trabajo actualizado');
-            } else {
-                console.error('❌ Índice de trabajo no encontrado');
-            }
-        } else {
-            // CREAR nuevo trabajo
-            window.jobs.push(job);
-            console.log('✅ Nuevo trabajo creado');
-        }
-        
-        // Guardar en localStorage
-        localStorage.setItem('taller-jobs', JSON.stringify(window.jobs));
-        
-        // Cerrar modal y recargar vista
-        closeJobModal();
-        
-        if (typeof loadJobs === 'function') {
-            loadJobs();
-        }
-        
-        if (typeof loadDashboard === 'function') {
-            loadDashboard();
-        }
-        
-        alert('✅ Trabajo guardado exitosamente');
-        console.log('✅ Proceso completado');
-    };
-    
-	// ===================================
-	// CORRECCIÓN FORZADA DE BOTONES - VERSIÓN 2.0
-	// ===================================
-
-	// Esperar a que la página esté completamente cargada
-	document.addEventListener('DOMContentLoaded', function() {
-	    console.log('🚨 Iniciando corrección forzada de botones...');
-	    
-	    // Función de corrección forzada
-	    function aplicarCorreccionForzada() {
-	        console.log('🔧 Aplicando corrección forzada...');
-	        
-	        // 1. FORZAR la reescritura de las funciones
-	        window.openJobModal = function(jobId = null) {
-	            console.log('🔧 FORZADA: openJobModal ejecutada con jobId:', jobId);
-	            
-	            try {
-	                // Buscar el modal
-	                const modal = document.getElementById('jobModal');
-	                if (!modal) {
-	                    console.error('❌ FORZADA: Modal no encontrado');
-	                    alert('Error: Modal no encontrado. Recarga la página.');
-	                    return;
-	                }
-	                
-	                // Abrir modal
-	                modal.style.display = 'flex';
-	                modal.classList.add('show');
-	                console.log('✅ FORZADA: Modal abierto exitosamente');
-	                
-	                // Limpiar formulario si es nuevo trabajo
-	                if (!jobId) {
-	                    const form = modal.querySelector('form') || modal;
-	                    if (form) {
-	                        form.reset();
-	                        console.log('✅ FORZADA: Formulario limpiado');
-	                    }
-	                }
-	                
-	                // Enfocar primer campo
-	                const firstInput = modal.querySelector('input, select, textarea');
-	                if (firstInput) {
-	                    setTimeout(() => firstInput.focus(), 100);
-	                    console.log('✅ FORZADA: Primer campo enfocado');
-	                }
-	                
-	            } catch (error) {
-	                console.error('❌ FORZADA: Error en openJobModal:', error);
-	                alert('Error al abrir el modal: ' + error.message);
-	            }
-	        };
-	        
-	        // 2. FORZAR función para cerrar modal
-	        window.closeJobModal = function() {
-	            console.log('🔧 FORZADA: closeJobModal ejecutada');
-	            
-	            try {
-	                const modal = document.getElementById('jobModal');
-	                if (modal) {
-	                    modal.style.display = 'none';
-	                    modal.classList.remove('show');
-	                    console.log('✅ FORZADA: Modal cerrado exitosamente');
-	                }
-	            } catch (error) {
-	                console.error('❌ FORZADA: Error en closeJobModal:', error);
-	            }
-	        };
-	        
-	        // 3. FORZAR función para guardar trabajo mejorado
-	        window.saveJob = function(event) {
-                if (event) {
-                    event.preventDefault();
-                }
-                
-                console.log('🔧 MEJORADA: saveJob ejecutada');
-                
-                try {
-                    // Obtener datos del formulario mejorado
-                    const jobId = document.getElementById('jobId').value;
-                    const jobData = {
-                        id: jobId || Date.now(),
-                        // Información del cliente
-                        clientName: document.getElementById('jobClientName').value.trim(),
-                        clientPhone: document.getElementById('jobClientPhone').value.trim(),
-                        clientCedula: document.getElementById('jobClientCedula').value.trim(),
-                        clientEmail: document.getElementById('jobClientEmail').value.trim(),
-                        // Información del vehículo
-                        plate: document.getElementById('jobPlate').value.trim().toUpperCase(),
-                        vehicleBrand: document.getElementById('jobVehicleBrand').value.trim(),
-                        vehicleModel: document.getElementById('jobVehicleModel').value.trim(),
-                        vehicleYear: document.getElementById('jobVehicleYear').value,
-                        mileage: parseInt(document.getElementById('jobMileage').value) || 0,
-                        // Información del trabajo
-                        mechanicId: document.getElementById('jobMechanic').value,
-                        status: document.getElementById('jobStatus').value,
-                        description: document.getElementById('jobDescription').value.trim(),
-                        // Repuestos
-                        inventoryItems: selectedInventoryItems.map(item => ({
-                            id: item.id,
-                            name: item.name,
-                            code: item.code,
-                            price: item.price,
-                            quantity: item.quantity,
-                            total: item.price * item.quantity
-                        })),
-                        inventoryPartsCost: selectedInventoryItems.reduce((sum, item) => sum + (item.price * item.quantity), 0),
-                        additionalParts: document.getElementById('jobParts').value.trim(),
-                        additionalPartsCost: parseFloat(document.getElementById('jobPartsCost').value) || 0,
-                        // Costos
-                        laborCost: parseFloat(document.getElementById('jobLaborCost').value) || 0,
-                        salePrice: parseFloat(document.getElementById('jobSalePrice').value) || 0,
-                        // Técnicos adicionales
-                        additionalMechanics: getAdditionalMechanics(),
-                        // Fechas
-                        date: new Date().toISOString().split('T')[0],
-                        createdAt: new Date().toISOString()
-                    };
-                    
-                    // Validaciones
-                    if (!jobData.clientName) {
-                        alert('Por favor ingresa el nombre del cliente');
-                        return;
-                    }
-                    
-                    if (!jobData.plate) {
-                        alert('Por favor ingresa la placa del vehículo');
-                        return;
-                    }
-                    
-                    if (!jobData.mechanicId) {
-                        alert('Por favor selecciona un mecánico');
-                        return;
-                    }
-                    
-                    if (!jobData.description) {
-                        alert('Por favor describe el trabajo a realizar');
-                        return;
-                    }
-                    
-                    // Obtener trabajos existentes
-                    let existingJobs = JSON.parse(localStorage.getItem('taller-jobs') || '[]');
-                    
-                    if (jobId) {
-                        // Editar trabajo existente
-                        const index = existingJobs.findIndex(job => job.id == jobId);
-                        if (index !== -1) {
-                            existingJobs[index] = { ...existingJobs[index], ...jobData };
-                        }
-                    } else {
-                        // Nuevo trabajo
-                        existingJobs.push(jobData);
-                    }
-                    
-                    localStorage.setItem('taller-jobs', JSON.stringify(existingJobs));
-                    
-                    // Limpiar variables temporales
-                    selectedInventoryItems = [];
-                    
-                    console.log('✅ MEJORADA: Trabajo guardado:', jobData);
-                    
-                    // Cerrar modal y actualizar vista
-                    window.closeJobModal();
-                    setTimeout(() => {
-                        if (typeof loadJobs === 'function') {
-                            loadJobs();
-                        } else {
-                            location.reload();
-                        }
-                    }, 500);
-                
-                    alert('✅ Trabajo guardado exitosamente con formulario mejorado');
-                
-                } catch (error) {
-                    console.error('❌ MEJORADA: Error en saveJob:', error);
-                    alert('Error al guardar: ' + error.message);
-                }
-            };
-	        
-	        // Función auxiliar para obtener técnicos adicionales
-	        function getAdditionalMechanics() {
-            	const additionalMechanics = [];
-            	for (let i = 1; i <= 3; i++) {
-            		const checkbox = document.getElementById(`additionalMechanic${i}`);
-            		if (checkbox && checkbox.checked) {
-            			additionalMechanics.push(parseInt(checkbox.value));
-            		}
-            	}
-            	return additionalMechanics;
-        	}
-	        
-	        // 4. FORZAR función de debug
-	        window.debugJobs = function() {
-	            const state = {
-	                jobs: window.jobs || 'No inicializado',
-	                jobs_length: window.jobs ? window.jobs.length : 0,
-	                localStorage_taller: localStorage.getItem('taller-jobs') || 'No existe',
-	                mechanics: window.mechanics || 'No inicializado',
-	                functions: {
-	                    openJobModal: typeof window.openJobModal,
-	                    closeJobModal: typeof window.closeJobModal,
-	                    saveJob: typeof window.saveJob
-	                }
-	            };
-	            console.log('🔍 FORZADA - Estado del sistema:', state);
-	            alert('✅ Revisa la consola (F12) para ver los detalles');
-	        };
-	        
-	        console.log('✅ FORZADA: Todas las funciones reescritas exitosamente');
-	    }
-	    
-	    // Aplicar corrección
-	    aplicarCorreccionForzada();
-	    
-	    // 5. FUERZA la corrección después de un delay
-	    setTimeout(() => {
-	        console.log('🔄 FORZADA: Aplicando corrección final...');
-	        aplicarCorreccionForzada();
-	    }, 1000);
-	    
-	    // 6. SIEMPRE aplicar corrección cuando se hace clic en botones
-	    document.addEventListener('click', function(e) {
-	        if (e.target && (e.target.onclick || e.target.getAttribute('onclick'))) {
-	            console.log('🔄 FORZADA: Click detectado, aplicando corrección...');
-	            aplicarCorreccionForzada();
-	        }
-	    });
-	    
-	    // 7. VERIFICAR que las funciones están disponibles
-	    setTimeout(() => {
-	        console.log('🔍 FORZADA: Verificando funciones...');
-	        console.log('openJobModal:', typeof window.openJobModal);
-	        console.log('closeJobModal:', typeof window.closeJobModal);
-	        console.log('saveJob:', typeof window.saveJob);
-	        
-	        if (typeof window.openJobModal !== 'function') {
-	            console.warn('⚠️ FORZADA: openJobModal no es una función, aplicando corrección...');
-	            aplicarCorreccionForzada();
-	        }
-	    }, 2000);
-	    
-	    console.log('✅ FORZADA: Corrección inicial aplicada');
-	});
-
-	// ===================================
-	// PUNTO DE ENTRADA GLOBAL
-	// ===================================
-
-	// Asegurar que las funciones estén siempre disponibles
-	window.addEventListener('load', function() {
-	    console.log('📋 FORZADA: Página cargada, verificando funciones...');
-	    
-	    // Crear botones de prueba en consola
-	    window.probarBotones = function() {
-	        console.log('🧪 FORZADA: Probando botones...');
-	        try {
-	            window.openJobModal();
-	            console.log('✅ openJobModal ejecutada');
-	        } catch (error) {
-	            console.error('❌ Error en prueba:', error);
-	        }
-	    };
-	    
-	    console.log('💡 Usa window.probarBotones() en la consola para probar');
-	});
-	    
-	console.log('🔧 Corrección forzada de botones aplicada correctamente');
-	    
-	// ===================================
-	// 🔧 SOLUCIÓN QUIRÚRGICA - SOLO BOTONES (INTEGRADA)
-	// ===================================
-
-	// NO ELIMINAR NADA DEL CÓDIGO ORIGINAL
-	// SOLO AGREGAR event listeners ADICIONALES
-
-	document.addEventListener('DOMContentLoaded', function() {
-	    console.log('🔧 SOLUCIÓN QUIRÚRGICA: Iniciando corrección específica...');
-	    
-	    // Función específica para los botones de trabajo
-	    function agregarEventListenerBotonesTrabajo() {
-	        console.log('🔍 SOLUCIÓN QUIRÚRGICA: Buscando botones de trabajo...');
-	        
-	        // Buscar botones específicos
-	        const botones = [
-	            ...document.querySelectorAll('button'),
-	            ...document.querySelectorAll('button.btn')
-	        ];
-	        
-	        let botonesEnlazados = 0;
-	        
-	        botones.forEach((boton, index) => {
-	            const textoBoton = boton.textContent.toLowerCase().trim();
-	            
-	            // Solo modificar botones específicos de trabajo
-	            if (textoBoton.includes('nuevo trabajo') || 
-	                textoBoton.includes('crear trabajo') || 
-	                textoBoton.includes('crear primer trabajo')) {
-	                
-	                console.log(`✅ SOLUCIÓN QUIRÚRGICA: Encontrado botón ${index}: "${textoBoton}"`);
-	                
-	                // Solo agregar si no tiene onclick o si es problemático
-	                if (!boton.onclick || boton.onclick === '') {
-	                    // Agregar event listener ADICIONAL
-	                    boton.addEventListener('click', function(e) {
-	                        e.preventDefault();
-	                        e.stopPropagation();
-	                        console.log('🚀 SOLUCIÓN QUIRÚRGICA: Click detectado en botón:', textoBoton);
-	                        
-	                        // Llamar a la función original si existe
-	                        if (typeof window.openJobModal === 'function') {
-	                            console.log('✅ SOLUCIÓN QUIRÚRGICA: Ejecutando openJobModal original...');
-	                            window.openJobModal();
-	                        } else {
-	                            console.log('⚠️ SOLUCIÓN QUIRÚRGICA: Función original no existe, usando modal de emergencia...');
-	                            crearModalEmergenciaMinimo();
-	                        }
-	                        
-	                        return false;
-	                    });
-	                    botonesEnlazados++;
-	                } else {
-	                    console.log(`🔄 SOLUCIÓN QUIRÚRGICA: Botón ya tiene onclick: "${textoBoton}"`);
-	                }
-	        });
-	        
-	        console.log(`✅ SOLUCIÓN QUIRÚRGICA: ${botonesEnlazados} botones enlazados`);
-	        return botonesEnlazados;
-	    }
-	    
-	    // Modal de emergencia mínimo (solo para casos extremos)
-	    function crearModalEmergenciaMinimo() {
-	        console.log('🚨 SOLUCIÓN QUIRÚRGICA: Creando modal mínimo...');
-	        
-	        // Solo crear si no existe
-	        if (document.getElementById('modalEmergenciaMinimo')) {
-	            return;
-	        }
-	        
-	        const modal = document.createElement('div');
-	        modal.id = 'modalEmergenciaMinimo';
-	        modal.style.cssText = `
-	            position: fixed;
-	            top: 0;
-	            left: 0;
-	            width: 100%;
-	            height: 100%;
-	            background: rgba(0,0,0,0.8);
-	            display: flex;
-	            justify-content: center;
-	            align-items: center;
-	            z-index: 9999;
-	        `;
-	        
-	        modal.innerHTML = `
-	            <div style="background: white; padding: 20px; border-radius: 8px; max-width: 400px; width: 90%; font-family: Arial;">
-	                <h3 style="color: #1E3A8A; margin-bottom: 15px;">🚨 Nuevo Trabajo</h3>
-	                <form id="formMinimo">
-	                    <div style="margin-bottom: 10px;">
-	                        <label style="display: block; font-weight: bold; margin-bottom: 3px;">Cliente:</label>
-	                        <input type="text" name="clientName" required style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
-	                    </div>
-	                    <div style="margin-bottom: 10px;">
-	                        <label style="display: block; font-weight: bold; margin-bottom: 3px;">Teléfono:</label>
-	                        <input type="text" name="phone" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
-	                    </div>
-	                    <div style="margin-bottom: 10px;">
-	                        <label style="display: block; font-weight: bold; margin-bottom: 3px;">Vehículo:</label>
-	                        <input type="text" name="vehicle" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
-	                    </div>
-	                    <div style="margin-bottom: 15px;">
-	                        <label style="display: block; font-weight: bold; margin-bottom: 3px;">Placa:</label>
-	                        <input type="text" name="plate" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
-	                    </div>
-	                    <div style="text-align: right;">
-	                        <button type="button" onclick="cerrarModalMinimo()" style="padding: 8px 15px; margin-right: 8px; background: #666; color: white; border: none; border-radius: 4px;">Cancelar</button>
-	                        <button type="submit" style="padding: 8px 15px; background: #1E3A8A; color: white; border: none; border-radius: 4px;">Guardar</button>
-	                    </div>
-	                </form>
-	                <div style="margin-top: 10px; padding: 8px; background: #f0f8ff; border-radius: 4px; font-size: 11px; color: #666;">
-	                    <strong>🧪 Diagnóstico:</strong><br>
-	                    • <code>window.probarSolucionQuirurgica()</code><br>
-	                    • <code>window.diagnosticarSolucionQuirurgica()</code>
-	                </div>
-	            </div>
-	        `;
-	        
-	        document.body.appendChild(modal);
-	        
-	        // Configurar formulario
-	        const form = modal.querySelector('#formMinimo');
-	        form.addEventListener('submit', function(e) {
-	            e.preventDefault();
-	            const formData = new FormData(form);
-	            
-	            const trabajo = {
-	                id: Date.now().toString(),
-	                clientName: formData.get('clientName') || '',
-	                phone: formData.get('phone') || '',
-	                vehicle: formData.get('vehicle') || '',
-	                plate: formData.get('plate') || '',
-	                service: 'Servicio general',
-	                mechanic: 'Sin asignar',
-	                arrivalDate: new Date().toISOString().split('T')[0],
-	                status: 'En proceso',
-	                createdAt: new Date().toISOString()
-	            };
-	            
-	            // Guardar
-	            const trabajos = JSON.parse(localStorage.getItem('taller-jobs') || '[]');
-	            trabajos.push(trabajo);
-	            localStorage.setItem('taller-jobs', JSON.stringify(trabajos));
-	            
-	            console.log('✅ SOLUCIÓN QUIRÚRGICA: Trabajo guardado:', trabajo);
-	            
-	            // Cerrar y recargar
-	            cerrarModalMinimo();
-	            alert('✅ Trabajo guardado exitosamente');
-	            setTimeout(() => location.reload(), 500);
-	        });
-	        
-	        console.log('✅ SOLUCIÓN QUIRÚRGICA: Modal mínimo creado');
-	    }
-	    
-	    function cerrarModalMinimo() {
-	        const modal = document.getElementById('modalEmergenciaMinimo');
-	        if (modal) modal.remove();
-	    }
-	    
-	    // Ejecutar función quirúrgica
-	    agregarEventListenerBotonesTrabajo();
-	    
-	    // Reconfigurar periódicamente (cada 5 segundos)
-	    setInterval(agregarEventListenerBotonesTrabajo, 5000);
-	    
-	    // Funciones globales
-	    window.cerrarModalMinimo = cerrarModalMinimo;
-	    window.probarSolucionQuirurgica = function() {
-	        console.log('🧪 SOLUCIÓN QUIRÚRGICA: Ejecutando prueba...');
-	        agregarEventListenerBotonesTrabajo();
-	    };
-	    
-	    window.diagnosticarSolucionQuirurgica = function() {
-	        const botones = document.querySelectorAll('button');
-	        console.log('🔍 SOLUCIÓN QUIRÚRGICA - Estado:');
-	        console.log('Total botones:', botones.length);
-	        botones.forEach((boton, index) => {
-	        	const texto = boton.textContent.trim().toLowerCase();
-	        	if (texto.includes('trabajo')) {
-	            	console.log(`Botón ${index}: "${texto}" - onclick: ${boton.onclick ? 'SÍ' : 'NO'}`);
-	            	console.log(`Event listeners: ${boton.getAttribute('data-listener-added') || 'NO'}`);
-	        	}
-	        });
-	    };
-	    
-	    console.log('✅ SOLUCIÓN QUIRÚRGICA: Configuración completada');
-	});
-
-	// Hacer funciones globales disponibles
-	window.cerrarModalMinimo = function() {
-	    const modal = document.getElementById('modalEmergenciaMinimo');
-	    if (modal) modal.remove();
-	};
-
-	console.log('🔧 SOLUCIÓN QUIRÚRGICA: Script cargado - ES MUY CONSERVADOR');
-	console.log('💡 MAC: Abrir consola con Cmd + Option + I');
-	
-	// ===== INTEGRACIÓN SUPABASE =====
-	// Configuración de Supabase
-	const SUPABASE_URL = 'https://crtdentsfumgrotgvwdj.supabase.co';
-	const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNydGRlbnRzZnVtZ3JvdGd2d2RqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI2NTU5NTIsImV4cCI6MjA3ODIzMTk1Mn0.7T_Fd_L1gn3MtkvgqSCePrlK-ZUhp-8gbT5fG8GZoW4';
-	
-	// Inicializar Supabase
-	let supabaseClient = null;
-	
-	async function initSupabase() {
-		try {
-			if (typeof supabase !== 'undefined') {
-				supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-				console.log('✅ Supabase inicializado correctamente');
-				return supabaseClient;
-			} else {
-				console.warn('⚠️  Supabase no disponible, usando modo offline');
-				return null;
-			}
-		} catch (error) {
-			console.error('❌ Error inicializando Supabase:', error);
-			return null;
-		}
-	}
-	
-	// Servicio de Supabase mejorado
-	const SupabaseService = {
-		// Sincronizar datos desde Supabase
-		async syncData() {
-			try {
-				if (!supabaseClient) return false;
-				
-				// Sincronizar clientes
-				const { data: clientes } = await supabaseClient.from('clientes').select('*');
-				if (clientes) {
-					localStorage.setItem('taller-clients', JSON.stringify(clientes));
-					console.log(`✅ Sincronizados ${clientes.length} clientes desde Supabase`);
-				}
-				
-				// Sincronizar inventario
-				const { data: inventario } = await supabaseClient.from('inventario').select('*');
-				if (inventario) {
-					localStorage.setItem('taller-inventory', JSON.stringify(inventario));
-					console.log(`✅ Sincronizado ${inventario.length} productos desde Supabase`);
-				}
-				
-				// Sincronizar trabajos
-				const { data: trabajos } = await supabaseClient.from('trabajos').select('*');
-				if (trabajos) {
-					localStorage.setItem('taller-jobs', JSON.stringify(trabajos));
-					console.log(`✅ Sincronizados ${trabajos.length} trabajos desde Supabase`);
-				}
-				
-				return true;
-			} catch (error) {
-				console.error('❌ Error sincronizando con Supabase:', error);
-				return false;
-			}
-		},
-		
-		// Guardar en Supabase y localStorage
-		async saveJob(jobData) {
-			try {
-				// Guardar en localStorage como siempre
-				const trabajos = JSON.parse(localStorage.getItem('taller-jobs') || '[]');
-				const existingIndex = trabajos.findIndex(t => t.id === jobData.id);
-				
-				if (existingIndex >= 0) {
-					trabajos[existingIndex] = jobData;
-				} else {
-					trabajos.push(jobData);
-				}
-				
-				localStorage.setItem('taller-jobs', JSON.stringify(trabajos));
-				
-				// Sincronizar con Supabase si está disponible
-				if (supabaseClient) {
-					const supabaseData = {
-						ot_number: jobData.ot_number || `OT-${Date.now()}`,
-						cliente_id: jobData.cliente_id || null,
-						fecha_inicio: jobData.fecha_inicio || new Date().toISOString(),
-						fecha_fin: jobData.fecha_fin || null,
-						estado: jobData.status || 'En Proceso',
-						descripcion: jobData.description || '',
-						observaciones: jobData.observaciones || '',
-						subtotal: parseFloat(jobData.subtotal) || 0,
-						descuento: parseFloat(jobData.descuento) || 0,
-						total: parseFloat(jobData.salePrice) || 0,
-						tipo_pago: jobData.tipo_pago || 'Efectivo',
-						estado_pago: jobData.estado_pago || 'Pendiente',
-						comision_total: parseFloat(jobData.comision_total) || 0,
-						estado_liquidacion: jobData.estado_liquidacion || 'Pendiente'
-					};
-					
-					if (existingIndex >= 0) {
-						await supabaseClient.from('trabajos').update(supabaseData).eq('ot_number', jobData.ot_number);
-					} else {
-						await supabaseClient.from('trabajos').insert([supabaseData]);
-					}
-				}
-				
-				return true;
-			} catch (error) {
-				console.error('❌ Error guardando trabajo:', error);
-				return false;
-			}
-		}
-	};
-	
-	// Función mejorada de liquidación con 5 opciones
-	function settleJob(jobId) {
-		const job = jobs.find(j => j.id === jobId);
-		if (!job) {
-			alert('Trabajo no encontrado');
-			return;
-		}
-		
-		if (job.status === 'liquidado') {
-			alert('Este trabajo ya está liquidado');
-			return;
-		}
-		
-		const total = job.salePrice || 0;
-		
-		// Mostrar opciones de liquidación
-		const opciones = `
-			OPCIONES DE LIQUIDACIÓN - OT ${job.ot_number || job.id}
-			==============================================
-			
-			Trabajo: ${job.description}
-			Total: $${total.toLocaleString()}
-			
-			1️⃣ LIQUIDACIÓN COMPLETA (Equipo completo)
-			   - Pedro Barraza: 20%
-			   - Víctor Padilla: 20% 
-			   Total comisión: $${(total * 0.40).toLocaleString()}
-			
-			2️⃣ LIQUIDACIÓN INDIVIDUAL - PEDRO BARRAZA
-			   - Pedro Barraza: 20%
-			   - Víctor Padilla: 0%
-			   Comisión: $${(total * 0.20).toLocaleString()}
-			
-			3️⃣ LIQUIDACIÓN INDIVIDUAL - VÍCTOR PADILLA
-			   - Pedro Barraza: 0%
-			   - Víctor Padilla: 20%
-			   Comisión: $${(total * 0.20).toLocaleString()}
-			
-			4️⃣ LIQUIDACIÓN CONJUNTA (Pedro + Víctor)
-			   - Pedro Barraza: 20%
-			   - Víctor Padilla: 20%
-			   Total comisión: $${(total * 0.40).toLocaleString()}
-			
-			5️⃣ LIQUIDACIÓN PERSONALIZADA
-			   - Ingresar porcentajes manualmente
-			
-			Selecciona una opción (1-5):`;
-		
-		const opcion = prompt(opciones);
-		if (!opcion) return;
-		
-		let pedroPorcentaje = 0;
-		let victorPorcentaje = 0;
-		let descripcion = '';
-		
-		switch(opcion.trim()) {
-			case '1':
-			case '4': // Opción 1 y 4 son iguales
-				pedroPorcentaje = 20;
-				victorPorcentaje = 20;
-				descripcion = 'Liquicación completa Pedro + Víctor';
-				break;
-			case '2':
-				pedroPorcentaje = 20;
-				victorPorcentaje = 0;
-				descripcion = 'Liquidación individual Pedro';
-				break;
-			case '3':
-				pedroPorcentaje = 0;
-				victorPorcentaje = 20;
-				descripcion = 'Liquidación individual Víctor';
-				break;
-			case '5':
-				const pedroInput = prompt('Porcentaje para Pedro Barraza (0-100):');
-				const victorInput = prompt('Porcentaje para Víctor Padilla (0-100):');
-				pedroPorcentaje = parseFloat(pedroInput) || 0;
-				victorPorcentaje = parseFloat(victorInput) || 0;
-				descripcion = 'Liquidación personalizada';
-				break;
-			default:
-				alert('Opción inválida');
-				return;
-		}
-		
-		// Calcular comisiones
-		const pedroComision = total * (pedroPorcentaje / 100);
-		const victorComision = total * (victorPorcentaje / 100);
-		const totalComision = pedroComision + victorComision;
-		
-		// Actualizar trabajo
-		job.commission = totalComision;
-		job.status = 'liquidado';
-		job.commissionDetails = {
-			pedro: { porcentaje: pedroPorcentaje, comision: pedroComision },
-			victor: { porcentaje: victorPorcentaje, comision: victorComision }
-		};
-		job.liquidacionFecha = new Date().toISOString();
-		
-		// Guardar cambios
-		localStorage.setItem('taller-jobs', JSON.stringify(jobs));
-		
-		// Sincronizar con Supabase
-		SupabaseService.saveJob(job);
-		
-		// Mostrar resumen
-		alert(`
-			LIQUIDACIÓN COMPLETADA
-			======================
-			
-			OT: ${job.ot_number || job.id}
-			Total trabajo: $${total.toLocaleString()}
-			
-			DISTRIBUCIÓN:
-			• Pedro Barraza: ${pedroPorcentaje}% = $${pedroComision.toLocaleString()}
-			• Víctor Padilla: ${victorPorcentaje}% = $${victorComision.toLocaleString()}
-			
-			Total comisiones: $${totalComision.toLocaleString()}
-			Fecha: ${new Date().toLocaleDateString()}
-		`);
-		
-		// Recargar la vista
-		loadJobs();
-	}
-	
-	// Función de búsqueda mejorada de clientes
-	function searchClient(query) {
-		const clients = JSON.parse(localStorage.getItem('taller-clients') || '[]');
-		const searchQuery = query.toLowerCase().trim();
-		
-		if (!searchQuery) return [];
-		
-		return clients.filter(client => 
-			client.cedula && client.cedula.toLowerCase().includes(searchQuery) ||
-			client.name && client.name.toLowerCase().includes(searchQuery) ||
-			client.identificacion && client.identificacion.toLowerCase().includes(searchQuery) ||
-			client.nombre && client.nombre.toLowerCase().includes(searchQuery)
-		);
-	}
-	
-	// Función de búsqueda mejorada de inventario
-	function searchInventory(query) {
-		const inventory = JSON.parse(localStorage.getItem('taller-inventory') || '[]');
-		const searchQuery = query.toLowerCase().trim();
-		
-		if (!searchQuery) return [];
-		
-		return inventory.filter(item => 
-			item.codigo_barras && item.codigo_barras.toLowerCase().includes(searchQuery) ||
-			item.barcode && item.barcode.toLowerCase().includes(searchQuery) ||
-			item.codigo_referencia && item.codigo_referencia.toLowerCase().includes(searchQuery) ||
-			item.code && item.code.toLowerCase().includes(searchQuery) ||
-			item.name && item.name.toLowerCase().includes(searchQuery) ||
-			item.nombre && item.nombre.toLowerCase().includes(searchQuery) ||
-			item.description && item.description.toLowerCase().includes(searchQuery) ||
-			item.descripcion && item.descripcion.toLowerCase().includes(searchQuery)
-		);
-	}
-	
-	// Inicializar Supabase al cargar
-	document.addEventListener('DOMContentLoaded', async function() {
-		await initSupabase();
-		
-		// Sincronizar datos si está disponible Supabase
-		if (supabaseClient) {
-			const synced = await SupabaseService.syncData();
-			if (synced) {
-				console.log('✅ Datos sincronizados desde Supabase');
-			}
-		}
-		
-		// Recargar datos si cambió la fuente
-		if (supabaseClient) {
-			setTimeout(() => {
-				loadJobs();
-				loadClients();
-				loadInventory();
-			}, 1000);
-		}
-	});
-	
-	// Hacer funciones disponibles globalmente
-	window.toggleSidebar = toggleSidebar;
-	window.showSection = showSection;
-	window.settleJob = settleJob;
-	window.searchClient = searchClient;
-	window.searchInventory = searchInventory;
-	window.SupabaseService = SupabaseService;
-	
-	console.log('✅ Integración Supabase cargada');
-    </script>
+    <!-- JavaScript -->
+    <script src="js/app.js"></script>
 </body>
 </html>
