@@ -2401,8 +2401,15 @@ function nuevoTrabajo() {
             }
         </style>
         `,
-        'large'
+        [
+            { text: 'Cancelar', class: 'btn-outline', onclick: 'closeModal()' },
+            { text: 'Vista Previa', class: 'btn-secondary', onclick: 'previsualizarTrabajo()' },
+            { text: 'Crear Trabajo', class: 'btn-primary', type: 'submit', form: 'nuevoTrabajoForm' }
+        ]
     );
+    
+    // Mostrar el modal
+    showModal(modal);
     
     // Initialize variables
     window.itemsTrabajo = [];
@@ -3839,7 +3846,8 @@ class SistemaLiquidacion {
             // Obtener técnico y porcentaje
             const mecanico = window.mecanicos.find(m => m.id === trabajo.mecanico);
             if (mecanico) {
-                const porcentaje = controlSaldos.obtenerPorcentaje(mecanico.nombre);
+                const nombreMecanico = mecanico.name || mecanico.nombre;
+                const porcentaje = controlSaldos.obtenerPorcentaje(nombreMecanico);
                 const montoManoObra = (trabajo.manoObra || 0) * (porcentaje / 100);
                 total += montoManoObra;
             }
@@ -3900,7 +3908,7 @@ const sistemaLiquidacion = new SistemaLiquidacion();
 function registrarAdelanto() {
     const tecnicos = window.mecanicos || [];
     const tecnicoOptions = tecnicos.map(t => 
-        `<option value="${t.id}">${t.nombre}</option>`
+        `<option value="${t.id}">${t.name || t.nombre}</option>`
     ).join('');
     
     const html = `
@@ -3971,7 +3979,7 @@ function procesarAdelanto(event) {
 function registrarAlmuerzo() {
     const tecnicos = window.mecanicos || [];
     const tecnicoOptions = tecnicos.map(t => 
-        `<option value="${t.id}">${t.nombre}</option>`
+        `<option value="${t.id}">${t.name || t.nombre}</option>`
     ).join('');
     
     const html = `
@@ -4109,10 +4117,11 @@ function generarResumenTecnicos() {
         const saldo = controlSaldos.obtenerSaldo(tecnico.id);
         const totales = controlMovimientos.calcularTotales(tecnico.id, fechaInicio, fechaFin);
         const liquidaciones = sistemaLiquidacion.obtenerLiquidacionesTecnico(tecnico.id);
+        const nombreTecnico = tecnico.name || tecnico.nombre;
         
         return `
             <div class="tecnico-card">
-                <h5>${tecnico.nombre}</h5>
+                <h5>${nombreTecnico}</h5>
                 <div class="tecnico-stats">
                     <div>Saldo Actual: $${saldo.saldoActual.toLocaleString()}</div>
                     <div>Adelantos Mes: $${totales.adelantos.toLocaleString()}</div>
@@ -4144,10 +4153,11 @@ function generarTablaMovimientos(movimientos) {
             <tbody>
                 ${movimientos.map(mov => {
                     const tecnico = window.mecanicos.find(t => t.id === mov.tecnicoId);
+                    const nombreTecnico = tecnico ? (tecnico.name || tecnico.nombre) : 'N/A';
                     return `
                         <tr>
                             <td>${mov.fechaMovimiento}</td>
-                            <td>${tecnico ? tecnico.nombre : 'N/A'}</td>
+                            <td>${nombreTecnico}</td>
                             <td><span class="badge badge-${mov.tipoMovimiento}">${mov.tipoMovimiento}</span></td>
                             <td>${mov.concepto}</td>
                             <td class="${mov.monto > 0 ? 'text-success' : 'text-danger'}">
@@ -4181,10 +4191,11 @@ function generarTablaLiquidaciones(liquidaciones) {
             <tbody>
                 ${liquidaciones.map(liquidacion => {
                     const tecnico = window.mecanicos.find(t => t.id === liquidacion.tecnicoId);
+                    const nombreTecnico = tecnico ? (tecnico.name || tecnico.nombre) : 'N/A';
                     return `
                         <tr>
                             <td>${liquidacion.fechaLiquidacion}</td>
-                            <td>${tecnico ? tecnico.nombre : 'N/A'}</td>
+                            <td>${nombreTecnico}</td>
                             <td>${liquidacion.periodoInicio} - ${liquidacion.periodoFin}</td>
                             <td>$${liquidacion.totalManosObra.toLocaleString()}</td>
                             <td class="${liquidacion.montoNeto >= 0 ? 'text-success' : 'text-danger'}">
@@ -4242,7 +4253,7 @@ function generarLiquidacion() {
     
     // Seleccionar técnico
     const tecnicoOptions = tecnicos.map(t => 
-        `<option value="${t.id}">${t.nombre}</option>`
+        `<option value="${t.id}">${t.name || t.nombre}</option>`
     ).join('');
     
     // Obtener fecha por defecto (últimos 30 días)
@@ -4313,15 +4324,21 @@ function actualizarVistaPrevia() {
     
     // Calcular vista previa
     const tecnico = window.mecanicos.find(t => t.id === tecnicoId);
+    if (!tecnico) {
+        document.getElementById('preview-contenido').innerHTML = 
+            '<p class="text-warning">Técnico no encontrado</p>';
+        return;
+    }
     const trabajosCompletados = sistemaLiquidacion.obtenerTrabajosCompletadosPorPeriodo(tecnicoId, fechaInicio, fechaFin);
     const totalManosObra = sistemaLiquidacion.calcularManosObra(trabajosCompletados);
     const totales = controlMovimientos.calcularTotales(tecnicoId, fechaInicio, fechaFin);
     const netoPagar = totalManosObra + totales.adelantos + totales.pagos - 
                      totales.almuerzos - totales.descuentos - totales.prestamos - totales.materiales;
+    const nombreTecnico = tecnico.name || tecnico.nombre;
     
     const html = `
         <div class="preview-section">
-            <h5>${tecnico.nombre}</h5>
+            <h5>${nombreTecnico}</h5>
             <div class="preview-details">
                 <div class="preview-item">
                     <span>Trabajos completados:</span>
@@ -4384,8 +4401,9 @@ function procesarLiquidacionAvanzada(event) {
         );
         
         const tecnico = window.mecanicos.find(t => t.id === tecnicoId);
+        const nombreTecnico = tecnico ? (tecnico.name || tecnico.nombre) : 'Técnico';
         showNotification(
-            `Liquidación procesada para ${tecnico.nombre}: $${liquidacion.montoNeto.toLocaleString()}`,
+            `Liquidación procesada para ${nombreTecnico}: $${liquidacion.montoNeto.toLocaleString()}`,
             'success'
         );
         
