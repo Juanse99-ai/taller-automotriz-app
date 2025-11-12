@@ -822,8 +822,8 @@ body {
             <aside id="sidebar" class="sidebar">
                 <div class="sidebar-header">
                     <div class="logo">
-                        <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiByeD0iOCIgZmlsbD0iI0Y5RkFGQiIvPgo8cGF0aCBkPSJNMjAgMTBDMTkuNSAxMCAxOSAxMC41IDE5IDExSDE3QzE2LjUgMTEgMTYgMTAuNSAxNiAxMEMxNiA5LjUgMTYuNSA5IDE3IDlIMTlDMTkuNSA5IDIwIDkuNSAyMCAxMFoiIGZpbGw9IndoaXRlIi8+CjxwYXRoIGQ9Ik0yNCAxNUMyMy41IDE1IDIzIDE1LjUgMjMgMTZIMTVDMTQuNSAxNiAxNCAxNS41IDE0IDE2QzE0IDE0LjUgMTQuNSAxNCAxNSAxNEgxN0MxNy41IDE0IDE4IDE0LjUgMTggMTZDMjAgMTYgMjAgMTUgMjQgMTV6IiBmaWxsPSJ3aGl0ZSIvPgo8L3N2Zz4K" alt="Multidiagnósticos AS">
-                        <span class="logo-text">Multidiagnósticos AS</span>
+                        <img src="assets/images/logo-multidiagnosticos.png" alt="Multidiagnósticos AS" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';" style="height: 40px; width: auto;">
+                        <span class="logo-text" style="display: none;">Multidiagnósticos AS</span>
                     </div>
                     <button class="sidebar-toggle" onclick="toggleSidebar()">☰</button>
                 </div>
@@ -4056,6 +4056,21 @@ function cerrarModal() {
         modal.remove();
     }
 }
+
+// Exponer todas las funciones al scope global
+window.registrarAdelanto = registrarAdelanto;
+window.registrarAlmuerzo = registrarAlmuerzo;
+window.controlPagos = controlPagos;
+window.generarLiquidacion = generarLiquidacion;
+window.controlMovimientos = controlMovimientos;
+window.controlSaldos = controlSaldos;
+window.cerrarModal = cerrarModal;
+window.procesarAdelanto = procesarAdelanto;
+window.procesarAlmuerzo = procesarAlmuerzo;
+window.cambiarTab = cambiarTab;
+window.generarResumenTecnicos = generarResumenTecnicos;
+window.generarTablaMovimientos = generarTablaMovimientos;
+window.generarTablaLiquidaciones = generarTablaLiquidaciones;
 
 // Inicializar sistema al cargar la página
 document.addEventListener('DOMContentLoaded', function() {
