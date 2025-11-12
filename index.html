@@ -1801,7 +1801,25 @@ const mecanicos = [
     { id: 3, name: 'Ismael Cervantes', specialty: 'Motor', phone: '3003456789', hourlyRate: 20000 }
 ];
 
-// DOM Content Loaded
+// Inicializar variables globales (después de definir mecanicos)
+window.itemsTrabajo = [];
+window.trabajos = [];
+window.mecanicos = mecanicos;
+
+// Función para formatear moneda (definida temprano para uso global)
+function formatCurrency(amount) {
+    if (typeof amount !== 'number' || isNaN(amount)) {
+        amount = 0;
+    }
+    return new Intl.NumberFormat('es-CO', {
+        style: 'currency',
+        currency: 'COP',
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0
+    }).format(amount);
+}
+
+// DOM Content Loaded (consolidado)
 document.addEventListener('DOMContentLoaded', function() {
     console.log('🚀 Multidiagnósticos AS - Sistema completo iniciado');
     console.log('🔧 Con todas las funcionalidades restauradas');
@@ -1811,6 +1829,20 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Set default section
     showSection('dashboard');
+    
+    // Inicializar sistema de liquidación
+    console.log('🚀 Sistema de Liquidación Avanzada inicializado');
+    actualizarDashboardLiquidacion();
+    
+    // Verificar que las funciones están disponibles
+    console.log('🔍 Verificando funciones del sistema avanzado:');
+    console.log('- registrarAdelanto:', typeof registrarAdelanto);
+    console.log('- registrarAlmuerzo:', typeof registrarAlmuerzo);
+    console.log('- controlPagos:', typeof controlPagos);
+    console.log('- generarLiquidacion:', typeof generarLiquidacion);
+    console.log('- controlMovimientos:', typeof controlMovimientos);
+    console.log('- sistemaLiquidacion:', typeof sistemaLiquidacion);
+    console.log('- controlSaldos:', typeof controlSaldos);
     
     console.log('✅ Sistema completamente funcional');
 });
@@ -2601,34 +2633,13 @@ function previsualizarTrabajo() {
         </div>
     `);
 }
-            
-            <div class="form-row">
-                <div class="form-group">
-                    <label class="form-label">Costo Mano de Obra</label>
-                    <input type="number" class="form-input" id="trabajoCosto" placeholder="25000">
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Tiempo Estimado</label>
-                    <input type="text" class="form-input" id="trabajoTiempo" placeholder="2 horas">
-                </div>
-            </div>
-        </form>
-        `,
-        [
-            { text: 'Cancelar', class: 'btn-outline', onclick: 'closeModal()' },
-            { text: 'Crear Trabajo', class: 'btn-primary', type: 'submit', form: 'nuevoTrabajoForm' }
-        ]
-    );
-    
-    showModal(modal);
-}
 
-// Buscar cliente por cédula
-function buscarClientePorCedula() {
-    const cedula = document.getElementById('busquedaCedula').value;
+// Buscar cliente por cédula (versión alternativa para formularios)
+function buscarClientePorCedulaForm() {
+    const cedula = document.getElementById('busquedaCedula')?.value;
     const clienteInput = document.getElementById('trabajoCliente');
     
-    if (cedula) {
+    if (cedula && clienteInput) {
         const cliente = clientes.find(c => c.cedula === cedula);
         if (cliente) {
             clienteInput.value = cliente.name;
@@ -2637,17 +2648,6 @@ function buscarClientePorCedula() {
             showNotification('Cliente no encontrado en la base de datos', 'error');
         }
     }
-}
-
-// Guardar nuevo trabajo
-// Función para formatear moneda
-function formatCurrency(amount) {
-    return new Intl.NumberFormat('es-CO', {
-        style: 'currency',
-        currency: 'COP',
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 0
-    }).format(amount);
 }
 
 // Guardar nuevo trabajo con sistema POS
@@ -3136,9 +3136,9 @@ function buscarProducto() {
     }
 }
 
-// Generar liquidación
-function generarLiquidacion() {
-    console.log('💼 Generando liquidación...');
+// Generar liquidación (versión simple - DEPRECADA, usar generarLiquidacionAvanzada)
+function generarLiquidacionSimple() {
+    console.log('💼 Generando liquidación simple...');
     
     // Simular cálculos de liquidación 20% + 20%
     const trabajosPendientes = [
@@ -3155,7 +3155,7 @@ function generarLiquidacion() {
         const montoLiquidacion = trabajo.manoObra * (trabajo.porcentaje / 100);
         totalLiquidacion += montoLiquidacion;
         
-        mensaje += `${trabajo.plate} - ${trabajo.tecnico}:\n`;
+        mensaje += `${trabajo.placa} - ${trabajo.tecnico}:\n`;
         mensaje += `Mano de obra: $${trabajo.manoObra.toLocaleString()}\n`;
         mensaje += `20% Liquidación: $${montoLiquidacion.toLocaleString()}\n\n`;
     });
@@ -3192,7 +3192,7 @@ function verPendientes() {
     let mensaje = 'TRABAJOS PENDIENTES DE LIQUIDACIÓN:\n\n';
     
     pendientes.forEach(pendiente => {
-        mensaje += `${pendiente.plate} - ${pendiente.tecnico}: $${pendiente.monto.toLocaleString()}\n`;
+        mensaje += `${pendiente.placa} - ${pendiente.tecnico}: $${pendiente.monto.toLocaleString()}\n`;
     });
     
     const total = pendientes.reduce((sum, p) => sum + p.monto, 0);
@@ -3427,6 +3427,16 @@ function closeModal() {
             currentModal = null;
         }, 300);
     }
+    // También cerrar modales creados con mostrarModal
+    const modalOverlay = document.querySelector('.modal-overlay');
+    if (modalOverlay) {
+        modalOverlay.remove();
+    }
+}
+
+// Alias para mantener compatibilidad
+function cerrarModal() {
+    closeModal();
 }
 
 // ===== UTILIDADES =====
@@ -4054,9 +4064,9 @@ function controlPagos() {
                 
                 <div class="tab-container">
                     <div class="tab-nav">
-                        <button class="tab-btn active" onclick="cambiarTab('resumen')">Resumen</button>
-                        <button class="tab-btn" onclick="cambiarTab('movimientos')">Movimientos</button>
-                        <button class="tab-btn" onclick="cambiarTab('liquidaciones')">Liquidaciones</button>
+                        <button class="tab-btn active" onclick="cambiarTab('resumen', this)">Resumen</button>
+                        <button class="tab-btn" onclick="cambiarTab('movimientos', this)">Movimientos</button>
+                        <button class="tab-btn" onclick="cambiarTab('liquidaciones', this)">Liquidaciones</button>
                     </div>
                     
                     <div id="tab-resumen" class="tab-content active">
@@ -4189,7 +4199,7 @@ function generarTablaLiquidaciones(liquidaciones) {
 }
 
 // Cambiar tabs
-function cambiarTab(tab) {
+function cambiarTab(tab, eventElement) {
     // Ocultar todos los tabs
     document.querySelectorAll('.tab-content').forEach(content => {
         content.classList.remove('active');
@@ -4201,8 +4211,17 @@ function cambiarTab(tab) {
     });
     
     // Mostrar tab seleccionado
-    document.getElementById(`tab-${tab}`).classList.add('active');
-    event.target.classList.add('active');
+    const tabContent = document.getElementById(`tab-${tab}`);
+    if (tabContent) {
+        tabContent.classList.add('active');
+    }
+    
+    // Activar botón
+    if (eventElement) {
+        eventElement.classList.add('active');
+    } else if (event && event.target) {
+        event.target.classList.add('active');
+    }
 }
 
 // ==========================================
@@ -4293,7 +4312,7 @@ function actualizarVistaPrevia() {
     }
     
     // Calcular vista previa
-    const tecnico = window.mecanicos.find(t => t.id == tecnicoId);
+    const tecnico = window.mecanicos.find(t => t.id === tecnicoId);
     const trabajosCompletados = sistemaLiquidacion.obtenerTrabajosCompletadosPorPeriodo(tecnicoId, fechaInicio, fechaFin);
     const totalManosObra = sistemaLiquidacion.calcularManosObra(trabajosCompletados);
     const totales = controlMovimientos.calcularTotales(tecnicoId, fechaInicio, fechaFin);
@@ -4585,12 +4604,7 @@ function mostrarModal(html) {
     }
 }
 
-function cerrarModal() {
-    const modal = document.querySelector('.modal-overlay');
-    if (modal) {
-        modal.remove();
-    }
-}
+// cerrarModal ahora es un alias de closeModal (definido arriba)
 
 // Exponer todas las funciones al scope global
 window.registrarAdelanto = registrarAdelanto;
@@ -4612,39 +4626,7 @@ window.nuevaCotizacion = nuevaCotizacion;
 window.toggleSidebar = toggleSidebar;
 window.showSection = showSection;
 
-// Inicializar sistema al cargar la página
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('🚀 Sistema de Liquidación Avanzada inicializado');
-    actualizarDashboardLiquidacion();
-    
-    // Verificar que las funciones están disponibles
-    console.log('🔍 Verificando funciones del sistema avanzado:');
-    console.log('- registrarAdelanto:', typeof registrarAdelanto);
-    console.log('- registrarAlmuerzo:', typeof registrarAlmuerzo);
-    console.log('- controlPagos:', typeof controlPagos);
-    console.log('- generarLiquidacion:', typeof generarLiquidacion);
-    console.log('- controlMovimientos:', typeof controlMovimientos);
-    console.log('- sistemaLiquidacion:', typeof sistemaLiquidacion);
-    console.log('- controlSaldos:', typeof controlSaldos);
-    console.log('- nuevoTrabajo:', typeof nuevoTrabajo);
-    console.log('- nuevaRecepcion:', typeof nuevaRecepcion);
-    console.log('- nuevaCotizacion:', typeof nuevaCotizacion);
-    console.log('- toggleSidebar:', typeof toggleSidebar);
-    console.log('- showSection:', typeof showSection);
-    
-    // Probar que se pueden ejecutar sin errores
-    setTimeout(() => {
-        try {
-            console.log('✅ Todas las funciones del sistema avanzado están disponibles');
-            
-            // Simular clic en cada botón para verificar que funcionan
-            console.log('🔧 Sistema de liquidación listo para usar');
-            
-        } catch (error) {
-            console.error('❌ Error en sistema avanzado:', error);
-        }
-    }, 1000);
-});
+// Sistema de liquidación ya se inicializa en el DOMContentLoaded principal arriba
 
 // Función para verificar funcionamiento de los botones
 function verificarBotones() {
