@@ -102,10 +102,23 @@ body {
     width: 60px;
 }
 
+.sidebar.collapsed .sidebar-header {
+    padding: var(--sm) var(--xs);
+    justify-content: center;
+}
+
+.sidebar.collapsed .logo {
+    display: none;
+}
+
 .sidebar.collapsed .logo-text,
 .sidebar.collapsed .nav-text,
 .sidebar.collapsed .nav-section-title {
     display: none;
+}
+
+.sidebar.collapsed .sidebar-toggle {
+    margin: 0;
 }
 
 .sidebar.collapsed .nav-item {
