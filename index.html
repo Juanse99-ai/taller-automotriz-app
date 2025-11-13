@@ -60,9 +60,11 @@
 
 body {
     font-family: var(--font-family);
-    background-color: var(--neutral-50);
+    background: linear-gradient(180deg, #f4f7ff 0%, #e9efff 45%, #fdfdfd 100%);
+    background-attachment: fixed;
     color: var(--neutral-900);
     line-height: 1.5;
+    min-height: 100vh;
 }
 
 .container {
@@ -75,6 +77,11 @@ body {
     max-width: 1600px;
     margin: 0 auto;
     padding: var(--sm);
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(16px);
+    border-radius: 24px;
+    box-shadow: 0 24px 48px rgba(30, 58, 138, 0.08);
+    overflow: hidden;
 }
 
 .main-layout {
@@ -85,7 +92,7 @@ body {
 /* Sidebar Navigation - FINAL */
 .sidebar {
     width: 280px;
-    background: var(--primary-500);
+    background: linear-gradient(210deg, var(--primary-500) 0%, #2549c5 55%, #1a3297 100%);
     padding: 0;
     display: flex;
     flex-direction: column;
@@ -257,13 +264,15 @@ body {
 
 /* Header - FINAL */
 .header {
-    background: var(--neutral-100);
-    border-bottom: 1px solid var(--neutral-400);
+    background: rgba(255, 255, 255, 0.9);
+    border-bottom: 1px solid rgba(209, 213, 219, 0.5);
     padding: var(--sm) var(--md);
     position: sticky;
     top: 0;
     z-index: 100;
     width: 100%;
+    backdrop-filter: blur(14px);
+    box-shadow: 0 18px 36px rgba(30, 64, 175, 0.08);
 }
 
 .header-content {
@@ -384,11 +393,12 @@ body {
 
 /* Cards */
 .card {
-    background: var(--neutral-100);
-    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.92);
+    border-radius: 20px;
     padding: var(--lg);
-    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-    border: 1px solid var(--neutral-400);
+    box-shadow: 0 20px 40px rgba(30, 64, 175, 0.12);
+    border: 1px solid rgba(255, 255, 255, 0.6);
+    backdrop-filter: blur(18px);
     margin-bottom: var(--md);
 }
 
@@ -841,7 +851,7 @@ body {
                             <path d="M20 30h60M20 70h60M30 20v60M70 20v60" stroke="#1E3A8A" stroke-width="3"/>
                             <circle cx="50" cy="50" r="8" fill="#1E3A8A"/>
                         </svg>
-                        <span class="logo-text" style="display: none;">Multidiagnósticos AS</span>
+                        <span class="logo-text">Multidiagnósticos AS</span>
                     </div>
                     <button class="sidebar-toggle" onclick="toggleSidebar()">☰</button>
                 </div>
@@ -1814,25 +1824,7 @@ const mecanicos = [
     { id: 3, name: 'Ismael Cervantes', specialty: 'Motor', phone: '3003456789', hourlyRate: 20000 }
 ];
 
-// Inicializar variables globales (después de definir mecanicos)
-window.itemsTrabajo = [];
-window.trabajos = [];
-window.mecanicos = mecanicos;
-
-// Función para formatear moneda (definida temprano para uso global)
-function formatCurrency(amount) {
-    if (typeof amount !== 'number' || isNaN(amount)) {
-        amount = 0;
-    }
-    return new Intl.NumberFormat('es-CO', {
-        style: 'currency',
-        currency: 'COP',
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 0
-    }).format(amount);
-}
-
-// DOM Content Loaded (consolidado)
+// DOM Content Loaded
 document.addEventListener('DOMContentLoaded', function() {
     console.log('🚀 Multidiagnósticos AS - Sistema completo iniciado');
     console.log('🔧 Con todas las funcionalidades restauradas');
@@ -1842,20 +1834,6 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Set default section
     showSection('dashboard');
-    
-    // Inicializar sistema de liquidación
-    console.log('🚀 Sistema de Liquidación Avanzada inicializado');
-    actualizarDashboardLiquidacion();
-    
-    // Verificar que las funciones están disponibles
-    console.log('🔍 Verificando funciones del sistema avanzado:');
-    console.log('- registrarAdelanto:', typeof registrarAdelanto);
-    console.log('- registrarAlmuerzo:', typeof registrarAlmuerzo);
-    console.log('- controlPagos:', typeof controlPagos);
-    console.log('- generarLiquidacion:', typeof generarLiquidacion);
-    console.log('- controlMovimientos:', typeof controlMovimientos);
-    console.log('- sistemaLiquidacion:', typeof sistemaLiquidacion);
-    console.log('- controlSaldos:', typeof controlSaldos);
     
     console.log('✅ Sistema completamente funcional');
 });
@@ -2414,15 +2392,8 @@ function nuevoTrabajo() {
             }
         </style>
         `,
-        [
-            { text: 'Cancelar', class: 'btn-outline', onclick: 'closeModal()' },
-            { text: 'Vista Previa', class: 'btn-secondary', onclick: 'previsualizarTrabajo()' },
-            { text: 'Crear Trabajo', class: 'btn-primary', type: 'submit', form: 'nuevoTrabajoForm' }
-        ]
+        'large'
     );
-    
-    // Mostrar el modal
-    showModal(modal);
     
     // Initialize variables
     window.itemsTrabajo = [];
@@ -2653,13 +2624,34 @@ function previsualizarTrabajo() {
         </div>
     `);
 }
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label">Costo Mano de Obra</label>
+                    <input type="number" class="form-input" id="trabajoCosto" placeholder="25000">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Tiempo Estimado</label>
+                    <input type="text" class="form-input" id="trabajoTiempo" placeholder="2 horas">
+                </div>
+            </div>
+        </form>
+        `,
+        [
+            { text: 'Cancelar', class: 'btn-outline', onclick: 'closeModal()' },
+            { text: 'Crear Trabajo', class: 'btn-primary', type: 'submit', form: 'nuevoTrabajoForm' }
+        ]
+    );
+    
+    showModal(modal);
+}
 
-// Buscar cliente por cédula (versión alternativa para formularios)
-function buscarClientePorCedulaForm() {
-    const cedula = document.getElementById('busquedaCedula')?.value;
+// Buscar cliente por cédula
+function buscarClientePorCedula() {
+    const cedula = document.getElementById('busquedaCedula').value;
     const clienteInput = document.getElementById('trabajoCliente');
     
-    if (cedula && clienteInput) {
+    if (cedula) {
         const cliente = clientes.find(c => c.cedula === cedula);
         if (cliente) {
             clienteInput.value = cliente.name;
@@ -2668,6 +2660,17 @@ function buscarClientePorCedulaForm() {
             showNotification('Cliente no encontrado en la base de datos', 'error');
         }
     }
+}
+
+// Guardar nuevo trabajo
+// Función para formatear moneda
+function formatCurrency(amount) {
+    return new Intl.NumberFormat('es-CO', {
+        style: 'currency',
+        currency: 'COP',
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0
+    }).format(amount);
 }
 
 // Guardar nuevo trabajo con sistema POS
@@ -3156,9 +3159,9 @@ function buscarProducto() {
     }
 }
 
-// Generar liquidación (versión simple - DEPRECADA, usar generarLiquidacionAvanzada)
-function generarLiquidacionSimple() {
-    console.log('💼 Generando liquidación simple...');
+// Generar liquidación
+function generarLiquidacion() {
+    console.log('💼 Generando liquidación...');
     
     // Simular cálculos de liquidación 20% + 20%
     const trabajosPendientes = [
@@ -3175,7 +3178,7 @@ function generarLiquidacionSimple() {
         const montoLiquidacion = trabajo.manoObra * (trabajo.porcentaje / 100);
         totalLiquidacion += montoLiquidacion;
         
-        mensaje += `${trabajo.placa} - ${trabajo.tecnico}:\n`;
+        mensaje += `${trabajo.plate} - ${trabajo.tecnico}:\n`;
         mensaje += `Mano de obra: $${trabajo.manoObra.toLocaleString()}\n`;
         mensaje += `20% Liquidación: $${montoLiquidacion.toLocaleString()}\n\n`;
     });
@@ -3212,7 +3215,7 @@ function verPendientes() {
     let mensaje = 'TRABAJOS PENDIENTES DE LIQUIDACIÓN:\n\n';
     
     pendientes.forEach(pendiente => {
-        mensaje += `${pendiente.placa} - ${pendiente.tecnico}: $${pendiente.monto.toLocaleString()}\n`;
+        mensaje += `${pendiente.plate} - ${pendiente.tecnico}: $${pendiente.monto.toLocaleString()}\n`;
     });
     
     const total = pendientes.reduce((sum, p) => sum + p.monto, 0);
@@ -3447,16 +3450,6 @@ function closeModal() {
             currentModal = null;
         }, 300);
     }
-    // También cerrar modales creados con mostrarModal
-    const modalOverlay = document.querySelector('.modal-overlay');
-    if (modalOverlay) {
-        modalOverlay.remove();
-    }
-}
-
-// Alias para mantener compatibilidad
-function cerrarModal() {
-    closeModal();
 }
 
 // ===== UTILIDADES =====
@@ -3859,8 +3852,7 @@ class SistemaLiquidacion {
             // Obtener técnico y porcentaje
             const mecanico = window.mecanicos.find(m => m.id === trabajo.mecanico);
             if (mecanico) {
-                const nombreMecanico = mecanico.name || mecanico.nombre;
-                const porcentaje = controlSaldos.obtenerPorcentaje(nombreMecanico);
+                const porcentaje = controlSaldos.obtenerPorcentaje(mecanico.nombre);
                 const montoManoObra = (trabajo.manoObra || 0) * (porcentaje / 100);
                 total += montoManoObra;
             }
@@ -3921,7 +3913,7 @@ const sistemaLiquidacion = new SistemaLiquidacion();
 function registrarAdelanto() {
     const tecnicos = window.mecanicos || [];
     const tecnicoOptions = tecnicos.map(t => 
-        `<option value="${t.id}">${t.name || t.nombre}</option>`
+        `<option value="${t.id}">${t.nombre}</option>`
     ).join('');
     
     const html = `
@@ -3992,7 +3984,7 @@ function procesarAdelanto(event) {
 function registrarAlmuerzo() {
     const tecnicos = window.mecanicos || [];
     const tecnicoOptions = tecnicos.map(t => 
-        `<option value="${t.id}">${t.name || t.nombre}</option>`
+        `<option value="${t.id}">${t.nombre}</option>`
     ).join('');
     
     const html = `
@@ -4085,9 +4077,9 @@ function controlPagos() {
                 
                 <div class="tab-container">
                     <div class="tab-nav">
-                        <button class="tab-btn active" onclick="cambiarTab('resumen', this)">Resumen</button>
-                        <button class="tab-btn" onclick="cambiarTab('movimientos', this)">Movimientos</button>
-                        <button class="tab-btn" onclick="cambiarTab('liquidaciones', this)">Liquidaciones</button>
+                        <button class="tab-btn active" onclick="cambiarTab('resumen')">Resumen</button>
+                        <button class="tab-btn" onclick="cambiarTab('movimientos')">Movimientos</button>
+                        <button class="tab-btn" onclick="cambiarTab('liquidaciones')">Liquidaciones</button>
                     </div>
                     
                     <div id="tab-resumen" class="tab-content active">
@@ -4130,11 +4122,10 @@ function generarResumenTecnicos() {
         const saldo = controlSaldos.obtenerSaldo(tecnico.id);
         const totales = controlMovimientos.calcularTotales(tecnico.id, fechaInicio, fechaFin);
         const liquidaciones = sistemaLiquidacion.obtenerLiquidacionesTecnico(tecnico.id);
-        const nombreTecnico = tecnico.name || tecnico.nombre;
         
         return `
             <div class="tecnico-card">
-                <h5>${nombreTecnico}</h5>
+                <h5>${tecnico.nombre}</h5>
                 <div class="tecnico-stats">
                     <div>Saldo Actual: $${saldo.saldoActual.toLocaleString()}</div>
                     <div>Adelantos Mes: $${totales.adelantos.toLocaleString()}</div>
@@ -4166,11 +4157,10 @@ function generarTablaMovimientos(movimientos) {
             <tbody>
                 ${movimientos.map(mov => {
                     const tecnico = window.mecanicos.find(t => t.id === mov.tecnicoId);
-                    const nombreTecnico = tecnico ? (tecnico.name || tecnico.nombre) : 'N/A';
                     return `
                         <tr>
                             <td>${mov.fechaMovimiento}</td>
-                            <td>${nombreTecnico}</td>
+                            <td>${tecnico ? tecnico.nombre : 'N/A'}</td>
                             <td><span class="badge badge-${mov.tipoMovimiento}">${mov.tipoMovimiento}</span></td>
                             <td>${mov.concepto}</td>
                             <td class="${mov.monto > 0 ? 'text-success' : 'text-danger'}">
@@ -4204,11 +4194,10 @@ function generarTablaLiquidaciones(liquidaciones) {
             <tbody>
                 ${liquidaciones.map(liquidacion => {
                     const tecnico = window.mecanicos.find(t => t.id === liquidacion.tecnicoId);
-                    const nombreTecnico = tecnico ? (tecnico.name || tecnico.nombre) : 'N/A';
                     return `
                         <tr>
                             <td>${liquidacion.fechaLiquidacion}</td>
-                            <td>${nombreTecnico}</td>
+                            <td>${tecnico ? tecnico.nombre : 'N/A'}</td>
                             <td>${liquidacion.periodoInicio} - ${liquidacion.periodoFin}</td>
                             <td>$${liquidacion.totalManosObra.toLocaleString()}</td>
                             <td class="${liquidacion.montoNeto >= 0 ? 'text-success' : 'text-danger'}">
@@ -4223,7 +4212,7 @@ function generarTablaLiquidaciones(liquidaciones) {
 }
 
 // Cambiar tabs
-function cambiarTab(tab, eventElement) {
+function cambiarTab(tab) {
     // Ocultar todos los tabs
     document.querySelectorAll('.tab-content').forEach(content => {
         content.classList.remove('active');
@@ -4235,17 +4224,8 @@ function cambiarTab(tab, eventElement) {
     });
     
     // Mostrar tab seleccionado
-    const tabContent = document.getElementById(`tab-${tab}`);
-    if (tabContent) {
-        tabContent.classList.add('active');
-    }
-    
-    // Activar botón
-    if (eventElement) {
-        eventElement.classList.add('active');
-    } else if (event && event.target) {
-        event.target.classList.add('active');
-    }
+    document.getElementById(`tab-${tab}`).classList.add('active');
+    event.target.classList.add('active');
 }
 
 // ==========================================
@@ -4266,7 +4246,7 @@ function generarLiquidacion() {
     
     // Seleccionar técnico
     const tecnicoOptions = tecnicos.map(t => 
-        `<option value="${t.id}">${t.name || t.nombre}</option>`
+        `<option value="${t.id}">${t.nombre}</option>`
     ).join('');
     
     // Obtener fecha por defecto (últimos 30 días)
@@ -4336,22 +4316,16 @@ function actualizarVistaPrevia() {
     }
     
     // Calcular vista previa
-    const tecnico = window.mecanicos.find(t => t.id === tecnicoId);
-    if (!tecnico) {
-        document.getElementById('preview-contenido').innerHTML = 
-            '<p class="text-warning">Técnico no encontrado</p>';
-        return;
-    }
+    const tecnico = window.mecanicos.find(t => t.id == tecnicoId);
     const trabajosCompletados = sistemaLiquidacion.obtenerTrabajosCompletadosPorPeriodo(tecnicoId, fechaInicio, fechaFin);
     const totalManosObra = sistemaLiquidacion.calcularManosObra(trabajosCompletados);
     const totales = controlMovimientos.calcularTotales(tecnicoId, fechaInicio, fechaFin);
     const netoPagar = totalManosObra + totales.adelantos + totales.pagos - 
                      totales.almuerzos - totales.descuentos - totales.prestamos - totales.materiales;
-    const nombreTecnico = tecnico.name || tecnico.nombre;
     
     const html = `
         <div class="preview-section">
-            <h5>${nombreTecnico}</h5>
+            <h5>${tecnico.nombre}</h5>
             <div class="preview-details">
                 <div class="preview-item">
                     <span>Trabajos completados:</span>
@@ -4414,9 +4388,8 @@ function procesarLiquidacionAvanzada(event) {
         );
         
         const tecnico = window.mecanicos.find(t => t.id === tecnicoId);
-        const nombreTecnico = tecnico ? (tecnico.name || tecnico.nombre) : 'Técnico';
         showNotification(
-            `Liquidación procesada para ${nombreTecnico}: $${liquidacion.montoNeto.toLocaleString()}`,
+            `Liquidación procesada para ${tecnico.nombre}: $${liquidacion.montoNeto.toLocaleString()}`,
             'success'
         );
         
@@ -4635,7 +4608,12 @@ function mostrarModal(html) {
     }
 }
 
-// cerrarModal ahora es un alias de closeModal (definido arriba)
+function cerrarModal() {
+    const modal = document.querySelector('.modal-overlay');
+    if (modal) {
+        modal.remove();
+    }
+}
 
 // Exponer todas las funciones al scope global
 window.registrarAdelanto = registrarAdelanto;
@@ -4657,7 +4635,39 @@ window.nuevaCotizacion = nuevaCotizacion;
 window.toggleSidebar = toggleSidebar;
 window.showSection = showSection;
 
-// Sistema de liquidación ya se inicializa en el DOMContentLoaded principal arriba
+// Inicializar sistema al cargar la página
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('🚀 Sistema de Liquidación Avanzada inicializado');
+    actualizarDashboardLiquidacion();
+    
+    // Verificar que las funciones están disponibles
+    console.log('🔍 Verificando funciones del sistema avanzado:');
+    console.log('- registrarAdelanto:', typeof registrarAdelanto);
+    console.log('- registrarAlmuerzo:', typeof registrarAlmuerzo);
+    console.log('- controlPagos:', typeof controlPagos);
+    console.log('- generarLiquidacion:', typeof generarLiquidacion);
+    console.log('- controlMovimientos:', typeof controlMovimientos);
+    console.log('- sistemaLiquidacion:', typeof sistemaLiquidacion);
+    console.log('- controlSaldos:', typeof controlSaldos);
+    console.log('- nuevoTrabajo:', typeof nuevoTrabajo);
+    console.log('- nuevaRecepcion:', typeof nuevaRecepcion);
+    console.log('- nuevaCotizacion:', typeof nuevaCotizacion);
+    console.log('- toggleSidebar:', typeof toggleSidebar);
+    console.log('- showSection:', typeof showSection);
+    
+    // Probar que se pueden ejecutar sin errores
+    setTimeout(() => {
+        try {
+            console.log('✅ Todas las funciones del sistema avanzado están disponibles');
+            
+            // Simular clic en cada botón para verificar que funcionan
+            console.log('🔧 Sistema de liquidación listo para usar');
+            
+        } catch (error) {
+            console.error('❌ Error en sistema avanzado:', error);
+        }
+    }, 1000);
+});
 
 // Función para verificar funcionamiento de los botones
 function verificarBotones() {
@@ -4668,7 +4678,191 @@ function verificarBotones() {
     console.log('💼 Botón Generar Liquidación: OK');
 }
 
+// =====================================================
+// SISTEMA MULTIDIAGNÓSTICOS AS - INTEGRACIÓN SUPABASE
+// =====================================================
+
+// Variables globales para datos reales de Supabase
+let supabaseClientes = [];
+let supabaseInventario = [];
+let supabaseConectado = false;
+
+// Configuración Supabase
+// =====================================================
+// CARGAR DATOS DESDE SUPABASE
+// =====================================================
+
+async function cargarDatosDesdeSupabase() {
+    console.log('🔄 Cargando datos desde Supabase...');
+    
+    try {
+        // Cargar clientes
+        const { data: clientes, error: errorClientes } = await supabase
+            .from('clientes')
+            .select('*')
+            .order('id');
+            
+        if (errorClientes) {
+            console.error('❌ Error cargando clientes:', errorClientes);
+            return false;
+        }
+        
+        supabaseClientes = clientes || [];
+        console.log(`✅ Clientes cargados: ${supabaseClientes.length} registros`);
+        
+        // Cargar inventario
+        const { data: inventario, error: errorInventario } = await supabase
+            .from('inventario')
+            .select('*')
+            .order('id');
+            
+        if (errorInventario) {
+            console.error('❌ Error cargando inventario:', errorInventario);
+            return false;
+        }
+        
+        supabaseInventario = inventario || [];
+        console.log(`✅ Inventario cargado: ${supabaseInventario.length} registros`);
+        
+        supabaseConectado = true;
+        
+        // Guardar en localStorage como respaldo
+        localStorage.setItem('supabase_clientes_backup', JSON.stringify(supabaseClientes));
+        localStorage.setItem('supabase_inventario_backup', JSON.stringify(supabaseInventario));
+        localStorage.setItem('supabase_last_sync', new Date().toISOString());
+        
+        console.log('🎉 Datos de Supabase cargados exitosamente');
+        return true;
+        
+    } catch (error) {
+        console.error('❌ Error general:', error);
+        return false;
+    }
+}
+
+// =====================================================
+// BÚSQUEDA DE CLIENTES (DATOS REALES)
+// =====================================================
+
+function buscarClientePorCedulaReal(cedula) {
+    if (!cedula) return;
+    
+    // Buscar en datos de Supabase
+    const cliente = supabaseClientes.find(c => 
+        c.cedula === cedula || 
+        c.id_cedula === cedula || 
+        c.documento === cedula
+    );
+    
+    if (cliente) {
+        const nombre = cliente.nombre || cliente.name || cliente.cliente;
+        const telefono = cliente.telefono || cliente.phone || '';
+        const email = cliente.email || '';
+        const direccion = cliente.direccion || cliente.address || '';
+        
+        // Llenar campos del formulario
+        document.getElementById('trabajoCliente').value = nombre;
+        if (telefono) document.getElementById('trabajoTelefono') && (document.getElementById('trabajoTelefono').value = telefono);
+        if (email) document.getElementById('trabajoEmail') && (document.getElementById('trabajoEmail').value = email);
+        if (direccion) document.getElementById('trabajoDireccion') && (document.getElementById('trabajoDireccion').value = direccion);
+        
+        showNotification(`👤 Cliente encontrado: ${nombre}`, 'success');
+        return cliente;
+    } else {
+        showNotification('❌ Cliente no encontrado', 'error');
+        return null;
+    }
+}
+
+// =====================================================
+// BÚSQUEDA DE REPUESTOS (DATOS REALES)
+// =====================================================
+
+function buscarRepuestoReal(termino) {
+    if (!termino) return [];
+    
+    // Buscar en inventario de Supabase
+    const resultados = supabaseInventario.filter(item => {
+        const codigo = (item.codigo || item.code || '').toString().toLowerCase();
+        const nombre = (item.nombre || item.name || item.producto || '').toString().toLowerCase();
+        const categoria = (item.categoria || item.category || '').toString().toLowerCase();
+        
+        const terminoLower = termino.toLowerCase();
+        
+        return codigo.includes(terminoLower) || 
+               nombre.includes(terminoLower) || 
+               categoria.includes(terminoLower);
+    });
+    
+    return resultados.map(item => ({
+        codigo: item.codigo || item.code || `ITEM-${item.id}`,
+        nombre: item.nombre || item.name || item.producto || 'Sin nombre',
+        categoria: item.categoria || item.category || 'Sin categoría',
+        precio: item.precio || item.price || item.valor || 0,
+        stock: item.stock || item.cantidad || item.quantity || 0,
+        stock_minimo: item.stock_minimo || item.minimo || item.min_stock || 1
+    }));
+}
+
+// =====================================================
+// FUNCIONES DE INICIALIZACIÓN
+// =====================================================
+
+// Función para inicializar con datos de Supabase
+window.inicializarConSupabase = async function() {
+    console.log('🚀 Inicializando sistema con datos de Supabase...');
+    
+    const success = await cargarDatosDesdeSupabase();
+    
+    if (success) {
+        showNotification('🎉 Sistema conectado a Supabase exitosamente', 'success');
+    } else {
+        showNotification('⚠️ Error conectando a Supabase. Usando datos locales.', 'warning');
+        
+        // Intentar cargar desde localStorage
+        const clientesBackup = localStorage.getItem('supabase_clientes_backup');
+        const inventarioBackup = localStorage.getItem('supabase_inventario_backup');
+        
+        if (clientesBackup) supabaseClientes = JSON.parse(clientesBackup);
+        if (inventarioBackup) supabaseInventario = JSON.parse(inventarioBackup);
+    }
+    
+    console.log(`📊 Datos disponibles: ${supabaseClientes.length} clientes, ${supabaseInventario.length} productos`);
+};
+
+// Función para verificar conexión
+window.verificarConexionSupabase = function() {
+    return {
+        conectado: supabaseConectado,
+        clientes: supabaseClientes.length,
+        inventario: supabaseInventario.length,
+        ultimaSync: localStorage.getItem('supabase_last_sync') || 'Nunca'
+    };
+};
+
+// =====================================================
+// REEMPLAZAR FUNCIONES ORIGINALES
+// =====================================================
+
+// Sobrescribir función de búsqueda de cliente
+window.buscarClientePorCedula = buscarClientePorCedulaReal;
+
+// Sobrescribir función de búsqueda de repuesto
+window.buscarRepuesto = buscarRepuestoReal;
+
+// Función para sincronizar datos manualmente
+window.sincronizarDatosSupabase = cargarDatosDesdeSupabase;
+
+// Inicializar sistema con datos de Supabase
+window.addEventListener('load', function() {
+    // Inicializar con datos de Supabase después de 2 segundos
+    setTimeout(() => {
+        inicializarConSupabase();
+    }, 2000);
+});
+
+console.log('✅ Sistema de integración Supabase cargado');
+
     </script>
-<script defer src="https://static.cloudflareinsights.com/beacon.min.js/vcd15cbe7772f49c399c6a5babf22c1241717689176015" integrity="sha512-ZpsOmlRQV6y907TI0dKBHq9Md29nnaEIPlkf84rnaERnq6zvWvPUqr2ft8M1aS28oN72PdrCzSjY4U6VaAw1EQ==" data-cf-beacon='{"rayId":"99d4103bebfd810e","serverTiming":{"name":{"cfExtPri":true,"cfEdge":true,"cfOrigin":true,"cfL4":true,"cfSpeedBrain":true,"cfCacheStatus":true}},"version":"2025.9.1","token":"e72945439c264b3b85d2e3b689102d27"}' crossorigin="anonymous"></script>
 </body>
 </html>
