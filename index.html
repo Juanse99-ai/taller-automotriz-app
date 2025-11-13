@@ -1813,6 +1813,11 @@ const mecanicos = [
     { id: 3, name: 'Ismael Cervantes', specialty: 'Motor', phone: '3003456789', hourlyRate: 20000 }
 ];
 
+// Exportar datos globales
+window.mecanicos = mecanicos;
+window.clientes = clientes;
+window.inventario = inventario;
+
 // ===== FUNCIONES CRÍTICAS - DEFINIDAS INMEDIATAMENTE =====
 // Estas funciones deben estar disponibles antes de que el HTML las use
 
@@ -1894,6 +1899,127 @@ function showSection(sectionName) {
 // Exportar funciones críticas al scope global INMEDIATAMENTE
 window.toggleSidebar = toggleSidebar;
 window.showSection = showSection;
+
+// ===== SISTEMA DE MODALES - DEFINIDO INMEDIATAMENTE =====
+let currentModal = null;
+
+function createModal(title, content, buttons = []) {
+    return {
+        title: title,
+        content: content,
+        buttons: buttons
+    };
+}
+
+function showModal(modalData) {
+    // Close any existing modal
+    if (typeof closeModal === 'function') {
+        closeModal();
+    }
+    
+    // Create modal elements
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    overlay.onclick = function(e) {
+        if (e.target === overlay) {
+            closeModal();
+        }
+    };
+    
+    const modal = document.createElement('div');
+    modal.className = 'modal';
+    
+    // Create header
+    const header = document.createElement('div');
+    header.className = 'modal-header';
+    header.innerHTML = `
+        <h3 class="modal-title">${modalData.title}</h3>
+        <button class="modal-close" onclick="closeModal()">&times;</button>
+    `;
+    
+    // Create body
+    const body = document.createElement('div');
+    body.className = 'modal-body';
+    body.innerHTML = modalData.content;
+    
+    // Create footer
+    const footer = document.createElement('div');
+    footer.className = 'modal-footer';
+    
+    if (modalData.buttons && modalData.buttons.length > 0) {
+        modalData.buttons.forEach(button => {
+            const btn = document.createElement('button');
+            btn.className = `btn ${button.class || 'btn-outline'}`;
+            btn.textContent = button.text;
+            if (button.onclick) {
+                btn.onclick = new Function(button.onclick);
+            }
+            if (button.type === 'submit' && button.form) {
+                btn.type = 'submit';
+                const form = document.getElementById(button.form);
+                if (form) {
+                    form.onsubmit = new Function(button.onclick.replace('return ', ''));
+                }
+            }
+            footer.appendChild(btn);
+        });
+    }
+    
+    // Assemble modal
+    modal.appendChild(header);
+    modal.appendChild(body);
+    if (modalData.buttons && modalData.buttons.length > 0) {
+        modal.appendChild(footer);
+    }
+    overlay.appendChild(modal);
+    
+    // Add to DOM
+    document.body.appendChild(overlay);
+    currentModal = overlay;
+    
+    // Show modal
+    setTimeout(() => {
+        overlay.style.opacity = '1';
+    }, 10);
+}
+
+function closeModal() {
+    if (currentModal) {
+        currentModal.style.opacity = '0';
+        setTimeout(() => {
+            if (currentModal && currentModal.parentNode) {
+                currentModal.parentNode.removeChild(currentModal);
+            }
+            currentModal = null;
+        }, 300);
+    }
+}
+
+// Exportar funciones de modal inmediatamente
+window.createModal = createModal;
+window.showModal = showModal;
+window.closeModal = closeModal;
+window.cerrarModal = closeModal; // Alias en español
+
+// Función de notificaciones básica (se mejorará más adelante)
+function showNotification(message, type = 'info') {
+    console.log(`🔔 [${type.toUpperCase()}] ${message}`);
+    // Versión básica - se mejorará más adelante
+    alert(message);
+}
+window.showNotification = showNotification;
+
+// Funciones placeholder para evitar errores (se redefinirán más adelante)
+window.nuevoTrabajo = function() {
+    console.log('⏳ Cargando función nuevoTrabajo...');
+    showNotification('Cargando sistema POS...', 'info');
+    // Se redefinirá cuando se cargue completamente
+};
+window.generarLiquidacion = function() {
+    console.log('⏳ Cargando función generarLiquidacion...');
+    showNotification('Cargando sistema de liquidación...', 'info');
+    // Se redefinirá cuando se cargue completamente
+};
 
 // DOM Content Loaded
 document.addEventListener('DOMContentLoaded', function() {
@@ -2492,12 +2618,16 @@ function nuevoTrabajo() {
         document.getElementById('totalFinal').textContent = formatCurrency(total);
     };
     
-    // Set defaults
-    document.getElementById('vehiculoAno').value = new Date().getFullYear();
-    document.getElementById('precioHora').value = 45000;
-    
-    // Mostrar el modal
+    // Mostrar el modal primero
     showModal(modal);
+    
+    // Set defaults después de que el modal se muestre
+    setTimeout(() => {
+        const anoInput = document.getElementById('vehiculoAno');
+        const precioInput = document.getElementById('precioHora');
+        if (anoInput) anoInput.value = new Date().getFullYear();
+        if (precioInput) precioInput.value = 45000;
+    }, 100);
     
     console.log('✅ Sistema POS para nuevo trabajo inicializado');
 }
@@ -4317,52 +4447,47 @@ function generarLiquidacion() {
     const hoy = new Date();
     const hace30Dias = new Date(hoy.getTime() - (30 * 24 * 60 * 60 * 1000));
     
-    const html = `
-        <div class="modal-overlay" onclick="cerrarModal()">
-            <div class="modal-content modal-large" onclick="event.stopPropagation()">
-                <h3>💼 Liquidación Avanzada</h3>
-                <form onsubmit="procesarLiquidacionAvanzada(event)">
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label>Técnico:</label>
-                            <select name="tecnicoId" required class="form-control">
-                                <option value="">Seleccionar técnico</option>
-                                ${tecnicoOptions}
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label>Fecha Inicio:</label>
-                            <input type="date" name="fechaInicio" required class="form-control" 
-                                   value="${hace30Dias.toISOString().split('T')[0]}">
-                        </div>
-                        <div class="form-group">
-                            <label>Fecha Fin:</label>
-                            <input type="date" name="fechaFin" required class="form-control" 
-                                   value="${hoy.toISOString().split('T')[0]}">
-                        </div>
-                    </div>
-                    <div class="form-group">
-                        <label>Observaciones:</label>
-                        <textarea name="observaciones" class="form-control" 
-                                  placeholder="Observaciones de la liquidación"></textarea>
-                    </div>
-                    
-                    <div id="preview-liquidacion" class="preview-box">
-                        <h4>Vista Previa de la Liquidación</h4>
-                        <div id="preview-contenido">Selecciona un técnico y período para ver la vista previa</div>
-                    </div>
-                    
-                    <div class="modal-actions">
-                        <button type="button" onclick="cerrarModal()" class="btn btn-outline">Cancelar</button>
-                        <button type="button" onclick="actualizarVistaPrevia()" class="btn btn-info">Vista Previa</button>
-                        <button type="submit" class="btn btn-primary">Generar Liquidación</button>
-                    </div>
-                </form>
+    const content = `
+        <form onsubmit="procesarLiquidacionAvanzada(event)">
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Técnico:</label>
+                    <select name="tecnicoId" required class="form-control">
+                        <option value="">Seleccionar técnico</option>
+                        ${tecnicoOptions}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Fecha Inicio:</label>
+                    <input type="date" name="fechaInicio" required class="form-control" 
+                           value="${hace30Dias.toISOString().split('T')[0]}">
+                </div>
+                <div class="form-group">
+                    <label>Fecha Fin:</label>
+                    <input type="date" name="fechaFin" required class="form-control" 
+                           value="${hoy.toISOString().split('T')[0]}">
+                </div>
             </div>
-        </div>
+            <div class="form-group">
+                <label>Observaciones:</label>
+                <textarea name="observaciones" class="form-control" 
+                          placeholder="Observaciones de la liquidación"></textarea>
+            </div>
+            
+            <div id="preview-liquidacion" class="preview-box">
+                <h4>Vista Previa de la Liquidación</h4>
+                <div id="preview-contenido">Selecciona un técnico y período para ver la vista previa</div>
+            </div>
+        </form>
     `;
     
-    mostrarModal(html);
+    const modal = createModal('💼 Liquidación Avanzada', content, [
+        { text: 'Cancelar', class: 'btn-outline', onclick: 'closeModal()' },
+        { text: 'Vista Previa', class: 'btn-info', onclick: 'actualizarVistaPrevia()' },
+        { text: 'Generar Liquidación', class: 'btn-primary', type: 'submit', form: 'procesarLiquidacionAvanzada' }
+    ]);
+    
+    showModal(modal);
 }
 
 // Actualizar vista previa
@@ -4701,6 +4826,20 @@ window.showSection = showSection;
 window.closeModal = closeModal;
 window.logout = logout;
 
+// Exportar funciones auxiliares del sistema POS
+if (typeof buscarClientePorCedula !== 'undefined') window.buscarClientePorCedula = buscarClientePorCedula;
+if (typeof buscarEnInventario !== 'undefined') window.buscarEnInventario = buscarEnInventario;
+if (typeof agregarRepuesto !== 'undefined') window.agregarRepuesto = agregarRepuesto;
+if (typeof formatCurrency !== 'undefined') window.formatCurrency = formatCurrency;
+if (typeof guardarNuevoTrabajo !== 'undefined') window.guardarNuevoTrabajo = guardarNuevoTrabajo;
+if (typeof actualizarTotales !== 'undefined') window.actualizarTotales = actualizarTotales;
+if (typeof calcularTotal !== 'undefined') window.calcularTotal = calcularTotal;
+if (typeof agregarServicioManual !== 'undefined') window.agregarServicioManual = agregarServicioManual;
+if (typeof mostrarTodosLosRepuestos !== 'undefined') window.mostrarTodosLosRepuestos = mostrarTodosLosRepuestos;
+if (typeof previsualizarTrabajo !== 'undefined') window.previsualizarTrabajo = previsualizarTrabajo;
+if (typeof procesarLiquidacionAvanzada !== 'undefined') window.procesarLiquidacionAvanzada = procesarLiquidacionAvanzada;
+if (typeof actualizarVistaPrevia !== 'undefined') window.actualizarVistaPrevia = actualizarVistaPrevia;
+
 // Verificar que todas las funciones críticas estén disponibles
 console.log('🔍 Verificando funciones globales:');
 console.log('- toggleSidebar:', typeof window.toggleSidebar);
@@ -4936,6 +5075,20 @@ window.addEventListener('load', function() {
 });
 
 console.log('✅ Sistema de integración Supabase cargado');
+
+// Verificación final de funciones críticas
+setTimeout(() => {
+    console.log('🔍 Verificación final de funciones:');
+    console.log('✅ toggleSidebar:', typeof window.toggleSidebar === 'function' ? 'OK' : 'FALTA');
+    console.log('✅ showSection:', typeof window.showSection === 'function' ? 'OK' : 'FALTA');
+    console.log('✅ nuevoTrabajo:', typeof window.nuevoTrabajo === 'function' ? 'OK' : 'FALTA');
+    console.log('✅ generarLiquidacion:', typeof window.generarLiquidacion === 'function' ? 'OK' : 'FALTA');
+    console.log('✅ createModal:', typeof window.createModal === 'function' ? 'OK' : 'FALTA');
+    console.log('✅ showModal:', typeof window.showModal === 'function' ? 'OK' : 'FALTA');
+    console.log('✅ closeModal:', typeof window.closeModal === 'function' ? 'OK' : 'FALTA');
+    console.log('✅ showNotification:', typeof window.showNotification === 'function' ? 'OK' : 'FALTA');
+    console.log('🎉 Sistema Multidiagnósticos AS completamente cargado y listo para usar');
+}, 500);
 
     </script>
 </body>
