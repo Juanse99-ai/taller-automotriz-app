@@ -516,6 +516,57 @@ body {
     border: 1px solid rgba(108, 117, 125, 0.3);
 }
 
+.debug-results {
+    margin-top: 12px;
+    font-size: 14px;
+    color: var(--neutral-600);
+}
+
+.debug-results ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.debug-results li {
+    margin-bottom: 8px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    align-items: center;
+}
+
+.debug-label {
+    font-weight: 600;
+    color: var(--neutral-900);
+}
+
+.debug-value {
+    color: var(--neutral-600);
+}
+
+.debug-badge {
+    padding: 2px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.debug-badge.ok {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.debug-badge.warn {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.debug-badge.error {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
 /* Text utilities */
 .text-center { text-align: center; }
 .mt-4 { margin-top: 24px; }
@@ -1015,6 +1066,17 @@ body {
                                 </table>
                             </div>
                         </div>
+
+            <!-- Panel de diagnóstico -->
+            <div class="card" id="debugPanel">
+                <h3 class="card-title" style="display:flex;justify-content:space-between;align-items:center;">
+                    <span>🧪 Diagnóstico del Sistema</span>
+                    <button class="btn btn-outline" onclick="ejecutarDiagnostico()">Ejecutar Diagnóstico</button>
+                </h3>
+                <div id="debugResults" class="debug-results" style="color:var(--neutral-600);font-size:14px;">
+                    Presiona el botón para verificar conexión y datos.
+                </div>
+            </div>
                     </section>
 
                     <!-- Trabajos Section -->
@@ -1814,6 +1876,9 @@ const mecanicos = [
 ];
 
 // Exportar datos globales
+mecanicos.forEach(m => {
+    if (!m.nombre) m.nombre = m.name;
+});
 window.mecanicos = mecanicos;
 window.clientes = clientes;
 window.inventario = inventario;
@@ -2291,15 +2356,10 @@ function nuevoTrabajo() {
             <div class="pos-section">
                 <h3 class="pos-section-title">💰 Resumen y Totales</h3>
                 <div class="totales-container">
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label class="form-label">🔨 Mano de Obra (Horas)</label>
-                            <input type="number" class="form-input" id="manoObraHoras" placeholder="2.5" step="0.5" min="0" onchange="calcularTotal()">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">💵 Precio por Hora</label>
-                            <input type="number" class="form-input" id="precioHora" placeholder="45000" min="0" onchange="calcularTotal()">
-                        </div>
+                    <div class="form-group">
+                        <label class="form-label">💵 Mano de Obra (Valor total del servicio)</label>
+                        <input type="number" class="form-input" id="manoObraValor" placeholder="45000" min="0" onchange="calcularTotal()">
+                        <small style="color:#6b7280;">Ingresa el valor total que cobrarás por la mano de obra.</small>
                     </div>
                     
                     <div class="totales-detalles">
@@ -2484,9 +2544,8 @@ function nuevoTrabajo() {
     window.itemsTrabajo = [];
     window.actualizarTotales = function() {
         const subtotalRepuestos = window.itemsTrabajo.reduce((total, item) => total + (item.precio * item.cantidad), 0);
-        const horas = parseFloat(document.getElementById('manoObraHoras').value) || 0;
-        const precioHora = parseFloat(document.getElementById('precioHora').value) || 0;
-        const subtotalManoObra = horas * precioHora;
+        const manoObra = parseFloat(document.getElementById('manoObraValor').value) || 0;
+        const subtotalManoObra = manoObra;
         const subtotal = subtotalRepuestos + subtotalManoObra;
         const iva = subtotal * 0.19;
         const total = subtotal + iva;
@@ -2503,9 +2562,9 @@ function nuevoTrabajo() {
     // Set defaults después de que el modal se muestre
     setTimeout(() => {
         const anoInput = document.getElementById('vehiculoAno');
-        const precioInput = document.getElementById('precioHora');
+        const manoObraInput = document.getElementById('manoObraValor');
         if (anoInput) anoInput.value = new Date().getFullYear();
-        if (precioInput) precioInput.value = 45000;
+        if (manoObraInput && !manoObraInput.value) manoObraInput.value = 45000;
     }, 100);
     
     console.log('✅ Sistema POS para nuevo trabajo inicializado');
@@ -2515,40 +2574,56 @@ function nuevoTrabajo() {
 
 // Buscar cliente por cédula
 function buscarClientePorCedula(cedula) {
-    if (cedula.length < 3) {
-        document.getElementById('resultadosBusqueda').classList.remove('show');
+    const contenedor = document.getElementById('resultadosBusqueda');
+    if (!contenedor) return;
+
+    if (!cedula || cedula.length < 3) {
+        contenedor.classList.remove('show');
+        contenedor.innerHTML = '';
         return;
     }
-    
-    // Datos de ejemplo de clientes (en producción vendría de Supabase)
-    const clientes = [
-        {cedula: '1043038457', nombre: 'JUAN CERVANTES'},
-        {cedula: '12345678', nombre: 'MARIA GARCIA'},
-        {cedula: '87654321', nombre: 'CARLOS RODRIGUEZ'},
-        {cedula: '11223344', nombre: 'ANA MARTINEZ'}
-    ];
-    
-    const resultados = clientes.filter(c => c.cedula.includes(cedula));
-    const contenedor = document.getElementById('resultadosBusqueda');
-    
+
+    const baseClientes = Array.isArray(supabaseClientes) && supabaseClientes.length
+        ? supabaseClientes
+        : [
+            { cedula: '1043038457', nombre: 'JUAN CERVANTES' },
+            { cedula: '12345678', nombre: 'MARIA GARCIA' },
+            { cedula: '87654321', nombre: 'CARLOS RODRIGUEZ' },
+            { cedula: '11223344', nombre: 'ANA MARTINEZ' }
+        ];
+
+    const normalizarDocumento = cliente => (cliente?.cedula || cliente?.documento || cliente?.id_cedula || '').toString();
+
+    const resultados = baseClientes.filter(cliente => normalizarDocumento(cliente).includes(cedula));
+
     if (resultados.length > 0) {
-        contenedor.innerHTML = resultados.map(cliente => 
-            `<div class="resultado-item" onclick="seleccionarCliente('${cliente.nombre}', '${cliente.cedula}')">
-                <strong>${cliente.cedula}</strong> - ${cliente.nombre}
-            </div>`
-        ).join('');
-        contenedor.classList.add('show');
+        contenedor.innerHTML = resultados.map(cliente => {
+            const doc = normalizarDocumento(cliente);
+            const nombre = (cliente?.nombre || cliente?.name || cliente?.cliente || 'Cliente sin nombre').toString();
+            const telefono = (cliente?.telefono || cliente?.phone || '').toString();
+            const email = (cliente?.email || '').toString();
+            const escapar = valor => valor.replace(/'/g, "\\'");
+            return `
+                <div class="resultado-item" onclick="seleccionarCliente('${escapar(nombre)}', '${escapar(doc)}', '${escapar(telefono)}', '${escapar(email)}')">
+                    <strong>${doc}</strong> - ${nombre}
+                </div>
+            `;
+        }).join('');
     } else {
         contenedor.innerHTML = '<div class="resultado-item">No se encontraron clientes</div>';
-        contenedor.classList.add('show');
     }
+    contenedor.classList.add('show');
 }
 
 // Seleccionar cliente de resultados
-function seleccionarCliente(nombre, cedula) {
+function seleccionarCliente(nombre, cedula, telefono = '', email = '') {
     document.getElementById('trabajoCliente').value = nombre;
     document.getElementById('busquedaCedula').value = cedula;
     document.getElementById('resultadosBusqueda').classList.remove('show');
+    const telefonoInput = document.getElementById('clienteTelefono');
+    const emailInput = document.getElementById('clienteEmail');
+    if (telefonoInput && telefono) telefonoInput.value = telefono;
+    if (emailInput && email) emailInput.value = email;
 }
 
 // Buscar en inventario
@@ -2558,31 +2633,42 @@ function buscarEnInventario(termino) {
         return;
     }
     
-    // Datos de ejemplo de inventario (en producción vendría de Supabase)
-    const inventario = [
-        {codigo: 'ACE001', nombre: 'Aceite Motor 5W30 Synthetic', precio: 45000, categoria: 'Lubricantes'},
-        {codigo: 'FRN001', nombre: 'Frenos Delanteros Completos', precio: 180000, categoria: 'Frenos'},
-        {codigo: 'FLT001', nombre: 'Filtro de Aire', precio: 25000, categoria: 'Filtros'},
-        {codigo: 'BTR001', nombre: 'Batería 12V 60Ah', precio: 320000, categoria: 'Eléctrico'},
-        {codigo: 'LMP001', nombre: 'Lámpara Halógena H7', precio: 35000, categoria: 'Iluminación'},
-        {codigo: 'LLV001', nombre: 'Llantas Michelin 195/65R15', precio: 280000, categoria: 'Neumáticos'},
-        {codigo: 'CDR001', nombre: 'Correa de Distribución', precio: 95000, categoria: 'Motor'},
-        {codigo: 'SVP001', nombre: 'Servicio Preventivo Básico', precio: 85000, categoria: 'Servicios'}
-    ];
+    const baseInventario = Array.isArray(supabaseInventario) && supabaseInventario.length
+        ? supabaseInventario
+        : [
+            { codigo: 'ACE001', nombre: 'Aceite Motor 5W30 Synthetic', precio: 45000, categoria: 'Lubricantes' },
+            { codigo: 'FRN001', nombre: 'Frenos Delanteros Completos', precio: 180000, categoria: 'Frenos' },
+            { codigo: 'FLT001', nombre: 'Filtro de Aire', precio: 25000, categoria: 'Filtros' },
+            { codigo: 'BTR001', nombre: 'Batería 12V 60Ah', precio: 320000, categoria: 'Eléctrico' },
+            { codigo: 'LMP001', nombre: 'Lámpara Halógena H7', precio: 35000, categoria: 'Iluminación' },
+            { codigo: 'LLV001', nombre: 'Llantas Michelin 195/65R15', precio: 280000, categoria: 'Neumáticos' },
+            { codigo: 'CDR001', nombre: 'Correa de Distribución', precio: 95000, categoria: 'Motor' },
+            { codigo: 'SVP001', nombre: 'Servicio Preventivo Básico', precio: 85000, categoria: 'Servicios' }
+        ];
     
-    const resultados = inventario.filter(item => 
-        item.codigo.toLowerCase().includes(termino.toLowerCase()) ||
-        item.nombre.toLowerCase().includes(termino.toLowerCase())
-    );
+    const normalizarTexto = texto => (texto || '').toString().toLowerCase();
+    
+    const resultados = baseInventario.filter(item => {
+        const codigo = normalizarTexto(item.codigo || item.code);
+        const nombre = normalizarTexto(item.nombre || item.name || item.producto);
+        return codigo.includes(termino.toLowerCase()) || nombre.includes(termino.toLowerCase());
+    });
     
     const contenedor = document.getElementById('resultadosInventario');
+    window._ultimosResultadosInventario = resultados;
     if (resultados.length > 0) {
-        contenedor.innerHTML = resultados.map(item => 
-            `<div class="inventario-item" onclick="agregarRepuesto('${item.codigo}', '${item.nombre}', ${item.precio}, '${item.categoria}')">
-                <strong>${item.codigo}</strong> - ${item.nombre}<br>
-                <small style="color: #666;">${item.categoria} - ${formatCurrency(item.precio)}</small>
-            </div>`
-        ).join('');
+        contenedor.innerHTML = resultados.map((item, index) => {
+            const codigo = item.codigo || item.code || 'S/C';
+            const nombre = item.nombre || item.name || item.producto || 'Producto sin nombre';
+            const categoria = item.categoria || item.category || 'General';
+            const precio = Number(item.precio || item.price || item.valor || 0);
+            return `
+                <div class="inventario-item" onclick="agregarRepuestoDesdeBusqueda(${index})">
+                    <strong>${codigo}</strong> - ${nombre}<br>
+                    <small style="color: #666;">${categoria} - ${formatCurrency(precio)}</small>
+                </div>
+            `;
+        }).join('');
         contenedor.classList.add('show');
     } else {
         contenedor.innerHTML = '<div class="inventario-item">No se encontraron productos</div>';
@@ -2616,6 +2702,19 @@ function agregarRepuesto(codigo, nombre, precio, categoria) {
     actualizarTablaItems();
     document.getElementById('resultadosInventario').classList.remove('show');
     document.getElementById('busquedaRepuesto').value = '';
+}
+
+function agregarRepuestoDesdeBusqueda(index) {
+    const lista = window._ultimosResultadosInventario || [];
+    const item = lista[index];
+    if (!item) return;
+    
+    const codigo = item.codigo || item.code || 'S/C';
+    const nombre = item.nombre || item.name || item.producto || 'Producto sin nombre';
+    const categoria = item.categoria || item.category || 'General';
+    const precio = Number(item.precio || item.price || item.valor || 0);
+    
+    agregarRepuesto(codigo, nombre, precio, categoria);
 }
 
 // Agregar servicio manual
@@ -2704,7 +2803,7 @@ function previsualizarTrabajo() {
                 `<div>• ${item.nombre} (${item.cantidad}x) - ${formatCurrency(item.precio * item.cantidad)}</div>`
             ).join('') : '<div>No hay items agregados</div>'}
             <br>
-            <div><strong>Horas Mano de Obra:</strong> ${document.getElementById('manoObraHoras').value || 0}</div>
+            <div><strong>Mano de Obra:</strong> ${formatCurrency(document.getElementById('manoObraValor').value || 0)}</div>
             <div><strong>Total Final:</strong> ${document.getElementById('totalFinal').textContent}</div>
         </div>
     `;
@@ -2767,9 +2866,8 @@ function guardarNuevoTrabajo(event) {
     
     // Calcular totales finales
     const subtotalRepuestos = window.itemsTrabajo.reduce((total, item) => total + (item.precio * item.cantidad), 0);
-    const horas = parseFloat(document.getElementById('manoObraHoras').value) || 0;
-    const precioHora = parseFloat(document.getElementById('precioHora').value) || 0;
-    const subtotalManoObra = horas * precioHora;
+    const manoObraValor = parseFloat(document.getElementById('manoObraValor').value) || 0;
+    const subtotalManoObra = manoObraValor;
     const subtotal = subtotalRepuestos + subtotalManoObra;
     const iva = subtotal * 0.19;
     const total = subtotal + iva;
@@ -2799,8 +2897,7 @@ function guardarNuevoTrabajo(event) {
         // Sistema POS
         items: [...window.itemsTrabajo],
         manoObra: {
-            horas: horas,
-            precioPorHora: precioHora,
+            valor: manoObraValor,
             subtotal: subtotalManoObra
         },
         
@@ -2833,7 +2930,7 @@ function guardarNuevoTrabajo(event) {
     console.log('- Vehículo:', `${trabajoCompleto.marca} ${trabajoCompleto.modelo} ${trabajoCompleto.ano}`);
     console.log('- Placa:', trabajoCompleto.placa);
     console.log('- Items agregados:', trabajoCompleto.items.length);
-    console.log('- Horas mano de obra:', trabajoCompleto.manoObra.horas);
+    console.log('- Mano de obra (valor):', formatCurrency(trabajoCompleto.manoObra.valor || 0));
     console.log('- Total:', formatCurrency(trabajoCompleto.total));
 }
 
@@ -2989,12 +3086,14 @@ function buscarClienteRecepcion() {
     const cedula = document.getElementById('busquedaCedulaRecepcion').value;
     
     if (cedula) {
-        const cliente = clientes.find(c => c.cedula === cedula);
+        const baseClientes = Array.isArray(supabaseClientes) && supabaseClientes.length ? supabaseClientes : clientes;
+        const normalizarDocumento = cliente => (cliente?.cedula || cliente?.documento || cliente?.id_cedula || '').toString();
+        const cliente = baseClientes.find(c => normalizarDocumento(c) === cedula);
         if (cliente) {
-            document.getElementById('clienteNombre').value = cliente.name;
-            document.getElementById('clienteTelefono').value = cliente.phone;
-            document.getElementById('clienteEmail').value = cliente.email;
-            showNotification(`Cliente encontrado: ${cliente.name}`, 'success');
+            document.getElementById('clienteNombre').value = cliente.nombre || cliente.name || cliente.cliente || '';
+            document.getElementById('clienteTelefono').value = cliente.telefono || cliente.phone || '';
+            document.getElementById('clienteEmail').value = cliente.email || '';
+            showNotification(`Cliente encontrado: ${cliente.nombre || cliente.name}`, 'success');
         } else {
             showNotification('Cliente no encontrado. Puede crear uno nuevo.', 'warning');
             document.getElementById('clienteNombre').value = '';
@@ -4002,7 +4101,7 @@ const sistemaLiquidacion = new SistemaLiquidacion();
 function registrarAdelanto() {
     const tecnicos = window.mecanicos || [];
     const tecnicoOptions = tecnicos.map(t => 
-        `<option value="${t.id}">${t.nombre}</option>`
+        `<option value="${t.id}">${t.nombre || t.name || 'Sin nombre'}</option>`
     ).join('');
     
     const html = `
@@ -4975,6 +5074,85 @@ setTimeout(() => {
     console.log('✅ showNotification:', typeof window.showNotification === 'function' ? 'OK' : 'FALTA');
     console.log('🎉 Sistema Multidiagnósticos AS completamente cargado y listo para usar');
 }, 500);
+
+// Herramienta de diagnóstico
+function ejecutarDiagnostico() {
+    const panel = document.getElementById('debugResults');
+    if (!panel) {
+        console.warn('⚠️ No se encontró el panel de diagnóstico.');
+        return;
+    }
+
+    const clientesCount = Array.isArray(supabaseClientes) ? supabaseClientes.length : 0;
+    const inventarioCount = Array.isArray(supabaseInventario) ? supabaseInventario.length : 0;
+    const conectado = !!supabaseConectado || (clientesCount + inventarioCount) > 0;
+    const ultimaSync = localStorage.getItem('supabase_last_sync');
+
+    const funcionesCriticas = [
+        'nuevoTrabajo',
+        'generarLiquidacion',
+        'buscarClientePorCedula',
+        'buscarEnInventario',
+        'guardarNuevoTrabajo',
+        'mostrarModal'
+    ];
+
+    console.group('🔎 Diagnóstico Multidiagnósticos AS');
+    console.table({
+        supabaseUrl: SUPABASE_URL || 'No definida',
+        supabaseConectado: conectado,
+        clientesCargados: clientesCount,
+        inventarioCargado: inventarioCount,
+        ultimaSincronizacion: ultimaSync || 'Sin sincronizar',
+    });
+
+    const funcionesEstado = funcionesCriticas.map(fn => ({
+        funcion: fn,
+        tipo: typeof window[fn],
+        disponible: typeof window[fn] === 'function'
+    }));
+    console.table(funcionesEstado, ['funcion', 'tipo', 'disponible']);
+    console.groupEnd();
+
+    const badge = status => {
+        if (status === 'ok') return '<span class="debug-badge ok">OK</span>';
+        if (status === 'warn') return '<span class="debug-badge warn">Advertencia</span>';
+        return '<span class="debug-badge error">Error</span>';
+    };
+
+    const html = `
+        <ul>
+            <li>
+                <span class="debug-label">Supabase:</span>
+                <span class="debug-value">${SUPABASE_URL || 'No definida'}</span>
+                ${badge(conectado ? 'ok' : 'error')}
+            </li>
+            <li>
+                <span class="debug-label">Clientes cargados:</span>
+                <span class="debug-value">${clientesCount}</span>
+                ${badge(clientesCount > 0 ? 'ok' : 'warn')}
+            </li>
+            <li>
+                <span class="debug-label">Inventario cargado:</span>
+                <span class="debug-value">${inventarioCount}</span>
+                ${badge(inventarioCount > 0 ? 'ok' : 'warn')}
+            </li>
+            <li>
+                <span class="debug-label">Última sincronización:</span>
+                <span class="debug-value">${ultimaSync ? new Date(ultimaSync).toLocaleString() : 'Sin sincronizar'}</span>
+            </li>
+            <li>
+                <span class="debug-label">Funciones críticas:</span>
+                <span class="debug-value">
+                    ${funcionesEstado.map(f => `${f.funcion} (${f.disponible ? 'OK' : 'FALTA'})`).join(', ')}
+                </span>
+                ${badge(funcionesEstado.every(f => f.disponible) ? 'ok' : 'error')}
+            </li>
+        </ul>
+    `;
+
+    panel.innerHTML = html;
+}
 
     </script>
 </body>
