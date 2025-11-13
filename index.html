@@ -102,23 +102,10 @@ body {
     width: 60px;
 }
 
-.sidebar.collapsed .sidebar-header {
-    padding: var(--sm) var(--xs);
-    justify-content: center;
-}
-
-.sidebar.collapsed .logo {
-    display: none;
-}
-
 .sidebar.collapsed .logo-text,
 .sidebar.collapsed .nav-text,
 .sidebar.collapsed .nav-section-title {
     display: none;
-}
-
-.sidebar.collapsed .sidebar-toggle {
-    margin: 0;
 }
 
 .sidebar.collapsed .nav-item {
@@ -835,10 +822,10 @@ body {
             <aside id="sidebar" class="sidebar">
                 <div class="sidebar-header">
                     <div class="logo">
-                        <img src="./assets/images/logo-multidiagnosticos.png" alt="Multidiagnósticos AS" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';" style="height: 40px; width: auto; display: block;">
-                        <svg class="logo-fallback" style="display: none; width: 40px; height: 40px; background: #1E3A8A; border-radius: 8px; padding: 4px; margin-right: 8px;" viewBox="0 0 100 100">
-                            <rect width="100" height="100" rx="10" fill="white" opacity="0.9"/>
-                            <text x="50" y="60" font-family="Arial, sans-serif" font-size="24" font-weight="bold" fill="#1E3A8A" text-anchor="middle">MA</text>
+                        <svg class="logo-fallback" width="40px" height="40px" style="background: none; margin-right: 8px;" viewBox="0 0 100 100">
+                            <rect width="100" height="100" rx="10" fill="#1E3A8A"/>
+                            <path d="M20 30h60M20 70h60M30 20v60M70 20v60" stroke="white" stroke-width="3"/>
+                            <circle cx="50" cy="50" r="8" fill="white"/>
                         </svg>
                         <span class="logo-text">Multidiagnósticos AS</span>
                     </div>
@@ -1813,231 +1800,18 @@ const mecanicos = [
     { id: 3, name: 'Ismael Cervantes', specialty: 'Motor', phone: '3003456789', hourlyRate: 20000 }
 ];
 
-// Exportar datos globales
-window.mecanicos = mecanicos;
-window.clientes = clientes;
-window.inventario = inventario;
-
-// ===== FUNCIONES CRÍTICAS - DEFINIDAS INMEDIATAMENTE =====
-// Estas funciones deben estar disponibles antes de que el HTML las use
-
-// Toggle sidebar - versión inicial
-function toggleSidebar() {
-    const sidebar = document.getElementById('sidebar');
-    const mainContent = document.querySelector('.main-content');
-    
-    if (sidebar && mainContent) {
-        if (window.innerWidth <= 768) {
-            sidebar.classList.toggle('mobile-open');
-        } else {
-            sidebar.classList.toggle('collapsed');
-            mainContent.classList.toggle('sidebar-collapsed');
-            sidebarCollapsed = !sidebarCollapsed;
-        }
-        
-        console.log('🔄 Sidebar toggled:', sidebarCollapsed ? 'collapsed' : 'expanded');
-    }
-}
-
-// Show section - versión inicial
-function showSection(sectionName) {
-    console.log('📄 Cambiando a sección:', sectionName);
-    
-    // Hide all sections
-    const sections = document.querySelectorAll('.section');
-    sections.forEach(section => {
-        section.classList.remove('active');
-        section.style.display = 'none';
-    });
-    
-    // Show target section
-    const targetSection = document.getElementById(sectionName);
-    if (targetSection) {
-        targetSection.classList.add('active');
-        targetSection.style.display = 'block';
-        currentSection = sectionName;
-        
-        // Update page title (si la función existe)
-        if (typeof updatePageTitle === 'function') {
-            updatePageTitle(sectionName);
-        }
-        
-        // Load section data (si la función existe)
-        if (typeof loadSectionData === 'function') {
-            loadSectionData(sectionName);
-        }
-        
-        console.log('✅ Sección mostrada:', sectionName);
-    } else {
-        console.error('❌ Sección no encontrada:', sectionName);
-    }
-    
-    // Update active nav item (si la función existe)
-    if (typeof updateActiveNavItem === 'function') {
-        updateActiveNavItem(sectionName);
-    } else {
-        // Versión básica si la función no existe aún
-        const navItems = document.querySelectorAll('.nav-item');
-        navItems.forEach(item => {
-            item.classList.remove('active');
-        });
-        const currentNavItem = document.querySelector(`[onclick="showSection('${sectionName}')"]`);
-        if (currentNavItem) {
-            currentNavItem.classList.add('active');
-        }
-    }
-    
-    // Close mobile sidebar if open
-    if (window.innerWidth <= 768) {
-        const sidebar = document.getElementById('sidebar');
-        if (sidebar) {
-            sidebar.classList.remove('mobile-open');
-        }
-    }
-}
-
-// Exportar funciones críticas al scope global INMEDIATAMENTE
-window.toggleSidebar = toggleSidebar;
-window.showSection = showSection;
-
-// ===== SISTEMA DE MODALES - DEFINIDO INMEDIATAMENTE =====
-let currentModal = null;
-
-function createModal(title, content, buttons = []) {
-    return {
-        title: title,
-        content: content,
-        buttons: buttons
-    };
-}
-
-function showModal(modalData) {
-    // Close any existing modal
-    if (typeof closeModal === 'function') {
-        closeModal();
-    }
-    
-    // Create modal elements
-    const overlay = document.createElement('div');
-    overlay.className = 'modal-overlay';
-    overlay.onclick = function(e) {
-        if (e.target === overlay) {
-            closeModal();
-        }
-    };
-    
-    const modal = document.createElement('div');
-    modal.className = 'modal';
-    
-    // Create header
-    const header = document.createElement('div');
-    header.className = 'modal-header';
-    header.innerHTML = `
-        <h3 class="modal-title">${modalData.title}</h3>
-        <button class="modal-close" onclick="closeModal()">&times;</button>
-    `;
-    
-    // Create body
-    const body = document.createElement('div');
-    body.className = 'modal-body';
-    body.innerHTML = modalData.content;
-    
-    // Create footer
-    const footer = document.createElement('div');
-    footer.className = 'modal-footer';
-    
-    if (modalData.buttons && modalData.buttons.length > 0) {
-        modalData.buttons.forEach(button => {
-            const btn = document.createElement('button');
-            btn.className = `btn ${button.class || 'btn-outline'}`;
-            btn.textContent = button.text;
-            if (button.onclick) {
-                btn.onclick = new Function(button.onclick);
-            }
-            if (button.type === 'submit' && button.form) {
-                btn.type = 'submit';
-                const form = document.getElementById(button.form);
-                if (form) {
-                    form.onsubmit = new Function(button.onclick.replace('return ', ''));
-                }
-            }
-            footer.appendChild(btn);
-        });
-    }
-    
-    // Assemble modal
-    modal.appendChild(header);
-    modal.appendChild(body);
-    if (modalData.buttons && modalData.buttons.length > 0) {
-        modal.appendChild(footer);
-    }
-    overlay.appendChild(modal);
-    
-    // Add to DOM
-    document.body.appendChild(overlay);
-    currentModal = overlay;
-    
-    // Show modal
-    setTimeout(() => {
-        overlay.style.opacity = '1';
-    }, 10);
-}
-
-function closeModal() {
-    if (currentModal) {
-        currentModal.style.opacity = '0';
-        setTimeout(() => {
-            if (currentModal && currentModal.parentNode) {
-                currentModal.parentNode.removeChild(currentModal);
-            }
-            currentModal = null;
-        }, 300);
-    }
-}
-
-// Exportar funciones de modal inmediatamente
-window.createModal = createModal;
-window.showModal = showModal;
-window.closeModal = closeModal;
-window.cerrarModal = closeModal; // Alias en español
-
-// Función de notificaciones básica (se mejorará más adelante)
-function showNotification(message, type = 'info') {
-    console.log(`🔔 [${type.toUpperCase()}] ${message}`);
-    // Versión básica - se mejorará más adelante
-    alert(message);
-}
-window.showNotification = showNotification;
-
-// Funciones placeholder para evitar errores (se redefinirán más adelante)
-window.nuevoTrabajo = function() {
-    console.log('⏳ Cargando función nuevoTrabajo...');
-    showNotification('Cargando sistema POS...', 'info');
-    // Se redefinirá cuando se cargue completamente
-};
-window.generarLiquidacion = function() {
-    console.log('⏳ Cargando función generarLiquidacion...');
-    showNotification('Cargando sistema de liquidación...', 'info');
-    // Se redefinirá cuando se cargue completamente
-};
-
 // DOM Content Loaded
 document.addEventListener('DOMContentLoaded', function() {
-    try {
-        console.log('🚀 Multidiagnósticos AS - Sistema completo iniciado');
-        console.log('🔧 Con todas las funcionalidades restauradas');
-        
-        // Initialize application
-        initializeApp();
-        
-        // Set default section
-        showSection('dashboard');
-        
-        console.log('✅ Sistema completamente funcional');
-    } catch (error) {
-        console.error('❌ Error al inicializar la aplicación:', error);
-        alert('Error al cargar la aplicación. Por favor, recarga la página.');
-    }
+    console.log('🚀 Multidiagnósticos AS - Sistema completo iniciado');
+    console.log('🔧 Con todas las funcionalidades restauradas');
+    
+    // Initialize application
+    initializeApp();
+    
+    // Set default section
+    showSection('dashboard');
+    
+    console.log('✅ Sistema completamente funcional');
 });
 
 // Initialize application
@@ -2176,10 +1950,6 @@ function updateActiveNavItem(sectionName) {
         currentNavItem.classList.add('active');
     }
 }
-
-// Exportar funciones críticas al scope global inmediatamente
-window.toggleSidebar = toggleSidebar;
-window.showSection = showSection;
 
 // Load section data
 function loadSectionData(sectionName) {
@@ -2618,16 +2388,9 @@ function nuevoTrabajo() {
         document.getElementById('totalFinal').textContent = formatCurrency(total);
     };
     
-    // Mostrar el modal primero
-    showModal(modal);
-    
-    // Set defaults después de que el modal se muestre
-    setTimeout(() => {
-        const anoInput = document.getElementById('vehiculoAno');
-        const precioInput = document.getElementById('precioHora');
-        if (anoInput) anoInput.value = new Date().getFullYear();
-        if (precioInput) precioInput.value = 45000;
-    }, 100);
+    // Set defaults
+    document.getElementById('vehiculoAno').value = new Date().getFullYear();
+    document.getElementById('precioHora').value = 45000;
     
     console.log('✅ Sistema POS para nuevo trabajo inicializado');
 }
@@ -2830,12 +2593,31 @@ function previsualizarTrabajo() {
         </div>
     `;
     
-    const modal = createModal('Vista Previa', `
+    createModal('Vista Previa', `
         <div style="padding: 20px;">${vistaPrevia}</div>
         <div style="text-align: right; padding: 20px;">
             <button class="btn-secondary" onclick="cerrarModal()">Cerrar</button>
         </div>
     `);
+}
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label">Costo Mano de Obra</label>
+                    <input type="number" class="form-input" id="trabajoCosto" placeholder="25000">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Tiempo Estimado</label>
+                    <input type="text" class="form-input" id="trabajoTiempo" placeholder="2 horas">
+                </div>
+            </div>
+        </form>
+        `,
+        [
+            { text: 'Cancelar', class: 'btn-outline', onclick: 'closeModal()' },
+            { text: 'Crear Trabajo', class: 'btn-primary', type: 'submit', form: 'nuevoTrabajoForm' }
+        ]
+    );
     
     showModal(modal);
 }
@@ -4447,47 +4229,52 @@ function generarLiquidacion() {
     const hoy = new Date();
     const hace30Dias = new Date(hoy.getTime() - (30 * 24 * 60 * 60 * 1000));
     
-    const content = `
-        <form onsubmit="procesarLiquidacionAvanzada(event)">
-            <div class="form-row">
-                <div class="form-group">
-                    <label>Técnico:</label>
-                    <select name="tecnicoId" required class="form-control">
-                        <option value="">Seleccionar técnico</option>
-                        ${tecnicoOptions}
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label>Fecha Inicio:</label>
-                    <input type="date" name="fechaInicio" required class="form-control" 
-                           value="${hace30Dias.toISOString().split('T')[0]}">
-                </div>
-                <div class="form-group">
-                    <label>Fecha Fin:</label>
-                    <input type="date" name="fechaFin" required class="form-control" 
-                           value="${hoy.toISOString().split('T')[0]}">
-                </div>
+    const html = `
+        <div class="modal-overlay" onclick="cerrarModal()">
+            <div class="modal-content modal-large" onclick="event.stopPropagation()">
+                <h3>💼 Liquidación Avanzada</h3>
+                <form onsubmit="procesarLiquidacionAvanzada(event)">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Técnico:</label>
+                            <select name="tecnicoId" required class="form-control">
+                                <option value="">Seleccionar técnico</option>
+                                ${tecnicoOptions}
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Fecha Inicio:</label>
+                            <input type="date" name="fechaInicio" required class="form-control" 
+                                   value="${hace30Dias.toISOString().split('T')[0]}">
+                        </div>
+                        <div class="form-group">
+                            <label>Fecha Fin:</label>
+                            <input type="date" name="fechaFin" required class="form-control" 
+                                   value="${hoy.toISOString().split('T')[0]}">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Observaciones:</label>
+                        <textarea name="observaciones" class="form-control" 
+                                  placeholder="Observaciones de la liquidación"></textarea>
+                    </div>
+                    
+                    <div id="preview-liquidacion" class="preview-box">
+                        <h4>Vista Previa de la Liquidación</h4>
+                        <div id="preview-contenido">Selecciona un técnico y período para ver la vista previa</div>
+                    </div>
+                    
+                    <div class="modal-actions">
+                        <button type="button" onclick="cerrarModal()" class="btn btn-outline">Cancelar</button>
+                        <button type="button" onclick="actualizarVistaPrevia()" class="btn btn-info">Vista Previa</button>
+                        <button type="submit" class="btn btn-primary">Generar Liquidación</button>
+                    </div>
+                </form>
             </div>
-            <div class="form-group">
-                <label>Observaciones:</label>
-                <textarea name="observaciones" class="form-control" 
-                          placeholder="Observaciones de la liquidación"></textarea>
-            </div>
-            
-            <div id="preview-liquidacion" class="preview-box">
-                <h4>Vista Previa de la Liquidación</h4>
-                <div id="preview-contenido">Selecciona un técnico y período para ver la vista previa</div>
-            </div>
-        </form>
+        </div>
     `;
     
-    const modal = createModal('💼 Liquidación Avanzada', content, [
-        { text: 'Cancelar', class: 'btn-outline', onclick: 'closeModal()' },
-        { text: 'Vista Previa', class: 'btn-info', onclick: 'actualizarVistaPrevia()' },
-        { text: 'Generar Liquidación', class: 'btn-primary', type: 'submit', form: 'procesarLiquidacionAvanzada' }
-    ]);
-    
-    showModal(modal);
+    mostrarModal(html);
 }
 
 // Actualizar vista previa
@@ -4823,30 +4610,6 @@ window.nuevaRecepcion = nuevaRecepcion;
 window.nuevaCotizacion = nuevaCotizacion;
 window.toggleSidebar = toggleSidebar;
 window.showSection = showSection;
-window.closeModal = closeModal;
-window.logout = logout;
-
-// Exportar funciones auxiliares del sistema POS
-if (typeof buscarClientePorCedula !== 'undefined') window.buscarClientePorCedula = buscarClientePorCedula;
-if (typeof buscarEnInventario !== 'undefined') window.buscarEnInventario = buscarEnInventario;
-if (typeof agregarRepuesto !== 'undefined') window.agregarRepuesto = agregarRepuesto;
-if (typeof formatCurrency !== 'undefined') window.formatCurrency = formatCurrency;
-if (typeof guardarNuevoTrabajo !== 'undefined') window.guardarNuevoTrabajo = guardarNuevoTrabajo;
-if (typeof actualizarTotales !== 'undefined') window.actualizarTotales = actualizarTotales;
-if (typeof calcularTotal !== 'undefined') window.calcularTotal = calcularTotal;
-if (typeof agregarServicioManual !== 'undefined') window.agregarServicioManual = agregarServicioManual;
-if (typeof mostrarTodosLosRepuestos !== 'undefined') window.mostrarTodosLosRepuestos = mostrarTodosLosRepuestos;
-if (typeof previsualizarTrabajo !== 'undefined') window.previsualizarTrabajo = previsualizarTrabajo;
-if (typeof procesarLiquidacionAvanzada !== 'undefined') window.procesarLiquidacionAvanzada = procesarLiquidacionAvanzada;
-if (typeof actualizarVistaPrevia !== 'undefined') window.actualizarVistaPrevia = actualizarVistaPrevia;
-
-// Verificar que todas las funciones críticas estén disponibles
-console.log('🔍 Verificando funciones globales:');
-console.log('- toggleSidebar:', typeof window.toggleSidebar);
-console.log('- showSection:', typeof window.showSection);
-console.log('- nuevoTrabajo:', typeof window.nuevoTrabajo);
-console.log('- closeModal:', typeof window.closeModal);
-console.log('- logout:', typeof window.logout);
 
 // Inicializar sistema al cargar la página
 document.addEventListener('DOMContentLoaded', function() {
@@ -4901,6 +4664,12 @@ let supabaseInventario = [];
 let supabaseConectado = false;
 
 // Configuración Supabase
+const SUPABASE_URL = 'https://crtdentsfumgrotgvwdj.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNydGRlbnRzZnVtZ3JvdGd2d2RqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI2NTU5NTIsImV4cCI6MjA3ODIzMTk1Mn0.7T_Fd_L1gn3MtkvgqSCePrlK-ZUhp-8gbT5fG8GZoW4';
+
+// Inicializar cliente Supabase
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
 // =====================================================
 // CARGAR DATOS DESDE SUPABASE
 // =====================================================
@@ -5075,20 +4844,6 @@ window.addEventListener('load', function() {
 });
 
 console.log('✅ Sistema de integración Supabase cargado');
-
-// Verificación final de funciones críticas
-setTimeout(() => {
-    console.log('🔍 Verificación final de funciones:');
-    console.log('✅ toggleSidebar:', typeof window.toggleSidebar === 'function' ? 'OK' : 'FALTA');
-    console.log('✅ showSection:', typeof window.showSection === 'function' ? 'OK' : 'FALTA');
-    console.log('✅ nuevoTrabajo:', typeof window.nuevoTrabajo === 'function' ? 'OK' : 'FALTA');
-    console.log('✅ generarLiquidacion:', typeof window.generarLiquidacion === 'function' ? 'OK' : 'FALTA');
-    console.log('✅ createModal:', typeof window.createModal === 'function' ? 'OK' : 'FALTA');
-    console.log('✅ showModal:', typeof window.showModal === 'function' ? 'OK' : 'FALTA');
-    console.log('✅ closeModal:', typeof window.closeModal === 'function' ? 'OK' : 'FALTA');
-    console.log('✅ showNotification:', typeof window.showNotification === 'function' ? 'OK' : 'FALTA');
-    console.log('🎉 Sistema Multidiagnósticos AS completamente cargado y listo para usar');
-}, 500);
 
     </script>
 </body>
