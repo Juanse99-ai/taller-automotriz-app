@@ -60,11 +60,9 @@
 
 body {
     font-family: var(--font-family);
-    background: linear-gradient(180deg, #f4f7ff 0%, #e9efff 45%, #fdfdfd 100%);
-    background-attachment: fixed;
+    background-color: var(--neutral-50);
     color: var(--neutral-900);
     line-height: 1.5;
-    min-height: 100vh;
 }
 
 .container {
@@ -77,11 +75,6 @@ body {
     max-width: 1600px;
     margin: 0 auto;
     padding: var(--sm);
-    background: rgba(255, 255, 255, 0.85);
-    backdrop-filter: blur(16px);
-    border-radius: 24px;
-    box-shadow: 0 24px 48px rgba(30, 58, 138, 0.08);
-    overflow: hidden;
 }
 
 .main-layout {
@@ -92,7 +85,7 @@ body {
 /* Sidebar Navigation - FINAL */
 .sidebar {
     width: 280px;
-    background: linear-gradient(210deg, var(--primary-500) 0%, #2549c5 55%, #1a3297 100%);
+    background: var(--primary-500);
     padding: 0;
     display: flex;
     flex-direction: column;
@@ -109,23 +102,10 @@ body {
     width: 60px;
 }
 
-.sidebar.collapsed .sidebar-header {
-    padding: var(--sm) var(--xs);
-    justify-content: center;
-}
-
-.sidebar.collapsed .logo {
-    display: none;
-}
-
 .sidebar.collapsed .logo-text,
 .sidebar.collapsed .nav-text,
 .sidebar.collapsed .nav-section-title {
     display: none;
-}
-
-.sidebar.collapsed .sidebar-toggle {
-    margin: 0;
 }
 
 .sidebar.collapsed .nav-item {
@@ -264,15 +244,13 @@ body {
 
 /* Header - FINAL */
 .header {
-    background: rgba(255, 255, 255, 0.9);
-    border-bottom: 1px solid rgba(209, 213, 219, 0.5);
+    background: var(--neutral-100);
+    border-bottom: 1px solid var(--neutral-400);
     padding: var(--sm) var(--md);
     position: sticky;
     top: 0;
     z-index: 100;
     width: 100%;
-    backdrop-filter: blur(14px);
-    box-shadow: 0 18px 36px rgba(30, 64, 175, 0.08);
 }
 
 .header-content {
@@ -393,12 +371,11 @@ body {
 
 /* Cards */
 .card {
-    background: rgba(255, 255, 255, 0.92);
-    border-radius: 20px;
+    background: var(--neutral-100);
+    border-radius: 16px;
     padding: var(--lg);
-    box-shadow: 0 20px 40px rgba(30, 64, 175, 0.12);
-    border: 1px solid rgba(255, 255, 255, 0.6);
-    backdrop-filter: blur(18px);
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    border: 1px solid var(--neutral-400);
     margin-bottom: var(--md);
 }
 
@@ -851,7 +828,7 @@ body {
                             <path d="M20 30h60M20 70h60M30 20v60M70 20v60" stroke="#1E3A8A" stroke-width="3"/>
                             <circle cx="50" cy="50" r="8" fill="#1E3A8A"/>
                         </svg>
-                        <span class="logo-text">Multidiagnósticos AS</span>
+                        <span class="logo-text" style="display: none;">Multidiagnósticos AS</span>
                     </div>
                     <button class="sidebar-toggle" onclick="toggleSidebar()">☰</button>
                 </div>
@@ -4688,6 +4665,12 @@ let supabaseInventario = [];
 let supabaseConectado = false;
 
 // Configuración Supabase
+const SUPABASE_URL = 'https://crtdentsfumgrotgvwdj.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNydGRlbnRzZnVtZ3JvdGd2d2RqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI2NTU5NTIsImV4cCI6MjA3ODIzMTk1Mn0.7T_Fd_L1gn3MtkvgqSCePrlK-ZUhp-8gbT5fG8GZoW4';
+
+// Inicializar cliente Supabase
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
 // =====================================================
 // CARGAR DATOS DESDE SUPABASE
 // =====================================================
