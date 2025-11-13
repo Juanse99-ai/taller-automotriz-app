@@ -102,10 +102,23 @@ body {
     width: 60px;
 }
 
+.sidebar.collapsed .sidebar-header {
+    padding: var(--sm) var(--xs);
+    justify-content: center;
+}
+
+.sidebar.collapsed .logo {
+    display: none;
+}
+
 .sidebar.collapsed .logo-text,
 .sidebar.collapsed .nav-text,
 .sidebar.collapsed .nav-section-title {
     display: none;
+}
+
+.sidebar.collapsed .sidebar-toggle {
+    margin: 0;
 }
 
 .sidebar.collapsed .nav-item {
@@ -828,7 +841,7 @@ body {
                             <path d="M20 30h60M20 70h60M30 20v60M70 20v60" stroke="#1E3A8A" stroke-width="3"/>
                             <circle cx="50" cy="50" r="8" fill="#1E3A8A"/>
                         </svg>
-                        <span class="logo-text" style="display: none;">Multidiagnósticos AS</span>
+                        <span class="logo-text">Multidiagnósticos AS</span>
                     </div>
                     <button class="sidebar-toggle" onclick="toggleSidebar()">☰</button>
                 </div>
@@ -4665,12 +4678,6 @@ let supabaseInventario = [];
 let supabaseConectado = false;
 
 // Configuración Supabase
-const SUPABASE_URL = 'https://crtdentsfumgrotgvwdj.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNydGRlbnRzZnVtZ3JvdGd2d2RqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI2NTU5NTIsImV4cCI6MjA3ODIzMTk1Mn0.7T_Fd_L1gn3MtkvgqSCePrlK-ZUhp-8gbT5fG8GZoW4';
-
-// Inicializar cliente Supabase
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
 // =====================================================
 // CARGAR DATOS DESDE SUPABASE
 // =====================================================
