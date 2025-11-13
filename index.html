@@ -1816,16 +1816,21 @@ const mecanicos = [
 
 // DOM Content Loaded
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('🚀 Multidiagnósticos AS - Sistema completo iniciado');
-    console.log('🔧 Con todas las funcionalidades restauradas');
-    
-    // Initialize application
-    initializeApp();
-    
-    // Set default section
-    showSection('dashboard');
-    
-    console.log('✅ Sistema completamente funcional');
+    try {
+        console.log('🚀 Multidiagnósticos AS - Sistema completo iniciado');
+        console.log('🔧 Con todas las funcionalidades restauradas');
+        
+        // Initialize application
+        initializeApp();
+        
+        // Set default section
+        showSection('dashboard');
+        
+        console.log('✅ Sistema completamente funcional');
+    } catch (error) {
+        console.error('❌ Error al inicializar la aplicación:', error);
+        alert('Error al cargar la aplicación. Por favor, recarga la página.');
+    }
 });
 
 // Initialize application
@@ -1964,6 +1969,10 @@ function updateActiveNavItem(sectionName) {
         currentNavItem.classList.add('active');
     }
 }
+
+// Exportar funciones críticas al scope global inmediatamente
+window.toggleSidebar = toggleSidebar;
+window.showSection = showSection;
 
 // Load section data
 function loadSectionData(sectionName) {
@@ -2405,6 +2414,9 @@ function nuevoTrabajo() {
     // Set defaults
     document.getElementById('vehiculoAno').value = new Date().getFullYear();
     document.getElementById('precioHora').value = 45000;
+    
+    // Mostrar el modal
+    showModal(modal);
     
     console.log('✅ Sistema POS para nuevo trabajo inicializado');
 }
@@ -4624,6 +4636,16 @@ window.nuevaRecepcion = nuevaRecepcion;
 window.nuevaCotizacion = nuevaCotizacion;
 window.toggleSidebar = toggleSidebar;
 window.showSection = showSection;
+window.closeModal = closeModal;
+window.logout = logout;
+
+// Verificar que todas las funciones críticas estén disponibles
+console.log('🔍 Verificando funciones globales:');
+console.log('- toggleSidebar:', typeof window.toggleSidebar);
+console.log('- showSection:', typeof window.showSection);
+console.log('- nuevoTrabajo:', typeof window.nuevoTrabajo);
+console.log('- closeModal:', typeof window.closeModal);
+console.log('- logout:', typeof window.logout);
 
 // Inicializar sistema al cargar la página
 document.addEventListener('DOMContentLoaded', function() {
