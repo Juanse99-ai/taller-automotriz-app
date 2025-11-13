@@ -357,6 +357,21 @@ body {
     font-size: 14px;
 }
 
+.btn-icon {
+    width: 48px;
+    height: 48px;
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 18px;
+    padding: 0;
+}
+
+.btn.btn-sm {
+    padding: 6px 12px;
+    font-size: 13px;
+}
+
 .btn-info {
     background-color: #17a2b8;
     border-color: #17a2b8;
@@ -397,6 +412,16 @@ body {
     font-weight: 600;
     color: var(--neutral-900);
     margin-bottom: var(--md);
+}
+
+.input-with-button {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.input-with-button .form-input {
+    flex: 1;
 }
 
 /* Grid */
@@ -565,6 +590,144 @@ body {
 .debug-badge.error {
     background: #fee2e2;
     color: #991b1b;
+}
+
+.pos-section {
+    background: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+.pos-section-title {
+    margin: 0 0 15px 0;
+    color: #2c3e50;
+    font-size: 16px;
+    font-weight: 600;
+    border-bottom: 2px solid #3498db;
+    padding-bottom: 5px;
+}
+
+.busqueda-resultados,
+.inventario-resultados {
+    margin-top: 10px;
+    max-height: 200px;
+    overflow-y: auto;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    background: white;
+    display: none;
+}
+
+.busqueda-resultados.show,
+.inventario-resultados.show {
+    display: block;
+}
+
+.resultado-item,
+.inventario-item {
+    padding: 10px;
+    border-bottom: 1px solid #eee;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.resultado-item:hover,
+.inventario-item:hover {
+    background-color: #f0f8ff;
+}
+
+.items-container {
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.items-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.items-table th {
+    background: #2c3e50;
+    color: white;
+    padding: 12px 8px;
+    text-align: left;
+    font-weight: 600;
+}
+
+.items-table td {
+    padding: 12px 8px;
+    border-bottom: 1px solid #eee;
+}
+
+.items-table input[type='number'] {
+    width: 60px;
+    text-align: center;
+}
+
+.remove-item {
+    background: #e74c3c;
+    color: white;
+    border: none;
+    padding: 6px 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+}
+
+.remove-item:hover {
+    background: #c0392b;
+}
+
+.nuevo-trabajo-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.nuevo-trabajo-actions {
+    display: flex;
+    gap: 12px;
+}
+
+.cliente-search-modal {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.modal-clientes-list {
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    max-height: 320px;
+    overflow-y: auto;
+}
+
+.modal-clientes-list table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.modal-clientes-list th {
+    background: #1e3a8a;
+    color: white;
+    text-align: left;
+    padding: 10px;
+    font-weight: 600;
+}
+
+.modal-clientes-list td {
+    padding: 10px;
+    border-bottom: 1px solid #eee;
+    font-size: 14px;
+}
+
+.modal-clientes-list tr:hover {
+    background: #f3f4f6;
 }
 
 /* Text utilities */
@@ -1067,16 +1230,174 @@ body {
                             </div>
                         </div>
 
-            <!-- Panel de diagnóstico -->
-            <div class="card" id="debugPanel">
-                <h3 class="card-title" style="display:flex;justify-content:space-between;align-items:center;">
-                    <span>🧪 Diagnóstico del Sistema</span>
-                    <button class="btn btn-outline" onclick="ejecutarDiagnostico()">Ejecutar Diagnóstico</button>
-                </h3>
-                <div id="debugResults" class="debug-results" style="color:var(--neutral-600);font-size:14px;">
-                    Presiona el botón para verificar conexión y datos.
-                </div>
-            </div>
+                        <!-- Panel de diagnóstico -->
+                        <div class="card" id="debugPanel">
+                            <h3 class="card-title" style="display:flex;justify-content:space-between;align-items:center;">
+                                <span>🧪 Diagnóstico del Sistema</span>
+                                <button class="btn btn-outline" onclick="ejecutarDiagnostico()">Ejecutar Diagnóstico</button>
+                            </h3>
+                            <div id="debugResults" class="debug-results" style="color:var(--neutral-600);font-size:14px;">
+                                Presiona el botón para verificar conexión y datos.
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Nuevo Trabajo Page -->
+                    <section id="nuevoTrabajoPage" class="section">
+                        <div class="card">
+                            <div class="nuevo-trabajo-header">
+                                <div>
+                                    <h3 class="card-title">Nuevo Trabajo</h3>
+                                    <p style="color: var(--neutral-600); margin: 0;">Completa la información para crear una nueva orden de trabajo.</p>
+                                </div>
+                                <div class="nuevo-trabajo-actions">
+                                    <button type="button" class="btn btn-secondary" onclick="cancelarNuevoTrabajo()">Volver</button>
+                                    <button type="button" class="btn btn-outline" onclick="inicializarNuevoTrabajoForm()">Reiniciar</button>
+                                </div>
+                            </div>
+
+                            <form id="nuevoTrabajoForm" onsubmit="guardarNuevoTrabajo(event)">
+                                <div class="pos-section">
+                                    <h3 class="pos-section-title">📋 Información del Cliente</h3>
+                                    <div class="form-row">
+                                        <div class="form-group">
+                                            <label class="form-label">🔍 Buscar Cliente por Cédula</label>
+                                            <div class="input-with-button">
+                                                <input type="text" class="form-input" id="busquedaCedula" placeholder="12345678" onkeyup="buscarClientePorCedula(this.value)">
+                                                <button type="button" class="btn btn-secondary btn-icon" onclick="abrirBuscadorClientes()" title="Buscar clientes">
+                                                    🔍
+                                                </button>
+                                            </div>
+                                            <div id="resultadosBusqueda" class="busqueda-resultados"></div>
+                                        </div>
+                                        <div class="form-group">
+                                            <label class="form-label">👤 Cliente</label>
+                                            <input type="text" class="form-input" id="trabajoCliente" required placeholder="Nombre completo del cliente">
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="pos-section">
+                                    <h3 class="pos-section-title">🚗 Información del Vehículo</h3>
+                                    <div class="form-row">
+                                    <div class="form-group">
+                                        <label class="form-label">🔢 Placa del Vehículo</label>
+                                        <input type="text" class="form-input" id="trabajoPlaca" placeholder="ABC123" required style="text-transform: uppercase;">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">📍 Marca del Vehículo</label>
+                                        <input type="text" class="form-input" id="vehiculoMarca" placeholder="Toyota, Ford, etc." required>
+                                    </div>
+                                    </div>
+                                    <div class="form-row">
+                                        <div class="form-group">
+                                            <label class="form-label">🏷️ Modelo del Vehículo</label>
+                                            <input type="text" class="form-input" id="vehiculoModelo" placeholder="Corolla, Focus, etc." required>
+                                        </div>
+                                        <div class="form-group">
+                                            <label class="form-label">📅 Año del Vehículo</label>
+                                            <input type="number" class="form-input" id="vehiculoAno" min="1980" max="2025" required>
+                                        </div>
+                                    </div>
+                                    <div class="form-row">
+                                        <div class="form-group">
+                                            <label class="form-label">🛣️ Kilometraje</label>
+                                            <input type="number" class="form-input" id="trabajoKilometraje" placeholder="45000" min="0" required>
+                                        </div>
+                                        <div class="form-group">
+                                            <label class="form-label">⚙️ Técnico Asignado</label>
+                                            <select class="form-select" id="trabajoTecnico" required>
+                                                <option value="">Seleccionar técnico</option>
+                                                <option value="1">Pedro Barraza</option>
+                                                <option value="2">Víctor Padilla</option>
+                                                <option value="3">Ismael Cervantes</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="pos-section">
+                                    <h3 class="pos-section-title">🔧 Repuestos y Servicios</h3>
+                                    <div class="form-group">
+                                        <label class="form-label">🔍 Buscar Repuesto/Servicio</label>
+                                        <div class="input-with-button">
+                                            <input type="text" class="form-input" id="busquedaRepuesto" placeholder="Buscar por código o nombre..." onkeyup="buscarEnInventario(this.value)">
+                                            <button type="button" class="btn btn-secondary" onclick="mostrarTodosLosRepuestos()">Ver Todo</button>
+                                        </div>
+                                        <div id="resultadosInventario" class="inventario-resultados"></div>
+                                    </div>
+
+                                    <div class="form-group">
+                                        <button type="button" class="btn btn-secondary" onclick="agregarServicioManual()">➕ Agregar Servicio Manual</button>
+                                    </div>
+
+                                    <div class="items-container">
+                                        <table class="items-table">
+                                            <thead>
+                                                <tr>
+                                                    <th style="width: 40%">Descripción</th>
+                                                    <th style="width: 10%">Cant.</th>
+                                                    <th style="width: 15%">Precio Unit.</th>
+                                                    <th style="width: 15%">Total</th>
+                                                    <th style="width: 10%">Acciones</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="itemsTrabajo">
+                                                <tr id="noItemsRow">
+                                                    <td colspan="5" style="text-align: center; padding: 40px; color: #666;">
+                                                        📝 No hay repuestos agregados. Usa la búsqueda de inventario arriba para agregar productos.
+                                                    </td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+
+                                <div class="pos-section">
+                                    <h3 class="pos-section-title">💰 Resumen y Totales</h3>
+                                    <div class="totales-container">
+                                        <div class="form-group">
+                                            <label class="form-label">💵 Mano de Obra (Valor total del servicio)</label>
+                                            <input type="number" class="form-input" id="manoObraValor" placeholder="45000" min="0" onchange="calcularTotal()">
+                                            <small style="color:#6b7280;">Ingresa el valor total que cobrarás por la mano de obra.</small>
+                                        </div>
+                                        
+                                        <div class="totales-detalles">
+                                            <div class="total-row">
+                                                <span>Subtotal Repuestos:</span>
+                                                <span id="subtotalRepuestos">$0</span>
+                                            </div>
+                                            <div class="total-row">
+                                                <span>Subtotal Mano de Obra:</span>
+                                                <span id="subtotalManoObra">$0</span>
+                                            </div>
+                                            <div class="total-row iva">
+                                                <span>IVA (19%):</span>
+                                                <span id="subtotalIva">$0</span>
+                                            </div>
+                                            <div class="total-row grand-total">
+                                                <span><strong>TOTAL A PAGAR:</strong></span>
+                                                <span id="totalFinal">$0</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="pos-section">
+                                    <h3 class="pos-section-title">📝 Descripción Adicional</h3>
+                                    <div class="form-group">
+                                        <label class="form-label">Observaciones del Trabajo</label>
+                                        <textarea class="form-textarea" id="trabajoServicio" placeholder="Diagnóstico, observaciones adicionales, recomendaciones, etc."></textarea>
+                                    </div>
+                                </div>
+
+                                <div class="form-actions">
+                                    <button type="button" class="btn btn-secondary" onclick="cancelarNuevoTrabajo()">❌ Cancelar</button>
+                                    <button type="button" class="btn btn-secondary" onclick="previsualizarTrabajo()">👁️ Vista Previa</button>
+                                    <button type="submit" class="btn btn-primary">💾 Crear Trabajo</button>
+                                </div>
+                            </form>
+                        </div>
                     </section>
 
                     <!-- Trabajos Section -->
@@ -1849,6 +2170,7 @@ let sidebarCollapsed = false;
 let nextOrderNumber = 3;
 let nextQuoteNumber = 3;
 let nextInvoiceNumber = 3;
+let previousSectionBeforeNuevoTrabajo = 'dashboard';
 
 // Base de datos de clientes
 const clientes = [
@@ -1882,6 +2204,7 @@ mecanicos.forEach(m => {
 window.mecanicos = mecanicos;
 window.clientes = clientes;
 window.inventario = inventario;
+window.itemsTrabajo = [];
 
 // ===== FUNCIONES CRÍTICAS - DEFINIDAS INMEDIATAMENTE =====
 // Estas funciones deben estar disponibles antes de que el HTML las use
@@ -1968,16 +2291,16 @@ window.showSection = showSection;
 // DOM Content Loaded
 document.addEventListener('DOMContentLoaded', function() {
     try {
-        console.log('🚀 Multidiagnósticos AS - Sistema completo iniciado');
-        console.log('🔧 Con todas las funcionalidades restauradas');
-        
-        // Initialize application
-        initializeApp();
-        
-        // Set default section
-        showSection('dashboard');
-        
-        console.log('✅ Sistema completamente funcional');
+    console.log('🚀 Multidiagnósticos AS - Sistema completo iniciado');
+    console.log('🔧 Con todas las funcionalidades restauradas');
+    
+    // Initialize application
+    initializeApp();
+    
+    // Set default section
+    showSection('dashboard');
+    
+    console.log('✅ Sistema completamente funcional');
     } catch (error) {
         console.error('❌ Error al inicializar la aplicación:', error);
         alert('Error al cargar la aplicación. Por favor, recarga la página.');
@@ -2098,7 +2421,8 @@ function updatePageTitle(sectionName) {
         'liquidacion': { title: 'Liquidación', subtitle: 'Gestión de comisiones 20% + 20%' },
         'reportes': { title: 'Reportes', subtitle: 'Reportes y estadísticas' },
         'inventario': { title: 'Inventario', subtitle: 'Gestión de productos y repuestos' },
-        'cuentti': { title: 'CUENTTI', subtitle: 'Integración para facturación' }
+        'cuentti': { title: 'CUENTTI', subtitle: 'Integración para facturación' },
+        'nuevoTrabajoPage': { title: 'Nuevo Trabajo', subtitle: 'Crear una nueva orden de servicio' }
     };
     
     const titleData = titles[sectionName] || titles['dashboard'];
@@ -2260,7 +2584,12 @@ function nuevoTrabajo() {
                 <div class="form-row">
                     <div class="form-group">
                         <label class="form-label">🔍 Buscar Cliente por Cédula</label>
+                <div class="input-with-button">
                         <input type="text" class="form-input" id="busquedaCedula" placeholder="12345678" onkeyup="buscarClientePorCedula(this.value)">
+                    <button type="button" class="btn btn-secondary btn-icon" onclick="abrirBuscadorClientes()" title="Buscar clientes">
+                        🔍
+                    </button>
+                </div>
                         <div id="resultadosBusqueda" class="busqueda-resultados"></div>
                     </div>
                     <div class="form-group">
@@ -2356,7 +2685,7 @@ function nuevoTrabajo() {
             <div class="pos-section">
                 <h3 class="pos-section-title">💰 Resumen y Totales</h3>
                 <div class="totales-container">
-                    <div class="form-group">
+                        <div class="form-group">
                         <label class="form-label">💵 Mano de Obra (Valor total del servicio)</label>
                         <input type="number" class="form-input" id="manoObraValor" placeholder="45000" min="0" onchange="calcularTotal()">
                         <small style="color:#6b7280;">Ingresa el valor total que cobrarás por la mano de obra.</small>
@@ -2436,6 +2765,57 @@ function nuevoTrabajo() {
             }
             .resultado-item:hover, .inventario-item:hover {
                 background-color: #f0f8ff;
+            }
+            .input-with-button {
+                display: flex;
+                gap: 8px;
+                align-items: center;
+            }
+            .input-with-button .form-input {
+                flex: 1;
+            }
+            .btn-icon {
+                width: 48px;
+                display: inline-flex;
+                justify-content: center;
+                align-items: center;
+                font-size: 18px;
+                padding: 0;
+                height: 48px;
+            }
+            .btn.btn-sm {
+                padding: 6px 12px;
+                font-size: 13px;
+            }
+            .cliente-search-modal {
+                display: flex;
+                flex-direction: column;
+                gap: 12px;
+            }
+            .modal-clientes-list {
+                border: 1px solid #ddd;
+                border-radius: 8px;
+                max-height: 320px;
+                overflow-y: auto;
+            }
+            .modal-clientes-list table {
+                width: 100%;
+                border-collapse: collapse;
+            }
+            .modal-clientes-list th {
+                background: #1E3A8A;
+                color: white;
+                text-align: left;
+                padding: 10px;
+                font-weight: 600;
+            }
+            .modal-clientes-list td {
+                padding: 10px;
+                border-bottom: 1px solid #eee;
+                font-size: 14px;
+            }
+            .modal-clientes-list tr:hover {
+                background: #F3F4F6;
             }
             .items-container {
                 background: white;
@@ -2570,6 +2950,78 @@ function nuevoTrabajo() {
     console.log('✅ Sistema POS para nuevo trabajo inicializado');
 }
 
+function actualizarTotales() {
+    const items = Array.isArray(window.itemsTrabajo) ? window.itemsTrabajo : [];
+    const subtotalRepuestos = items.reduce((total, item) => total + (item.precio * item.cantidad), 0);
+    const manoObraInput = document.getElementById('manoObraValor');
+    const manoObra = manoObraInput ? parseFloat(manoObraInput.value) || 0 : 0;
+    const subtotalManoObra = manoObra;
+    const subtotal = subtotalRepuestos + subtotalManoObra;
+    const iva = subtotal * 0.19;
+    const total = subtotal + iva;
+
+    const setText = (id, value) => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = value;
+    };
+
+    setText('subtotalRepuestos', formatCurrency(subtotalRepuestos));
+    setText('subtotalManoObra', formatCurrency(subtotalManoObra));
+    setText('subtotalIva', formatCurrency(iva));
+    setText('totalFinal', formatCurrency(total));
+}
+
+window.actualizarTotales = actualizarTotales;
+
+function inicializarNuevoTrabajoForm() {
+    const form = document.getElementById('nuevoTrabajoForm');
+    if (form) form.reset();
+
+    window.itemsTrabajo = [];
+    actualizarTablaItems();
+
+    const manoObraInput = document.getElementById('manoObraValor');
+    if (manoObraInput) manoObraInput.value = 45000;
+
+    const anoInput = document.getElementById('vehiculoAno');
+    if (anoInput) anoInput.value = new Date().getFullYear();
+
+    const tecnicoSelect = document.getElementById('trabajoTecnico');
+    if (tecnicoSelect) tecnicoSelect.value = '';
+
+    const resultadoClientes = document.getElementById('resultadosBusqueda');
+    if (resultadoClientes) {
+        resultadoClientes.innerHTML = '';
+        resultadoClientes.classList.remove('show');
+    }
+
+    const resultadoInventario = document.getElementById('resultadosInventario');
+    if (resultadoInventario) {
+        resultadoInventario.innerHTML = '';
+        resultadoInventario.classList.remove('show');
+    }
+
+    const busquedaCedula = document.getElementById('busquedaCedula');
+    if (busquedaCedula) busquedaCedula.value = '';
+
+    actualizarTotales();
+}
+
+function cancelarNuevoTrabajo() {
+    inicializarNuevoTrabajoForm();
+    const destino = previousSectionBeforeNuevoTrabajo || 'trabajos';
+    showSection(destino);
+}
+
+function nuevoTrabajo() {
+    console.log('➕ Abriendo formulario de nuevo trabajo...');
+    previousSectionBeforeNuevoTrabajo = currentSection;
+    showSection('nuevoTrabajoPage');
+    inicializarNuevoTrabajoForm();
+    const content = document.querySelector('.content');
+    if (content) content.scrollTop = 0;
+}
+
 // ===== FUNCIONES AUXILIARES DEL SISTEMA POS =====
 
 // Buscar cliente por cédula
@@ -2582,7 +3034,7 @@ function buscarClientePorCedula(cedula) {
         contenedor.innerHTML = '';
         return;
     }
-
+    
     const baseClientes = Array.isArray(supabaseClientes) && supabaseClientes.length
         ? supabaseClientes
         : [
@@ -2595,7 +3047,7 @@ function buscarClientePorCedula(cedula) {
     const normalizarDocumento = cliente => (cliente?.cedula || cliente?.documento || cliente?.id_cedula || '').toString();
 
     const resultados = baseClientes.filter(cliente => normalizarDocumento(cliente).includes(cedula));
-
+    
     if (resultados.length > 0) {
         contenedor.innerHTML = resultados.map(cliente => {
             const doc = normalizarDocumento(cliente);
@@ -2612,7 +3064,7 @@ function buscarClientePorCedula(cedula) {
     } else {
         contenedor.innerHTML = '<div class="resultado-item">No se encontraron clientes</div>';
     }
-    contenedor.classList.add('show');
+        contenedor.classList.add('show');
 }
 
 // Seleccionar cliente de resultados
@@ -2626,12 +3078,94 @@ function seleccionarCliente(nombre, cedula, telefono = '', email = '') {
     if (emailInput && email) emailInput.value = email;
 }
 
-// Buscar en inventario
-function buscarEnInventario(termino) {
-    if (termino.length < 2) {
-        document.getElementById('resultadosInventario').classList.remove('show');
+function obtenerListaClientes() {
+    return Array.isArray(supabaseClientes) && supabaseClientes.length ? supabaseClientes : clientes;
+}
+
+function abrirBuscadorClientes() {
+    const modal = createModal(
+        'Buscar Cliente',
+        `
+        <div class="cliente-search-modal">
+            <input type="text" class="form-input" id="modalBuscarCliente" placeholder="Buscar por cédula o nombre..." oninput="filtrarClientesModal(this.value)">
+            <div id="modalClientesResultado" class="modal-clientes-list"></div>
+        </div>
+        `,
+        'large',
+        [
+            { text: 'Cerrar', class: 'btn-outline', onclick: 'closeModal()' }
+        ]
+    );
+    showModal(modal);
+    filtrarClientesModal('');
+}
+
+function filtrarClientesModal(termino = '') {
+    const contenedor = document.getElementById('modalClientesResultado');
+    if (!contenedor) return;
+
+    const lista = obtenerListaClientes();
+    const terminoLower = termino.toLowerCase();
+    const normalizarDocumento = cliente => (cliente?.cedula || cliente?.documento || cliente?.id_cedula || '').toString();
+    const normalizarNombre = cliente => (cliente?.nombre || cliente?.name || cliente?.cliente || '').toString();
+
+    const resultados = lista.filter(cliente => {
+        const doc = normalizarDocumento(cliente).toLowerCase();
+        const nombre = normalizarNombre(cliente).toLowerCase();
+        return !terminoLower || doc.includes(terminoLower) || nombre.includes(terminoLower);
+    }).slice(0, 50);
+
+    if (!resultados.length) {
+        contenedor.innerHTML = '<div style="padding: 16px; color: #6b7280;">No se encontraron clientes</div>';
         return;
     }
+    
+    const escapar = valor => valor.replace(/'/g, "\\'");
+    contenedor.innerHTML = `
+        <table>
+            <thead>
+                <tr>
+                    <th>Cédula</th>
+                    <th>Nombre</th>
+                    <th>Teléfono</th>
+                    <th>Email</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                ${resultados.map(cliente => {
+                    const doc = normalizarDocumento(cliente);
+                    const nombre = normalizarNombre(cliente);
+                    const telefono = (cliente?.telefono || cliente?.phone || '').toString();
+                    const email = (cliente?.email || '').toString();
+                    return `
+                        <tr>
+                            <td>${doc}</td>
+                            <td>${nombre}</td>
+                            <td>${telefono || '-'}</td>
+                            <td>${email || '-'}</td>
+                            <td>
+                                <button type="button" class="btn btn-primary btn-sm" onclick="seleccionarClienteDesdeModal('${escapar(nombre)}', '${escapar(doc)}', '${escapar(telefono)}', '${escapar(email)}')">
+                                    Seleccionar
+                                </button>
+                            </td>
+                        </tr>
+                    `;
+                }).join('')}
+            </tbody>
+        </table>
+    `;
+}
+
+function seleccionarClienteDesdeModal(nombre, cedula, telefono = '', email = '') {
+    seleccionarCliente(nombre, cedula, telefono, email);
+    closeModal();
+}
+
+// Buscar en inventario
+function buscarEnInventario(termino) {
+    const contenedor = document.getElementById('resultadosInventario');
+    if (!contenedor) return;
     
     const baseInventario = Array.isArray(supabaseInventario) && supabaseInventario.length
         ? supabaseInventario
@@ -2647,14 +3181,22 @@ function buscarEnInventario(termino) {
         ];
     
     const normalizarTexto = texto => (texto || '').toString().toLowerCase();
+    let resultados = [];
+
+    if (!termino || termino.trim() === '') {
+        resultados = baseInventario.slice(0, 50);
+    } else if (termino.length < 2) {
+        contenedor.classList.remove('show');
+        contenedor.innerHTML = '';
+        return;
+    } else {
+        resultados = baseInventario.filter(item => {
+            const codigo = normalizarTexto(item.codigo || item.code);
+            const nombre = normalizarTexto(item.nombre || item.name || item.producto);
+            return codigo.includes(termino.toLowerCase()) || nombre.includes(termino.toLowerCase());
+        }).slice(0, 50);
+    }
     
-    const resultados = baseInventario.filter(item => {
-        const codigo = normalizarTexto(item.codigo || item.code);
-        const nombre = normalizarTexto(item.nombre || item.name || item.producto);
-        return codigo.includes(termino.toLowerCase()) || nombre.includes(termino.toLowerCase());
-    });
-    
-    const contenedor = document.getElementById('resultadosInventario');
     window._ultimosResultadosInventario = resultados;
     if (resultados.length > 0) {
         contenedor.innerHTML = resultados.map((item, index) => {
@@ -2741,6 +3283,7 @@ function actualizarTablaItems() {
     
     if (window.itemsTrabajo.length === 0) {
         document.getElementById('noItemsRow').style.display = 'table-row';
+        actualizarTotales();
         return;
     }
     
@@ -2816,22 +3359,6 @@ function previsualizarTrabajo() {
     `);
     
     showModal(modal);
-}
-
-// Buscar cliente por cédula
-function buscarClientePorCedula() {
-    const cedula = document.getElementById('busquedaCedula').value;
-    const clienteInput = document.getElementById('trabajoCliente');
-    
-    if (cedula) {
-        const cliente = clientes.find(c => c.cedula === cedula);
-        if (cliente) {
-            clienteInput.value = cliente.name;
-            showNotification(`Cliente encontrado: ${cliente.name}`, 'success');
-        } else {
-            showNotification('Cliente no encontrado en la base de datos', 'error');
-        }
-    }
 }
 
 // Guardar nuevo trabajo
@@ -2918,8 +3445,28 @@ function guardarNuevoTrabajo(event) {
     // Simular guardado (en producción se enviaría a Supabase)
     showNotification(`🎉 Trabajo ${trabajoCompleto.id} creado exitosamente! Total: ${formatCurrency(total)}`, 'success');
     
-    // Cerrar modal
-    cerrarModal();
+    const trabajosTableBody = document.getElementById('trabajosTable');
+    if (trabajosTableBody) {
+        const nuevaFila = document.createElement('tr');
+        const tecnicoNombre = document.getElementById('trabajoTecnico').selectedOptions.length
+            ? document.getElementById('trabajoTecnico').selectedOptions[0].text
+            : '—';
+        nuevaFila.innerHTML = `
+            <td>${trabajoCompleto.placa}</td>
+            <td>${trabajoCompleto.cliente}</td>
+            <td>${trabajoCompleto.marca} ${trabajoCompleto.modelo} ${trabajoCompleto.ano}</td>
+            <td>${trabajoCompleto.observaciones || 'Trabajo sin descripción'}</td>
+            <td>${tecnicoNombre}</td>
+            <td><span class="status-badge status-pendiente">Pendiente</span></td>
+            <td>
+                <button class="btn btn-sm btn-outline" onclick="verTrabajo('${trabajoCompleto.placa}')">Ver</button>
+            </td>
+        `;
+        trabajosTableBody.prepend(nuevaFila);
+    }
+    
+    actualizarMetricasTrabajos();
+    cancelarNuevoTrabajo();
     
     // Actualizar vista si es necesario
     // loadTrabajosData();
@@ -2932,6 +3479,44 @@ function guardarNuevoTrabajo(event) {
     console.log('- Items agregados:', trabajoCompleto.items.length);
     console.log('- Mano de obra (valor):', formatCurrency(trabajoCompleto.manoObra.valor || 0));
     console.log('- Total:', formatCurrency(trabajoCompleto.total));
+}
+
+function actualizarMetricasTrabajos() {
+    const trabajosTableBody = document.getElementById('trabajosTable');
+    if (!trabajosTableBody) return;
+
+    let total = 0;
+    let completados = 0;
+    let enProgreso = 0;
+    let pendientes = 0;
+
+    trabajosTableBody.querySelectorAll('tr').forEach(tr => {
+        const badge = tr.querySelector('.status-badge');
+        if (!badge) return;
+        total++;
+        const estado = badge.textContent.trim().toLowerCase();
+        if (estado.includes('completado')) {
+            completados++;
+        } else if (estado.includes('progreso')) {
+            enProgreso++;
+        } else {
+            pendientes++;
+        }
+    });
+
+    const setTextIfExists = (id, value) => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = value;
+    };
+
+    setTextIfExists('trabajosTotal', total);
+    setTextIfExists('trabajosCompletados', completados);
+    setTextIfExists('trabajosEnProgreso', enProgreso);
+    setTextIfExists('trabajosPendientes', pendientes);
+
+    setTextIfExists('totalJobs', total);
+    setTextIfExists('completedJobs', completados);
+    setTextIfExists('inProgressJobs', enProgreso);
 }
 
 // Ver trabajo
@@ -3592,20 +4177,20 @@ function showModal(modalData) {
     footer.className = 'modal-footer';
     
     if (Array.isArray(modalData.buttons) && modalData.buttons.length > 0) {
-        modalData.buttons.forEach(button => {
-            const btn = document.createElement('button');
-            btn.className = `btn ${button.class}`;
-            btn.textContent = button.text;
-            btn.onclick = button.onclick ? new Function(button.onclick) : null;
-            if (button.type === 'submit' && button.form) {
-                btn.type = 'submit';
-                const form = document.getElementById(button.form);
-                if (form) {
-                    form.onsubmit = new Function(button.onclick.replace('return ', ''));
-                }
+    modalData.buttons.forEach(button => {
+        const btn = document.createElement('button');
+        btn.className = `btn ${button.class}`;
+        btn.textContent = button.text;
+        btn.onclick = button.onclick ? new Function(button.onclick) : null;
+        if (button.type === 'submit' && button.form) {
+            btn.type = 'submit';
+            const form = document.getElementById(button.form);
+            if (form) {
+                form.onsubmit = new Function(button.onclick.replace('return ', ''));
             }
-            footer.appendChild(btn);
-        });
+        }
+        footer.appendChild(btn);
+    });
     } else {
         footer.style.display = 'none';
     }
@@ -3614,7 +4199,7 @@ function showModal(modalData) {
     modal.appendChild(header);
     modal.appendChild(body);
     if (Array.isArray(modalData.buttons) && modalData.buttons.length > 0) {
-        modal.appendChild(footer);
+    modal.appendChild(footer);
     }
     overlay.appendChild(modal);
     
@@ -4820,6 +5405,7 @@ window.generarTablaLiquidaciones = generarTablaLiquidaciones;
 window.nuevoTrabajo = nuevoTrabajo;
 window.nuevaRecepcion = nuevaRecepcion;
 window.nuevaCotizacion = nuevaCotizacion;
+window.cancelarNuevoTrabajo = cancelarNuevoTrabajo;
 window.toggleSidebar = toggleSidebar;
 window.showSection = showSection;
 window.closeModal = closeModal;
