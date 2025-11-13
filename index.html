@@ -4960,6 +4960,99 @@ setTimeout(() => {
     console.log('🎉 Sistema Multidiagnósticos AS completamente cargado y listo para usar');
 }, 500);
 
+// === Gestión de botón "Nuevo Trabajo" ===
+// Crea un nuevo trabajo y actualiza las métricas de trabajos y dashboard
+function nuevoTrabajo() {
+    try {
+        console.log('🆕 Click en "Nuevo Trabajo"');
+
+        const placa = prompt('Placa del vehículo (ej: ABC123)');
+        if (!placa) return;
+
+        const cliente = prompt('Nombre del cliente');
+        if (!cliente) return;
+
+        const vehiculo = prompt('Vehículo (ej: Toyota Corolla 2020)');
+        if (!vehiculo) return;
+
+        const servicio = prompt('Servicio a realizar');
+        if (!servicio) return;
+
+        const tecnico = prompt('Técnico asignado');
+        if (!tecnico) return;
+
+        const trabajosTableBody = document.getElementById('trabajosTable');
+        if (!trabajosTableBody) {
+            console.error('❌ No se encontró el <tbody> con id "trabajosTable"');
+            alert('No se encontró la tabla de trabajos en la vista. Revisa el HTML.');
+            return;
+        }
+
+        const nuevaFila = document.createElement('tr');
+        nuevaFila.innerHTML = `
+            <td>${placa}</td>
+            <td>${cliente}</td>
+            <td>${vehiculo}</td>
+            <td>${servicio}</td>
+            <td>${tecnico}</td>
+            <td><span class="status-badge status-pendiente">Pendiente</span></td>
+            <td>
+                <button class="btn btn-sm btn-outline" onclick="verTrabajo('${placa}')">Ver</button>
+            </td>
+        `;
+        trabajosTableBody.appendChild(nuevaFila);
+
+        actualizarMetricasTrabajos();
+        console.log('✅ Trabajo creado correctamente desde el botón "Nuevo Trabajo"');
+    } catch (error) {
+        console.error('❌ Error en nuevoTrabajo:', error);
+        alert('Ocurrió un error al crear el trabajo. Revisa la consola para más detalles.');
+    }
+}
+
+// Recalcula las métricas de trabajos leyendo la tabla actual
+function actualizarMetricasTrabajos() {
+    const trabajosTableBody = document.getElementById('trabajosTable');
+    if (!trabajosTableBody) {
+        console.warn('⚠️ No se encontró el cuerpo de la tabla de trabajos para recalcular métricas');
+        return;
+    }
+
+    let total = 0;
+    let completados = 0;
+    let enProgreso = 0;
+    let pendientes = 0;
+
+    trabajosTableBody.querySelectorAll('tr').forEach(tr => {
+        total++;
+        const badge = tr.querySelector('.status-badge');
+        if (!badge) return;
+
+        const estadoTexto = badge.textContent.trim().toLowerCase();
+        if (estadoTexto.includes('completado')) {
+            completados++;
+        } else if (estadoTexto.includes('progreso')) {
+            enProgreso++;
+        } else if (estadoTexto.includes('pendiente')) {
+            pendientes++;
+        }
+    });
+
+    const setTextIfExists = (id, value) => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = value;
+    };
+
+    setTextIfExists('trabajosTotal', total);
+    setTextIfExists('trabajosCompletados', completados);
+    setTextIfExists('trabajosEnProgreso', enProgreso);
+    setTextIfExists('trabajosPendientes', pendientes);
+
+    setTextIfExists('totalJobs', total);
+    setTextIfExists('completedJobs', completados);
+    setTextIfExists('inProgressJobs', enProgreso);
+}
+
     </script>
 </body>
 </html>
