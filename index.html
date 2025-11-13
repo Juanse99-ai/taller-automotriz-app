@@ -102,10 +102,23 @@ body {
     width: 60px;
 }
 
+.sidebar.collapsed .sidebar-header {
+    padding: var(--sm) var(--xs);
+    justify-content: center;
+}
+
+.sidebar.collapsed .logo {
+    display: none;
+}
+
 .sidebar.collapsed .logo-text,
 .sidebar.collapsed .nav-text,
 .sidebar.collapsed .nav-section-title {
     display: none;
+}
+
+.sidebar.collapsed .sidebar-toggle {
+    margin: 0;
 }
 
 .sidebar.collapsed .nav-item {
@@ -822,10 +835,10 @@ body {
             <aside id="sidebar" class="sidebar">
                 <div class="sidebar-header">
                     <div class="logo">
-                        <svg class="logo-fallback" width="40px" height="40px" style="background: none; margin-right: 8px;" viewBox="0 0 100 100">
-                            <rect width="100" height="100" rx="10" fill="#1E3A8A"/>
-                            <path d="M20 30h60M20 70h60M30 20v60M70 20v60" stroke="white" stroke-width="3"/>
-                            <circle cx="50" cy="50" r="8" fill="white"/>
+                        <img src="./assets/images/logo-multidiagnosticos.png" alt="Multidiagnósticos AS" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';" style="height: 40px; width: auto; display: block;">
+                        <svg class="logo-fallback" style="display: none; width: 40px; height: 40px; background: #1E3A8A; border-radius: 8px; padding: 4px; margin-right: 8px;" viewBox="0 0 100 100">
+                            <rect width="100" height="100" rx="10" fill="white" opacity="0.9"/>
+                            <text x="50" y="60" font-family="Arial, sans-serif" font-size="24" font-weight="bold" fill="#1E3A8A" text-anchor="middle">MA</text>
                         </svg>
                         <span class="logo-text">Multidiagnósticos AS</span>
                     </div>
@@ -1800,18 +1813,110 @@ const mecanicos = [
     { id: 3, name: 'Ismael Cervantes', specialty: 'Motor', phone: '3003456789', hourlyRate: 20000 }
 ];
 
+// Exportar datos globales
+window.mecanicos = mecanicos;
+window.clientes = clientes;
+window.inventario = inventario;
+
+// ===== FUNCIONES CRÍTICAS - DEFINIDAS INMEDIATAMENTE =====
+// Estas funciones deben estar disponibles antes de que el HTML las use
+
+// Toggle sidebar - versión inicial
+function toggleSidebar() {
+    const sidebar = document.getElementById('sidebar');
+    const mainContent = document.querySelector('.main-content');
+    
+    if (sidebar && mainContent) {
+        if (window.innerWidth <= 768) {
+            sidebar.classList.toggle('mobile-open');
+        } else {
+            sidebar.classList.toggle('collapsed');
+            mainContent.classList.toggle('sidebar-collapsed');
+            sidebarCollapsed = !sidebarCollapsed;
+        }
+        
+        console.log('🔄 Sidebar toggled:', sidebarCollapsed ? 'collapsed' : 'expanded');
+    }
+}
+
+// Show section - versión inicial
+function showSection(sectionName) {
+    console.log('📄 Cambiando a sección:', sectionName);
+    
+    // Hide all sections
+    const sections = document.querySelectorAll('.section');
+    sections.forEach(section => {
+        section.classList.remove('active');
+        section.style.display = 'none';
+    });
+    
+    // Show target section
+    const targetSection = document.getElementById(sectionName);
+    if (targetSection) {
+        targetSection.classList.add('active');
+        targetSection.style.display = 'block';
+        currentSection = sectionName;
+        
+        // Update page title (si la función existe)
+        if (typeof updatePageTitle === 'function') {
+            updatePageTitle(sectionName);
+        }
+        
+        // Load section data (si la función existe)
+        if (typeof loadSectionData === 'function') {
+            loadSectionData(sectionName);
+        }
+        
+        console.log('✅ Sección mostrada:', sectionName);
+    } else {
+        console.error('❌ Sección no encontrada:', sectionName);
+    }
+    
+    // Update active nav item (si la función existe)
+    if (typeof updateActiveNavItem === 'function') {
+        updateActiveNavItem(sectionName);
+    } else {
+        // Versión básica si la función no existe aún
+        const navItems = document.querySelectorAll('.nav-item');
+        navItems.forEach(item => {
+            item.classList.remove('active');
+        });
+        const currentNavItem = document.querySelector(`[onclick="showSection('${sectionName}')"]`);
+        if (currentNavItem) {
+            currentNavItem.classList.add('active');
+        }
+    }
+    
+    // Close mobile sidebar if open
+    if (window.innerWidth <= 768) {
+        const sidebar = document.getElementById('sidebar');
+        if (sidebar) {
+            sidebar.classList.remove('mobile-open');
+        }
+    }
+}
+
+// Exportar funciones críticas al scope global INMEDIATAMENTE
+window.toggleSidebar = toggleSidebar;
+window.showSection = showSection;
+
 // DOM Content Loaded
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('🚀 Multidiagnósticos AS - Sistema completo iniciado');
-    console.log('🔧 Con todas las funcionalidades restauradas');
-    
-    // Initialize application
-    initializeApp();
-    
-    // Set default section
-    showSection('dashboard');
-    
-    console.log('✅ Sistema completamente funcional');
+    try {
+        console.log('🚀 Multidiagnósticos AS - Sistema completo iniciado');
+        console.log('🔧 Con todas las funcionalidades restauradas');
+        
+        // Initialize application
+        initializeApp();
+        
+        // Set default section
+        showSection('dashboard');
+        
+        console.log('✅ Sistema completamente funcional');
+    } catch (error) {
+        console.error('❌ Error al inicializar la aplicación:', error);
+        alert('Error al cargar la aplicación. Por favor, recarga la página.');
+    }
 });
 
 // Initialize application
@@ -1950,6 +2055,10 @@ function updateActiveNavItem(sectionName) {
         currentNavItem.classList.add('active');
     }
 }
+
+// Exportar funciones críticas al scope global inmediatamente
+window.toggleSidebar = toggleSidebar;
+window.showSection = showSection;
 
 // Load section data
 function loadSectionData(sectionName) {
@@ -2388,9 +2497,16 @@ function nuevoTrabajo() {
         document.getElementById('totalFinal').textContent = formatCurrency(total);
     };
     
-    // Set defaults
-    document.getElementById('vehiculoAno').value = new Date().getFullYear();
-    document.getElementById('precioHora').value = 45000;
+    // Mostrar el modal primero
+    showModal(modal);
+    
+    // Set defaults después de que el modal se muestre
+    setTimeout(() => {
+        const anoInput = document.getElementById('vehiculoAno');
+        const precioInput = document.getElementById('precioHora');
+        if (anoInput) anoInput.value = new Date().getFullYear();
+        if (precioInput) precioInput.value = 45000;
+    }, 100);
     
     console.log('✅ Sistema POS para nuevo trabajo inicializado');
 }
@@ -2593,31 +2709,12 @@ function previsualizarTrabajo() {
         </div>
     `;
     
-    createModal('Vista Previa', `
+    const modal = createModal('Vista Previa', `
         <div style="padding: 20px;">${vistaPrevia}</div>
         <div style="text-align: right; padding: 20px;">
             <button class="btn-secondary" onclick="cerrarModal()">Cerrar</button>
         </div>
     `);
-}
-            
-            <div class="form-row">
-                <div class="form-group">
-                    <label class="form-label">Costo Mano de Obra</label>
-                    <input type="number" class="form-input" id="trabajoCosto" placeholder="25000">
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Tiempo Estimado</label>
-                    <input type="text" class="form-input" id="trabajoTiempo" placeholder="2 horas">
-                </div>
-            </div>
-        </form>
-        `,
-        [
-            { text: 'Cancelar', class: 'btn-outline', onclick: 'closeModal()' },
-            { text: 'Crear Trabajo', class: 'btn-primary', type: 'submit', form: 'nuevoTrabajoForm' }
-        ]
-    );
     
     showModal(modal);
 }
@@ -4610,6 +4707,16 @@ window.nuevaRecepcion = nuevaRecepcion;
 window.nuevaCotizacion = nuevaCotizacion;
 window.toggleSidebar = toggleSidebar;
 window.showSection = showSection;
+window.closeModal = closeModal;
+window.logout = logout;
+
+// Verificar que todas las funciones críticas estén disponibles
+console.log('🔍 Verificando funciones globales:');
+console.log('- toggleSidebar:', typeof window.toggleSidebar);
+console.log('- showSection:', typeof window.showSection);
+console.log('- nuevoTrabajo:', typeof window.nuevoTrabajo);
+console.log('- closeModal:', typeof window.closeModal);
+console.log('- logout:', typeof window.logout);
 
 // Inicializar sistema al cargar la página
 document.addEventListener('DOMContentLoaded', function() {
@@ -4664,12 +4771,6 @@ let supabaseInventario = [];
 let supabaseConectado = false;
 
 // Configuración Supabase
-const SUPABASE_URL = 'https://crtdentsfumgrotgvwdj.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNydGRlbnRzZnVtZ3JvdGd2d2RqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI2NTU5NTIsImV4cCI6MjA3ODIzMTk1Mn0.7T_Fd_L1gn3MtkvgqSCePrlK-ZUhp-8gbT5fG8GZoW4';
-
-// Inicializar cliente Supabase
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
 // =====================================================
 // CARGAR DATOS DESDE SUPABASE
 // =====================================================
@@ -4845,403 +4946,19 @@ window.addEventListener('load', function() {
 
 console.log('✅ Sistema de integración Supabase cargado');
 
-// =====================================================
-// SISTEMA MEJORADO DE DIAGNÓSTICO Y CORRECCIÓN
-// =====================================================
-
-// Función para agregar botón de diagnóstico dinámicamente
-function agregarBotonDiagnostico() {
-    // Verificar si ya existe el botón
-    if (document.getElementById('btn-diagnostico')) return;
-    
-    const diagnosticoBtn = document.createElement('button');
-    diagnosticoBtn.id = 'btn-diagnostico';
-    diagnosticoBtn.innerHTML = '🔧 Diagnóstico';
-    diagnosticoBtn.className = 'btn btn-warning btn-sm';
-    diagnosticoBtn.style.cssText = 'position: fixed; top: 100px; right: 20px; z-index: 1000; font-size: 12px; padding: 8px 12px;';
-    diagnosticoBtn.onclick = abrirDiagnostico;
-    
-    document.body.appendChild(diagnosticoBtn);
-}
-
-// Abrir ventana de diagnóstico
-function abrirDiagnostico() {
-    const diagnosticoWindow = window.open('', '_blank', 'width=800,height=600,scrollbars=yes,resizable=yes');
-    
-    diagnosticoWindow.document.write(`
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <title>🔧 Diagnóstico Sistema</title>
-            <style>
-                body { font-family: Arial, sans-serif; margin: 20px; background: #f5f5f5; }
-                .container { max-width: 700px; margin: 0 auto; background: white; padding: 20px; border-radius: 10px; }
-                .btn { background: #007bff; color: white; border: none; padding: 8px 16px; margin: 5px; cursor: pointer; border-radius: 4px; }
-                .btn:hover { background: #0056b3; }
-                .status { padding: 8px; margin: 5px 0; border-radius: 4px; }
-                .success { background: #d4edda; color: #155724; }
-                .error { background: #f8d7da; color: #721c24; }
-                .warning { background: #fff3cd; color: #856404; }
-                .info { background: #d1ecf1; color: #0c5460; }
-                pre { background: #f8f9fa; padding: 10px; border-radius: 4px; overflow-x: auto; }
-            </style>
-        </head>
-        <body>
-            <div class="container">
-                <h1>🔧 Diagnóstico del Sistema</h1>
-                <p>Esta herramienta diagnosticará problemas con Supabase y funcionalidades.</p>
-                
-                <button class="btn" onclick="testSupabaseConnection()">🔗 Test Supabase</button>
-                <button class="btn" onclick="testDataLoading()">📊 Test Carga Datos</button>
-                <button class="btn" onclick="testFunctions()">⚙️ Test Funciones</button>
-                <button class="btn" onclick="clearResults()">🗑️ Limpiar</button>
-                
-                <h3>📋 Resultados:</h3>
-                <div id="results"></div>
-                
-                <h3>📊 Estado Actual:</h3>
-                <pre id="status"></pre>
-            </div>
-            
-            <script>
-                function log(message, type = 'info') {
-                    const results = document.getElementById('results');
-                    const div = document.createElement('div');
-                    div.className = 'status ' + type;
-                    div.textContent = message;
-                    results.appendChild(div);
-                }
-                
-                function updateStatus() {
-                    const status = document.getElementById('status');
-                    const estado = {
-                        'Supabase Cargado': typeof window.supabase !== 'undefined',
-                        'Cliente Inicializado': typeof window.supabase === 'object',
-                        'Variables Globales': {
-                            'supabaseClientes': window.supabaseClientes ? window.supabaseClientes.length : 0,
-                            'supabaseInventario': window.supabaseInventario ? window.supabaseInventario.length : 0,
-                            'supabaseConectado': window.supabaseConectado
-                        },
-                        'Funciones Disponibles': {
-                            'nuevoTrabajo': typeof window.nuevoTrabajo,
-                            'buscarClientePorCedula': typeof window.buscarClientePorCedula,
-                            'cargarDatosDesdeSupabase': typeof window.cargarDatosDesdeSupabase
-                        }
-                    };
-                    status.textContent = JSON.stringify(estado, null, 2);
-                }
-                
-                async function testSupabaseConnection() {
-                    log('🔄 Probando conexión a Supabase...', 'info');
-                    
-                    try {
-                        if (!window.supabase) {
-                            log('❌ Biblioteca Supabase no cargada', 'error');
-                            return;
-                        }
-                        
-                        // Probar consulta simple
-                        const { data, error } = await window.supabase.from('clientes').select('count').limit(1);
-                        
-                        if (error) {
-                            log('❌ Error Supabase: ' + error.message, 'error');
-                        } else {
-                            log('✅ Conexión Supabase exitosa', 'success');
-                        }
-                        
-                    } catch (error) {
-                        log('❌ Error: ' + error.message, 'error');
-                    }
-                    
-                    updateStatus();
-                }
-                
-                async function testDataLoading() {
-                    log('📊 Probando carga de datos...', 'info');
-                    
-                    try {
-                        if (window.cargarDatosDesdeSupabase) {
-                            const result = await window.cargarDatosDesdeSupabase();
-                            if (result) {
-                                log('✅ Datos cargados exitosamente', 'success');
-                                log('👥 Clientes: ' + (window.supabaseClientes ? window.supabaseClientes.length : 0), 'info');
-                                log('📦 Inventario: ' + (window.supabaseInventario ? window.supabaseInventario.length : 0), 'info');
-                            } else {
-                                log('⚠️ Error en carga de datos', 'warning');
-                                log('🔄 Intentando con datos de ejemplo...', 'info');
-                                inicializarConFallback();
-                            }
-                        } else {
-                            log('❌ Función cargarDatosDesdeSupabase no disponible', 'error');
-                        }
-                    } catch (error) {
-                        log('❌ Error: ' + error.message, 'error');
-                        inicializarConFallback();
-                    }
-                    
-                    updateStatus();
-                }
-                
-                function testFunctions() {
-                    log('⚙️ Probando funciones principales...', 'info');
-                    
-                    const functions = ['nuevoTrabajo', 'buscarClientePorCedula', 'showNotification'];
-                    
-                    functions.forEach(func => {
-                        if (typeof window[func] === 'function') {
-                            log('✅ ' + func + ' disponible', 'success');
-                        } else {
-                            log('❌ ' + func + ' no disponible', 'error');
-                        }
-                    });
-                    
-                    updateStatus();
-                }
-                
-                function clearResults() {
-                    document.getElementById('results').innerHTML = '';
-                    log('Resultados limpiados', 'info');
-                    updateStatus();
-                }
-                
-                // Sistema de fallback para cuando Supabase no funciona
-                function inicializarConFallback() {
-                    log('🔄 Inicializando con datos de ejemplo...', 'info');
-                    
-                    window.supabaseClientes = [
-                        { id: 1, cedula: '12345678', nombre: 'Juan Pérez', telefono: '3001234567', email: 'juan@test.com' },
-                        { id: 2, cedula: '87654321', nombre: 'María García', telefono: '3009876543', email: 'maria@test.com' }
-                    ];
-                    
-                    window.supabaseInventario = [
-                        { id: 1, codigo: 'ACE001', nombre: 'Aceite Motor 5W-30', categoria: 'Lubricantes', precio: 25000, stock: 10 },
-                        { id: 2, codigo: 'FIL001', nombre: 'Filtro de Aceite', categoria: 'Filtros', precio: 15000, stock: 25 },
-                        { id: 3, codigo: 'FRN001', nombre: 'Pastillas de Freno', categoria: 'Frenos', precio: 45000, stock: 8 }
-                    ];
-                    
-                    window.supabaseConectado = false;
-                    
-                    log('✅ Sistema iniciado con datos de ejemplo', 'success');
-                    log('👥 ' + window.supabaseClientes.length + ' clientes cargados', 'info');
-                    log('📦 ' + window.supabaseInventario.length + ' productos cargados', 'info');
-                }
-                
-                // Auto-actualizar estado
-                updateStatus();
-                setInterval(updateStatus, 5000);
-            </script>
-        </body>
-        </html>
-    `);
-    
-    diagnosticoWindow.document.close();
-}
-
-// Mejorar inicialización del sistema
-const originalInit = window.inicializarConSupabase;
-window.inicializarConSupabase = async function() {
-    console.log('🚀 Sistema mejorado iniciando...');
-    
-    try {
-        if (originalInit) {
-            await originalInit();
-        }
-        
-        // Si no se conectó a Supabase, usar datos de ejemplo
-        if (!window.supabaseConectado || !window.supabaseClientes || window.supabaseClientes.length === 0) {
-            console.log('⚠️ Supabase no disponible, iniciando con datos de ejemplo...');
-            
-            window.supabaseClientes = [
-                { id: 1, cedula: '12345678', nombre: 'Juan Pérez', telefono: '3001234567', email: 'juan@test.com', direccion: 'Carrera 15 #93-07' },
-                { id: 2, cedula: '87654321', nombre: 'María García', telefono: '3009876543', email: 'maria@test.com', direccion: 'Calle 100 #15-23' },
-                { id: 3, cedula: '11223344', nombre: 'Carlos López', telefono: '3001112233', email: 'carlos@test.com', direccion: 'Av. 68 #45-12' }
-            ];
-            
-            window.supabaseInventario = [
-                { id: 1, codigo: 'ACE001', nombre: 'Aceite Motor 5W-30', categoria: 'Lubricantes', precio: 25000, stock: 10, stock_minimo: 2 },
-                { id: 2, codigo: 'FIL001', nombre: 'Filtro de Aceite', categoria: 'Filtros', precio: 15000, stock: 25, stock_minimo: 5 },
-                { id: 3, codigo: 'FRN001', nombre: 'Pastillas de Freno Delanteras', categoria: 'Frenos', precio: 45000, stock: 8, stock_minimo: 2 },
-                { id: 4, codigo: 'BUJ001', nombre: 'Bujías NGK', categoria: 'Motor', precio: 12000, stock: 20, stock_minimo: 4 },
-                { id: 5, codigo: 'LLN001', nombre: 'Llanta 205/55R16', categoria: 'Neumáticos', precio: 180000, stock: 4, stock_minimo: 1 }
-            ];
-            
-            window.supabaseConectado = false;
-            
-            if (window.showNotification) {
-                window.showNotification('⚠️ Sistema funcionando con datos de ejemplo', 'warning');
-            }
-        }
-        
-    } catch (error) {
-        console.error('❌ Error en inicialización mejorada:', error);
-    }
-};
-
-// Mejorar la función de búsqueda de clientes
-const originalBuscarCliente = window.buscarClientePorCedulaReal;
-window.buscarClientePorCedulaReal = function(cedula) {
-    if (!cedula) return;
-    
-    console.log('🔍 Buscando cliente por cédula:', cedula);
-    
-    // Buscar en datos de Supabase
-    let cliente = null;
-    if (window.supabaseClientes && window.supabaseClientes.length > 0) {
-        cliente = window.supabaseClientes.find(c => 
-            c.cedula === cedula || 
-            c.id_cedula === cedula || 
-            c.documento === cedula
-        );
-    }
-    
-    if (cliente) {
-        const nombre = cliente.nombre || cliente.name || cliente.cliente;
-        const telefono = cliente.telefono || cliente.phone || '';
-        const email = cliente.email || '';
-        const direccion = cliente.direccion || cliente.address || '';
-        
-        // Llenar campos del formulario
-        const clienteField = document.getElementById('trabajoCliente');
-        if (clienteField) clienteField.value = nombre;
-        
-        const telefonoField = document.getElementById('trabajoTelefono');
-        if (telefonoField && telefono) telefonoField.value = telefono;
-        
-        const emailField = document.getElementById('trabajoEmail');
-        if (emailField && email) emailField.value = email;
-        
-        const direccionField = document.getElementById('trabajoDireccion');
-        if (direccionField && direccion) direccionField.value = direccion;
-        
-        if (window.showNotification) {
-            window.showNotification(`👤 Cliente encontrado: ${nombre}`, 'success');
-        }
-        
-        console.log('✅ Cliente encontrado:', cliente);
-        return cliente;
-    } else {
-        if (window.showNotification) {
-            window.showNotification('❌ Cliente no encontrado. ¿Desea crearlo?', 'warning');
-        }
-        
-        // Opcional: crear nuevo cliente automáticamente
-        const crearNuevo = confirm('Cliente no encontrado. ¿Desea crearlo?');
-        if (crearNuevo) {
-            const nuevoCliente = {
-                id: Date.now(),
-                cedula: cedula,
-                nombre: prompt('Nombre del cliente:') || 'Nuevo Cliente',
-                telefono: prompt('Teléfono:') || '',
-                email: prompt('Email:') || ''
-            };
-            
-            window.supabaseClientes.push(nuevoCliente);
-            if (window.showNotification) {
-                window.showNotification('✅ Nuevo cliente creado', 'success');
-            }
-            
-            // Llamar de nuevo la función para llenar los campos
-            setTimeout(() => window.buscarClientePorCedulaReal(cedula), 100);
-        }
-        
-        return null;
-    }
-};
-
-// Mejorar la función de carga de Supabase con múltiples intentos
-const originalCargarDatos = window.cargarDatosDesdeSupabase;
-window.cargarDatosDesdeSupabase = async function() {
-    console.log('🔄 Cargando datos desde Supabase (versión mejorada)...');
-    
-    try {
-        if (!window.supabase) {
-            console.error('❌ Cliente Supabase no inicializado');
-            return false;
-        }
-        
-        // Probar múltiples combinaciones de tablas
-        const tablasClientes = ['clientes', 'client', 'customer'];
-        const tablasInventario = ['inventario', 'inventory', 'productos', 'products'];
-        
-        let clientes = [];
-        let inventario = [];
-        let datosCargados = false;
-        
-        // Cargar clientes
-        for (const tabla of tablasClientes) {
-            try {
-                const { data, error } = await window.supabase.from(tabla).select('*').limit(50);
-                if (!error && data && data.length > 0) {
-                    clientes = data;
-                    console.log(`✅ Clientes cargados de '${tabla}': ${clientes.length} registros`);
-                    datosCargados = true;
-                    break;
-                }
-            } catch (err) {
-                console.log(`⚠️ Error con tabla '${tabla}':`, err.message);
-            }
-        }
-        
-        // Cargar inventario
-        for (const tabla of tablasInventario) {
-            try {
-                const { data, error } = await window.supabase.from(tabla).select('*').limit(50);
-                if (!error && data && data.length > 0) {
-                    inventario = data;
-                    console.log(`✅ Inventario cargado de '${tabla}': ${inventario.length} registros`);
-                    datosCargados = true;
-                    break;
-                }
-            } catch (err) {
-                console.log(`⚠️ Error con tabla '${tabla}':`, err.message);
-            }
-        }
-        
-        if (!datosCargados) {
-            console.warn('⚠️ No se pudieron cargar datos de Supabase');
-            return false;
-        }
-        
-        window.supabaseClientes = clientes;
-        window.supabaseInventario = inventario;
-        window.supabaseConectado = true;
-        
-        // Guardar respaldo
-        localStorage.setItem('supabase_clientes_backup', JSON.stringify(clientes));
-        localStorage.setItem('supabase_inventario_backup', JSON.stringify(inventario));
-        localStorage.setItem('supabase_last_sync', new Date().toISOString());
-        
-        console.log('🎉 Datos de Supabase cargados exitosamente');
-        return true;
-        
-    } catch (error) {
-        console.error('❌ Error general:', error);
-        return false;
-    }
-};
-
-// Sobrescribir eventos de inicialización
-window.addEventListener('load', function() {
-    console.log('🚀 Sistema Multidiagnósticos AS mejorado cargando...');
-    
-    setTimeout(async () => {
-        try {
-            await window.inicializarConSupabase();
-        } catch (error) {
-            console.error('❌ Error en inicialización:', error);
-        }
-        
-        // Agregar botón de diagnóstico
-        setTimeout(() => {
-            if (typeof window.agregarBotonDiagnostico === 'function') {
-                window.agregarBotonDiagnostico();
-            }
-        }, 1000);
-        
-    }, 2000);
-});
-
-console.log('✅ Sistema de integración Supabase mejorado cargado');
+// Verificación final de funciones críticas
+setTimeout(() => {
+    console.log('🔍 Verificación final de funciones:');
+    console.log('✅ toggleSidebar:', typeof window.toggleSidebar === 'function' ? 'OK' : 'FALTA');
+    console.log('✅ showSection:', typeof window.showSection === 'function' ? 'OK' : 'FALTA');
+    console.log('✅ nuevoTrabajo:', typeof window.nuevoTrabajo === 'function' ? 'OK' : 'FALTA');
+    console.log('✅ generarLiquidacion:', typeof window.generarLiquidacion === 'function' ? 'OK' : 'FALTA');
+    console.log('✅ createModal:', typeof window.createModal === 'function' ? 'OK' : 'FALTA');
+    console.log('✅ showModal:', typeof window.showModal === 'function' ? 'OK' : 'FALTA');
+    console.log('✅ closeModal:', typeof window.closeModal === 'function' ? 'OK' : 'FALTA');
+    console.log('✅ showNotification:', typeof window.showNotification === 'function' ? 'OK' : 'FALTA');
+    console.log('🎉 Sistema Multidiagnósticos AS completamente cargado y listo para usar');
+}, 500);
 
     </script>
 </body>
