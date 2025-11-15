@@ -436,41 +436,7 @@
                                             <th>Acciones</th>
                                         </tr>
                                     </thead>
-                                    <tbody id="trabajosTable">
-                                        <tr>
-                                            <td>ABC123</td>
-                                            <td>Juan Pérez</td>
-                                            <td>Toyota Corolla 2020</td>
-                                            <td>Cambio de aceite y filtro</td>
-                                            <td>Víctor Padilla</td>
-                                            <td><span class="status-badge status-completado">Completado</span></td>
-                                            <td>
-                                                <button class="btn btn-sm btn-outline" onclick="verTrabajo('ABC123')">Ver</button>
-                                            </td>
-                                        </tr>
-                                        <tr>
-                                            <td>XYZ789</td>
-                                            <td>María García</td>
-                                            <td>Honda Civic 2019</td>
-                                            <td>Frenos delanteros</td>
-                                            <td>Pedro Barraza</td>
-                                            <td><span class="status-badge status-en-progreso">En Progreso</span></td>
-                                            <td>
-                                                <button class="btn btn-sm btn-outline" onclick="verTrabajo('XYZ789')">Ver</button>
-                                            </td>
-                                        </tr>
-                                        <tr>
-                                            <td>DEF456</td>
-                                            <td>Carlos López</td>
-                                            <td>Nissan Sentra 2021</td>
-                                            <td>Revisión general</td>
-                                            <td>Ismael Cervantes</td>
-                                            <td><span class="status-badge status-pendiente">Pendiente</span></td>
-                                            <td>
-                                                <button class="btn btn-sm btn-outline" onclick="verTrabajo('DEF456')">Ver</button>
-                                            </td>
-                                        </tr>
-                                    </tbody>
+                                    <tbody id="trabajosTable"></tbody>
                                 </table>
                             </div>
                         </div>
@@ -589,26 +555,7 @@
                                             <th>Estado</th>
                                         </tr>
                                     </thead>
-                                    <tbody id="recepcionTable">
-                                        <tr>
-                                            <td>ORD-2025-001</td>
-                                            <td>Juan Pérez</td>
-                                            <td>ABC123</td>
-                                            <td>Toyota Corolla 2020</td>
-                                            <td>45,000 km</td>
-                                            <td>Víctor Padilla</td>
-                                            <td><span class="status-badge status-evaluacion">En Evaluación</span></td>
-                                        </tr>
-                                        <tr>
-                                            <td>ORD-2025-002</td>
-                                            <td>María González</td>
-                                            <td>XYZ789</td>
-                                            <td>Chevrolet Spark 2018</td>
-                                            <td>62,000 km</td>
-                                            <td>Pedro Barraza</td>
-                                            <td><span class="status-badge status-evaluacion">En Evaluación</span></td>
-                                        </tr>
-                                    </tbody>
+                                    <tbody id="recepcionTable"></tbody>
                                 </table>
                             </div>
                         </div>
@@ -654,32 +601,7 @@
                                             <th>Acciones</th>
                                         </tr>
                                     </thead>
-                                    <tbody id="cotizacionesTable">
-                                        <tr>
-                                            <td>COT-2025-001</td>
-                                            <td>Juan Pérez</td>
-                                            <td>Toyota Corolla</td>
-                                            <td>$115,000</td>
-                                            <td><span class="status-badge status-pendiente">Pendiente</span></td>
-                                            <td>10/01/2025</td>
-                                            <td>
-                                                <button class="btn btn-sm btn-outline" onclick="verCotizacion('COT-2025-001')">Ver</button>
-                                                <button class="btn btn-sm btn-success" onclick="aprobarCotizacion('COT-2025-001')">Aprobar</button>
-                                            </td>
-                                        </tr>
-                                        <tr>
-                                            <td>COT-2025-002</td>
-                                            <td>María González</td>
-                                            <td>Chevrolet Spark</td>
-                                            <td>$360,000</td>
-                                            <td><span class="status-badge status-completado">Aprobada</span></td>
-                                            <td>11/01/2025</td>
-                                            <td>
-                                                <button class="btn btn-sm btn-outline" onclick="verCotizacion('COT-2025-002')">Ver</button>
-                                                <button class="btn btn-sm btn-primary" onclick="generarFactura('COT-2025-002')">Facturar</button>
-                                            </td>
-                                        </tr>
-                                    </tbody>
+                                    <tbody id="cotizacionesTable"></tbody>
                                 </table>
                             </div>
                         </div>
@@ -836,26 +758,7 @@
                                             <th>Acciones</th>
                                         </tr>
                                     </thead>
-                                    <tbody id="notificacionesTable">
-                                        <tr>
-                                            <td>12/01/2025</td>
-                                            <td>🔧 Mantenimiento</td>
-                                            <td>ABC123 requiere mantenimiento preventivo</td>
-                                            <td><span class="status-badge status-pendiente">Pendiente</span></td>
-                                            <td>
-                                                <button class="btn btn-sm btn-primary" onclick="agendarMantenimiento()">Agendar</button>
-                                            </td>
-                                        </tr>
-                                        <tr>
-                                            <td>11/01/2025</td>
-                                            <td>📦 Stock</td>
-                                            <td>Filtro de aceite bajo (3 unidades)</td>
-                                            <td><span class="status-badge status-pendiente">Pendiente</span></td>
-                                            <td>
-                                                <button class="btn btn-sm btn-warning" onclick="reabastecerStock()">Reabastecer</button>
-                                            </td>
-                                        </tr>
-                                    </tbody>
+                                    <tbody id="notificacionesTable"></tbody>
                                 </table>
                             </div>
                         </div>
@@ -1179,28 +1082,7 @@
                                             <th>Acciones</th>
                                         </tr>
                                     </thead>
-                                    <tbody id="inventarioTable">
-                                        <tr>
-                                            <td>FO-001</td>
-                                            <td>Filtro de Aceite Universal</td>
-                                            <td>15 unidades</td>
-                                            <td>$15,000</td>
-                                            <td><span class="status-badge status-completado">Disponible</span></td>
-                                            <td>
-                                                <button class="btn btn-sm btn-outline" onclick="editarProducto('FO-001')">Editar</button>
-                                            </td>
-                                        </tr>
-                                        <tr>
-                                            <td>FR-002</td>
-                                            <td>Pastillas de Freno Delanteras</td>
-                                            <td>3 unidades</td>
-                                            <td>$45,000</td>
-                                            <td><span class="status-badge status-pendiente">Stock Bajo</span></td>
-                                            <td>
-                                                <button class="btn btn-sm btn-warning" onclick="reabastecer('FR-002')">Reabastecer</button>
-                                            </td>
-                                        </tr>
-                                    </tbody>
+                                    <tbody id="inventarioTable"></tbody>
                                 </table>
                             </div>
                         </div>
@@ -1246,28 +1128,7 @@
                                             <th>Acciones</th>
                                         </tr>
                                     </thead>
-                                    <tbody id="cuenttiTable">
-                                        <tr>
-                                            <td>FAC-2025-001</td>
-                                            <td>Juan Pérez</td>
-                                            <td>$115,000</td>
-                                            <td><span class="status-badge status-completado">Enviada</span></td>
-                                            <td><span class="status-badge status-completado">✓ Sincronizada</span></td>
-                                            <td>
-                                                <button class="btn btn-sm btn-outline" onclick="verFactura('FAC-2025-001')">Ver</button>
-                                            </td>
-                                        </tr>
-                                        <tr>
-                                            <td>FAC-2025-002</td>
-                                            <td>María González</td>
-                                            <td>$360,000</td>
-                                            <td><span class="status-badge status-pendiente">Pendiente</span></td>
-                                            <td><span class="status-badge status-pendiente">⏳ Esperando</span></td>
-                                            <td>
-                                                <button class="btn btn-sm btn-primary" onclick="enviarFactura('FAC-2025-002')">Enviar</button>
-                                            </td>
-                                        </tr>
-                                    </tbody>
+                                    <tbody id="cuenttiTable"></tbody>
                                 </table>
                             </div>
                         </div>

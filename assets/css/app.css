@@ -110,14 +110,28 @@ body {
   .sidebar.hover-expand.collapsed:hover { width: 70px; }
 }
 
+/* Sidebar overlay (tablets/mobiles) */
+.sidebar-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.35);
+  z-index: 900; /* under hamburger (1100) and modal (10000) */
+  opacity: 0;
+  transition: opacity 0.25s ease;
+}
+.sidebar-overlay.show { opacity: 1; }
+
 .sidebar.collapsed .sidebar-header {
     padding: var(--sm) var(--xs);
     justify-content: center;
 }
 
 .sidebar.collapsed .logo {
-    display: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
+.sidebar.collapsed .logo img { width: 28px; height: 28px; margin-right: 0; }
 
 .sidebar.collapsed .logo-text,
 .sidebar.collapsed .nav-text,
@@ -286,6 +300,7 @@ body {
   align-items: center;
   justify-content: center;
   cursor: pointer;
+  transition: left 0.35s cubic-bezier(0.22, 1, 0.36, 1), top 0.25s ease, box-shadow 0.2s ease;
 }
 .hamburger-toggle:hover { background: #f8fafc; }
 .hamburger-toggle span { display:block; width:18px; height:2px; background:#111827; position:relative; }

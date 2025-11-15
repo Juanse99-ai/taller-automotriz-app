@@ -81,14 +81,21 @@ function initializeApp() {
     
     console.log('✅ Aplicación completamente inicializada');
 
-    // Sidebar: iniciar en modo colapsado; hover-expand solo desktop
+    // Sidebar: iniciar según preferencia; hover-expand solo desktop
     try {
         const sidebar = document.getElementById('sidebar');
         const mainContent = document.querySelector('.main-content');
         if (sidebar && mainContent && !sidebar.classList.contains('initialized')) {
-            sidebar.classList.add('collapsed','initialized');
+            const pref = localStorage.getItem('ui_sidebar_state') || 'collapsed';
+            const startCollapsed = window.innerWidth <= 1024 ? true : (pref !== 'expanded');
+            sidebar.classList.add('initialized');
             if (window.innerWidth > 1024) sidebar.classList.add('hover-expand');
-            mainContent.classList.add('sidebar-collapsed');
+            if (startCollapsed) {
+                sidebar.classList.add('collapsed');
+                mainContent.classList.add('sidebar-collapsed');
+            } else {
+                mainContent.classList.add('sidebar-expanded');
+            }
         }
         // Posicionar hamburguesa y mover en hover
         try { updateHamburgerPosition(); } catch(e) {}
@@ -102,6 +109,10 @@ function initializeApp() {
                 setHamburgerLeft(false);
             }
         });
+        // Overlay inicial en tablets si arranca expandido
+        if (window.innerWidth > 768 && window.innerWidth <= 1024 && !sidebar.classList.contains('collapsed')) {
+            ensureSidebarOverlay();
+        }
     } catch(e) {}
 
     // Cerrar sugerencias al hacer click fuera o con Escape
@@ -114,7 +125,17 @@ function initializeApp() {
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') closeAllSuggestions();
     });
-    window.addEventListener('resize', () => { try { updateHamburgerPosition(); } catch(e) {} });
+    window.addEventListener('resize', () => { 
+        try { 
+            updateHamburgerPosition();
+            const sidebar = document.getElementById('sidebar');
+            if (window.innerWidth > 1024) hideSidebarOverlay();
+            if (window.innerWidth > 768 && window.innerWidth <= 1024) {
+                if (!sidebar.classList.contains('collapsed')) ensureSidebarOverlay();
+                else hideSidebarOverlay();
+            }
+        } catch(e) {} 
+    });
 }
 
 function closeAllSuggestions() {
@@ -122,6 +143,46 @@ function closeAllSuggestions() {
         const el = document.getElementById(id);
         if (el) { el.classList.remove('show'); el.innerHTML=''; }
     });
+}
+
+// Sidebar overlay helpers for tablet/mobile
+function ensureSidebarOverlay() {
+    let overlay = document.querySelector('.sidebar-overlay');
+    if (!overlay) {
+        overlay = document.createElement('div');
+        overlay.className = 'sidebar-overlay';
+        overlay.addEventListener('click', () => {
+            const sidebar = document.getElementById('sidebar');
+            const mainContent = document.querySelector('.main-content');
+            if (!sidebar) return;
+            if (window.innerWidth <= 768) {
+                sidebar.classList.remove('mobile-open');
+            } else {
+                sidebar.classList.add('collapsed');
+                if (mainContent) {
+                    mainContent.classList.remove('sidebar-expanded');
+                    mainContent.classList.add('sidebar-collapsed');
+                }
+                localStorage.setItem('ui_sidebar_state', 'collapsed');
+            }
+            hideSidebarOverlay();
+            try { updateHamburgerPosition(); } catch (e) {}
+        });
+        document.body.appendChild(overlay);
+    }
+    requestAnimationFrame(() => overlay.classList.add('show'));
+}
+
+function hideSidebarOverlay() {
+    const overlay = document.querySelector('.sidebar-overlay');
+    if (!overlay) return;
+    overlay.classList.remove('show');
+    setTimeout(() => {
+        const ov = document.querySelector('.sidebar-overlay');
+        if (ov && !ov.classList.contains('show') && ov.parentNode) {
+            ov.parentNode.removeChild(ov);
+        }
+    }, 250);
 }
 
 // Control de posición del botón hamburguesa
@@ -207,16 +268,25 @@ function toggleSidebar() {
     if (sidebar && mainContent) {
         if (window.innerWidth <= 768) {
             sidebar.classList.toggle('mobile-open');
+            if (sidebar.classList.contains('mobile-open')) ensureSidebarOverlay();
+            else hideSidebarOverlay();
         } else {
             sidebar.classList.toggle('collapsed');
             if (sidebar.classList.contains('collapsed')) {
                 mainContent.classList.remove('sidebar-expanded');
                 mainContent.classList.add('sidebar-collapsed');
+                hideSidebarOverlay();
             } else {
                 mainContent.classList.remove('sidebar-collapsed');
                 mainContent.classList.add('sidebar-expanded');
+                if (window.innerWidth > 768 && window.innerWidth <= 1024) {
+                    ensureSidebarOverlay();
+                }
             }
             sidebarCollapsed = !sidebarCollapsed;
+            if (window.innerWidth > 1024) {
+                localStorage.setItem('ui_sidebar_state', sidebar.classList.contains('collapsed') ? 'collapsed' : 'expanded');
+            }
         }
         
         console.log('🔄 Sidebar toggled:', sidebarCollapsed ? 'collapsed' : 'expanded');
