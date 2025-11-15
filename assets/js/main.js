@@ -1735,6 +1735,94 @@ window.buscarArticulo = buscarArticulo;
 window.agregarLineaVacia = agregarLineaVacia;
 window.validarItems = validarItems;
 
+// =============================
+// Búsqueda de clientes en Recepción
+// =============================
+function seleccionarClienteRecepcion(nombre, cedula, telefono = '', email = '') {
+    const setVal = (id, v) => { const el = document.getElementById(id); if (el) el.value = v || ''; };
+    setVal('rcpCliente', nombre);
+    setVal('rcpCedula', cedula);
+    setVal('rcpTelefono', telefono);
+    setVal('rcpEmail', email);
+    const cont = document.getElementById('rcpResultadosClientes');
+    if (cont) { cont.classList.remove('show'); cont.innerHTML=''; }
+}
+
+function buscarClientePorCedulaRecepcion(cedula) {
+    const contenedor = document.getElementById('rcpResultadosClientes');
+    if (!contenedor) return;
+    const termino = (cedula || '').toString().trim();
+    if (termino.length < 2) { contenedor.classList.remove('show'); contenedor.innerHTML=''; return; }
+    const baseClientes = obtenerListaClientes();
+    const terminoLower = termino.toLowerCase();
+    const resultados = baseClientes.filter(c => normalizarDocumentoCliente(c).toLowerCase().includes(terminoLower)).slice(0,50);
+    if (resultados.length) {
+        const escapar = v => (v||'').toString().replace(/'/g, "\\'").replace(/"/g,'&quot;');
+        contenedor.innerHTML = resultados.map((c,idx) => {
+            const doc = normalizarDocumentoCliente(c);
+            const nombre = normalizarNombreCliente(c);
+            const tel = (c?.telefono || c?.phone || '').toString();
+            const mail = (c?.email || '').toString();
+            return `<div class="resultado-item" onclick="seleccionarClienteRecepcion('${escapar(nombre)}','${escapar(doc)}','${escapar(tel)}','${escapar(mail)}')">
+                        <strong>${doc}</strong> - ${nombre}
+                        ${tel ? `<br><small style='color:#666'>📞 ${tel}</small>`:''}
+                        ${mail ? `<br><small style='color:#666'>📧 ${mail}</small>`:''}
+                    </div>`;
+        }).join('');
+        contenedor.classList.add('show');
+    } else {
+        contenedor.innerHTML = '<div class="resultado-item">No se encontraron clientes</div>';
+        contenedor.classList.add('show');
+    }
+}
+
+function abrirBuscadorClientesRecepcion() {
+    const modal = createModal(
+        'Buscar Cliente',
+        `
+        <div class="cliente-search-modal">
+            <input type="text" class="form-input" id="modalBuscarClienteRecep" placeholder="Buscar por cédula/NIT o nombre..." oninput="filtrarClientesModalRecepcion(this.value)">
+            <div id="modalClientesResultadoRecep" class="modal-clientes-list"></div>
+        </div>
+        `,
+        'large',
+        [ { text: 'Cerrar', class: 'btn-outline', onclick: 'closeModal()' } ]
+    );
+    showModal(modal);
+    filtrarClientesModalRecepcion('');
+}
+
+function filtrarClientesModalRecepcion(termino='') {
+    const cont = document.getElementById('modalClientesResultadoRecep');
+    if (!cont) return;
+    const lista = obtenerListaClientes();
+    const tl = (termino||'').toLowerCase();
+    const resultados = lista.filter(c => {
+        const doc = normalizarDocumentoCliente(c).toLowerCase();
+        const nom = normalizarNombreCliente(c).toLowerCase();
+        return !tl || doc.includes(tl) || nom.includes(tl);
+    }).slice(0,50);
+    const esc = s => (s||'').toString().replace(/'/g, "\\'").replace(/"/g,'&quot;');
+    if (!resultados.length) { cont.innerHTML = '<div style="padding:16px;color:#6b7280;">No se encontraron clientes</div>'; return; }
+    cont.innerHTML = `
+        <table style="width:100%;border-collapse:collapse;">
+            <thead><tr><th>Cédula/NIT</th><th>Nombre</th><th>Teléfono</th><th>Email</th><th>Acciones</th></tr></thead>
+            <tbody>
+                ${resultados.map((c,idx) => {
+                    const doc = normalizarDocumentoCliente(c); const nom = normalizarNombreCliente(c);
+                    const tel = (c?.telefono || c?.phone || '').toString(); const mail = (c?.email || '').toString();
+                    return `<tr>
+                        <td>${doc}</td><td>${nom}</td><td>${tel||'-'}</td><td>${mail||'-'}</td>
+                        <td><button class="btn btn-primary btn-sm" onclick="seleccionarClienteRecepcion('${esc(nom)}','${esc(doc)}','${esc(tel)}','${esc(mail)}'); closeModal();">Seleccionar</button></td>
+                    </tr>`;
+                }).join('')}
+            </tbody>
+        </table>`;
+}
+
+window.buscarClientePorCedulaRecepcion = buscarClientePorCedulaRecepcion;
+window.abrirBuscadorClientesRecepcion = abrirBuscadorClientesRecepcion;
+
 // Sincroniza la línea especial de Mano de Obra con el input #manoObraValor
 function syncManoObraItem() {
     const moInput = document.getElementById('manoObraValor');
