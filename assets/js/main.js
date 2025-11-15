@@ -1370,125 +1370,63 @@ function guardarServicioManual(event) {
 function actualizarTablaItems() {
     const tbody = document.getElementById('itemsTrabajo');
     if (!tbody) return;
-    
-    // Sincronizar línea de Mano de Obra con el valor del input
-    try { syncManoObraItem(); } catch (e) { /* noop */ }
-    
-    if (!window.itemsTrabajo || window.itemsTrabajo.length === 0) {
+
+    try { syncManoObraItem(); } catch (e) {}
+
+    if (!Array.isArray(window.itemsTrabajo) || window.itemsTrabajo.length === 0) {
         const noItemsRow = document.getElementById('noItemsRow');
         if (noItemsRow) noItemsRow.style.display = 'table-row';
         actualizarTotales();
         return;
     }
-    
+
     const noItemsRow = document.getElementById('noItemsRow');
     if (noItemsRow) noItemsRow.style.display = 'none';
-    
-    tbody.innerHTML = window.itemsTrabajo.map((item, index) => {
-        // Asegurar que precio y cantidad sean números
+
+    const rows = window.itemsTrabajo.map((item, index) => {
         const precio = Number(item.precio) || 0;
-        const cantidad = Number(item.cantidad) || 1;
-        const ivaPorcentaje = Number(item.iva) || 0;
-        const descuentoValor = Number(item.descuento || 0);
-        const tipoDescuento = item.tipoDescuento || '$'; // '$' o '%'
-        
-        // Si el precio YA incluye IVA (ivaPorcentaje > 0), calcular el desglose
-        let totalConIva, precioBase, valorIvaIncluido;
-        
-        // Calcular descuento
-        let descuentoAplicado = 0;
-        if (descuentoValor > 0) {
-            if (tipoDescuento === '%') {
-                descuentoAplicado = (precio * cantidad * descuentoValor) / 100;
-            } else {
-                descuentoAplicado = descuentoValor;
-            }
-        }
-        
-        const subtotalConDescuento = (precio * cantidad) - descuentoAplicado;
-        
+        const cantidad = Math.max(1, Number(item.cantidad) || 1);
+        const ivaPorcentaje = Math.max(0, Number(item.iva) || 0);
+
+        let totalConIva, precioBase;
         if (ivaPorcentaje > 0) {
-            // El precio mostrado YA incluye IVA
-            totalConIva = subtotalConDescuento; // Total con IVA incluido
-            precioBase = totalConIva / (1 + (ivaPorcentaje / 100)); // Precio base sin IVA
-            valorIvaIncluido = totalConIva - precioBase; // IVA incluido en el precio
+            totalConIva = precio * cantidad;
+            precioBase = totalConIva / (1 + (ivaPorcentaje / 100));
         } else {
-            // El precio NO incluye IVA
-            precioBase = subtotalConDescuento;
-            valorIvaIncluido = 0;
+            precioBase = precio * cantidad;
             totalConIva = precioBase;
         }
-        
-        const numFila = index + 1;
-        const codigo = item.codigo || 'S/C';
-        const nombre = item.nombre || 'Artículo';
-        const descripcion = `${codigo}#${nombre}`;
-        
-        // Calcular total sin IVA (precio base)
-        const totalSinIva = precioBase;
-        
+
+        const codigo = (item.codigo || '').toString();
+        const nombre = (item.nombre || '').toString();
+
         return `
         <tr style="border-bottom: 1px solid #eee;">
-            <td style="padding: 14px 16px; vertical-align: top;">
-                <div style="display: flex; align-items: flex-start; gap: 12px;">
-                    <div style="display: flex; flex-direction: column; align-items: center; gap: 6px; min-width: 60px; flex-shrink: 0;">
-                        <button type="button" onclick="eliminarItem(${index})" style="background: #ef4444; color: white; border: none; padding: 6px 10px; border-radius: 4px; cursor: pointer; font-size: 13px;">🗑️</button>
-                        <div style="font-weight: bold; color: #2c3e50; font-size: 15px;">#${numFila}</div>
-                        <div style="display: flex; flex-direction: column; gap: 3px;">
-                            ${index > 0 ? `<button type="button" onclick="moverItemArriba(${index})" style="background: #e9ecef; border: 1px solid #ddd; padding: 3px 8px; cursor: pointer; font-size: 11px; border-radius: 3px;">↑</button>` : '<div style="height: 24px;"></div>'}
-                            ${index < window.itemsTrabajo.length - 1 ? `<button type="button" onclick="moverItemAbajo(${index})" style="background: #e9ecef; border: 1px solid #ddd; padding: 3px 8px; cursor: pointer; font-size: 11px; border-radius: 3px;">↓</button>` : '<div style="height: 24px;"></div>'}
-                        </div>
-                        <div style="color: #999; font-size: 11px;">${index}</div>
-                    </div>
-                    <div style="flex: 1; min-width: 0;">
-                        <div style="position: relative; margin-bottom: 8px;">
-                            <input type="text" value="${nombre.substring(0, 3).toUpperCase()}" onchange="cambiarArticulo(${index}, this.value)" style="width: 100%; padding: 8px 35px 8px 12px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; box-sizing: border-box;" placeholder="Artículo">
-                            <span style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #666; font-size: 14px;" onclick="buscarArticulo(${index})">🔍</span>
-                        </div>
-                        <div style="position: relative; margin-bottom: 8px;">
-                            <input type="text" value="${descripcion}" onchange="cambiarDescripcion(${index}, this.value)" style="width: 100%; padding: 8px 35px 8px 12px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px; box-sizing: border-box;" placeholder="Descripción">
-                            <span style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #666; font-size: 14px;">🧮</span>
-                        </div>
-                        <small style="color: #666; font-size: 12px; display: block; margin-top: 4px;">P.U=${formatCurrency(precio)}</small>
-                    </div>
+            <td style="padding: 12px 10px; vertical-align: middle;">
+                <div style="display:flex; gap:8px; align-items:center;">
+                    <button type="button" title="Eliminar" onclick="eliminarItem(${index})" style="background:#ef4444;color:#fff;border:none;padding:6px 8px;border-radius:4px;cursor:pointer;">🗑️</button>
+                    <input type="text" value="${codigo}" placeholder="Ref." onchange="cambiarCodigo(${index}, this.value)" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:4px;font-size:14px;" />
                 </div>
             </td>
-            <td style="padding: 14px 16px; text-align: center; vertical-align: middle;">
-                <div style="display: flex; gap: 6px; align-items: center; justify-content: center;">
-                    <input type="number" value="${cantidad}" min="1" onchange="cambiarCantidad(${index}, this.value)" oninput="cambiarCantidad(${index}, this.value)" style="width: 70px; padding: 8px; border: 1px solid #ddd; border-radius: 4px; text-align: center; font-size: 14px; box-sizing: border-box;">
-                    <select style="padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px; box-sizing: border-box;">
-                        <option>un</option>
-                    </select>
-                </div>
+            <td style="padding: 12px 10px;">
+                <input type="text" value="${nombre}" placeholder="Descripción" onchange="cambiarDescripcion(${index}, this.value)" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:4px;font-size:14px;" />
             </td>
-            <td style="padding: 14px 16px; text-align: right; vertical-align: middle;">
-                <input type="text" value="${formatCurrency(precio)}" onchange="cambiarPrecioUnitario(${index}, this.value)" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; text-align: right; font-size: 14px; box-sizing: border-box;">
+            <td style="padding: 12px 10px; text-align:right;">
+                <input type="text" value="${formatCurrency(precio)}" onchange="cambiarPrecioUnitario(${index}, this.value)" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:4px;text-align:right;font-size:14px;" />
             </td>
-            <td style="padding: 14px 16px; text-align: right; vertical-align: middle;">
-                <input type="text" value="${formatCurrency(totalSinIva)}" readonly id="subtotalItem${index}" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; text-align: right; font-size: 14px; background: #f8f9fa; box-sizing: border-box;">
+            <td style="padding: 12px 10px; text-align:center;">
+                <input type="number" min="1" value="${cantidad}" onchange="cambiarCantidad(${index}, this.value)" style="width:80px;padding:8px;border:1px solid #ddd;border-radius:4px;text-align:center;font-size:14px;" />
             </td>
-            <td style="padding: 14px 16px; text-align: center; vertical-align: middle;">
-                <div style="display: flex; gap: 6px; align-items: center; justify-content: center; flex-wrap: wrap;">
-                    <input type="number" value="${cantidad}" min="1" readonly style="width: 50px; padding: 8px; border: 1px solid #ddd; border-radius: 4px; text-align: center; font-size: 13px; background: #f8f9fa; box-sizing: border-box;">
-                    <select style="padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px; box-sizing: border-box;">
-                        <option>un</option>
-                    </select>
-                    <button type="button" onclick="cambiarTipoDescuento(${index}, '%')" style="padding: 8px 12px; border: 1px solid #ddd; background: ${tipoDescuento === '%' ? '#e9ecef' : 'white'}; border-radius: 4px 0 0 4px; cursor: pointer; font-size: 13px;">%</button>
-                    <button type="button" onclick="cambiarTipoDescuento(${index}, '$')" style="padding: 8px 12px; border: 1px solid #ddd; border-left: none; background: ${tipoDescuento === '$' ? '#e9ecef' : 'white'}; border-radius: 0 4px 4px 0; cursor: pointer; font-size: 13px;">$</button>
-                    <span style="cursor: pointer; color: #666; font-size: 14px;" title="Configurar descuento">🔧</span>
-                    <input type="number" value="${descuentoValor}" min="0" step="0.01" onchange="cambiarDescuento(${index}, this.value)" style="width: 60px; padding: 8px; border: 1px solid #ddd; border-radius: 4px; text-align: center; font-size: 13px; box-sizing: border-box;">
-                </div>
+            <td style="padding: 12px 10px; text-align:center;">
+                <input type="number" min="0" step="0.01" value="${ivaPorcentaje}" onchange="cambiarIva(${index}, this.value)" style="width:90px;padding:8px;border:1px solid #ddd;border-radius:4px;text-align:center;font-size:14px;" />
             </td>
-            <td style="padding: 14px 16px; text-align: right; vertical-align: middle;">
-                <input type="text" value="${formatCurrency(totalConIva)}" readonly id="totalItem${index}" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; text-align: right; font-size: 14px; font-weight: bold; background: #f8f9fa; box-sizing: border-box;">
+            <td style="padding: 12px 10px; text-align:right;">
+                <input type="text" value="${formatCurrency(totalConIva)}" readonly id="totalItem${index}" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:4px;text-align:right;font-weight:600;background:#f8f9fa;font-size:14px;" />
             </td>
-            <td style="padding: 14px 16px; text-align: center; vertical-align: middle;">
-                <input type="number" value="${ivaPorcentaje}" min="0" max="100" step="0.01" onchange="cambiarIva(${index}, this.value)" oninput="cambiarIva(${index}, this.value)" style="width: 70px; padding: 8px; border: 1px solid #ddd; border-radius: 4px; text-align: center; font-size: 14px; box-sizing: border-box;">
-            </td>
-        </tr>
-        `;
+        </tr>`;
     }).join('');
-    
+
+    tbody.innerHTML = rows;
     actualizarTotales();
 }
 
@@ -1528,6 +1466,7 @@ function eliminarItem(index) {
 window.eliminarItem = eliminarItem;
 window.cambiarCantidad = cambiarCantidad;
 window.cambiarIva = cambiarIva;
+window.cambiarCodigo = cambiarCodigo;
 window.agregarRepuesto = agregarRepuesto;
 window.agregarServicioManual = agregarServicioManual;
 window.guardarServicioManual = guardarServicioManual;
@@ -1553,7 +1492,16 @@ function moverItemAbajo(index) {
 
 function cambiarArticulo(index, nuevoNombre) {
     if (window.itemsTrabajo && window.itemsTrabajo[index]) {
-        window.itemsTrabajo[index].nombre = nuevoNombre.trim();
+        // Antes se usaba para nombre abreviado; ahora es referencia/código
+        window.itemsTrabajo[index].codigo = nuevoNombre.trim();
+        actualizarTablaItems();
+    }
+}
+
+// Cambiar código de referencia (nuevo input en la columna Referencia)
+function cambiarCodigo(index, nuevoCodigo) {
+    if (window.itemsTrabajo && window.itemsTrabajo[index]) {
+        window.itemsTrabajo[index].codigo = (nuevoCodigo || '').toString().trim();
         actualizarTablaItems();
     }
 }
