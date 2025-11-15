@@ -961,6 +961,46 @@
                         </div>
                     </section>
 
+                    <!-- Liquidación Avanzada (Página dedicada) -->
+                    <section id="liquidacionAvanzada" class="section" style="display:none;">
+                        <div class="card">
+                            <h3 class="card-title">💼 Liquidación Avanzada</h3>
+                            <form id="liquidacionAvanzadaForm" onsubmit="procesarLiquidacionAvanzada(event)">
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label class="form-label">Técnico</label>
+                                        <select name="tecnicoId" class="form-input" required>
+                                            <option value="">Seleccionar técnico</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Fecha Inicio</label>
+                                        <input type="date" name="fechaInicio" class="form-input" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Fecha Fin</label>
+                                        <input type="date" name="fechaFin" class="form-input" required>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Observaciones</label>
+                                    <textarea name="observaciones" class="form-textarea" placeholder="Observaciones de la liquidación"></textarea>
+                                </div>
+
+                                <div id="preview-liquidacion" class="pos-section">
+                                    <h3 class="pos-section-title">Vista Previa de la Liquidación</h3>
+                                    <div id="preview-contenido">Selecciona un técnico y período para ver la vista previa</div>
+                                </div>
+
+                                <div class="form-actions">
+                                    <button type="button" class="btn-secondary" onclick="showSection('liquidacion')">Volver</button>
+                                    <button type="button" class="btn btn-info" onclick="actualizarVistaPrevia()">Vista Previa</button>
+                                    <button type="submit" class="btn-primary">Generar Liquidación</button>
+                                </div>
+                            </form>
+                        </div>
+                    </section>
+
                     <!-- Reportes Section -->
                     <section id="reportes" class="section">
                         <div class="card">
