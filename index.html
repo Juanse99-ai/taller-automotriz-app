@@ -1275,6 +1275,16 @@ body {
                                             <input type="text" class="form-input" id="trabajoCliente" required placeholder="Nombre completo del cliente">
                                         </div>
                                     </div>
+                                    <div class="form-row">
+                                        <div class="form-group">
+                                            <label class="form-label">📞 Teléfono</label>
+                                            <input type="text" class="form-input" id="clienteTelefono" placeholder="Teléfono del cliente">
+                                        </div>
+                                        <div class="form-group">
+                                            <label class="form-label">📧 Email</label>
+                                            <input type="email" class="form-input" id="clienteEmail" placeholder="Email del cliente">
+                                        </div>
+                                    </div>
                                 </div>
 
                                 <div class="pos-section">
@@ -3091,15 +3101,23 @@ function buscarClientePorCedula(cedula) {
     ).slice(0, 50);
     
     if (resultados.length > 0) {
-        contenedor.innerHTML = resultados.map(cliente => {
+        contenedor.innerHTML = resultados.map((cliente, index) => {
             const doc = normalizarDocumentoCliente(cliente);
             const nombre = normalizarNombreCliente(cliente);
             const telefono = (cliente?.telefono || cliente?.phone || '').toString();
             const email = (cliente?.email || '').toString();
-            const escapar = valor => valor.replace(/'/g, "\\'");
+            const clienteId = cliente?.id || cliente?.id_cliente || index;
+            const escapar = valor => valor.replace(/'/g, "\\'").replace(/"/g, '&quot;');
             return `
-                <div class="resultado-item" onclick="seleccionarCliente('${escapar(nombre)}', '${escapar(doc)}', '${escapar(telefono)}', '${escapar(email)}')">
-                    <strong>${doc}</strong> - ${nombre}
+                <div class="resultado-item" style="display: flex; justify-content: space-between; align-items: center;">
+                    <div onclick="seleccionarCliente('${escapar(nombre)}', '${escapar(doc)}', '${escapar(telefono)}', '${escapar(email)}')" style="flex: 1; cursor: pointer;">
+                        <strong>${doc}</strong> - ${nombre}
+                        ${telefono ? `<br><small style="color: #666;">📞 ${telefono}</small>` : ''}
+                        ${email ? `<br><small style="color: #666;">📧 ${email}</small>` : ''}
+                    </div>
+                    <button type="button" class="btn btn-outline btn-sm" onclick="event.stopPropagation(); editarClienteDesdeModal('${escapar(doc)}', '${escapar(nombre)}', '${escapar(telefono)}', '${escapar(email)}', '${clienteId}')" title="Editar cliente" style="margin-left: 8px;">
+                        ✏️
+                    </button>
                 </div>
             `;
         }).join('');
@@ -3160,7 +3178,7 @@ function filtrarClientesModal(termino = '') {
         return;
     }
     
-    const escapar = valor => valor.replace(/'/g, "\\'");
+    const escapar = valor => valor.replace(/'/g, "\\'").replace(/"/g, '&quot;');
     contenedor.innerHTML = `
         <table>
             <thead>
@@ -3169,24 +3187,28 @@ function filtrarClientesModal(termino = '') {
                     <th>Nombre</th>
                     <th>Teléfono</th>
                     <th>Email</th>
-                    <th></th>
+                    <th>Acciones</th>
                 </tr>
             </thead>
             <tbody>
-                ${resultados.map(cliente => {
+                ${resultados.map((cliente, index) => {
                     const doc = normalizarDocumentoCliente(cliente);
                     const nombre = normalizarNombreCliente(cliente);
                     const telefono = (cliente?.telefono || cliente?.phone || '').toString();
                     const email = (cliente?.email || '').toString();
+                    const clienteId = cliente?.id || cliente?.id_cliente || index;
                     return `
                         <tr>
                             <td>${doc}</td>
                             <td>${nombre}</td>
                             <td>${telefono || '-'}</td>
                             <td>${email || '-'}</td>
-                            <td>
-                                <button type="button" class="btn btn-primary btn-sm" onclick="seleccionarClienteDesdeModal('${escapar(nombre)}', '${escapar(doc)}', '${escapar(telefono)}', '${escapar(email)}')">
+                            <td style="white-space: nowrap;">
+                                <button type="button" class="btn btn-primary btn-sm" onclick="seleccionarClienteDesdeModal('${escapar(nombre)}', '${escapar(doc)}', '${escapar(telefono)}', '${escapar(email)}')" style="margin-right: 4px;">
                                     Seleccionar
+                                </button>
+                                <button type="button" class="btn btn-outline btn-sm" onclick="editarClienteDesdeModal('${escapar(doc)}', '${escapar(nombre)}', '${escapar(telefono)}', '${escapar(email)}', '${clienteId}')" title="Editar cliente">
+                                    ✏️
                                 </button>
                             </td>
                         </tr>
@@ -3200,6 +3222,138 @@ function filtrarClientesModal(termino = '') {
 function seleccionarClienteDesdeModal(nombre, cedula, telefono = '', email = '') {
     seleccionarCliente(nombre, cedula, telefono, email);
     closeModal();
+}
+
+// Editar cliente desde el modal
+function editarClienteDesdeModal(cedula, nombre, telefono = '', email = '', clienteId = '') {
+    const modal = createModal(
+        'Editar Cliente',
+        `
+        <form id="editarClienteForm" onsubmit="guardarEdicionCliente(event, '${cedula}', '${clienteId}')">
+            <div class="form-group">
+                <label class="form-label">Cédula/NIT</label>
+                <input type="text" class="form-input" id="editClienteCedula" value="${cedula}" readonly>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Nombre</label>
+                <input type="text" class="form-input" id="editClienteNombre" value="${nombre}" required>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Teléfono</label>
+                <input type="text" class="form-input" id="editClienteTelefono" value="${telefono}" placeholder="Agregar o actualizar teléfono">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Email</label>
+                <input type="email" class="form-input" id="editClienteEmail" value="${email}" placeholder="Agregar o actualizar email">
+            </div>
+        </form>
+        `,
+        [
+            { text: 'Cancelar', class: 'btn-outline', onclick: 'closeModal()' },
+            { text: 'Guardar Cambios', class: 'btn-primary', type: 'submit', form: 'editarClienteForm' }
+        ]
+    );
+    showModal(modal);
+}
+
+// Guardar edición de cliente
+async function guardarEdicionCliente(event, cedulaOriginal, clienteId) {
+    event.preventDefault();
+    
+    const nombre = document.getElementById('editClienteNombre').value.trim();
+    const telefono = document.getElementById('editClienteTelefono').value.trim();
+    const email = document.getElementById('editClienteEmail').value.trim();
+    
+    if (!nombre) {
+        showNotification('El nombre es obligatorio', 'error');
+        return;
+    }
+    
+    try {
+        // Buscar el cliente en la lista actual
+        const baseClientes = obtenerListaClientes();
+        const clienteExistente = baseClientes.find(c => {
+            const doc = normalizarDocumentoCliente(c);
+            return doc === cedulaOriginal;
+        });
+        
+        if (!clienteExistente) {
+            showNotification('Cliente no encontrado', 'error');
+            return;
+        }
+        
+        // Actualizar datos localmente
+        clienteExistente.nombre = nombre;
+        clienteExistente.name = nombre;
+        if (telefono) {
+            clienteExistente.telefono = telefono;
+            clienteExistente.phone = telefono;
+        }
+        if (email) {
+            clienteExistente.email = email;
+        }
+        
+        // Intentar actualizar en Supabase si está disponible
+        if (window.supabase && clienteId && clienteId !== '') {
+            try {
+                const { error } = await supabase
+                    .from('clientes')
+                    .update({
+                        nombre: nombre,
+                        telefono: telefono || null,
+                        email: email || null
+                    })
+                    .eq('id', clienteId);
+                
+                if (error) {
+                    console.warn('⚠️ Error al actualizar en Supabase:', error);
+                    // Continuar con actualización local
+                } else {
+                    console.log('✅ Cliente actualizado en Supabase');
+                    // Recargar datos desde Supabase
+                    await cargarDatosDesdeSupabase();
+                }
+            } catch (supabaseError) {
+                console.warn('⚠️ Error de conexión con Supabase:', supabaseError);
+                // Continuar con actualización local
+            }
+        }
+        
+        // Si es cliente de Supabase, actualizar el array
+        if (Array.isArray(supabaseClientes) && supabaseClientes.length > 0) {
+            const index = supabaseClientes.findIndex(c => {
+                const doc = normalizarDocumentoCliente(c);
+                return doc === cedulaOriginal;
+            });
+            if (index !== -1) {
+                supabaseClientes[index] = { ...supabaseClientes[index], ...clienteExistente };
+            }
+        }
+        
+        showNotification('Cliente actualizado correctamente', 'success');
+        closeModal();
+        
+        // Refrescar el modal de búsqueda si está abierto
+        const modalBuscar = document.getElementById('modalBuscarCliente');
+        if (modalBuscar) {
+            filtrarClientesModal(modalBuscar.value);
+        }
+        
+        // Si estamos en el formulario de nuevo trabajo, actualizar los campos
+        const trabajoClienteInput = document.getElementById('trabajoCliente');
+        const busquedaCedulaInput = document.getElementById('busquedaCedula');
+        if (trabajoClienteInput && busquedaCedulaInput && busquedaCedulaInput.value === cedulaOriginal) {
+            trabajoClienteInput.value = nombre;
+            const telefonoInput = document.getElementById('clienteTelefono');
+            const emailInput = document.getElementById('clienteEmail');
+            if (telefonoInput) telefonoInput.value = telefono;
+            if (emailInput) emailInput.value = email;
+        }
+        
+    } catch (error) {
+        console.error('❌ Error al guardar cliente:', error);
+        showNotification('Error al guardar los cambios', 'error');
+    }
 }
 
 // Buscar en inventario
@@ -4370,6 +4524,8 @@ window.closeModal = closeModal;
 window.guardarNuevoTrabajo = guardarNuevoTrabajo;
 window.guardarNuevaRecepcion = guardarNuevaRecepcion;
 window.guardarNuevaCotizacion = guardarNuevaCotizacion;
+window.editarClienteDesdeModal = editarClienteDesdeModal;
+window.guardarEdicionCliente = guardarEdicionCliente;
 
 // Additional functions
 function agendarMantenimiento(placa) {
