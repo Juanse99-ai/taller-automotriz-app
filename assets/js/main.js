@@ -1966,20 +1966,29 @@ function addOrUpdateVehicleAssoc(placa, clienteDoc, clienteNombre, marca='', mod
     const obj = { placa, clienteDoc, clienteNombre, marca, modelo, ano };
     if (idx >= 0) {
         const old = vehs[idx];
-        // Si cambia de propietario, pedir confirmación
+        // Si cambia de propietario, pedir confirmación con objeto temporal global
         if ((old.clienteDoc || '').toString() !== (clienteDoc || '').toString()) {
-            const content = `
-                <div style="line-height:1.6;">
-                    <p>La placa <strong>${placa}</strong> ya está asociada a:</n>
-                    <div style="margin:8px 0 12px 0; padding:10px; background:#F3F4F6; border-radius:8px;">
-                        <div><strong>Actual:</strong> ${old.clienteNombre || '-'} (${old.clienteDoc || '-'})</div>
-                        <div><strong>Nuevo:</strong> ${clienteNombre || '-'} (${clienteDoc || '-'})</div>
-                    </div>
-                    <p>¿Deseas reasignar la placa al nuevo cliente?</p>
-                </div>`;
+            window._pendingPlateReassign = {
+                placa,
+                oldDoc: old.clienteDoc || '',
+                oldNombre: old.clienteNombre || '',
+                newDoc: clienteDoc || '',
+                newNombre: clienteNombre || '',
+                marca: marca || '',
+                modelo: modelo || '',
+                ano: ano || ''
+            };
+            const content = '<div style="line-height:1.6;">'
+              + '<p>La placa <strong>'+placa+'</strong> ya está asociada a:</p>'
+              + '<div style="margin:8px 0 12px 0; padding:10px; background:#F3F4F6; border-radius:8px;">'
+              + '<div><strong>Actual:</strong> '+(old.clienteNombre||'-')+' ('+(old.clienteDoc||'-')+')</div>'
+              + '<div><strong>Nuevo:</strong> '+(clienteNombre||'-')+' ('+(clienteDoc||'-')+')</div>'
+              + '</div>'
+              + '<p>¿Deseas reasignar la placa al nuevo cliente?</p>'
+              + '</div>';
             const modal = createModal('Reasignar placa', content, [
                 { text: 'Cancelar', class: 'btn-outline', onclick: 'closeModal()' },
-                { text: 'Reasignar', class: 'btn-primary', onclick: `confirmReassignPlate('${placa}','${old.clienteDoc||''}','${(old.clienteNombre||'').replace(/'/g,\\'')}','${clienteDoc||''}','${(clienteNombre||'').replace(/'/g,\\'')}','${(marca||'').replace(/'/g,\\'')}','${(modelo||'').replace(/'/g,\\'')}','${ano||''}')` }
+                { text: 'Reasignar', class: 'btn-primary', onclick: 'confirmReassignPlatePending()' }
             ]);
             showModal(modal);
             return; // Esperar confirmación explícita
@@ -2012,6 +2021,13 @@ function confirmReassignPlate(placa, oldDoc, oldNombre, newDoc, newNombre, marca
     } finally {
         closeModal();
     }
+}
+
+function confirmReassignPlatePending() {
+    const p = window._pendingPlateReassign;
+    if (!p) { closeModal(); return; }
+    confirmReassignPlate(p.placa, p.oldDoc, p.oldNombre, p.newDoc, p.newNombre, p.marca, p.modelo, p.ano);
+    window._pendingPlateReassign = null;
 }
 
 function asociarPlacaConClienteDesdeForm(contexto='ot') {
