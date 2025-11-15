@@ -51,8 +51,9 @@ body {
 }
 
 .main-wrapper {
-    max-width: 1600px;
-    margin: 0 auto;
+    max-width: 100%;
+    width: 100%;
+    margin: 0;
     padding: var(--sm);
 }
 

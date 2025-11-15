@@ -53,91 +53,6 @@ window.trabajos = window.trabajos || [];
 // ===== FUNCIONES CRÍTICAS - DEFINIDAS INMEDIATAMENTE =====
 // Estas funciones deben estar disponibles antes de que el HTML las use
 
-// Toggle sidebar - versión inicial
-function toggleSidebar() {
-    const sidebar = document.getElementById('sidebar');
-    const mainContent = document.querySelector('.main-content');
-    
-    if (sidebar && mainContent) {
-        if (window.innerWidth <= 768) {
-            sidebar.classList.toggle('mobile-open');
-        } else {
-            sidebar.classList.toggle('collapsed');
-            if (sidebar.classList.contains('collapsed')) {
-                mainContent.classList.remove('sidebar-expanded');
-                mainContent.classList.add('sidebar-collapsed');
-            } else {
-                mainContent.classList.remove('sidebar-collapsed');
-                mainContent.classList.add('sidebar-expanded');
-            }
-            sidebarCollapsed = !sidebarCollapsed;
-        }
-        
-        console.log('🔄 Sidebar toggled:', sidebarCollapsed ? 'collapsed' : 'expanded');
-    }
-}
-
-// Show section - versión inicial
-function showSection(sectionName) {
-    console.log('📄 Cambiando a sección:', sectionName);
-    
-    // Hide all sections
-    const sections = document.querySelectorAll('.section');
-    sections.forEach(section => {
-        section.classList.remove('active');
-        section.style.display = 'none';
-    });
-    
-    // Show target section
-    const targetSection = document.getElementById(sectionName);
-    if (targetSection) {
-        targetSection.classList.add('active');
-        targetSection.style.display = 'block';
-        currentSection = sectionName;
-        
-        // Update page title (si la función existe)
-        if (typeof updatePageTitle === 'function') {
-            updatePageTitle(sectionName);
-        }
-        
-        // Load section data (si la función existe)
-        if (typeof loadSectionData === 'function') {
-            loadSectionData(sectionName);
-        }
-        
-        console.log('✅ Sección mostrada:', sectionName);
-    } else {
-        console.error('❌ Sección no encontrada:', sectionName);
-    }
-    
-    // Update active nav item (si la función existe)
-    if (typeof updateActiveNavItem === 'function') {
-        updateActiveNavItem(sectionName);
-    } else {
-        // Versión básica si la función no existe aún
-        const navItems = document.querySelectorAll('.nav-item');
-        navItems.forEach(item => {
-            item.classList.remove('active');
-        });
-        const currentNavItem = document.querySelector(`[onclick="showSection('${sectionName}')"]`);
-        if (currentNavItem) {
-            currentNavItem.classList.add('active');
-        }
-    }
-    
-    // Close mobile sidebar if open
-    if (window.innerWidth <= 768) {
-        const sidebar = document.getElementById('sidebar');
-        if (sidebar) {
-            sidebar.classList.remove('mobile-open');
-        }
-    }
-}
-
-// Exportar funciones críticas al scope global INMEDIATAMENTE
-window.toggleSidebar = toggleSidebar;
-window.showSection = showSection;
-
 // DOM Content Loaded
 document.addEventListener('DOMContentLoaded', function() {
     try {
@@ -278,7 +193,8 @@ function updatePageTitle(sectionName) {
         'reportes': { title: 'Reportes', subtitle: 'Reportes y estadísticas' },
         'inventario': { title: 'Inventario', subtitle: 'Gestión de productos y repuestos' },
         'cuentti': { title: 'CUENTTI', subtitle: 'Integración para facturación' },
-        'nuevoTrabajoPage': { title: 'Nuevo Trabajo', subtitle: 'Crear una nueva orden de servicio' }
+        'nuevoTrabajoPage': { title: 'Nuevo Trabajo', subtitle: 'Crear una nueva orden de servicio' },
+        'liquidacionAvanzada': { title: 'Liquidación Avanzada', subtitle: 'Cálculo y registro de pagos a técnicos' }
     };
     
     const titleData = titles[sectionName] || titles['dashboard'];
@@ -350,6 +266,9 @@ function loadSectionData(sectionName) {
             break;
         case 'cuentti':
             loadCuenttiData();
+            break;
+        case 'liquidacionAvanzada':
+            // La inicialización se realiza desde generarLiquidacion
             break;
         default:
             console.log('No data loading function for section:', sectionName);
@@ -848,17 +767,16 @@ function actualizarTotales() {
         }
     });
     
-    // Mano de obra (no incluye IVA)
-    const manoObra = Number(document.getElementById('manoObraValor')?.value || 0);
-    const subtotalConManoObra = subtotalSinIva + manoObra;
-    const totalConIvaYManoObra = totalConIva + manoObra;
-    
-    setText('subtotalRepuestos', formatCurrency(subtotalConManoObra));
+    // Totales calculados únicamente desde items (incluye Mano de Obra si está agregada como ítem)
+    const subtotal = subtotalSinIva;
+    const total = totalConIva;
+
+    setText('subtotalRepuestos', formatCurrency(subtotal));
     setText('subtotalIva', formatCurrency(totalIva));
     setText('totalImpuesto', formatCurrency(totalIva));
     setText('totalDescuento', formatCurrency(totalDescuentos));
-    setText('subtotalFinal', formatCurrency(subtotalConManoObra));
-    setText('totalFinal', formatCurrency(totalConIvaYManoObra));
+    setText('subtotalFinal', formatCurrency(subtotal));
+    setText('totalFinal', formatCurrency(total));
 }
 
 window.actualizarTotales = actualizarTotales;
@@ -1453,6 +1371,9 @@ function actualizarTablaItems() {
     const tbody = document.getElementById('itemsTrabajo');
     if (!tbody) return;
     
+    // Sincronizar línea de Mano de Obra con el valor del input
+    try { syncManoObraItem(); } catch (e) { /* noop */ }
+    
     if (!window.itemsTrabajo || window.itemsTrabajo.length === 0) {
         const noItemsRow = document.getElementById('noItemsRow');
         if (noItemsRow) noItemsRow.style.display = 'table-row';
@@ -1738,9 +1659,44 @@ window.buscarArticulo = buscarArticulo;
 window.agregarLineaVacia = agregarLineaVacia;
 window.validarItems = validarItems;
 
+// Sincroniza la línea especial de Mano de Obra con el input #manoObraValor
+function syncManoObraItem() {
+    const moInput = document.getElementById('manoObraValor');
+    if (!moInput) return;
+    const valor = Math.max(0, Number(moInput.value || 0));
+    if (!Array.isArray(window.itemsTrabajo)) window.itemsTrabajo = [];
+
+    const idx = window.itemsTrabajo.findIndex(i => i && i.isManoObra === true);
+
+    if (valor > 0) {
+        if (idx === -1) {
+            window.itemsTrabajo.push({
+                id: 'MO-' + Date.now(),
+                codigo: 'MO',
+                nombre: 'Mano de Obra',
+                precio: valor,
+                categoria: 'Servicio',
+                cantidad: 1,
+                iva: 0,
+                descuento: 0,
+                tipoDescuento: '$',
+                isManoObra: true
+            });
+        } else {
+            window.itemsTrabajo[idx].precio = valor;
+            window.itemsTrabajo[idx].cantidad = 1;
+            window.itemsTrabajo[idx].iva = 0;
+        }
+    } else if (idx !== -1) {
+        window.itemsTrabajo.splice(idx, 1);
+    }
+}
+
 // Calcular totales
 function calcularTotal() {
-    actualizarTotales();
+    // Al cambiar MO, aseguremos la línea especial y refresquemos tabla y totales
+    syncManoObraItem();
+    actualizarTablaItems();
 }
 
 // Previsualizar trabajo
@@ -1778,7 +1734,7 @@ function previsualizarTrabajo() {
                     return `<div>• ${item.nombre} (${cantidad}x) — ${formatCurrency(totalItem)}</div>`;
                 }
             }).join('') : '<div>No hay items agregados</div>'}
-            ${(() => { const mo = Number(document.getElementById('manoObraValor')?.value || 0); return mo > 0 ? `<div>• Mano de obra — ${formatCurrency(mo)}</div>` : ''; })()}
+            
             <br>
             <div><strong>Subtotal (Sin IVA):</strong> ${document.getElementById('subtotalRepuestos').textContent}</div>
             <div><strong>IVA Total:</strong> ${document.getElementById('subtotalIva').textContent}</div>
@@ -1826,6 +1782,8 @@ function guardarNuevoTrabajo(event) {
         return;
     }
     
+    // Sincronizar Mano de Obra como ítem antes de calcular
+    try { syncManoObraItem(); } catch (e) { /* noop */ }
     // Calcular totales finales (precio de items incluye IVA si item.iva > 0)
     let subtotalSinIva = 0;
     let totalIva = 0;
@@ -1847,12 +1805,8 @@ function guardarNuevoTrabajo(event) {
             totalConIva += totalItem;
         }
     });
-    // Mano de obra (sin IVA)
+    // Mano de obra (sin IVA) solo para registro; los totales ya lo incluyen como item si aplica
     const manoObraValor = Number(document.getElementById('manoObraValor')?.value || 0);
-    if (manoObraValor > 0) {
-        subtotalSinIva += manoObraValor;
-        totalConIva += manoObraValor;
-    }
     
     // Crear objeto de trabajo completo
     const trabajoCompleto = {
@@ -3472,84 +3426,44 @@ function cambiarTab(tab) {
 // ==========================================
 
 function generarLiquidacion() {
-    console.log('💼 Iniciando sistema de liquidación avanzada...');
+    console.log('💼 Iniciando sistema de liquidación avanzada (página)...');
     
-    // Obtener técnicos y trabajos
-    const tecnicos = window.mecanicos || [];
-    const trabajos = window.trabajos || [];
+    // Navegar a la sección de página
+    showSection('liquidacionAvanzada');
     
-    if (tecnicos.length === 0) {
-        showNotification('No hay técnicos registrados', 'error');
-        return;
+    // Poblar formulario con valores por defecto
+    const form = document.getElementById('liquidacionAvanzadaForm');
+    if (!form) return;
+    
+    const select = form.querySelector('select[name="tecnicoId"]');
+    if (select) {
+        // Limpiar excepto placeholder
+        select.innerHTML = '<option value="">Seleccionar técnico</option>' +
+            (window.mecanicos || []).map(t => `<option value="${t.id}">${t.nombre || t.name || 'Técnico'}</option>`).join('');
     }
     
-    // Seleccionar técnico
-    const tecnicoOptions = tecnicos.map(t => 
-        `<option value="${t.id}">${t.nombre}</option>`
-    ).join('');
-    
-    // Obtener fecha por defecto (últimos 30 días)
     const hoy = new Date();
     const hace30Dias = new Date(hoy.getTime() - (30 * 24 * 60 * 60 * 1000));
+    const inicio = form.querySelector('input[name="fechaInicio"]');
+    const fin = form.querySelector('input[name="fechaFin"]');
+    if (inicio) inicio.value = hace30Dias.toISOString().split('T')[0];
+    if (fin) fin.value = hoy.toISOString().split('T')[0];
     
-    const html = `
-        <div class="modal-overlay" onclick="closeModal()">
-            <div class="modal-content modal-large" onclick="event.stopPropagation()">
-                <h3>💼 Liquidación Avanzada</h3>
-                <form onsubmit="procesarLiquidacionAvanzada(event)">
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label>Técnico:</label>
-                            <select name="tecnicoId" required class="form-control">
-                                <option value="">Seleccionar técnico</option>
-                                ${tecnicoOptions}
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label>Fecha Inicio:</label>
-                            <input type="date" name="fechaInicio" required class="form-control" 
-                                   value="${hace30Dias.toISOString().split('T')[0]}">
-                        </div>
-                        <div class="form-group">
-                            <label>Fecha Fin:</label>
-                            <input type="date" name="fechaFin" required class="form-control" 
-                                   value="${hoy.toISOString().split('T')[0]}">
-                        </div>
-                    </div>
-                    <div class="form-group">
-                        <label>Observaciones:</label>
-                        <textarea name="observaciones" class="form-control" 
-                                  placeholder="Observaciones de la liquidación"></textarea>
-                    </div>
-                    
-                    <div id="preview-liquidacion" class="preview-box">
-                        <h4>Vista Previa de la Liquidación</h4>
-                        <div id="preview-contenido">Selecciona un técnico y período para ver la vista previa</div>
-                    </div>
-                    
-                    <div class="modal-actions">
-                        <button type="button" onclick="closeModal()" class="btn btn-outline">Cancelar</button>
-                        <button type="button" onclick="actualizarVistaPrevia()" class="btn btn-info">Vista Previa</button>
-                        <button type="submit" class="btn btn-primary">Generar Liquidación</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    `;
-    
-    mostrarModal(html);
+    const preview = document.querySelector('#liquidacionAvanzada #preview-contenido');
+    if (preview) preview.innerHTML = 'Selecciona un técnico y período para ver la vista previa';
 }
 
 // Actualizar vista previa
 function actualizarVistaPrevia() {
-    const form = document.querySelector('form');
+    const form = document.getElementById('liquidacionAvanzadaForm');
     const datos = new FormData(form);
     const tecnicoId = datos.get('tecnicoId');
     const fechaInicio = datos.get('fechaInicio');
     const fechaFin = datos.get('fechaFin');
     
     if (!tecnicoId || !fechaInicio || !fechaFin) {
-        document.getElementById('preview-contenido').innerHTML = 
+        const preview = document.querySelector('#liquidacionAvanzada #preview-contenido');
+        if (preview) preview.innerHTML = 
             '<p class="text-warning">Completa todos los campos para ver la vista previa</p>';
         return;
     }
@@ -3557,7 +3471,8 @@ function actualizarVistaPrevia() {
     // Calcular vista previa
     const tecnico = window.mecanicos.find(t => t.id == tecnicoId);
     if (!tecnico) {
-        document.getElementById('preview-contenido').innerHTML = 
+        const preview = document.querySelector('#liquidacionAvanzada #preview-contenido');
+        if (preview) preview.innerHTML = 
             '<p class="text-warning">Técnico no encontrado</p>';
         return;
     }
@@ -3611,7 +3526,8 @@ function actualizarVistaPrevia() {
         </div>
     `;
     
-    document.getElementById('preview-contenido').innerHTML = html;
+    const preview = document.querySelector('#liquidacionAvanzada #preview-contenido');
+    if (preview) preview.innerHTML = html;
 }
 
 // Procesar liquidación avanzada
@@ -3640,7 +3556,8 @@ function procesarLiquidacionAvanzada(event) {
             'success'
         );
         
-        closeModal();
+        // Volver a la sección de Liquidación principal y refrescar métricas
+        showSection('liquidacion');
         actualizarDashboardLiquidacion();
         
     } catch (error) {
@@ -4082,4 +3999,3 @@ function ejecutarDiagnostico() {
 
     panel.innerHTML = html;
 }
-
