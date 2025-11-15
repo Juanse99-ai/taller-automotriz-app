@@ -89,6 +89,18 @@ function initializeApp() {
             sidebar.classList.add('collapsed','hover-expand','initialized');
             mainContent.classList.add('sidebar-collapsed');
         }
+        // Posicionar hamburguesa y mover en hover
+        try { updateHamburgerPosition(); } catch(e) {}
+        sidebar.addEventListener('mouseenter', () => {
+            if (sidebar.classList.contains('hover-expand') && sidebar.classList.contains('collapsed')) {
+                setHamburgerLeft(true);
+            }
+        });
+        sidebar.addEventListener('mouseleave', () => {
+            if (sidebar.classList.contains('hover-expand') && sidebar.classList.contains('collapsed')) {
+                setHamburgerLeft(false);
+            }
+        });
     } catch(e) {}
 
     // Cerrar sugerencias al hacer click fuera o con Escape
@@ -101,6 +113,7 @@ function initializeApp() {
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') closeAllSuggestions();
     });
+    window.addEventListener('resize', () => { try { updateHamburgerPosition(); } catch(e) {} });
 }
 
 function closeAllSuggestions() {
@@ -108,6 +121,24 @@ function closeAllSuggestions() {
         const el = document.getElementById(id);
         if (el) { el.classList.remove('show'); el.innerHTML=''; }
     });
+}
+
+// Control de posición del botón hamburguesa
+function setHamburgerLeft(expandedHover) {
+    const btn = document.querySelector('.hamburger-toggle');
+    if (!btn) return;
+    const desktop = window.innerWidth > 768;
+    if (expandedHover) btn.style.left = desktop ? '300px' : '12px';
+    else btn.style.left = desktop ? '70px' : '12px';
+}
+function updateHamburgerPosition() {
+    const btn = document.querySelector('.hamburger-toggle');
+    const sidebar = document.getElementById('sidebar');
+    if (!btn || !sidebar) return;
+    const isCollapsed = sidebar.classList.contains('collapsed');
+    const isDesktop = window.innerWidth > 768;
+    if (isCollapsed) btn.style.left = isDesktop ? '70px' : '12px';
+    else btn.style.left = isDesktop ? '300px' : '12px';
 }
 
 // =====================
@@ -163,14 +194,8 @@ function setupMobileResponsive() {
 
 // Add mobile menu toggle
 function addMobileMenuToggle() {
-    const header = document.querySelector('.header-content');
-    if (header && !header.querySelector('.mobile-menu-toggle')) {
-        const mobileToggle = document.createElement('button');
-        mobileToggle.className = 'mobile-menu-toggle btn btn-primary';
-        mobileToggle.innerHTML = '☰';
-        mobileToggle.onclick = toggleSidebar;
-        header.appendChild(mobileToggle);
-    }
+    // Ya contamos con un botón hamburguesa flotante único
+    return;
 }
 
 // Toggle sidebar
@@ -194,6 +219,7 @@ function toggleSidebar() {
         }
         
         console.log('🔄 Sidebar toggled:', sidebarCollapsed ? 'collapsed' : 'expanded');
+        try { updateHamburgerPosition(); } catch(e) {}
     }
 }
 
