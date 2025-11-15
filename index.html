@@ -2668,19 +2668,18 @@ function nuevoTrabajo() {
                     <table class="items-table" style="width: 100%; border-collapse: collapse; background: white;">
                         <thead>
                             <tr style="background: #2c3e50; color: white;">
+                                <th style="padding: 8px; text-align: left; width: 300px;">Descripción</th>
+                                <th style="padding: 8px; text-align: center; width: 100px;">Cant.</th>
+                                <th style="padding: 8px; text-align: right; width: 120px;">Precio Unit.</th>
+                                <th style="padding: 8px; text-align: right; width: 120px;">Total</th>
+                                <th style="padding: 8px; text-align: center; width: 180px;">IVA %</th>
+                                <th style="padding: 8px; text-align: right; width: 120px;">Total c/IVA</th>
                                 <th style="padding: 8px; text-align: center; width: 80px;">Acciones</th>
-                                <th style="padding: 8px; text-align: left; width: 150px;">Artículo</th>
-                                <th style="padding: 8px; text-align: left; width: 250px;">Descripción</th>
-                                <th style="padding: 8px; text-align: right; width: 100px;">Precio Uni</th>
-                                <th style="padding: 8px; text-align: center; width: 100px;">Cantidad</th>
-                                <th style="padding: 8px; text-align: center; width: 130px;">Desc% / Valor</th>
-                                <th style="padding: 8px; text-align: center; width: 120px;">Impuesto</th>
-                                <th style="padding: 8px; text-align: right; width: 120px;">Total.N</th>
                             </tr>
                         </thead>
                         <tbody id="itemsTrabajo">
                             <tr id="noItemsRow">
-                                <td colspan="8" style="text-align: center; padding: 40px; color: #666;">
+                                <td colspan="7" style="text-align: center; padding: 40px; color: #666;">
                                     📝 No hay repuestos agregados. Use la búsqueda de inventario arriba para agregar productos.
                                 </td>
                             </tr>
@@ -3574,17 +3573,17 @@ function guardarServicioManual(event) {
         window.itemsTrabajo = [];
     }
     
-    const item = {
+        const item = {
         id: 'SERV-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9), // ID único
-        codigo: 'SERV-' + Date.now(),
+            codigo: 'SERV-' + Date.now(),
         nombre: nombre,
-        precio: precio,
-        categoria: 'Servicio Manual',
+            precio: precio,
+            categoria: 'Servicio Manual',
         cantidad: Math.max(1, cantidad),
         iva: ivaPorcentaje,
         descuento: 0,
         tipoDescuento: '$'
-    };
+        };
         
         window.itemsTrabajo.push(item);
         actualizarTablaItems();
@@ -3648,59 +3647,66 @@ function actualizarTablaItems() {
         const nombre = item.nombre || 'Artículo';
         const descripcion = `${codigo}#${nombre}`;
         
+        // Calcular total sin IVA (precio base)
+        const totalSinIva = precioBase;
+        
         return `
         <tr style="border-bottom: 1px solid #eee;">
-            <td style="padding: 8px; text-align: center; vertical-align: middle;">
-                <div style="display: flex; flex-direction: column; align-items: center; gap: 4px;">
-                    <button type="button" onclick="eliminarItem(${index})" style="background: #ef4444; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 12px;">🗑️</button>
-                    <div style="font-weight: bold; color: #2c3e50;">#${numFila}</div>
-                    <div style="display: flex; flex-direction: column; gap: 2px;">
-                        ${index > 0 ? `<button type="button" onclick="moverItemArriba(${index})" style="background: #e9ecef; border: 1px solid #ddd; padding: 2px 6px; cursor: pointer; font-size: 10px;">↑</button>` : '<div style="height: 20px;"></div>'}
-                        ${index < window.itemsTrabajo.length - 1 ? `<button type="button" onclick="moverItemAbajo(${index})" style="background: #e9ecef; border: 1px solid #ddd; padding: 2px 6px; cursor: pointer; font-size: 10px;">↓</button>` : '<div style="height: 20px;"></div>'}
+            <td style="padding: 8px; vertical-align: top;">
+                <div style="display: flex; align-items: flex-start; gap: 8px;">
+                    <div style="display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 50px;">
+                        <button type="button" onclick="eliminarItem(${index})" style="background: #ef4444; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 12px;">🗑️</button>
+                        <div style="font-weight: bold; color: #2c3e50; font-size: 14px;">#${numFila}</div>
+                        <div style="display: flex; flex-direction: column; gap: 2px;">
+                            ${index > 0 ? `<button type="button" onclick="moverItemArriba(${index})" style="background: #e9ecef; border: 1px solid #ddd; padding: 2px 6px; cursor: pointer; font-size: 10px;">↑</button>` : '<div style="height: 20px;"></div>'}
+                            ${index < window.itemsTrabajo.length - 1 ? `<button type="button" onclick="moverItemAbajo(${index})" style="background: #e9ecef; border: 1px solid #ddd; padding: 2px 6px; cursor: pointer; font-size: 10px;">↓</button>` : '<div style="height: 20px;"></div>'}
+                        </div>
+                        <div style="color: #999; font-size: 11px;">${index}</div>
                     </div>
-                    <div style="color: #999; font-size: 11px;">${index}</div>
+                    <div style="flex: 1;">
+                        <div style="position: relative; margin-bottom: 4px;">
+                            <input type="text" value="${nombre.substring(0, 3).toUpperCase()}" onchange="cambiarArticulo(${index}, this.value)" style="width: 100%; padding: 6px 30px 6px 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px;" placeholder="Artículo">
+                            <span style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #666;" onclick="buscarArticulo(${index})">🔍</span>
+                        </div>
+                        <div style="position: relative; margin-bottom: 4px;">
+                            <input type="text" value="${descripcion}" onchange="cambiarDescripcion(${index}, this.value)" style="width: 100%; padding: 6px 30px 6px 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 12px;" placeholder="Descripción">
+                            <span style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #666;">🧮</span>
+                        </div>
+                        <small style="color: #666; font-size: 11px;">P.U=${formatCurrency(precio)}</small>
+                    </div>
                 </div>
-            </td>
-            <td style="padding: 8px;">
-                <div style="position: relative;">
-                    <input type="text" value="${nombre}" onchange="cambiarArticulo(${index}, this.value)" style="width: 100%; padding: 6px 30px 6px 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px;" placeholder="Articulo">
-                    <span style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #666;" onclick="buscarArticulo(${index})">🔍</span>
-                </div>
-            </td>
-            <td style="padding: 8px; position: relative;">
-                <div style="position: relative;">
-                    <input type="text" value="${descripcion}" onchange="cambiarDescripcion(${index}, this.value)" style="width: 100%; padding: 6px 30px 6px 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 12px;" placeholder="Descripción">
-                    <span style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #666;">🧮</span>
-                </div>
-                <small style="color: #666; font-size: 11px; display: block; margin-top: 4px;">P.U=${formatCurrency(precio)}</small>
-            </td>
-            <td style="padding: 8px; text-align: right; vertical-align: middle;">
-                <input type="text" value="${formatCurrency(precio)}" onchange="cambiarPrecioUnitario(${index}, this.value)" style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; text-align: right; font-size: 13px;">
             </td>
             <td style="padding: 8px; text-align: center; vertical-align: middle;">
-                <div style="display: flex; gap: 4px; align-items: center;">
+                <div style="display: flex; gap: 4px; align-items: center; justify-content: center;">
                     <input type="number" value="${cantidad}" min="1" onchange="cambiarCantidad(${index}, this.value)" oninput="cambiarCantidad(${index}, this.value)" style="width: 60px; padding: 6px; border: 1px solid #ddd; border-radius: 4px; text-align: center;">
                     <select style="padding: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 12px;">
                         <option>un</option>
                     </select>
                 </div>
             </td>
-            <td style="padding: 8px; text-align: center; vertical-align: middle;">
-                <div style="display: flex; gap: 4px; align-items: center;">
-                    <button type="button" onclick="cambiarTipoDescuento(${index}, '%')" style="padding: 6px 10px; border: 1px solid #ddd; background: ${tipoDescuento === '%' ? '#e9ecef' : 'white'}; border-radius: 4px 0 0 4px; cursor: pointer; font-size: 12px;">%</button>
-                    <button type="button" onclick="cambiarTipoDescuento(${index}, '$')" style="padding: 6px 10px; border: 1px solid #ddd; border-left: none; background: ${tipoDescuento === '$' ? '#e9ecef' : 'white'}; border-radius: 0 4px 4px 0; cursor: pointer; font-size: 12px;">$</button>
-                    <span style="cursor: pointer; color: #666; margin-left: 4px;" title="Configurar descuento">🔧</span>
-                    <input type="number" value="${descuentoValor}" min="0" step="0.01" onchange="cambiarDescuento(${index}, this.value)" style="width: 60px; padding: 6px; border: 1px solid #ddd; border-radius: 4px; text-align: center; font-size: 12px;">
-                </div>
+            <td style="padding: 8px; text-align: right; vertical-align: middle;">
+                <input type="text" value="${formatCurrency(precio)}" onchange="cambiarPrecioUnitario(${index}, this.value)" style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; text-align: right; font-size: 13px;">
+            </td>
+            <td style="padding: 8px; text-align: right; vertical-align: middle;">
+                <input type="text" value="${formatCurrency(totalSinIva)}" readonly id="subtotalItem${index}" style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; text-align: right; font-size: 13px; background: #f8f9fa;">
             </td>
             <td style="padding: 8px; text-align: center; vertical-align: middle;">
-                <div style="display: flex; gap: 4px; align-items: center;">
-                    <input type="text" value="${formatCurrency(valorIvaIncluido)}" readonly style="width: 70px; padding: 6px; border: 1px solid #ddd; border-radius: 4px; text-align: center; font-size: 12px; background: #f8f9fa;">
-                    <input type="number" value="${ivaPorcentaje}" min="0" max="100" step="0.01" onchange="cambiarIva(${index}, this.value)" oninput="cambiarIva(${index}, this.value)" style="width: 50px; padding: 6px; border: 1px solid #ddd; border-radius: 4px; text-align: center; font-size: 12px;">
+                <div style="display: flex; gap: 4px; align-items: center; justify-content: center; flex-wrap: wrap;">
+                    <input type="number" value="${cantidad}" min="1" readonly style="width: 40px; padding: 6px; border: 1px solid #ddd; border-radius: 4px; text-align: center; font-size: 12px; background: #f8f9fa;">
+                    <select style="padding: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 12px;">
+                        <option>un</option>
+                    </select>
+                    <button type="button" onclick="cambiarTipoDescuento(${index}, '%')" style="padding: 6px 10px; border: 1px solid #ddd; background: ${tipoDescuento === '%' ? '#e9ecef' : 'white'}; border-radius: 4px 0 0 4px; cursor: pointer; font-size: 12px;">%</button>
+                    <button type="button" onclick="cambiarTipoDescuento(${index}, '$')" style="padding: 6px 10px; border: 1px solid #ddd; border-left: none; background: ${tipoDescuento === '$' ? '#e9ecef' : 'white'}; border-radius: 0 4px 4px 0; cursor: pointer; font-size: 12px;">$</button>
+                    <span style="cursor: pointer; color: #666;" title="Configurar descuento">🔧</span>
+                    <input type="number" value="${descuentoValor}" min="0" step="0.01" onchange="cambiarDescuento(${index}, this.value)" style="width: 50px; padding: 6px; border: 1px solid #ddd; border-radius: 4px; text-align: center; font-size: 12px;">
                 </div>
             </td>
             <td style="padding: 8px; text-align: right; vertical-align: middle;">
                 <input type="text" value="${formatCurrency(totalConIva)}" readonly id="totalItem${index}" style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; text-align: right; font-size: 13px; font-weight: bold; background: #f8f9fa;">
+            </td>
+            <td style="padding: 8px; text-align: center; vertical-align: middle;">
+                <input type="number" value="${ivaPorcentaje}" min="0" max="100" step="0.01" onchange="cambiarIva(${index}, this.value)" oninput="cambiarIva(${index}, this.value)" style="width: 60px; padding: 6px; border: 1px solid #ddd; border-radius: 4px; text-align: center; font-size: 13px;">
             </td>
         </tr>
         `;
