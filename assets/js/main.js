@@ -80,6 +80,24 @@ function initializeApp() {
     }
     
     console.log('✅ Aplicación completamente inicializada');
+
+    // Cerrar sugerencias al hacer click fuera o con Escape
+    document.addEventListener('click', (e) => {
+        const targets = ['#resultadosBusqueda','#resultadosBusquedaNombre','#rcpResultadosClientes','#rcpResultadosClientesNombre'];
+        const clickedInside = targets.some(sel => e.target.closest(sel));
+        const clickedInputs = ['#rcpCliente','#rcpCedula','#trabajoCliente','#busquedaCedula'].some(sel => e.target.closest(sel));
+        if (!clickedInside && !clickedInputs) closeAllSuggestions();
+    });
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') closeAllSuggestions();
+    });
+}
+
+function closeAllSuggestions() {
+    ['resultadosBusqueda','resultadosBusquedaNombre','rcpResultadosClientes','rcpResultadosClientesNombre'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) { el.classList.remove('show'); el.innerHTML=''; }
+    });
 }
 
 // =====================
@@ -2921,21 +2939,21 @@ function buscarProducto() {
 
 // Ver pendientes de liquidación
 function verPendientes() {
-    const pendientes = [
-        { placa: 'ABC123', tecnico: 'Víctor Padilla', monto: 5000 },
-        { placa: 'DEF456', tecnico: 'Ismael Cervantes', monto: 8000 }
-    ];
-    
-    let mensaje = 'TRABAJOS PENDIENTES DE LIQUIDACIÓN:\n\n';
-    
-    pendientes.forEach(pendiente => {
-        mensaje += `${pendiente.placa} - ${pendiente.tecnico}: $${pendiente.monto.toLocaleString()}\n`;
-    });
-    
-    const total = pendientes.reduce((sum, p) => sum + p.monto, 0);
-    mensaje += `\nTotal pendiente: $${total.toLocaleString()}`;
-    
-    alert(mensaje);
+    const trabajos = getTrabajosData();
+    const pendientes = trabajos.filter(t => (t.estado || '').toLowerCase() !== 'completado');
+    if (!pendientes.length) { showNotification('No hay trabajos pendientes de liquidación', 'success'); return; }
+    const rows = pendientes.map(t => {
+        const mec = (window.mecanicos||[]).find(m=>m.id===t.mecanico);
+        const tec = mec ? (mec.nombre || mec.name || '') : '';
+        return `<tr><td>${t.id}</td><td>${t.placa}</td><td>${t.cliente||''}</td><td>${tec}</td><td>$${(t.manoObra||0).toLocaleString()}</td></tr>`;
+    }).join('');
+    const content = `
+        <table class="table"><thead><tr><th>ID</th><th>Placa</th><th>Cliente</th><th>Técnico</th><th>MO</th></tr></thead>
+        <tbody>${rows}</tbody></table>`;
+    const modal = createModal('Trabajos pendientes', content, [
+        { text:'Cerrar', class:'btn-outline', onclick:'closeModal()' }
+    ]);
+    showModal(modal);
 }
 
 // Liquidar trabajo individual
@@ -3695,52 +3713,30 @@ const sistemaLiquidacion = new SistemaLiquidacion();
 // Registrar Adelanto
 function registrarAdelanto() {
     const tecnicos = window.mecanicos || [];
-    const tecnicoOptions = tecnicos.map(t => 
-        `<option value="${t.id}">${t.nombre || t.name || 'Sin nombre'}</option>`
-    ).join('');
-    
-    const html = `
-        <div class="modal-overlay" onclick="cerrarModal()">
-            <div class="modal-content" onclick="event.stopPropagation()">
-                <h3>💰 Registrar Adelanto</h3>
-                <form onsubmit="procesarAdelanto(event)">
-                    <div class="form-group">
-                        <label>Técnico:</label>
-                        <select name="tecnicoId" required class="form-control">
-                            <option value="">Seleccionar técnico</option>
-                            ${tecnicoOptions}
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>Concepto:</label>
-                        <input type="text" name="concepto" required class="form-control" 
-                               placeholder="Ej: Adelanto trabajo ABC123">
-                    </div>
-                    <div class="form-group">
-                        <label>Monto ($):</label>
-                        <input type="number" name="monto" required class="form-control" 
-                               min="1" placeholder="0">
-                    </div>
-                    <div class="form-group">
-                        <label>Fecha:</label>
-                        <input type="date" name="fecha" required class="form-control" 
-                               value="${new Date().toISOString().split('T')[0]}">
-                    </div>
-                    <div class="form-group">
-                        <label>Observaciones:</label>
-                        <textarea name="observaciones" class="form-control" 
-                                  placeholder="Observaciones adicionales"></textarea>
-                    </div>
-                    <div class="modal-actions">
-                        <button type="button" onclick="cerrarModal()" class="btn btn-outline">Cancelar</button>
-                        <button type="submit" class="btn btn-primary">Registrar Adelanto</button>
-                    </div>
-                </form>
+    const tecnicoOptions = tecnicos.map(t => `<option value="${t.id}">${t.nombre || t.name || 'Sin nombre'}</option>`).join('');
+    const content = `
+        <form id="formAdelanto" onsubmit="procesarAdelanto(event)">
+            <div class="form-group"><label>Técnico:</label>
+                <select name="tecnicoId" required class="form-select"><option value="">Seleccionar técnico</option>${tecnicoOptions}</select>
             </div>
-        </div>
-    `;
-    
-    mostrarModal(html);
+            <div class="form-group"><label>Concepto:</label>
+                <input type="text" name="concepto" required class="form-input" placeholder="Ej: Adelanto trabajo ABC123">
+            </div>
+            <div class="form-group"><label>Monto ($):</label>
+                <input type="number" name="monto" required class="form-input" min="1" placeholder="0">
+            </div>
+            <div class="form-group"><label>Fecha:</label>
+                <input type="date" name="fecha" required class="form-input" value="${new Date().toISOString().split('T')[0]}">
+            </div>
+            <div class="form-group"><label>Observaciones:</label>
+                <textarea name="observaciones" class="form-textarea" placeholder="Observaciones adicionales"></textarea>
+            </div>
+        </form>`;
+    const modal = createModal('💰 Registrar Adelanto', content, [
+        { text:'Cancelar', class:'btn-outline', onclick:'closeModal()' },
+        { text:'Registrar Adelanto', class:'btn-primary', type:'submit', form:'formAdelanto' }
+    ]);
+    showModal(modal);
 }
 
 // Procesar Adelanto
@@ -3766,51 +3762,28 @@ function procesarAdelanto(event) {
 // Registrar Almuerzo
 function registrarAlmuerzo() {
     const tecnicos = window.mecanicos || [];
-    const tecnicoOptions = tecnicos.map(t => 
-        `<option value="${t.id}">${t.nombre}</option>`
-    ).join('');
-    
-    const html = `
-        <div class="modal-overlay" onclick="cerrarModal()">
-            <div class="modal-content" onclick="event.stopPropagation()">
-                <h3>🍽️ Registrar Almuerzo</h3>
-                <div class="info-box">
-                    <strong>Precio almuerzo:</strong> $${controlSaldos.configuracion.precioAlmuerzo.toLocaleString()}
-                </div>
-                <form onsubmit="procesarAlmuerzo(event)">
-                    <div class="form-group">
-                        <label>Técnico:</label>
-                        <select name="tecnicoId" required class="form-control">
-                            <option value="">Seleccionar técnico</option>
-                            ${tecnicoOptions}
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>Fecha:</label>
-                        <input type="date" name="fecha" required class="form-control" 
-                               value="${new Date().toISOString().split('T')[0]}">
-                    </div>
-                    <div class="form-group">
-                        <label>Monto ($):</label>
-                        <input type="number" name="monto" required class="form-control" 
-                               value="${controlSaldos.configuracion.precioAlmuerzo}" 
-                               min="0" placeholder="${controlSaldos.configuracion.precioAlmuerzo}">
-                    </div>
-                    <div class="form-group">
-                        <label>Observaciones:</label>
-                        <textarea name="observaciones" class="form-control" 
-                                  placeholder="Observaciones adicionales"></textarea>
-                    </div>
-                    <div class="modal-actions">
-                        <button type="button" onclick="cerrarModal()" class="btn btn-outline">Cancelar</button>
-                        <button type="submit" class="btn btn-primary">Registrar Almuerzo</button>
-                    </div>
-                </form>
+    const tecnicoOptions = tecnicos.map(t => `<option value="${t.id}">${t.nombre}</option>`).join('');
+    const content = `
+        <div class="info-box" style="margin-bottom:8px;"><strong>Precio almuerzo:</strong> $${controlSaldos.configuracion.precioAlmuerzo.toLocaleString()}</div>
+        <form id="formAlmuerzo" onsubmit="procesarAlmuerzo(event)">
+            <div class="form-group"><label>Técnico:</label>
+                <select name="tecnicoId" required class="form-select"><option value="">Seleccionar técnico</option>${tecnicoOptions}</select>
             </div>
-        </div>
-    `;
-    
-    mostrarModal(html);
+            <div class="form-group"><label>Fecha:</label>
+                <input type="date" name="fecha" required class="form-input" value="${new Date().toISOString().split('T')[0]}">
+            </div>
+            <div class="form-group"><label>Monto ($):</label>
+                <input type="number" name="monto" required class="form-input" value="${controlSaldos.configuracion.precioAlmuerzo}" min="0" placeholder="${controlSaldos.configuracion.precioAlmuerzo}">
+            </div>
+            <div class="form-group"><label>Observaciones:</label>
+                <textarea name="observaciones" class="form-textarea" placeholder="Observaciones adicionales"></textarea>
+            </div>
+        </form>`;
+    const modal = createModal('🍽️ Registrar Almuerzo', content, [
+        { text:'Cancelar', class:'btn-outline', onclick:'closeModal()' },
+        { text:'Registrar Almuerzo', class:'btn-primary', type:'submit', form:'formAlmuerzo' }
+    ]);
+    showModal(modal);
 }
 
 // Procesar Almuerzo
@@ -3837,13 +3810,8 @@ function procesarAlmuerzo(event) {
 function controlPagos() {
     const estadisticas = sistemaLiquidacion.obtenerEstadisticas();
     const movimientos = controlMovimientos.obtenerTodos();
-    
-    const html = `
-        <div class="modal-overlay" onclick="cerrarModal()">
-            <div class="modal-content modal-large" onclick="event.stopPropagation()">
-                <h3>💳 Control de Pagos</h3>
-                
-                <div class="stats-grid">
+    const content = `
+                <div class="stats-grid" style="margin-bottom:12px;">
                     <div class="stat-card">
                         <div class="stat-value">${estadisticas.totalLiquidacionesMes}</div>
                         <div class="stat-label">Liquidaciones del Mes</div>
@@ -3857,7 +3825,6 @@ function controlPagos() {
                         <div class="stat-label">Promedio</div>
                     </div>
                 </div>
-                
                 <div class="tab-container">
                     <div class="tab-nav">
                         <button class="tab-btn active" onclick="cambiarTab('resumen')">Resumen</button>
@@ -3880,15 +3847,11 @@ function controlPagos() {
                         ${generarTablaLiquidaciones(sistemaLiquidacion.liquidaciones.slice(-5))}
                     </div>
                 </div>
-                
-                <div class="modal-actions">
-                    <button type="button" onclick="cerrarModal()" class="btn btn-outline">Cerrar</button>
-                </div>
-            </div>
-        </div>
     `;
-    
-    mostrarModal(html);
+    const modal = createModal('💳 Control de Pagos', content, [
+        { text:'Cerrar', class:'btn-outline', onclick:'closeModal()' }
+    ], 'large');
+    showModal(modal);
 }
 
 // Generar resumen por técnicos
