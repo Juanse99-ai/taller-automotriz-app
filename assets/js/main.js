@@ -1928,6 +1928,65 @@ function guardarNuevoTrabajo(event) {
     console.log('- Total:', formatCurrency(trabajoCompleto.total));
 }
 
+// Exportar OT a formato CUENTTI (CSV)
+function exportarTrabajoACuentti() {
+    // Recolectar datos actuales del formulario de OT
+    const placa = (document.getElementById('trabajoPlaca')?.value || '').toUpperCase();
+    const fecha = new Date().toISOString().slice(0,10);
+
+    // Asegurar que MO está sincronizada como ítem
+    try { syncManoObraItem(); } catch (e) {}
+
+    const items = Array.isArray(window.itemsTrabajo) ? window.itemsTrabajo : [];
+    if (!items.length) { alert('No hay items para exportar'); return; }
+
+    // Construir filas según plantilla CUENTTI
+    const header = [
+        'Referencia o codigo de barras', 'Nombre', 'Precio Unitario', 'Cantidad', 'Descuento', 'Impuesto',
+        'SubTotal (No modificar)', 'Estampilla(sino Aplica 0)', 'Impoconsumo(sino Aplica 0)', 'Total (No modificar)', 'id_plan_cuenta (opcional solo Egresos)'
+    ];
+
+    const toNumber = v => Math.max(0, Number(v) || 0);
+    const rows = items.map(it => {
+        const ref = (it.codigo || '').toString();
+        const nombre = (it.nombre || '').toString();
+        const cantidad = Math.max(1, parseInt(it.cantidad) || 1);
+        const iva = toNumber(it.iva); // %
+        const precio = toNumber(it.precio);
+        // Precio Unitario base (pre-IVA si iva>0)
+        const precioUnitBase = iva > 0 ? (precio / (1 + (iva/100))) : precio;
+        // Descuento en % (si existiera)
+        const tipoDesc = it.tipoDescuento || '$';
+        const descVal = toNumber(it.descuento);
+        let descuentoPct = 0;
+        if (descVal > 0) {
+            descuentoPct = (tipoDesc === '%') ? descVal : (precioUnitBase > 0 ? (descVal / precioUnitBase) * 100 : 0);
+        }
+        const bruto = precioUnitBase * cantidad;
+        const subtotal = Math.max(0, bruto * (1 - (descuentoPct/100)));
+        const estampilla = 0;
+        const impoconsumo = 0;
+        const total = Math.round(subtotal * (1 + (iva/100)) + estampilla + impoconsumo);
+        return [ref, nombre, Math.round(precioUnitBase), cantidad, Math.round(descuentoPct), iva, Math.round(subtotal), estampilla, impoconsumo, total, ''];
+    });
+
+    const csv = [header, ...rows].map(r => r.map(v => {
+        const s = (v ?? '').toString();
+        return /[",\n;]/.test(s) ? '"' + s.replace(/"/g,'""') + '"' : s;
+    }).join(',')).join('\n');
+
+    const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const nombreArchivo = `OT-${placa || 'SIN_PLACA'}-${fecha}.csv`;
+    link.href = URL.createObjectURL(blob);
+    link.download = nombreArchivo;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+
+window.exportarTrabajoACuentti = exportarTrabajoACuentti;
+
 function actualizarMetricasTrabajos() {
     const trabajosTableBody = document.getElementById('trabajosTable');
     if (!trabajosTableBody) return;
@@ -3533,6 +3592,15 @@ function generarLiquidacion() {
     
     const preview = document.querySelector('#liquidacionAvanzada #preview-contenido');
     if (preview) preview.innerHTML = 'Selecciona un técnico y período para ver la vista previa';
+
+    // Disparar vista previa automática y re-render al cambiar filtros
+    try {
+        actualizarVistaPrevia();
+        const sel = form.querySelector('select[name="tecnicoId"]');
+        if (sel) sel.addEventListener('change', () => actualizarVistaPrevia());
+        if (inicio) inicio.addEventListener('change', () => actualizarVistaPrevia());
+        if (fin) fin.addEventListener('change', () => actualizarVistaPrevia());
+    } catch (e) { console.warn('No se pudo inicializar vista previa:', e); }
 }
 
 // Actualizar vista previa
