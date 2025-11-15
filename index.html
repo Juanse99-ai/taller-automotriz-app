@@ -251,7 +251,8 @@
                                         </div>
                                         <div class="form-group">
                                             <label class="form-label">👤 Cliente</label>
-                                            <input type="text" class="form-input" id="trabajoCliente" required placeholder="Nombre completo del cliente">
+                                            <input type="text" class="form-input" id="trabajoCliente" required placeholder="Nombre completo del cliente" oninput="buscarClientePorNombreOT(this.value)">
+                                            <div id="resultadosBusquedaNombre" class="busqueda-resultados"></div>
                                         </div>
                                     </div>
                                     <div class="form-row">
@@ -948,7 +949,8 @@
                                 <div class="form-row">
                                     <div class="form-group">
                                         <label class="form-label">Cliente</label>
-                                        <input type="text" class="form-input" id="rcpCliente" placeholder="Nombre del cliente" required>
+                                        <input type="text" class="form-input" id="rcpCliente" placeholder="Nombre del cliente" required oninput="buscarClientePorNombreRecepcion(this.value)">
+                                        <div id="rcpResultadosClientesNombre" class="busqueda-resultados"></div>
                                     </div>
                                     <div class="form-group">
                                         <label class="form-label">Cédula</label>

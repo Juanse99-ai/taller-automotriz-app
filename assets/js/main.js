@@ -982,6 +982,28 @@ function seleccionarCliente(nombre, cedula, telefono = '', email = '') {
     if (emailInput && email) emailInput.value = email;
 }
 
+// Buscar cliente por nombre (OT)
+function buscarClientePorNombreOT(nombre) {
+    const contenedor = document.getElementById('resultadosBusquedaNombre');
+    if (!contenedor) return;
+    const termino = (nombre || '').toString().trim().toLowerCase();
+    if (termino.length < 2) { contenedor.classList.remove('show'); contenedor.innerHTML=''; return; }
+    const baseClientes = obtenerListaClientes();
+    const resultados = baseClientes.filter(c => normalizarNombreCliente(c).toLowerCase().includes(termino) || normalizarDocumentoCliente(c).toLowerCase().includes(termino)).slice(0,50);
+    if (resultados.length) {
+        const escapar = v => (v||'').toString().replace(/'/g, "\\'").replace(/\"/g,'&quot;');
+        contenedor.innerHTML = resultados.map(c => {
+            const doc = normalizarDocumentoCliente(c); const nom = normalizarNombreCliente(c);
+            const tel = (c?.telefono || c?.phone || '').toString(); const mail = (c?.email || '').toString();
+            return `<div class="resultado-item" onclick="seleccionarCliente('${escapar(nom)}','${escapar(doc)}','${escapar(tel)}','${escapar(mail)}')"><strong>${doc}</strong> - ${nom}${tel?`<br><small style='color:#666'>📞 ${tel}</small>`:''}${mail?`<br><small style='color:#666'> 📧 ${mail}</small>`:''}</div>`;
+        }).join('');
+        contenedor.classList.add('show');
+    } else {
+        contenedor.innerHTML = '<div class="resultado-item">No se encontraron clientes</div>';
+        contenedor.classList.add('show');
+    }
+}
+
 function obtenerListaClientes() {
     return Array.isArray(supabaseClientes) && supabaseClientes.length ? supabaseClientes : clientes;
 }
@@ -1067,6 +1089,31 @@ function seleccionarClienteDesdeModal(nombre, cedula, telefono = '', email = '')
     seleccionarCliente(nombre, cedula, telefono, email);
     closeModal();
 }
+
+// Buscar cliente por nombre (Recepción)
+function buscarClientePorNombreRecepcion(nombre) {
+    const contenedor = document.getElementById('rcpResultadosClientesNombre');
+    if (!contenedor) return;
+    const termino = (nombre || '').toString().trim().toLowerCase();
+    if (termino.length < 2) { contenedor.classList.remove('show'); contenedor.innerHTML=''; return; }
+    const baseClientes = obtenerListaClientes();
+    const resultados = baseClientes.filter(c => normalizarNombreCliente(c).toLowerCase().includes(termino) || normalizarDocumentoCliente(c).toLowerCase().includes(termino)).slice(0,50);
+    if (resultados.length) {
+        const escapar = v => (v||'').toString().replace(/'/g, "\\'").replace(/\"/g,'&quot;');
+        contenedor.innerHTML = resultados.map(c => {
+            const doc = normalizarDocumentoCliente(c); const nom = normalizarNombreCliente(c);
+            const tel = (c?.telefono || c?.phone || '').toString(); const mail = (c?.email || '').toString();
+            return `<div class=\"resultado-item\" onclick=\"seleccionarClienteRecepcion('${escapar(nom)}','${escapar(doc)}','${escapar(tel)}','${escapar(mail)}')\"><strong>${doc}</strong> - ${nom}${tel?`<br><small style='color:#666'>📞 ${tel}</small>`:''}${mail?`<br><small style='color:#666'> 📧 ${mail}</small>`:''}</div>`;
+        }).join('');
+        contenedor.classList.add('show');
+    } else {
+        contenedor.innerHTML = '<div class="resultado-item">No se encontraron clientes</div>';
+        contenedor.classList.add('show');
+    }
+}
+
+window.buscarClientePorNombreOT = buscarClientePorNombreOT;
+window.buscarClientePorNombreRecepcion = buscarClientePorNombreRecepcion;
 
 // Editar cliente desde el modal
 function editarClienteDesdeModal(cedula, nombre, telefono = '', email = '', clienteId = '') {
