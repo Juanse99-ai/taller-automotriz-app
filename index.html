@@ -3426,14 +3426,14 @@ function agregarRepuesto(codigo, nombre, precio, categoria) {
     // Asegurar que precio sea un número
     const precioNumero = Number(precio) || 0;
     
-    // Los repuestos tienen IVA incluido por defecto (19%)
+    // Los repuestos YA tienen IVA incluido en el precio, por lo tanto IVA = 0%
     const item = {
         codigo: codigo,
         nombre: nombre,
         precio: precioNumero,
         categoria: categoria,
         cantidad: 1,
-        iva: 19  // IVA por defecto para repuestos
+        iva: 0  // IVA = 0% porque el precio ya incluye IVA
     };
     
     // Inicializar array si no existe
