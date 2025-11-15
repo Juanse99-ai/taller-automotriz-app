@@ -978,7 +978,10 @@ function buscarClientePorCedula(cedula) {
 function seleccionarCliente(nombre, cedula, telefono = '', email = '') {
     document.getElementById('trabajoCliente').value = nombre;
     document.getElementById('busquedaCedula').value = cedula;
-    document.getElementById('resultadosBusqueda').classList.remove('show');
+    const contCed = document.getElementById('resultadosBusqueda');
+    if (contCed) contCed.classList.remove('show');
+    const contNom = document.getElementById('resultadosBusquedaNombre');
+    if (contNom) { contNom.classList.remove('show'); contNom.innerHTML = ''; }
     const telefonoInput = document.getElementById('clienteTelefono');
     const emailInput = document.getElementById('clienteEmail');
     if (telefonoInput && telefono) telefonoInput.value = telefono;
@@ -1797,6 +1800,8 @@ function seleccionarClienteRecepcion(nombre, cedula, telefono = '', email = '') 
     setVal('rcpEmail', email);
     const cont = document.getElementById('rcpResultadosClientes');
     if (cont) { cont.classList.remove('show'); cont.innerHTML=''; }
+    const contNom = document.getElementById('rcpResultadosClientesNombre');
+    if (contNom) { contNom.classList.remove('show'); contNom.innerHTML=''; }
 }
 
 function buscarClientePorCedulaRecepcion(cedula) {
