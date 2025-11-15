@@ -3581,6 +3581,9 @@ function generarLiquidacion() {
         // Limpiar excepto placeholder
         select.innerHTML = '<option value="">Seleccionar técnico</option>' +
             (window.mecanicos || []).map(t => `<option value="${t.id}">${t.nombre || t.name || 'Técnico'}</option>`).join('');
+        // Seleccionar por defecto el primer técnico disponible
+        const firstOpt = select.querySelector('option[value]:not([value=""])');
+        if (firstOpt) select.value = firstOpt.value;
     }
     
     const hoy = new Date();
@@ -3618,6 +3621,15 @@ function actualizarVistaPrevia() {
     if (!tecnicoId) tecnicoId = form.querySelector('select[name="tecnicoId"]')?.value || '';
     if (!fechaInicio) fechaInicio = form.querySelector('input[name="fechaInicio"]')?.value || '';
     if (!fechaFin) fechaFin = form.querySelector('input[name="fechaFin"]')?.value || '';
+    // Si falta técnico, tomar el primero disponible y setearlo en el select
+    if (!tecnicoId) {
+        const sel = form.querySelector('select[name="tecnicoId"]');
+        const first = sel?.querySelector('option[value]:not([value=""])');
+        if (first) {
+            sel.value = first.value;
+            tecnicoId = first.value;
+        }
+    }
 
     // Si faltan fechas, usar por defecto últimos 30 días y pintar en el formulario
     if (!fechaInicio || !fechaFin) {
@@ -3783,7 +3795,8 @@ function procesarLiquidacionAvanzada(event) {
         
     } catch (error) {
         console.error('Error en liquidación:', error);
-        showNotification('Error al procesar la liquidación', 'error');
+        const msg = (error && (error.message || error.toString())) || 'Error desconocido';
+        showNotification('Error al procesar la liquidación: ' + msg, 'error');
     }
 }
 
