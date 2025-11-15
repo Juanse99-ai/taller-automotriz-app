@@ -82,6 +82,22 @@ body {
     width: 60px;
 }
 
+/* Hover-expand behavior for collapsed sidebar on desktop */
+@media (min-width: 769px) {
+  .sidebar.hover-expand.collapsed:hover {
+    width: 280px;
+  }
+  .sidebar.hover-expand.collapsed:hover .logo-text,
+  .sidebar.hover-expand.collapsed:hover .nav-text,
+  .sidebar.hover-expand.collapsed:hover .nav-section-title {
+    display: inline;
+  }
+  /* Expand main content padding when sidebar opens on hover */
+  .sidebar.hover-expand.collapsed:hover ~ .main-content {
+    padding-left: 280px;
+  }
+}
+
 .sidebar.collapsed .sidebar-header {
     padding: var(--sm) var(--xs);
     justify-content: center;
@@ -240,6 +256,33 @@ body {
 
 .main-content.sidebar-collapsed {
     padding-left: 80px;
+}
+
+/* Floating hamburger button */
+.hamburger-toggle {
+  position: fixed;
+  top: 14px;
+  left: 70px;
+  z-index: 1100;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  border: 1px solid rgba(0,0,0,0.1);
+  background: #ffffff;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+.hamburger-toggle:hover { background: #f8fafc; }
+.hamburger-toggle span { display:block; width:18px; height:2px; background:#111827; position:relative; }
+.hamburger-toggle span::before, .hamburger-toggle span::after { content:''; position:absolute; left:0; width:18px; height:2px; background:#111827; }
+.hamburger-toggle span::before { top:-6px; }
+.hamburger-toggle span::after { top:6px; }
+
+@media (max-width: 768px) {
+  .hamburger-toggle { left: 12px; top: 12px; }
 }
 
 /* Header - FINAL */
@@ -1038,4 +1081,3 @@ body {
     font-size: 48px;
     margin-bottom: var(--sm);
 }
-

@@ -81,6 +81,16 @@ function initializeApp() {
     
     console.log('✅ Aplicación completamente inicializada');
 
+    // Sidebar: iniciar en modo colapsado + hover-expand
+    try {
+        const sidebar = document.getElementById('sidebar');
+        const mainContent = document.querySelector('.main-content');
+        if (sidebar && mainContent && !sidebar.classList.contains('initialized')) {
+            sidebar.classList.add('collapsed','hover-expand','initialized');
+            mainContent.classList.add('sidebar-collapsed');
+        }
+    } catch(e) {}
+
     // Cerrar sugerencias al hacer click fuera o con Escape
     document.addEventListener('click', (e) => {
         const targets = ['#resultadosBusqueda','#resultadosBusquedaNombre','#rcpResultadosClientes','#rcpResultadosClientesNombre'];
@@ -274,6 +284,24 @@ function updateActiveNavItem(sectionName) {
 // Exportar funciones críticas al scope global inmediatamente
 window.toggleSidebar = toggleSidebar;
 window.showSection = showSection;
+
+// Limpiar datos locales para pruebas reales
+function clearLocalData() {
+    const keys = [
+        'supabase_clientes_backup','supabase_inventario_backup','supabase_last_sync',
+        'vehiculos_assoc','vehiculos_audit','movimientos_tecnicos','saldos_tecnicos',
+        'configuracion_taller','liquidaciones_completas'
+    ];
+    keys.forEach(k => localStorage.removeItem(k));
+    // Reset in-memory data
+    try {
+        if (window.__appData) { window.__appData.trabajos = []; window.__appData.vehiculos=[]; window.__appData.vehiculosAudit=[]; }
+        if (Array.isArray(window.supabaseClientes)) window.supabaseClientes.length = 0;
+        if (Array.isArray(window.supabaseInventario)) window.supabaseInventario.length = 0;
+    } catch(e) {}
+    showNotification('Datos locales limpiados. Refresca la página.', 'success');
+}
+window.clearLocalData = clearLocalData;
 
 // Load section data
 function loadSectionData(sectionName) {

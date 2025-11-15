@@ -114,6 +114,9 @@
 
             <!-- Main Content -->
             <div class="main-content">
+                <button class="hamburger-toggle" onclick="toggleSidebar()" title="Menú">
+                    <span></span>
+                </button>
                 <!-- Header -->
                 <div class="header">
                     <div class="header-content">
@@ -126,6 +129,7 @@
                                 <div class="user-name">Administrador</div>
                                 <div class="user-role">Gerente General</div>
                             </div>
+                            <button class="btn btn-outline" onclick="clearLocalData()" title="Limpiar datos locales">Limpiar Datos</button>
                             <button id="themeToggleBtn" class="btn btn-outline" onclick="toggleGlassTheme()" title="Cambiar tema">Tema iOS</button>
                             <button class="btn btn-outline" onclick="logout()">Cerrar Sesión</button>
                         </div>
