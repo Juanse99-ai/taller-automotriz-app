@@ -1347,16 +1347,18 @@ body {
                                         <table class="items-table">
                                             <thead>
                                                 <tr>
-                                                    <th style="width: 40%">Descripción</th>
-                                                    <th style="width: 10%">Cant.</th>
-                                                    <th style="width: 15%">Precio Unit.</th>
-                                                    <th style="width: 15%">Total</th>
+                                                    <th style="width: 35%">Descripción</th>
+                                                    <th style="width: 8%">Cant.</th>
+                                                    <th style="width: 12%">Precio Unit.</th>
+                                                    <th style="width: 12%">Total</th>
+                                                    <th style="width: 8%">IVA %</th>
+                                                    <th style="width: 15%">Total c/IVA</th>
                                                     <th style="width: 10%">Acciones</th>
                                                 </tr>
                                             </thead>
                                             <tbody id="itemsTrabajo">
                                                 <tr id="noItemsRow">
-                                                    <td colspan="5" style="text-align: center; padding: 40px; color: #666;">
+                                                    <td colspan="7" style="text-align: center; padding: 40px; color: #666;">
                                                         📝 No hay repuestos agregados. Usa la búsqueda de inventario arriba para agregar productos.
                                                     </td>
                                                 </tr>
@@ -1368,23 +1370,13 @@ body {
                                 <div class="pos-section">
                                     <h3 class="pos-section-title">💰 Resumen y Totales</h3>
                                     <div class="totales-container">
-                                        <div class="form-group">
-                                            <label class="form-label">💵 Mano de Obra (Valor total del servicio)</label>
-                                            <input type="number" class="form-input" id="manoObraValor" placeholder="45000" min="0" onchange="calcularTotal()">
-                                            <small style="color:#6b7280;">Ingresa el valor total que cobrarás por la mano de obra.</small>
-                                        </div>
-                                        
                                         <div class="totales-detalles">
                                             <div class="total-row">
-                                                <span>Subtotal Repuestos:</span>
+                                                <span>Subtotal (Sin IVA):</span>
                                                 <span id="subtotalRepuestos">$0</span>
                                             </div>
-                                            <div class="total-row">
-                                                <span>Subtotal Mano de Obra:</span>
-                                                <span id="subtotalManoObra">$0</span>
-                                            </div>
                                             <div class="total-row iva">
-                                                <span>IVA (19%):</span>
+                                                <span>IVA Total:</span>
                                                 <span id="subtotalIva">$0</span>
                                             </div>
                                             <div class="total-row grand-total">
@@ -2935,29 +2927,13 @@ function nuevoTrabajo() {
     
     // Initialize variables
     window.itemsTrabajo = [];
-    window.actualizarTotales = function() {
-        const subtotalRepuestos = window.itemsTrabajo.reduce((total, item) => total + (item.precio * item.cantidad), 0);
-        const manoObra = parseFloat(document.getElementById('manoObraValor').value) || 0;
-        const subtotalManoObra = manoObra;
-        const subtotal = subtotalRepuestos + subtotalManoObra;
-        const iva = subtotal * 0.19;
-        const total = subtotal + iva;
-        
-        document.getElementById('subtotalRepuestos').textContent = formatCurrency(subtotalRepuestos);
-        document.getElementById('subtotalManoObra').textContent = formatCurrency(subtotalManoObra);
-        document.getElementById('subtotalIva').textContent = formatCurrency(iva);
-        document.getElementById('totalFinal').textContent = formatCurrency(total);
-    };
-    
     // Mostrar el modal primero
     showModal(modal);
     
     // Set defaults después de que el modal se muestre
     setTimeout(() => {
         const anoInput = document.getElementById('vehiculoAno');
-        const manoObraInput = document.getElementById('manoObraValor');
         if (anoInput) anoInput.value = new Date().getFullYear();
-        if (manoObraInput && !manoObraInput.value) manoObraInput.value = 45000;
     }, 100);
     
     console.log('✅ Sistema POS para nuevo trabajo inicializado');
@@ -2966,29 +2942,33 @@ function nuevoTrabajo() {
 function actualizarTotales() {
     const items = Array.isArray(window.itemsTrabajo) ? window.itemsTrabajo : [];
     
-    // Asegurar que precio y cantidad sean números al calcular
-    const subtotalRepuestos = items.reduce((total, item) => {
+    // Calcular subtotal sin IVA y total con IVA por item
+    let subtotalSinIva = 0;
+    let totalIva = 0;
+    let totalConIva = 0;
+    
+    items.forEach(item => {
         const precio = Number(item.precio) || 0;
         const cantidad = Number(item.cantidad) || 1;
-        return total + (precio * cantidad);
-    }, 0);
-    
-    const manoObraInput = document.getElementById('manoObraValor');
-    const manoObra = manoObraInput ? parseFloat(manoObraInput.value) || 0 : 0;
-    const subtotalManoObra = manoObra;
-    const subtotal = subtotalRepuestos + subtotalManoObra;
-    const iva = subtotal * 0.19;
-    const total = subtotal + iva;
+        const ivaPorcentaje = Number(item.iva) || 0;
+        
+        const subtotalItem = precio * cantidad;
+        const ivaItem = subtotalItem * (ivaPorcentaje / 100);
+        const totalItemConIva = subtotalItem + ivaItem;
+        
+        subtotalSinIva += subtotalItem;
+        totalIva += ivaItem;
+        totalConIva += totalItemConIva;
+    });
 
     const setText = (id, value) => {
         const el = document.getElementById(id);
         if (el) el.textContent = value;
     };
 
-    setText('subtotalRepuestos', formatCurrency(subtotalRepuestos));
-    setText('subtotalManoObra', formatCurrency(subtotalManoObra));
-    setText('subtotalIva', formatCurrency(iva));
-    setText('totalFinal', formatCurrency(total));
+    setText('subtotalRepuestos', formatCurrency(subtotalSinIva));
+    setText('subtotalIva', formatCurrency(totalIva));
+    setText('totalFinal', formatCurrency(totalConIva));
 }
 
 window.actualizarTotales = actualizarTotales;
@@ -2999,9 +2979,6 @@ function inicializarNuevoTrabajoForm() {
 
     window.itemsTrabajo = [];
     actualizarTablaItems();
-
-    const manoObraInput = document.getElementById('manoObraValor');
-    if (manoObraInput) manoObraInput.value = 45000;
 
     const anoInput = document.getElementById('vehiculoAno');
     if (anoInput) anoInput.value = new Date().getFullYear();
@@ -3449,13 +3426,20 @@ function agregarRepuesto(codigo, nombre, precio, categoria) {
     // Asegurar que precio sea un número
     const precioNumero = Number(precio) || 0;
     
+    // Los repuestos tienen IVA incluido por defecto (19%)
     const item = {
         codigo: codigo,
         nombre: nombre,
         precio: precioNumero,
         categoria: categoria,
-        cantidad: 1
+        cantidad: 1,
+        iva: 19  // IVA por defecto para repuestos
     };
+    
+    // Inicializar array si no existe
+    if (!window.itemsTrabajo) {
+        window.itemsTrabajo = [];
+    }
     
     // Verificar si ya existe
     const index = window.itemsTrabajo.findIndex(i => i.codigo === codigo);
@@ -3466,8 +3450,10 @@ function agregarRepuesto(codigo, nombre, precio, categoria) {
     }
     
     actualizarTablaItems();
-    document.getElementById('resultadosInventario').classList.remove('show');
-    document.getElementById('busquedaRepuesto').value = '';
+    const resultadosInventario = document.getElementById('resultadosInventario');
+    if (resultadosInventario) resultadosInventario.classList.remove('show');
+    const busquedaRepuesto = document.getElementById('busquedaRepuesto');
+    if (busquedaRepuesto) busquedaRepuesto.value = '';
 }
 
 function agregarRepuestoDesdeBusqueda(index) {
@@ -3485,15 +3471,19 @@ function agregarRepuestoDesdeBusqueda(index) {
 
 // Agregar servicio manual
 function agregarServicioManual() {
-    const nombre = prompt('Ingrese el nombre del servicio/repuesto:');
+    const nombre = prompt('Ingrese el nombre del servicio/repuesto (ej: Mano de Obra, Servicio X):');
     if (nombre && nombre.trim()) {
         const precio = parseFloat(prompt('Ingrese el precio:')) || 0;
+        const tieneIva = confirm('¿Este servicio tiene IVA? (Acepta = Sí, Cancelar = No)');
+        const ivaPorcentaje = tieneIva ? 19 : 0;
+        
         const item = {
             codigo: 'SERV-' + Date.now(),
             nombre: nombre.trim(),
             precio: precio,
             categoria: 'Servicio Manual',
-            cantidad: 1
+            cantidad: 1,
+            iva: ivaPorcentaje
         };
         
         window.itemsTrabajo.push(item);
@@ -3504,28 +3494,36 @@ function agregarServicioManual() {
 // Actualizar tabla de items
 function actualizarTablaItems() {
     const tbody = document.getElementById('itemsTrabajo');
+    if (!tbody) return;
     
-    if (window.itemsTrabajo.length === 0) {
-        document.getElementById('noItemsRow').style.display = 'table-row';
+    if (!window.itemsTrabajo || window.itemsTrabajo.length === 0) {
+        const noItemsRow = document.getElementById('noItemsRow');
+        if (noItemsRow) noItemsRow.style.display = 'table-row';
         actualizarTotales();
         return;
     }
     
-    document.getElementById('noItemsRow').style.display = 'none';
+    const noItemsRow = document.getElementById('noItemsRow');
+    if (noItemsRow) noItemsRow.style.display = 'none';
     
     tbody.innerHTML = window.itemsTrabajo.map((item, index) => {
         // Asegurar que precio y cantidad sean números
         const precio = Number(item.precio) || 0;
         const cantidad = Number(item.cantidad) || 1;
-        const total = precio * cantidad;
+        const ivaPorcentaje = Number(item.iva) || 0;
+        const subtotal = precio * cantidad;
+        const valorIva = subtotal * (ivaPorcentaje / 100);
+        const totalConIva = subtotal + valorIva;
         
         return `
         <tr>
             <td><strong>${item.nombre}</strong><br><small style="color: #666;">${item.codigo} - ${item.categoria}</small></td>
-            <td><input type="number" value="${cantidad}" min="1" onchange="cambiarCantidad(${index}, this.value)" oninput="cambiarCantidad(${index}, this.value)"></td>
+            <td><input type="number" value="${cantidad}" min="1" onchange="cambiarCantidad(${index}, this.value)" oninput="cambiarCantidad(${index}, this.value)" style="width: 60px;"></td>
             <td>${formatCurrency(precio)}</td>
-            <td id="totalItem${index}">${formatCurrency(total)}</td>
-            <td><button type="button" class="remove-item" onclick="eliminarItem(${index})">🗑️</button></td>
+            <td id="subtotalItem${index}">${formatCurrency(subtotal)}</td>
+            <td><input type="number" value="${ivaPorcentaje}" min="0" max="100" step="0.01" onchange="cambiarIva(${index}, this.value)" oninput="cambiarIva(${index}, this.value)" style="width: 60px;" placeholder="0">%</td>
+            <td id="totalItem${index}">${formatCurrency(totalConIva)}</td>
+            <td><button type="button" class="remove-item" onclick="eliminarItem(${index})" style="background: #ef4444; color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer;">🗑️</button></td>
         </tr>
         `;
     }).join('');
@@ -3533,32 +3531,68 @@ function actualizarTablaItems() {
     actualizarTotales();
 }
 
+window.actualizarTablaItems = actualizarTablaItems;
+
 // Cambiar cantidad de item
 function cambiarCantidad(index, nuevaCantidad) {
     const cantidad = Math.max(1, parseInt(nuevaCantidad) || 1);
     
-    if (window.itemsTrabajo[index]) {
-        // Asegurar que la cantidad sea un número
-    window.itemsTrabajo[index].cantidad = cantidad;
+    if (window.itemsTrabajo && window.itemsTrabajo[index]) {
+        window.itemsTrabajo[index].cantidad = cantidad;
         
-        // Actualizar el total de esta fila inmediatamente sin recargar toda la tabla
-        const precio = Number(window.itemsTrabajo[index].precio) || 0;
-        const total = precio * cantidad;
+        // Recalcular totales de la fila
+        const item = window.itemsTrabajo[index];
+        const precio = Number(item.precio) || 0;
+        const ivaPorcentaje = Number(item.iva) || 0;
+        const subtotal = precio * cantidad;
+        const valorIva = subtotal * (ivaPorcentaje / 100);
+        const totalConIva = subtotal + valorIva;
+        
+        const subtotalCell = document.getElementById(`subtotalItem${index}`);
         const totalCell = document.getElementById(`totalItem${index}`);
-        if (totalCell) {
-            totalCell.textContent = formatCurrency(total);
-        }
+        if (subtotalCell) subtotalCell.textContent = formatCurrency(subtotal);
+        if (totalCell) totalCell.textContent = formatCurrency(totalConIva);
         
-        // Actualizar los totales generales
+        actualizarTotales();
+    }
+}
+
+// Cambiar IVA de item
+function cambiarIva(index, nuevoIva) {
+    const ivaPorcentaje = Math.max(0, parseFloat(nuevoIva) || 0);
+    
+    if (window.itemsTrabajo && window.itemsTrabajo[index]) {
+        window.itemsTrabajo[index].iva = ivaPorcentaje;
+        
+        // Recalcular totales de la fila
+        const item = window.itemsTrabajo[index];
+        const precio = Number(item.precio) || 0;
+        const cantidad = Number(item.cantidad) || 1;
+        const subtotal = precio * cantidad;
+        const valorIva = subtotal * (ivaPorcentaje / 100);
+        const totalConIva = subtotal + valorIva;
+        
+        const totalCell = document.getElementById(`totalItem${index}`);
+        if (totalCell) totalCell.textContent = formatCurrency(totalConIva);
+        
         actualizarTotales();
     }
 }
 
 // Eliminar item
 function eliminarItem(index) {
+    if (!window.itemsTrabajo || index < 0 || index >= window.itemsTrabajo.length) {
+        console.error('❌ Índice inválido para eliminar:', index);
+        return;
+    }
+    
     window.itemsTrabajo.splice(index, 1);
     actualizarTablaItems();
 }
+
+window.eliminarItem = eliminarItem;
+window.cambiarCantidad = cambiarCantidad;
+window.cambiarIva = cambiarIva;
 
 // Calcular totales
 function calcularTotal() {
@@ -3587,11 +3621,18 @@ function previsualizarTrabajo() {
             <div><strong>Técnico:</strong> ${document.getElementById('trabajoTecnico').selectedOptions[0].text}</div>
             <br>
             <h4>🔧 Items del Trabajo:</h4>
-            ${window.itemsTrabajo.length > 0 ? window.itemsTrabajo.map(item => 
-                `<div>• ${item.nombre} (${item.cantidad}x) - ${formatCurrency(item.precio * item.cantidad)}</div>`
-            ).join('') : '<div>No hay items agregados</div>'}
+            ${window.itemsTrabajo.length > 0 ? window.itemsTrabajo.map(item => {
+                const precio = Number(item.precio) || 0;
+                const cantidad = Number(item.cantidad) || 1;
+                const ivaPorcentaje = Number(item.iva) || 0;
+                const subtotal = precio * cantidad;
+                const ivaItem = subtotal * (ivaPorcentaje / 100);
+                const totalConIva = subtotal + ivaItem;
+                return `<div>• ${item.nombre} (${cantidad}x) - ${formatCurrency(subtotal)} ${ivaPorcentaje > 0 ? `+ IVA ${ivaPorcentaje}% = ${formatCurrency(totalConIva)}` : ''}</div>`;
+            }).join('') : '<div>No hay items agregados</div>'}
             <br>
-            <div><strong>Mano de Obra:</strong> ${formatCurrency(document.getElementById('manoObraValor').value || 0)}</div>
+            <div><strong>Subtotal (Sin IVA):</strong> ${document.getElementById('subtotalRepuestos').textContent}</div>
+            <div><strong>IVA Total:</strong> ${document.getElementById('subtotalIva').textContent}</div>
             <div><strong>Total Final:</strong> ${document.getElementById('totalFinal').textContent}</div>
         </div>
     `;
@@ -3636,13 +3677,21 @@ function guardarNuevoTrabajo(event) {
         return;
     }
     
-    // Calcular totales finales
-    const subtotalRepuestos = window.itemsTrabajo.reduce((total, item) => total + (item.precio * item.cantidad), 0);
-    const manoObraValor = parseFloat(document.getElementById('manoObraValor').value) || 0;
-    const subtotalManoObra = manoObraValor;
-    const subtotal = subtotalRepuestos + subtotalManoObra;
-    const iva = subtotal * 0.19;
-    const total = subtotal + iva;
+    // Calcular totales finales (sin mano de obra separada - ahora es un servicio más)
+    let subtotalSinIva = 0;
+    let totalIva = 0;
+    let totalConIva = 0;
+    
+    window.itemsTrabajo.forEach(item => {
+        const precio = Number(item.precio) || 0;
+        const cantidad = Number(item.cantidad) || 1;
+        const ivaPorcentaje = Number(item.iva) || 0;
+        const subtotalItem = precio * cantidad;
+        const ivaItem = subtotalItem * (ivaPorcentaje / 100);
+        subtotalSinIva += subtotalItem;
+        totalIva += ivaItem;
+        totalConIva += subtotalItem + ivaItem;
+    });
     
     // Crear objeto de trabajo completo
     const trabajoCompleto = {
@@ -3668,17 +3717,11 @@ function guardarNuevoTrabajo(event) {
         
         // Sistema POS
         items: [...window.itemsTrabajo],
-        manoObra: {
-            valor: manoObraValor,
-            subtotal: subtotalManoObra
-        },
         
-        // Totales
-        subtotalRepuestos: subtotalRepuestos,
-        subtotalManoObra: subtotalManoObra,
-        subtotal: subtotal,
-        iva: iva,
-        total: total,
+        // Totales (sin mano de obra separada)
+        subtotalSinIva: subtotalSinIva,
+        totalIva: totalIva,
+        total: totalConIva,
         
         // Estado del pago
         pagado: false,
