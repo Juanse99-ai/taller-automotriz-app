@@ -1205,7 +1205,7 @@ function buscarEnInventario(termino) {
     window._ultimosResultadosInventario = resultados;
     if (resultados.length > 0) {
         contenedor.innerHTML = resultados.map((item, index) => {
-            const codigo = item.codigo || item.code || 'S/C';
+            const codigo = item.codigo || item.code || '';
             const nombre = item.nombre || item.name || item.producto || 'Producto sin nombre';
             const categoria = item.categoria || item.category || 'General';
             const referencia = item.referencia || item.ref || item.referencia_interna || item.codigo_barras || '';
@@ -1244,7 +1244,7 @@ function agregarRepuesto(codigo, nombre, precio, categoria) {
     // Cada item se agrega como uno nuevo (no se combinan automáticamente)
     const item = {
         id: 'ITEM-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9), // ID único
-        codigo: codigo || 'S/C',
+        codigo: codigo || '',
         nombre: nombre || 'Producto sin nombre',
         precio: precioNumero,
         categoria: categoria || 'General',
@@ -1271,7 +1271,7 @@ function agregarRepuestoDesdeBusqueda(index) {
     const item = lista[index];
     if (!item) return;
     
-    const codigo = item.codigo || item.code || 'S/C';
+    const codigo = item.codigo || item.code || '';
     const nombre = item.nombre || item.name || item.producto || 'Producto sin nombre';
     const categoria = item.categoria || item.category || 'General';
     const precio = Number(item.precio || item.price || item.valor || 0);
@@ -1507,7 +1507,7 @@ function obtenerSugerenciasInventario(termino, limite = 8) {
         const referencia = (item.referencia || item.ref || item.referencia_interna || '').toString().toLowerCase();
         return codigo.includes(q) || nombre.includes(q) || referencia.includes(q);
     }).slice(0, limite).map(it => ({
-        codigo: it.codigo || it.code || 'S/C',
+        codigo: it.codigo || it.code || '',
         nombre: it.nombre || it.name || it.producto || 'Producto',
         precio: Number(it.precio || it.price || it.valor || 0),
         categoria: it.categoria || it.category || 'General'
@@ -2824,12 +2824,29 @@ class ControlMovimientosTecnicos {
             trabajoId: trabajoId,
             observaciones: observaciones,
             procesado: false,
+            aplicadoAcumulado: 0,
             createdAt: new Date().toISOString()
         };
         
         this.movimientos.push(movimiento);
         this.guardar();
         return movimiento;
+    }
+
+    // Aplicar montos parciales de adelantos a una liquidación
+    aplicarAdelantos(tecnicoId, aplicacionesMap = {}) {
+        const ids = Object.keys(aplicacionesMap).map(id => parseFloat(id));
+        if (ids.length === 0) return;
+        this.movimientos.forEach(mov => {
+            if (mov.tecnicoId === tecnicoId && mov.tipoMovimiento === 'adelanto' && ids.includes(mov.id)) {
+                const aplicar = Math.max(0, parseInt(aplicacionesMap[mov.id] || 0));
+                mov.aplicadoAcumulado = Math.max(0, (mov.aplicadoAcumulado || 0) + aplicar);
+                if (mov.aplicadoAcumulado >= Math.abs(mov.monto)) {
+                    mov.procesado = true;
+                }
+            }
+        });
+        this.guardar();
     }
 
     // Obtener movimientos de un técnico en un período
@@ -3008,7 +3025,7 @@ class SistemaLiquidacion {
     }
 
     // Generar liquidación para un período
-    generarLiquidacion(tecnicoId, fechaInicio, fechaFin, observaciones = '') {
+    generarLiquidacion(tecnicoId, fechaInicio, fechaFin, observaciones = '', opciones = {}) {
         console.log(`💼 Generando liquidación para técnico ${tecnicoId} del ${fechaInicio} al ${fechaFin}`);
         
         // Obtener trabajos completados en el período
@@ -3024,13 +3041,19 @@ class SistemaLiquidacion {
         // Calcular totales
         const totales = controlMovimientos.calcularTotales(tecnicoId, fechaInicio, fechaFin);
         
-        // Calcular neto
-        const netoPagar = totalManosObra + totales.adelantos + totales.pagos - 
-                         totales.almuerzos - totales.descuentos - totales.prestamos - totales.materiales;
+        // Aplicaciones parciales de adelantos (mapa id->aplicar)
+        const aplicarAdelantosMap = opciones.aplicarAdelantosMap || {};
+        const aplicadoAdelantos = Object.values(aplicarAdelantosMap).reduce((s, v) => s + (parseInt(v) || 0), 0);
+        
+        // Neto: MO (pre-IVA) menos adelantos aplicados y otros cargos; no descontar materiales
+        const netoPagar = totalManosObra - aplicadoAdelantos - totales.almuerzos - totales.descuentos - totales.prestamos - totales.pagos;
         
         // Obtener trabajos liquidados
         const trabajosIds = trabajosCompletados.map(t => t.id);
-        const movimientosIds = movimientosNoProcesados.map(m => m.id);
+        // Marcar como procesados los movimientos no-adelanto del período (se consideran aplicados íntegramente)
+        const noAdelantosIds = movimientos
+            .filter(m => m.tipoMovimiento !== 'adelanto')
+            .map(m => m.id);
         
         // Crear liquidación
         const liquidacion = {
@@ -3045,11 +3068,26 @@ class SistemaLiquidacion {
             totalDescuentos: totales.descuentos,
             totalPrestamos: totales.prestamos,
             totalPagos: totales.pagos,
+            adelantoAplicado: aplicadoAdelantos,
             montoNeto: netoPagar,
             trabajosLiquidados: trabajosIds,
-            movimientosAplicados: movimientosIds,
+            movimientosAplicados: [...noAdelantosIds, ...Object.keys(aplicarAdelantosMap).map(id => parseFloat(id))],
             trabajos: trabajosCompletados,
             movimientos: movimientos,
+            detalleTrabajos: trabajosCompletados.map(t => ({
+                id: t.id,
+                fecha: (t.fecha || '').toString().slice(0,10),
+                placa: t.placa,
+                marca: t.marca,
+                modelo: t.modelo,
+                ano: t.ano,
+                cliente: t.cliente,
+                manoObra: t.manoObra || 0
+            })),
+            detalleAplicaciones: Object.keys(aplicarAdelantosMap).map(id => ({
+                movimientoId: parseFloat(id),
+                aplicado: parseInt(aplicarAdelantosMap[id] || 0)
+            })),
             observaciones: observaciones,
             createdAt: new Date().toISOString()
         };
@@ -3057,8 +3095,9 @@ class SistemaLiquidacion {
         this.liquidaciones.push(liquidacion);
         this.guardar();
         
-        // Marcar movimientos como procesados
-        controlMovimientos.marcarComoProcesados(movimientosIds);
+        // Aplicar adelantos parcialmente y marcar no-adelantos como procesados
+        controlMovimientos.aplicarAdelantos(tecnicoId, aplicarAdelantosMap);
+        controlMovimientos.marcarComoProcesados(noAdelantosIds);
         
         // Actualizar saldo del técnico
         controlSaldos.actualizarSaldo(tecnicoId, netoPagar);
@@ -3069,16 +3108,18 @@ class SistemaLiquidacion {
     // Obtener trabajos completados por período
     obtenerTrabajosCompletadosPorPeriodo(tecnicoId, fechaInicio, fechaFin) {
         const trabajos = window.trabajos || [];
-        return trabajos.filter(trabajo => {
+        let filtrados = trabajos.filter(trabajo => {
             const fechaTrabajo = new Date(trabajo.fecha || Date.now());
             const inicio = new Date(fechaInicio);
             const fin = new Date(fechaFin);
             
             return trabajo.mecanico === tecnicoId && 
                    fechaTrabajo >= inicio && 
-                   fechaTrabajo <= fin &&
-                   trabajo.estado === 'completado';
+                   fechaTrabajo <= fin;
         });
+        // Si hay estado, considerar todo menos cancelados; si no, devolver los mismos
+        filtrados = filtrados.filter(t => (typeof t.estado === 'undefined') || (t.estado && t.estado.toLowerCase() !== 'cancelado'));
+        return filtrados;
     }
 
     // Calcular manos de obra
@@ -3525,55 +3566,76 @@ function actualizarVistaPrevia() {
         return;
     }
     
-    const trabajosCompletados = sistemaLiquidacion.obtenerTrabajosCompletadosPorPeriodo(tecnicoId, fechaInicio, fechaFin);
-    const totalManosObra = sistemaLiquidacion.calcularManosObra(trabajosCompletados);
+    const trabajosPeriodo = sistemaLiquidacion.obtenerTrabajosCompletadosPorPeriodo(tecnicoId, fechaInicio, fechaFin);
+    const totalManosObra = sistemaLiquidacion.calcularManosObra(trabajosPeriodo);
     const totales = controlMovimientos.calcularTotales(tecnicoId, fechaInicio, fechaFin);
-    const netoPagar = totalManosObra + totales.adelantos + totales.pagos - 
-                     totales.almuerzos - totales.descuentos - totales.prestamos - totales.materiales;
-    const nombreTecnico = tecnico.nombre || tecnico.name || 'Técnico';
-    
+
+    // Adelantos del período (con restante)
+    const movimientosPeriodo = controlMovimientos.obtenerMovimientosPorPeriodo(tecnicoId, fechaInicio, fechaFin) || [];
+    const adelantos = movimientosPeriodo.filter(m => m.tipoMovimiento === 'adelanto');
+    let restanteMO = totalManosObra;
+    const aplicarMap = {};
+    const filasAdelantos = adelantos.map(m => {
+        const aplicado = Math.max(0, parseInt(m.aplicadoAcumulado || 0));
+        const disponible = Math.max(0, Math.abs(m.monto) - aplicado);
+        const aplicar = Math.min(disponible, Math.max(0, restanteMO));
+        aplicarMap[m.id] = aplicar;
+        restanteMO -= aplicar;
+        return `
+            <tr>
+                <td>${m.fechaMovimiento}</td>
+                <td>${m.concepto || 'Adelanto'}</td>
+                <td>$${(m.monto).toLocaleString()}</td>
+                <td>$${aplicado.toLocaleString()}</td>
+                <td>
+                    <input type="number" min="0" max="${disponible}" value="${aplicar}" name="adelanto-aplicar-${m.id}" style="width:120px; text-align:right;" />
+                </td>
+                <td>$${disponible.toLocaleString()}</td>
+            </tr>`;
+    }).join('') || '<tr><td colspan="6">Sin adelantos en el período</td></tr>';
+
+    // Construir detalle de trabajos
+    const filasTrabajos = trabajosPeriodo.map(t => `
+        <tr>
+            <td>${(t.fecha || '').toString().slice(0,10)}</td>
+            <td>${t.placa || ''}</td>
+            <td>${[t.marca,t.modelo,t.ano].filter(Boolean).join(' ')}</td>
+            <td>${t.cliente || ''}</td>
+            <td style="text-align:right;">$${(t.manoObra || 0).toLocaleString()}</td>
+        </tr>
+    `).join('') || '<tr><td colspan="5">Sin trabajos en el período</td></tr>';
+
+    // Estado de cuenta estimado (usa aplicarMap por defecto)
+    const aplicarTotal = Object.values(aplicarMap).reduce((s,v)=> s + (parseInt(v)||0), 0);
+    const netoEstimado = totalManosObra - aplicarTotal - totales.almuerzos - totales.descuentos - totales.prestamos - totales.pagos;
+
     const html = `
         <div class="preview-section">
-            <h5>${nombreTecnico}</h5>
-            <div class="preview-details">
-                <div class="preview-item">
-                    <span>Trabajos completados:</span>
-                    <span>${trabajosCompletados.length}</span>
-                </div>
-                <div class="preview-item">
-                    <span>Total manos de obra:</span>
-                    <span>$${totalManosObra.toLocaleString()}</span>
-                </div>
-                <div class="preview-item">
-                    <span>Adelantos:</span>
-                    <span class="text-success">+$${totales.adelantos.toLocaleString()}</span>
-                </div>
-                <div class="preview-item">
-                    <span>Almuerzos:</span>
-                    <span class="text-danger">-$${totales.almuerzos.toLocaleString()}</span>
-                </div>
-                <div class="preview-item">
-                    <span>Descuentos:</span>
-                    <span class="text-danger">-$${totales.descuentos.toLocaleString()}</span>
-                </div>
-                <div class="preview-item">
-                    <span>Préstamos:</span>
-                    <span class="text-danger">-$${totales.prestamos.toLocaleString()}</span>
-                </div>
-                <div class="preview-item">
-                    <span>Materiales:</span>
-                    <span class="text-danger">-$${totales.materiales.toLocaleString()}</span>
-                </div>
-                <div class="preview-item total">
-                    <span><strong>NETO A PAGAR:</strong></span>
-                    <span class="${netoPagar >= 0 ? 'text-success' : 'text-danger'}">
-                        <strong>${netoPagar >= 0 ? '+' : ''}$${netoPagar.toLocaleString()}</strong>
-                    </span>
-                </div>
+            <h5>${tecnico.nombre || tecnico.name || 'Técnico'}</h5>
+            <div class="preview-details" style="margin-bottom:10px;">
+                <div class="preview-item"><span>Trabajos:</span><span>${trabajosPeriodo.length}</span></div>
+                <div class="preview-item"><span>Total MO (pre-IVA):</span><span>$${totalManosObra.toLocaleString()}</span></div>
+                <div class="preview-item"><span>Adelantos a aplicar:</span><span>-$${aplicarTotal.toLocaleString()}</span></div>
+                <div class="preview-item"><span>Almuerzos:</span><span>-$${totales.almuerzos.toLocaleString()}</span></div>
+                <div class="preview-item"><span>Descuentos:</span><span>-$${totales.descuentos.toLocaleString()}</span></div>
+                <div class="preview-item"><span>Préstamos:</span><span>-$${totales.prestamos.toLocaleString()}</span></div>
+                <div class="preview-item"><span>Pagos previos:</span><span>-$${totales.pagos.toLocaleString()}</span></div>
+                <div class="preview-item total"><span><strong>NETO ESTIMADO:</strong></span><span class="${netoEstimado>=0?'text-success':'text-danger'}"><strong>$${Math.abs(netoEstimado).toLocaleString()}</strong></span></div>
             </div>
+            <h6>Trabajos del período</h6>
+            <table class="data-table" style="width:100%; margin-bottom:12px;">
+                <thead><tr><th>Fecha</th><th>Placa</th><th>Vehículo</th><th>Cliente</th><th>MO</th></tr></thead>
+                <tbody>${filasTrabajos}</tbody>
+            </table>
+            <h6>Adelantos (aplicación parcial)</h6>
+            <table class="data-table" style="width:100%;">
+                <thead><tr><th>Fecha</th><th>Concepto</th><th>Monto</th><th>Aplicado</th><th>Aplicar ahora</th><th>Pendiente</th></tr></thead>
+                <tbody>${filasAdelantos}</tbody>
+            </table>
+            <small style="color:#6b7280;">Puedes ajustar los campos "Aplicar ahora" antes de generar.</small>
         </div>
     `;
-    
+
     const preview = document.querySelector('#liquidacionAvanzada #preview-contenido');
     if (preview) preview.innerHTML = html;
 }
@@ -3589,12 +3651,21 @@ function procesarLiquidacionAvanzada(event) {
     const fechaFin = datos.get('fechaFin');
     const observaciones = datos.get('observaciones');
     
+    // Recoger aplicaciones parciales de adelantos
+    const aplicarAdelantosMap = {};
+    form.querySelectorAll('input[name^="adelanto-aplicar-"]').forEach(inp => {
+        const id = inp.name.replace('adelanto-aplicar-','');
+        const v = Math.max(0, parseInt(inp.value || 0));
+        if (v > 0) aplicarAdelantosMap[id] = v;
+    });
+    
     try {
         const liquidacion = sistemaLiquidacion.generarLiquidacion(
             tecnicoId, 
             fechaInicio, 
             fechaFin, 
-            observaciones
+            observaciones,
+            { aplicarAdelantosMap }
         );
         
         const tecnico = window.mecanicos.find(t => t.id === tecnicoId);
