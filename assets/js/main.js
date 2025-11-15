@@ -3606,10 +3606,18 @@ function generarLiquidacion() {
 // Actualizar vista previa
 function actualizarVistaPrevia() {
     const form = document.getElementById('liquidacionAvanzadaForm');
+    if (!form) {
+        console.warn('No se encontró #liquidacionAvanzadaForm');
+        return;
+    }
     const datos = new FormData(form);
-    const tecnicoId = datos.get('tecnicoId');
-    const fechaInicio = datos.get('fechaInicio');
-    const fechaFin = datos.get('fechaFin');
+    // Fallbacks por si FormData devuelve vacío en Safari/iOS para input date/select
+    let tecnicoId = datos.get('tecnicoId');
+    let fechaInicio = datos.get('fechaInicio');
+    let fechaFin = datos.get('fechaFin');
+    if (!tecnicoId) tecnicoId = form.querySelector('select[name="tecnicoId"]')?.value || '';
+    if (!fechaInicio) fechaInicio = form.querySelector('input[name="fechaInicio"]')?.value || '';
+    if (!fechaFin) fechaFin = form.querySelector('input[name="fechaFin"]')?.value || '';
     
     if (!tecnicoId || !fechaInicio || !fechaFin) {
         const preview = document.querySelector('#liquidacionAvanzada #preview-contenido');
@@ -3714,13 +3722,22 @@ function actualizarVistaPrevia() {
 // Procesar liquidación avanzada
 function procesarLiquidacionAvanzada(event) {
     event.preventDefault();
-    const form = event.target;
+    const form = event.target.closest('form') || document.getElementById('liquidacionAvanzadaForm');
     const datos = new FormData(form);
     
-    const tecnicoId = parseInt(datos.get('tecnicoId'));
-    const fechaInicio = datos.get('fechaInicio');
-    const fechaFin = datos.get('fechaFin');
+    let tecnicoId = parseInt(datos.get('tecnicoId'));
+    let fechaInicio = datos.get('fechaInicio');
+    let fechaFin = datos.get('fechaFin');
     const observaciones = datos.get('observaciones');
+    // Fallbacks
+    if (!tecnicoId) tecnicoId = parseInt(form.querySelector('select[name="tecnicoId"]')?.value || '0');
+    if (!fechaInicio) fechaInicio = form.querySelector('input[name="fechaInicio"]')?.value || '';
+    if (!fechaFin) fechaFin = form.querySelector('input[name="fechaFin"]')?.value || '';
+    
+    if (!tecnicoId || !fechaInicio || !fechaFin) {
+        showNotification('Completa Técnico, Fecha Inicio y Fecha Fin', 'warning');
+        return;
+    }
     
     // Recoger aplicaciones parciales de adelantos
     const aplicarAdelantosMap = {};
