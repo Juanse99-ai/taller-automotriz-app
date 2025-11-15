@@ -1405,9 +1405,19 @@ function actualizarTablaItems() {
             <td style="padding: 12px 10px; vertical-align: middle;">
                 <div style="display:flex; gap:10px; align-items:flex-start;">
                     <button type="button" title="Eliminar" onclick="eliminarItem(${index})" style="background:#ef4444;color:#fff;border:none;padding:6px 8px;border-radius:4px;cursor:pointer;flex-shrink:0;">🗑️</button>
-                    <div style="flex:1; min-width:0; display:flex; flex-direction:column; gap:8px;">
-                        <input type="text" value="${codigo}" placeholder="Referencia" onchange="cambiarCodigo(${index}, this.value)" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:4px;font-size:14px;" />
-                        <input type="text" value="${nombre}" placeholder="Descripción" onchange="cambiarDescripcion(${index}, this.value)" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:4px;font-size:14px;" />
+                    <div style="flex:1; min-width:0; display:flex; flex-direction:column; gap:8px; position:relative;">
+                        <input type="text" value="${codigo}" placeholder="Referencia" 
+                               oninput="sugerirReferencia(${index}, this.value)" 
+                               onfocus="sugerirReferencia(${index}, this.value)"
+                               onblur="cerrarSugerenciasRefConDelay(${index})"
+                               onchange="cambiarCodigo(${index}, this.value)" 
+                               style="width:100%;padding:8px;border:1px solid #ddd;border-radius:4px;font-size:14px;" />
+                        <input type="text" value="${nombre}" placeholder="Descripción" 
+                               onchange="cambiarDescripcion(${index}, this.value)" 
+                               onblur="autoFormatoDescripcion(${index})"
+                               style="width:100%;padding:8px;border:1px solid #ddd;border-radius:4px;font-size:14px;" />
+                        <div id="refSuggest-${index}" class="inventario-resultados" 
+                             style="position:absolute; top: calc(100% + 4px); left:0; right:0; display:none; z-index: 2000;"></div>
                     </div>
                 </div>
             </td>
@@ -1470,8 +1480,88 @@ window.cambiarCodigo = cambiarCodigo;
 window.agregarRepuesto = agregarRepuesto;
 window.agregarServicioManual = agregarServicioManual;
 window.guardarServicioManual = guardarServicioManual;
+window.sugerirReferencia = sugerirReferencia;
+window.seleccionarSugerenciaRef = seleccionarSugerenciaRef;
+window.cerrarSugerenciasRefConDelay = cerrarSugerenciasRefConDelay;
+window.autoFormatoDescripcion = autoFormatoDescripcion;
 
 // Funciones para la nueva interfaz de tabla
+function obtenerSugerenciasInventario(termino, limite = 8) {
+    const baseInventario = Array.isArray(supabaseInventario) && supabaseInventario.length
+        ? supabaseInventario
+        : [
+            { codigo: 'ACE001', nombre: 'Aceite Motor 5W30 Synthetic', referencia: 'ACE001', precio: 45000, categoria: 'Lubricantes' },
+            { codigo: 'FRN001', nombre: 'Frenos Delanteros Completos', referencia: 'FRN001', precio: 180000, categoria: 'Frenos' },
+            { codigo: 'FLT001', nombre: 'Filtro de Aire', referencia: 'FLT001', precio: 25000, categoria: 'Filtros' },
+            { codigo: 'BTR001', nombre: 'Batería 12V 60Ah', referencia: 'BTR001', precio: 320000, categoria: 'Eléctrico' },
+            { codigo: 'LMP001', nombre: 'Lámpara Halógena H7', referencia: 'LMP001', precio: 35000, categoria: 'Iluminación' },
+            { codigo: 'LLV001', nombre: 'Llantas Michelin 195/65R15', referencia: 'LLV001', precio: 280000, categoria: 'Neumáticos' },
+            { codigo: 'CDR001', nombre: 'Correa de Distribución', referencia: 'CDR001', precio: 95000, categoria: 'Motor' },
+            { codigo: 'SVP001', nombre: 'Servicio Preventivo Básico', referencia: 'SVP001', precio: 85000, categoria: 'Servicios' }
+        ];
+    const q = (termino || '').toString().trim().toLowerCase();
+    if (q.length < 2) return [];
+    return baseInventario.filter(item => {
+        const codigo = (item.codigo || item.code || '').toString().toLowerCase();
+        const nombre = (item.nombre || item.name || item.producto || '').toString().toLowerCase();
+        const referencia = (item.referencia || item.ref || item.referencia_interna || '').toString().toLowerCase();
+        return codigo.includes(q) || nombre.includes(q) || referencia.includes(q);
+    }).slice(0, limite).map(it => ({
+        codigo: it.codigo || it.code || 'S/C',
+        nombre: it.nombre || it.name || it.producto || 'Producto',
+        precio: Number(it.precio || it.price || it.valor || 0),
+        categoria: it.categoria || it.category || 'General'
+    }));
+}
+
+function sugerirReferencia(index, termino) {
+    const cont = document.getElementById(`refSuggest-${index}`);
+    if (!cont) return;
+    const sugerencias = obtenerSugerenciasInventario(termino, 8);
+    if (!sugerencias.length) {
+        cont.style.display = 'none';
+        cont.innerHTML = '';
+        return;
+    }
+    const esc = s => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,"&#39;");
+    cont.innerHTML = sugerencias.map((it, i) => `
+        <div class="inventario-item" style="display:flex;justify-content:space-between;align-items:center;gap:8px;" onclick="seleccionarSugerenciaRef(${index}, '${esc(it.codigo)}', '${esc(it.nombre)}', ${it.precio})">
+            <div><strong>${esc(it.codigo)}</strong> — ${esc(it.nombre)}</div>
+            <div style="color:#666;">${formatCurrency(it.precio)}</div>
+        </div>
+    `).join('');
+    cont.style.display = 'block';
+}
+
+function cerrarSugerenciasRefConDelay(index) {
+    setTimeout(() => {
+        const cont = document.getElementById(`refSuggest-${index}`);
+        if (cont) cont.style.display = 'none';
+    }, 200);
+}
+
+function seleccionarSugerenciaRef(index, codigo, nombre, precio) {
+    if (!Array.isArray(window.itemsTrabajo) || !window.itemsTrabajo[index]) return;
+    window.itemsTrabajo[index].codigo = codigo;
+    window.itemsTrabajo[index].nombre = nombre;
+    if (precio && !isNaN(precio)) window.itemsTrabajo[index].precio = Number(precio);
+    // Por defecto aplicar 19% como IVA incluido si no tiene
+    if (typeof window.itemsTrabajo[index].iva === 'undefined') window.itemsTrabajo[index].iva = 19;
+    actualizarTablaItems();
+}
+
+function autoFormatoDescripcion(index) {
+    if (!Array.isArray(window.itemsTrabajo) || !window.itemsTrabajo[index]) return;
+    const item = window.itemsTrabajo[index];
+    const ref = (item.codigo || '').toString().trim();
+    let nombre = (item.nombre || '').toString().trim();
+    if (!ref || !nombre) return; // Requiere ambos para formatear
+    const prefijo = `${ref} — `;
+    if (!nombre.startsWith(prefijo)) {
+        item.nombre = prefijo + nombre.replace(/^.*?\s—\s/, '');
+        actualizarTablaItems();
+    }
+}
 function moverItemArriba(index) {
     if (index > 0 && window.itemsTrabajo && window.itemsTrabajo[index]) {
         const temp = window.itemsTrabajo[index];
@@ -1508,14 +1598,24 @@ function cambiarCodigo(index, nuevoCodigo) {
 
 function cambiarDescripcion(index, nuevaDescripcion) {
     if (window.itemsTrabajo && window.itemsTrabajo[index]) {
-        // La descripción viene como "CODIGO#NOMBRE"
-        const partes = nuevaDescripcion.split('#');
-        if (partes.length >= 2) {
-            window.itemsTrabajo[index].codigo = partes[0].trim();
-            window.itemsTrabajo[index].nombre = partes.slice(1).join('#').trim();
-        } else {
-            window.itemsTrabajo[index].nombre = nuevaDescripcion.trim();
+        // Permitir formatos "CODIGO#NOMBRE" o "CODIGO — NOMBRE" o solo nombre
+        const texto = (nuevaDescripcion || '').toString();
+        let codigo = window.itemsTrabajo[index].codigo || '';
+        let nombre = texto.trim();
+
+        // Separadores soportados
+        const sepHash = texto.indexOf('#');
+        const sepDash = texto.indexOf('—');
+        if (sepHash > -1) {
+            codigo = texto.slice(0, sepHash).trim();
+            nombre = texto.slice(sepHash + 1).trim();
+        } else if (sepDash > -1) {
+            codigo = texto.slice(0, sepDash).trim();
+            nombre = texto.slice(sepDash + 1).trim();
         }
+
+        if (codigo) window.itemsTrabajo[index].codigo = codigo;
+        window.itemsTrabajo[index].nombre = nombre;
         actualizarTablaItems();
     }
 }
