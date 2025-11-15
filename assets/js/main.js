@@ -1412,7 +1412,7 @@ function actualizarTablaItems() {
                                onblur="cerrarSugerenciasRefConDelay(${index})"
                                onchange="cambiarCodigo(${index}, this.value)" 
                                style="width:100%;padding:8px;border:1px solid #ddd;border-radius:4px;font-size:14px;" />
-                        <input type="text" value="${nombre}" placeholder="Descripción" 
+                        <input type="text" value="${codigo ? (codigo + ' — ') : ''}${nombre}" placeholder="Descripción" 
                                onchange="cambiarDescripcion(${index}, this.value)" 
                                onblur="autoFormatoDescripcion(${index})"
                                style="width:100%;padding:8px;border:1px solid #ddd;border-radius:4px;font-size:14px;" />
@@ -1551,16 +1551,8 @@ function seleccionarSugerenciaRef(index, codigo, nombre, precio) {
 }
 
 function autoFormatoDescripcion(index) {
-    if (!Array.isArray(window.itemsTrabajo) || !window.itemsTrabajo[index]) return;
-    const item = window.itemsTrabajo[index];
-    const ref = (item.codigo || '').toString().trim();
-    let nombre = (item.nombre || '').toString().trim();
-    if (!ref || !nombre) return; // Requiere ambos para formatear
-    const prefijo = `${ref} — `;
-    if (!nombre.startsWith(prefijo)) {
-        item.nombre = prefijo + nombre.replace(/^.*?\s—\s/, '');
-        actualizarTablaItems();
-    }
+    // Ya parseamos con cambiarDescripcion; aquí solo re-renderizamos por consistencia
+    actualizarTablaItems();
 }
 function moverItemArriba(index) {
     if (index > 0 && window.itemsTrabajo && window.itemsTrabajo[index]) {
@@ -3576,12 +3568,15 @@ function actualizarVistaPrevia() {
     const adelantos = movimientosPeriodo.filter(m => m.tipoMovimiento === 'adelanto');
     let restanteMO = totalManosObra;
     const aplicarMap = {};
+    let pendienteTotal = 0;
     const filasAdelantos = adelantos.map(m => {
         const aplicado = Math.max(0, parseInt(m.aplicadoAcumulado || 0));
         const disponible = Math.max(0, Math.abs(m.monto) - aplicado);
         const aplicar = Math.min(disponible, Math.max(0, restanteMO));
         aplicarMap[m.id] = aplicar;
         restanteMO -= aplicar;
+        const pendiente = Math.max(0, disponible - aplicar);
+        pendienteTotal += pendiente;
         return `
             <tr>
                 <td>${m.fechaMovimiento}</td>
@@ -3617,6 +3612,7 @@ function actualizarVistaPrevia() {
                 <div class="preview-item"><span>Trabajos:</span><span id="li-prev-trabajos-count">${trabajosPeriodo.length}</span></div>
                 <div class="preview-item"><span>Total MO (pre-IVA):</span><span id="moTotalValor" data-value="${totalManosObra}">$${totalManosObra.toLocaleString()}</span></div>
                 <div class="preview-item"><span>Adelantos a aplicar:</span><span id="adelantosAplicarTotal" data-value="${aplicarTotal}">-$${aplicarTotal.toLocaleString()}</span></div>
+                <div class="preview-item"><span>Adelanto pendiente:</span><span id="adelantoPendienteTotal" data-value="${pendienteTotal}">-$${pendienteTotal.toLocaleString()}</span></div>
                 <div class="preview-item"><span>Almuerzos:</span><span id="almTotal" data-value="${totales.almuerzos}">-$${totales.almuerzos.toLocaleString()}</span></div>
                 <div class="preview-item"><span>Descuentos:</span><span id="descTotal" data-value="${totales.descuentos}">-$${totales.descuentos.toLocaleString()}</span></div>
                 <div class="preview-item"><span>Préstamos:</span><span id="prestTotal" data-value="${totales.prestamos}">-$${totales.prestamos.toLocaleString()}</span></div>
@@ -3632,6 +3628,7 @@ function actualizarVistaPrevia() {
             <div class="btn-group" style="margin: 6px 0 10px 0; display:flex; gap:8px;">
                 <button type="button" class="btn btn-outline" onclick="aplicarAdelantosCubrirMO()">Cubrir MO</button>
                 <button type="button" class="btn btn-outline" onclick="aplicarAdelantosTodo()">Aplicar todo</button>
+                <button type="button" class="btn btn-outline" onclick="aplicarAdelantosSaldoCero()">Hasta saldo 0</button>
                 <button type="button" class="btn btn-outline" onclick="recalcularResumenAdelantos()">Recalcular</button>
             </div>
             <table class="data-table" style="width:100%;">
@@ -3722,6 +3719,14 @@ function obtenerNumero(id) {
 function recalcularResumenAdelantos() {
     const aplicar = sumarValoresAdelantos();
     actualizarSpanMoneda('adelantosAplicarTotal', aplicar);
+    // actualizar pendiente total
+    let pendiente = 0;
+    document.querySelectorAll('input[name^="adelanto-aplicar-"]').forEach(inp => {
+        const max = parseInt(inp.getAttribute('max') || '0');
+        const val = Math.max(0, parseInt(inp.value || 0));
+        pendiente += Math.max(0, max - val);
+    });
+    actualizarSpanMoneda('adelantoPendienteTotal', pendiente);
     const mo = obtenerNumero('moTotalValor');
     const alm = obtenerNumero('almTotal');
     const desc = obtenerNumero('descTotal');
@@ -3763,9 +3768,15 @@ function aplicarAdelantosCubrirMO() {
     recalcularResumenAdelantos();
 }
 
+// Alias: aplicar hasta que el neto llegue a 0 (mismo algoritmo de cubrir MO)
+function aplicarAdelantosSaldoCero() {
+    aplicarAdelantosCubrirMO();
+}
+
 window.recalcularResumenAdelantos = recalcularResumenAdelantos;
 window.aplicarAdelantosTodo = aplicarAdelantosTodo;
 window.aplicarAdelantosCubrirMO = aplicarAdelantosCubrirMO;
+window.aplicarAdelantosSaldoCero = aplicarAdelantosSaldoCero;
 
 // Actualizar dashboard de liquidación
 function actualizarDashboardLiquidacion() {
