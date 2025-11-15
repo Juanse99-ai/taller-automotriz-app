@@ -1900,6 +1900,23 @@ function guardarNuevoTrabajo(event) {
     // Simular guardado (en producción se enviaría a Supabase)
     showNotification(`🎉 Trabajo ${trabajoCompleto.id} creado exitosamente! Total: ${formatCurrency(trabajoCompleto.total)}` , 'success');
     
+    // Ofrecer ir a liquidación del técnico
+    try {
+        const tecnicoId = trabajoCompleto.mecanico;
+        const modal = createModal(
+            'Trabajo creado',
+            `<div style="padding:16px;line-height:1.6;">
+                <p>El trabajo <strong>${trabajoCompleto.id}</strong> fue creado para la placa <strong>${trabajoCompleto.placa}</strong>.</p>
+                <p>¿Deseas ir a <strong>Liquidación Avanzada</strong> para el técnico seleccionado?</p>
+            </div>`,
+            [
+                { text: 'Seguir aquí', class: 'btn-outline', onclick: 'closeModal()' },
+                { text: 'Liquidar ahora', class: 'btn-primary', onclick: `closeModal(); irALiquidacionDelTecnico(${tecnicoId});` }
+            ]
+        );
+        showModal(modal);
+    } catch(e) { /* noop */ }
+
     const trabajosTableBody = document.getElementById('trabajosTable');
     if (trabajosTableBody) {
         const nuevaFila = document.createElement('tr');
@@ -2204,6 +2221,49 @@ function nuevaRecepcionModal() {
     
     showModal(modal);
 }
+
+// Ruta conectada: Recepción → OT → Liquidación
+function iniciarOrdenTrabajo(event) {
+    event.preventDefault();
+    // Tomar valores del form de recepción
+    const f = document.getElementById('recepcionForm');
+    if (!f) { showNotification('No se encontró el formulario de recepción', 'error'); return; }
+    const val = id => (document.getElementById(id)?.value || '').toString().trim();
+    datosRecepcionTemporal = {
+        clienteNombre: val('rcpCliente'),
+        cedula: val('rcpCedula'),
+        telefono: val('rcpTelefono'),
+        email: val('rcpEmail'),
+        placa: val('rcpPlaca').toUpperCase(),
+        marca: val('rcpMarca'),
+        modelo: val('rcpModelo'),
+        ano: parseInt(val('rcpAno') || new Date().getFullYear()),
+        kilometraje: val('rcpKm'),
+        tecnico: val('rcpTecnico'),
+        descripcion: val('rcpObs')
+    };
+    previousSectionBeforeNuevoTrabajo = 'recepcionPage';
+    showSection('nuevoTrabajoPage');
+    setTimeout(() => inicializarNuevoTrabajoForm(), 0);
+}
+
+function irALiquidacionDelTecnico(tecnicoId) {
+    showSection('liquidacionAvanzada');
+    const form = document.getElementById('liquidacionAvanzadaForm');
+    if (!form) return;
+    const sel = form.querySelector('select[name="tecnicoId"]');
+    if (sel) sel.value = String(tecnicoId || '');
+    const hoy = new Date();
+    const hace30 = new Date(hoy.getTime() - 30*24*60*60*1000);
+    const ini = form.querySelector('input[name="fechaInicio"]');
+    const fin = form.querySelector('input[name="fechaFin"]');
+    if (ini && !ini.value) ini.value = hace30.toISOString().split('T')[0];
+    if (fin && !fin.value) fin.value = hoy.toISOString().split('T')[0];
+    actualizarVistaPrevia();
+}
+
+window.iniciarOrdenTrabajo = iniciarOrdenTrabajo;
+window.irALiquidacionDelTecnico = irALiquidacionDelTecnico;
 
 // Buscar cliente por cédula en recepción
 function buscarClienteRecepcion() {

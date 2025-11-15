@@ -56,7 +56,7 @@
                     
                     <div class="nav-section">
                         <div class="nav-section-title">Operaciones</div>
-                        <div class="nav-item" onclick="showSection('recepcion')">
+                        <div class="nav-item" onclick="showSection('recepcionPage')">
                             <span class="nav-icon">📋</span>
                             <span class="nav-text">Recepción</span>
                         </div>
@@ -957,6 +957,78 @@
                                     </tbody>
                                 </table>
                             </div>
+                        </div>
+                    </section>
+
+                    <!-- Recepción (Página dedicada) -->
+                    <section id="recepcionPage" class="section" style="display:none;">
+                        <div class="card">
+                            <h3 class="card-title">📋 Recepción de Vehículo</h3>
+                            <form id="recepcionForm" onsubmit="iniciarOrdenTrabajo(event)">
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label class="form-label">Cliente</label>
+                                        <input type="text" class="form-input" id="rcpCliente" placeholder="Nombre del cliente" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Cédula</label>
+                                        <input type="text" class="form-input" id="rcpCedula" placeholder="Documento" required>
+                                    </div>
+                                </div>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label class="form-label">Teléfono</label>
+                                        <input type="text" class="form-input" id="rcpTelefono" placeholder="Teléfono">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Email</label>
+                                        <input type="email" class="form-input" id="rcpEmail" placeholder="Correo">
+                                    </div>
+                                </div>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label class="form-label">Placa</label>
+                                        <input type="text" class="form-input" id="rcpPlaca" placeholder="ABC123" style="text-transform:uppercase" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Marca</label>
+                                        <input type="text" class="form-input" id="rcpMarca" placeholder="Marca" required>
+                                    </div>
+                                </div>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label class="form-label">Modelo</label>
+                                        <input type="text" class="form-input" id="rcpModelo" placeholder="Modelo" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Año</label>
+                                        <input type="number" class="form-input" id="rcpAno" min="1980" max="2030" required>
+                                    </div>
+                                </div>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label class="form-label">Kilometraje</label>
+                                        <input type="number" class="form-input" id="rcpKm" min="0" placeholder="0">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Técnico</label>
+                                        <select class="form-select" id="rcpTecnico" required>
+                                            <option value="">Seleccionar técnico</option>
+                                            <option value="1">Pedro Barraza</option>
+                                            <option value="2">Víctor Padilla</option>
+                                            <option value="3">Ismael Cervantes</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Observaciones iniciales</label>
+                                    <textarea class="form-textarea" id="rcpObs" placeholder="Observaciones, síntomas, diagnóstico preliminar"></textarea>
+                                </div>
+                                <div class="form-actions">
+                                    <button type="button" class="btn btn-secondary" onclick="showSection('dashboard')">Cancelar</button>
+                                    <button type="submit" class="btn btn-primary">Continuar a Orden de Trabajo</button>
+                                </div>
+                            </form>
                         </div>
                     </section>
 
