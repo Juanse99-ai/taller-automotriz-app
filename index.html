@@ -2965,7 +2965,14 @@ function nuevoTrabajo() {
 
 function actualizarTotales() {
     const items = Array.isArray(window.itemsTrabajo) ? window.itemsTrabajo : [];
-    const subtotalRepuestos = items.reduce((total, item) => total + (item.precio * item.cantidad), 0);
+    
+    // Asegurar que precio y cantidad sean números al calcular
+    const subtotalRepuestos = items.reduce((total, item) => {
+        const precio = Number(item.precio) || 0;
+        const cantidad = Number(item.cantidad) || 1;
+        return total + (precio * cantidad);
+    }, 0);
+    
     const manoObraInput = document.getElementById('manoObraValor');
     const manoObra = manoObraInput ? parseFloat(manoObraInput.value) || 0 : 0;
     const subtotalManoObra = manoObra;
@@ -3052,10 +3059,26 @@ function cancelarNuevoTrabajo() {
 }
 
 function nuevoTrabajo() {
-    console.log('➕ Abriendo formulario de nuevo trabajo...');
-    previousSectionBeforeNuevoTrabajo = currentSection;
+    console.log('➕ Abriendo módulo unificado: Nuevo Trabajo...');
+    
+    // Si ya estamos en nuevoTrabajoPage, solo reinicializamos
+    if (currentSection === 'nuevoTrabajoPage' && !datosRecepcionTemporal) {
+        inicializarNuevoTrabajoForm();
+        return;
+    }
+    
+    // Guardar la sección actual si no está guardada
+    if (!previousSectionBeforeNuevoTrabajo) {
+        previousSectionBeforeNuevoTrabajo = currentSection;
+    }
+    
+    // Cambiar a la sección
     showSection('nuevoTrabajoPage');
+    
+    // Inicializar el formulario (esto cargará datos de recepción si existen)
     inicializarNuevoTrabajoForm();
+    
+    // Scroll al inicio
     const content = document.querySelector('.content');
     if (content) content.scrollTop = 0;
 }
@@ -3095,7 +3118,7 @@ function buscarClientePorCedula(cedula) {
     
     const baseClientes = obtenerListaClientes();
     const terminoLower = termino.toLowerCase();
-
+    
     const resultados = baseClientes.filter(cliente => 
         normalizarDocumentoCliente(cliente).toLowerCase().includes(terminoLower)
     ).slice(0, 50);
@@ -3124,7 +3147,7 @@ function buscarClientePorCedula(cedula) {
     } else {
         contenedor.innerHTML = '<div class="resultado-item">No se encontraron clientes</div>';
     }
-    contenedor.classList.add('show');
+        contenedor.classList.add('show');
 }
 
 // Seleccionar cliente de resultados
@@ -3423,10 +3446,13 @@ function mostrarTodosLosRepuestos() {
 
 // Agregar repuesto/servicio al trabajo
 function agregarRepuesto(codigo, nombre, precio, categoria) {
+    // Asegurar que precio sea un número
+    const precioNumero = Number(precio) || 0;
+    
     const item = {
         codigo: codigo,
         nombre: nombre,
-        precio: precio,
+        precio: precioNumero,
         categoria: categoria,
         cantidad: 1
     };
@@ -3434,7 +3460,7 @@ function agregarRepuesto(codigo, nombre, precio, categoria) {
     // Verificar si ya existe
     const index = window.itemsTrabajo.findIndex(i => i.codigo === codigo);
     if (index !== -1) {
-        window.itemsTrabajo[index].cantidad++;
+        window.itemsTrabajo[index].cantidad = Number(window.itemsTrabajo[index].cantidad) + 1;
     } else {
         window.itemsTrabajo.push(item);
     }
@@ -3487,15 +3513,22 @@ function actualizarTablaItems() {
     
     document.getElementById('noItemsRow').style.display = 'none';
     
-    tbody.innerHTML = window.itemsTrabajo.map((item, index) => `
+    tbody.innerHTML = window.itemsTrabajo.map((item, index) => {
+        // Asegurar que precio y cantidad sean números
+        const precio = Number(item.precio) || 0;
+        const cantidad = Number(item.cantidad) || 1;
+        const total = precio * cantidad;
+        
+        return `
         <tr>
             <td><strong>${item.nombre}</strong><br><small style="color: #666;">${item.codigo} - ${item.categoria}</small></td>
-            <td><input type="number" value="${item.cantidad}" min="1" onchange="cambiarCantidad(${index}, this.value)"></td>
-            <td>${formatCurrency(item.precio)}</td>
-            <td>${formatCurrency(item.precio * item.cantidad)}</td>
+            <td><input type="number" value="${cantidad}" min="1" onchange="cambiarCantidad(${index}, this.value)" oninput="cambiarCantidad(${index}, this.value)"></td>
+            <td>${formatCurrency(precio)}</td>
+            <td id="totalItem${index}">${formatCurrency(total)}</td>
             <td><button type="button" class="remove-item" onclick="eliminarItem(${index})">🗑️</button></td>
         </tr>
-    `).join('');
+        `;
+    }).join('');
     
     actualizarTotales();
 }
@@ -3503,8 +3536,22 @@ function actualizarTablaItems() {
 // Cambiar cantidad de item
 function cambiarCantidad(index, nuevaCantidad) {
     const cantidad = Math.max(1, parseInt(nuevaCantidad) || 1);
+    
+    if (window.itemsTrabajo[index]) {
+        // Asegurar que la cantidad sea un número
     window.itemsTrabajo[index].cantidad = cantidad;
-    actualizarTablaItems();
+        
+        // Actualizar el total de esta fila inmediatamente sin recargar toda la tabla
+        const precio = Number(window.itemsTrabajo[index].precio) || 0;
+        const total = precio * cantidad;
+        const totalCell = document.getElementById(`totalItem${index}`);
+        if (totalCell) {
+            totalCell.textContent = formatCurrency(total);
+        }
+        
+        // Actualizar los totales generales
+        actualizarTotales();
+    }
 }
 
 // Eliminar item
@@ -3753,8 +3800,34 @@ function verTrabajo(placa) {
 }
 
 // Nueva recepción
+// ===== MÓDULO UNIFICADO: RECEPCIÓN Y NUEVO TRABAJO =====
+// Primero se muestra recepción, luego pasa a nuevo trabajo automáticamente
+
 function nuevaRecepcion() {
-    console.log('📋 Abriendo formulario de nueva recepción...');
+    console.log('📋 Abriendo módulo unificado: Recepción → Nuevo Trabajo...');
+    
+    // Guardar la sección actual para volver después
+    previousSectionBeforeNuevoTrabajo = currentSection;
+    
+    // Cambiar a la sección de nuevo trabajo (unificada con recepción)
+    showSection('nuevoTrabajoPage');
+    
+    // Inicializar el formulario
+    setTimeout(() => {
+        inicializarNuevoTrabajoForm();
+        
+        // Mostrar un mensaje informativo
+        showNotification('Completa la recepción primero, luego continúa con el trabajo', 'info');
+        
+        // Scroll al inicio
+        const content = document.querySelector('.content');
+        if (content) content.scrollTop = 0;
+    }, 100);
+}
+
+// Función anterior para mantener compatibilidad, ahora redirige al módulo unificado
+function nuevaRecepcionModal() {
+    console.log('📋 Abriendo formulario de nueva recepción (modal)...');
     
     const modal = createModal(
         'Nueva Recepción',
@@ -3886,16 +3959,15 @@ function buscarClienteRecepcion() {
     }
 }
 
-// Guardar nueva recepción
+// Guardar nueva recepción (desde modal - modo legacy)
 function guardarNuevaRecepcion(event) {
     event.preventDefault();
     
     const ordenNumero = document.getElementById('ordenNumero').value;
     
-    console.log('💾 Guardando nueva recepción:', ordenNumero);
+    console.log('💾 Guardando nueva recepción desde modal:', ordenNumero);
     
     nextOrderNumber++;
-    showNotification(`Recepción ${ordenNumero} creada exitosamente`, 'success');
     
     datosRecepcionTemporal = {
         clienteNombre: document.getElementById('clienteNombre').value,
@@ -3912,10 +3984,10 @@ function guardarNuevaRecepcion(event) {
     };
     
     closeModal();
-    nuevoTrabajo();
+    showNotification(`Recepción ${ordenNumero} guardada. Continuando con nuevo trabajo...`, 'success');
     
-    // Actualizar datos
-    // loadRecepcionData();
+    // Ahora abrir el módulo de nuevo trabajo
+    nuevoTrabajo();
 }
 
 // Nueva cotización
@@ -4130,51 +4202,7 @@ function buscarProducto() {
     }
 }
 
-// Generar liquidación
-function generarLiquidacion() {
-    console.log('💼 Generando liquidación...');
-    
-    // Simular cálculos de liquidación 20% + 20%
-    const trabajosPendientes = [
-        { placa: 'ABC123', tecnico: 'Víctor Padilla', manoObra: 25000, porcentaje: 20 },
-        { placa: 'DEF456', tecnico: 'Ismael Cervantes', manoObra: 40000, porcentaje: 20 }
-    ];
-    
-    let mensaje = 'LIQUIDACIÓN DE MANOS DE OBRA\n';
-    mensaje += '================================\n\n';
-    
-    let totalLiquidacion = 0;
-    
-    trabajosPendientes.forEach(trabajo => {
-        const montoLiquidacion = trabajo.manoObra * (trabajo.porcentaje / 100);
-        totalLiquidacion += montoLiquidacion;
-        
-        mensaje += `${trabajo.plate} - ${trabajo.tecnico}:\n`;
-        mensaje += `Mano de obra: $${trabajo.manoObra.toLocaleString()}\n`;
-        mensaje += `20% Liquidación: $${montoLiquidacion.toLocaleString()}\n\n`;
-    });
-    
-    // Simular movimientos financieros
-    const adelantos = 100000; // Víctor
-    const prestamos = 200000; // Víctor
-    const descuentos = 50000; // Ismael
-    const netoPagar = totalLiquidacion - adelantos - prestamos + descuentos;
-    
-    mensaje += 'MOVIMIENTOS FINANCIEROS:\n';
-    mensaje += `Total a liquidar: $${totalLiquidacion.toLocaleString()}\n`;
-    mensaje += `Adelantos: $${adelantos.toLocaleString()}\n`;
-    mensaje += `Préstamos: $${prestamos.toLocaleString()}\n`;
-    mensaje += `Descuentos: $${descuentos.toLocaleString()}\n`;
-    mensaje += `NETO A PAGAR: $${netoPagar.toLocaleString()}\n\n`;
-    
-    mensaje += '¿Procesar liquidación?';
-    
-    if (confirm(mensaje)) {
-        showNotification('Liquidación procesada correctamente', 'success');
-        // Marcar trabajos como liquidados
-        // loadLiquidacionData();
-    }
-}
+// Generar liquidación - función simple eliminada, usar generarLiquidacion() avanzada
 
 // Ver pendientes de liquidación
 function verPendientes() {
@@ -4526,6 +4554,9 @@ window.guardarNuevaRecepcion = guardarNuevaRecepcion;
 window.guardarNuevaCotizacion = guardarNuevaCotizacion;
 window.editarClienteDesdeModal = editarClienteDesdeModal;
 window.guardarEdicionCliente = guardarEdicionCliente;
+window.procesarLiquidacionAvanzada = procesarLiquidacionAvanzada;
+window.actualizarVistaPrevia = actualizarVistaPrevia;
+window.cerrarModal = closeModal; // Alias adicional
 
 // Additional functions
 function agendarMantenimiento(placa) {
@@ -5243,7 +5274,7 @@ function generarLiquidacion() {
     const hace30Dias = new Date(hoy.getTime() - (30 * 24 * 60 * 60 * 1000));
     
     const html = `
-        <div class="modal-overlay" onclick="cerrarModal()">
+        <div class="modal-overlay" onclick="closeModal()">
             <div class="modal-content modal-large" onclick="event.stopPropagation()">
                 <h3>💼 Liquidación Avanzada</h3>
                 <form onsubmit="procesarLiquidacionAvanzada(event)">
@@ -5278,7 +5309,7 @@ function generarLiquidacion() {
                     </div>
                     
                     <div class="modal-actions">
-                        <button type="button" onclick="cerrarModal()" class="btn btn-outline">Cancelar</button>
+                        <button type="button" onclick="closeModal()" class="btn btn-outline">Cancelar</button>
                         <button type="button" onclick="actualizarVistaPrevia()" class="btn btn-info">Vista Previa</button>
                         <button type="submit" class="btn btn-primary">Generar Liquidación</button>
                     </div>
@@ -5306,15 +5337,22 @@ function actualizarVistaPrevia() {
     
     // Calcular vista previa
     const tecnico = window.mecanicos.find(t => t.id == tecnicoId);
+    if (!tecnico) {
+        document.getElementById('preview-contenido').innerHTML = 
+            '<p class="text-warning">Técnico no encontrado</p>';
+        return;
+    }
+    
     const trabajosCompletados = sistemaLiquidacion.obtenerTrabajosCompletadosPorPeriodo(tecnicoId, fechaInicio, fechaFin);
     const totalManosObra = sistemaLiquidacion.calcularManosObra(trabajosCompletados);
     const totales = controlMovimientos.calcularTotales(tecnicoId, fechaInicio, fechaFin);
     const netoPagar = totalManosObra + totales.adelantos + totales.pagos - 
                      totales.almuerzos - totales.descuentos - totales.prestamos - totales.materiales;
+    const nombreTecnico = tecnico.nombre || tecnico.name || 'Técnico';
     
     const html = `
         <div class="preview-section">
-            <h5>${tecnico.nombre}</h5>
+            <h5>${nombreTecnico}</h5>
             <div class="preview-details">
                 <div class="preview-item">
                     <span>Trabajos completados:</span>
@@ -5377,12 +5415,13 @@ function procesarLiquidacionAvanzada(event) {
         );
         
         const tecnico = window.mecanicos.find(t => t.id === tecnicoId);
+        const nombreTecnico = tecnico ? (tecnico.nombre || tecnico.name || 'Técnico') : 'Técnico';
         showNotification(
-            `Liquidación procesada para ${tecnico.nombre}: $${liquidacion.montoNeto.toLocaleString()}`,
+            `Liquidación procesada para ${nombreTecnico}: $${liquidacion.montoNeto.toLocaleString()}`,
             'success'
         );
         
-        cerrarModal();
+        closeModal();
         actualizarDashboardLiquidacion();
         
     } catch (error) {
