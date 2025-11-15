@@ -104,6 +104,10 @@
                             <span class="nav-icon">💼</span>
                             <span class="nav-text">CUENTTI</span>
                         </div>
+                        <div class="nav-item" onclick="showSection('auditoriaPlacas')">
+                            <span class="nav-icon">🧾</span>
+                            <span class="nav-text">Auditoría Placas</span>
+                        </div>
                     </div>
                 </nav>
             </aside>
@@ -1057,6 +1061,42 @@
                                     <button type="submit" class="btn-primary">Generar Liquidación</button>
                                 </div>
                             </form>
+                        </div>
+                    </section>
+
+                    <!-- Auditoría de Placas -->
+                    <section id="auditoriaPlacas" class="section" style="display:none;">
+                        <div class="card">
+                            <h3 class="card-title">🧾 Auditoría de Placas</h3>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label class="form-label">Placa</label>
+                                    <input type="text" class="form-input" id="auditPlacaFiltro" placeholder="ABC123" style="text-transform:uppercase" oninput="renderAuditoriaPlacas()">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Fecha Inicio</label>
+                                    <input type="date" class="form-input" id="auditFechaInicio" onchange="renderAuditoriaPlacas()">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Fecha Fin</label>
+                                    <input type="date" class="form-input" id="auditFechaFin" onchange="renderAuditoriaPlacas()">
+                                </div>
+                            </div>
+                            <div class="table-container mt-4">
+                                <table class="table">
+                                    <thead>
+                                        <tr>
+                                            <th>Fecha/Hora</th>
+                                            <th>Acción</th>
+                                            <th>Placa</th>
+                                            <th>Propietario (ant.)</th>
+                                            <th>Propietario (nuevo)</th>
+                                            <th>Acciones</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="auditoriaPlacasTable"></tbody>
+                                </table>
+                            </div>
                         </div>
                     </section>
 

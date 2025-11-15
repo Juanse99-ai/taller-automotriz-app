@@ -303,6 +303,9 @@ function loadSectionData(sectionName) {
         case 'cuentti':
             loadCuenttiData();
             break;
+        case 'auditoriaPlacas':
+            renderAuditoriaPlacas();
+            break;
         case 'liquidacionAvanzada':
             // La inicialización se realiza desde generarLiquidacion
             break;
@@ -4372,6 +4375,79 @@ function imprimirLiquidacion() {
 
 window.exportarLiquidacionACuentti = exportarLiquidacionACuentti;
 window.imprimirLiquidacion = imprimirLiquidacion;
+
+// =============================
+// Auditoría de Placas - Render y acciones
+// =============================
+function getAuditData() {
+    try { return Array.isArray(window.__appData.vehiculosAudit) ? window.__appData.vehiculosAudit : []; } catch(e){ return []; }
+}
+
+function renderAuditoriaPlacas() {
+    const tbody = document.getElementById('auditoriaPlacasTable');
+    if (!tbody) return;
+    const placaFiltro = (document.getElementById('auditPlacaFiltro')?.value || '').toUpperCase();
+    const fi = document.getElementById('auditFechaInicio')?.value || '';
+    const ff = document.getElementById('auditFechaFin')?.value || '';
+    const desde = fi ? new Date(fi) : null;
+    const hasta = ff ? new Date(ff) : null;
+    const rows = getAuditData().filter(e => {
+        if (placaFiltro && e.placa !== placaFiltro) return false;
+        const d = new Date(e.ts || Date.now());
+        if (desde && d < desde) return false;
+        if (hasta && d > hasta) return false;
+        return true;
+    }).sort((a,b)=> (b.ts||0)-(a.ts||0));
+    if (!rows.length) { tbody.innerHTML = '<tr><td colspan="6">Sin registros</td></tr>'; return; }
+    const fmt = ts => new Date(ts).toLocaleString();
+    tbody.innerHTML = rows.map((e,idx)=>{
+        const oldStr = e.old ? `${e.old.clienteNombre||''} (${e.old.clienteDoc||''})` : '-';
+        const newStr = e.nuevo ? `${e.nuevo.clienteNombre||''} (${e.nuevo.clienteDoc||''})` : '-';
+        const acciones = [
+            `<button class="btn btn-outline btn-sm" onclick="revertFromAudit(${e.ts})">Revertir</button>`,
+            `<button class="btn btn-outline btn-sm" onclick="desasociarPlaca('${e.placa}')">Desasociar</button>`
+        ].join(' ');
+        return `<tr><td>${fmt(e.ts)}</td><td>${e.action}</td><td>${e.placa}</td><td>${oldStr}</td><td>${newStr}</td><td>${acciones}</td></tr>`;
+    }).join('');
+}
+
+function revertFromAudit(ts) {
+    const audit = getAuditData().find(a => a.ts === ts);
+    if (!audit) { showNotification('Registro no encontrado', 'error'); return; }
+    const old = audit.old;
+    if (!old) { showNotification('No hay estado anterior para revertir', 'warning'); return; }
+    confirmReassignPlate(audit.placa, old.clienteDoc||'', old.clienteNombre||'', old.clienteDoc||'', old.clienteNombre||'', old.marca||'', old.modelo||'', old.ano||'');
+    setTimeout(renderAuditoriaPlacas, 200);
+}
+
+function desasociarPlaca(placa) {
+    const vehs = getVehiclesData();
+    const idx = vehs.findIndex(v => v.placa === placa);
+    if (idx === -1) { showNotification('Placa no encontrada', 'error'); return; }
+    const old = vehs[idx];
+    const modal = createModal('Desasociar placa', `<p>¿Deseas desasociar la placa <strong>${placa}</strong> del cliente actual?</p>`, [
+        { text:'Cancelar', class:'btn-outline', onclick:'closeModal()' },
+        { text:'Desasociar', class:'btn-primary', onclick:`confirmDesasociarPlaca('${placa}')` }
+    ]);
+    showModal(modal);
+}
+
+function confirmDesasociarPlaca(placa) {
+    const vehs = getVehiclesData();
+    const idx = vehs.findIndex(v => v.placa === placa);
+    if (idx === -1) { closeModal(); return; }
+    const old = vehs[idx];
+    vehs.splice(idx,1);
+    saveVehiclesData();
+    addVehicleAuditEntry({ ts: Date.now(), action:'unlink', placa, old });
+    try { if (window.supabase) { supabase.from('vehiculos').delete().eq('placa', placa); } } catch(e){}
+    closeModal();
+    showNotification(`Placa ${placa} desasociada`, 'success');
+    renderAuditoriaPlacas();
+}
+
+window.renderAuditoriaPlacas = renderAuditoriaPlacas;
+window.desasociarPlaca = desasociarPlaca;
 
 // Actualizar dashboard de liquidación
 function actualizarDashboardLiquidacion() {
