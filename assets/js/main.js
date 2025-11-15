@@ -48,7 +48,14 @@ window.mecanicos = mecanicos;
 window.clientes = clientes;
 window.inventario = inventario;
 window.itemsTrabajo = [];
-window.trabajos = window.trabajos || [];
+// Almacén seguro para evitar colisión con <section id="trabajos">
+window.__appData = window.__appData || {};
+if (!Array.isArray(window.__appData.trabajos)) {
+    window.__appData.trabajos = Array.isArray(window.trabajos) ? window.trabajos : [];
+}
+function getTrabajosData() { return window.__appData.trabajos; }
+function addTrabajoData(t) { window.__appData.trabajos.push(t); }
+window.getTrabajosData = getTrabajosData;
 
 // ===== FUNCIONES CRÍTICAS - DEFINIDAS INMEDIATAMENTE =====
 // Estas funciones deben estar disponibles antes de que el HTML las use
@@ -1886,7 +1893,7 @@ function guardarNuevoTrabajo(event) {
         metodoPago: null
     };
     // Añadir al listado de trabajos en memoria para usar en liquidación
-    try { window.trabajos.push(trabajoCompleto); } catch (e) { console.warn('No se pudo agregar a window.trabajos:', e); }
+    try { addTrabajoData(trabajoCompleto); } catch (e) { console.warn('No se pudo agregar a trabajos:', e); }
 
     console.log('✅ Trabajo creado:', trabajoCompleto);
     
@@ -3159,7 +3166,7 @@ class SistemaLiquidacion {
 
     // Obtener trabajos completados por período
     obtenerTrabajosCompletadosPorPeriodo(tecnicoId, fechaInicio, fechaFin) {
-        const trabajos = window.trabajos || [];
+        const trabajos = getTrabajosData();
         let filtrados = trabajos.filter(trabajo => {
             const fechaTrabajo = new Date(trabajo.fecha || Date.now());
             const inicio = new Date(fechaInicio);
