@@ -1774,12 +1774,13 @@ function previsualizarTrabajo() {
                 const cantidad = Number(item.cantidad) || 1;
                 const ivaPorcentaje = Number(item.iva) || 0;
                 const totalItem = precio * cantidad;
+                const desc = `${item.codigo ? (item.codigo + ' — ') : ''}${item.nombre || ''}`;
                 if (ivaPorcentaje > 0) {
                     const base = totalItem / (1 + (ivaPorcentaje / 100));
                     const ivaIncluido = totalItem - base;
-                    return `<div>• ${item.nombre} (${cantidad}x) — ${formatCurrency(totalItem)} <small>(incl. IVA ${ivaPorcentaje}%: ${formatCurrency(ivaIncluido)})</small></div>`;
+                    return `<div>• ${desc} (${cantidad}x) — ${formatCurrency(totalItem)} <small>(incl. IVA ${ivaPorcentaje}%: ${formatCurrency(ivaIncluido)})</small></div>`;
                 } else {
-                    return `<div>• ${item.nombre} (${cantidad}x) — ${formatCurrency(totalItem)}</div>`;
+                    return `<div>• ${desc} (${cantidad}x) — ${formatCurrency(totalItem)}</div>`;
                 }
             }).join('') : '<div>No hay items agregados</div>'}
             
@@ -3588,7 +3589,7 @@ function actualizarVistaPrevia() {
                 <td>$${(m.monto).toLocaleString()}</td>
                 <td>$${aplicado.toLocaleString()}</td>
                 <td>
-                    <input type="number" min="0" max="${disponible}" value="${aplicar}" name="adelanto-aplicar-${m.id}" style="width:120px; text-align:right;" />
+                    <input type="number" min="0" max="${disponible}" value="${aplicar}" name="adelanto-aplicar-${m.id}" oninput="recalcularResumenAdelantos()" style="width:120px; text-align:right;" />
                 </td>
                 <td>$${disponible.toLocaleString()}</td>
             </tr>`;
@@ -3613,14 +3614,14 @@ function actualizarVistaPrevia() {
         <div class="preview-section">
             <h5>${tecnico.nombre || tecnico.name || 'Técnico'}</h5>
             <div class="preview-details" style="margin-bottom:10px;">
-                <div class="preview-item"><span>Trabajos:</span><span>${trabajosPeriodo.length}</span></div>
-                <div class="preview-item"><span>Total MO (pre-IVA):</span><span>$${totalManosObra.toLocaleString()}</span></div>
-                <div class="preview-item"><span>Adelantos a aplicar:</span><span>-$${aplicarTotal.toLocaleString()}</span></div>
-                <div class="preview-item"><span>Almuerzos:</span><span>-$${totales.almuerzos.toLocaleString()}</span></div>
-                <div class="preview-item"><span>Descuentos:</span><span>-$${totales.descuentos.toLocaleString()}</span></div>
-                <div class="preview-item"><span>Préstamos:</span><span>-$${totales.prestamos.toLocaleString()}</span></div>
-                <div class="preview-item"><span>Pagos previos:</span><span>-$${totales.pagos.toLocaleString()}</span></div>
-                <div class="preview-item total"><span><strong>NETO ESTIMADO:</strong></span><span class="${netoEstimado>=0?'text-success':'text-danger'}"><strong>$${Math.abs(netoEstimado).toLocaleString()}</strong></span></div>
+                <div class="preview-item"><span>Trabajos:</span><span id="li-prev-trabajos-count">${trabajosPeriodo.length}</span></div>
+                <div class="preview-item"><span>Total MO (pre-IVA):</span><span id="moTotalValor" data-value="${totalManosObra}">$${totalManosObra.toLocaleString()}</span></div>
+                <div class="preview-item"><span>Adelantos a aplicar:</span><span id="adelantosAplicarTotal" data-value="${aplicarTotal}">-$${aplicarTotal.toLocaleString()}</span></div>
+                <div class="preview-item"><span>Almuerzos:</span><span id="almTotal" data-value="${totales.almuerzos}">-$${totales.almuerzos.toLocaleString()}</span></div>
+                <div class="preview-item"><span>Descuentos:</span><span id="descTotal" data-value="${totales.descuentos}">-$${totales.descuentos.toLocaleString()}</span></div>
+                <div class="preview-item"><span>Préstamos:</span><span id="prestTotal" data-value="${totales.prestamos}">-$${totales.prestamos.toLocaleString()}</span></div>
+                <div class="preview-item"><span>Pagos previos:</span><span id="pagosTotal" data-value="${totales.pagos}">-$${totales.pagos.toLocaleString()}</span></div>
+                <div class="preview-item total"><span><strong>NETO ESTIMADO:</strong></span><span id="netoEstimadoValor" class="${netoEstimado>=0?'text-success':'text-danger'}" data-value="${netoEstimado}"><strong>$${Math.abs(netoEstimado).toLocaleString()}</strong></span></div>
             </div>
             <h6>Trabajos del período</h6>
             <table class="data-table" style="width:100%; margin-bottom:12px;">
@@ -3628,6 +3629,11 @@ function actualizarVistaPrevia() {
                 <tbody>${filasTrabajos}</tbody>
             </table>
             <h6>Adelantos (aplicación parcial)</h6>
+            <div class="btn-group" style="margin: 6px 0 10px 0; display:flex; gap:8px;">
+                <button type="button" class="btn btn-outline" onclick="aplicarAdelantosCubrirMO()">Cubrir MO</button>
+                <button type="button" class="btn btn-outline" onclick="aplicarAdelantosTodo()">Aplicar todo</button>
+                <button type="button" class="btn btn-outline" onclick="recalcularResumenAdelantos()">Recalcular</button>
+            </div>
             <table class="data-table" style="width:100%;">
                 <thead><tr><th>Fecha</th><th>Concepto</th><th>Monto</th><th>Aplicado</th><th>Aplicar ahora</th><th>Pendiente</th></tr></thead>
                 <tbody>${filasAdelantos}</tbody>
@@ -3684,6 +3690,82 @@ function procesarLiquidacionAvanzada(event) {
         showNotification('Error al procesar la liquidación', 'error');
     }
 }
+
+// Helpers de vista previa de liquidación
+function sumarValoresAdelantos() {
+    let total = 0;
+    document.querySelectorAll('input[name^="adelanto-aplicar-"]').forEach(inp => {
+        total += Math.max(0, parseInt(inp.value || 0));
+    });
+    return total;
+}
+
+function actualizarSpanMoneda(id, valor) {
+    const span = document.getElementById(id);
+    if (!span) return;
+    span.dataset.value = valor;
+    const abs = Math.abs(valor);
+    const pref = (id === 'adelantosAplicarTotal' || id === 'almTotal' || id === 'descTotal' || id === 'prestTotal' || id === 'pagosTotal') ? '-$' : '$';
+    span.textContent = `${pref}${abs.toLocaleString()}`;
+    if (id === 'netoEstimadoValor') {
+        span.className = (valor >= 0 ? 'text-success' : 'text-danger');
+        span.innerHTML = `<strong>$${abs.toLocaleString()}</strong>`;
+    }
+}
+
+function obtenerNumero(id) {
+    const el = document.getElementById(id);
+    if (!el) return 0;
+    return parseInt(el.dataset.value || '0');
+}
+
+function recalcularResumenAdelantos() {
+    const aplicar = sumarValoresAdelantos();
+    actualizarSpanMoneda('adelantosAplicarTotal', aplicar);
+    const mo = obtenerNumero('moTotalValor');
+    const alm = obtenerNumero('almTotal');
+    const desc = obtenerNumero('descTotal');
+    const prest = obtenerNumero('prestTotal');
+    const pagos = obtenerNumero('pagosTotal');
+    const neto = mo - aplicar - alm - desc - prest - pagos;
+    const netEl = document.getElementById('netoEstimadoValor');
+    if (netEl) {
+        netEl.dataset.value = neto;
+        netEl.className = (neto >= 0 ? 'text-success' : 'text-danger');
+        netEl.innerHTML = `<strong>$${Math.abs(neto).toLocaleString()}</strong>`;
+    }
+}
+
+function aplicarAdelantosTodo() {
+    document.querySelectorAll('input[name^="adelanto-aplicar-"]').forEach(inp => {
+        const max = parseInt(inp.getAttribute('max') || '0');
+        inp.value = Math.max(0, max);
+    });
+    recalcularResumenAdelantos();
+}
+
+function aplicarAdelantosCubrirMO() {
+    const mo = obtenerNumero('moTotalValor');
+    const alm = obtenerNumero('almTotal');
+    const desc = obtenerNumero('descTotal');
+    const prest = obtenerNumero('prestTotal');
+    const pagos = obtenerNumero('pagosTotal');
+    let objetivo = mo - alm - desc - prest - pagos; // cuánto necesito aplicar para que neto llegue a 0
+    const inputs = Array.from(document.querySelectorAll('input[name^="adelanto-aplicar-"]'));
+    inputs.forEach(inp => { inp.value = 0; });
+    for (const inp of inputs) {
+        if (objetivo <= 0) break;
+        const max = parseInt(inp.getAttribute('max') || '0');
+        const aplicar = Math.min(max, objetivo);
+        inp.value = aplicar;
+        objetivo -= aplicar;
+    }
+    recalcularResumenAdelantos();
+}
+
+window.recalcularResumenAdelantos = recalcularResumenAdelantos;
+window.aplicarAdelantosTodo = aplicarAdelantosTodo;
+window.aplicarAdelantosCubrirMO = aplicarAdelantosCubrirMO;
 
 // Actualizar dashboard de liquidación
 function actualizarDashboardLiquidacion() {
