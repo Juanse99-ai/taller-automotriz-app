@@ -2942,22 +2942,30 @@ function nuevoTrabajo() {
 function actualizarTotales() {
     const items = Array.isArray(window.itemsTrabajo) ? window.itemsTrabajo : [];
     
-    // Calcular subtotal sin IVA y total con IVA por item
-    let subtotalSinIva = 0;
-    let totalIva = 0;
-    let totalConIva = 0;
+    // Calcular desglose: si el precio incluye IVA, separar precio base e IVA
+    let subtotalSinIva = 0;  // Suma de precios base sin IVA
+    let totalIva = 0;         // Suma de IVA incluido en los precios
+    let totalConIva = 0;      // Suma de precios con IVA incluido (lo que se cobra)
     
     items.forEach(item => {
         const precio = Number(item.precio) || 0;
         const cantidad = Number(item.cantidad) || 1;
         const ivaPorcentaje = Number(item.iva) || 0;
         
-        const subtotalItem = precio * cantidad;
-        const ivaItem = subtotalItem * (ivaPorcentaje / 100);
-        const totalItemConIva = subtotalItem + ivaItem;
+        const totalItemConIva = precio * cantidad; // Total con IVA incluido
         
-        subtotalSinIva += subtotalItem;
-        totalIva += ivaItem;
+        if (ivaPorcentaje > 0) {
+            // El precio YA incluye IVA, calcular desglose
+            const precioBase = totalItemConIva / (1 + (ivaPorcentaje / 100));
+            const ivaIncluido = totalItemConIva - precioBase;
+            
+            subtotalSinIva += precioBase;
+            totalIva += ivaIncluido;
+        } else {
+            // El precio NO incluye IVA
+            subtotalSinIva += totalItemConIva;
+        }
+        
         totalConIva += totalItemConIva;
     });
 
@@ -3426,14 +3434,15 @@ function agregarRepuesto(codigo, nombre, precio, categoria) {
     // Asegurar que precio sea un número
     const precioNumero = Number(precio) || 0;
     
-    // Los repuestos YA tienen IVA incluido en el precio, por lo tanto IVA = 0%
+    // Los repuestos YA tienen IVA incluido en el precio (19%)
+    // El campo IVA = 19% indica que el precio mostrado YA incluye ese 19% de IVA
     const item = {
         codigo: codigo,
         nombre: nombre,
         precio: precioNumero,
         categoria: categoria,
         cantidad: 1,
-        iva: 0  // IVA = 0% porque el precio ya incluye IVA
+        iva: 19  // 19% significa que el precio YA incluye este IVA
     };
     
     // Inicializar array si no existe
@@ -3511,16 +3520,28 @@ function actualizarTablaItems() {
         const precio = Number(item.precio) || 0;
         const cantidad = Number(item.cantidad) || 1;
         const ivaPorcentaje = Number(item.iva) || 0;
-        const subtotal = precio * cantidad;
-        const valorIva = subtotal * (ivaPorcentaje / 100);
-        const totalConIva = subtotal + valorIva;
+        
+        // Si el precio YA incluye IVA (ivaPorcentaje > 0), calcular el desglose
+        let totalConIva, precioBase, valorIvaIncluido;
+        
+        if (ivaPorcentaje > 0) {
+            // El precio mostrado YA incluye IVA
+            totalConIva = precio * cantidad; // Total con IVA incluido
+            precioBase = totalConIva / (1 + (ivaPorcentaje / 100)); // Precio base sin IVA
+            valorIvaIncluido = totalConIva - precioBase; // IVA incluido en el precio
+        } else {
+            // El precio NO incluye IVA, se muestra tal cual
+            precioBase = precio * cantidad;
+            valorIvaIncluido = 0;
+            totalConIva = precioBase;
+        }
         
         return `
         <tr>
             <td><strong>${item.nombre}</strong><br><small style="color: #666;">${item.codigo} - ${item.categoria}</small></td>
             <td><input type="number" value="${cantidad}" min="1" onchange="cambiarCantidad(${index}, this.value)" oninput="cambiarCantidad(${index}, this.value)" style="width: 60px;"></td>
             <td>${formatCurrency(precio)}</td>
-            <td id="subtotalItem${index}">${formatCurrency(subtotal)}</td>
+            <td id="subtotalItem${index}">${formatCurrency(totalConIva)}</td>
             <td><input type="number" value="${ivaPorcentaje}" min="0" max="100" step="0.01" onchange="cambiarIva(${index}, this.value)" oninput="cambiarIva(${index}, this.value)" style="width: 60px;" placeholder="0">%</td>
             <td id="totalItem${index}">${formatCurrency(totalConIva)}</td>
             <td><button type="button" class="remove-item" onclick="eliminarItem(${index})" style="background: #ef4444; color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer;">🗑️</button></td>
@@ -3544,13 +3565,19 @@ function cambiarCantidad(index, nuevaCantidad) {
         const item = window.itemsTrabajo[index];
         const precio = Number(item.precio) || 0;
         const ivaPorcentaje = Number(item.iva) || 0;
-        const subtotal = precio * cantidad;
-        const valorIva = subtotal * (ivaPorcentaje / 100);
-        const totalConIva = subtotal + valorIva;
+        
+        let totalConIva;
+        if (ivaPorcentaje > 0) {
+            // El precio YA incluye IVA
+            totalConIva = precio * cantidad;
+        } else {
+            // El precio NO incluye IVA
+            totalConIva = precio * cantidad;
+        }
         
         const subtotalCell = document.getElementById(`subtotalItem${index}`);
         const totalCell = document.getElementById(`totalItem${index}`);
-        if (subtotalCell) subtotalCell.textContent = formatCurrency(subtotal);
+        if (subtotalCell) subtotalCell.textContent = formatCurrency(totalConIva);
         if (totalCell) totalCell.textContent = formatCurrency(totalConIva);
         
         actualizarTotales();
@@ -3568,11 +3595,19 @@ function cambiarIva(index, nuevoIva) {
         const item = window.itemsTrabajo[index];
         const precio = Number(item.precio) || 0;
         const cantidad = Number(item.cantidad) || 1;
-        const subtotal = precio * cantidad;
-        const valorIva = subtotal * (ivaPorcentaje / 100);
-        const totalConIva = subtotal + valorIva;
         
+        let totalConIva;
+        if (ivaPorcentaje > 0) {
+            // El precio YA incluye IVA
+            totalConIva = precio * cantidad;
+        } else {
+            // El precio NO incluye IVA
+            totalConIva = precio * cantidad;
+        }
+        
+        const subtotalCell = document.getElementById(`subtotalItem${index}`);
         const totalCell = document.getElementById(`totalItem${index}`);
+        if (subtotalCell) subtotalCell.textContent = formatCurrency(totalConIva);
         if (totalCell) totalCell.textContent = formatCurrency(totalConIva);
         
         actualizarTotales();
