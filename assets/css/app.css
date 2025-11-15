@@ -83,7 +83,7 @@ body {
 }
 
 /* Hover-expand behavior for collapsed sidebar on desktop */
-@media (min-width: 769px) {
+@media (min-width: 1025px) {
   .sidebar.hover-expand.collapsed:hover {
     width: 280px;
   }
@@ -96,6 +96,18 @@ body {
   .sidebar.hover-expand.collapsed:hover ~ .main-content {
     padding-left: 280px;
   }
+}
+
+/* Tablet layout: 769px–1024px (no hover-expand, toggle only) */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .sidebar { width: 70px; }
+  .sidebar.collapsed { width: 70px; }
+  .sidebar:not(.collapsed) { width: 220px; }
+  .main-content { padding-left: 80px; }
+  .main-content.sidebar-expanded { padding-left: 220px; }
+  .main-content.sidebar-collapsed { padding-left: 80px; }
+  /* Avoid hover expand on tablets */
+  .sidebar.hover-expand.collapsed:hover { width: 70px; }
 }
 
 .sidebar.collapsed .sidebar-header {
@@ -683,11 +695,12 @@ body {
     background: white;
     border: 1px solid #ddd;
     border-radius: 8px;
-    overflow: hidden;
+    overflow: auto; /* permitir scroll horizontal en pantallas pequeñas */
 }
 
 .items-table {
     width: 100%;
+    min-width: 900px; /* evita aplastamiento en móviles */
     border-collapse: collapse;
 }
 

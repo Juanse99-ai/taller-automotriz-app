@@ -81,23 +81,24 @@ function initializeApp() {
     
     console.log('✅ Aplicación completamente inicializada');
 
-    // Sidebar: iniciar en modo colapsado + hover-expand
+    // Sidebar: iniciar en modo colapsado; hover-expand solo desktop
     try {
         const sidebar = document.getElementById('sidebar');
         const mainContent = document.querySelector('.main-content');
         if (sidebar && mainContent && !sidebar.classList.contains('initialized')) {
-            sidebar.classList.add('collapsed','hover-expand','initialized');
+            sidebar.classList.add('collapsed','initialized');
+            if (window.innerWidth > 1024) sidebar.classList.add('hover-expand');
             mainContent.classList.add('sidebar-collapsed');
         }
         // Posicionar hamburguesa y mover en hover
         try { updateHamburgerPosition(); } catch(e) {}
         sidebar.addEventListener('mouseenter', () => {
-            if (sidebar.classList.contains('hover-expand') && sidebar.classList.contains('collapsed')) {
+            if (window.innerWidth > 1024 && sidebar.classList.contains('hover-expand') && sidebar.classList.contains('collapsed')) {
                 setHamburgerLeft(true);
             }
         });
         sidebar.addEventListener('mouseleave', () => {
-            if (sidebar.classList.contains('hover-expand') && sidebar.classList.contains('collapsed')) {
+            if (window.innerWidth > 1024 && sidebar.classList.contains('hover-expand') && sidebar.classList.contains('collapsed')) {
                 setHamburgerLeft(false);
             }
         });
