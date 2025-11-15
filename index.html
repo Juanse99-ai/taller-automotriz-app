@@ -1318,14 +1318,16 @@ body {
 
                                 <div class="pos-section">
                                     <h3 class="pos-section-title">🔧 Repuestos y Servicios</h3>
-                                    <div class="form-group">
-                                        <label class="form-label">🔍 Buscar Repuesto/Servicio</label>
-                                        <div class="input-with-button">
-                                            <input type="text" class="form-input" id="busquedaRepuesto" placeholder="Buscar por código o nombre..." onkeyup="buscarEnInventario(this.value)">
-                                            <button type="button" class="btn btn-secondary" onclick="mostrarTodosLosRepuestos()">Ver Todo</button>
-                                        </div>
-                                        <div id="resultadosInventario" class="inventario-resultados"></div>
-                                    </div>
+                        <div class="form-group">
+                            <label class="form-label">🔍 Buscar Repuesto/Servicio</label>
+                            <div class="input-with-button">
+                                <input type="text" class="form-input" id="busquedaRepuesto" placeholder="Buscar por código, referencia o nombre..." onkeyup="buscarEnInventario(this.value)">
+                                <button type="button" class="btn btn-secondary btn-icon" title="Mostrar todos" onclick="mostrarTodosLosRepuestos()">🔍</button>
+                                <button type="button" class="btn btn-secondary btn-icon" title="Escanear código de barras" onclick="abrirScannerRepuestos()">📷</button>
+                            </div>
+                            <small style="color:#6b7280;">También puedes escanear el código de barras o ingresar la referencia del repuesto.</small>
+                            <div id="resultadosInventario" class="inventario-resultados"></div>
+                        </div>
 
                                     <div class="form-group">
                                         <button type="button" class="btn btn-secondary" onclick="agregarServicioManual()">➕ Agregar Servicio Manual</button>
@@ -2171,6 +2173,7 @@ let nextOrderNumber = 3;
 let nextQuoteNumber = 3;
 let nextInvoiceNumber = 3;
 let previousSectionBeforeNuevoTrabajo = 'dashboard';
+let datosRecepcionTemporal = null;
 
 // Base de datos de clientes
 const clientes = [
@@ -3005,6 +3008,31 @@ function inicializarNuevoTrabajoForm() {
     if (busquedaCedula) busquedaCedula.value = '';
 
     actualizarTotales();
+
+    if (datosRecepcionTemporal) {
+        document.getElementById('trabajoCliente').value = datosRecepcionTemporal.clienteNombre || '';
+        document.getElementById('busquedaCedula').value = datosRecepcionTemporal.cedula || '';
+        const telefonoInput = document.getElementById('clienteTelefono');
+        if (telefonoInput) telefonoInput.value = datosRecepcionTemporal.telefono || '';
+        const emailInput = document.getElementById('clienteEmail');
+        if (emailInput) emailInput.value = datosRecepcionTemporal.email || '';
+
+        document.getElementById('trabajoPlaca').value = datosRecepcionTemporal.placa || '';
+        document.getElementById('vehiculoMarca').value = datosRecepcionTemporal.marca || '';
+        document.getElementById('vehiculoModelo').value = datosRecepcionTemporal.modelo || '';
+        document.getElementById('vehiculoAno').value = datosRecepcionTemporal.ano || new Date().getFullYear();
+        document.getElementById('trabajoKilometraje').value = datosRecepcionTemporal.kilometraje || '';
+
+        const tecnicoSelect = document.getElementById('trabajoTecnico');
+        if (tecnicoSelect && datosRecepcionTemporal.tecnico) {
+            tecnicoSelect.value = datosRecepcionTemporal.tecnico;
+        }
+
+        const descripcion = document.getElementById('trabajoServicio');
+        if (descripcion) descripcion.value = datosRecepcionTemporal.descripcion || '';
+
+        datosRecepcionTemporal = null;
+    }
 }
 
 function cancelarNuevoTrabajo() {
@@ -3025,33 +3053,47 @@ function nuevoTrabajo() {
 // ===== FUNCIONES AUXILIARES DEL SISTEMA POS =====
 
 // Buscar cliente por cédula
+function normalizarDocumentoCliente(cliente) {
+    return (
+        cliente?.cedula ||
+        cliente?.documento ||
+        cliente?.id_cedula ||
+        cliente?.nit ||
+        cliente?.numero_documento ||
+        cliente?.identificacion ||
+        cliente?.doc ||
+        cliente?.documento_identidad ||
+        cliente?.id ||
+        ''
+    ).toString();
+}
+
+function normalizarNombreCliente(cliente) {
+    return (cliente?.nombre || cliente?.name || cliente?.cliente || 'Cliente sin nombre').toString();
+}
+
 function buscarClientePorCedula(cedula) {
     const contenedor = document.getElementById('resultadosBusqueda');
     if (!contenedor) return;
 
-    if (!cedula || cedula.length < 3) {
+    const termino = (cedula || '').toString().trim();
+    if (termino.length < 2) {
         contenedor.classList.remove('show');
         contenedor.innerHTML = '';
         return;
     }
     
-    const baseClientes = Array.isArray(supabaseClientes) && supabaseClientes.length
-        ? supabaseClientes
-        : [
-            { cedula: '1043038457', nombre: 'JUAN CERVANTES' },
-            { cedula: '12345678', nombre: 'MARIA GARCIA' },
-            { cedula: '87654321', nombre: 'CARLOS RODRIGUEZ' },
-            { cedula: '11223344', nombre: 'ANA MARTINEZ' }
-        ];
+    const baseClientes = obtenerListaClientes();
+    const terminoLower = termino.toLowerCase();
 
-    const normalizarDocumento = cliente => (cliente?.cedula || cliente?.documento || cliente?.id_cedula || '').toString();
-
-    const resultados = baseClientes.filter(cliente => normalizarDocumento(cliente).includes(cedula));
+    const resultados = baseClientes.filter(cliente => 
+        normalizarDocumentoCliente(cliente).toLowerCase().includes(terminoLower)
+    ).slice(0, 50);
     
     if (resultados.length > 0) {
         contenedor.innerHTML = resultados.map(cliente => {
-            const doc = normalizarDocumento(cliente);
-            const nombre = (cliente?.nombre || cliente?.name || cliente?.cliente || 'Cliente sin nombre').toString();
+            const doc = normalizarDocumentoCliente(cliente);
+            const nombre = normalizarNombreCliente(cliente);
             const telefono = (cliente?.telefono || cliente?.phone || '').toString();
             const email = (cliente?.email || '').toString();
             const escapar = valor => valor.replace(/'/g, "\\'");
@@ -3064,7 +3106,7 @@ function buscarClientePorCedula(cedula) {
     } else {
         contenedor.innerHTML = '<div class="resultado-item">No se encontraron clientes</div>';
     }
-        contenedor.classList.add('show');
+    contenedor.classList.add('show');
 }
 
 // Seleccionar cliente de resultados
@@ -3087,7 +3129,7 @@ function abrirBuscadorClientes() {
         'Buscar Cliente',
         `
         <div class="cliente-search-modal">
-            <input type="text" class="form-input" id="modalBuscarCliente" placeholder="Buscar por cédula o nombre..." oninput="filtrarClientesModal(this.value)">
+            <input type="text" class="form-input" id="modalBuscarCliente" placeholder="Buscar por cédula/NIT o nombre..." oninput="filtrarClientesModal(this.value)">
             <div id="modalClientesResultado" class="modal-clientes-list"></div>
         </div>
         `,
@@ -3105,13 +3147,11 @@ function filtrarClientesModal(termino = '') {
     if (!contenedor) return;
 
     const lista = obtenerListaClientes();
-    const terminoLower = termino.toLowerCase();
-    const normalizarDocumento = cliente => (cliente?.cedula || cliente?.documento || cliente?.id_cedula || '').toString();
-    const normalizarNombre = cliente => (cliente?.nombre || cliente?.name || cliente?.cliente || '').toString();
+    const terminoLower = (termino || '').toLowerCase();
 
     const resultados = lista.filter(cliente => {
-        const doc = normalizarDocumento(cliente).toLowerCase();
-        const nombre = normalizarNombre(cliente).toLowerCase();
+        const doc = normalizarDocumentoCliente(cliente).toLowerCase();
+        const nombre = normalizarNombreCliente(cliente).toLowerCase();
         return !terminoLower || doc.includes(terminoLower) || nombre.includes(terminoLower);
     }).slice(0, 50);
 
@@ -3125,7 +3165,7 @@ function filtrarClientesModal(termino = '') {
         <table>
             <thead>
                 <tr>
-                    <th>Cédula</th>
+                    <th>Cédula/NIT</th>
                     <th>Nombre</th>
                     <th>Teléfono</th>
                     <th>Email</th>
@@ -3134,8 +3174,8 @@ function filtrarClientesModal(termino = '') {
             </thead>
             <tbody>
                 ${resultados.map(cliente => {
-                    const doc = normalizarDocumento(cliente);
-                    const nombre = normalizarNombre(cliente);
+                    const doc = normalizarDocumentoCliente(cliente);
+                    const nombre = normalizarNombreCliente(cliente);
                     const telefono = (cliente?.telefono || cliente?.phone || '').toString();
                     const email = (cliente?.email || '').toString();
                     return `
@@ -3170,14 +3210,14 @@ function buscarEnInventario(termino) {
     const baseInventario = Array.isArray(supabaseInventario) && supabaseInventario.length
         ? supabaseInventario
         : [
-            { codigo: 'ACE001', nombre: 'Aceite Motor 5W30 Synthetic', precio: 45000, categoria: 'Lubricantes' },
-            { codigo: 'FRN001', nombre: 'Frenos Delanteros Completos', precio: 180000, categoria: 'Frenos' },
-            { codigo: 'FLT001', nombre: 'Filtro de Aire', precio: 25000, categoria: 'Filtros' },
-            { codigo: 'BTR001', nombre: 'Batería 12V 60Ah', precio: 320000, categoria: 'Eléctrico' },
-            { codigo: 'LMP001', nombre: 'Lámpara Halógena H7', precio: 35000, categoria: 'Iluminación' },
-            { codigo: 'LLV001', nombre: 'Llantas Michelin 195/65R15', precio: 280000, categoria: 'Neumáticos' },
-            { codigo: 'CDR001', nombre: 'Correa de Distribución', precio: 95000, categoria: 'Motor' },
-            { codigo: 'SVP001', nombre: 'Servicio Preventivo Básico', precio: 85000, categoria: 'Servicios' }
+            { codigo: 'ACE001', nombre: 'Aceite Motor 5W30 Synthetic', referencia: 'ACE001', precio: 45000, categoria: 'Lubricantes' },
+            { codigo: 'FRN001', nombre: 'Frenos Delanteros Completos', referencia: 'FRN001', precio: 180000, categoria: 'Frenos' },
+            { codigo: 'FLT001', nombre: 'Filtro de Aire', referencia: 'FLT001', precio: 25000, categoria: 'Filtros' },
+            { codigo: 'BTR001', nombre: 'Batería 12V 60Ah', referencia: 'BTR001', precio: 320000, categoria: 'Eléctrico' },
+            { codigo: 'LMP001', nombre: 'Lámpara Halógena H7', referencia: 'LMP001', precio: 35000, categoria: 'Iluminación' },
+            { codigo: 'LLV001', nombre: 'Llantas Michelin 195/65R15', referencia: 'LLV001', precio: 280000, categoria: 'Neumáticos' },
+            { codigo: 'CDR001', nombre: 'Correa de Distribución', referencia: 'CDR001', precio: 95000, categoria: 'Motor' },
+            { codigo: 'SVP001', nombre: 'Servicio Preventivo Básico', referencia: 'SVP001', precio: 85000, categoria: 'Servicios' }
         ];
     
     const normalizarTexto = texto => (texto || '').toString().toLowerCase();
@@ -3193,7 +3233,10 @@ function buscarEnInventario(termino) {
         resultados = baseInventario.filter(item => {
             const codigo = normalizarTexto(item.codigo || item.code);
             const nombre = normalizarTexto(item.nombre || item.name || item.producto);
-            return codigo.includes(termino.toLowerCase()) || nombre.includes(termino.toLowerCase());
+            const referencia = normalizarTexto(item.referencia || item.ref || item.referencia_interna);
+            const barras = normalizarTexto(item.codigo_barras || item.barcode);
+            const terminoLower = termino.toLowerCase();
+            return codigo.includes(terminoLower) || nombre.includes(terminoLower) || referencia.includes(terminoLower) || barras.includes(terminoLower);
         }).slice(0, 50);
     }
     
@@ -3203,11 +3246,12 @@ function buscarEnInventario(termino) {
             const codigo = item.codigo || item.code || 'S/C';
             const nombre = item.nombre || item.name || item.producto || 'Producto sin nombre';
             const categoria = item.categoria || item.category || 'General';
+            const referencia = item.referencia || item.ref || item.referencia_interna || item.codigo_barras || '';
             const precio = Number(item.precio || item.price || item.valor || 0);
             return `
                 <div class="inventario-item" onclick="agregarRepuestoDesdeBusqueda(${index})">
                     <strong>${codigo}</strong> - ${nombre}<br>
-                    <small style="color: #666;">${categoria} - ${formatCurrency(precio)}</small>
+                    <small style="color: #666;">${categoria}${referencia ? ' · Ref: ' + referencia : ''} · ${formatCurrency(precio)}</small>
                 </div>
             `;
         }).join('');
@@ -3698,7 +3742,23 @@ function guardarNuevaRecepcion(event) {
     
     nextOrderNumber++;
     showNotification(`Recepción ${ordenNumero} creada exitosamente`, 'success');
+    
+    datosRecepcionTemporal = {
+        clienteNombre: document.getElementById('clienteNombre').value,
+        cedula: document.getElementById('busquedaCedulaRecepcion').value,
+        telefono: document.getElementById('clienteTelefono').value,
+        email: document.getElementById('clienteEmail').value,
+        placa: document.getElementById('vehiculoPlaca').value,
+        marca: document.getElementById('vehiculoMarcaRecepcion').value,
+        modelo: document.getElementById('vehiculoModeloRecepcion').value,
+        ano: document.getElementById('vehiculoAnoRecepcion').value,
+        kilometraje: document.getElementById('vehiculoKilometraje').value,
+        tecnico: document.getElementById('tecnicoAsignado').value,
+        descripcion: document.getElementById('problemaDescripcion').value
+    };
+    
     closeModal();
+    nuevoTrabajo();
     
     // Actualizar datos
     // loadRecepcionData();
