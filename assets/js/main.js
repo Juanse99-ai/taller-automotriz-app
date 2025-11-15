@@ -1403,13 +1403,13 @@ function actualizarTablaItems() {
         return `
         <tr style="border-bottom: 1px solid #eee;">
             <td style="padding: 12px 10px; vertical-align: middle;">
-                <div style="display:flex; gap:8px; align-items:center;">
-                    <button type="button" title="Eliminar" onclick="eliminarItem(${index})" style="background:#ef4444;color:#fff;border:none;padding:6px 8px;border-radius:4px;cursor:pointer;">🗑️</button>
-                    <input type="text" value="${codigo}" placeholder="Ref." onchange="cambiarCodigo(${index}, this.value)" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:4px;font-size:14px;" />
+                <div style="display:flex; gap:10px; align-items:flex-start;">
+                    <button type="button" title="Eliminar" onclick="eliminarItem(${index})" style="background:#ef4444;color:#fff;border:none;padding:6px 8px;border-radius:4px;cursor:pointer;flex-shrink:0;">🗑️</button>
+                    <div style="flex:1; min-width:0; display:flex; flex-direction:column; gap:8px;">
+                        <input type="text" value="${codigo}" placeholder="Referencia" onchange="cambiarCodigo(${index}, this.value)" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:4px;font-size:14px;" />
+                        <input type="text" value="${nombre}" placeholder="Descripción" onchange="cambiarDescripcion(${index}, this.value)" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:4px;font-size:14px;" />
+                    </div>
                 </div>
-            </td>
-            <td style="padding: 12px 10px;">
-                <input type="text" value="${nombre}" placeholder="Descripción" onchange="cambiarDescripcion(${index}, this.value)" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:4px;font-size:14px;" />
             </td>
             <td style="padding: 12px 10px; text-align:right;">
                 <input type="text" value="${formatCurrency(precio)}" onchange="cambiarPrecioUnitario(${index}, this.value)" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:4px;text-align:right;font-size:14px;" />
@@ -1492,8 +1492,8 @@ function moverItemAbajo(index) {
 
 function cambiarArticulo(index, nuevoNombre) {
     if (window.itemsTrabajo && window.itemsTrabajo[index]) {
-        // Antes se usaba para nombre abreviado; ahora es referencia/código
-        window.itemsTrabajo[index].codigo = nuevoNombre.trim();
+        // Mantener compatibilidad: cambia el nombre del artículo
+        window.itemsTrabajo[index].nombre = (nuevoNombre || '').toString().trim();
         actualizarTablaItems();
     }
 }
