@@ -933,28 +933,7 @@
                                             <th>Acciones</th>
                                         </tr>
                                     </thead>
-                                    <tbody id="liquidacionTable">
-                                        <tr>
-                                            <td>ABC123 - Cambio aceite</td>
-                                            <td>Víctor Padilla</td>
-                                            <td>$25,000</td>
-                                            <td>$5,000</td>
-                                            <td><span class="status-badge status-pendiente">Pendiente</span></td>
-                                            <td>
-                                                <button class="btn btn-sm btn-success" onclick="liquidarTrabajo('ABC123')">Liquidar</button>
-                                            </td>
-                                        </tr>
-                                        <tr>
-                                            <td>XYZ789 - Reparación frenos</td>
-                                            <td>Pedro Barraza</td>
-                                            <td>$80,000</td>
-                                            <td>$16,000</td>
-                                            <td><span class="status-badge status-evaluacion">Dueño</span></td>
-                                            <td>
-                                                <span class="status-badge status-evaluacion">No aplica</span>
-                                            </td>
-                                        </tr>
-                                    </tbody>
+                                    <tbody id="liquidacionTable"></tbody>
                                 </table>
                             </div>
                         </div>
@@ -1066,6 +1045,8 @@
                                 <div class="form-actions">
                                     <button type="button" class="btn-secondary" onclick="showSection('liquidacion')">Volver</button>
                                     <button type="button" class="btn btn-info" onclick="actualizarVistaPrevia()">Vista Previa</button>
+                                    <button type="button" class="btn btn-outline" onclick="imprimirLiquidacion()">Imprimir</button>
+                                    <button type="button" class="btn btn-outline" onclick="exportarLiquidacionACuentti()">Exportar CUENTTI (CSV)</button>
                                     <button type="submit" class="btn-primary">Generar Liquidación</button>
                                 </div>
                             </form>

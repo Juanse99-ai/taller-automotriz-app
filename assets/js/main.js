@@ -15,23 +15,9 @@ let nextInvoiceNumber = 3;
 let previousSectionBeforeNuevoTrabajo = 'dashboard';
 let datosRecepcionTemporal = null;
 
-// Base de datos de clientes
-const clientes = [
-    { id: 1, name: 'Juan Pérez', cedula: '12345678', phone: '3001112233', email: 'juan.perez@email.com' },
-    { id: 2, name: 'María González', cedula: '87654321', phone: '3004445566', email: 'maria.gonzalez@email.com' },
-    { id: 3, name: 'Carlos Rodríguez', cedula: '11223344', phone: '3007778899', email: 'carlos.rodriguez@email.com' },
-    { id: 4, name: 'Ana Martínez', cedula: '55667788', phone: '3001113344', email: 'ana.martinez@email.com' },
-    { id: 5, name: 'Luis Sánchez', cedula: '99887766', phone: '3005556677', email: 'luis.sanchez@email.com' }
-];
-
-// Inventario de productos
-const inventario = [
-    { codigo: 'FO-001', nombre: 'Filtro de Aceite Universal', precio: 15000, stock: 15, categoria: 'Filtros' },
-    { codigo: 'FO-002', nombre: 'Filtro de Aire', precio: 12000, stock: 8, categoria: 'Filtros' },
-    { codigo: 'FR-001', nombre: 'Pastillas de Freno Traseras', precio: 35000, stock: 6, categoria: 'Frenos' },
-    { codigo: 'FR-002', nombre: 'Pastillas de Freno Delanteras', precio: 45000, stock: 3, categoria: 'Frenos' },
-    { codigo: 'LG-001', nombre: 'Lubricante de Motor', precio: 25000, stock: 20, categoria: 'Lubricantes' }
-];
+// Base de datos en memoria (vacía por defecto para pruebas reales)
+const clientes = [];
+const inventario = [];
 
 // Mecánicos del taller
 const mecanicos = [
@@ -1932,6 +1918,7 @@ function guardarNuevoTrabajo(event) {
             <td><span class="status-badge status-pendiente">Pendiente</span></td>
             <td>
                 <button class="btn btn-sm btn-outline" onclick="verTrabajo('${trabajoCompleto.placa}')">Ver</button>
+                <button class="btn btn-sm btn-success" onclick="completarTrabajo('${trabajoCompleto.id}')">Completar</button>
             </td>
         `;
         trabajosTableBody.prepend(nuevaFila);
@@ -2083,6 +2070,32 @@ function verTrabajo(placa) {
     
     showModal(modal);
 }
+
+// Completar trabajo (marcar como 'completado')
+function completarTrabajo(trabajoId) {
+    const trabajos = getTrabajosData();
+    const t = trabajos.find(x => String(x.id) === String(trabajoId));
+    if (!t) { showNotification('Trabajo no encontrado', 'error'); return; }
+    t.estado = 'completado';
+    showNotification(`Trabajo ${t.id} marcado como completado`, 'success');
+    // Actualizar UI si la fila existe
+    try {
+        const trabajosTableBody = document.getElementById('trabajosTable');
+        if (trabajosTableBody) {
+            const filas = Array.from(trabajosTableBody.querySelectorAll('tr'));
+            const fila = filas.find(tr => tr.innerText.includes(t.placa));
+            if (fila) {
+                const badge = fila.querySelector('.status-badge');
+                if (badge) {
+                    badge.className = 'status-badge status-completado';
+                    badge.textContent = 'Completado';
+                }
+            }
+            actualizarMetricasTrabajos();
+        }
+    } catch (e) { /* noop */ }
+}
+window.completarTrabajo = completarTrabajo;
 
 // Nueva recepción
 // ===== MÓDULO UNIFICADO: RECEPCIÓN Y NUEVO TRABAJO =====
@@ -3236,8 +3249,8 @@ class SistemaLiquidacion {
                    fechaTrabajo >= inicio && 
                    fechaTrabajo <= fin;
         });
-        // Si hay estado, considerar todo menos cancelados; si no, devolver los mismos
-        filtrados = filtrados.filter(t => (typeof t.estado === 'undefined') || (t.estado && t.estado.toLowerCase() !== 'cancelado'));
+        // Solo trabajos completados
+        filtrados = filtrados.filter(t => (t.estado || '').toString().toLowerCase() === 'completado');
         return filtrados;
     }
 
@@ -3956,6 +3969,59 @@ window.recalcularResumenAdelantos = recalcularResumenAdelantos;
 window.aplicarAdelantosTodo = aplicarAdelantosTodo;
 window.aplicarAdelantosCubrirMO = aplicarAdelantosCubrirMO;
 window.aplicarAdelantosSaldoCero = aplicarAdelantosSaldoCero;
+
+// Exportar Liquidación a CUENTTI (CSV) usando los trabajos del período (MO técnico)
+function exportarLiquidacionACuentti() {
+    const form = document.getElementById('liquidacionAvanzadaForm');
+    if (!form) { showNotification('Abre la Liquidación Avanzada', 'warning'); return; }
+    const tecnicoId = parseInt(form.querySelector('select[name="tecnicoId"]')?.value || '0');
+    const fechaInicio = form.querySelector('input[name="fechaInicio"]')?.value || '';
+    const fechaFin = form.querySelector('input[name="fechaFin"]')?.value || '';
+    if (!tecnicoId || !fechaInicio || !fechaFin) { showNotification('Completa técnico y fechas', 'warning'); return; }
+    const trabajos = sistemaLiquidacion.obtenerTrabajosCompletadosPorPeriodo(tecnicoId, fechaInicio, fechaFin);
+    const tecnico = window.mecanicos.find(m => m.id === tecnicoId);
+    const porcentaje = tecnico ? controlSaldos.obtenerPorcentaje(tecnico.nombre || tecnico.name || '') : 0;
+    const header = ['Referencia o codigo de barras','Nombre','Precio Unitario','Cantidad','Descuento','Impuesto','SubTotal (No modificar)','Estampilla(sino Aplica 0)','Impoconsumo(sino Aplica 0)','Total (No modificar)','id_plan_cuenta (opcional solo Egresos)'];
+    const rows = trabajos.map(t => {
+        const moTec = Math.round((t.manoObra || 0) * (porcentaje/100));
+        const ref = `MO-${t.placa || ''}`;
+        const nombre = `Mano de Obra ${t.placa || ''} ${[t.marca,t.modelo,t.ano].filter(Boolean).join(' ')}`.trim();
+        const pu = moTec; // MO técnico como unitario
+        const cant = 1;
+        const desc = 0;
+        const iva = 0;
+        const sub = pu * cant;
+        const est = 0, impo = 0;
+        const tot = sub;
+        return [ref, nombre, pu, cant, desc, iva, sub, est, impo, tot, ''];
+    });
+    if (!rows.length) { showNotification('No hay trabajos completados en el período', 'warning'); return; }
+    const csv = [header, ...rows].map(r => r.join(',')).join('\n');
+    const blob = new Blob(['\ufeff'+csv], {type:'text/csv;charset=utf-8;'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `LIQ-${tecnico ? (tecnico.nombre || tecnico.name) : 'Tecnico'}-${fechaInicio}_a_${fechaFin}.csv`;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+}
+
+// Imprimir Liquidación (usa el HTML de la vista previa)
+function imprimirLiquidacion() {
+    const cont = document.querySelector('#liquidacionAvanzada #preview-contenido');
+    if (!cont) { showNotification('Genera la vista previa primero', 'warning'); return; }
+    const w = window.open('', '_blank');
+    w.document.write('<html><head><title>Liquidación</title>');
+    w.document.write('<style>body{font-family:Arial,sans-serif;padding:20px;} table{width:100%;border-collapse:collapse} th,td{border:1px solid #ddd;padding:8px;text-align:left} .text-success{color:#198754} .text-danger{color:#dc3545}</style>');
+    w.document.write('</head><body>');
+    w.document.write('<h2>Liquidación Avanzada</h2>');
+    w.document.write(cont.innerHTML);
+    w.document.write('</body></html>');
+    w.document.close();
+    w.focus();
+    w.print();
+}
+
+window.exportarLiquidacionACuentti = exportarLiquidacionACuentti;
+window.imprimirLiquidacion = imprimirLiquidacion;
 
 // Actualizar dashboard de liquidación
 function actualizarDashboardLiquidacion() {
