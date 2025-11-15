@@ -3618,6 +3618,20 @@ function actualizarVistaPrevia() {
     if (!tecnicoId) tecnicoId = form.querySelector('select[name="tecnicoId"]')?.value || '';
     if (!fechaInicio) fechaInicio = form.querySelector('input[name="fechaInicio"]')?.value || '';
     if (!fechaFin) fechaFin = form.querySelector('input[name="fechaFin"]')?.value || '';
+
+    // Si faltan fechas, usar por defecto últimos 30 días y pintar en el formulario
+    if (!fechaInicio || !fechaFin) {
+        const hoy = new Date();
+        const hace30 = new Date(hoy.getTime() - 30*24*60*60*1000);
+        const dIni = hace30.toISOString().split('T')[0];
+        const dFin = hoy.toISOString().split('T')[0];
+        fechaInicio = fechaInicio || dIni;
+        fechaFin = fechaFin || dFin;
+        const iniInput = form.querySelector('input[name="fechaInicio"]');
+        const finInput = form.querySelector('input[name="fechaFin"]');
+        if (iniInput && !iniInput.value) iniInput.value = fechaInicio;
+        if (finInput && !finInput.value) finInput.value = fechaFin;
+    }
     
     if (!tecnicoId || !fechaInicio || !fechaFin) {
         const preview = document.querySelector('#liquidacionAvanzada #preview-contenido');
