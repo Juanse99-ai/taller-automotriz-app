@@ -1,257 +1,386 @@
-# 🚀 **Sistema de Gestión Taller Automotriz**
+# 🔧 Sistema de Gestión Multidiagnósticos AS
 
-## **🎉 ESTADO: COMPLETAMENTE FUNCIONAL**
+Sistema completo de gestión para talleres automotrices con integración a Supabase, diseñado para administrar trabajos, mecánicos, inventario, finanzas y liquidaciones de manera eficiente.
 
-**✅ Compatible con Safari en macOS**  
-**✅ Compatible con Chrome, Firefox, Edge**  
-**✅ Listo para GitHub y Vercel**  
-**✅ Versión estática (no requiere servidor)**
+## 📋 Tabla de Contenidos
 
-## **📱 Versiones Disponibles**
+- [Características Principales](#-características-principales)
+- [Tecnologías Utilizadas](#-tecnologías-utilizadas)
+- [Instalación y Configuración](#-instalación-y-configuración)
+- [Uso del Sistema](#-uso-del-sistema)
+- [Estructura del Proyecto](#-estructura-del-proyecto)
+- [Despliegue](#-despliegue)
+- [Configuración de Supabase](#-configuración-de-supabase)
+- [Personalización](#-personalización)
 
-### **Versiones Principales:**
-- **`index.html`** - Aplicación principal (optimizada para Safari)
-- **`SAFARI.html`** - Versión específica para Safari en macOS
-- **`index-SAFARI.html`** - App completa optimizada para Safari
+## ✨ Características Principales
 
-### **Archivos de Diagnóstico:**
-- **`TEST-INDEX.html`** - Test de carga de archivos
-- **`simple.html`** - Versión simplificada
-- **`EMERGENCIA.html`** - Test de emergencia
-
-## **🧪 Credenciales de Prueba**
-```
-👤 admin / admin (Administrador)
-👨‍🔧 mecanico / mecanico (Mecánico)
-🔧 pedro / pedro (Pedro Barraza - 20% liquidación)
-🔧 victor / victor (Víctor Padilla - 20% liquidación)
-```
-
-```
-taller-automotriz-app/
-├── index.html              # Página principal
-├── assets/
-│   ├── css/
-│   │   └── styles.css      # Estilos CSS
-│   └── js/
-│       └── app.js          # JavaScript completo
-├── README.md               # Esta documentación
-└── vercel.json             # Configuración para Vercel
-```
-
-## **🔧 Cómo Ejecutar Localmente**
-
-### **Opción 1: Abrir Directamente**
-```bash
-# Navegar a la carpeta del proyecto
-cd taller-automotriz-app
-
-# Abrir en el navegador (funciona con file://)
-open index.html
-# o
-start index.html    # Windows
-# o simplemente arrastrar index.html al navegador
-```
-
-### **Opción 2: Servidor Local Simple**
-```bash
-# Usar Python (si está instalado)
-python -m http.server 8000
-
-# O usar Node.js (si está instalado)
-npx serve .
-
-# Luego abrir: http://localhost:8000
-```
-
-## **🌐 Subir a GitHub**
-
-### **1. Crear Repositorio en GitHub**
-1. Ve a [github.com](https://github.com) y haz login
-2. Click en "New repository"
-3. Nombre: `taller-automotriz`
-4. Descripción: `Sistema de gestión para taller automotriz`
-5. **Mark**: Public o Private (según prefieras)
-6. Click "Create repository"
-
-### **2. Subir Código Local**
-```bash
-# En la carpeta taller-automotriz-app
-git init
-git add .
-git commit -m "Initial commit: Sistema Taller Automotriz"
-
-# Conectar con tu repositorio (reemplaza TU_USUARIO)
-git remote add origin https://github.com/TU_USUARIO/taller-automotriz.git
-
-# Subir código
-git push -u origin main
-```
-
-### **3. Alternativa: Desde GitHub Desktop**
-1. Descarga [GitHub Desktop](https://desktop.github.com/)
-2. "Add an Existing Repository from your Hard Drive"
-3. Selecciona la carpeta `taller-automotriz-app`
-4. "Publish repository"
-
-## **🚀 Desplegar en Vercel**
-
-### **Opción 1: Desde GitHub (Recomendado)**
-
-1. **Ir a [vercel.com](https://vercel.com)**
-   - Sign up con tu cuenta de GitHub
-
-2. **Importar Proyecto**
-   - Click "New Project"
-   - Conecta tu cuenta de GitHub
-   - Busca el repositorio `taller-automotriz`
-   - Click "Import"
-
-3. **Configurar Despliegue**
-   - Framework: "Other" (es HTML estático)
-   - Root Directory: `./` (por defecto)
-   - Build Command: (dejar vacío)
-   - Output Directory: (dejar vacío)
-   - Click "Deploy"
-
-4. **¡Listo!**
-   - Vercel te dará una URL como: `https://taller-automotriz.vercel.app`
-   - Cada push a GitHub actualizará automáticamente la web
-
-### **Opción 2: Subir Directamente a Vercel**
-
-1. **Comprimir la carpeta**
-   ```bash
-   # En la carpeta taller-automotriz-app
-   zip -r taller-automotriz.zip .
-   ```
-
-2. **En Vercel.com**
-   - Click "New Project"
-   - "Browse All Templates" → "Other" → "Deploy"
-   - Arrastra el archivo `.zip`
-
-## **🔐 Credenciales de Prueba**
-
-```
-ADMIN:
-- Usuario: admin
-- Contraseña: admin
-- Rol: Administrador (acceso completo)
-
-MECÁNICO:
-- Usuario: mecanico  
-- Contraseña: mecanico
-- Rol: Mecánico (acceso limitado)
-```
-
-## **💾 Funcionalidades Disponibles**
-
-### **📊 Dashboard**
-- Resumen de trabajos del mes
-- Estadísticas en tiempo real
+### 📊 Dashboard
+- Resumen general del taller con métricas en tiempo real
+- Estadísticas de trabajos (completados, en progreso, pendientes)
+- Ingresos mensuales
 - Trabajos recientes
 
-### **🔨 Gestión de Trabajos**
-- Crear, editar y eliminar trabajos
-- Asignación a mecánicos
-- Seguimiento de estados
-- Cálculo de costos
+### 🔧 Gestión de Trabajos (Sistema POS/OT)
+- **Sistema POS completo** para crear órdenes de trabajo
+- Búsqueda de clientes por cédula (integración con Supabase)
+- Registro completo de vehículos (placa, marca, modelo, año, kilometraje)
+- Asignación de técnicos
+- Gestión de repuestos e inventario
+- Cálculo automático de:
+  - Subtotal de repuestos
+  - Mano de obra (horas × tarifa)
+  - IVA (19%)
+  - Total final
+- Estados de trabajo: Pendiente, En Progreso, Completado
 
-### **👥 Gestión de Mecánicos**
-- Registro de técnicos
-- Especialidades y tarifas
-- Historial de trabajos
+### 👨‍🔧 Gestión de Mecánicos
+- Registro de técnicos con especialidades
+- Tarifas por hora configurables
+- Control de trabajos activos por mecánico
+- Estadísticas de rendimiento
 
-### **💰 Control Financiero**
-- Registro de pagos, adelantos, préstamos
-- Control de descuentos
-- Filtros por mecánico
+### 📋 Recepción de Vehículos
+- Registro de órdenes de servicio
+- Búsqueda de clientes existentes
+- Asignación de prioridad y técnico
+- Tiempo estimado de trabajo
 
-### **💼 Sistema de Liquidación**
-- **20% para Pedro Barraza**
-- **20% para Víctor Padilla**
-- **Ismael Cervantes (dueño) NO participa**
-- Cálculo automático de 40% total de mano de obra
+### 💰 Cotizaciones
+- Creación de cotizaciones detalladas
+- Selección de productos del inventario
+- Cálculo automático de totales
+- Estados: Pendiente, Aprobada
+- Generación de facturas desde cotizaciones aprobadas
 
-### **📋 Flujo Completo de Recepción**
-1. **Recepción**: Registro de vehículo y cliente
-2. **Cotización**: Presupuesto detallado
-3. **Calendario**: Asignación a técnico
-4. **Historial**: Seguimiento por vehículo
-5. **Notificaciones**: Recordatorios automáticos
+### 📅 Calendario
+- Vista de citas por técnico
+- Programación de trabajos
+- Control de ocupación
+- Gestión de cancelaciones
 
-### **📅 Calendario de 8 Técnicos**
-- Vista semanal independiente
-- Asignación de citas
-- Diferentes tipos de trabajo
-
-### **🚗 Historial por Vehículo**
+### 📚 Historial de Vehículos
 - Búsqueda por placa
-- Historial completo de servicios
-- Próximos mantenimientos
+- Historial completo de servicios realizados
+- Próximos mantenimientos recomendados
+- Seguimiento de kilometraje
 
-### **🔔 Sistema de Notificaciones**
+### 🔔 Notificaciones
 - Mantenimientos pendientes
 - Alertas de stock bajo
 - Seguimientos automáticos
 
-## **🔧 Personalización**
+### 💳 Control Financiero
+- Ingresos y gastos mensuales
+- Ganancia neta
+- Flujo de caja
+- Reportes financieros
 
-### **Cambiar Colores**
-Edita `assets/css/styles.css`:
+### 📝 Sistema de Liquidación Avanzado
+- **Liquidación de manos de obra con porcentajes configurables:**
+  - Pedro Barraza: 20%
+  - Víctor Padilla: 20%
+  - Ismael Cervantes: 0% (dueño)
+- **Gestión de movimientos financieros:**
+  - 💰 Registrar adelantos
+  - 🍽️ Registrar almuerzos (descuentos)
+  - 💳 Control de pagos
+  - Préstamos y descuentos
+- Cálculo automático del neto a pagar
+- Vista previa de liquidaciones
+- Historial de liquidaciones procesadas
+
+### 📦 Gestión de Inventario
+- Búsqueda de productos por código, nombre o categoría
+- Control de stock
+- Alertas de stock bajo
+- Valor total del inventario
+- Integración con Supabase para datos reales
+
+### 💼 Integración CUENTTI
+- Sincronización con sistema de facturación CUENTTI
+- Envío de facturas
+- Control de facturas pendientes
+- Seguimiento de estado de sincronización
+
+## 🛠️ Tecnologías Utilizadas
+
+- **Frontend:**
+  - HTML5
+  - CSS3 (Variables CSS, Flexbox, Grid)
+  - JavaScript (ES6+)
+  - Font: Inter (Google Fonts)
+
+- **Backend/Database:**
+  - Supabase (PostgreSQL)
+  - LocalStorage (respaldo local)
+
+- **Deployment:**
+  - Vercel (recomendado)
+  - GitHub Pages
+  - Cualquier servidor estático
+
+## 🚀 Instalación y Configuración
+
+### Requisitos Previos
+- Navegador moderno (Chrome, Firefox, Safari, Edge)
+- Cuenta de Supabase (opcional, para datos en la nube)
+- Git (para control de versiones)
+
+### Instalación Local
+
+1. **Clonar o descargar el repositorio:**
+```bash
+git clone https://github.com/tu-usuario/taller-automotriz-app.git
+cd taller-automotriz-app
+```
+
+2. **Abrir el archivo principal:**
+```bash
+# Opción 1: Abrir directamente
+open MULTIDIAGNOSTICOS-AS-SISTEMA-SUPABASE-FINAL.html
+
+# Opción 2: Servidor local (recomendado)
+python -m http.server 8000
+# Luego abrir: http://localhost:8000/MULTIDIAGNOSTICOS-AS-SISTEMA-SUPABASE-FINAL.html
+```
+
+3. **Configurar Supabase (Opcional):**
+   - Edita las constantes en el archivo HTML:
+   ```javascript
+   const SUPABASE_URL = 'tu-url-de-supabase';
+   const SUPABASE_ANON_KEY = 'tu-clave-anon';
+   ```
+
+## 📖 Uso del Sistema
+
+### Crear un Nuevo Trabajo
+
+1. Navega a la sección **"Trabajos"**
+2. Haz clic en **"Nuevo Trabajo"**
+3. Completa el formulario:
+   - **Buscar Cliente:** Ingresa la cédula para buscar clientes existentes
+   - **Información del Vehículo:** Placa, marca, modelo, año, kilometraje
+   - **Técnico Asignado:** Selecciona el mecánico responsable
+   - **Repuestos y Servicios:** 
+     - Busca productos del inventario
+     - Agrega servicios manuales si es necesario
+     - Ajusta cantidades
+   - **Mano de Obra:** Ingresa horas y precio por hora
+4. Revisa el resumen con totales (IVA incluido)
+5. Haz clic en **"Crear Trabajo"**
+
+### Gestionar Liquidaciones
+
+1. Ve a la sección **"Liquidación"**
+2. **Registrar Adelantos:**
+   - Haz clic en "💰 Registrar Adelanto"
+   - Selecciona técnico, monto y concepto
+3. **Registrar Almuerzos:**
+   - Haz clic en "🍽️ Registrar Almuerzo"
+   - Se aplica como descuento automático
+4. **Generar Liquidación:**
+   - Haz clic en "Generar Liquidación"
+   - Selecciona técnico y período
+   - Revisa la vista previa
+   - Confirma para procesar
+
+### Buscar Historial de Vehículo
+
+1. Ve a la sección **"Historial"**
+2. Ingresa la placa del vehículo
+3. Haz clic en **"Buscar"**
+4. Se mostrará:
+   - Historial completo de servicios
+   - Próximo mantenimiento recomendado
+   - Opción para agendar mantenimiento
+
+### Gestionar Inventario
+
+1. Ve a la sección **"Inventario"**
+2. **Buscar Producto:** Usa el buscador por código, nombre o categoría
+3. **Ver Stock:** Revisa el stock disponible y alertas de stock bajo
+4. **Editar Producto:** Haz clic en "Editar" para modificar información
+
+## 📁 Estructura del Proyecto
+
+```
+taller-automotriz-app/
+├── MULTIDIAGNOSTICOS-AS-SISTEMA-SUPABASE-FINAL.html  # Archivo principal
+├── index.html                                         # Versión alternativa
+├── assets/
+│   ├── css/
+│   │   └── styles.css                                # Estilos (si se separan)
+│   ├── js/
+│   │   └── app.js                                    # JavaScript (si se separa)
+│   └── images/
+│       └── logo-multidiagnosticos.png                # Logo del taller
+├── README.md                                         # Esta documentación
+└── vercel.json                                       # Configuración Vercel
+```
+
+## 🌐 Despliegue
+
+### Desplegar en Vercel (Recomendado)
+
+1. **Sube el proyecto a GitHub:**
+```bash
+git init
+git add .
+git commit -m "Initial commit"
+git remote add origin https://github.com/tu-usuario/taller-automotriz-app.git
+git push -u origin main
+```
+
+2. **En Vercel:**
+   - Ve a [vercel.com](https://vercel.com)
+   - Conecta tu cuenta de GitHub
+   - Importa el repositorio
+   - Framework: "Other"
+   - Deploy automático
+
+3. **Resultado:**
+   - URL: `https://taller-automotriz-app.vercel.app`
+   - Actualización automática en cada push
+
+### Desplegar en GitHub Pages
+
+1. Ve a Settings → Pages en tu repositorio
+2. Selecciona la rama `main`
+3. Carpeta: `/ (root)`
+4. Guarda y espera el despliegue
+5. URL: `https://tu-usuario.github.io/taller-automotriz-app/`
+
+## 🔐 Configuración de Supabase
+
+### Crear Tablas en Supabase
+
+1. **Tabla `clientes`:**
+```sql
+CREATE TABLE clientes (
+  id SERIAL PRIMARY KEY,
+  nombre VARCHAR(255),
+  cedula VARCHAR(50) UNIQUE,
+  telefono VARCHAR(20),
+  email VARCHAR(255),
+  direccion TEXT,
+  created_at TIMESTAMP DEFAULT NOW()
+);
+```
+
+2. **Tabla `inventario`:**
+```sql
+CREATE TABLE inventario (
+  id SERIAL PRIMARY KEY,
+  codigo VARCHAR(50) UNIQUE,
+  nombre VARCHAR(255),
+  categoria VARCHAR(100),
+  precio DECIMAL(10,2),
+  stock INTEGER,
+  stock_minimo INTEGER DEFAULT 1,
+  created_at TIMESTAMP DEFAULT NOW()
+);
+```
+
+3. **Configurar Row Level Security (RLS):**
+   - En Supabase Dashboard → Authentication → Policies
+   - Habilita políticas para lectura pública (si es necesario)
+
+### Variables de Configuración
+
+Edita en el archivo HTML:
+```javascript
+const SUPABASE_URL = 'https://tu-proyecto.supabase.co';
+const SUPABASE_ANON_KEY = 'tu-clave-anon-key';
+```
+
+## 🎨 Personalización
+
+### Cambiar Colores Corporativos
+
+Edita las variables CSS en el `<style>` del HTML:
 ```css
 :root {
-    --primary-500: #0057B7;    /* Color principal */
-    --success: #198754;         /* Color éxito */
-    --warning: #FFC107;         /* Color advertencia */
-    --error: #DC3545;           /* Color error */
+    --primary-500: #1E3A8A;    /* Color principal */
+    --primary-700: #1E40AF;    /* Color hover */
+    --success: #198754;         /* Éxito */
+    --warning: #FFC107;         /* Advertencia */
+    --error: #DC3545;           /* Error */
 }
 ```
 
-### **Modificar Usuarios**
-Edita `assets/js/app.js` línea ~1511:
+### Modificar Porcentajes de Liquidación
+
+Edita en el código JavaScript:
 ```javascript
-const users = {
-    'admin': { password: 'admin', role: 'admin', name: 'Administrador' },
-    'mecanico': { password: 'mecanico', role: 'mechanic', name: 'Juan Pérez' },
-    // Agregar más usuarios aquí
+this.configuracion.porcentajes = {
+    'pedro': 20,      // Pedro Barraza
+    'victor': 20,     // Víctor Padilla
+    'ismael': 0       // Ismael Cervantes (dueño)
 };
 ```
 
-### **Configurar Liquidación**
-Edita `assets/js/app.js` línea ~2828:
+### Agregar Nuevos Técnicos
+
+Edita el array `mecanicos`:
 ```javascript
-const activeTechnicians = ['Pedro Barraza', 'Víctor Padilla'];
-// Cambiar aquí los técnicos que participan en liquidación
+const mecanicos = [
+    { id: 1, name: 'Pedro Barraza', specialty: 'Dueño/Frenos', phone: '3002345678', hourlyRate: 20000 },
+    // Agrega más técnicos aquí
+];
 ```
 
-## **🌟 Ventajas de Vercel**
+## 📱 Características Responsivas
 
-- ✅ **Gratis** para proyectos personales
-- ✅ **HTTPS automático** (seguro)
-- ✅ **Dominio personalizado** disponible
-- ✅ **Actualizaciones automáticas** desde GitHub
-- ✅ **Rendimiento optimizado**
-- ✅ **Sin necesidad de servidor**
+- **Desktop:** Layout completo con sidebar expandido
+- **Tablet:** Sidebar colapsable, optimizado para uso en taller
+- **Mobile:** Menú lateral deslizable, interfaz adaptada
 
-## **📞 Soporte**
+## 🔒 Seguridad
 
-Si tienes problemas:
-1. Verifica que todos los archivos estén en las carpetas correctas
-2. Asegúrate de que la estructura de archivos coincida
-3. Revisa la consola del navegador (F12) para errores
-4. El proyecto usa `localStorage`, no necesita base de datos
+- Las credenciales de Supabase están en el código (cliente)
+- Para producción, considera usar variables de entorno
+- RLS (Row Level Security) configurado en Supabase
+- Validación de datos en formularios
 
-## **🔮 Próximas Mejoras**
+## 🐛 Solución de Problemas
 
-- 🔄 **Sincronización en la nube**
-- 📧 **Integración con Mailchimp**
-- 📱 **App móvil para mecánicos**
-- 📄 **Exportación a PDF**
-- 🔐 **Autenticación más robusta**
-- 💾 **Base de datos real**
+### Los botones no funcionan
+- Verifica que el JavaScript esté cargado (consola del navegador)
+- Asegúrate de que las funciones estén en el scope global
+- Revisa errores en la consola (F12)
+
+### El logo no se muestra
+- Verifica que la ruta `./assets/images/logo-multidiagnosticos.png` sea correcta
+- El sistema mostrará un fallback con las iniciales "MA" si el logo no carga
+
+### Error de conexión a Supabase
+- Verifica que las credenciales sean correctas
+- Revisa que las tablas existan en Supabase
+- Comprueba las políticas RLS
+
+## 📝 Notas Importantes
+
+- El sistema funciona completamente offline (con datos locales)
+- Supabase es opcional pero recomendado para sincronización
+- Los datos se respaldan en LocalStorage del navegador
+- Compatible con todos los navegadores modernos
+
+## 🤝 Contribuciones
+
+Este es un proyecto privado para Multidiagnósticos AS. Para sugerencias o mejoras, contacta al administrador del sistema.
+
+## 📄 Licencia
+
+Proyecto privado - Multidiagnósticos AS © 2025
+
+## 👥 Créditos
+
+Desarrollado para **Multidiagnósticos AS**  
+Sistema de gestión integral para talleres automotrices
 
 ---
 
-**¡Tu sistema de taller automotriz está listo para usar! 🎉**
+**Versión:** 1.0.0  
+**Última actualización:** Enero 2025  
+**Estado:** ✅ Producción
