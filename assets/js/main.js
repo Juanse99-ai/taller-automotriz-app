@@ -54,6 +54,8 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Initialize application
     initializeApp();
+    // Inicializar tema guardado
+    try { initThemeFromStorage(); } catch(e) { console.warn('Tema: no se pudo inicializar', e); }
     
     // Set default section
     showSection('dashboard');
@@ -79,6 +81,47 @@ function initializeApp() {
     
     console.log('✅ Aplicación completamente inicializada');
 }
+
+// =====================
+// Tema: iOS glass toggle
+// =====================
+function ensureGlassLinkPresent() {
+    let link = document.getElementById('theme-glass-css');
+    if (!link) {
+        link = document.createElement('link');
+        link.id = 'theme-glass-css';
+        link.rel = 'stylesheet';
+        link.href = 'assets/css/theme-glass.css';
+        document.head.appendChild(link);
+    }
+}
+
+function applyGlassTheme(enabled) {
+    const html = document.documentElement;
+    const btn = document.getElementById('themeToggleBtn');
+    if (enabled) {
+        ensureGlassLinkPresent();
+        html.classList.add('theme-glass');
+        localStorage.setItem('ui_theme', 'glass');
+        if (btn) btn.textContent = 'Tema Clásico';
+    } else {
+        html.classList.remove('theme-glass');
+        localStorage.setItem('ui_theme', 'default');
+        if (btn) btn.textContent = 'Tema iOS';
+    }
+}
+
+function toggleGlassTheme() {
+    const enabled = !document.documentElement.classList.contains('theme-glass');
+    applyGlassTheme(enabled);
+}
+
+function initThemeFromStorage() {
+    const pref = localStorage.getItem('ui_theme') || 'default';
+    applyGlassTheme(pref === 'glass');
+}
+
+window.toggleGlassTheme = toggleGlassTheme;
 
 // Mobile responsive setup
 function setupMobileResponsive() {
