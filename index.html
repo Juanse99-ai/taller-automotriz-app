@@ -272,7 +272,7 @@
                                     <div class="form-row">
                                     <div class="form-group">
                                         <label class="form-label">🔢 Placa del Vehículo</label>
-                                        <input type="text" class="form-input" id="trabajoPlaca" placeholder="ABC123" required style="text-transform: uppercase;">
+                                        <input type="text" class="form-input" id="trabajoPlaca" placeholder="ABC123" required style="text-transform: uppercase;" onblur="autocompletarClientePorPlacaOT()">
                                     </div>
                                     <div class="form-group">
                                         <label class="form-label">📍 Marca del Vehículo</label>
@@ -974,7 +974,7 @@
                                 <div class="form-row">
                                     <div class="form-group">
                                         <label class="form-label">Placa</label>
-                                        <input type="text" class="form-input" id="rcpPlaca" placeholder="ABC123" style="text-transform:uppercase" required>
+                                        <input type="text" class="form-input" id="rcpPlaca" placeholder="ABC123" style="text-transform:uppercase" required onblur="autocompletarClientePorPlacaRecepcion()">
                                     </div>
                                     <div class="form-group">
                                         <label class="form-label">Marca</label>

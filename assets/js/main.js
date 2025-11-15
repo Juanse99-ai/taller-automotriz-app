@@ -1019,6 +1019,7 @@ function abrirBuscadorClientes() {
         `,
         'large',
         [
+            { text: 'Nuevo Cliente', class: 'btn-primary', onclick: 'closeModal(); abrirCrearCliente(\'ot\')' },
             { text: 'Cerrar', class: 'btn-outline', onclick: 'closeModal()' }
         ]
     );
@@ -1833,7 +1834,10 @@ function abrirBuscadorClientesRecepcion() {
         </div>
         `,
         'large',
-        [ { text: 'Cerrar', class: 'btn-outline', onclick: 'closeModal()' } ]
+        [
+            { text: 'Nuevo Cliente', class: 'btn-primary', onclick: 'closeModal(); abrirCrearCliente(\'recepcion\')' },
+            { text: 'Cerrar', class: 'btn-outline', onclick: 'closeModal()' }
+        ]
     );
     showModal(modal);
     filtrarClientesModalRecepcion('');
@@ -1869,6 +1873,125 @@ function filtrarClientesModalRecepcion(termino='') {
 
 window.buscarClientePorCedulaRecepcion = buscarClientePorCedulaRecepcion;
 window.abrirBuscadorClientesRecepcion = abrirBuscadorClientesRecepcion;
+
+// =============================
+// Crear/editar cliente + asociación de placas
+// =============================
+function abrirCrearCliente(contexto = 'ot') {
+    const modal = createModal(
+        'Nuevo Cliente',
+        `
+        <form id="formNuevoCliente" onsubmit="guardarNuevoCliente(event, '${contexto}')">
+            <div class="form-row">
+                <div class="form-group"><label class="form-label">Cédula/NIT</label><input id="ncDoc" class="form-input" required></div>
+                <div class="form-group"><label class="form-label">Nombre</label><input id="ncNombre" class="form-input" required></div>
+            </div>
+            <div class="form-row">
+                <div class="form-group"><label class="form-label">Teléfono</label><input id="ncTel" class="form-input"></div>
+                <div class="form-group"><label class="form-label">Email</label><input id="ncEmail" type="email" class="form-input"></div>
+            </div>
+        </form>
+        `,
+        [
+            { text: 'Cancelar', class: 'btn-outline', onclick: 'closeModal()' },
+            { text: 'Crear', class: 'btn-primary', type: 'submit', form: 'formNuevoCliente' }
+        ]
+    );
+    showModal(modal);
+}
+
+async function guardarNuevoCliente(event, contexto = 'ot') {
+    event.preventDefault();
+    const doc = document.getElementById('ncDoc').value.trim();
+    const nombre = document.getElementById('ncNombre').value.trim();
+    const tel = document.getElementById('ncTel').value.trim();
+    const email = document.getElementById('ncEmail').value.trim();
+    if (!doc || !nombre) { showNotification('Cédula y Nombre son obligatorios', 'error'); return; }
+    const nuevo = { cedula: doc, nombre, telefono: tel || null, email: email || null };
+    try {
+        if (window.supabase) {
+            try {
+                const { data, error } = await supabase.from('clientes').insert(nuevo).select();
+                if (error) console.warn('Supabase insert clientes:', error);
+                if (data && data.length) nuevo.id = data[0].id;
+            } catch(e) { console.warn('Supabase insertar cliente falla', e); }
+        }
+        // Actualizar listas en memoria
+        if (Array.isArray(window.supabaseClientes)) supabaseClientes.push(nuevo);
+        else clientes.push(nuevo);
+        // Backups
+        localStorage.setItem('supabase_clientes_backup', JSON.stringify(supabaseClientes || clientes));
+        closeModal();
+        showNotification('Cliente creado', 'success');
+        // Autocompletar según contexto
+        if (contexto === 'ot') {
+            seleccionarCliente(nombre, doc, tel || '', email || '');
+        } else {
+            seleccionarClienteRecepcion(nombre, doc, tel || '', email || '');
+        }
+        // Asociar placa si existe valor en el formulario
+        try {
+            if (contexto === 'ot') autocompletarClientePorPlacaOT(); else autocompletarClientePorPlacaRecepcion();
+        } catch(e) {}
+    } catch (e) {
+        console.error('Error creando cliente:', e);
+        showNotification('No se pudo crear el cliente', 'error');
+    }
+}
+
+// Vehículos asociados (placa→cliente)
+window.__appData = window.__appData || {};
+if (!Array.isArray(window.__appData.vehiculos)) {
+    try { window.__appData.vehiculos = JSON.parse(localStorage.getItem('vehiculos_assoc')||'[]'); } catch(e){ window.__appData.vehiculos = []; }
+}
+function getVehiclesData() { return window.__appData.vehiculos; }
+function saveVehiclesData() { localStorage.setItem('vehiculos_assoc', JSON.stringify(window.__appData.vehiculos)); }
+function findVehicleByPlaca(placa) { placa = (placa||'').toUpperCase(); return getVehiclesData().find(v => v.placa === placa); }
+function addOrUpdateVehicleAssoc(placa, clienteDoc, clienteNombre, marca='', modelo='', ano='') {
+    placa = (placa||'').toUpperCase();
+    if (!placa || !clienteDoc) return;
+    const vehs = getVehiclesData();
+    const idx = vehs.findIndex(v => v.placa === placa);
+    const obj = { placa, clienteDoc, clienteNombre, marca, modelo, ano };
+    if (idx >= 0) vehs[idx] = { ...vehs[idx], ...obj };
+    else vehs.push(obj);
+    saveVehiclesData();
+    // Intentar enviar a Supabase si existe una tabla 'vehiculos'
+    try {
+        if (window.supabase) {
+            supabase.from('vehiculos').upsert({ placa, cliente_doc: clienteDoc, cliente_nombre: clienteNombre, marca, modelo, ano });
+        }
+    } catch(e) { /* noop */ }
+}
+
+function asociarPlacaConClienteDesdeForm(contexto='ot') {
+    const get = id => (document.getElementById(id)?.value || '').toString().trim();
+    const placa = contexto==='ot'? get('trabajoPlaca') : get('rcpPlaca');
+    const nombre = contexto==='ot'? get('trabajoCliente') : get('rcpCliente');
+    const doc = contexto==='ot'? get('busquedaCedula') : get('rcpCedula');
+    const marca = contexto==='ot'? get('vehiculoMarca') : get('rcpMarca');
+    const modelo = contexto==='ot'? get('vehiculoModelo') : get('rcpModelo');
+    const ano = contexto==='ot'? get('vehiculoAno') : get('rcpAno');
+    if (placa && doc) addOrUpdateVehicleAssoc(placa, doc, nombre, marca, modelo, ano);
+}
+
+function autocompletarClientePorPlacaRecepcion() {
+    const placa = (document.getElementById('rcpPlaca')?.value || '').toUpperCase();
+    if (!placa) return;
+    const v = findVehicleByPlaca(placa);
+    if (v) seleccionarClienteRecepcion(v.clienteNombre || '', v.clienteDoc || '', '', '');
+}
+function autocompletarClientePorPlacaOT() {
+    const placa = (document.getElementById('trabajoPlaca')?.value || '').toUpperCase();
+    if (!placa) return;
+    const v = findVehicleByPlaca(placa);
+    if (v) seleccionarCliente(v.clienteNombre || '', v.clienteDoc || '', '', '');
+}
+
+window.abrirCrearCliente = abrirCrearCliente;
+window.guardarNuevoCliente = guardarNuevoCliente;
+window.autocompletarClientePorPlacaRecepcion = autocompletarClientePorPlacaRecepcion;
+window.autocompletarClientePorPlacaOT = autocompletarClientePorPlacaOT;
 
 // Sincroniza la línea especial de Mano de Obra con el input #manoObraValor
 function syncManoObraItem() {
@@ -2060,6 +2183,8 @@ function guardarNuevoTrabajo(event) {
     try { addTrabajoData(trabajoCompleto); } catch (e) { console.warn('No se pudo agregar a trabajos:', e); }
 
     console.log('✅ Trabajo creado:', trabajoCompleto);
+    // Asociar placa con cliente
+    try { asociarPlacaConClienteDesdeForm('ot'); } catch(e) {}
     
     // Simular guardado (en producción se enviaría a Supabase)
     showNotification(`🎉 Trabajo ${trabajoCompleto.id} creado exitosamente! Total: ${formatCurrency(trabajoCompleto.total)}` , 'success');
