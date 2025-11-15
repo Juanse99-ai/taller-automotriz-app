@@ -2665,24 +2665,31 @@ function nuevoTrabajo() {
 
                 <!-- Tabla de items agregados -->
                 <div class="items-container">
-                    <table class="items-table">
+                    <table class="items-table" style="width: 100%; border-collapse: collapse; background: white;">
                         <thead>
-                            <tr>
-                                <th style="width: 40%">Descripción</th>
-                                <th style="width: 10%">Cant.</th>
-                                <th style="width: 15%">Precio Unit.</th>
-                                <th style="width: 15%">Total</th>
-                                <th style="width: 10%">Acciones</th>
+                            <tr style="background: #2c3e50; color: white;">
+                                <th style="padding: 8px; text-align: center; width: 80px;">Acciones</th>
+                                <th style="padding: 8px; text-align: left; width: 150px;">Artículo</th>
+                                <th style="padding: 8px; text-align: left; width: 250px;">Descripción</th>
+                                <th style="padding: 8px; text-align: right; width: 100px;">Precio Uni</th>
+                                <th style="padding: 8px; text-align: center; width: 100px;">Cantidad</th>
+                                <th style="padding: 8px; text-align: center; width: 130px;">Desc% / Valor</th>
+                                <th style="padding: 8px; text-align: center; width: 120px;">Impuesto</th>
+                                <th style="padding: 8px; text-align: right; width: 120px;">Total.N</th>
                             </tr>
                         </thead>
                         <tbody id="itemsTrabajo">
                             <tr id="noItemsRow">
-                                <td colspan="5" style="text-align: center; padding: 40px; color: #666;">
+                                <td colspan="8" style="text-align: center; padding: 40px; color: #666;">
                                     📝 No hay repuestos agregados. Use la búsqueda de inventario arriba para agregar productos.
                                 </td>
                             </tr>
                         </tbody>
                     </table>
+                    <div style="margin-top: 10px;">
+                        <button type="button" class="btn-secondary" onclick="agregarLineaVacia()" style="margin-right: 10px;">➕ Agregar líneas</button>
+                        <button type="button" class="btn-primary" onclick="validarItems()">✅ Validar</button>
+                    </div>
                 </div>
             </div>
 
@@ -2696,22 +2703,22 @@ function nuevoTrabajo() {
                         <small style="color:#6b7280;">Ingresa el valor total que cobrarás por la mano de obra.</small>
                     </div>
                     
-                    <div class="totales-detalles">
-                        <div class="total-row">
-                            <span>Subtotal Repuestos:</span>
-                            <span id="subtotalRepuestos">$0</span>
+                    <div class="totales-detalles" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-top: 20px;">
+                        <div class="total-row" style="text-align: center; padding: 15px; background: #f8f9fa; border-radius: 6px;">
+                            <div style="font-size: 14px; color: #666; margin-bottom: 8px;">Imp</div>
+                            <div style="font-size: 20px; font-weight: bold; color: #2c3e50;" id="totalImpuesto">$0.00</div>
                         </div>
-                        <div class="total-row">
-                            <span>Subtotal Mano de Obra:</span>
-                            <span id="subtotalManoObra">$0</span>
+                        <div class="total-row" style="text-align: center; padding: 15px; background: #f8f9fa; border-radius: 6px;">
+                            <div style="font-size: 14px; color: #666; margin-bottom: 8px;">Desc</div>
+                            <div style="font-size: 20px; font-weight: bold; color: #2c3e50;" id="totalDescuento">$0.00</div>
                         </div>
-                        <div class="total-row iva">
-                            <span>IVA (19%):</span>
-                            <span id="subtotalIva">$0</span>
+                        <div class="total-row" style="text-align: center; padding: 15px; background: #f8f9fa; border-radius: 6px;">
+                            <div style="font-size: 14px; color: #666; margin-bottom: 8px;">Subtotal</div>
+                            <div style="font-size: 20px; font-weight: bold; color: #2c3e50;" id="subtotalFinal">$0.00</div>
                         </div>
-                        <div class="total-row grand-total">
-                            <span><strong>TOTAL A PAGAR:</strong></span>
-                            <span id="totalFinal">$0</span>
+                        <div class="total-row" style="text-align: center; padding: 15px; background: #27ae60; border-radius: 6px; color: white;">
+                            <div style="font-size: 14px; margin-bottom: 8px; opacity: 0.9;">TOTAL</div>
+                            <div style="font-size: 24px; font-weight: bold;" id="totalFinal">$0.00</div>
                         </div>
                     </div>
                 </div>
@@ -2974,8 +2981,28 @@ function actualizarTotales() {
         if (el) el.textContent = value;
     };
 
+    // Calcular descuentos totales
+    let totalDescuentos = 0;
+    items.forEach(item => {
+        const precio = Number(item.precio) || 0;
+        const cantidad = Number(item.cantidad) || 1;
+        const descuentoValor = Number(item.descuento || 0);
+        const tipoDescuento = item.tipoDescuento || '$';
+        
+        if (descuentoValor > 0) {
+            if (tipoDescuento === '%') {
+                totalDescuentos += (precio * cantidad * descuentoValor) / 100;
+            } else {
+                totalDescuentos += descuentoValor;
+            }
+        }
+    });
+    
     setText('subtotalRepuestos', formatCurrency(subtotalSinIva));
     setText('subtotalIva', formatCurrency(totalIva));
+    setText('totalImpuesto', formatCurrency(totalIva));
+    setText('totalDescuento', formatCurrency(totalDescuentos));
+    setText('subtotalFinal', formatCurrency(subtotalSinIva));
     setText('totalFinal', formatCurrency(totalConIva));
 }
 
@@ -3434,35 +3461,36 @@ function agregarRepuesto(codigo, nombre, precio, categoria) {
     // Asegurar que precio sea un número
     const precioNumero = Number(precio) || 0;
     
-    // Los repuestos YA tienen IVA incluido en el precio (19%)
-    // El campo IVA = 19% indica que el precio mostrado YA incluye ese 19% de IVA
-    const item = {
-        codigo: codigo,
-        nombre: nombre,
-        precio: precioNumero,
-        categoria: categoria,
-        cantidad: 1,
-        iva: 19  // 19% significa que el precio YA incluye este IVA
-    };
-    
     // Inicializar array si no existe
     if (!window.itemsTrabajo) {
         window.itemsTrabajo = [];
     }
     
-    // Verificar si ya existe
-    const index = window.itemsTrabajo.findIndex(i => i.codigo === codigo);
-    if (index !== -1) {
-        window.itemsTrabajo[index].cantidad = Number(window.itemsTrabajo[index].cantidad) + 1;
-    } else {
+    // Los repuestos YA tienen IVA incluido en el precio (19%)
+    // El campo IVA = 19% indica que el precio mostrado YA incluye ese 19% de IVA
+    // Cada item se agrega como uno nuevo (no se combinan automáticamente)
+    const item = {
+        id: 'ITEM-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9), // ID único
+        codigo: codigo || 'S/C',
+        nombre: nombre || 'Producto sin nombre',
+        precio: precioNumero,
+        categoria: categoria || 'General',
+        cantidad: 1,
+        iva: 19,  // 19% significa que el precio YA incluye este IVA
+        descuento: 0,
+        tipoDescuento: '$'
+    };
+    
+    // Siempre agregar como nuevo item (el usuario puede ajustar cantidad manualmente)
         window.itemsTrabajo.push(item);
-    }
     
     actualizarTablaItems();
     const resultadosInventario = document.getElementById('resultadosInventario');
     if (resultadosInventario) resultadosInventario.classList.remove('show');
     const busquedaRepuesto = document.getElementById('busquedaRepuesto');
     if (busquedaRepuesto) busquedaRepuesto.value = '';
+    
+    showNotification(`✅ "${nombre}" agregado correctamente`, 'success');
 }
 
 function agregarRepuestoDesdeBusqueda(index) {
@@ -3480,24 +3508,89 @@ function agregarRepuestoDesdeBusqueda(index) {
 
 // Agregar servicio manual
 function agregarServicioManual() {
-    const nombre = prompt('Ingrese el nombre del servicio/repuesto (ej: Mano de Obra, Servicio X):');
-    if (nombre && nombre.trim()) {
-        const precio = parseFloat(prompt('Ingrese el precio:')) || 0;
-        const tieneIva = confirm('¿Este servicio tiene IVA? (Acepta = Sí, Cancelar = No)');
-        const ivaPorcentaje = tieneIva ? 19 : 0;
-        
-        const item = {
-            codigo: 'SERV-' + Date.now(),
-            nombre: nombre.trim(),
-            precio: precio,
-            categoria: 'Servicio Manual',
-            cantidad: 1,
-            iva: ivaPorcentaje
-        };
+    const modal = createModal(
+        '➕ Agregar Servicio Manual',
+        `
+        <form id="formServicioManual" onsubmit="guardarServicioManual(event)">
+            <div class="form-group">
+                <label class="form-label">📝 Descripción del Servicio</label>
+                <input type="text" class="form-input" id="servicioNombre" placeholder="Ej: Mano de Obra, Cambio de Aceite, Reparación..." required autofocus>
+            </div>
+            <div class="form-group">
+                <label class="form-label">💰 Precio</label>
+                <input type="number" class="form-input" id="servicioPrecio" placeholder="0" min="0" step="0.01" required>
+            </div>
+            <div class="form-group">
+                <label class="form-label">📊 IVA</label>
+                <select class="form-input" id="servicioIva" required>
+                    <option value="0">Sin IVA (0%)</option>
+                    <option value="19" selected>Con IVA Incluido (19%)</option>
+                </select>
+                <small style="color: #666; display: block; margin-top: 4px;">
+                    Nota: Si selecciona "Con IVA Incluido", el precio ingresado ya incluye el 19% de IVA.
+                </small>
+            </div>
+            <div class="form-group">
+                <label class="form-label">📦 Cantidad</label>
+                <input type="number" class="form-input" id="servicioCantidad" value="1" min="1" step="1" required>
+            </div>
+        </form>
+        `,
+        [
+            { text: 'Cancelar', class: 'btn-outline', onclick: 'closeModal()' },
+            { text: '➕ Agregar Servicio', class: 'btn-primary', type: 'submit', form: 'formServicioManual' }
+        ]
+    );
+    showModal(modal);
+    
+    // Enfocar el primer campo
+    setTimeout(() => {
+        const nombreInput = document.getElementById('servicioNombre');
+        if (nombreInput) nombreInput.focus();
+    }, 100);
+}
+
+// Guardar servicio manual
+function guardarServicioManual(event) {
+    event.preventDefault();
+    
+    const nombre = document.getElementById('servicioNombre')?.value.trim();
+    const precio = parseFloat(document.getElementById('servicioPrecio')?.value) || 0;
+    const ivaPorcentaje = parseInt(document.getElementById('servicioIva')?.value) || 0;
+    const cantidad = parseInt(document.getElementById('servicioCantidad')?.value) || 1;
+    
+    if (!nombre) {
+        showNotification('⚠️ La descripción del servicio es obligatoria', 'error');
+        return;
+    }
+    
+    if (precio <= 0) {
+        showNotification('⚠️ El precio debe ser mayor a cero', 'error');
+        return;
+    }
+    
+    // Inicializar array si no existe
+    if (!window.itemsTrabajo) {
+        window.itemsTrabajo = [];
+    }
+    
+    const item = {
+        id: 'SERV-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9), // ID único
+        codigo: 'SERV-' + Date.now(),
+        nombre: nombre,
+        precio: precio,
+        categoria: 'Servicio Manual',
+        cantidad: Math.max(1, cantidad),
+        iva: ivaPorcentaje,
+        descuento: 0,
+        tipoDescuento: '$'
+    };
         
         window.itemsTrabajo.push(item);
         actualizarTablaItems();
-    }
+    closeModal();
+    
+    showNotification(`✅ "${nombre}" agregado correctamente`, 'success');
 }
 
 // Actualizar tabla de items
@@ -3520,31 +3613,95 @@ function actualizarTablaItems() {
         const precio = Number(item.precio) || 0;
         const cantidad = Number(item.cantidad) || 1;
         const ivaPorcentaje = Number(item.iva) || 0;
+        const descuentoValor = Number(item.descuento || 0);
+        const tipoDescuento = item.tipoDescuento || '$'; // '$' o '%'
         
         // Si el precio YA incluye IVA (ivaPorcentaje > 0), calcular el desglose
         let totalConIva, precioBase, valorIvaIncluido;
         
+        // Calcular descuento
+        let descuentoAplicado = 0;
+        if (descuentoValor > 0) {
+            if (tipoDescuento === '%') {
+                descuentoAplicado = (precio * cantidad * descuentoValor) / 100;
+            } else {
+                descuentoAplicado = descuentoValor;
+            }
+        }
+        
+        const subtotalConDescuento = (precio * cantidad) - descuentoAplicado;
+        
         if (ivaPorcentaje > 0) {
             // El precio mostrado YA incluye IVA
-            totalConIva = precio * cantidad; // Total con IVA incluido
+            totalConIva = subtotalConDescuento; // Total con IVA incluido
             precioBase = totalConIva / (1 + (ivaPorcentaje / 100)); // Precio base sin IVA
             valorIvaIncluido = totalConIva - precioBase; // IVA incluido en el precio
         } else {
-            // El precio NO incluye IVA, se muestra tal cual
-            precioBase = precio * cantidad;
+            // El precio NO incluye IVA
+            precioBase = subtotalConDescuento;
             valorIvaIncluido = 0;
             totalConIva = precioBase;
         }
         
+        const numFila = index + 1;
+        const codigo = item.codigo || 'S/C';
+        const nombre = item.nombre || 'Artículo';
+        const descripcion = `${codigo}#${nombre}`;
+        
         return `
-        <tr>
-            <td><strong>${item.nombre}</strong><br><small style="color: #666;">${item.codigo} - ${item.categoria}</small></td>
-            <td><input type="number" value="${cantidad}" min="1" onchange="cambiarCantidad(${index}, this.value)" oninput="cambiarCantidad(${index}, this.value)" style="width: 60px;"></td>
-            <td>${formatCurrency(precio)}</td>
-            <td id="subtotalItem${index}">${formatCurrency(totalConIva)}</td>
-            <td><input type="number" value="${ivaPorcentaje}" min="0" max="100" step="0.01" onchange="cambiarIva(${index}, this.value)" oninput="cambiarIva(${index}, this.value)" style="width: 60px;" placeholder="0">%</td>
-            <td id="totalItem${index}">${formatCurrency(totalConIva)}</td>
-            <td><button type="button" class="remove-item" onclick="eliminarItem(${index})" style="background: #ef4444; color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer;">🗑️</button></td>
+        <tr style="border-bottom: 1px solid #eee;">
+            <td style="padding: 8px; text-align: center; vertical-align: middle;">
+                <div style="display: flex; flex-direction: column; align-items: center; gap: 4px;">
+                    <button type="button" onclick="eliminarItem(${index})" style="background: #ef4444; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 12px;">🗑️</button>
+                    <div style="font-weight: bold; color: #2c3e50;">#${numFila}</div>
+                    <div style="display: flex; flex-direction: column; gap: 2px;">
+                        ${index > 0 ? `<button type="button" onclick="moverItemArriba(${index})" style="background: #e9ecef; border: 1px solid #ddd; padding: 2px 6px; cursor: pointer; font-size: 10px;">↑</button>` : '<div style="height: 20px;"></div>'}
+                        ${index < window.itemsTrabajo.length - 1 ? `<button type="button" onclick="moverItemAbajo(${index})" style="background: #e9ecef; border: 1px solid #ddd; padding: 2px 6px; cursor: pointer; font-size: 10px;">↓</button>` : '<div style="height: 20px;"></div>'}
+                    </div>
+                    <div style="color: #999; font-size: 11px;">${index}</div>
+                </div>
+            </td>
+            <td style="padding: 8px;">
+                <div style="position: relative;">
+                    <input type="text" value="${nombre}" onchange="cambiarArticulo(${index}, this.value)" style="width: 100%; padding: 6px 30px 6px 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px;" placeholder="Articulo">
+                    <span style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #666;" onclick="buscarArticulo(${index})">🔍</span>
+                </div>
+            </td>
+            <td style="padding: 8px; position: relative;">
+                <div style="position: relative;">
+                    <input type="text" value="${descripcion}" onchange="cambiarDescripcion(${index}, this.value)" style="width: 100%; padding: 6px 30px 6px 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 12px;" placeholder="Descripción">
+                    <span style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #666;">🧮</span>
+                </div>
+                <small style="color: #666; font-size: 11px; display: block; margin-top: 4px;">P.U=${formatCurrency(precio)}</small>
+            </td>
+            <td style="padding: 8px; text-align: right; vertical-align: middle;">
+                <input type="text" value="${formatCurrency(precio)}" onchange="cambiarPrecioUnitario(${index}, this.value)" style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; text-align: right; font-size: 13px;">
+            </td>
+            <td style="padding: 8px; text-align: center; vertical-align: middle;">
+                <div style="display: flex; gap: 4px; align-items: center;">
+                    <input type="number" value="${cantidad}" min="1" onchange="cambiarCantidad(${index}, this.value)" oninput="cambiarCantidad(${index}, this.value)" style="width: 60px; padding: 6px; border: 1px solid #ddd; border-radius: 4px; text-align: center;">
+                    <select style="padding: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 12px;">
+                        <option>un</option>
+                    </select>
+                </div>
+            </td>
+            <td style="padding: 8px; text-align: center; vertical-align: middle;">
+                <div style="display: flex; gap: 4px; align-items: center;">
+                    <button type="button" onclick="cambiarTipoDescuento(${index}, '%')" style="padding: 6px 10px; border: 1px solid #ddd; background: ${tipoDescuento === '%' ? '#e9ecef' : 'white'}; border-radius: 4px 0 0 4px; cursor: pointer; font-size: 12px;">%</button>
+                    <button type="button" onclick="cambiarTipoDescuento(${index}, '$')" style="padding: 6px 10px; border: 1px solid #ddd; border-left: none; background: ${tipoDescuento === '$' ? '#e9ecef' : 'white'}; border-radius: 0 4px 4px 0; cursor: pointer; font-size: 12px;">$</button>
+                    <span style="cursor: pointer; color: #666; margin-left: 4px;" title="Configurar descuento">🔧</span>
+                    <input type="number" value="${descuentoValor}" min="0" step="0.01" onchange="cambiarDescuento(${index}, this.value)" style="width: 60px; padding: 6px; border: 1px solid #ddd; border-radius: 4px; text-align: center; font-size: 12px;">
+                </div>
+            </td>
+            <td style="padding: 8px; text-align: center; vertical-align: middle;">
+                <div style="display: flex; gap: 4px; align-items: center;">
+                    <input type="text" value="${formatCurrency(valorIvaIncluido)}" readonly style="width: 70px; padding: 6px; border: 1px solid #ddd; border-radius: 4px; text-align: center; font-size: 12px; background: #f8f9fa;">
+                    <input type="number" value="${ivaPorcentaje}" min="0" max="100" step="0.01" onchange="cambiarIva(${index}, this.value)" oninput="cambiarIva(${index}, this.value)" style="width: 50px; padding: 6px; border: 1px solid #ddd; border-radius: 4px; text-align: center; font-size: 12px;">
+                </div>
+            </td>
+            <td style="padding: 8px; text-align: right; vertical-align: middle;">
+                <input type="text" value="${formatCurrency(totalConIva)}" readonly id="totalItem${index}" style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; text-align: right; font-size: 13px; font-weight: bold; background: #f8f9fa;">
+            </td>
         </tr>
         `;
     }).join('');
@@ -3559,28 +3716,8 @@ function cambiarCantidad(index, nuevaCantidad) {
     const cantidad = Math.max(1, parseInt(nuevaCantidad) || 1);
     
     if (window.itemsTrabajo && window.itemsTrabajo[index]) {
-        window.itemsTrabajo[index].cantidad = cantidad;
-        
-        // Recalcular totales de la fila
-        const item = window.itemsTrabajo[index];
-        const precio = Number(item.precio) || 0;
-        const ivaPorcentaje = Number(item.iva) || 0;
-        
-        let totalConIva;
-        if (ivaPorcentaje > 0) {
-            // El precio YA incluye IVA
-            totalConIva = precio * cantidad;
-        } else {
-            // El precio NO incluye IVA
-            totalConIva = precio * cantidad;
-        }
-        
-        const subtotalCell = document.getElementById(`subtotalItem${index}`);
-        const totalCell = document.getElementById(`totalItem${index}`);
-        if (subtotalCell) subtotalCell.textContent = formatCurrency(totalConIva);
-        if (totalCell) totalCell.textContent = formatCurrency(totalConIva);
-        
-        actualizarTotales();
+    window.itemsTrabajo[index].cantidad = cantidad;
+        actualizarTablaItems(); // Re-renderizar toda la tabla para actualizar todo correctamente
     }
 }
 
@@ -3590,27 +3727,7 @@ function cambiarIva(index, nuevoIva) {
     
     if (window.itemsTrabajo && window.itemsTrabajo[index]) {
         window.itemsTrabajo[index].iva = ivaPorcentaje;
-        
-        // Recalcular totales de la fila
-        const item = window.itemsTrabajo[index];
-        const precio = Number(item.precio) || 0;
-        const cantidad = Number(item.cantidad) || 1;
-        
-        let totalConIva;
-        if (ivaPorcentaje > 0) {
-            // El precio YA incluye IVA
-            totalConIva = precio * cantidad;
-        } else {
-            // El precio NO incluye IVA
-            totalConIva = precio * cantidad;
-        }
-        
-        const subtotalCell = document.getElementById(`subtotalItem${index}`);
-        const totalCell = document.getElementById(`totalItem${index}`);
-        if (subtotalCell) subtotalCell.textContent = formatCurrency(totalConIva);
-        if (totalCell) totalCell.textContent = formatCurrency(totalConIva);
-        
-        actualizarTotales();
+        actualizarTablaItems(); // Re-renderizar toda la tabla para actualizar todo correctamente
     }
 }
 
@@ -3628,6 +3745,136 @@ function eliminarItem(index) {
 window.eliminarItem = eliminarItem;
 window.cambiarCantidad = cambiarCantidad;
 window.cambiarIva = cambiarIva;
+window.agregarRepuesto = agregarRepuesto;
+window.agregarServicioManual = agregarServicioManual;
+window.guardarServicioManual = guardarServicioManual;
+
+// Funciones para la nueva interfaz de tabla
+function moverItemArriba(index) {
+    if (index > 0 && window.itemsTrabajo && window.itemsTrabajo[index]) {
+        const temp = window.itemsTrabajo[index];
+        window.itemsTrabajo[index] = window.itemsTrabajo[index - 1];
+        window.itemsTrabajo[index - 1] = temp;
+        actualizarTablaItems();
+    }
+}
+
+function moverItemAbajo(index) {
+    if (index < window.itemsTrabajo.length - 1 && window.itemsTrabajo && window.itemsTrabajo[index]) {
+        const temp = window.itemsTrabajo[index];
+        window.itemsTrabajo[index] = window.itemsTrabajo[index + 1];
+        window.itemsTrabajo[index + 1] = temp;
+        actualizarTablaItems();
+    }
+}
+
+function cambiarArticulo(index, nuevoNombre) {
+    if (window.itemsTrabajo && window.itemsTrabajo[index]) {
+        window.itemsTrabajo[index].nombre = nuevoNombre.trim();
+        actualizarTablaItems();
+    }
+}
+
+function cambiarDescripcion(index, nuevaDescripcion) {
+    if (window.itemsTrabajo && window.itemsTrabajo[index]) {
+        // La descripción viene como "CODIGO#NOMBRE"
+        const partes = nuevaDescripcion.split('#');
+        if (partes.length >= 2) {
+            window.itemsTrabajo[index].codigo = partes[0].trim();
+            window.itemsTrabajo[index].nombre = partes.slice(1).join('#').trim();
+        } else {
+            window.itemsTrabajo[index].nombre = nuevaDescripcion.trim();
+        }
+        actualizarTablaItems();
+    }
+}
+
+function cambiarPrecioUnitario(index, nuevoPrecio) {
+    if (window.itemsTrabajo && window.itemsTrabajo[index]) {
+        // Extraer número del string formateado
+        const precioNumero = parseFloat(nuevoPrecio.toString().replace(/[^0-9.-]/g, '')) || 0;
+        window.itemsTrabajo[index].precio = precioNumero;
+        actualizarTablaItems();
+    }
+}
+
+function cambiarTipoDescuento(index, tipo) {
+    if (window.itemsTrabajo && window.itemsTrabajo[index]) {
+        window.itemsTrabajo[index].tipoDescuento = tipo;
+        actualizarTablaItems();
+    }
+}
+
+function cambiarDescuento(index, valor) {
+    if (window.itemsTrabajo && window.itemsTrabajo[index]) {
+        window.itemsTrabajo[index].descuento = Math.max(0, parseFloat(valor) || 0);
+        actualizarTablaItems();
+    }
+}
+
+function buscarArticulo(index) {
+    // Abrir buscador de inventario enfocado en este item
+    const inputBusqueda = document.getElementById('busquedaRepuesto');
+    if (inputBusqueda) {
+        inputBusqueda.focus();
+        window._itemSeleccionadoParaEditar = index;
+    }
+}
+
+function agregarLineaVacia() {
+    if (!window.itemsTrabajo) {
+        window.itemsTrabajo = [];
+    }
+    
+    const item = {
+        id: 'ITEM-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9),
+        codigo: '',
+        nombre: 'Artículo',
+        precio: 0,
+        categoria: 'General',
+        cantidad: 1,
+        iva: 0,
+        descuento: 0,
+        tipoDescuento: '$'
+    };
+    
+    window.itemsTrabajo.push(item);
+    actualizarTablaItems();
+}
+
+function validarItems() {
+    let errores = [];
+    
+    if (!window.itemsTrabajo || window.itemsTrabajo.length === 0) {
+        errores.push('No hay items agregados');
+    } else {
+        window.itemsTrabajo.forEach((item, index) => {
+            if (!item.nombre || item.nombre.trim() === '' || item.nombre === 'Artículo') {
+                errores.push(`Fila ${index + 1}: Falta el nombre del artículo`);
+            }
+            if (!item.precio || item.precio <= 0) {
+                errores.push(`Fila ${index + 1}: El precio debe ser mayor a cero`);
+            }
+        });
+    }
+    
+    if (errores.length > 0) {
+        showNotification('⚠️ Errores encontrados:\n' + errores.join('\n'), 'error');
+    } else {
+        showNotification('✅ Todos los items están válidos', 'success');
+    }
+}
+
+window.moverItemArriba = moverItemArriba;
+window.moverItemAbajo = moverItemAbajo;
+window.cambiarArticulo = cambiarArticulo;
+window.cambiarDescripcion = cambiarDescripcion;
+window.cambiarPrecioUnitario = cambiarPrecioUnitario;
+window.cambiarTipoDescuento = cambiarTipoDescuento;
+window.cambiarDescuento = cambiarDescuento;
+window.buscarArticulo = buscarArticulo;
+window.agregarLineaVacia = agregarLineaVacia;
+window.validarItems = validarItems;
 
 // Calcular totales
 function calcularTotal() {
