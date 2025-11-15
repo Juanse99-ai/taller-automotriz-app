@@ -1944,8 +1944,16 @@ window.__appData = window.__appData || {};
 if (!Array.isArray(window.__appData.vehiculos)) {
     try { window.__appData.vehiculos = JSON.parse(localStorage.getItem('vehiculos_assoc')||'[]'); } catch(e){ window.__appData.vehiculos = []; }
 }
+// Auditoría de cambios de asociación de placas
+if (!Array.isArray(window.__appData.vehiculosAudit)) {
+    try { window.__appData.vehiculosAudit = JSON.parse(localStorage.getItem('vehiculos_audit')||'[]'); } catch(e){ window.__appData.vehiculosAudit = []; }
+}
 function getVehiclesData() { return window.__appData.vehiculos; }
 function saveVehiclesData() { localStorage.setItem('vehiculos_assoc', JSON.stringify(window.__appData.vehiculos)); }
+function addVehicleAuditEntry(entry){
+    window.__appData.vehiculosAudit.push(entry);
+    localStorage.setItem('vehiculos_audit', JSON.stringify(window.__appData.vehiculosAudit));
+}
 function findVehicleByPlaca(placa) { placa = (placa||'').toUpperCase(); return getVehiclesData().find(v => v.placa === placa); }
 function addOrUpdateVehicleAssoc(placa, clienteDoc, clienteNombre, marca='', modelo='', ano='') {
     placa = (placa||'').toUpperCase();
@@ -1953,15 +1961,54 @@ function addOrUpdateVehicleAssoc(placa, clienteDoc, clienteNombre, marca='', mod
     const vehs = getVehiclesData();
     const idx = vehs.findIndex(v => v.placa === placa);
     const obj = { placa, clienteDoc, clienteNombre, marca, modelo, ano };
-    if (idx >= 0) vehs[idx] = { ...vehs[idx], ...obj };
-    else vehs.push(obj);
-    saveVehiclesData();
-    // Intentar enviar a Supabase si existe una tabla 'vehiculos'
-    try {
-        if (window.supabase) {
-            supabase.from('vehiculos').upsert({ placa, cliente_doc: clienteDoc, cliente_nombre: clienteNombre, marca, modelo, ano });
+    if (idx >= 0) {
+        const old = vehs[idx];
+        // Si cambia de propietario, pedir confirmación
+        if ((old.clienteDoc || '').toString() !== (clienteDoc || '').toString()) {
+            const content = `
+                <div style="line-height:1.6;">
+                    <p>La placa <strong>${placa}</strong> ya está asociada a:</n>
+                    <div style="margin:8px 0 12px 0; padding:10px; background:#F3F4F6; border-radius:8px;">
+                        <div><strong>Actual:</strong> ${old.clienteNombre || '-'} (${old.clienteDoc || '-'})</div>
+                        <div><strong>Nuevo:</strong> ${clienteNombre || '-'} (${clienteDoc || '-'})</div>
+                    </div>
+                    <p>¿Deseas reasignar la placa al nuevo cliente?</p>
+                </div>`;
+            const modal = createModal('Reasignar placa', content, [
+                { text: 'Cancelar', class: 'btn-outline', onclick: 'closeModal()' },
+                { text: 'Reasignar', class: 'btn-primary', onclick: `confirmReassignPlate('${placa}','${old.clienteDoc||''}','${(old.clienteNombre||'').replace(/'/g,\\'')}','${clienteDoc||''}','${(clienteNombre||'').replace(/'/g,\\'')}','${(marca||'').replace(/'/g,\\'')}','${(modelo||'').replace(/'/g,\\'')}','${ano||''}')` }
+            ]);
+            showModal(modal);
+            return; // Esperar confirmación explícita
         }
-    } catch(e) { /* noop */ }
+        vehs[idx] = { ...vehs[idx], ...obj };
+        addVehicleAuditEntry({ ts: Date.now(), action:'update', placa, old: old, nuevo: obj });
+    } else {
+        vehs.push(obj);
+        addVehicleAuditEntry({ ts: Date.now(), action:'create', placa, nuevo: obj });
+    }
+    saveVehiclesData();
+    try { if (window.supabase) { supabase.from('vehiculos').upsert({ placa, cliente_doc: clienteDoc, cliente_nombre: clienteNombre, marca, modelo, ano }); } } catch(e) {}
+}
+
+// Confirmar reasignación de placa a otro cliente
+function confirmReassignPlate(placa, oldDoc, oldNombre, newDoc, newNombre, marca='', modelo='', ano='') {
+    try {
+        const vehs = getVehiclesData();
+        const idx = vehs.findIndex(v => v.placa === placa);
+        const old = idx>=0 ? vehs[idx] : null;
+        const nuevo = { placa, clienteDoc:newDoc, clienteNombre:newNombre, marca, modelo, ano };
+        if (idx>=0) vehs[idx] = { ...vehs[idx], ...nuevo }; else vehs.push(nuevo);
+        saveVehiclesData();
+        addVehicleAuditEntry({ ts: Date.now(), action:'reassign', placa, old: old, nuevo });
+        try { if (window.supabase) { supabase.from('vehiculos').upsert({ placa, cliente_doc:newDoc, cliente_nombre:newNombre, marca, modelo, ano }); } } catch(e) {}
+        showNotification(`Placa ${placa} reasignada a ${newNombre}`, 'success');
+    } catch(e) {
+        console.error('Reasignación de placa falló', e);
+        showNotification('No se pudo reasignar la placa', 'error');
+    } finally {
+        closeModal();
+    }
 }
 
 function asociarPlacaConClienteDesdeForm(contexto='ot') {
