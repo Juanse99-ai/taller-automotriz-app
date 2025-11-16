@@ -309,7 +309,49 @@ body {
 .hamburger-toggle span::after { top:6px; }
 
 @media (max-width: 768px) {
+  .main-wrapper {
+    padding: 0;
+  }
+  .content {
+    padding: 16px 12px;
+  }
+  .card {
+    padding: 16px;
+  }
+  .header-content {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  .user-menu {
+    width: 100%;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .user-menu .btn {
+    flex: 1 1 48%;
+    min-width: 140px;
+    justify-content: center;
+  }
+  .user-info {
+    text-align: left;
+  }
   .hamburger-toggle { left: 12px; top: 12px; }
+}
+
+@media (max-width: 1024px) and (min-width: 769px) {
+  .content {
+    padding: 24px 24px;
+  }
+  .card {
+    padding: 20px;
+  }
+  .header-content {
+    gap: 16px;
+  }
+  .user-menu {
+    flex-wrap: wrap;
+  }
 }
 
 /* Header - FINAL */
