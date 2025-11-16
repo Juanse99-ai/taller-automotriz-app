@@ -4138,13 +4138,18 @@ function generarLiquidacion() {
     const preview = document.querySelector('#liquidacionAvanzada #preview-contenido');
     if (preview) preview.innerHTML = 'Selecciona un técnico y período para ver la vista previa';
 
-    // Disparar vista previa automática y re-render al cambiar filtros
+    // Disparar vista previa automática y re-render al cambiar filtros (una sola vez)
     try {
         actualizarVistaPrevia();
-        const sel = form.querySelector('select[name="tecnicoId"]');
-        if (sel) sel.addEventListener('change', () => actualizarVistaPrevia());
-        if (inicio) inicio.addEventListener('change', () => actualizarVistaPrevia());
-        if (fin) fin.addEventListener('change', () => actualizarVistaPrevia());
+        if (!form.dataset.previewBound) {
+            form.addEventListener('change', (event) => {
+                if (!event.target || !event.target.name) return;
+                if (['tecnicoId', 'fechaInicio', 'fechaFin'].includes(event.target.name)) {
+                    actualizarVistaPrevia();
+                }
+            });
+            form.dataset.previewBound = 'true';
+        }
     } catch (e) { console.warn('No se pudo inicializar vista previa:', e); }
 }
 
@@ -4247,7 +4252,7 @@ function actualizarVistaPrevia() {
 
     // Estado de cuenta estimado (usa aplicarMap por defecto)
     const aplicarTotal = Object.values(aplicarMap).reduce((s,v)=> s + (parseInt(v)||0), 0);
-    const netoEstimado = totalManosObra - aplicarTotal - totales.almuerzos - totales.descuentos - totales.prestamos - totales.pagos;
+    const netoEstimado = totalManosObra - aplicarTotal - totales.almuerzos - totales.descuentos - totales.prestamos - totales.pagos - totales.materiales;
 
     const html = `
         <div class="preview-section">
@@ -4261,6 +4266,7 @@ function actualizarVistaPrevia() {
                 <div class="preview-item"><span>Descuentos:</span><span id="descTotal" data-value="${totales.descuentos}">-$${totales.descuentos.toLocaleString()}</span></div>
                 <div class="preview-item"><span>Préstamos:</span><span id="prestTotal" data-value="${totales.prestamos}">-$${totales.prestamos.toLocaleString()}</span></div>
                 <div class="preview-item"><span>Pagos previos:</span><span id="pagosTotal" data-value="${totales.pagos}">-$${totales.pagos.toLocaleString()}</span></div>
+                <div class="preview-item"><span>Materiales:</span><span id="matTotal" data-value="${totales.materiales}">-$${totales.materiales.toLocaleString()}</span></div>
                 <div class="preview-item total"><span><strong>NETO ESTIMADO:</strong></span><span id="netoEstimadoValor" class="${netoEstimado>=0?'text-success':'text-danger'}" data-value="${netoEstimado}"><strong>$${Math.abs(netoEstimado).toLocaleString()}</strong></span></div>
             </div>
             <h6>Trabajos del período</h6>
@@ -4356,7 +4362,7 @@ function actualizarSpanMoneda(id, valor) {
     if (!span) return;
     span.dataset.value = valor;
     const abs = Math.abs(valor);
-    const pref = (id === 'adelantosAplicarTotal' || id === 'almTotal' || id === 'descTotal' || id === 'prestTotal' || id === 'pagosTotal') ? '-$' : '$';
+    const pref = (id === 'adelantosAplicarTotal' || id === 'almTotal' || id === 'descTotal' || id === 'prestTotal' || id === 'pagosTotal' || id === 'matTotal') ? '-$' : '$';
     span.textContent = `${pref}${abs.toLocaleString()}`;
     if (id === 'netoEstimadoValor') {
         span.className = (valor >= 0 ? 'text-success' : 'text-danger');
@@ -4386,7 +4392,8 @@ function recalcularResumenAdelantos() {
     const desc = obtenerNumero('descTotal');
     const prest = obtenerNumero('prestTotal');
     const pagos = obtenerNumero('pagosTotal');
-    const neto = mo - aplicar - alm - desc - prest - pagos;
+    const mat = obtenerNumero('matTotal');
+    const neto = mo - aplicar - alm - desc - prest - pagos - mat;
     const netEl = document.getElementById('netoEstimadoValor');
     if (netEl) {
         netEl.dataset.value = neto;
@@ -4409,7 +4416,8 @@ function aplicarAdelantosCubrirMO() {
     const desc = obtenerNumero('descTotal');
     const prest = obtenerNumero('prestTotal');
     const pagos = obtenerNumero('pagosTotal');
-    let objetivo = mo - alm - desc - prest - pagos; // cuánto necesito aplicar para que neto llegue a 0
+    const mat = obtenerNumero('matTotal');
+    let objetivo = mo - alm - desc - prest - pagos - mat; // cuánto necesito aplicar para que neto llegue a 0
     const inputs = Array.from(document.querySelectorAll('input[name^="adelanto-aplicar-"]'));
     inputs.forEach(inp => { inp.value = 0; });
     for (const inp of inputs) {
@@ -4582,7 +4590,7 @@ function actualizarDashboardLiquidacion() {
         const totales = controlMovimientos.calcularTotales(tecnico.id, fechaInicio, fechaFin);
         totalAdelantos += totales.adelantos;
         
-        const neto = manosObra + totales.adelantos + totales.pagos - 
+        const neto = manosObra - totales.adelantos - totales.pagos - 
                     totales.almuerzos - totales.descuentos - totales.prestamos - totales.materiales;
         totalNeto += neto;
     });

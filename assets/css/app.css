@@ -39,7 +39,7 @@
 
 body {
     font-family: var(--font-family);
-    background-color: var(--neutral-50);
+    background-color: #e5e7eb; /* gris suave para mejor contraste */
     color: var(--neutral-900);
     line-height: 1.5;
 }
