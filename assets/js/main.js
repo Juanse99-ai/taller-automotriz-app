@@ -466,7 +466,10 @@ function loadDashboardData() {
 
 function loadTrabajosData() {
     console.log('🔧 Cargando datos de trabajos...');
-    // Trabaja ya tiene datos por defecto
+    // Cargar inventario automáticamente al mostrar la sección de trabajos
+    setTimeout(() => {
+        mostrarTodosLosRepuestos();
+    }, 100);
 }
 
 function loadMecanicosData() {
@@ -1419,7 +1422,8 @@ function buscarEnInventario(termino) {
     let resultados = [];
 
     if (!termino || termino.trim() === '') {
-        resultados = baseInventario.slice(0, 50);
+        // Mostrar TODOS los repuestos cuando no hay término de búsqueda
+        resultados = baseInventario;
     } else if (termino.length < 2) {
         contenedor.classList.remove('show');
         contenedor.innerHTML = '';
@@ -1432,7 +1436,7 @@ function buscarEnInventario(termino) {
             const barras = normalizarTexto(item.codigo_barras || item.barcode);
             const terminoLower = termino.toLowerCase();
             return codigo.includes(terminoLower) || nombre.includes(terminoLower) || referencia.includes(terminoLower) || barras.includes(terminoLower);
-        }).slice(0, 50);
+        });
     }
     
     window._ultimosResultadosInventario = resultados;
@@ -1455,6 +1459,21 @@ function buscarEnInventario(termino) {
         contenedor.innerHTML = '<div class="inventario-item">No se encontraron productos</div>';
         contenedor.classList.add('show');
     }
+}
+
+// Disparar búsqueda desde el botón de la lupa
+function buscarRepuestoDesdeBoton() {
+    const input = document.getElementById('busquedaRepuesto');
+    if (!input) return;
+
+    const termino = (input.value || '').trim();
+
+    if (termino.length < 2) {
+        mostrarTodosLosRepuestos();
+        return;
+    }
+
+    buscarEnInventario(termino);
 }
 
 // Mostrar todos los repuestos
@@ -1717,6 +1736,9 @@ window.sugerirReferencia = sugerirReferencia;
 window.seleccionarSugerenciaRef = seleccionarSugerenciaRef;
 window.cerrarSugerenciasRefConDelay = cerrarSugerenciasRefConDelay;
 window.autoFormatoDescripcion = autoFormatoDescripcion;
+window.buscarEnInventario = buscarEnInventario;
+window.mostrarTodosLosRepuestos = mostrarTodosLosRepuestos;
+window.buscarRepuestoDesdeBoton = buscarRepuestoDesdeBoton;
 
 // Funciones para la nueva interfaz de tabla
 function obtenerSugerenciasInventario(termino, limite = 8) {
