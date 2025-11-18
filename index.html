@@ -34,7 +34,6 @@
                         </svg>
                         <span class="logo-text">Multidiagnósticos AS</span>
                     </div>
-                    <button class="sidebar-toggle" onclick="toggleSidebar()">☰</button>
                 </div>
                 
                 <nav class="sidebar-nav">
@@ -56,7 +55,7 @@
                     
                     <div class="nav-section">
                         <div class="nav-section-title">Operaciones</div>
-                        <div class="nav-item" onclick="showSection('recepcion')">
+                        <div class="nav-item" onclick="showSection('recepcionPage')">
                             <span class="nav-icon">📋</span>
                             <span class="nav-text">Recepción</span>
                         </div>
@@ -104,12 +103,19 @@
                             <span class="nav-icon">💼</span>
                             <span class="nav-text">CUENTTI</span>
                         </div>
+                        <div class="nav-item" onclick="showSection('auditoriaPlacas')">
+                            <span class="nav-icon">🧾</span>
+                            <span class="nav-text">Auditoría Placas</span>
+                        </div>
                     </div>
                 </nav>
             </aside>
 
             <!-- Main Content -->
             <div class="main-content">
+                <button class="hamburger-toggle" onclick="toggleSidebar()" title="Menú">
+                    <span></span>
+                </button>
                 <!-- Header -->
                 <div class="header">
                     <div class="header-content">
@@ -122,6 +128,8 @@
                                 <div class="user-name">Administrador</div>
                                 <div class="user-role">Gerente General</div>
                             </div>
+                            <button class="btn btn-outline" onclick="clearLocalData()" title="Limpiar datos locales">Limpiar Datos</button>
+                            <button id="themeToggleBtn" class="btn btn-outline" onclick="toggleGlassTheme()" title="Cambiar tema">Tema iOS</button>
                             <button class="btn btn-outline" onclick="logout()">Cerrar Sesión</button>
                         </div>
                     </div>
@@ -136,28 +144,28 @@
                             <!-- Métricas principales -->
                             <div class="card text-center">
                                 <div class="metric">
-                                    <span class="metric-value" id="totalJobs">12</span>
+                                    <span class="metric-value" id="totalJobs">0</span>
                                     <div class="metric-label">Total Trabajos</div>
                                 </div>
                             </div>
                             
                             <div class="card text-center">
                                 <div class="metric">
-                                    <span class="metric-value" id="completedJobs">8</span>
+                                    <span class="metric-value" id="completedJobs">0</span>
                                     <div class="metric-label">Completados</div>
                                 </div>
                             </div>
                             
                             <div class="card text-center">
                                 <div class="metric">
-                                    <span class="metric-value" id="inProgressJobs">3</span>
+                                    <span class="metric-value" id="inProgressJobs">0</span>
                                     <div class="metric-label">En Progreso</div>
                                 </div>
                             </div>
                             
                             <div class="card text-center">
                                 <div class="metric">
-                                    <span class="metric-value" id="monthlyRevenue">$1,250,000</span>
+                                    <span class="metric-value" id="monthlyRevenue">$0</span>
                                     <div class="metric-label">Ingresos Mes</div>
                                 </div>
                             </div>
@@ -180,28 +188,9 @@
                                     </thead>
                                     <tbody id="trabajosRecientes">
                                         <tr>
-                                            <td>ABC123</td>
-                                            <td>Juan Pérez</td>
-                                            <td>Toyota Corolla 2020</td>
-                                            <td>Cambio de aceite y filtro</td>
-                                            <td><span class="status-badge status-completado">Completado</span></td>
-                                            <td>10/01/2025</td>
-                                        </tr>
-                                        <tr>
-                                            <td>XYZ789</td>
-                                            <td>María García</td>
-                                            <td>Honda Civic 2019</td>
-                                            <td>Frenos delanteros</td>
-                                            <td><span class="status-badge status-en-progreso">En Progreso</span></td>
-                                            <td>11/01/2025</td>
-                                        </tr>
-                                        <tr>
-                                            <td>DEF456</td>
-                                            <td>Carlos López</td>
-                                            <td>Nissan Sentra 2021</td>
-                                            <td>Revisión general</td>
-                                            <td><span class="status-badge status-pendiente">Pendiente</span></td>
-                                            <td>12/01/2025</td>
+                                            <td colspan="6" style="text-align:center; padding: 32px; color: #6b7280;">
+                                                No hay trabajos registrados todavía.
+                                            </td>
                                         </tr>
                                     </tbody>
                                 </table>
@@ -250,7 +239,8 @@
                                         </div>
                                         <div class="form-group">
                                             <label class="form-label">👤 Cliente</label>
-                                            <input type="text" class="form-input" id="trabajoCliente" required placeholder="Nombre completo del cliente">
+                                            <input type="text" class="form-input" id="trabajoCliente" required placeholder="Nombre completo del cliente" oninput="buscarClientePorNombreOT(this.value)">
+                                            <div id="resultadosBusquedaNombre" class="busqueda-resultados"></div>
                                         </div>
                                     </div>
                                     <div class="form-row">
@@ -270,7 +260,7 @@
                                     <div class="form-row">
                                     <div class="form-group">
                                         <label class="form-label">🔢 Placa del Vehículo</label>
-                                        <input type="text" class="form-input" id="trabajoPlaca" placeholder="ABC123" required style="text-transform: uppercase;">
+                                        <input type="text" class="form-input" id="trabajoPlaca" placeholder="ABC123" required style="text-transform: uppercase;" onblur="autocompletarClientePorPlacaOT()">
                                     </div>
                                     <div class="form-group">
                                         <label class="form-label">📍 Marca del Vehículo</label>
@@ -325,18 +315,16 @@
                                         <table class="items-table">
                                             <thead>
                                                 <tr>
-                                                    <th style="width: 35%">Descripción</th>
-                                                    <th style="width: 8%">Cant.</th>
-                                                    <th style="width: 12%">Precio Unit.</th>
-                                                    <th style="width: 12%">Total</th>
-                                                    <th style="width: 8%">IVA %</th>
-                                                    <th style="width: 15%">Total c/IVA</th>
-                                                    <th style="width: 10%">Acciones</th>
+                                                    <th style="width: 50%">Descripción</th>
+                                                    <th style="width: 14%">Precio Unitario</th>
+                                                    <th style="width: 12%">Cantidad</th>
+                                                    <th style="width: 10%">Impuesto</th>
+                                                    <th style="width: 14%">Total</th>
                                                 </tr>
                                             </thead>
                                             <tbody id="itemsTrabajo">
                                                 <tr id="noItemsRow">
-                                                    <td colspan="7" style="text-align: center; padding: 40px; color: #666;">
+                                                    <td colspan="5" style="text-align: center; padding: 40px; color: #666;">
                                                         📝 No hay repuestos agregados. Usa la búsqueda de inventario arriba para agregar productos.
                                                     </td>
                                                 </tr>
@@ -376,6 +364,7 @@
                                 <div class="form-actions">
                                     <button type="button" class="btn btn-secondary" onclick="cancelarNuevoTrabajo()">❌ Cancelar</button>
                                     <button type="button" class="btn btn-secondary" onclick="previsualizarTrabajo()">👁️ Vista Previa</button>
+                                    <button type="button" class="btn btn-info" onclick="exportarTrabajoACuentti()">⬇️ Exportar CUENTTI (CSV)</button>
                                     <button type="submit" class="btn btn-primary">💾 Crear Trabajo</button>
                                 </div>
                             </form>
@@ -389,25 +378,25 @@
                             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4">
                                 <div class="card text-center">
                                     <div class="metric">
-                                        <span class="metric-value" id="trabajosTotal">12</span>
+                                        <span class="metric-value" id="trabajosTotal">0</span>
                                         <div class="metric-label">Total Trabajos</div>
                                     </div>
                                 </div>
                                 <div class="card text-center">
                                     <div class="metric">
-                                        <span class="metric-value" id="trabajosCompletados">8</span>
+                                        <span class="metric-value" id="trabajosCompletados">0</span>
                                         <div class="metric-label">Completados</div>
                                     </div>
                                 </div>
                                 <div class="card text-center">
                                     <div class="metric">
-                                        <span class="metric-value" id="trabajosEnProgreso">3</span>
+                                        <span class="metric-value" id="trabajosEnProgreso">0</span>
                                         <div class="metric-label">En Progreso</div>
                                     </div>
                                 </div>
                                 <div class="card text-center">
                                     <div class="metric">
-                                        <span class="metric-value" id="trabajosPendientes">1</span>
+                                        <span class="metric-value" id="trabajosPendientes">0</span>
                                         <div class="metric-label">Pendiente</div>
                                     </div>
                                 </div>
@@ -428,41 +417,7 @@
                                             <th>Acciones</th>
                                         </tr>
                                     </thead>
-                                    <tbody id="trabajosTable">
-                                        <tr>
-                                            <td>ABC123</td>
-                                            <td>Juan Pérez</td>
-                                            <td>Toyota Corolla 2020</td>
-                                            <td>Cambio de aceite y filtro</td>
-                                            <td>Víctor Padilla</td>
-                                            <td><span class="status-badge status-completado">Completado</span></td>
-                                            <td>
-                                                <button class="btn btn-sm btn-outline" onclick="verTrabajo('ABC123')">Ver</button>
-                                            </td>
-                                        </tr>
-                                        <tr>
-                                            <td>XYZ789</td>
-                                            <td>María García</td>
-                                            <td>Honda Civic 2019</td>
-                                            <td>Frenos delanteros</td>
-                                            <td>Pedro Barraza</td>
-                                            <td><span class="status-badge status-en-progreso">En Progreso</span></td>
-                                            <td>
-                                                <button class="btn btn-sm btn-outline" onclick="verTrabajo('XYZ789')">Ver</button>
-                                            </td>
-                                        </tr>
-                                        <tr>
-                                            <td>DEF456</td>
-                                            <td>Carlos López</td>
-                                            <td>Nissan Sentra 2021</td>
-                                            <td>Revisión general</td>
-                                            <td>Ismael Cervantes</td>
-                                            <td><span class="status-badge status-pendiente">Pendiente</span></td>
-                                            <td>
-                                                <button class="btn btn-sm btn-outline" onclick="verTrabajo('DEF456')">Ver</button>
-                                            </td>
-                                        </tr>
-                                    </tbody>
+                                    <tbody id="trabajosTable"></tbody>
                                 </table>
                             </div>
                         </div>
@@ -475,19 +430,19 @@
                             <div class="grid grid-cols-1 md:grid-cols-3">
                                 <div class="card text-center">
                                     <div class="metric">
-                                        <span class="metric-value" id="mecanicosTotal">3</span>
+                                        <span class="metric-value" id="mecanicosTotal">0</span>
                                         <div class="metric-label">Total Mecánicos</div>
                                     </div>
                                 </div>
                                 <div class="card text-center">
                                     <div class="metric">
-                                        <span class="metric-value" id="mecanicosActivos">3</span>
+                                        <span class="metric-value" id="mecanicosActivos">0</span>
                                         <div class="metric-label">Activos</div>
                                     </div>
                                 </div>
                                 <div class="card text-center">
                                     <div class="metric">
-                                        <span class="metric-value" id="mecanicosExperiencia">10</span>
+                                        <span class="metric-value" id="mecanicosExperiencia">0</span>
                                         <div class="metric-label">Años Promedio</div>
                                     </div>
                                 </div>
@@ -542,25 +497,25 @@
                             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4">
                                 <div class="card text-center">
                                     <div class="metric">
-                                        <span class="metric-value" id="enCola">2</span>
+                                        <span class="metric-value" id="enCola">0</span>
                                         <div class="metric-label">En Cola</div>
                                     </div>
                                 </div>
                                 <div class="card text-center">
                                     <div class="metric">
-                                        <span class="metric-value" id="atendidosHoy">8</span>
+                                        <span class="metric-value" id="atendidosHoy">0</span>
                                         <div class="metric-label">Atendidos Hoy</div>
                                     </div>
                                 </div>
                                 <div class="card text-center">
                                     <div class="metric">
-                                        <span class="metric-value" id="promedioDiario">12</span>
+                                        <span class="metric-value" id="promedioDiario">0</span>
                                         <div class="metric-label">Promedio Diario</div>
                                     </div>
                                 </div>
                                 <div class="card text-center">
                                     <div class="metric">
-                                        <span class="metric-value" id="satisfaccion">95%</span>
+                                        <span class="metric-value" id="satisfaccion">0%</span>
                                         <div class="metric-label">Satisfacción</div>
                                     </div>
                                 </div>
@@ -581,26 +536,7 @@
                                             <th>Estado</th>
                                         </tr>
                                     </thead>
-                                    <tbody id="recepcionTable">
-                                        <tr>
-                                            <td>ORD-2025-001</td>
-                                            <td>Juan Pérez</td>
-                                            <td>ABC123</td>
-                                            <td>Toyota Corolla 2020</td>
-                                            <td>45,000 km</td>
-                                            <td>Víctor Padilla</td>
-                                            <td><span class="status-badge status-evaluacion">En Evaluación</span></td>
-                                        </tr>
-                                        <tr>
-                                            <td>ORD-2025-002</td>
-                                            <td>María González</td>
-                                            <td>XYZ789</td>
-                                            <td>Chevrolet Spark 2018</td>
-                                            <td>62,000 km</td>
-                                            <td>Pedro Barraza</td>
-                                            <td><span class="status-badge status-evaluacion">En Evaluación</span></td>
-                                        </tr>
-                                    </tbody>
+                                    <tbody id="recepcionTable"></tbody>
                                 </table>
                             </div>
                         </div>
@@ -613,19 +549,19 @@
                             <div class="grid grid-cols-1 md:grid-cols-3">
                                 <div class="card text-center">
                                     <div class="metric">
-                                        <span class="metric-value" id="cotizacionesActivas">2</span>
+                                        <span class="metric-value" id="cotizacionesActivas">0</span>
                                         <div class="metric-label">Cotizaciones Activas</div>
                                     </div>
                                 </div>
                                 <div class="card text-center">
                                     <div class="metric">
-                                        <span class="metric-value" id="valorTotal">$475,000</span>
+                                        <span class="metric-value" id="valorTotal">$0</span>
                                         <div class="metric-label">Valor Total</div>
                                     </div>
                                 </div>
                                 <div class="card text-center">
                                     <div class="metric">
-                                        <span class="metric-value" id="tasaConversion">80%</span>
+                                        <span class="metric-value" id="tasaConversion">0%</span>
                                         <div class="metric-label">Tasa Conversión</div>
                                     </div>
                                 </div>
@@ -646,32 +582,7 @@
                                             <th>Acciones</th>
                                         </tr>
                                     </thead>
-                                    <tbody id="cotizacionesTable">
-                                        <tr>
-                                            <td>COT-2025-001</td>
-                                            <td>Juan Pérez</td>
-                                            <td>Toyota Corolla</td>
-                                            <td>$115,000</td>
-                                            <td><span class="status-badge status-pendiente">Pendiente</span></td>
-                                            <td>10/01/2025</td>
-                                            <td>
-                                                <button class="btn btn-sm btn-outline" onclick="verCotizacion('COT-2025-001')">Ver</button>
-                                                <button class="btn btn-sm btn-success" onclick="aprobarCotizacion('COT-2025-001')">Aprobar</button>
-                                            </td>
-                                        </tr>
-                                        <tr>
-                                            <td>COT-2025-002</td>
-                                            <td>María González</td>
-                                            <td>Chevrolet Spark</td>
-                                            <td>$360,000</td>
-                                            <td><span class="status-badge status-completado">Aprobada</span></td>
-                                            <td>11/01/2025</td>
-                                            <td>
-                                                <button class="btn btn-sm btn-outline" onclick="verCotizacion('COT-2025-002')">Ver</button>
-                                                <button class="btn btn-sm btn-primary" onclick="generarFactura('COT-2025-002')">Facturar</button>
-                                            </td>
-                                        </tr>
-                                    </tbody>
+                                    <tbody id="cotizacionesTable"></tbody>
                                 </table>
                             </div>
                         </div>
@@ -684,25 +595,25 @@
                             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4">
                                 <div class="card text-center">
                                     <div class="metric">
-                                        <span class="metric-value" id="citasHoy">6</span>
+                                        <span class="metric-value" id="citasHoy">0</span>
                                         <div class="metric-label">Citas Hoy</div>
                                     </div>
                                 </div>
                                 <div class="card text-center">
                                     <div class="metric">
-                                        <span class="metric-value" id="citasSemana">42</span>
+                                        <span class="metric-value" id="citasSemana">0</span>
                                         <div class="metric-label">Esta Semana</div>
                                     </div>
                                 </div>
                                 <div class="card text-center">
                                     <div class="metric">
-                                        <span class="metric-value" id="ocupacion">85%</span>
+                                        <span class="metric-value" id="ocupacion">0%</span>
                                         <div class="metric-label">Ocupación</div>
                                     </div>
                                 </div>
                                 <div class="card text-center">
                                     <div class="metric">
-                                        <span class="metric-value" id="cancelaciones">2</span>
+                                        <span class="metric-value" id="cancelaciones">0</span>
                                         <div class="metric-label">Cancelaciones</div>
                                     </div>
                                 </div>
@@ -800,19 +711,19 @@
                             <div class="grid grid-cols-1 md:grid-cols-3">
                                 <div class="card text-center">
                                     <div class="metric">
-                                        <span class="metric-value" id="mantenimientosPendientes">3</span>
+                                        <span class="metric-value" id="mantenimientosPendientes">0</span>
                                         <div class="metric-label">Mantenimientos</div>
                                     </div>
                                 </div>
                                 <div class="card text-center">
                                     <div class="metric">
-                                        <span class="metric-value" id="alertasStock">2</span>
+                                        <span class="metric-value" id="alertasStock">0</span>
                                         <div class="metric-label">Stock Bajo</div>
                                     </div>
                                 </div>
                                 <div class="card text-center">
                                     <div class="metric">
-                                        <span class="metric-value" id="seguimientosPendientes">5</span>
+                                        <span class="metric-value" id="seguimientosPendientes">0</span>
                                         <div class="metric-label">Seguimientos</div>
                                     </div>
                                 </div>
@@ -828,26 +739,7 @@
                                             <th>Acciones</th>
                                         </tr>
                                     </thead>
-                                    <tbody id="notificacionesTable">
-                                        <tr>
-                                            <td>12/01/2025</td>
-                                            <td>🔧 Mantenimiento</td>
-                                            <td>ABC123 requiere mantenimiento preventivo</td>
-                                            <td><span class="status-badge status-pendiente">Pendiente</span></td>
-                                            <td>
-                                                <button class="btn btn-sm btn-primary" onclick="agendarMantenimiento()">Agendar</button>
-                                            </td>
-                                        </tr>
-                                        <tr>
-                                            <td>11/01/2025</td>
-                                            <td>📦 Stock</td>
-                                            <td>Filtro de aceite bajo (3 unidades)</td>
-                                            <td><span class="status-badge status-pendiente">Pendiente</span></td>
-                                            <td>
-                                                <button class="btn btn-sm btn-warning" onclick="reabastecerStock()">Reabastecer</button>
-                                            </td>
-                                        </tr>
-                                    </tbody>
+                                    <tbody id="notificacionesTable"></tbody>
                                 </table>
                             </div>
                         </div>
@@ -860,25 +752,25 @@
                             <div class="grid grid-cols-1 md:grid-cols-4">
                                 <div class="card text-center">
                                     <div class="metric">
-                                        <span class="metric-value" id="ingresosMes">$1,250,000</span>
+                                        <span class="metric-value" id="ingresosMes">$0</span>
                                         <div class="metric-label">Ingresos Mes</div>
                                     </div>
                                 </div>
                                 <div class="card text-center">
                                     <div class="metric">
-                                        <span class="metric-value" id="gastos">$450,000</span>
+                                        <span class="metric-value" id="gastos">$0</span>
                                         <div class="metric-label">Gastos</div>
                                     </div>
                                 </div>
                                 <div class="card text-center">
                                     <div class="metric">
-                                        <span class="metric-value" id="gananciaNeta">$800,000</span>
+                                        <span class="metric-value" id="gananciaNeta">$0</span>
                                         <div class="metric-label">Ganancia Neta</div>
                                     </div>
                                 </div>
                                 <div class="card text-center">
                                     <div class="metric">
-                                        <span class="metric-value" id="flujoCaja">$2,100,000</span>
+                                        <span class="metric-value" id="flujoCaja">$0</span>
                                         <div class="metric-label">Flujo de Caja</div>
                                     </div>
                                 </div>
@@ -893,19 +785,19 @@
                             <div class="grid grid-cols-1 md:grid-cols-3">
                                 <div class="card text-center">
                                     <div class="metric">
-                                        <span class="metric-value" id="porLiquidar">$21,000</span>
+                                        <span class="metric-value" id="porLiquidar">$0</span>
                                         <div class="metric-label">Por Liquidar (40%)</div>
                                     </div>
                                 </div>
                                 <div class="card text-center">
                                     <div class="metric">
-                                        <span class="metric-value" id="adelantosPendientes">$150,000</span>
+                                        <span class="metric-value" id="adelantosPendientes">$0</span>
                                         <div class="metric-label">Adelantos Pendientes</div>
                                     </div>
                                 </div>
                                 <div class="card text-center">
                                     <div class="metric">
-                                        <span class="metric-value" id="netoPagar">-$340,000</span>
+                                        <span class="metric-value" id="netoPagar">$0</span>
                                         <div class="metric-label">Neto a Pagar</div>
                                     </div>
                                 </div>
@@ -934,30 +826,86 @@
                                             <th>Acciones</th>
                                         </tr>
                                     </thead>
-                                    <tbody id="liquidacionTable">
-                                        <tr>
-                                            <td>ABC123 - Cambio aceite</td>
-                                            <td>Víctor Padilla</td>
-                                            <td>$25,000</td>
-                                            <td>$5,000</td>
-                                            <td><span class="status-badge status-pendiente">Pendiente</span></td>
-                                            <td>
-                                                <button class="btn btn-sm btn-success" onclick="liquidarTrabajo('ABC123')">Liquidar</button>
-                                            </td>
-                                        </tr>
-                                        <tr>
-                                            <td>XYZ789 - Reparación frenos</td>
-                                            <td>Pedro Barraza</td>
-                                            <td>$80,000</td>
-                                            <td>$16,000</td>
-                                            <td><span class="status-badge status-evaluacion">Dueño</span></td>
-                                            <td>
-                                                <span class="status-badge status-evaluacion">No aplica</span>
-                                            </td>
-                                        </tr>
-                                    </tbody>
+                                    <tbody id="liquidacionTable"></tbody>
                                 </table>
                             </div>
+                        </div>
+                    </section>
+
+                    <!-- Recepción (Página dedicada) -->
+                    <section id="recepcionPage" class="section" style="display:none;">
+                        <div class="card">
+                            <h3 class="card-title">📋 Recepción de Vehículo</h3>
+                            <form id="recepcionForm" onsubmit="iniciarOrdenTrabajo(event)">
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label class="form-label">Cliente</label>
+                                        <input type="text" class="form-input" id="rcpCliente" placeholder="Nombre del cliente" required oninput="buscarClientePorNombreRecepcion(this.value)">
+                                        <div id="rcpResultadosClientesNombre" class="busqueda-resultados"></div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Cédula</label>
+                                        <div class="input-with-button">
+                                            <input type="text" class="form-input" id="rcpCedula" placeholder="Documento" required oninput="buscarClientePorCedulaRecepcion(this.value)">
+                                            <button type="button" class="btn btn-outline btn-icon" onclick="abrirBuscadorClientesRecepcion()" title="Buscar clientes">🔍</button>
+                                        </div>
+                                        <div id="rcpResultadosClientes" class="busqueda-resultados"></div>
+                                    </div>
+                                </div>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label class="form-label">Teléfono</label>
+                                        <input type="text" class="form-input" id="rcpTelefono" placeholder="Teléfono">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Email</label>
+                                        <input type="email" class="form-input" id="rcpEmail" placeholder="Correo">
+                                    </div>
+                                </div>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label class="form-label">Placa</label>
+                                        <input type="text" class="form-input" id="rcpPlaca" placeholder="ABC123" style="text-transform:uppercase" required onblur="autocompletarClientePorPlacaRecepcion()">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Marca</label>
+                                        <input type="text" class="form-input" id="rcpMarca" placeholder="Marca" required>
+                                    </div>
+                                </div>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label class="form-label">Modelo</label>
+                                        <input type="text" class="form-input" id="rcpModelo" placeholder="Modelo" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Año</label>
+                                        <input type="number" class="form-input" id="rcpAno" min="1980" max="2030" required>
+                                    </div>
+                                </div>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label class="form-label">Kilometraje</label>
+                                        <input type="number" class="form-input" id="rcpKm" min="0" placeholder="0">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Técnico</label>
+                                        <select class="form-select" id="rcpTecnico" required>
+                                            <option value="">Seleccionar técnico</option>
+                                            <option value="1">Pedro Barraza</option>
+                                            <option value="2">Víctor Padilla</option>
+                                            <option value="3">Ismael Cervantes</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Observaciones iniciales</label>
+                                    <textarea class="form-textarea" id="rcpObs" placeholder="Observaciones, síntomas, diagnóstico preliminar"></textarea>
+                                </div>
+                                <div class="form-actions">
+                                    <button type="button" class="btn btn-secondary" onclick="showSection('dashboard')">Cancelar</button>
+                                    <button type="submit" class="btn btn-primary">Continuar a Orden de Trabajo</button>
+                                </div>
+                            </form>
                         </div>
                     </section>
 
@@ -995,9 +943,47 @@
                                 <div class="form-actions">
                                     <button type="button" class="btn-secondary" onclick="showSection('liquidacion')">Volver</button>
                                     <button type="button" class="btn btn-info" onclick="actualizarVistaPrevia()">Vista Previa</button>
+                                    <button type="button" class="btn btn-outline" onclick="imprimirLiquidacion()">Imprimir</button>
+                                    <button type="button" class="btn btn-outline" onclick="exportarLiquidacionACuentti()">Exportar CUENTTI (CSV)</button>
                                     <button type="submit" class="btn-primary">Generar Liquidación</button>
                                 </div>
                             </form>
+                        </div>
+                    </section>
+
+                    <!-- Auditoría de Placas -->
+                    <section id="auditoriaPlacas" class="section" style="display:none;">
+                        <div class="card">
+                            <h3 class="card-title">🧾 Auditoría de Placas</h3>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label class="form-label">Placa</label>
+                                    <input type="text" class="form-input" id="auditPlacaFiltro" placeholder="ABC123" style="text-transform:uppercase" oninput="renderAuditoriaPlacas()">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Fecha Inicio</label>
+                                    <input type="date" class="form-input" id="auditFechaInicio" onchange="renderAuditoriaPlacas()">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Fecha Fin</label>
+                                    <input type="date" class="form-input" id="auditFechaFin" onchange="renderAuditoriaPlacas()">
+                                </div>
+                            </div>
+                            <div class="table-container mt-4">
+                                <table class="table">
+                                    <thead>
+                                        <tr>
+                                            <th>Fecha/Hora</th>
+                                            <th>Acción</th>
+                                            <th>Placa</th>
+                                            <th>Propietario (ant.)</th>
+                                            <th>Propietario (nuevo)</th>
+                                            <th>Acciones</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="auditoriaPlacasTable"></tbody>
+                                </table>
+                            </div>
                         </div>
                     </section>
 
@@ -1008,25 +994,25 @@
                             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4">
                                 <div class="card text-center">
                                     <div class="metric">
-                                        <span class="metric-value" id="reportesGenerados">12</span>
+                                        <span class="metric-value" id="reportesGenerados">0</span>
                                         <div class="metric-label">Generados</div>
                                     </div>
                                 </div>
                                 <div class="card text-center">
                                     <div class="metric">
-                                        <span class="metric-value" id="reportesPendientes">3</span>
+                                        <span class="metric-value" id="reportesPendientes">0</span>
                                         <div class="metric-label">Pendientes</div>
                                     </div>
                                 </div>
                                 <div class="card text-center">
                                     <div class="metric">
-                                        <span class="metric-value" id="promedioRendimiento">92%</span>
+                                        <span class="metric-value" id="promedioRendimiento">0%</span>
                                         <div class="metric-label">Rendimiento</div>
                                     </div>
                                 </div>
                                 <div class="card text-center">
                                     <div class="metric">
-                                        <span class="metric-value" id="tendencia">+5%</span>
+                                        <span class="metric-value" id="tendencia">0%</span>
                                         <div class="metric-label">Tendencia</div>
                                     </div>
                                 </div>
@@ -1041,19 +1027,19 @@
                             <div class="grid grid-cols-1 md:grid-cols-3">
                                 <div class="card text-center">
                                     <div class="metric">
-                                        <span class="metric-value" id="totalProductos">150</span>
+                                        <span class="metric-value" id="totalProductos">0</span>
                                         <div class="metric-label">Total Productos</div>
                                     </div>
                                 </div>
                                 <div class="card text-center">
                                     <div class="metric">
-                                        <span class="metric-value" id="stockBajo">8</span>
+                                        <span class="metric-value" id="stockBajo">0</span>
                                         <div class="metric-label">Stock Bajo</div>
                                     </div>
                                 </div>
                                 <div class="card text-center">
                                     <div class="metric">
-                                        <span class="metric-value" id="valorInventario">$2,500,000</span>
+                                        <span class="metric-value" id="valorInventario">$0</span>
                                         <div class="metric-label">Valor Total</div>
                                     </div>
                                 </div>
@@ -1077,28 +1063,7 @@
                                             <th>Acciones</th>
                                         </tr>
                                     </thead>
-                                    <tbody id="inventarioTable">
-                                        <tr>
-                                            <td>FO-001</td>
-                                            <td>Filtro de Aceite Universal</td>
-                                            <td>15 unidades</td>
-                                            <td>$15,000</td>
-                                            <td><span class="status-badge status-completado">Disponible</span></td>
-                                            <td>
-                                                <button class="btn btn-sm btn-outline" onclick="editarProducto('FO-001')">Editar</button>
-                                            </td>
-                                        </tr>
-                                        <tr>
-                                            <td>FR-002</td>
-                                            <td>Pastillas de Freno Delanteras</td>
-                                            <td>3 unidades</td>
-                                            <td>$45,000</td>
-                                            <td><span class="status-badge status-pendiente">Stock Bajo</span></td>
-                                            <td>
-                                                <button class="btn btn-sm btn-warning" onclick="reabastecer('FR-002')">Reabastecer</button>
-                                            </td>
-                                        </tr>
-                                    </tbody>
+                                    <tbody id="inventarioTable"></tbody>
                                 </table>
                             </div>
                         </div>
@@ -1111,19 +1076,19 @@
                             <div class="grid grid-cols-1 md:grid-cols-3">
                                 <div class="card text-center">
                                     <div class="metric">
-                                        <span class="metric-value" id="facturasPendientes">2</span>
+                                        <span class="metric-value" id="facturasPendientes">0</span>
                                         <div class="metric-label">Facturas Pendientes</div>
                                     </div>
                                 </div>
                                 <div class="card text-center">
                                     <div class="metric">
-                                        <span class="metric-value" id="facturasEnviadas">25</span>
+                                        <span class="metric-value" id="facturasEnviadas">0</span>
                                         <div class="metric-label">Enviadas este Mes</div>
                                     </div>
                                 </div>
                                 <div class="card text-center">
                                     <div class="metric">
-                                        <span class="metric-value" id="valorFacturado">$1,800,000</span>
+                                        <span class="metric-value" id="valorFacturado">$0</span>
                                         <div class="metric-label">Valor Facturado</div>
                                     </div>
                                 </div>
@@ -1144,28 +1109,7 @@
                                             <th>Acciones</th>
                                         </tr>
                                     </thead>
-                                    <tbody id="cuenttiTable">
-                                        <tr>
-                                            <td>FAC-2025-001</td>
-                                            <td>Juan Pérez</td>
-                                            <td>$115,000</td>
-                                            <td><span class="status-badge status-completado">Enviada</span></td>
-                                            <td><span class="status-badge status-completado">✓ Sincronizada</span></td>
-                                            <td>
-                                                <button class="btn btn-sm btn-outline" onclick="verFactura('FAC-2025-001')">Ver</button>
-                                            </td>
-                                        </tr>
-                                        <tr>
-                                            <td>FAC-2025-002</td>
-                                            <td>María González</td>
-                                            <td>$360,000</td>
-                                            <td><span class="status-badge status-pendiente">Pendiente</span></td>
-                                            <td><span class="status-badge status-pendiente">⏳ Esperando</span></td>
-                                            <td>
-                                                <button class="btn btn-sm btn-primary" onclick="enviarFactura('FAC-2025-002')">Enviar</button>
-                                            </td>
-                                        </tr>
-                                    </tbody>
+                                    <tbody id="cuenttiTable"></tbody>
                                 </table>
                             </div>
                         </div>

@@ -15,23 +15,9 @@ let nextInvoiceNumber = 3;
 let previousSectionBeforeNuevoTrabajo = 'dashboard';
 let datosRecepcionTemporal = null;
 
-// Base de datos de clientes
-const clientes = [
-    { id: 1, name: 'Juan Pérez', cedula: '12345678', phone: '3001112233', email: 'juan.perez@email.com' },
-    { id: 2, name: 'María González', cedula: '87654321', phone: '3004445566', email: 'maria.gonzalez@email.com' },
-    { id: 3, name: 'Carlos Rodríguez', cedula: '11223344', phone: '3007778899', email: 'carlos.rodriguez@email.com' },
-    { id: 4, name: 'Ana Martínez', cedula: '55667788', phone: '3001113344', email: 'ana.martinez@email.com' },
-    { id: 5, name: 'Luis Sánchez', cedula: '99887766', phone: '3005556677', email: 'luis.sanchez@email.com' }
-];
-
-// Inventario de productos
-const inventario = [
-    { codigo: 'FO-001', nombre: 'Filtro de Aceite Universal', precio: 15000, stock: 15, categoria: 'Filtros' },
-    { codigo: 'FO-002', nombre: 'Filtro de Aire', precio: 12000, stock: 8, categoria: 'Filtros' },
-    { codigo: 'FR-001', nombre: 'Pastillas de Freno Traseras', precio: 35000, stock: 6, categoria: 'Frenos' },
-    { codigo: 'FR-002', nombre: 'Pastillas de Freno Delanteras', precio: 45000, stock: 3, categoria: 'Frenos' },
-    { codigo: 'LG-001', nombre: 'Lubricante de Motor', precio: 25000, stock: 20, categoria: 'Lubricantes' }
-];
+// Base de datos en memoria (vacía por defecto para pruebas reales)
+const clientes = [];
+const inventario = [];
 
 // Mecánicos del taller
 const mecanicos = [
@@ -48,7 +34,14 @@ window.mecanicos = mecanicos;
 window.clientes = clientes;
 window.inventario = inventario;
 window.itemsTrabajo = [];
-window.trabajos = window.trabajos || [];
+// Almacén seguro para evitar colisión con <section id="trabajos">
+window.__appData = window.__appData || {};
+if (!Array.isArray(window.__appData.trabajos)) {
+    window.__appData.trabajos = Array.isArray(window.trabajos) ? window.trabajos : [];
+}
+function getTrabajosData() { return window.__appData.trabajos; }
+function addTrabajoData(t) { window.__appData.trabajos.push(t); }
+window.getTrabajosData = getTrabajosData;
 
 // ===== FUNCIONES CRÍTICAS - DEFINIDAS INMEDIATAMENTE =====
 // Estas funciones deben estar disponibles antes de que el HTML las use
@@ -61,6 +54,8 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Initialize application
     initializeApp();
+    // Inicializar tema guardado
+    try { initThemeFromStorage(); } catch(e) { console.warn('Tema: no se pudo inicializar', e); }
     
     // Set default section
     showSection('dashboard');
@@ -85,7 +80,169 @@ function initializeApp() {
     }
     
     console.log('✅ Aplicación completamente inicializada');
+
+    // Sidebar: iniciar según preferencia; hover-expand solo desktop
+    try {
+        const sidebar = document.getElementById('sidebar');
+        const mainContent = document.querySelector('.main-content');
+        if (sidebar && mainContent && !sidebar.classList.contains('initialized')) {
+            const pref = localStorage.getItem('ui_sidebar_state') || 'collapsed';
+            const startCollapsed = window.innerWidth <= 1024 ? true : (pref !== 'expanded');
+            sidebar.classList.add('initialized');
+            if (window.innerWidth > 1024) sidebar.classList.add('hover-expand');
+            if (startCollapsed) {
+                sidebar.classList.add('collapsed');
+                mainContent.classList.add('sidebar-collapsed');
+            } else {
+                mainContent.classList.add('sidebar-expanded');
+            }
+        }
+        // Posicionar hamburguesa y mover en hover
+        try { updateHamburgerPosition(); } catch(e) {}
+        sidebar.addEventListener('mouseenter', () => {
+            if (window.innerWidth > 1024 && sidebar.classList.contains('hover-expand') && sidebar.classList.contains('collapsed')) {
+                setHamburgerLeft(true);
+            }
+        });
+        sidebar.addEventListener('mouseleave', () => {
+            if (window.innerWidth > 1024 && sidebar.classList.contains('hover-expand') && sidebar.classList.contains('collapsed')) {
+                setHamburgerLeft(false);
+            }
+        });
+        // Overlay inicial en tablets si arranca expandido
+        if (window.innerWidth > 768 && window.innerWidth <= 1024 && !sidebar.classList.contains('collapsed')) {
+            ensureSidebarOverlay();
+        }
+    } catch(e) {}
+
+    // Cerrar sugerencias al hacer click fuera o con Escape
+    document.addEventListener('click', (e) => {
+        const targets = ['#resultadosBusqueda','#resultadosBusquedaNombre','#rcpResultadosClientes','#rcpResultadosClientesNombre'];
+        const clickedInside = targets.some(sel => e.target.closest(sel));
+        const clickedInputs = ['#rcpCliente','#rcpCedula','#trabajoCliente','#busquedaCedula'].some(sel => e.target.closest(sel));
+        if (!clickedInside && !clickedInputs) closeAllSuggestions();
+    });
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') closeAllSuggestions();
+    });
+    window.addEventListener('resize', () => { 
+        try { 
+            updateHamburgerPosition();
+            const sidebar = document.getElementById('sidebar');
+            if (window.innerWidth > 1024) hideSidebarOverlay();
+            if (window.innerWidth > 768 && window.innerWidth <= 1024) {
+                if (!sidebar.classList.contains('collapsed')) ensureSidebarOverlay();
+                else hideSidebarOverlay();
+            }
+        } catch(e) {} 
+    });
 }
+
+function closeAllSuggestions() {
+    ['resultadosBusqueda','resultadosBusquedaNombre','rcpResultadosClientes','rcpResultadosClientesNombre'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) { el.classList.remove('show'); el.innerHTML=''; }
+    });
+}
+
+// Sidebar overlay helpers for tablet/mobile
+function ensureSidebarOverlay() {
+    let overlay = document.querySelector('.sidebar-overlay');
+    if (!overlay) {
+        overlay = document.createElement('div');
+        overlay.className = 'sidebar-overlay';
+        overlay.addEventListener('click', () => {
+            const sidebar = document.getElementById('sidebar');
+            const mainContent = document.querySelector('.main-content');
+            if (!sidebar) return;
+            if (window.innerWidth <= 768) {
+                sidebar.classList.remove('mobile-open');
+            } else {
+                sidebar.classList.add('collapsed');
+                if (mainContent) {
+                    mainContent.classList.remove('sidebar-expanded');
+                    mainContent.classList.add('sidebar-collapsed');
+                }
+                localStorage.setItem('ui_sidebar_state', 'collapsed');
+            }
+            hideSidebarOverlay();
+            try { updateHamburgerPosition(); } catch (e) {}
+        });
+        document.body.appendChild(overlay);
+    }
+    requestAnimationFrame(() => overlay.classList.add('show'));
+}
+
+function hideSidebarOverlay() {
+    const overlay = document.querySelector('.sidebar-overlay');
+    if (!overlay) return;
+    overlay.classList.remove('show');
+    setTimeout(() => {
+        const ov = document.querySelector('.sidebar-overlay');
+        if (ov && !ov.classList.contains('show') && ov.parentNode) {
+            ov.parentNode.removeChild(ov);
+        }
+    }, 250);
+}
+
+// Control de posición del botón hamburguesa
+function setHamburgerLeft(expandedHover) {
+    const btn = document.querySelector('.hamburger-toggle');
+    if (!btn) return;
+    const desktop = window.innerWidth > 768;
+    if (expandedHover) btn.style.left = desktop ? '300px' : '12px';
+    else btn.style.left = desktop ? '70px' : '12px';
+}
+function updateHamburgerPosition() {
+    const btn = document.querySelector('.hamburger-toggle');
+    const sidebar = document.getElementById('sidebar');
+    if (!btn || !sidebar) return;
+    const isCollapsed = sidebar.classList.contains('collapsed');
+    const isDesktop = window.innerWidth > 768;
+    if (isCollapsed) btn.style.left = isDesktop ? '70px' : '12px';
+    else btn.style.left = isDesktop ? '300px' : '12px';
+}
+
+// =====================
+// Tema: iOS glass toggle
+// =====================
+function ensureGlassLinkPresent() {
+    let link = document.getElementById('theme-glass-css');
+    if (!link) {
+        link = document.createElement('link');
+        link.id = 'theme-glass-css';
+        link.rel = 'stylesheet';
+        link.href = 'assets/css/theme-glass.css';
+        document.head.appendChild(link);
+    }
+}
+
+function applyGlassTheme(enabled) {
+    const html = document.documentElement;
+    const btn = document.getElementById('themeToggleBtn');
+    if (enabled) {
+        ensureGlassLinkPresent();
+        html.classList.add('theme-glass');
+        localStorage.setItem('ui_theme', 'glass');
+        if (btn) btn.textContent = 'Tema Clásico';
+    } else {
+        html.classList.remove('theme-glass');
+        localStorage.setItem('ui_theme', 'default');
+        if (btn) btn.textContent = 'Tema iOS';
+    }
+}
+
+function toggleGlassTheme() {
+    const enabled = !document.documentElement.classList.contains('theme-glass');
+    applyGlassTheme(enabled);
+}
+
+function initThemeFromStorage() {
+    const pref = localStorage.getItem('ui_theme') || 'default';
+    applyGlassTheme(pref === 'glass');
+}
+
+window.toggleGlassTheme = toggleGlassTheme;
 
 // Mobile responsive setup
 function setupMobileResponsive() {
@@ -99,14 +256,8 @@ function setupMobileResponsive() {
 
 // Add mobile menu toggle
 function addMobileMenuToggle() {
-    const header = document.querySelector('.header-content');
-    if (header && !header.querySelector('.mobile-menu-toggle')) {
-        const mobileToggle = document.createElement('button');
-        mobileToggle.className = 'mobile-menu-toggle btn btn-primary';
-        mobileToggle.innerHTML = '☰';
-        mobileToggle.onclick = toggleSidebar;
-        header.appendChild(mobileToggle);
-    }
+    // Ya contamos con un botón hamburguesa flotante único
+    return;
 }
 
 // Toggle sidebar
@@ -117,19 +268,29 @@ function toggleSidebar() {
     if (sidebar && mainContent) {
         if (window.innerWidth <= 768) {
             sidebar.classList.toggle('mobile-open');
+            if (sidebar.classList.contains('mobile-open')) ensureSidebarOverlay();
+            else hideSidebarOverlay();
         } else {
             sidebar.classList.toggle('collapsed');
             if (sidebar.classList.contains('collapsed')) {
                 mainContent.classList.remove('sidebar-expanded');
                 mainContent.classList.add('sidebar-collapsed');
+                hideSidebarOverlay();
             } else {
                 mainContent.classList.remove('sidebar-collapsed');
                 mainContent.classList.add('sidebar-expanded');
+                if (window.innerWidth > 768 && window.innerWidth <= 1024) {
+                    ensureSidebarOverlay();
+                }
             }
             sidebarCollapsed = !sidebarCollapsed;
+            if (window.innerWidth > 1024) {
+                localStorage.setItem('ui_sidebar_state', sidebar.classList.contains('collapsed') ? 'collapsed' : 'expanded');
+            }
         }
         
         console.log('🔄 Sidebar toggled:', sidebarCollapsed ? 'collapsed' : 'expanded');
+        try { updateHamburgerPosition(); } catch(e) {}
     }
 }
 
@@ -221,6 +382,24 @@ function updateActiveNavItem(sectionName) {
 window.toggleSidebar = toggleSidebar;
 window.showSection = showSection;
 
+// Limpiar datos locales para pruebas reales
+function clearLocalData() {
+    const keys = [
+        'supabase_clientes_backup','supabase_inventario_backup','supabase_last_sync',
+        'vehiculos_assoc','vehiculos_audit','movimientos_tecnicos','saldos_tecnicos',
+        'configuracion_taller','liquidaciones_completas'
+    ];
+    keys.forEach(k => localStorage.removeItem(k));
+    // Reset in-memory data
+    try {
+        if (window.__appData) { window.__appData.trabajos = []; window.__appData.vehiculos=[]; window.__appData.vehiculosAudit=[]; }
+        if (Array.isArray(window.supabaseClientes)) window.supabaseClientes.length = 0;
+        if (Array.isArray(window.supabaseInventario)) window.supabaseInventario.length = 0;
+    } catch(e) {}
+    showNotification('Datos locales limpiados. Refresca la página.', 'success');
+}
+window.clearLocalData = clearLocalData;
+
 // Load section data
 function loadSectionData(sectionName) {
     console.log('📊 Cargando datos para sección:', sectionName);
@@ -266,6 +445,9 @@ function loadSectionData(sectionName) {
             break;
         case 'cuentti':
             loadCuenttiData();
+            break;
+        case 'auditoriaPlacas':
+            renderAuditoriaPlacas();
             break;
         case 'liquidacionAvanzada':
             // La inicialización se realiza desde generarLiquidacion
@@ -939,11 +1121,36 @@ function buscarClientePorCedula(cedula) {
 function seleccionarCliente(nombre, cedula, telefono = '', email = '') {
     document.getElementById('trabajoCliente').value = nombre;
     document.getElementById('busquedaCedula').value = cedula;
-    document.getElementById('resultadosBusqueda').classList.remove('show');
+    const contCed = document.getElementById('resultadosBusqueda');
+    if (contCed) contCed.classList.remove('show');
+    const contNom = document.getElementById('resultadosBusquedaNombre');
+    if (contNom) { contNom.classList.remove('show'); contNom.innerHTML = ''; }
     const telefonoInput = document.getElementById('clienteTelefono');
     const emailInput = document.getElementById('clienteEmail');
     if (telefonoInput && telefono) telefonoInput.value = telefono;
     if (emailInput && email) emailInput.value = email;
+}
+
+// Buscar cliente por nombre (OT)
+function buscarClientePorNombreOT(nombre) {
+    const contenedor = document.getElementById('resultadosBusquedaNombre');
+    if (!contenedor) return;
+    const termino = (nombre || '').toString().trim().toLowerCase();
+    if (termino.length < 2) { contenedor.classList.remove('show'); contenedor.innerHTML=''; return; }
+    const baseClientes = obtenerListaClientes();
+    const resultados = baseClientes.filter(c => normalizarNombreCliente(c).toLowerCase().includes(termino) || normalizarDocumentoCliente(c).toLowerCase().includes(termino)).slice(0,50);
+    if (resultados.length) {
+        const escapar = v => (v||'').toString().replace(/'/g, "\\'").replace(/\"/g,'&quot;');
+        contenedor.innerHTML = resultados.map(c => {
+            const doc = normalizarDocumentoCliente(c); const nom = normalizarNombreCliente(c);
+            const tel = (c?.telefono || c?.phone || '').toString(); const mail = (c?.email || '').toString();
+            return `<div class="resultado-item" onclick="seleccionarCliente('${escapar(nom)}','${escapar(doc)}','${escapar(tel)}','${escapar(mail)}')"><strong>${doc}</strong> - ${nom}${tel?`<br><small style='color:#666'>📞 ${tel}</small>`:''}${mail?`<br><small style='color:#666'> 📧 ${mail}</small>`:''}</div>`;
+        }).join('');
+        contenedor.classList.add('show');
+    } else {
+        contenedor.innerHTML = '<div class="resultado-item">No se encontraron clientes</div>';
+        contenedor.classList.add('show');
+    }
 }
 
 function obtenerListaClientes() {
@@ -961,6 +1168,7 @@ function abrirBuscadorClientes() {
         `,
         'large',
         [
+            { text: 'Nuevo Cliente', class: 'btn-primary', onclick: 'closeModal(); abrirCrearCliente(\'ot\')' },
             { text: 'Cerrar', class: 'btn-outline', onclick: 'closeModal()' }
         ]
     );
@@ -1031,6 +1239,31 @@ function seleccionarClienteDesdeModal(nombre, cedula, telefono = '', email = '')
     seleccionarCliente(nombre, cedula, telefono, email);
     closeModal();
 }
+
+// Buscar cliente por nombre (Recepción)
+function buscarClientePorNombreRecepcion(nombre) {
+    const contenedor = document.getElementById('rcpResultadosClientesNombre');
+    if (!contenedor) return;
+    const termino = (nombre || '').toString().trim().toLowerCase();
+    if (termino.length < 2) { contenedor.classList.remove('show'); contenedor.innerHTML=''; return; }
+    const baseClientes = obtenerListaClientes();
+    const resultados = baseClientes.filter(c => normalizarNombreCliente(c).toLowerCase().includes(termino) || normalizarDocumentoCliente(c).toLowerCase().includes(termino)).slice(0,50);
+    if (resultados.length) {
+        const escapar = v => (v||'').toString().replace(/'/g, "\\'").replace(/\"/g,'&quot;');
+        contenedor.innerHTML = resultados.map(c => {
+            const doc = normalizarDocumentoCliente(c); const nom = normalizarNombreCliente(c);
+            const tel = (c?.telefono || c?.phone || '').toString(); const mail = (c?.email || '').toString();
+            return `<div class=\"resultado-item\" onclick=\"seleccionarClienteRecepcion('${escapar(nom)}','${escapar(doc)}','${escapar(tel)}','${escapar(mail)}')\"><strong>${doc}</strong> - ${nom}${tel?`<br><small style='color:#666'>📞 ${tel}</small>`:''}${mail?`<br><small style='color:#666'> 📧 ${mail}</small>`:''}</div>`;
+        }).join('');
+        contenedor.classList.add('show');
+    } else {
+        contenedor.innerHTML = '<div class="resultado-item">No se encontraron clientes</div>';
+        contenedor.classList.add('show');
+    }
+}
+
+window.buscarClientePorNombreOT = buscarClientePorNombreOT;
+window.buscarClientePorNombreRecepcion = buscarClientePorNombreRecepcion;
 
 // Editar cliente desde el modal
 function editarClienteDesdeModal(cedula, nombre, telefono = '', email = '', clienteId = '') {
@@ -1205,7 +1438,7 @@ function buscarEnInventario(termino) {
     window._ultimosResultadosInventario = resultados;
     if (resultados.length > 0) {
         contenedor.innerHTML = resultados.map((item, index) => {
-            const codigo = item.codigo || item.code || 'S/C';
+            const codigo = item.codigo || item.code || '';
             const nombre = item.nombre || item.name || item.producto || 'Producto sin nombre';
             const categoria = item.categoria || item.category || 'General';
             const referencia = item.referencia || item.ref || item.referencia_interna || item.codigo_barras || '';
@@ -1244,7 +1477,7 @@ function agregarRepuesto(codigo, nombre, precio, categoria) {
     // Cada item se agrega como uno nuevo (no se combinan automáticamente)
     const item = {
         id: 'ITEM-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9), // ID único
-        codigo: codigo || 'S/C',
+        codigo: codigo || '',
         nombre: nombre || 'Producto sin nombre',
         precio: precioNumero,
         categoria: categoria || 'General',
@@ -1271,7 +1504,7 @@ function agregarRepuestoDesdeBusqueda(index) {
     const item = lista[index];
     if (!item) return;
     
-    const codigo = item.codigo || item.code || 'S/C';
+    const codigo = item.codigo || item.code || '';
     const nombre = item.nombre || item.name || item.producto || 'Producto sin nombre';
     const categoria = item.categoria || item.category || 'General';
     const precio = Number(item.precio || item.price || item.valor || 0);
@@ -1370,125 +1603,73 @@ function guardarServicioManual(event) {
 function actualizarTablaItems() {
     const tbody = document.getElementById('itemsTrabajo');
     if (!tbody) return;
-    
-    // Sincronizar línea de Mano de Obra con el valor del input
-    try { syncManoObraItem(); } catch (e) { /* noop */ }
-    
-    if (!window.itemsTrabajo || window.itemsTrabajo.length === 0) {
+
+    try { syncManoObraItem(); } catch (e) {}
+
+    if (!Array.isArray(window.itemsTrabajo) || window.itemsTrabajo.length === 0) {
         const noItemsRow = document.getElementById('noItemsRow');
         if (noItemsRow) noItemsRow.style.display = 'table-row';
         actualizarTotales();
         return;
     }
-    
+
     const noItemsRow = document.getElementById('noItemsRow');
     if (noItemsRow) noItemsRow.style.display = 'none';
-    
-    tbody.innerHTML = window.itemsTrabajo.map((item, index) => {
-        // Asegurar que precio y cantidad sean números
+
+    const rows = window.itemsTrabajo.map((item, index) => {
         const precio = Number(item.precio) || 0;
-        const cantidad = Number(item.cantidad) || 1;
-        const ivaPorcentaje = Number(item.iva) || 0;
-        const descuentoValor = Number(item.descuento || 0);
-        const tipoDescuento = item.tipoDescuento || '$'; // '$' o '%'
-        
-        // Si el precio YA incluye IVA (ivaPorcentaje > 0), calcular el desglose
-        let totalConIva, precioBase, valorIvaIncluido;
-        
-        // Calcular descuento
-        let descuentoAplicado = 0;
-        if (descuentoValor > 0) {
-            if (tipoDescuento === '%') {
-                descuentoAplicado = (precio * cantidad * descuentoValor) / 100;
-            } else {
-                descuentoAplicado = descuentoValor;
-            }
-        }
-        
-        const subtotalConDescuento = (precio * cantidad) - descuentoAplicado;
-        
+        const cantidad = Math.max(1, Number(item.cantidad) || 1);
+        const ivaPorcentaje = Math.max(0, Number(item.iva) || 0);
+
+        let totalConIva, precioBase;
         if (ivaPorcentaje > 0) {
-            // El precio mostrado YA incluye IVA
-            totalConIva = subtotalConDescuento; // Total con IVA incluido
-            precioBase = totalConIva / (1 + (ivaPorcentaje / 100)); // Precio base sin IVA
-            valorIvaIncluido = totalConIva - precioBase; // IVA incluido en el precio
+            totalConIva = precio * cantidad;
+            precioBase = totalConIva / (1 + (ivaPorcentaje / 100));
         } else {
-            // El precio NO incluye IVA
-            precioBase = subtotalConDescuento;
-            valorIvaIncluido = 0;
+            precioBase = precio * cantidad;
             totalConIva = precioBase;
         }
-        
-        const numFila = index + 1;
-        const codigo = item.codigo || 'S/C';
-        const nombre = item.nombre || 'Artículo';
-        const descripcion = `${codigo}#${nombre}`;
-        
-        // Calcular total sin IVA (precio base)
-        const totalSinIva = precioBase;
-        
+
+        const codigo = (item.codigo || '').toString();
+        const nombre = (item.nombre || '').toString();
+
         return `
         <tr style="border-bottom: 1px solid #eee;">
-            <td style="padding: 14px 16px; vertical-align: top;">
-                <div style="display: flex; align-items: flex-start; gap: 12px;">
-                    <div style="display: flex; flex-direction: column; align-items: center; gap: 6px; min-width: 60px; flex-shrink: 0;">
-                        <button type="button" onclick="eliminarItem(${index})" style="background: #ef4444; color: white; border: none; padding: 6px 10px; border-radius: 4px; cursor: pointer; font-size: 13px;">🗑️</button>
-                        <div style="font-weight: bold; color: #2c3e50; font-size: 15px;">#${numFila}</div>
-                        <div style="display: flex; flex-direction: column; gap: 3px;">
-                            ${index > 0 ? `<button type="button" onclick="moverItemArriba(${index})" style="background: #e9ecef; border: 1px solid #ddd; padding: 3px 8px; cursor: pointer; font-size: 11px; border-radius: 3px;">↑</button>` : '<div style="height: 24px;"></div>'}
-                            ${index < window.itemsTrabajo.length - 1 ? `<button type="button" onclick="moverItemAbajo(${index})" style="background: #e9ecef; border: 1px solid #ddd; padding: 3px 8px; cursor: pointer; font-size: 11px; border-radius: 3px;">↓</button>` : '<div style="height: 24px;"></div>'}
-                        </div>
-                        <div style="color: #999; font-size: 11px;">${index}</div>
-                    </div>
-                    <div style="flex: 1; min-width: 0;">
-                        <div style="position: relative; margin-bottom: 8px;">
-                            <input type="text" value="${nombre.substring(0, 3).toUpperCase()}" onchange="cambiarArticulo(${index}, this.value)" style="width: 100%; padding: 8px 35px 8px 12px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; box-sizing: border-box;" placeholder="Artículo">
-                            <span style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #666; font-size: 14px;" onclick="buscarArticulo(${index})">🔍</span>
-                        </div>
-                        <div style="position: relative; margin-bottom: 8px;">
-                            <input type="text" value="${descripcion}" onchange="cambiarDescripcion(${index}, this.value)" style="width: 100%; padding: 8px 35px 8px 12px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px; box-sizing: border-box;" placeholder="Descripción">
-                            <span style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #666; font-size: 14px;">🧮</span>
-                        </div>
-                        <small style="color: #666; font-size: 12px; display: block; margin-top: 4px;">P.U=${formatCurrency(precio)}</small>
+            <td style="padding: 12px 10px; vertical-align: middle;">
+                <div style="display:flex; gap:10px; align-items:flex-start;">
+                    <button type="button" title="Eliminar" onclick="eliminarItem(${index})" style="background:#ef4444;color:#fff;border:none;padding:6px 8px;border-radius:4px;cursor:pointer;flex-shrink:0;">🗑️</button>
+                    <div style="flex:1; min-width:0; display:flex; flex-direction:column; gap:8px; position:relative;">
+                        <input type="text" value="${codigo}" placeholder="Referencia" 
+                               oninput="sugerirReferencia(${index}, this.value)" 
+                               onfocus="sugerirReferencia(${index}, this.value)"
+                               onblur="cerrarSugerenciasRefConDelay(${index})"
+                               onchange="cambiarCodigo(${index}, this.value)" 
+                               style="width:100%;padding:8px;border:1px solid #ddd;border-radius:4px;font-size:14px;" />
+                        <input type="text" value="${codigo ? (codigo + ' — ') : ''}${nombre}" placeholder="Descripción" 
+                               onchange="cambiarDescripcion(${index}, this.value)" 
+                               onblur="autoFormatoDescripcion(${index})"
+                               style="width:100%;padding:8px;border:1px solid #ddd;border-radius:4px;font-size:14px;" />
+                        <div id="refSuggest-${index}" class="inventario-resultados" 
+                             style="position:absolute; top: calc(100% + 4px); left:0; right:0; display:none; z-index: 2000;"></div>
                     </div>
                 </div>
             </td>
-            <td style="padding: 14px 16px; text-align: center; vertical-align: middle;">
-                <div style="display: flex; gap: 6px; align-items: center; justify-content: center;">
-                    <input type="number" value="${cantidad}" min="1" onchange="cambiarCantidad(${index}, this.value)" oninput="cambiarCantidad(${index}, this.value)" style="width: 70px; padding: 8px; border: 1px solid #ddd; border-radius: 4px; text-align: center; font-size: 14px; box-sizing: border-box;">
-                    <select style="padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px; box-sizing: border-box;">
-                        <option>un</option>
-                    </select>
-                </div>
+            <td style="padding: 12px 10px; text-align:right;">
+                <input type="text" value="${formatCurrency(precio)}" onchange="cambiarPrecioUnitario(${index}, this.value)" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:4px;text-align:right;font-size:14px;" />
             </td>
-            <td style="padding: 14px 16px; text-align: right; vertical-align: middle;">
-                <input type="text" value="${formatCurrency(precio)}" onchange="cambiarPrecioUnitario(${index}, this.value)" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; text-align: right; font-size: 14px; box-sizing: border-box;">
+            <td style="padding: 12px 10px; text-align:center;">
+                <input type="number" min="1" value="${cantidad}" onchange="cambiarCantidad(${index}, this.value)" style="width:80px;padding:8px;border:1px solid #ddd;border-radius:4px;text-align:center;font-size:14px;" />
             </td>
-            <td style="padding: 14px 16px; text-align: right; vertical-align: middle;">
-                <input type="text" value="${formatCurrency(totalSinIva)}" readonly id="subtotalItem${index}" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; text-align: right; font-size: 14px; background: #f8f9fa; box-sizing: border-box;">
+            <td style="padding: 12px 10px; text-align:center;">
+                <input type="number" min="0" step="0.01" value="${ivaPorcentaje}" onchange="cambiarIva(${index}, this.value)" style="width:90px;padding:8px;border:1px solid #ddd;border-radius:4px;text-align:center;font-size:14px;" />
             </td>
-            <td style="padding: 14px 16px; text-align: center; vertical-align: middle;">
-                <div style="display: flex; gap: 6px; align-items: center; justify-content: center; flex-wrap: wrap;">
-                    <input type="number" value="${cantidad}" min="1" readonly style="width: 50px; padding: 8px; border: 1px solid #ddd; border-radius: 4px; text-align: center; font-size: 13px; background: #f8f9fa; box-sizing: border-box;">
-                    <select style="padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px; box-sizing: border-box;">
-                        <option>un</option>
-                    </select>
-                    <button type="button" onclick="cambiarTipoDescuento(${index}, '%')" style="padding: 8px 12px; border: 1px solid #ddd; background: ${tipoDescuento === '%' ? '#e9ecef' : 'white'}; border-radius: 4px 0 0 4px; cursor: pointer; font-size: 13px;">%</button>
-                    <button type="button" onclick="cambiarTipoDescuento(${index}, '$')" style="padding: 8px 12px; border: 1px solid #ddd; border-left: none; background: ${tipoDescuento === '$' ? '#e9ecef' : 'white'}; border-radius: 0 4px 4px 0; cursor: pointer; font-size: 13px;">$</button>
-                    <span style="cursor: pointer; color: #666; font-size: 14px;" title="Configurar descuento">🔧</span>
-                    <input type="number" value="${descuentoValor}" min="0" step="0.01" onchange="cambiarDescuento(${index}, this.value)" style="width: 60px; padding: 8px; border: 1px solid #ddd; border-radius: 4px; text-align: center; font-size: 13px; box-sizing: border-box;">
-                </div>
+            <td style="padding: 12px 10px; text-align:right;">
+                <input type="text" value="${formatCurrency(totalConIva)}" readonly id="totalItem${index}" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:4px;text-align:right;font-weight:600;background:#f8f9fa;font-size:14px;" />
             </td>
-            <td style="padding: 14px 16px; text-align: right; vertical-align: middle;">
-                <input type="text" value="${formatCurrency(totalConIva)}" readonly id="totalItem${index}" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; text-align: right; font-size: 14px; font-weight: bold; background: #f8f9fa; box-sizing: border-box;">
-            </td>
-            <td style="padding: 14px 16px; text-align: center; vertical-align: middle;">
-                <input type="number" value="${ivaPorcentaje}" min="0" max="100" step="0.01" onchange="cambiarIva(${index}, this.value)" oninput="cambiarIva(${index}, this.value)" style="width: 70px; padding: 8px; border: 1px solid #ddd; border-radius: 4px; text-align: center; font-size: 14px; box-sizing: border-box;">
-            </td>
-        </tr>
-        `;
+        </tr>`;
     }).join('');
-    
+
+    tbody.innerHTML = rows;
     actualizarTotales();
 }
 
@@ -1528,11 +1709,84 @@ function eliminarItem(index) {
 window.eliminarItem = eliminarItem;
 window.cambiarCantidad = cambiarCantidad;
 window.cambiarIva = cambiarIva;
+window.cambiarCodigo = cambiarCodigo;
 window.agregarRepuesto = agregarRepuesto;
 window.agregarServicioManual = agregarServicioManual;
 window.guardarServicioManual = guardarServicioManual;
+window.sugerirReferencia = sugerirReferencia;
+window.seleccionarSugerenciaRef = seleccionarSugerenciaRef;
+window.cerrarSugerenciasRefConDelay = cerrarSugerenciasRefConDelay;
+window.autoFormatoDescripcion = autoFormatoDescripcion;
 
 // Funciones para la nueva interfaz de tabla
+function obtenerSugerenciasInventario(termino, limite = 8) {
+    const baseInventario = Array.isArray(supabaseInventario) && supabaseInventario.length
+        ? supabaseInventario
+        : [
+            { codigo: 'ACE001', nombre: 'Aceite Motor 5W30 Synthetic', referencia: 'ACE001', precio: 45000, categoria: 'Lubricantes' },
+            { codigo: 'FRN001', nombre: 'Frenos Delanteros Completos', referencia: 'FRN001', precio: 180000, categoria: 'Frenos' },
+            { codigo: 'FLT001', nombre: 'Filtro de Aire', referencia: 'FLT001', precio: 25000, categoria: 'Filtros' },
+            { codigo: 'BTR001', nombre: 'Batería 12V 60Ah', referencia: 'BTR001', precio: 320000, categoria: 'Eléctrico' },
+            { codigo: 'LMP001', nombre: 'Lámpara Halógena H7', referencia: 'LMP001', precio: 35000, categoria: 'Iluminación' },
+            { codigo: 'LLV001', nombre: 'Llantas Michelin 195/65R15', referencia: 'LLV001', precio: 280000, categoria: 'Neumáticos' },
+            { codigo: 'CDR001', nombre: 'Correa de Distribución', referencia: 'CDR001', precio: 95000, categoria: 'Motor' },
+            { codigo: 'SVP001', nombre: 'Servicio Preventivo Básico', referencia: 'SVP001', precio: 85000, categoria: 'Servicios' }
+        ];
+    const q = (termino || '').toString().trim().toLowerCase();
+    if (q.length < 2) return [];
+    return baseInventario.filter(item => {
+        const codigo = (item.codigo || item.code || '').toString().toLowerCase();
+        const nombre = (item.nombre || item.name || item.producto || '').toString().toLowerCase();
+        const referencia = (item.referencia || item.ref || item.referencia_interna || '').toString().toLowerCase();
+        return codigo.includes(q) || nombre.includes(q) || referencia.includes(q);
+    }).slice(0, limite).map(it => ({
+        codigo: it.codigo || it.code || '',
+        nombre: it.nombre || it.name || it.producto || 'Producto',
+        precio: Number(it.precio || it.price || it.valor || 0),
+        categoria: it.categoria || it.category || 'General'
+    }));
+}
+
+function sugerirReferencia(index, termino) {
+    const cont = document.getElementById(`refSuggest-${index}`);
+    if (!cont) return;
+    const sugerencias = obtenerSugerenciasInventario(termino, 8);
+    if (!sugerencias.length) {
+        cont.style.display = 'none';
+        cont.innerHTML = '';
+        return;
+    }
+    const esc = s => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,"&#39;");
+    cont.innerHTML = sugerencias.map((it, i) => `
+        <div class="inventario-item" style="display:flex;justify-content:space-between;align-items:center;gap:8px;" onclick="seleccionarSugerenciaRef(${index}, '${esc(it.codigo)}', '${esc(it.nombre)}', ${it.precio})">
+            <div><strong>${esc(it.codigo)}</strong> — ${esc(it.nombre)}</div>
+            <div style="color:#666;">${formatCurrency(it.precio)}</div>
+        </div>
+    `).join('');
+    cont.style.display = 'block';
+}
+
+function cerrarSugerenciasRefConDelay(index) {
+    setTimeout(() => {
+        const cont = document.getElementById(`refSuggest-${index}`);
+        if (cont) cont.style.display = 'none';
+    }, 200);
+}
+
+function seleccionarSugerenciaRef(index, codigo, nombre, precio) {
+    if (!Array.isArray(window.itemsTrabajo) || !window.itemsTrabajo[index]) return;
+    window.itemsTrabajo[index].codigo = codigo;
+    window.itemsTrabajo[index].nombre = nombre;
+    if (precio && !isNaN(precio)) window.itemsTrabajo[index].precio = Number(precio);
+    // Por defecto aplicar 19% como IVA incluido si no tiene
+    if (typeof window.itemsTrabajo[index].iva === 'undefined') window.itemsTrabajo[index].iva = 19;
+    actualizarTablaItems();
+}
+
+function autoFormatoDescripcion(index) {
+    // Ya parseamos con cambiarDescripcion; aquí solo re-renderizamos por consistencia
+    actualizarTablaItems();
+}
 function moverItemArriba(index) {
     if (index > 0 && window.itemsTrabajo && window.itemsTrabajo[index]) {
         const temp = window.itemsTrabajo[index];
@@ -1553,21 +1807,40 @@ function moverItemAbajo(index) {
 
 function cambiarArticulo(index, nuevoNombre) {
     if (window.itemsTrabajo && window.itemsTrabajo[index]) {
-        window.itemsTrabajo[index].nombre = nuevoNombre.trim();
+        // Mantener compatibilidad: cambia el nombre del artículo
+        window.itemsTrabajo[index].nombre = (nuevoNombre || '').toString().trim();
+        actualizarTablaItems();
+    }
+}
+
+// Cambiar código de referencia (nuevo input en la columna Referencia)
+function cambiarCodigo(index, nuevoCodigo) {
+    if (window.itemsTrabajo && window.itemsTrabajo[index]) {
+        window.itemsTrabajo[index].codigo = (nuevoCodigo || '').toString().trim();
         actualizarTablaItems();
     }
 }
 
 function cambiarDescripcion(index, nuevaDescripcion) {
     if (window.itemsTrabajo && window.itemsTrabajo[index]) {
-        // La descripción viene como "CODIGO#NOMBRE"
-        const partes = nuevaDescripcion.split('#');
-        if (partes.length >= 2) {
-            window.itemsTrabajo[index].codigo = partes[0].trim();
-            window.itemsTrabajo[index].nombre = partes.slice(1).join('#').trim();
-        } else {
-            window.itemsTrabajo[index].nombre = nuevaDescripcion.trim();
+        // Permitir formatos "CODIGO#NOMBRE" o "CODIGO — NOMBRE" o solo nombre
+        const texto = (nuevaDescripcion || '').toString();
+        let codigo = window.itemsTrabajo[index].codigo || '';
+        let nombre = texto.trim();
+
+        // Separadores soportados
+        const sepHash = texto.indexOf('#');
+        const sepDash = texto.indexOf('—');
+        if (sepHash > -1) {
+            codigo = texto.slice(0, sepHash).trim();
+            nombre = texto.slice(sepHash + 1).trim();
+        } else if (sepDash > -1) {
+            codigo = texto.slice(0, sepDash).trim();
+            nombre = texto.slice(sepDash + 1).trim();
         }
+
+        if (codigo) window.itemsTrabajo[index].codigo = codigo;
+        window.itemsTrabajo[index].nombre = nombre;
         actualizarTablaItems();
     }
 }
@@ -1659,6 +1932,281 @@ window.buscarArticulo = buscarArticulo;
 window.agregarLineaVacia = agregarLineaVacia;
 window.validarItems = validarItems;
 
+// =============================
+// Búsqueda de clientes en Recepción
+// =============================
+function seleccionarClienteRecepcion(nombre, cedula, telefono = '', email = '') {
+    const setVal = (id, v) => { const el = document.getElementById(id); if (el) el.value = v || ''; };
+    setVal('rcpCliente', nombre);
+    setVal('rcpCedula', cedula);
+    setVal('rcpTelefono', telefono);
+    setVal('rcpEmail', email);
+    const cont = document.getElementById('rcpResultadosClientes');
+    if (cont) { cont.classList.remove('show'); cont.innerHTML=''; }
+    const contNom = document.getElementById('rcpResultadosClientesNombre');
+    if (contNom) { contNom.classList.remove('show'); contNom.innerHTML=''; }
+}
+
+function buscarClientePorCedulaRecepcion(cedula) {
+    const contenedor = document.getElementById('rcpResultadosClientes');
+    if (!contenedor) return;
+    const termino = (cedula || '').toString().trim();
+    if (termino.length < 2) { contenedor.classList.remove('show'); contenedor.innerHTML=''; return; }
+    const baseClientes = obtenerListaClientes();
+    const terminoLower = termino.toLowerCase();
+    const resultados = baseClientes.filter(c => normalizarDocumentoCliente(c).toLowerCase().includes(terminoLower)).slice(0,50);
+    if (resultados.length) {
+        const escapar = v => (v||'').toString().replace(/'/g, "\\'").replace(/"/g,'&quot;');
+        contenedor.innerHTML = resultados.map((c,idx) => {
+            const doc = normalizarDocumentoCliente(c);
+            const nombre = normalizarNombreCliente(c);
+            const tel = (c?.telefono || c?.phone || '').toString();
+            const mail = (c?.email || '').toString();
+            return `<div class="resultado-item" onclick="seleccionarClienteRecepcion('${escapar(nombre)}','${escapar(doc)}','${escapar(tel)}','${escapar(mail)}')">
+                        <strong>${doc}</strong> - ${nombre}
+                        ${tel ? `<br><small style='color:#666'>📞 ${tel}</small>`:''}
+                        ${mail ? `<br><small style='color:#666'>📧 ${mail}</small>`:''}
+                    </div>`;
+        }).join('');
+        contenedor.classList.add('show');
+    } else {
+        contenedor.innerHTML = '<div class="resultado-item">No se encontraron clientes</div>';
+        contenedor.classList.add('show');
+    }
+}
+
+function abrirBuscadorClientesRecepcion() {
+    const modal = createModal(
+        'Buscar Cliente',
+        `
+        <div class="cliente-search-modal">
+            <input type="text" class="form-input" id="modalBuscarClienteRecep" placeholder="Buscar por cédula/NIT o nombre..." oninput="filtrarClientesModalRecepcion(this.value)">
+            <div id="modalClientesResultadoRecep" class="modal-clientes-list"></div>
+        </div>
+        `,
+        'large',
+        [
+            { text: 'Nuevo Cliente', class: 'btn-primary', onclick: 'closeModal(); abrirCrearCliente(\'recepcion\')' },
+            { text: 'Cerrar', class: 'btn-outline', onclick: 'closeModal()' }
+        ]
+    );
+    showModal(modal);
+    filtrarClientesModalRecepcion('');
+}
+
+function filtrarClientesModalRecepcion(termino='') {
+    const cont = document.getElementById('modalClientesResultadoRecep');
+    if (!cont) return;
+    const lista = obtenerListaClientes();
+    const tl = (termino||'').toLowerCase();
+    const resultados = lista.filter(c => {
+        const doc = normalizarDocumentoCliente(c).toLowerCase();
+        const nom = normalizarNombreCliente(c).toLowerCase();
+        return !tl || doc.includes(tl) || nom.includes(tl);
+    }).slice(0,50);
+    const esc = s => (s||'').toString().replace(/'/g, "\\'").replace(/"/g,'&quot;');
+    if (!resultados.length) { cont.innerHTML = '<div style="padding:16px;color:#6b7280;">No se encontraron clientes</div>'; return; }
+    cont.innerHTML = `
+        <table style="width:100%;border-collapse:collapse;">
+            <thead><tr><th>Cédula/NIT</th><th>Nombre</th><th>Teléfono</th><th>Email</th><th>Acciones</th></tr></thead>
+            <tbody>
+                ${resultados.map((c,idx) => {
+                    const doc = normalizarDocumentoCliente(c); const nom = normalizarNombreCliente(c);
+                    const tel = (c?.telefono || c?.phone || '').toString(); const mail = (c?.email || '').toString();
+                    return `<tr>
+                        <td>${doc}</td><td>${nom}</td><td>${tel||'-'}</td><td>${mail||'-'}</td>
+                        <td><button class="btn btn-primary btn-sm" onclick="seleccionarClienteRecepcion('${esc(nom)}','${esc(doc)}','${esc(tel)}','${esc(mail)}'); closeModal();">Seleccionar</button></td>
+                    </tr>`;
+                }).join('')}
+            </tbody>
+        </table>`;
+}
+
+window.buscarClientePorCedulaRecepcion = buscarClientePorCedulaRecepcion;
+window.abrirBuscadorClientesRecepcion = abrirBuscadorClientesRecepcion;
+
+// =============================
+// Crear/editar cliente + asociación de placas
+// =============================
+function abrirCrearCliente(contexto = 'ot') {
+    const modal = createModal(
+        'Nuevo Cliente',
+        `
+        <form id="formNuevoCliente" onsubmit="guardarNuevoCliente(event, '${contexto}')">
+            <div class="form-row">
+                <div class="form-group"><label class="form-label">Cédula/NIT</label><input id="ncDoc" class="form-input" required></div>
+                <div class="form-group"><label class="form-label">Nombre</label><input id="ncNombre" class="form-input" required></div>
+            </div>
+            <div class="form-row">
+                <div class="form-group"><label class="form-label">Teléfono</label><input id="ncTel" class="form-input"></div>
+                <div class="form-group"><label class="form-label">Email</label><input id="ncEmail" type="email" class="form-input"></div>
+            </div>
+        </form>
+        `,
+        [
+            { text: 'Cancelar', class: 'btn-outline', onclick: 'closeModal()' },
+            { text: 'Crear', class: 'btn-primary', type: 'submit', form: 'formNuevoCliente' }
+        ]
+    );
+    showModal(modal);
+}
+
+async function guardarNuevoCliente(event, contexto = 'ot') {
+    event.preventDefault();
+    const doc = document.getElementById('ncDoc').value.trim();
+    const nombre = document.getElementById('ncNombre').value.trim();
+    const tel = document.getElementById('ncTel').value.trim();
+    const email = document.getElementById('ncEmail').value.trim();
+    if (!doc || !nombre) { showNotification('Cédula y Nombre son obligatorios', 'error'); return; }
+    const nuevo = { cedula: doc, nombre, telefono: tel || null, email: email || null };
+    try {
+        if (window.supabase) {
+            try {
+                const { data, error } = await supabase.from('clientes').insert(nuevo).select();
+                if (error) console.warn('Supabase insert clientes:', error);
+                if (data && data.length) nuevo.id = data[0].id;
+            } catch(e) { console.warn('Supabase insertar cliente falla', e); }
+        }
+        // Actualizar listas en memoria
+        if (Array.isArray(window.supabaseClientes)) supabaseClientes.push(nuevo);
+        else clientes.push(nuevo);
+        // Backups
+        localStorage.setItem('supabase_clientes_backup', JSON.stringify(supabaseClientes || clientes));
+        closeModal();
+        showNotification('Cliente creado', 'success');
+        // Autocompletar según contexto
+        if (contexto === 'ot') {
+            seleccionarCliente(nombre, doc, tel || '', email || '');
+        } else {
+            seleccionarClienteRecepcion(nombre, doc, tel || '', email || '');
+        }
+        // Asociar placa si existe valor en el formulario
+        try {
+            if (contexto === 'ot') autocompletarClientePorPlacaOT(); else autocompletarClientePorPlacaRecepcion();
+        } catch(e) {}
+    } catch (e) {
+        console.error('Error creando cliente:', e);
+        showNotification('No se pudo crear el cliente', 'error');
+    }
+}
+
+// Vehículos asociados (placa→cliente)
+window.__appData = window.__appData || {};
+if (!Array.isArray(window.__appData.vehiculos)) {
+    try { window.__appData.vehiculos = JSON.parse(localStorage.getItem('vehiculos_assoc')||'[]'); } catch(e){ window.__appData.vehiculos = []; }
+}
+// Auditoría de cambios de asociación de placas
+if (!Array.isArray(window.__appData.vehiculosAudit)) {
+    try { window.__appData.vehiculosAudit = JSON.parse(localStorage.getItem('vehiculos_audit')||'[]'); } catch(e){ window.__appData.vehiculosAudit = []; }
+}
+function getVehiclesData() { return window.__appData.vehiculos; }
+function saveVehiclesData() { localStorage.setItem('vehiculos_assoc', JSON.stringify(window.__appData.vehiculos)); }
+function addVehicleAuditEntry(entry){
+    window.__appData.vehiculosAudit.push(entry);
+    localStorage.setItem('vehiculos_audit', JSON.stringify(window.__appData.vehiculosAudit));
+}
+function findVehicleByPlaca(placa) { placa = (placa||'').toUpperCase(); return getVehiclesData().find(v => v.placa === placa); }
+function addOrUpdateVehicleAssoc(placa, clienteDoc, clienteNombre, marca='', modelo='', ano='') {
+    placa = (placa||'').toUpperCase();
+    if (!placa || !clienteDoc) return;
+    const vehs = getVehiclesData();
+    const idx = vehs.findIndex(v => v.placa === placa);
+    const obj = { placa, clienteDoc, clienteNombre, marca, modelo, ano };
+    if (idx >= 0) {
+        const old = vehs[idx];
+        // Si cambia de propietario, pedir confirmación con objeto temporal global
+        if ((old.clienteDoc || '').toString() !== (clienteDoc || '').toString()) {
+            window._pendingPlateReassign = {
+                placa,
+                oldDoc: old.clienteDoc || '',
+                oldNombre: old.clienteNombre || '',
+                newDoc: clienteDoc || '',
+                newNombre: clienteNombre || '',
+                marca: marca || '',
+                modelo: modelo || '',
+                ano: ano || ''
+            };
+            const content = '<div style="line-height:1.6;">'
+              + '<p>La placa <strong>'+placa+'</strong> ya está asociada a:</p>'
+              + '<div style="margin:8px 0 12px 0; padding:10px; background:#F3F4F6; border-radius:8px;">'
+              + '<div><strong>Actual:</strong> '+(old.clienteNombre||'-')+' ('+(old.clienteDoc||'-')+')</div>'
+              + '<div><strong>Nuevo:</strong> '+(clienteNombre||'-')+' ('+(clienteDoc||'-')+')</div>'
+              + '</div>'
+              + '<p>¿Deseas reasignar la placa al nuevo cliente?</p>'
+              + '</div>';
+            const modal = createModal('Reasignar placa', content, [
+                { text: 'Cancelar', class: 'btn-outline', onclick: 'closeModal()' },
+                { text: 'Reasignar', class: 'btn-primary', onclick: 'confirmReassignPlatePending()' }
+            ]);
+            showModal(modal);
+            return; // Esperar confirmación explícita
+        }
+        vehs[idx] = { ...vehs[idx], ...obj };
+        addVehicleAuditEntry({ ts: Date.now(), action:'update', placa, old: old, nuevo: obj });
+    } else {
+        vehs.push(obj);
+        addVehicleAuditEntry({ ts: Date.now(), action:'create', placa, nuevo: obj });
+    }
+    saveVehiclesData();
+    try { if (window.supabase) { supabase.from('vehiculos').upsert({ placa, cliente_doc: clienteDoc, cliente_nombre: clienteNombre, marca, modelo, ano }); } } catch(e) {}
+}
+
+// Confirmar reasignación de placa a otro cliente
+function confirmReassignPlate(placa, oldDoc, oldNombre, newDoc, newNombre, marca='', modelo='', ano='') {
+    try {
+        const vehs = getVehiclesData();
+        const idx = vehs.findIndex(v => v.placa === placa);
+        const old = idx>=0 ? vehs[idx] : null;
+        const nuevo = { placa, clienteDoc:newDoc, clienteNombre:newNombre, marca, modelo, ano };
+        if (idx>=0) vehs[idx] = { ...vehs[idx], ...nuevo }; else vehs.push(nuevo);
+        saveVehiclesData();
+        addVehicleAuditEntry({ ts: Date.now(), action:'reassign', placa, old: old, nuevo });
+        try { if (window.supabase) { supabase.from('vehiculos').upsert({ placa, cliente_doc:newDoc, cliente_nombre:newNombre, marca, modelo, ano }); } } catch(e) {}
+        showNotification(`Placa ${placa} reasignada a ${newNombre}`, 'success');
+    } catch(e) {
+        console.error('Reasignación de placa falló', e);
+        showNotification('No se pudo reasignar la placa', 'error');
+    } finally {
+        closeModal();
+    }
+}
+
+function confirmReassignPlatePending() {
+    const p = window._pendingPlateReassign;
+    if (!p) { closeModal(); return; }
+    confirmReassignPlate(p.placa, p.oldDoc, p.oldNombre, p.newDoc, p.newNombre, p.marca, p.modelo, p.ano);
+    window._pendingPlateReassign = null;
+}
+
+function asociarPlacaConClienteDesdeForm(contexto='ot') {
+    const get = id => (document.getElementById(id)?.value || '').toString().trim();
+    const placa = contexto==='ot'? get('trabajoPlaca') : get('rcpPlaca');
+    const nombre = contexto==='ot'? get('trabajoCliente') : get('rcpCliente');
+    const doc = contexto==='ot'? get('busquedaCedula') : get('rcpCedula');
+    const marca = contexto==='ot'? get('vehiculoMarca') : get('rcpMarca');
+    const modelo = contexto==='ot'? get('vehiculoModelo') : get('rcpModelo');
+    const ano = contexto==='ot'? get('vehiculoAno') : get('rcpAno');
+    if (placa && doc) addOrUpdateVehicleAssoc(placa, doc, nombre, marca, modelo, ano);
+}
+
+function autocompletarClientePorPlacaRecepcion() {
+    const placa = (document.getElementById('rcpPlaca')?.value || '').toUpperCase();
+    if (!placa) return;
+    const v = findVehicleByPlaca(placa);
+    if (v) seleccionarClienteRecepcion(v.clienteNombre || '', v.clienteDoc || '', '', '');
+}
+function autocompletarClientePorPlacaOT() {
+    const placa = (document.getElementById('trabajoPlaca')?.value || '').toUpperCase();
+    if (!placa) return;
+    const v = findVehicleByPlaca(placa);
+    if (v) seleccionarCliente(v.clienteNombre || '', v.clienteDoc || '', '', '');
+}
+
+window.abrirCrearCliente = abrirCrearCliente;
+window.guardarNuevoCliente = guardarNuevoCliente;
+window.autocompletarClientePorPlacaRecepcion = autocompletarClientePorPlacaRecepcion;
+window.autocompletarClientePorPlacaOT = autocompletarClientePorPlacaOT;
+
 // Sincroniza la línea especial de Mano de Obra con el input #manoObraValor
 function syncManoObraItem() {
     const moInput = document.getElementById('manoObraValor');
@@ -1726,12 +2274,13 @@ function previsualizarTrabajo() {
                 const cantidad = Number(item.cantidad) || 1;
                 const ivaPorcentaje = Number(item.iva) || 0;
                 const totalItem = precio * cantidad;
+                const desc = `${item.codigo ? (item.codigo + ' — ') : ''}${item.nombre || ''}`;
                 if (ivaPorcentaje > 0) {
                     const base = totalItem / (1 + (ivaPorcentaje / 100));
                     const ivaIncluido = totalItem - base;
-                    return `<div>• ${item.nombre} (${cantidad}x) — ${formatCurrency(totalItem)} <small>(incl. IVA ${ivaPorcentaje}%: ${formatCurrency(ivaIncluido)})</small></div>`;
+                    return `<div>• ${desc} (${cantidad}x) — ${formatCurrency(totalItem)} <small>(incl. IVA ${ivaPorcentaje}%: ${formatCurrency(ivaIncluido)})</small></div>`;
                 } else {
-                    return `<div>• ${item.nombre} (${cantidad}x) — ${formatCurrency(totalItem)}</div>`;
+                    return `<div>• ${desc} (${cantidad}x) — ${formatCurrency(totalItem)}</div>`;
                 }
             }).join('') : '<div>No hay items agregados</div>'}
             
@@ -1845,13 +2394,32 @@ function guardarNuevoTrabajo(event) {
         metodoPago: null
     };
     // Añadir al listado de trabajos en memoria para usar en liquidación
-    try { window.trabajos.push(trabajoCompleto); } catch (e) { console.warn('No se pudo agregar a window.trabajos:', e); }
+    try { addTrabajoData(trabajoCompleto); } catch (e) { console.warn('No se pudo agregar a trabajos:', e); }
 
     console.log('✅ Trabajo creado:', trabajoCompleto);
+    // Asociar placa con cliente
+    try { asociarPlacaConClienteDesdeForm('ot'); } catch(e) {}
     
     // Simular guardado (en producción se enviaría a Supabase)
     showNotification(`🎉 Trabajo ${trabajoCompleto.id} creado exitosamente! Total: ${formatCurrency(trabajoCompleto.total)}` , 'success');
     
+    // Ofrecer ir a liquidación del técnico
+    try {
+        const tecnicoId = trabajoCompleto.mecanico;
+        const modal = createModal(
+            'Trabajo creado',
+            `<div style="padding:16px;line-height:1.6;">
+                <p>El trabajo <strong>${trabajoCompleto.id}</strong> fue creado para la placa <strong>${trabajoCompleto.placa}</strong>.</p>
+                <p>¿Deseas ir a <strong>Liquidación Avanzada</strong> para el técnico seleccionado?</p>
+            </div>`,
+            [
+                { text: 'Seguir aquí', class: 'btn-outline', onclick: 'closeModal()' },
+                { text: 'Liquidar ahora', class: 'btn-primary', onclick: `closeModal(); irALiquidacionDelTecnico(${tecnicoId});` }
+            ]
+        );
+        showModal(modal);
+    } catch(e) { /* noop */ }
+
     const trabajosTableBody = document.getElementById('trabajosTable');
     if (trabajosTableBody) {
         const nuevaFila = document.createElement('tr');
@@ -1867,6 +2435,7 @@ function guardarNuevoTrabajo(event) {
             <td><span class="status-badge status-pendiente">Pendiente</span></td>
             <td>
                 <button class="btn btn-sm btn-outline" onclick="verTrabajo('${trabajoCompleto.placa}')">Ver</button>
+                <button class="btn btn-sm btn-success" onclick="completarTrabajo('${trabajoCompleto.id}')">Completar</button>
             </td>
         `;
         trabajosTableBody.prepend(nuevaFila);
@@ -1886,6 +2455,65 @@ function guardarNuevoTrabajo(event) {
     console.log('- Items agregados:', trabajoCompleto.items.length);
     console.log('- Total:', formatCurrency(trabajoCompleto.total));
 }
+
+// Exportar OT a formato CUENTTI (CSV)
+function exportarTrabajoACuentti() {
+    // Recolectar datos actuales del formulario de OT
+    const placa = (document.getElementById('trabajoPlaca')?.value || '').toUpperCase();
+    const fecha = new Date().toISOString().slice(0,10);
+
+    // Asegurar que MO está sincronizada como ítem
+    try { syncManoObraItem(); } catch (e) {}
+
+    const items = Array.isArray(window.itemsTrabajo) ? window.itemsTrabajo : [];
+    if (!items.length) { alert('No hay items para exportar'); return; }
+
+    // Construir filas según plantilla CUENTTI
+    const header = [
+        'Referencia o codigo de barras', 'Nombre', 'Precio Unitario', 'Cantidad', 'Descuento', 'Impuesto',
+        'SubTotal (No modificar)', 'Estampilla(sino Aplica 0)', 'Impoconsumo(sino Aplica 0)', 'Total (No modificar)', 'id_plan_cuenta (opcional solo Egresos)'
+    ];
+
+    const toNumber = v => Math.max(0, Number(v) || 0);
+    const rows = items.map(it => {
+        const ref = (it.codigo || '').toString();
+        const nombre = (it.nombre || '').toString();
+        const cantidad = Math.max(1, parseInt(it.cantidad) || 1);
+        const iva = toNumber(it.iva); // %
+        const precio = toNumber(it.precio);
+        // Precio Unitario base (pre-IVA si iva>0)
+        const precioUnitBase = iva > 0 ? (precio / (1 + (iva/100))) : precio;
+        // Descuento en % (si existiera)
+        const tipoDesc = it.tipoDescuento || '$';
+        const descVal = toNumber(it.descuento);
+        let descuentoPct = 0;
+        if (descVal > 0) {
+            descuentoPct = (tipoDesc === '%') ? descVal : (precioUnitBase > 0 ? (descVal / precioUnitBase) * 100 : 0);
+        }
+        const bruto = precioUnitBase * cantidad;
+        const subtotal = Math.max(0, bruto * (1 - (descuentoPct/100)));
+        const estampilla = 0;
+        const impoconsumo = 0;
+        const total = Math.round(subtotal * (1 + (iva/100)) + estampilla + impoconsumo);
+        return [ref, nombre, Math.round(precioUnitBase), cantidad, Math.round(descuentoPct), iva, Math.round(subtotal), estampilla, impoconsumo, total, ''];
+    });
+
+    const csv = [header, ...rows].map(r => r.map(v => {
+        const s = (v ?? '').toString();
+        return /[",\n;]/.test(s) ? '"' + s.replace(/"/g,'""') + '"' : s;
+    }).join(',')).join('\n');
+
+    const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const nombreArchivo = `OT-${placa || 'SIN_PLACA'}-${fecha}.csv`;
+    link.href = URL.createObjectURL(blob);
+    link.download = nombreArchivo;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+
+window.exportarTrabajoACuentti = exportarTrabajoACuentti;
 
 function actualizarMetricasTrabajos() {
     const trabajosTableBody = document.getElementById('trabajosTable');
@@ -1959,6 +2587,32 @@ function verTrabajo(placa) {
     
     showModal(modal);
 }
+
+// Completar trabajo (marcar como 'completado')
+function completarTrabajo(trabajoId) {
+    const trabajos = getTrabajosData();
+    const t = trabajos.find(x => String(x.id) === String(trabajoId));
+    if (!t) { showNotification('Trabajo no encontrado', 'error'); return; }
+    t.estado = 'completado';
+    showNotification(`Trabajo ${t.id} marcado como completado`, 'success');
+    // Actualizar UI si la fila existe
+    try {
+        const trabajosTableBody = document.getElementById('trabajosTable');
+        if (trabajosTableBody) {
+            const filas = Array.from(trabajosTableBody.querySelectorAll('tr'));
+            const fila = filas.find(tr => tr.innerText.includes(t.placa));
+            if (fila) {
+                const badge = fila.querySelector('.status-badge');
+                if (badge) {
+                    badge.className = 'status-badge status-completado';
+                    badge.textContent = 'Completado';
+                }
+            }
+            actualizarMetricasTrabajos();
+        }
+    } catch (e) { /* noop */ }
+}
+window.completarTrabajo = completarTrabajo;
 
 // Nueva recepción
 // ===== MÓDULO UNIFICADO: RECEPCIÓN Y NUEVO TRABAJO =====
@@ -2097,6 +2751,49 @@ function nuevaRecepcionModal() {
     
     showModal(modal);
 }
+
+// Ruta conectada: Recepción → OT → Liquidación
+function iniciarOrdenTrabajo(event) {
+    event.preventDefault();
+    // Tomar valores del form de recepción
+    const f = document.getElementById('recepcionForm');
+    if (!f) { showNotification('No se encontró el formulario de recepción', 'error'); return; }
+    const val = id => (document.getElementById(id)?.value || '').toString().trim();
+    datosRecepcionTemporal = {
+        clienteNombre: val('rcpCliente'),
+        cedula: val('rcpCedula'),
+        telefono: val('rcpTelefono'),
+        email: val('rcpEmail'),
+        placa: val('rcpPlaca').toUpperCase(),
+        marca: val('rcpMarca'),
+        modelo: val('rcpModelo'),
+        ano: parseInt(val('rcpAno') || new Date().getFullYear()),
+        kilometraje: val('rcpKm'),
+        tecnico: val('rcpTecnico'),
+        descripcion: val('rcpObs')
+    };
+    previousSectionBeforeNuevoTrabajo = 'recepcionPage';
+    showSection('nuevoTrabajoPage');
+    setTimeout(() => inicializarNuevoTrabajoForm(), 0);
+}
+
+function irALiquidacionDelTecnico(tecnicoId) {
+    showSection('liquidacionAvanzada');
+    const form = document.getElementById('liquidacionAvanzadaForm');
+    if (!form) return;
+    const sel = form.querySelector('select[name="tecnicoId"]');
+    if (sel) sel.value = String(tecnicoId || '');
+    const hoy = new Date();
+    const hace30 = new Date(hoy.getTime() - 30*24*60*60*1000);
+    const ini = form.querySelector('input[name="fechaInicio"]');
+    const fin = form.querySelector('input[name="fechaFin"]');
+    if (ini && !ini.value) ini.value = hace30.toISOString().split('T')[0];
+    if (fin && !fin.value) fin.value = hoy.toISOString().split('T')[0];
+    actualizarVistaPrevia();
+}
+
+window.iniciarOrdenTrabajo = iniciarOrdenTrabajo;
+window.irALiquidacionDelTecnico = irALiquidacionDelTecnico;
 
 // Buscar cliente por cédula en recepción
 function buscarClienteRecepcion() {
@@ -2367,21 +3064,21 @@ function buscarProducto() {
 
 // Ver pendientes de liquidación
 function verPendientes() {
-    const pendientes = [
-        { placa: 'ABC123', tecnico: 'Víctor Padilla', monto: 5000 },
-        { placa: 'DEF456', tecnico: 'Ismael Cervantes', monto: 8000 }
-    ];
-    
-    let mensaje = 'TRABAJOS PENDIENTES DE LIQUIDACIÓN:\n\n';
-    
-    pendientes.forEach(pendiente => {
-        mensaje += `${pendiente.placa} - ${pendiente.tecnico}: $${pendiente.monto.toLocaleString()}\n`;
-    });
-    
-    const total = pendientes.reduce((sum, p) => sum + p.monto, 0);
-    mensaje += `\nTotal pendiente: $${total.toLocaleString()}`;
-    
-    alert(mensaje);
+    const trabajos = getTrabajosData();
+    const pendientes = trabajos.filter(t => (t.estado || '').toLowerCase() !== 'completado');
+    if (!pendientes.length) { showNotification('No hay trabajos pendientes de liquidación', 'success'); return; }
+    const rows = pendientes.map(t => {
+        const mec = (window.mecanicos||[]).find(m=>m.id===t.mecanico);
+        const tec = mec ? (mec.nombre || mec.name || '') : '';
+        return `<tr><td>${t.id}</td><td>${t.placa}</td><td>${t.cliente||''}</td><td>${tec}</td><td>$${(t.manoObra||0).toLocaleString()}</td></tr>`;
+    }).join('');
+    const content = `
+        <table class="table"><thead><tr><th>ID</th><th>Placa</th><th>Cliente</th><th>Técnico</th><th>MO</th></tr></thead>
+        <tbody>${rows}</tbody></table>`;
+    const modal = createModal('Trabajos pendientes', content, [
+        { text:'Cerrar', class:'btn-outline', onclick:'closeModal()' }
+    ]);
+    showModal(modal);
 }
 
 // Liquidar trabajo individual
@@ -2776,12 +3473,29 @@ class ControlMovimientosTecnicos {
             trabajoId: trabajoId,
             observaciones: observaciones,
             procesado: false,
+            aplicadoAcumulado: 0,
             createdAt: new Date().toISOString()
         };
         
         this.movimientos.push(movimiento);
         this.guardar();
         return movimiento;
+    }
+
+    // Aplicar montos parciales de adelantos a una liquidación
+    aplicarAdelantos(tecnicoId, aplicacionesMap = {}) {
+        const ids = Object.keys(aplicacionesMap).map(id => parseFloat(id));
+        if (ids.length === 0) return;
+        this.movimientos.forEach(mov => {
+            if (mov.tecnicoId === tecnicoId && mov.tipoMovimiento === 'adelanto' && ids.includes(mov.id)) {
+                const aplicar = Math.max(0, parseInt(aplicacionesMap[mov.id] || 0));
+                mov.aplicadoAcumulado = Math.max(0, (mov.aplicadoAcumulado || 0) + aplicar);
+                if (mov.aplicadoAcumulado >= Math.abs(mov.monto)) {
+                    mov.procesado = true;
+                }
+            }
+        });
+        this.guardar();
     }
 
     // Obtener movimientos de un técnico en un período
@@ -2960,7 +3674,7 @@ class SistemaLiquidacion {
     }
 
     // Generar liquidación para un período
-    generarLiquidacion(tecnicoId, fechaInicio, fechaFin, observaciones = '') {
+    generarLiquidacion(tecnicoId, fechaInicio, fechaFin, observaciones = '', opciones = {}) {
         console.log(`💼 Generando liquidación para técnico ${tecnicoId} del ${fechaInicio} al ${fechaFin}`);
         
         // Obtener trabajos completados en el período
@@ -2976,13 +3690,19 @@ class SistemaLiquidacion {
         // Calcular totales
         const totales = controlMovimientos.calcularTotales(tecnicoId, fechaInicio, fechaFin);
         
-        // Calcular neto
-        const netoPagar = totalManosObra + totales.adelantos + totales.pagos - 
-                         totales.almuerzos - totales.descuentos - totales.prestamos - totales.materiales;
+        // Aplicaciones parciales de adelantos (mapa id->aplicar)
+        const aplicarAdelantosMap = opciones.aplicarAdelantosMap || {};
+        const aplicadoAdelantos = Object.values(aplicarAdelantosMap).reduce((s, v) => s + (parseInt(v) || 0), 0);
+        
+        // Neto: MO (pre-IVA) menos adelantos aplicados y otros cargos; no descontar materiales
+        const netoPagar = totalManosObra - aplicadoAdelantos - totales.almuerzos - totales.descuentos - totales.prestamos - totales.pagos;
         
         // Obtener trabajos liquidados
         const trabajosIds = trabajosCompletados.map(t => t.id);
-        const movimientosIds = movimientosNoProcesados.map(m => m.id);
+        // Marcar como procesados los movimientos no-adelanto del período (se consideran aplicados íntegramente)
+        const noAdelantosIds = movimientos
+            .filter(m => m.tipoMovimiento !== 'adelanto')
+            .map(m => m.id);
         
         // Crear liquidación
         const liquidacion = {
@@ -2997,11 +3717,26 @@ class SistemaLiquidacion {
             totalDescuentos: totales.descuentos,
             totalPrestamos: totales.prestamos,
             totalPagos: totales.pagos,
+            adelantoAplicado: aplicadoAdelantos,
             montoNeto: netoPagar,
             trabajosLiquidados: trabajosIds,
-            movimientosAplicados: movimientosIds,
+            movimientosAplicados: [...noAdelantosIds, ...Object.keys(aplicarAdelantosMap).map(id => parseFloat(id))],
             trabajos: trabajosCompletados,
             movimientos: movimientos,
+            detalleTrabajos: trabajosCompletados.map(t => ({
+                id: t.id,
+                fecha: (t.fecha || '').toString().slice(0,10),
+                placa: t.placa,
+                marca: t.marca,
+                modelo: t.modelo,
+                ano: t.ano,
+                cliente: t.cliente,
+                manoObra: t.manoObra || 0
+            })),
+            detalleAplicaciones: Object.keys(aplicarAdelantosMap).map(id => ({
+                movimientoId: parseFloat(id),
+                aplicado: parseInt(aplicarAdelantosMap[id] || 0)
+            })),
             observaciones: observaciones,
             createdAt: new Date().toISOString()
         };
@@ -3009,8 +3744,9 @@ class SistemaLiquidacion {
         this.liquidaciones.push(liquidacion);
         this.guardar();
         
-        // Marcar movimientos como procesados
-        controlMovimientos.marcarComoProcesados(movimientosIds);
+        // Aplicar adelantos parcialmente y marcar no-adelantos como procesados
+        controlMovimientos.aplicarAdelantos(tecnicoId, aplicarAdelantosMap);
+        controlMovimientos.marcarComoProcesados(noAdelantosIds);
         
         // Actualizar saldo del técnico
         controlSaldos.actualizarSaldo(tecnicoId, netoPagar);
@@ -3020,17 +3756,19 @@ class SistemaLiquidacion {
 
     // Obtener trabajos completados por período
     obtenerTrabajosCompletadosPorPeriodo(tecnicoId, fechaInicio, fechaFin) {
-        const trabajos = window.trabajos || [];
-        return trabajos.filter(trabajo => {
+        const trabajos = getTrabajosData();
+        let filtrados = trabajos.filter(trabajo => {
             const fechaTrabajo = new Date(trabajo.fecha || Date.now());
             const inicio = new Date(fechaInicio);
             const fin = new Date(fechaFin);
             
             return trabajo.mecanico === tecnicoId && 
                    fechaTrabajo >= inicio && 
-                   fechaTrabajo <= fin &&
-                   trabajo.estado === 'completado';
+                   fechaTrabajo <= fin;
         });
+        // Solo trabajos completados
+        filtrados = filtrados.filter(t => (t.estado || '').toString().toLowerCase() === 'completado');
+        return filtrados;
     }
 
     // Calcular manos de obra
@@ -3100,52 +3838,30 @@ const sistemaLiquidacion = new SistemaLiquidacion();
 // Registrar Adelanto
 function registrarAdelanto() {
     const tecnicos = window.mecanicos || [];
-    const tecnicoOptions = tecnicos.map(t => 
-        `<option value="${t.id}">${t.nombre || t.name || 'Sin nombre'}</option>`
-    ).join('');
-    
-    const html = `
-        <div class="modal-overlay" onclick="cerrarModal()">
-            <div class="modal-content" onclick="event.stopPropagation()">
-                <h3>💰 Registrar Adelanto</h3>
-                <form onsubmit="procesarAdelanto(event)">
-                    <div class="form-group">
-                        <label>Técnico:</label>
-                        <select name="tecnicoId" required class="form-control">
-                            <option value="">Seleccionar técnico</option>
-                            ${tecnicoOptions}
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>Concepto:</label>
-                        <input type="text" name="concepto" required class="form-control" 
-                               placeholder="Ej: Adelanto trabajo ABC123">
-                    </div>
-                    <div class="form-group">
-                        <label>Monto ($):</label>
-                        <input type="number" name="monto" required class="form-control" 
-                               min="1" placeholder="0">
-                    </div>
-                    <div class="form-group">
-                        <label>Fecha:</label>
-                        <input type="date" name="fecha" required class="form-control" 
-                               value="${new Date().toISOString().split('T')[0]}">
-                    </div>
-                    <div class="form-group">
-                        <label>Observaciones:</label>
-                        <textarea name="observaciones" class="form-control" 
-                                  placeholder="Observaciones adicionales"></textarea>
-                    </div>
-                    <div class="modal-actions">
-                        <button type="button" onclick="cerrarModal()" class="btn btn-outline">Cancelar</button>
-                        <button type="submit" class="btn btn-primary">Registrar Adelanto</button>
-                    </div>
-                </form>
+    const tecnicoOptions = tecnicos.map(t => `<option value="${t.id}">${t.nombre || t.name || 'Sin nombre'}</option>`).join('');
+    const content = `
+        <form id="formAdelanto" onsubmit="procesarAdelanto(event)">
+            <div class="form-group"><label>Técnico:</label>
+                <select name="tecnicoId" required class="form-select"><option value="">Seleccionar técnico</option>${tecnicoOptions}</select>
             </div>
-        </div>
-    `;
-    
-    mostrarModal(html);
+            <div class="form-group"><label>Concepto:</label>
+                <input type="text" name="concepto" required class="form-input" placeholder="Ej: Adelanto trabajo ABC123">
+            </div>
+            <div class="form-group"><label>Monto ($):</label>
+                <input type="number" name="monto" required class="form-input" min="1" placeholder="0">
+            </div>
+            <div class="form-group"><label>Fecha:</label>
+                <input type="date" name="fecha" required class="form-input" value="${new Date().toISOString().split('T')[0]}">
+            </div>
+            <div class="form-group"><label>Observaciones:</label>
+                <textarea name="observaciones" class="form-textarea" placeholder="Observaciones adicionales"></textarea>
+            </div>
+        </form>`;
+    const modal = createModal('💰 Registrar Adelanto', content, [
+        { text:'Cancelar', class:'btn-outline', onclick:'closeModal()' },
+        { text:'Registrar Adelanto', class:'btn-primary', type:'submit', form:'formAdelanto' }
+    ]);
+    showModal(modal);
 }
 
 // Procesar Adelanto
@@ -3171,51 +3887,28 @@ function procesarAdelanto(event) {
 // Registrar Almuerzo
 function registrarAlmuerzo() {
     const tecnicos = window.mecanicos || [];
-    const tecnicoOptions = tecnicos.map(t => 
-        `<option value="${t.id}">${t.nombre}</option>`
-    ).join('');
-    
-    const html = `
-        <div class="modal-overlay" onclick="cerrarModal()">
-            <div class="modal-content" onclick="event.stopPropagation()">
-                <h3>🍽️ Registrar Almuerzo</h3>
-                <div class="info-box">
-                    <strong>Precio almuerzo:</strong> $${controlSaldos.configuracion.precioAlmuerzo.toLocaleString()}
-                </div>
-                <form onsubmit="procesarAlmuerzo(event)">
-                    <div class="form-group">
-                        <label>Técnico:</label>
-                        <select name="tecnicoId" required class="form-control">
-                            <option value="">Seleccionar técnico</option>
-                            ${tecnicoOptions}
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>Fecha:</label>
-                        <input type="date" name="fecha" required class="form-control" 
-                               value="${new Date().toISOString().split('T')[0]}">
-                    </div>
-                    <div class="form-group">
-                        <label>Monto ($):</label>
-                        <input type="number" name="monto" required class="form-control" 
-                               value="${controlSaldos.configuracion.precioAlmuerzo}" 
-                               min="0" placeholder="${controlSaldos.configuracion.precioAlmuerzo}">
-                    </div>
-                    <div class="form-group">
-                        <label>Observaciones:</label>
-                        <textarea name="observaciones" class="form-control" 
-                                  placeholder="Observaciones adicionales"></textarea>
-                    </div>
-                    <div class="modal-actions">
-                        <button type="button" onclick="cerrarModal()" class="btn btn-outline">Cancelar</button>
-                        <button type="submit" class="btn btn-primary">Registrar Almuerzo</button>
-                    </div>
-                </form>
+    const tecnicoOptions = tecnicos.map(t => `<option value="${t.id}">${t.nombre}</option>`).join('');
+    const content = `
+        <div class="info-box" style="margin-bottom:8px;"><strong>Precio almuerzo:</strong> $${controlSaldos.configuracion.precioAlmuerzo.toLocaleString()}</div>
+        <form id="formAlmuerzo" onsubmit="procesarAlmuerzo(event)">
+            <div class="form-group"><label>Técnico:</label>
+                <select name="tecnicoId" required class="form-select"><option value="">Seleccionar técnico</option>${tecnicoOptions}</select>
             </div>
-        </div>
-    `;
-    
-    mostrarModal(html);
+            <div class="form-group"><label>Fecha:</label>
+                <input type="date" name="fecha" required class="form-input" value="${new Date().toISOString().split('T')[0]}">
+            </div>
+            <div class="form-group"><label>Monto ($):</label>
+                <input type="number" name="monto" required class="form-input" value="${controlSaldos.configuracion.precioAlmuerzo}" min="0" placeholder="${controlSaldos.configuracion.precioAlmuerzo}">
+            </div>
+            <div class="form-group"><label>Observaciones:</label>
+                <textarea name="observaciones" class="form-textarea" placeholder="Observaciones adicionales"></textarea>
+            </div>
+        </form>`;
+    const modal = createModal('🍽️ Registrar Almuerzo', content, [
+        { text:'Cancelar', class:'btn-outline', onclick:'closeModal()' },
+        { text:'Registrar Almuerzo', class:'btn-primary', type:'submit', form:'formAlmuerzo' }
+    ]);
+    showModal(modal);
 }
 
 // Procesar Almuerzo
@@ -3242,13 +3935,8 @@ function procesarAlmuerzo(event) {
 function controlPagos() {
     const estadisticas = sistemaLiquidacion.obtenerEstadisticas();
     const movimientos = controlMovimientos.obtenerTodos();
-    
-    const html = `
-        <div class="modal-overlay" onclick="cerrarModal()">
-            <div class="modal-content modal-large" onclick="event.stopPropagation()">
-                <h3>💳 Control de Pagos</h3>
-                
-                <div class="stats-grid">
+    const content = `
+                <div class="stats-grid" style="margin-bottom:12px;">
                     <div class="stat-card">
                         <div class="stat-value">${estadisticas.totalLiquidacionesMes}</div>
                         <div class="stat-label">Liquidaciones del Mes</div>
@@ -3262,7 +3950,6 @@ function controlPagos() {
                         <div class="stat-label">Promedio</div>
                     </div>
                 </div>
-                
                 <div class="tab-container">
                     <div class="tab-nav">
                         <button class="tab-btn active" onclick="cambiarTab('resumen')">Resumen</button>
@@ -3285,15 +3972,11 @@ function controlPagos() {
                         ${generarTablaLiquidaciones(sistemaLiquidacion.liquidaciones.slice(-5))}
                     </div>
                 </div>
-                
-                <div class="modal-actions">
-                    <button type="button" onclick="cerrarModal()" class="btn btn-outline">Cerrar</button>
-                </div>
-            </div>
-        </div>
     `;
-    
-    mostrarModal(html);
+    const modal = createModal('💳 Control de Pagos', content, [
+        { text:'Cerrar', class:'btn-outline', onclick:'closeModal()' }
+    ], 'large');
+    showModal(modal);
 }
 
 // Generar resumen por técnicos
@@ -3440,6 +4123,9 @@ function generarLiquidacion() {
         // Limpiar excepto placeholder
         select.innerHTML = '<option value="">Seleccionar técnico</option>' +
             (window.mecanicos || []).map(t => `<option value="${t.id}">${t.nombre || t.name || 'Técnico'}</option>`).join('');
+        // Seleccionar por defecto el primer técnico disponible
+        const firstOpt = select.querySelector('option[value]:not([value=""])');
+        if (firstOpt) select.value = firstOpt.value;
     }
     
     const hoy = new Date();
@@ -3451,15 +4137,60 @@ function generarLiquidacion() {
     
     const preview = document.querySelector('#liquidacionAvanzada #preview-contenido');
     if (preview) preview.innerHTML = 'Selecciona un técnico y período para ver la vista previa';
+
+    // Disparar vista previa automática y re-render al cambiar filtros (una sola vez)
+    try {
+        actualizarVistaPrevia();
+        if (!form.dataset.previewBound) {
+            form.addEventListener('change', (event) => {
+                if (!event.target || !event.target.name) return;
+                if (['tecnicoId', 'fechaInicio', 'fechaFin'].includes(event.target.name)) {
+                    actualizarVistaPrevia();
+                }
+            });
+            form.dataset.previewBound = 'true';
+        }
+    } catch (e) { console.warn('No se pudo inicializar vista previa:', e); }
 }
 
 // Actualizar vista previa
 function actualizarVistaPrevia() {
     const form = document.getElementById('liquidacionAvanzadaForm');
+    if (!form) {
+        console.warn('No se encontró #liquidacionAvanzadaForm');
+        return;
+    }
     const datos = new FormData(form);
-    const tecnicoId = datos.get('tecnicoId');
-    const fechaInicio = datos.get('fechaInicio');
-    const fechaFin = datos.get('fechaFin');
+    // Fallbacks por si FormData devuelve vacío en Safari/iOS para input date/select
+    let tecnicoId = datos.get('tecnicoId');
+    let fechaInicio = datos.get('fechaInicio');
+    let fechaFin = datos.get('fechaFin');
+    if (!tecnicoId) tecnicoId = form.querySelector('select[name="tecnicoId"]')?.value || '';
+    if (!fechaInicio) fechaInicio = form.querySelector('input[name="fechaInicio"]')?.value || '';
+    if (!fechaFin) fechaFin = form.querySelector('input[name="fechaFin"]')?.value || '';
+    // Si falta técnico, tomar el primero disponible y setearlo en el select
+    if (!tecnicoId) {
+        const sel = form.querySelector('select[name="tecnicoId"]');
+        const first = sel?.querySelector('option[value]:not([value=""])');
+        if (first) {
+            sel.value = first.value;
+            tecnicoId = first.value;
+        }
+    }
+
+    // Si faltan fechas, usar por defecto últimos 30 días y pintar en el formulario
+    if (!fechaInicio || !fechaFin) {
+        const hoy = new Date();
+        const hace30 = new Date(hoy.getTime() - 30*24*60*60*1000);
+        const dIni = hace30.toISOString().split('T')[0];
+        const dFin = hoy.toISOString().split('T')[0];
+        fechaInicio = fechaInicio || dIni;
+        fechaFin = fechaFin || dFin;
+        const iniInput = form.querySelector('input[name="fechaInicio"]');
+        const finInput = form.querySelector('input[name="fechaFin"]');
+        if (iniInput && !iniInput.value) iniInput.value = fechaInicio;
+        if (finInput && !finInput.value) finInput.value = fechaFin;
+    }
     
     if (!tecnicoId || !fechaInicio || !fechaFin) {
         const preview = document.querySelector('#liquidacionAvanzada #preview-contenido');
@@ -3477,55 +4208,87 @@ function actualizarVistaPrevia() {
         return;
     }
     
-    const trabajosCompletados = sistemaLiquidacion.obtenerTrabajosCompletadosPorPeriodo(tecnicoId, fechaInicio, fechaFin);
-    const totalManosObra = sistemaLiquidacion.calcularManosObra(trabajosCompletados);
+    const trabajosPeriodo = sistemaLiquidacion.obtenerTrabajosCompletadosPorPeriodo(tecnicoId, fechaInicio, fechaFin);
+    const totalManosObra = sistemaLiquidacion.calcularManosObra(trabajosPeriodo);
     const totales = controlMovimientos.calcularTotales(tecnicoId, fechaInicio, fechaFin);
-    const netoPagar = totalManosObra + totales.adelantos + totales.pagos - 
-                     totales.almuerzos - totales.descuentos - totales.prestamos - totales.materiales;
-    const nombreTecnico = tecnico.nombre || tecnico.name || 'Técnico';
-    
+
+    // Adelantos del período (con restante)
+    const movimientosPeriodo = controlMovimientos.obtenerMovimientosPorPeriodo(tecnicoId, fechaInicio, fechaFin) || [];
+    const adelantos = movimientosPeriodo.filter(m => m.tipoMovimiento === 'adelanto');
+    let restanteMO = totalManosObra;
+    const aplicarMap = {};
+    let pendienteTotal = 0;
+    const filasAdelantos = adelantos.map(m => {
+        const aplicado = Math.max(0, parseInt(m.aplicadoAcumulado || 0));
+        const disponible = Math.max(0, Math.abs(m.monto) - aplicado);
+        const aplicar = Math.min(disponible, Math.max(0, restanteMO));
+        aplicarMap[m.id] = aplicar;
+        restanteMO -= aplicar;
+        const pendiente = Math.max(0, disponible - aplicar);
+        pendienteTotal += pendiente;
+        return `
+            <tr>
+                <td>${m.fechaMovimiento}</td>
+                <td>${m.concepto || 'Adelanto'}</td>
+                <td>$${(m.monto).toLocaleString()}</td>
+                <td>$${aplicado.toLocaleString()}</td>
+                <td>
+                    <input type="number" min="0" max="${disponible}" value="${aplicar}" name="adelanto-aplicar-${m.id}" oninput="recalcularResumenAdelantos()" style="width:120px; text-align:right;" />
+                </td>
+                <td>$${disponible.toLocaleString()}</td>
+            </tr>`;
+    }).join('') || '<tr><td colspan="6">Sin adelantos en el período</td></tr>';
+
+    // Construir detalle de trabajos
+    const filasTrabajos = trabajosPeriodo.map(t => `
+        <tr>
+            <td>${(t.fecha || '').toString().slice(0,10)}</td>
+            <td>${t.placa || ''}</td>
+            <td>${[t.marca,t.modelo,t.ano].filter(Boolean).join(' ')}</td>
+            <td>${t.cliente || ''}</td>
+            <td style="text-align:right;">$${(t.manoObra || 0).toLocaleString()}</td>
+        </tr>
+    `).join('') || '<tr><td colspan="5">Sin trabajos en el período</td></tr>';
+
+    // Estado de cuenta estimado (usa aplicarMap por defecto)
+    const aplicarTotal = Object.values(aplicarMap).reduce((s,v)=> s + (parseInt(v)||0), 0);
+    const netoEstimado = totalManosObra - aplicarTotal - totales.almuerzos - totales.descuentos - totales.prestamos - totales.pagos - totales.materiales;
+
     const html = `
         <div class="preview-section">
-            <h5>${nombreTecnico}</h5>
-            <div class="preview-details">
-                <div class="preview-item">
-                    <span>Trabajos completados:</span>
-                    <span>${trabajosCompletados.length}</span>
-                </div>
-                <div class="preview-item">
-                    <span>Total manos de obra:</span>
-                    <span>$${totalManosObra.toLocaleString()}</span>
-                </div>
-                <div class="preview-item">
-                    <span>Adelantos:</span>
-                    <span class="text-success">+$${totales.adelantos.toLocaleString()}</span>
-                </div>
-                <div class="preview-item">
-                    <span>Almuerzos:</span>
-                    <span class="text-danger">-$${totales.almuerzos.toLocaleString()}</span>
-                </div>
-                <div class="preview-item">
-                    <span>Descuentos:</span>
-                    <span class="text-danger">-$${totales.descuentos.toLocaleString()}</span>
-                </div>
-                <div class="preview-item">
-                    <span>Préstamos:</span>
-                    <span class="text-danger">-$${totales.prestamos.toLocaleString()}</span>
-                </div>
-                <div class="preview-item">
-                    <span>Materiales:</span>
-                    <span class="text-danger">-$${totales.materiales.toLocaleString()}</span>
-                </div>
-                <div class="preview-item total">
-                    <span><strong>NETO A PAGAR:</strong></span>
-                    <span class="${netoPagar >= 0 ? 'text-success' : 'text-danger'}">
-                        <strong>${netoPagar >= 0 ? '+' : ''}$${netoPagar.toLocaleString()}</strong>
-                    </span>
-                </div>
+            <h5>${tecnico.nombre || tecnico.name || 'Técnico'}</h5>
+            <div class="preview-details" style="margin-bottom:10px;">
+                <div class="preview-item"><span>Trabajos:</span><span id="li-prev-trabajos-count">${trabajosPeriodo.length}</span></div>
+                <div class="preview-item"><span>Total MO (pre-IVA):</span><span id="moTotalValor" data-value="${totalManosObra}">$${totalManosObra.toLocaleString()}</span></div>
+                <div class="preview-item"><span>Adelantos a aplicar:</span><span id="adelantosAplicarTotal" data-value="${aplicarTotal}">-$${aplicarTotal.toLocaleString()}</span></div>
+                <div class="preview-item"><span>Adelanto pendiente:</span><span id="adelantoPendienteTotal" data-value="${pendienteTotal}">-$${pendienteTotal.toLocaleString()}</span></div>
+                <div class="preview-item"><span>Almuerzos:</span><span id="almTotal" data-value="${totales.almuerzos}">-$${totales.almuerzos.toLocaleString()}</span></div>
+                <div class="preview-item"><span>Descuentos:</span><span id="descTotal" data-value="${totales.descuentos}">-$${totales.descuentos.toLocaleString()}</span></div>
+                <div class="preview-item"><span>Préstamos:</span><span id="prestTotal" data-value="${totales.prestamos}">-$${totales.prestamos.toLocaleString()}</span></div>
+                <div class="preview-item"><span>Pagos previos:</span><span id="pagosTotal" data-value="${totales.pagos}">-$${totales.pagos.toLocaleString()}</span></div>
+                <div class="preview-item"><span>Materiales:</span><span id="matTotal" data-value="${totales.materiales}">-$${totales.materiales.toLocaleString()}</span></div>
+                <div class="preview-item total"><span><strong>NETO ESTIMADO:</strong></span><span id="netoEstimadoValor" class="${netoEstimado>=0?'text-success':'text-danger'}" data-value="${netoEstimado}"><strong>$${Math.abs(netoEstimado).toLocaleString()}</strong></span></div>
             </div>
+            <h6>Trabajos del período</h6>
+            <table class="data-table" style="width:100%; margin-bottom:12px;">
+                <thead><tr><th>Fecha</th><th>Placa</th><th>Vehículo</th><th>Cliente</th><th>MO</th></tr></thead>
+                <tbody>${filasTrabajos}</tbody>
+            </table>
+            <h6>Adelantos (aplicación parcial)</h6>
+            <div class="btn-group" style="margin: 6px 0 10px 0; display:flex; gap:8px;">
+                <button type="button" class="btn btn-outline" onclick="aplicarAdelantosCubrirMO()">Cubrir MO</button>
+                <button type="button" class="btn btn-outline" onclick="aplicarAdelantosTodo()">Aplicar todo</button>
+                <button type="button" class="btn btn-outline" onclick="aplicarAdelantosSaldoCero()">Hasta saldo 0</button>
+                <button type="button" class="btn btn-outline" onclick="recalcularResumenAdelantos()">Recalcular</button>
+            </div>
+            <table class="data-table" style="width:100%;">
+                <thead><tr><th>Fecha</th><th>Concepto</th><th>Monto</th><th>Aplicado</th><th>Aplicar ahora</th><th>Pendiente</th></tr></thead>
+                <tbody>${filasAdelantos}</tbody>
+            </table>
+            <small style="color:#6b7280;">Puedes ajustar los campos "Aplicar ahora" antes de generar.</small>
         </div>
     `;
-    
+
     const preview = document.querySelector('#liquidacionAvanzada #preview-contenido');
     if (preview) preview.innerHTML = html;
 }
@@ -3533,20 +4296,38 @@ function actualizarVistaPrevia() {
 // Procesar liquidación avanzada
 function procesarLiquidacionAvanzada(event) {
     event.preventDefault();
-    const form = event.target;
+    const form = event.target.closest('form') || document.getElementById('liquidacionAvanzadaForm');
     const datos = new FormData(form);
     
-    const tecnicoId = parseInt(datos.get('tecnicoId'));
-    const fechaInicio = datos.get('fechaInicio');
-    const fechaFin = datos.get('fechaFin');
+    let tecnicoId = parseInt(datos.get('tecnicoId'));
+    let fechaInicio = datos.get('fechaInicio');
+    let fechaFin = datos.get('fechaFin');
     const observaciones = datos.get('observaciones');
+    // Fallbacks
+    if (!tecnicoId) tecnicoId = parseInt(form.querySelector('select[name="tecnicoId"]')?.value || '0');
+    if (!fechaInicio) fechaInicio = form.querySelector('input[name="fechaInicio"]')?.value || '';
+    if (!fechaFin) fechaFin = form.querySelector('input[name="fechaFin"]')?.value || '';
+    
+    if (!tecnicoId || !fechaInicio || !fechaFin) {
+        showNotification('Completa Técnico, Fecha Inicio y Fecha Fin', 'warning');
+        return;
+    }
+    
+    // Recoger aplicaciones parciales de adelantos
+    const aplicarAdelantosMap = {};
+    form.querySelectorAll('input[name^="adelanto-aplicar-"]').forEach(inp => {
+        const id = inp.name.replace('adelanto-aplicar-','');
+        const v = Math.max(0, parseInt(inp.value || 0));
+        if (v > 0) aplicarAdelantosMap[id] = v;
+    });
     
     try {
         const liquidacion = sistemaLiquidacion.generarLiquidacion(
             tecnicoId, 
             fechaInicio, 
             fechaFin, 
-            observaciones
+            observaciones,
+            { aplicarAdelantosMap }
         );
         
         const tecnico = window.mecanicos.find(t => t.id === tecnicoId);
@@ -3562,9 +4343,228 @@ function procesarLiquidacionAvanzada(event) {
         
     } catch (error) {
         console.error('Error en liquidación:', error);
-        showNotification('Error al procesar la liquidación', 'error');
+        const msg = (error && (error.message || error.toString())) || 'Error desconocido';
+        showNotification('Error al procesar la liquidación: ' + msg, 'error');
     }
 }
+
+// Helpers de vista previa de liquidación
+function sumarValoresAdelantos() {
+    let total = 0;
+    document.querySelectorAll('input[name^="adelanto-aplicar-"]').forEach(inp => {
+        total += Math.max(0, parseInt(inp.value || 0));
+    });
+    return total;
+}
+
+function actualizarSpanMoneda(id, valor) {
+    const span = document.getElementById(id);
+    if (!span) return;
+    span.dataset.value = valor;
+    const abs = Math.abs(valor);
+    const pref = (id === 'adelantosAplicarTotal' || id === 'almTotal' || id === 'descTotal' || id === 'prestTotal' || id === 'pagosTotal' || id === 'matTotal') ? '-$' : '$';
+    span.textContent = `${pref}${abs.toLocaleString()}`;
+    if (id === 'netoEstimadoValor') {
+        span.className = (valor >= 0 ? 'text-success' : 'text-danger');
+        span.innerHTML = `<strong>$${abs.toLocaleString()}</strong>`;
+    }
+}
+
+function obtenerNumero(id) {
+    const el = document.getElementById(id);
+    if (!el) return 0;
+    return parseInt(el.dataset.value || '0');
+}
+
+function recalcularResumenAdelantos() {
+    const aplicar = sumarValoresAdelantos();
+    actualizarSpanMoneda('adelantosAplicarTotal', aplicar);
+    // actualizar pendiente total
+    let pendiente = 0;
+    document.querySelectorAll('input[name^="adelanto-aplicar-"]').forEach(inp => {
+        const max = parseInt(inp.getAttribute('max') || '0');
+        const val = Math.max(0, parseInt(inp.value || 0));
+        pendiente += Math.max(0, max - val);
+    });
+    actualizarSpanMoneda('adelantoPendienteTotal', pendiente);
+    const mo = obtenerNumero('moTotalValor');
+    const alm = obtenerNumero('almTotal');
+    const desc = obtenerNumero('descTotal');
+    const prest = obtenerNumero('prestTotal');
+    const pagos = obtenerNumero('pagosTotal');
+    const mat = obtenerNumero('matTotal');
+    const neto = mo - aplicar - alm - desc - prest - pagos - mat;
+    const netEl = document.getElementById('netoEstimadoValor');
+    if (netEl) {
+        netEl.dataset.value = neto;
+        netEl.className = (neto >= 0 ? 'text-success' : 'text-danger');
+        netEl.innerHTML = `<strong>$${Math.abs(neto).toLocaleString()}</strong>`;
+    }
+}
+
+function aplicarAdelantosTodo() {
+    document.querySelectorAll('input[name^="adelanto-aplicar-"]').forEach(inp => {
+        const max = parseInt(inp.getAttribute('max') || '0');
+        inp.value = Math.max(0, max);
+    });
+    recalcularResumenAdelantos();
+}
+
+function aplicarAdelantosCubrirMO() {
+    const mo = obtenerNumero('moTotalValor');
+    const alm = obtenerNumero('almTotal');
+    const desc = obtenerNumero('descTotal');
+    const prest = obtenerNumero('prestTotal');
+    const pagos = obtenerNumero('pagosTotal');
+    const mat = obtenerNumero('matTotal');
+    let objetivo = mo - alm - desc - prest - pagos - mat; // cuánto necesito aplicar para que neto llegue a 0
+    const inputs = Array.from(document.querySelectorAll('input[name^="adelanto-aplicar-"]'));
+    inputs.forEach(inp => { inp.value = 0; });
+    for (const inp of inputs) {
+        if (objetivo <= 0) break;
+        const max = parseInt(inp.getAttribute('max') || '0');
+        const aplicar = Math.min(max, objetivo);
+        inp.value = aplicar;
+        objetivo -= aplicar;
+    }
+    recalcularResumenAdelantos();
+}
+
+// Alias: aplicar hasta que el neto llegue a 0 (mismo algoritmo de cubrir MO)
+function aplicarAdelantosSaldoCero() {
+    aplicarAdelantosCubrirMO();
+}
+
+window.recalcularResumenAdelantos = recalcularResumenAdelantos;
+window.aplicarAdelantosTodo = aplicarAdelantosTodo;
+window.aplicarAdelantosCubrirMO = aplicarAdelantosCubrirMO;
+window.aplicarAdelantosSaldoCero = aplicarAdelantosSaldoCero;
+
+// Exportar Liquidación a CUENTTI (CSV) usando los trabajos del período (MO técnico)
+function exportarLiquidacionACuentti() {
+    const form = document.getElementById('liquidacionAvanzadaForm');
+    if (!form) { showNotification('Abre la Liquidación Avanzada', 'warning'); return; }
+    const tecnicoId = parseInt(form.querySelector('select[name="tecnicoId"]')?.value || '0');
+    const fechaInicio = form.querySelector('input[name="fechaInicio"]')?.value || '';
+    const fechaFin = form.querySelector('input[name="fechaFin"]')?.value || '';
+    if (!tecnicoId || !fechaInicio || !fechaFin) { showNotification('Completa técnico y fechas', 'warning'); return; }
+    const trabajos = sistemaLiquidacion.obtenerTrabajosCompletadosPorPeriodo(tecnicoId, fechaInicio, fechaFin);
+    const tecnico = window.mecanicos.find(m => m.id === tecnicoId);
+    const porcentaje = tecnico ? controlSaldos.obtenerPorcentaje(tecnico.nombre || tecnico.name || '') : 0;
+    const header = ['Referencia o codigo de barras','Nombre','Precio Unitario','Cantidad','Descuento','Impuesto','SubTotal (No modificar)','Estampilla(sino Aplica 0)','Impoconsumo(sino Aplica 0)','Total (No modificar)','id_plan_cuenta (opcional solo Egresos)'];
+    const rows = trabajos.map(t => {
+        const moTec = Math.round((t.manoObra || 0) * (porcentaje/100));
+        const ref = `MO-${t.placa || ''}`;
+        const nombre = `Mano de Obra ${t.placa || ''} ${[t.marca,t.modelo,t.ano].filter(Boolean).join(' ')}`.trim();
+        const pu = moTec; // MO técnico como unitario
+        const cant = 1;
+        const desc = 0;
+        const iva = 0;
+        const sub = pu * cant;
+        const est = 0, impo = 0;
+        const tot = sub;
+        return [ref, nombre, pu, cant, desc, iva, sub, est, impo, tot, ''];
+    });
+    if (!rows.length) { showNotification('No hay trabajos completados en el período', 'warning'); return; }
+    const csv = [header, ...rows].map(r => r.join(',')).join('\n');
+    const blob = new Blob(['\ufeff'+csv], {type:'text/csv;charset=utf-8;'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `LIQ-${tecnico ? (tecnico.nombre || tecnico.name) : 'Tecnico'}-${fechaInicio}_a_${fechaFin}.csv`;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+}
+
+// Imprimir Liquidación (usa el HTML de la vista previa)
+function imprimirLiquidacion() {
+    const cont = document.querySelector('#liquidacionAvanzada #preview-contenido');
+    if (!cont) { showNotification('Genera la vista previa primero', 'warning'); return; }
+    const w = window.open('', '_blank');
+    w.document.write('<html><head><title>Liquidación</title>');
+    w.document.write('<style>body{font-family:Arial,sans-serif;padding:20px;} table{width:100%;border-collapse:collapse} th,td{border:1px solid #ddd;padding:8px;text-align:left} .text-success{color:#198754} .text-danger{color:#dc3545}</style>');
+    w.document.write('</head><body>');
+    w.document.write('<h2>Liquidación Avanzada</h2>');
+    w.document.write(cont.innerHTML);
+    w.document.write('</body></html>');
+    w.document.close();
+    w.focus();
+    w.print();
+}
+
+window.exportarLiquidacionACuentti = exportarLiquidacionACuentti;
+window.imprimirLiquidacion = imprimirLiquidacion;
+
+// =============================
+// Auditoría de Placas - Render y acciones
+// =============================
+function getAuditData() {
+    try { return Array.isArray(window.__appData.vehiculosAudit) ? window.__appData.vehiculosAudit : []; } catch(e){ return []; }
+}
+
+function renderAuditoriaPlacas() {
+    const tbody = document.getElementById('auditoriaPlacasTable');
+    if (!tbody) return;
+    const placaFiltro = (document.getElementById('auditPlacaFiltro')?.value || '').toUpperCase();
+    const fi = document.getElementById('auditFechaInicio')?.value || '';
+    const ff = document.getElementById('auditFechaFin')?.value || '';
+    const desde = fi ? new Date(fi) : null;
+    const hasta = ff ? new Date(ff) : null;
+    const rows = getAuditData().filter(e => {
+        if (placaFiltro && e.placa !== placaFiltro) return false;
+        const d = new Date(e.ts || Date.now());
+        if (desde && d < desde) return false;
+        if (hasta && d > hasta) return false;
+        return true;
+    }).sort((a,b)=> (b.ts||0)-(a.ts||0));
+    if (!rows.length) { tbody.innerHTML = '<tr><td colspan="6">Sin registros</td></tr>'; return; }
+    const fmt = ts => new Date(ts).toLocaleString();
+    tbody.innerHTML = rows.map((e,idx)=>{
+        const oldStr = e.old ? `${e.old.clienteNombre||''} (${e.old.clienteDoc||''})` : '-';
+        const newStr = e.nuevo ? `${e.nuevo.clienteNombre||''} (${e.nuevo.clienteDoc||''})` : '-';
+        const acciones = [
+            `<button class="btn btn-outline btn-sm" onclick="revertFromAudit(${e.ts})">Revertir</button>`,
+            `<button class="btn btn-outline btn-sm" onclick="desasociarPlaca('${e.placa}')">Desasociar</button>`
+        ].join(' ');
+        return `<tr><td>${fmt(e.ts)}</td><td>${e.action}</td><td>${e.placa}</td><td>${oldStr}</td><td>${newStr}</td><td>${acciones}</td></tr>`;
+    }).join('');
+}
+
+function revertFromAudit(ts) {
+    const audit = getAuditData().find(a => a.ts === ts);
+    if (!audit) { showNotification('Registro no encontrado', 'error'); return; }
+    const old = audit.old;
+    if (!old) { showNotification('No hay estado anterior para revertir', 'warning'); return; }
+    confirmReassignPlate(audit.placa, old.clienteDoc||'', old.clienteNombre||'', old.clienteDoc||'', old.clienteNombre||'', old.marca||'', old.modelo||'', old.ano||'');
+    setTimeout(renderAuditoriaPlacas, 200);
+}
+
+function desasociarPlaca(placa) {
+    const vehs = getVehiclesData();
+    const idx = vehs.findIndex(v => v.placa === placa);
+    if (idx === -1) { showNotification('Placa no encontrada', 'error'); return; }
+    const old = vehs[idx];
+    const modal = createModal('Desasociar placa', `<p>¿Deseas desasociar la placa <strong>${placa}</strong> del cliente actual?</p>`, [
+        { text:'Cancelar', class:'btn-outline', onclick:'closeModal()' },
+        { text:'Desasociar', class:'btn-primary', onclick:`confirmDesasociarPlaca('${placa}')` }
+    ]);
+    showModal(modal);
+}
+
+function confirmDesasociarPlaca(placa) {
+    const vehs = getVehiclesData();
+    const idx = vehs.findIndex(v => v.placa === placa);
+    if (idx === -1) { closeModal(); return; }
+    const old = vehs[idx];
+    vehs.splice(idx,1);
+    saveVehiclesData();
+    addVehicleAuditEntry({ ts: Date.now(), action:'unlink', placa, old });
+    try { if (window.supabase) { supabase.from('vehiculos').delete().eq('placa', placa); } } catch(e){}
+    closeModal();
+    showNotification(`Placa ${placa} desasociada`, 'success');
+    renderAuditoriaPlacas();
+}
+
+window.renderAuditoriaPlacas = renderAuditoriaPlacas;
+window.desasociarPlaca = desasociarPlaca;
 
 // Actualizar dashboard de liquidación
 function actualizarDashboardLiquidacion() {
@@ -3590,7 +4590,7 @@ function actualizarDashboardLiquidacion() {
         const totales = controlMovimientos.calcularTotales(tecnico.id, fechaInicio, fechaFin);
         totalAdelantos += totales.adelantos;
         
-        const neto = manosObra + totales.adelantos + totales.pagos - 
+        const neto = manosObra - totales.adelantos - totales.pagos - 
                     totales.almuerzos - totales.descuentos - totales.prestamos - totales.materiales;
         totalNeto += neto;
     });
@@ -3999,3 +4999,4 @@ function ejecutarDiagnostico() {
 
     panel.innerHTML = html;
 }
+ 
