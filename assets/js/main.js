@@ -1253,10 +1253,16 @@ function buscarClientePorNombreRecepcion(nombre) {
     const resultados = baseClientes.filter(c => normalizarNombreCliente(c).toLowerCase().includes(termino) || normalizarDocumentoCliente(c).toLowerCase().includes(termino)).slice(0,50);
     if (resultados.length) {
         const escapar = v => (v||'').toString().replace(/'/g, "\\'").replace(/\"/g,'&quot;');
-        contenedor.innerHTML = resultados.map(c => {
+        contenedor.innerHTML = resultados.map((c, idx) => {
             const doc = normalizarDocumentoCliente(c); const nom = normalizarNombreCliente(c);
             const tel = (c?.telefono || c?.phone || '').toString(); const mail = (c?.email || '').toString();
-            return `<div class=\"resultado-item\" onclick=\"seleccionarClienteRecepcion('${escapar(nom)}','${escapar(doc)}','${escapar(tel)}','${escapar(mail)}')\"><strong>${doc}</strong> - ${nom}${tel?`<br><small style='color:#666'>📞 ${tel}</small>`:''}${mail?`<br><small style='color:#666'> 📧 ${mail}</small>`:''}</div>`;
+            const clienteId = c?.id || c?.id_cliente || idx;
+            return `<div class=\"resultado-item\" style=\"display:flex;justify-content:space-between;align-items:center;\">
+                        <div onclick=\"seleccionarClienteRecepcion('${escapar(nom)}','${escapar(doc)}','${escapar(tel)}','${escapar(mail)}')\" style=\"flex:1;cursor:pointer;\">
+                            <strong>${doc}</strong> - ${nom}${tel?`<br><small style='color:#666'>📞 ${tel}</small>`:''}${mail?`<br><small style='color:#666'> 📧 ${mail}</small>`:''}
+                        </div>
+                        <button type=\"button\" class=\"btn btn-outline btn-sm\" onclick=\"event.stopPropagation(); editarClienteDesdeModal('${escapar(doc)}','${escapar(nom)}','${escapar(tel)}','${escapar(mail)}','${clienteId}')\" title=\"Editar cliente\" style=\"margin-left:8px;\">✏️</button>
+                    </div>`;
         }).join('');
         contenedor.classList.add('show');
     } else {
@@ -1984,10 +1990,14 @@ function buscarClientePorCedulaRecepcion(cedula) {
             const nombre = normalizarNombreCliente(c);
             const tel = (c?.telefono || c?.phone || '').toString();
             const mail = (c?.email || '').toString();
-            return `<div class="resultado-item" onclick="seleccionarClienteRecepcion('${escapar(nombre)}','${escapar(doc)}','${escapar(tel)}','${escapar(mail)}')">
-                        <strong>${doc}</strong> - ${nombre}
-                        ${tel ? `<br><small style='color:#666'>📞 ${tel}</small>`:''}
-                        ${mail ? `<br><small style='color:#666'>📧 ${mail}</small>`:''}
+            const clienteId = c?.id || c?.id_cliente || idx;
+            return `<div class="resultado-item" style="display:flex;justify-content:space-between;align-items:center;">
+                        <div onclick="seleccionarClienteRecepcion('${escapar(nombre)}','${escapar(doc)}','${escapar(tel)}','${escapar(mail)}')" style="flex:1;cursor:pointer;">
+                            <strong>${doc}</strong> - ${nombre}
+                            ${tel ? `<br><small style='color:#666'>📞 ${tel}</small>`:''}
+                            ${mail ? `<br><small style='color:#666'>📧 ${mail}</small>`:''}
+                        </div>
+                        <button type="button" class="btn btn-outline btn-sm" onclick="event.stopPropagation(); editarClienteDesdeModal('${escapar(doc)}','${escapar(nombre)}','${escapar(tel)}','${escapar(mail)}','${clienteId}')" title="Editar cliente" style="margin-left:8px;">✏️</button>
                     </div>`;
         }).join('');
         contenedor.classList.add('show');
