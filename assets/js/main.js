@@ -4730,15 +4730,35 @@ let supabaseConectado = false;
 // CARGAR DATOS DESDE SUPABASE
 // =====================================================
 
+const SUPABASE_PAGE_SIZE = 1000;
+
+async function fetchAllRows(tableName) {
+    const rows = [];
+    let from = 0;
+    while (true) {
+        const to = from + SUPABASE_PAGE_SIZE - 1;
+        const { data, error } = await supabase
+            .from(tableName)
+            .select('*')
+            .order('id', { ascending: true })
+            .range(from, to);
+        if (error) {
+            return { error };
+        }
+        if (!data || data.length === 0) break;
+        rows.push(...data);
+        if (data.length < SUPABASE_PAGE_SIZE) break;
+        from += SUPABASE_PAGE_SIZE;
+    }
+    return { data: rows };
+}
+
 async function cargarDatosDesdeSupabase() {
     console.log('🔄 Cargando datos desde Supabase...');
     
     try {
         // Cargar clientes
-        const { data: clientes, error: errorClientes } = await supabase
-            .from('clientes')
-            .select('*')
-            .order('id');
+        const { data: clientes, error: errorClientes } = await fetchAllRows('clientes');
             
         if (errorClientes) {
             console.error('❌ Error cargando clientes:', errorClientes);
@@ -4749,10 +4769,7 @@ async function cargarDatosDesdeSupabase() {
         console.log(`✅ Clientes cargados: ${supabaseClientes.length} registros`);
         
         // Cargar inventario
-        const { data: inventario, error: errorInventario } = await supabase
-            .from('inventario')
-            .select('*')
-            .order('id');
+        const { data: inventario, error: errorInventario } = await fetchAllRows('inventario');
             
         if (errorInventario) {
             console.error('❌ Error cargando inventario:', errorInventario);
