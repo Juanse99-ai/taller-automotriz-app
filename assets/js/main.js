@@ -3354,12 +3354,13 @@ function showModal(modalData) {
 
 function closeModal() {
     if (currentModal) {
-        currentModal.style.opacity = '0';
+        const modalToClose = currentModal;
+        modalToClose.style.opacity = '0';
+        currentModal = null;
         setTimeout(() => {
-            if (currentModal && currentModal.parentNode) {
-                currentModal.parentNode.removeChild(currentModal);
+            if (modalToClose && modalToClose.parentNode) {
+                modalToClose.parentNode.removeChild(modalToClose);
             }
-            currentModal = null;
         }, 300);
     }
 }
