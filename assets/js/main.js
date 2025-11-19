@@ -145,6 +145,13 @@ function closeAllSuggestions() {
     });
 }
 
+// Normaliza un valor monetario ingresado (acepta puntos o comas como separadores)
+function parseMontoInput(valor) {
+    if (valor === undefined || valor === null) return 0;
+    const limpio = valor.toString().replace(/[^\d]/g, '');
+    return limpio ? parseInt(limpio, 10) : 0;
+}
+
 // Sidebar overlay helpers for tablet/mobile
 function ensureSidebarOverlay() {
     let overlay = document.querySelector('.sidebar-overlay');
@@ -2243,7 +2250,7 @@ window.autocompletarClientePorPlacaOT = autocompletarClientePorPlacaOT;
 function syncManoObraItem() {
     const moInput = document.getElementById('manoObraValor');
     if (!moInput) return;
-    const valor = Math.max(0, Number(moInput.value || 0));
+    const valor = Math.max(0, parseMontoInput(moInput.value));
     if (!Array.isArray(window.itemsTrabajo)) window.itemsTrabajo = [];
 
     const idx = window.itemsTrabajo.findIndex(i => i && i.isManoObra === true);
@@ -2387,7 +2394,7 @@ function guardarNuevoTrabajo(event) {
         }
     });
     // Mano de obra (sin IVA) solo para registro; los totales ya lo incluyen como item si aplica
-    const manoObraValor = Number(document.getElementById('manoObraValor')?.value || 0);
+    const manoObraValor = parseMontoInput(document.getElementById('manoObraValor')?.value || 0);
     
     // Crear objeto de trabajo completo
     const trabajoCompleto = {
