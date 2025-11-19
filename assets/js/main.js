@@ -1351,28 +1351,60 @@ async function guardarEdicionCliente(event, cedulaOriginal, clienteId) {
         }
         
         // Intentar actualizar en Supabase si está disponible
-        if (window.supabase && clienteId && clienteId !== '') {
-            try {
-                const { error } = await supabase
-                    .from('clientes')
-                    .update({
-                        nombre: nombre,
-                        telefono: telefono || null,
-                        email: email || null
-                    })
-                    .eq('id', clienteId);
-                
-                if (error) {
-                    console.warn('⚠️ Error al actualizar en Supabase:', error);
-                    // Continuar con actualización local
-                } else {
-                    console.log('✅ Cliente actualizado en Supabase');
-                    // Recargar datos desde Supabase
-                    await cargarDatosDesdeSupabase();
+        // Determinar campo de documento disponible
+        const camposDocumento = ['cedula', 'documento', 'id_cedula', 'nit', 'numero_documento', 'identificacion', 'doc', 'documento_identidad'];
+        const campoDocumento = camposDocumento.find(campo => clienteExistente && clienteExistente.hasOwnProperty(campo) && clienteExistente[campo]);
+        const valorDocumento = campoDocumento ? clienteExistente[campoDocumento] : cedulaOriginal;
+        
+        // Intentar actualizar en Supabase usando el mejor identificador disponible
+        if (window.supabase) {
+            const payload = {
+                nombre: nombre,
+                telefono: telefono || null,
+                email: email || null
+            };
+            let sincronizadoSupabase = false;
+            
+            const tieneIdReal = clienteExistente && Object.prototype.hasOwnProperty.call(clienteExistente, 'id') && clienteExistente.id !== null && clienteExistente.id !== undefined;
+            if (tieneIdReal) {
+                try {
+                    const { data, error } = await supabase
+                        .from('clientes')
+                        .update(payload)
+                        .eq('id', clienteExistente.id)
+                        .select('id');
+                    
+                    if (error) {
+                        console.warn('⚠️ Error al actualizar cliente por ID en Supabase:', error);
+                    } else if (data && data.length > 0) {
+                        sincronizadoSupabase = true;
+                    }
+                } catch (supabaseError) {
+                    console.warn('⚠️ Error de conexión con Supabase (por ID):', supabaseError);
                 }
-            } catch (supabaseError) {
-                console.warn('⚠️ Error de conexión con Supabase:', supabaseError);
-                // Continuar con actualización local
+            }
+            
+            if (!sincronizadoSupabase && campoDocumento && valorDocumento) {
+                try {
+                    const { data, error } = await supabase
+                        .from('clientes')
+                        .update(payload)
+                        .eq(campoDocumento, valorDocumento)
+                        .select('id');
+                    
+                    if (error) {
+                        console.warn(`⚠️ Error al actualizar cliente por ${campoDocumento} en Supabase:`, error);
+                    } else if (data && data.length > 0) {
+                        sincronizadoSupabase = true;
+                    }
+                } catch (supabaseError) {
+                    console.warn(`⚠️ Error de conexión con Supabase (por ${campoDocumento}):`, supabaseError);
+                }
+            }
+            
+            if (sincronizadoSupabase) {
+                console.log('✅ Cliente sincronizado con Supabase');
+                await cargarDatosDesdeSupabase();
             }
         }
         
@@ -1385,6 +1417,11 @@ async function guardarEdicionCliente(event, cedulaOriginal, clienteId) {
             if (index !== -1) {
                 supabaseClientes[index] = { ...supabaseClientes[index], ...clienteExistente };
             }
+        }
+        try {
+            localStorage.setItem('supabase_clientes_backup', JSON.stringify(supabaseClientes));
+        } catch (storageError) {
+            console.warn('⚠️ No se pudo actualizar el backup local de clientes:', storageError);
         }
         
         showNotification('Cliente actualizado correctamente', 'success');
