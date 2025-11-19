@@ -4821,19 +4821,21 @@ function buscarRepuestoReal(termino) {
     
     // Buscar en inventario de Supabase
     const resultados = supabaseInventario.filter(item => {
-        const codigo = (item.codigo || item.code || '').toString().toLowerCase();
-        const nombre = (item.nombre || item.name || item.producto || '').toString().toLowerCase();
-        const categoria = (item.categoria || item.category || '').toString().toLowerCase();
+        const codigo = (item.codigo || item.code || item.sku || '').toString().toLowerCase();
+        const referencia = (item.referencia || item.reference || item.codigo_barras || item.barcode || '').toString().toLowerCase();
+        const nombre = (item.nombre || item.name || item.producto || item.descripcion || '').toString().toLowerCase();
+        const categoria = (item.categoria || item.category || item.tipo || '').toString().toLowerCase();
         
         const terminoLower = termino.toLowerCase();
         
         return codigo.includes(terminoLower) || 
+               (referencia && referencia.includes(terminoLower)) ||
                nombre.includes(terminoLower) || 
                categoria.includes(terminoLower);
     });
     
     return resultados.map(item => ({
-        codigo: item.codigo || item.code || `ITEM-${item.id}`,
+        codigo: item.codigo || item.code || item.referencia || item.reference || item.codigo_barras || `ITEM-${item.id}`,
         nombre: item.nombre || item.name || item.producto || 'Sin nombre',
         categoria: item.categoria || item.category || 'Sin categoría',
         precio: item.precio || item.price || item.valor || 0,
