@@ -138,11 +138,11 @@ cd taller-automotriz-app
 2. **Abrir el archivo principal:**
 ```bash
 # Opción 1: Abrir directamente
-open MULTIDIAGNOSTICOS-AS-SISTEMA-SUPABASE-FINAL.html
+open index.html
 
 # Opción 2: Servidor local (recomendado)
 python -m http.server 8000
-# Luego abrir: http://localhost:8000/MULTIDIAGNOSTICOS-AS-SISTEMA-SUPABASE-FINAL.html
+# Luego abrir: http://localhost:8000/index.html
 ```
 
 3. **Configurar Supabase (Opcional):**
@@ -206,15 +206,17 @@ python -m http.server 8000
 
 ```
 taller-automotriz-app/
-├── MULTIDIAGNOSTICOS-AS-SISTEMA-SUPABASE-FINAL.html  # Archivo principal
-├── index.html                                         # Versión alternativa
+├── index.html                                         # Aplicación principal
 ├── assets/
 │   ├── css/
-│   │   └── styles.css                                # Estilos (si se separan)
+│   │   ├── app.css                                   # Estilos base
+│   │   └── theme-glass.css                           # Estilos alternativos
 │   ├── js/
-│   │   └── app.js                                    # JavaScript (si se separa)
+│   │   └── main.js                                   # Lógica principal
 │   └── images/
 │       └── logo-multidiagnosticos.png                # Logo del taller
+├── .vscode/                                          # Configuración opcional de VS Code
+├── .gitignore                                        # Reglas para archivos temporales
 ├── README.md                                         # Esta documentación
 └── vercel.json                                       # Configuración Vercel
 ```
