@@ -1689,7 +1689,7 @@ function normalizarNombreCliente(cliente) {
     return (cliente?.nombre || cliente?.name || cliente?.cliente || 'Cliente sin nombre').toString();
 }
 
-function buscarClientePorCedula(cedula) {
+async function buscarClientePorCedula(cedula) {
     const contenedor = document.getElementById('resultadosBusqueda');
     if (!contenedor) return;
 
@@ -1700,38 +1700,67 @@ function buscarClientePorCedula(cedula) {
         return;
     }
     
-    const baseClientes = obtenerListaClientes();
-    const terminoLower = termino.toLowerCase();
-    
-    const resultados = baseClientes.filter(cliente => 
-        normalizarDocumentoCliente(cliente).toLowerCase().includes(terminoLower)
-    ).slice(0, 50);
-    
-    if (resultados.length > 0) {
-        contenedor.innerHTML = resultados.map((cliente, index) => {
-            const doc = normalizarDocumentoCliente(cliente);
-            const nombre = normalizarNombreCliente(cliente);
-            const telefono = (cliente?.telefono || cliente?.phone || '').toString();
-            const email = (cliente?.email || '').toString();
-            const clienteId = cliente?.id || cliente?.id_cliente || index;
+    try {
+        // Primero intentar buscar en CUENTTI
+        console.log('🔍 Buscando cliente en CUENTTI:', termino);
+        const clienteCuentti = await buscarClienteEnCuentti(termino);
+        
+        if (clienteCuentti) {
+            console.log('✅ Cliente encontrado en CUENTTI:', clienteCuentti);
             const escapar = valor => valor.replace(/'/g, "\\'").replace(/"/g, '&quot;');
-            return `
-                <div class="resultado-item" style="display: flex; justify-content: space-between; align-items: center;">
-                    <div onclick="seleccionarCliente('${escapar(nombre)}', '${escapar(doc)}', '${escapar(telefono)}', '${escapar(email)}')" style="flex: 1; cursor: pointer;">
-                        <strong>${doc}</strong> - ${nombre}
-                        ${telefono ? `<br><small style="color: #666;">📞 ${telefono}</small>` : ''}
-                        ${email ? `<br><small style="color: #666;">📧 ${email}</small>` : ''}
+            contenedor.innerHTML = `
+                <div class="resultado-item" style="display: flex; justify-content: space-between; align-items: center; border: 2px solid #10b981; background: #ecfdf5; padding: 12px; border-radius: 6px;">
+                    <div onclick="seleccionarCliente('${escapar(clienteCuentti.nombre)}', '${escapar(clienteCuentti.cedula)}', '${escapar(clienteCuentti.telefono)}', '${escapar(clienteCuentti.email)}')" style="flex: 1; cursor: pointer;">
+                        <strong>📱 ${clienteCuentti.cedula}</strong> - ${clienteCuentti.nombre}
+                        ${clienteCuentti.telefono ? `<br><small style="color: #10b981;">📞 ${clienteCuentti.telefono}</small>` : ''}
+                        ${clienteCuentti.email ? `<br><small style="color: #10b981;">📧 ${clienteCuentti.email}</small>` : ''}
                     </div>
-                    <button type="button" class="btn btn-outline btn-sm" onclick="event.stopPropagation(); editarClienteDesdeModal('${escapar(doc)}', '${escapar(nombre)}', '${escapar(telefono)}', '${escapar(email)}', '${clienteId}')" title="Editar cliente" style="margin-left: 8px;">
+                    <button type="button" class="btn btn-outline btn-sm" onclick="event.stopPropagation(); editarClienteDesdeModal('${escapar(clienteCuentti.cedula)}', '${escapar(clienteCuentti.nombre)}', '${escapar(clienteCuentti.telefono)}', '${escapar(clienteCuentti.email)}', '${clienteCuentti.id}')" title="Editar cliente" style="margin-left: 8px;">
                         ✏️
                     </button>
                 </div>
             `;
-        }).join('');
-    } else {
-        contenedor.innerHTML = '<div class="resultado-item">No se encontraron clientes</div>';
-    }
+            contenedor.classList.add('show');
+            return;
+        }
+        
+        // Si no encontró en CUENTTI, buscar localmente
+        const baseClientes = obtenerListaClientes();
+        const terminoLower = termino.toLowerCase();
+        const resultados = baseClientes.filter(cliente => 
+            normalizarDocumentoCliente(cliente).toLowerCase().includes(terminoLower)
+        ).slice(0, 50);
+        
+        if (resultados.length > 0) {
+            contenedor.innerHTML = resultados.map((cliente, index) => {
+                const doc = normalizarDocumentoCliente(cliente);
+                const nombre = normalizarNombreCliente(cliente);
+                const telefono = (cliente?.telefono || cliente?.phone || '').toString();
+                const email = (cliente?.email || '').toString();
+                const clienteId = cliente?.id || cliente?.id_cliente || index;
+                const escapar = valor => valor.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+                return `
+                    <div class="resultado-item" style="display: flex; justify-content: space-between; align-items: center;">
+                        <div onclick="seleccionarCliente('${escapar(nombre)}', '${escapar(doc)}', '${escapar(telefono)}', '${escapar(email)}')" style="flex: 1; cursor: pointer;">
+                            <strong>${doc}</strong> - ${nombre}
+                            ${telefono ? `<br><small style="color: #666;">📞 ${telefono}</small>` : ''}
+                            ${email ? `<br><small style="color: #666;">📧 ${email}</small>` : ''}
+                        </div>
+                        <button type="button" class="btn btn-outline btn-sm" onclick="event.stopPropagation(); editarClienteDesdeModal('${escapar(doc)}', '${escapar(nombre)}', '${escapar(telefono)}', '${escapar(email)}', '${clienteId}')" title="Editar cliente" style="margin-left: 8px;">
+                            ✏️
+                        </button>
+                    </div>
+                `;
+            }).join('');
+        } else {
+            contenedor.innerHTML = '<div class="resultado-item">❌ Cliente no encontrado en CUENTTI ni localmente</div>';
+        }
         contenedor.classList.add('show');
+    } catch (error) {
+        console.error('❌ Error en búsqueda de cliente:', error);
+        contenedor.innerHTML = '<div class="resultado-item" style="color: #dc2626;">❌ Error en búsqueda: ' + error.message + '</div>';
+        contenedor.classList.add('show');
+    }
 }
 
 // Seleccionar cliente de resultados
@@ -1793,18 +1822,39 @@ function abrirBuscadorClientes() {
     filtrarClientesModal('');
 }
 
-function filtrarClientesModal(termino = '') {
+async function filtrarClientesModal(termino = '') {
     const contenedor = document.getElementById('modalClientesResultado');
     if (!contenedor) return;
 
-    const lista = obtenerListaClientes();
     const terminoLower = (termino || '').toLowerCase();
+    let resultados = [];
 
-    const resultados = lista.filter(cliente => {
-        const doc = normalizarDocumentoCliente(cliente).toLowerCase();
-        const nombre = normalizarNombreCliente(cliente).toLowerCase();
-        return !terminoLower || doc.includes(terminoLower) || nombre.includes(terminoLower);
-    }).slice(0, 50);
+    // Si hay término, buscar en CUENTTI + local
+    if (terminoLower.length >= 1) {
+        // Intentar buscar en CUENTTI primero
+        try {
+            const clientesCuentti = await buscarClienteEnCuentti(terminoLower) || [];
+            if (clientesCuentti.id) {
+                resultados = [clientesCuentti];
+            }
+        } catch (e) {
+            console.warn('⚠️ Error buscando en CUENTTI:', e.message);
+        }
+        
+        // Si no encontró en CUENTTI, buscar localmente
+        if (resultados.length === 0) {
+            const lista = obtenerListaClientes();
+            resultados = lista.filter(cliente => {
+                const doc = normalizarDocumentoCliente(cliente).toLowerCase();
+                const nombre = normalizarNombreCliente(cliente).toLowerCase();
+                return doc.includes(terminoLower) || nombre.includes(terminoLower);
+            }).slice(0, 50);
+        }
+    } else {
+        // Sin término, mostrar todos los locales
+        const lista = obtenerListaClientes();
+        resultados = lista.slice(0, 50);
+    }
 
     if (!resultados.length) {
         contenedor.innerHTML = '<div style="padding: 16px; color: #6b7280;">No se encontraron clientes</div>';
@@ -2638,18 +2688,45 @@ function abrirBuscadorClientesRecepcion() {
     filtrarClientesModalRecepcion('');
 }
 
-function filtrarClientesModalRecepcion(termino='') {
+async function filtrarClientesModalRecepcion(termino='') {
     const cont = document.getElementById('modalClientesResultadoRecep');
     if (!cont) return;
-    const lista = obtenerListaClientes();
+    
     const tl = (termino||'').toLowerCase();
-    const resultados = lista.filter(c => {
-        const doc = normalizarDocumentoCliente(c).toLowerCase();
-        const nom = normalizarNombreCliente(c).toLowerCase();
-        return !tl || doc.includes(tl) || nom.includes(tl);
-    }).slice(0,50);
+    let resultados = [];
     const esc = s => (s||'').toString().replace(/'/g, "\\'").replace(/"/g,'&quot;');
-    if (!resultados.length) { cont.innerHTML = '<div style="padding:16px;color:#6b7280;">No se encontraron clientes</div>'; return; }
+    
+    // Si hay término, buscar en CUENTTI + local
+    if (tl.length >= 1) {
+        try {
+            const clienteCuentti = await buscarClienteEnCuentti(tl);
+            if (clienteCuentti && clienteCuentti.id) {
+                resultados = [clienteCuentti];
+            }
+        } catch (e) {
+            console.warn('⚠️ Error buscando en CUENTTI (Recepción):', e.message);
+        }
+        
+        // Si no encontró en CUENTTI, buscar localmente
+        if (resultados.length === 0) {
+            const lista = obtenerListaClientes();
+            resultados = lista.filter(c => {
+                const doc = normalizarDocumentoCliente(c).toLowerCase();
+                const nom = normalizarNombreCliente(c).toLowerCase();
+                return doc.includes(tl) || nom.includes(tl);
+            }).slice(0,50);
+        }
+    } else {
+        // Sin término, mostrar todos los locales
+        const lista = obtenerListaClientes();
+        resultados = lista.slice(0,50);
+    }
+    
+    if (!resultados.length) { 
+        cont.innerHTML = '<div style="padding:16px;color:#6b7280;">No se encontraron clientes</div>'; 
+        return; 
+    }
+    
     cont.innerHTML = `
         <table style="width:100%;border-collapse:collapse;">
             <thead><tr><th>Cédula/NIT</th><th>Nombre</th><th>Teléfono</th><th>Email</th><th>Acciones</th></tr></thead>
