@@ -16,6 +16,34 @@ let previousSectionBeforeNuevoTrabajo = 'dashboard';
 let datosRecepcionTemporal = null;
 let trabajoEditandoId = null;
 
+// Sistema de cotizaciones y facturas
+window.__appData = window.__appData || {};
+if (!Array.isArray(window.__appData.cotizaciones)) {
+    try {
+        window.__appData.cotizaciones = JSON.parse(localStorage.getItem('cotizaciones_data') || '[]');
+    } catch (e) {
+        window.__appData.cotizaciones = [];
+    }
+}
+if (!Array.isArray(window.__appData.facturas)) {
+    try {
+        window.__appData.facturas = JSON.parse(localStorage.getItem('facturas_data') || '[]');
+    } catch (e) {
+        window.__appData.facturas = [];
+    }
+}
+
+function getCotizacionesData() { return window.__appData.cotizaciones; }
+function getFacturasData() { return window.__appData.facturas; }
+function saveCotizacionesData() {
+    try { localStorage.setItem('cotizaciones_data', JSON.stringify(window.__appData.cotizaciones)); } catch(e) {}
+}
+function saveFacturasData() {
+    try { localStorage.setItem('facturas_data', JSON.stringify(window.__appData.facturas)); } catch(e) {}
+}
+function addCotizacionData(c) { window.__appData.cotizaciones.push(c); saveCotizacionesData(); }
+function addFacturaData(f) { window.__appData.facturas.push(f); saveFacturasData(); }
+
 // Base de datos en memoria (vacía por defecto para pruebas reales)
 const clientes = [];
 const inventario = [];
@@ -505,12 +533,167 @@ function loadRecepcionData() {
 
 function loadCotizacionesData() {
     console.log('💰 Cargando datos de cotizaciones...');
-    // Cotizaciones ya tiene datos por defecto
+    
+    const cotizaciones = getCotizacionesData();
+    const tableBody = document.getElementById('cotizacionesTable');
+    
+    if (tableBody) {
+        if (cotizaciones.length === 0) {
+            tableBody.innerHTML = `
+                <tr>
+                    <td colspan="7" style="text-align: center; padding: 24px; color: #6b7280;">
+                        No hay cotizaciones registradas. Usa el botón "Nueva Cotización" para crear una.
+                    </td>
+                </tr>
+            `;
+        } else {
+            tableBody.innerHTML = cotizaciones
+                .sort((a, b) => new Date(b.fecha || 0) - new Date(a.fecha || 0))
+                .map(cot => {
+                    const estadoClass = cot.estado === 'Aprobada' ? 'status-completado' : 
+                                       cot.estado === 'Rechazada' ? 'status-error' : 'status-pendiente';
+                    return `
+                        <tr>
+                            <td>${cot.numero || cot.id}</td>
+                            <td>${cot.cliente || '—'}</td>
+                            <td>${cot.vehiculo || '—'}</td>
+                            <td>${formatCurrency(cot.total || 0)}</td>
+                            <td><span class="status-badge ${estadoClass}">${cot.estado || 'Pendiente'}</span></td>
+                            <td>${cot.fecha ? new Date(cot.fecha).toLocaleDateString() : '—'}</td>
+                            <td>
+                                <button class="btn btn-sm btn-outline" onclick="verCotizacion('${cot.id}')">Ver</button>
+                                ${cot.estado === 'Pendiente' ? 
+                                    `<button class="btn btn-sm btn-success" onclick="aprobarCotizacion('${cot.id}')">Aprobar</button>` : ''}
+                                ${cot.estado === 'Aprobada' ? 
+                                    `<button class="btn btn-sm btn-primary" onclick="generarFactura('${cot.id}')">Facturar</button>` : ''}
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
+        }
+    }
+    
+    // Actualizar métricas
+    const activas = cotizaciones.filter(c => c.estado === 'Pendiente').length;
+    const valorTotal = cotizaciones.reduce((sum, c) => sum + (c.total || 0), 0);
+    const aprobadas = cotizaciones.filter(c => c.estado === 'Aprobada').length;
+    const tasaConversion = cotizaciones.length > 0 ? ((aprobadas / cotizaciones.length) * 100).toFixed(1) : 0;
+    
+    const activasEl = document.getElementById('cotizacionesActivas');
+    const valorEl = document.getElementById('valorTotal');
+    const tasaEl = document.getElementById('tasaConversion');
+    
+    if (activasEl) activasEl.textContent = activas;
+    if (valorEl) valorEl.textContent = formatCurrency(valorTotal);
+    if (tasaEl) tasaEl.textContent = tasaConversion + '%';
 }
 
 function loadCalendarioData() {
     console.log('📅 Cargando datos del calendario...');
-    // Calendario ya tiene datos por defecto
+    
+    const trabajos = getTrabajosData();
+    const hoy = new Date();
+    hoy.setHours(0, 0, 0, 0);
+    
+    const finSemana = new Date(hoy);
+    finSemana.setDate(finSemana.getDate() + 7);
+    
+    // Trabajos de hoy
+    const citasHoy = trabajos.filter(t => {
+        const fechaTrabajo = new Date(t.fecha);
+        fechaTrabajo.setHours(0, 0, 0, 0);
+        return fechaTrabajo.getTime() === hoy.getTime();
+    }).length;
+    
+    // Trabajos de esta semana
+    const citasSemana = trabajos.filter(t => {
+        const fechaTrabajo = new Date(t.fecha);
+        return fechaTrabajo >= hoy && fechaTrabajo <= finSemana;
+    }).length;
+    
+    // Calcular ocupación (trabajos completados vs totales)
+    const completados = trabajos.filter(t => (t.estado || '').toLowerCase().includes('complet')).length;
+    const ocupacion = trabajos.length > 0 ? ((completados / trabajos.length) * 100).toFixed(1) : 0;
+    
+    // Actualizar métricas
+    const citasHoyEl = document.getElementById('citasHoy');
+    const citasSemanaEl = document.getElementById('citasSemana');
+    const ocupacionEl = document.getElementById('ocupacion');
+    
+    if (citasHoyEl) citasHoyEl.textContent = citasHoy;
+    if (citasSemanaEl) citasSemanaEl.textContent = citasSemana;
+    if (ocupacionEl) ocupacionEl.textContent = ocupacion + '%';
+    
+    // Renderizar calendario por técnico
+    renderCalendarioTecnicos(trabajos);
+}
+
+// Renderizar calendario de técnicos
+function renderCalendarioTecnicos(trabajos) {
+    const contenedor = document.getElementById('calendarioTecnicos');
+    if (!contenedor) return;
+    
+    const mecanicosActivos = window.mecanicos || [];
+    
+    if (mecanicosActivos.length === 0) {
+        contenedor.innerHTML = '<div class="empty-state"><p>No hay técnicos registrados</p></div>';
+        return;
+    }
+    
+    // Agrupar trabajos por técnico y fecha
+    const trabajosPorTecnico = {};
+    mecanicosActivos.forEach(mec => {
+        trabajosPorTecnico[mec.id] = trabajos.filter(t => 
+            (t.mecanico === mec.id || t.tecnico === mec.id || t.tecnico === String(mec.id))
+        );
+    });
+    
+    // Crear vista de calendario
+    const calendarioHtml = mecanicosActivos.map(mec => {
+        const trabajosTecnico = trabajosPorTecnico[mec.id] || [];
+        const trabajosProximos = trabajosTecnico
+            .filter(t => {
+                const fechaTrabajo = new Date(t.fecha);
+                return fechaTrabajo >= new Date();
+            })
+            .sort((a, b) => new Date(a.fecha) - new Date(b.fecha))
+            .slice(0, 5); // Próximos 5 trabajos
+        
+        const trabajosHtml = trabajosProximos.length > 0
+            ? trabajosProximos.map(t => {
+                const fecha = new Date(t.fecha);
+                const estadoClass = (t.estado || '').toLowerCase().includes('complet') ? 'status-completado' :
+                                   (t.estado || '').toLowerCase().includes('progreso') ? 'status-progreso' : 'status-pendiente';
+                return `
+                    <div class="card" style="margin: 8px 0; padding: 12px; border-left: 4px solid var(--primary-500);">
+                        <div style="display: flex; justify-content: space-between; align-items: start;">
+                            <div style="flex: 1;">
+                                <strong>${t.placa || '—'}</strong> - ${t.cliente || '—'}
+                                <br>
+                                <small>${fecha.toLocaleDateString()} ${fecha.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</small>
+                                <br>
+                                <small>${t.observaciones || 'Sin descripción'}</small>
+                            </div>
+                            <span class="status-badge ${estadoClass}" style="margin-left: 10px;">${t.estado || 'Pendiente'}</span>
+                        </div>
+                    </div>
+                `;
+            }).join('')
+            : '<p style="color: #6b7280; padding: 16px;">No hay trabajos programados</p>';
+        
+        return `
+            <div class="card" style="margin-bottom: 20px;">
+                <h4 style="margin-bottom: 16px; color: var(--primary-500);">
+                    👨‍🔧 ${mec.nombre || mec.name || 'Técnico'}
+                </h4>
+                <div>
+                    ${trabajosHtml}
+                </div>
+            </div>
+        `;
+    }).join('');
+    
+    contenedor.innerHTML = calendarioHtml;
 }
 
 function loadHistorialData() {
@@ -535,7 +718,264 @@ function loadLiquidacionData() {
 
 function loadReportesData() {
     console.log('📈 Cargando reportes...');
-    // Reportes ya tiene datos por defecto
+    
+    // Calcular estadísticas
+    const trabajos = getTrabajosData();
+    const cotizaciones = getCotizacionesData();
+    const facturas = getFacturasData();
+    
+    const trabajosCompletados = trabajos.filter(t => (t.estado || '').toLowerCase().includes('complet')).length;
+    const ingresosMes = trabajos
+        .filter(t => {
+            const fecha = new Date(t.fecha);
+            const ahora = new Date();
+            return fecha.getMonth() === ahora.getMonth() && fecha.getFullYear() === ahora.getFullYear();
+        })
+        .reduce((sum, t) => sum + (t.total || 0), 0);
+    
+    // Actualizar métricas si existen
+    const reportesEl = document.getElementById('reportesGenerados');
+    if (reportesEl) reportesEl.textContent = trabajos.length;
+    
+    // Agregar botones de exportación si no existen
+    const reportesSection = document.getElementById('reportes');
+    if (reportesSection) {
+        const botonesExportacion = reportesSection.querySelector('.export-buttons');
+        if (!botonesExportacion) {
+            const botonesHtml = `
+                <div class="mt-4 export-buttons">
+                    <h4>Exportar Reportes</h4>
+                    <div class="btn-group">
+                        <button class="btn btn-primary" onclick="exportarReporteTrabajosPDF()">📄 Exportar Trabajos (PDF)</button>
+                        <button class="btn btn-success" onclick="exportarReporteTrabajosExcel()">📊 Exportar Trabajos (Excel)</button>
+                        <button class="btn btn-primary" onclick="exportarReporteFinancieroPDF()">💰 Reporte Financiero (PDF)</button>
+                        <button class="btn btn-success" onclick="exportarReporteFinancieroExcel()">📈 Reporte Financiero (Excel)</button>
+                    </div>
+                </div>
+            `;
+            const card = reportesSection.querySelector('.card');
+            if (card) {
+                const div = document.createElement('div');
+                div.innerHTML = botonesHtml;
+                card.appendChild(div.firstElementChild);
+            }
+        }
+    }
+}
+
+// Exportar reporte de trabajos a PDF
+function exportarReporteTrabajosPDF() {
+    const trabajos = getTrabajosData();
+    const fechaReporte = new Date().toLocaleDateString();
+    
+    const contenido = `
+        <html>
+        <head>
+            <title>Reporte de Trabajos - ${fechaReporte}</title>
+            <style>
+                body { font-family: Arial, sans-serif; padding: 20px; }
+                h1 { color: #1E3A8A; }
+                table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+                th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+                th { background-color: #1E3A8A; color: white; }
+                .total { font-size: 18px; font-weight: bold; }
+            </style>
+        </head>
+        <body>
+            <h1>Reporte de Trabajos</h1>
+            <p><strong>Fecha del reporte:</strong> ${fechaReporte}</p>
+            <p><strong>Total de trabajos:</strong> ${trabajos.length}</p>
+            
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Fecha</th>
+                        <th>Cliente</th>
+                        <th>Placa</th>
+                        <th>Vehículo</th>
+                        <th>Técnico</th>
+                        <th>Estado</th>
+                        <th>Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${trabajos.map(t => `
+                        <tr>
+                            <td>${t.id || '—'}</td>
+                            <td>${t.fecha ? new Date(t.fecha).toLocaleDateString() : '—'}</td>
+                            <td>${t.cliente || '—'}</td>
+                            <td>${t.placa || '—'}</td>
+                            <td>${[t.marca, t.modelo, t.ano].filter(Boolean).join(' ') || '—'}</td>
+                            <td>${obtenerNombreTecnicoPorId(t.mecanico || t.tecnico || '')}</td>
+                            <td>${t.estado || 'Pendiente'}</td>
+                            <td>${formatCurrency(t.total || 0)}</td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+                <tfoot>
+                    <tr>
+                        <td colspan="7" style="text-align: right; font-weight: bold;">TOTAL:</td>
+                        <td class="total">${formatCurrency(trabajos.reduce((sum, t) => sum + (t.total || 0), 0))}</td>
+                    </tr>
+                </tfoot>
+            </table>
+        </body>
+        </html>
+    `;
+    
+    const ventana = window.open('', '_blank');
+    ventana.document.write(contenido);
+    ventana.document.close();
+    ventana.print();
+}
+
+// Exportar reporte de trabajos a Excel (CSV)
+function exportarReporteTrabajosExcel() {
+    const trabajos = getTrabajosData();
+    
+    // Crear CSV
+    const headers = ['ID', 'Fecha', 'Cliente', 'Cédula', 'Placa', 'Marca', 'Modelo', 'Año', 'Técnico', 'Estado', 'Subtotal', 'IVA', 'Total'];
+    const rows = trabajos.map(t => [
+        t.id || '',
+        t.fecha ? new Date(t.fecha).toLocaleDateString() : '',
+        t.cliente || '',
+        t.cedula || '',
+        t.placa || '',
+        t.marca || '',
+        t.modelo || '',
+        t.ano || '',
+        obtenerNombreTecnicoPorId(t.mecanico || t.tecnico || ''),
+        t.estado || 'Pendiente',
+        t.subtotalSinIva || 0,
+        t.totalIva || 0,
+        t.total || 0
+    ]);
+    
+    const csv = [
+        headers.join(','),
+        ...rows.map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
+    ].join('\n');
+    
+    // Descargar
+    const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `reporte_trabajos_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    showNotification('✅ Reporte exportado a Excel', 'success');
+}
+
+// Exportar reporte financiero a PDF
+function exportarReporteFinancieroPDF() {
+    const trabajos = getTrabajosData();
+    const facturas = getFacturasData();
+    const cotizaciones = getCotizacionesData();
+    
+    const ahora = new Date();
+    const inicioMes = new Date(ahora.getFullYear(), ahora.getMonth(), 1);
+    
+    const trabajosMes = trabajos.filter(t => {
+        const fecha = new Date(t.fecha);
+        return fecha >= inicioMes;
+    });
+    
+    const ingresosMes = trabajosMes.reduce((sum, t) => sum + (t.total || 0), 0);
+    const ivaMes = trabajosMes.reduce((sum, t) => sum + (t.totalIva || 0), 0);
+    const subtotalMes = trabajosMes.reduce((sum, t) => sum + (t.subtotalSinIva || 0), 0);
+    
+    const contenido = `
+        <html>
+        <head>
+            <title>Reporte Financiero - ${ahora.toLocaleDateString()}</title>
+            <style>
+                body { font-family: Arial, sans-serif; padding: 20px; }
+                h1 { color: #1E3A8A; }
+                .metric { background: #f8f9fa; padding: 15px; margin: 10px 0; border-radius: 8px; }
+                .metric-value { font-size: 24px; font-weight: bold; color: #1E3A8A; }
+            </style>
+        </head>
+        <body>
+            <h1>Reporte Financiero</h1>
+            <p><strong>Período:</strong> ${inicioMes.toLocaleDateString()} - ${ahora.toLocaleDateString()}</p>
+            
+            <div class="metric">
+                <strong>Ingresos del Mes:</strong>
+                <div class="metric-value">${formatCurrency(ingresosMes)}</div>
+            </div>
+            
+            <div class="metric">
+                <strong>Subtotal (sin IVA):</strong>
+                <div class="metric-value">${formatCurrency(subtotalMes)}</div>
+            </div>
+            
+            <div class="metric">
+                <strong>IVA Recaudado:</strong>
+                <div class="metric-value">${formatCurrency(ivaMes)}</div>
+            </div>
+            
+            <div class="metric">
+                <strong>Trabajos Realizados:</strong>
+                <div class="metric-value">${trabajosMes.length}</div>
+            </div>
+            
+            <div class="metric">
+                <strong>Cotizaciones:</strong>
+                <div class="metric-value">${cotizaciones.length}</div>
+            </div>
+            
+            <div class="metric">
+                <strong>Facturas:</strong>
+                <div class="metric-value">${facturas.length}</div>
+            </div>
+        </body>
+        </html>
+    `;
+    
+    const ventana = window.open('', '_blank');
+    ventana.document.write(contenido);
+    ventana.document.close();
+    ventana.print();
+}
+
+// Exportar reporte financiero a Excel
+function exportarReporteFinancieroExcel() {
+    const trabajos = getTrabajosData();
+    const ahora = new Date();
+    const inicioMes = new Date(ahora.getFullYear(), ahora.getMonth(), 1);
+    
+    const trabajosMes = trabajos.filter(t => {
+        const fecha = new Date(t.fecha);
+        return fecha >= inicioMes;
+    });
+    
+    const csv = [
+        ['Reporte Financiero', `Período: ${inicioMes.toLocaleDateString()} - ${ahora.toLocaleDateString()}`],
+        [''],
+        ['Métrica', 'Valor'],
+        ['Ingresos del Mes', trabajosMes.reduce((sum, t) => sum + (t.total || 0), 0)],
+        ['Subtotal (sin IVA)', trabajosMes.reduce((sum, t) => sum + (t.subtotalSinIva || 0), 0)],
+        ['IVA Recaudado', trabajosMes.reduce((sum, t) => sum + (t.totalIva || 0), 0)],
+        ['Trabajos Realizados', trabajosMes.length],
+        ['Promedio por Trabajo', trabajosMes.length > 0 ? (trabajosMes.reduce((sum, t) => sum + (t.total || 0), 0) / trabajosMes.length).toFixed(2) : 0]
+    ].map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(',')).join('\n');
+    
+    const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `reporte_financiero_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    showNotification('✅ Reporte financiero exportado a Excel', 'success');
 }
 
 function loadInventarioData() {
@@ -3137,37 +3577,209 @@ function nuevaCotizacion() {
     showModal(modal);
 }
 
+// Variables globales para cotizaciones
+let itemsCotizacion = [];
+
 // Agregar item a cotización
 function agregarItemCotizacion() {
     const codigoProducto = document.getElementById('productoSeleccionado').value;
     if (!codigoProducto) return;
     
-    const producto = inventario.find(p => p.codigo === codigoProducto);
-    if (!producto) return;
+    // Buscar en inventario de CUENTTI
+    const baseInventario = Array.isArray(cuenttiInventario) && cuenttiInventario.length
+        ? cuenttiInventario
+        : inventario;
     
-    console.log('Agregando producto:', producto);
+    const producto = baseInventario.find(p => p.codigo === codigoProducto);
+    if (!producto) {
+        showNotification('Producto no encontrado', 'error');
+        return;
+    }
     
-    // Aquí se agregaría el producto a la lista
+    // Verificar si ya está agregado
+    if (itemsCotizacion.find(item => item.codigo === codigoProducto)) {
+        showNotification('Este producto ya está en la cotización', 'warning');
+        return;
+    }
+    
+    const nuevoItem = {
+        codigo: producto.codigo,
+        nombre: producto.nombre,
+        cantidad: 1,
+        precio: producto.precio || 0,
+        iva: producto.iva || 19,
+        categoria: producto.categoria || 'General'
+    };
+    
+    itemsCotizacion.push(nuevoItem);
+    actualizarItemsCotizacion();
+    calcularTotalCotizacion();
+    
     showNotification(`${producto.nombre} agregado a la cotización`, 'success');
     
     // Reset select
     document.getElementById('productoSeleccionado').value = '';
 }
 
+// Actualizar visualización de items de cotización
+function actualizarItemsCotizacion() {
+    const contenedor = document.getElementById('itemsCotizacion');
+    if (!contenedor) return;
+    
+    const itemsHtml = itemsCotizacion.map((item, index) => {
+        const subtotal = (item.precio || 0) * (item.cantidad || 1);
+        const iva = subtotal * ((item.iva || 19) / 100);
+        const total = subtotal + iva;
+        
+        return `
+            <div class="card" style="margin: 8px 0; padding: 12px;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div style="flex: 1;">
+                        <strong>${item.nombre}</strong> (${item.codigo})
+                        <br>
+                        <small>Cantidad: 
+                            <input type="number" min="1" value="${item.cantidad || 1}" 
+                                   style="width: 60px; padding: 4px;"
+                                   onchange="actualizarCantidadCotizacion(${index}, this.value)">
+                        </small>
+                        <br>
+                        <small>Precio: ${formatCurrency(item.precio || 0)} | IVA: ${item.iva || 19}%</small>
+                        <br>
+                        <strong>Subtotal: ${formatCurrency(total)}</strong>
+                    </div>
+                    <button type="button" class="btn btn-sm" style="background: #dc3545; color: white; margin-left: 10px;"
+                            onclick="eliminarItemCotizacion(${index})">Eliminar</button>
+                </div>
+            </div>
+        `;
+    }).join('');
+    
+    const selectHtml = `
+        <div class="form-group">
+            <label class="form-label">Agregar Producto/Repuesto</label>
+            <div class="form-row">
+                <select class="form-select" id="productoSeleccionado" onchange="agregarItemCotizacion()">
+                    <option value="">Seleccionar producto</option>
+                    ${(Array.isArray(cuenttiInventario) && cuenttiInventario.length ? cuenttiInventario : inventario)
+                        .map(item => `<option value="${item.codigo}">${item.codigo} - ${item.nombre} - ${formatCurrency(item.precio || 0)}</option>`)
+                        .join('')}
+                </select>
+            </div>
+        </div>
+        ${itemsCotizacion.length > 0 ? '<h5 style="margin-top: 16px;">Items Agregados:</h5>' + itemsHtml : ''}
+    `;
+    
+    contenedor.innerHTML = selectHtml;
+}
+
+// Actualizar cantidad de item en cotización
+function actualizarCantidadCotizacion(index, cantidad) {
+    if (itemsCotizacion[index]) {
+        itemsCotizacion[index].cantidad = parseInt(cantidad) || 1;
+        actualizarItemsCotizacion();
+        calcularTotalCotizacion();
+    }
+}
+
+// Eliminar item de cotización
+function eliminarItemCotizacion(index) {
+    itemsCotizacion.splice(index, 1);
+    actualizarItemsCotizacion();
+    calcularTotalCotizacion();
+}
+
+// Calcular total de cotización
+function calcularTotalCotizacion() {
+    let subtotalProductos = 0;
+    let totalIva = 0;
+    
+    itemsCotizacion.forEach(item => {
+        const cantidad = item.cantidad || 1;
+        const precio = item.precio || 0;
+        const ivaPorcentaje = item.iva || 19;
+        const subtotalItem = precio * cantidad;
+        const ivaItem = subtotalItem * (ivaPorcentaje / 100);
+        
+        subtotalProductos += subtotalItem;
+        totalIva += ivaItem;
+    });
+    
+    const manoObra = parseFloat(document.getElementById('cotizacionManoObra')?.value || 0);
+    const total = subtotalProductos + totalIva + manoObra;
+    
+    const subtotalEl = document.getElementById('subtotalProductos');
+    const manoObraEl = document.getElementById('subtotalManoObra');
+    const totalEl = document.getElementById('totalCotizacion');
+    
+    if (subtotalEl) subtotalEl.textContent = formatCurrency(subtotalProductos + totalIva);
+    if (manoObraEl) manoObraEl.textContent = formatCurrency(manoObra);
+    if (totalEl) totalEl.textContent = formatCurrency(total);
+}
+
 // Guardar nueva cotización
 function guardarNuevaCotizacion(event) {
     event.preventDefault();
     
-    const cotizacionNumero = document.getElementById('cotizacionNumero').value;
+    const numero = document.getElementById('cotizacionNumero').value;
+    const fecha = document.getElementById('cotizacionFecha').value;
+    const cliente = document.getElementById('cotizacionCliente').value.trim();
+    const vehiculo = document.getElementById('cotizacionVehiculo').value.trim();
+    const observaciones = document.getElementById('cotizacionObservaciones')?.value || '';
     
-    console.log('💾 Guardando nueva cotización:', cotizacionNumero);
+    if (!cliente || !vehiculo) {
+        showNotification('Por favor complete todos los campos obligatorios', 'error');
+        return;
+    }
     
+    if (itemsCotizacion.length === 0) {
+        showNotification('Agregue al menos un producto a la cotización', 'error');
+        return;
+    }
+    
+    // Calcular totales
+    let subtotalProductos = 0;
+    let totalIva = 0;
+    itemsCotizacion.forEach(item => {
+        const cantidad = item.cantidad || 1;
+        const precio = item.precio || 0;
+        const ivaPorcentaje = item.iva || 19;
+        const subtotalItem = precio * cantidad;
+        const ivaItem = subtotalItem * (ivaPorcentaje / 100);
+        subtotalProductos += subtotalItem;
+        totalIva += ivaItem;
+    });
+    
+    const manoObra = parseFloat(document.getElementById('cotizacionManoObra')?.value || 0);
+    const total = subtotalProductos + totalIva + manoObra;
+    
+    const cotizacion = {
+        id: numero,
+        numero: numero,
+        fecha: fecha || new Date().toISOString().split('T')[0],
+        cliente: cliente,
+        vehiculo: vehiculo,
+        items: [...itemsCotizacion],
+        manoObra: manoObra,
+        subtotalProductos: subtotalProductos,
+        totalIva: totalIva,
+        total: total,
+        observaciones: observaciones,
+        estado: 'Pendiente',
+        validez: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 7 días
+        createdAt: new Date().toISOString()
+    };
+    
+    addCotizacionData(cotizacion);
     nextQuoteNumber++;
-    showNotification(`Cotización ${cotizacionNumero} creada exitosamente`, 'success');
+    
+    showNotification(`✅ Cotización ${numero} creada exitosamente`, 'success');
     closeModal();
     
-    // Actualizar datos
-    // loadCotizacionesData();
+    // Limpiar
+    itemsCotizacion = [];
+    
+    // Actualizar vista
+    loadCotizacionesData();
 }
 
 // Buscar vehículo en historial
@@ -3345,37 +3957,63 @@ function enviarFacturas() {
 }
 
 // Ver cotización
-function verCotizacion(cotizacion) {
-    console.log('👁️ Ver cotización:', cotizacion);
+function verCotizacion(cotizacionId) {
+    console.log('👁️ Ver cotización:', cotizacionId);
+    
+    const cotizaciones = getCotizacionesData();
+    const cotizacion = cotizaciones.find(c => c.id === cotizacionId || c.numero === cotizacionId);
+    
+    if (!cotizacion) {
+        showNotification('Cotización no encontrada', 'error');
+        return;
+    }
+    
+    const itemsHtml = (cotizacion.items || []).map(item => {
+        const cantidad = item.cantidad || 1;
+        const precio = item.precio || 0;
+        const iva = item.iva || 19;
+        const subtotal = precio * cantidad;
+        const ivaValor = subtotal * (iva / 100);
+        const total = subtotal + ivaValor;
+        
+        return `<li>${item.nombre} (${item.codigo}) - ${cantidad}x ${formatCurrency(precio)} = ${formatCurrency(total)} (IVA ${iva}%)</li>`;
+    }).join('');
+    
+    const estadoClass = cotizacion.estado === 'Aprobada' ? 'status-completado' : 
+                       cotizacion.estado === 'Rechazada' ? 'status-error' : 'status-pendiente';
     
     const modal = createModal(
         'Detalles de Cotización',
         `
         <div style="line-height: 1.6;">
-            <h4>Cotización: ${cotizacion}</h4>
-            <p><strong>Cliente:</strong> Juan Pérez</p>
-            <p><strong>Vehículo:</strong> Toyota Corolla 2020</p>
-            <p><strong>Fecha:</strong> 10/01/2025</p>
-            <p><strong>Validez:</strong> 17/01/2025</p>
+            <h4>Cotización: ${cotizacion.numero || cotizacion.id}</h4>
+            <p><strong>Cliente:</strong> ${cotizacion.cliente || '—'}</p>
+            <p><strong>Vehículo:</strong> ${cotizacion.vehiculo || '—'}</p>
+            <p><strong>Fecha:</strong> ${cotizacion.fecha ? new Date(cotizacion.fecha).toLocaleDateString() : '—'}</p>
+            <p><strong>Validez hasta:</strong> ${cotizacion.validez ? new Date(cotizacion.validez).toLocaleDateString() : '—'}</p>
+            <p><strong>Estado:</strong> <span class="status-badge ${estadoClass}">${cotizacion.estado || 'Pendiente'}</span></p>
             
             <h5 style="margin: 16px 0 8px 0;">Items Cotizados:</h5>
-            <ul>
-                <li>Filtro de Aceite - $15,000</li>
-                <li>Aceite Motor 5W-30 - $25,000</li>
-                <li>Mano de Obra (2 horas) - $40,000</li>
-            </ul>
+            <ul>${itemsHtml || '<li>No hay items</li>'}</ul>
             
-            <p><strong>Subtotal:</strong> $80,000</p>
-            <p><strong>IVA (19%):</strong> $15,200</p>
-            <p><strong>TOTAL:</strong> <span style="font-size: 18px; font-weight: bold; color: var(--primary-500);">$95,200</span></p>
+            <div style="background: var(--neutral-50); padding: 16px; border-radius: 8px; margin: 16px 0;">
+                <p><strong>Subtotal productos:</strong> ${formatCurrency(cotizacion.subtotalProductos || 0)}</p>
+                <p><strong>IVA:</strong> ${formatCurrency(cotizacion.totalIva || 0)}</p>
+                <p><strong>Mano de obra:</strong> ${formatCurrency(cotizacion.manoObra || 0)}</p>
+                <p><strong>TOTAL:</strong> <span style="font-size: 18px; font-weight: bold; color: var(--primary-500);">${formatCurrency(cotizacion.total || 0)}</span></p>
+            </div>
             
-            <p><strong>Observaciones:</strong> Cotización válida por 7 días. Incluye garantía de 30 días en repuestos.</p>
+            ${cotizacion.observaciones ? `<p><strong>Observaciones:</strong> ${cotizacion.observaciones}</p>` : ''}
         </div>
         `,
         [
             { text: 'Cerrar', class: 'btn-outline', onclick: 'closeModal()' },
-            { text: 'Exportar PDF', class: 'btn-primary', onclick: 'exportarPDF()' },
-            { text: 'Aprobar', class: 'btn-success', onclick: 'aprobarCotizacion()' }
+            { text: 'Exportar PDF', class: 'btn-primary', onclick: `exportarCotizacionPDF('${cotizacion.id}')` },
+            ...(cotizacion.estado === 'Pendiente' ? 
+                [{ text: 'Aprobar', class: 'btn-success', onclick: `aprobarCotizacion('${cotizacion.id}')` }] : 
+                cotizacion.estado === 'Aprobada' ? 
+                [{ text: 'Generar Factura', class: 'btn-primary', onclick: `generarFactura('${cotizacion.id}')` }] : 
+                [])
         ]
     );
     
@@ -3383,33 +4021,87 @@ function verCotizacion(cotizacion) {
 }
 
 // Aprobar cotización
-function aprobarCotizacion(cotizacion) {
-    console.log('✅ Aprobando cotización:', cotizacion);
-    showNotification(`Cotización ${cotizacion} aprobada`, 'success');
+function aprobarCotizacion(cotizacionId) {
+    console.log('✅ Aprobando cotización:', cotizacionId);
+    
+    const cotizaciones = getCotizacionesData();
+    const cotizacion = cotizaciones.find(c => c.id === cotizacionId || c.numero === cotizacionId);
+    
+    if (!cotizacion) {
+        showNotification('Cotización no encontrada', 'error');
+        return;
+    }
+    
+    cotizacion.estado = 'Aprobada';
+    cotizacion.fechaAprobacion = new Date().toISOString();
+    saveCotizacionesData();
+    
+    showNotification(`✅ Cotización ${cotizacion.numero || cotizacion.id} aprobada`, 'success');
     closeModal();
+    loadCotizacionesData();
 }
 
-// Generar factura
-function generarFactura(cotizacion) {
-    console.log('📄 Generando factura para:', cotizacion);
+// Generar factura desde cotización aprobada
+async function generarFactura(cotizacionId) {
+    console.log('📄 Generando factura para cotización:', cotizacionId);
     
-    const numeroFactura = `FAC-2025-${nextInvoiceNumber.toString().padStart(3, '0')}`;
+    const cotizaciones = getCotizacionesData();
+    const cotizacion = cotizaciones.find(c => c.id === cotizacionId || c.numero === cotizacionId);
+    
+    if (!cotizacion) {
+        showNotification('Cotización no encontrada', 'error');
+        return;
+    }
+    
+    if (cotizacion.estado !== 'Aprobada') {
+        showNotification('Solo se pueden generar facturas de cotizaciones aprobadas', 'error');
+        return;
+    }
+    
+    const numeroFactura = `FAC-${new Date().getFullYear()}-${nextInvoiceNumber.toString().padStart(3, '0')}`;
     nextInvoiceNumber++;
+    
+    // Crear factura
+    const factura = {
+        id: numeroFactura,
+        numero: numeroFactura,
+        cotizacionId: cotizacion.id,
+        fecha: new Date().toISOString().split('T')[0],
+        cliente: cotizacion.cliente,
+        vehiculo: cotizacion.vehiculo,
+        items: [...(cotizacion.items || [])],
+        manoObra: cotizacion.manoObra || 0,
+        subtotalProductos: cotizacion.subtotalProductos || 0,
+        totalIva: cotizacion.totalIva || 0,
+        total: cotizacion.total || 0,
+        estado: 'Pendiente',
+        enviadoACuentti: false,
+        createdAt: new Date().toISOString()
+    };
+    
+    addFacturaData(factura);
+    
+    // Marcar cotización como facturada
+    cotizacion.facturada = true;
+    cotizacion.facturaId = numeroFactura;
+    saveCotizacionesData();
     
     const modal = createModal(
         'Factura Generada',
         `
         <div style="line-height: 1.6;">
             <h4>Factura: ${numeroFactura}</h4>
-            <p><strong>Cliente:</strong> Juan Pérez</p>
-            <p><strong>Desde cotización:</strong> ${cotizacion}</p>
+            <p><strong>Cliente:</strong> ${factura.cliente}</p>
+            <p><strong>Vehículo:</strong> ${factura.vehiculo}</p>
+            <p><strong>Desde cotización:</strong> ${cotizacion.numero || cotizacion.id}</p>
             <p><strong>Fecha:</strong> ${new Date().toLocaleDateString()}</p>
             
             <div style="background: var(--neutral-50); padding: 16px; border-radius: 8px; margin: 16px 0;">
                 <h5>Resumen de la Factura:</h5>
-                <p><strong>Subtotal:</strong> $80,000</p>
-                <p><strong>IVA (19%):</strong> $15,200</p>
-                <p><strong>Total:</strong> <span style="font-size: 20px; font-weight: bold; color: var(--primary-500);">$95,200</span></p>
+                <p><strong>Subtotal productos:</strong> ${formatCurrency(factura.subtotalProductos)}</p>
+                <p><strong>IVA:</strong> ${formatCurrency(factura.totalIva)}</p>
+                <p><strong>Mano de obra:</strong> ${formatCurrency(factura.manoObra)}</p>
+                <p><strong>Total:</strong> <span style="font-size: 20px; font-weight: bold; color: var(--primary-500);">${formatCurrency(factura.total)}</span></p>
             </div>
             
             <p><strong>Estado:</strong> <span class="status-badge status-pendiente">Pendiente de envío a CUENTTI</span></p>
@@ -3417,18 +4109,133 @@ function generarFactura(cotizacion) {
         `,
         [
             { text: 'Cerrar', class: 'btn-outline', onclick: 'closeModal()' },
-            { text: 'Enviar a CUENTTI', class: 'btn-primary', onclick: 'enviarFactura()' }
+            { text: 'Enviar a CUENTTI', class: 'btn-primary', onclick: `enviarFacturaACuentti('${numeroFactura}')` }
         ]
     );
     
     showModal(modal);
+    loadCotizacionesData();
 }
 
-// Enviar factura
-function enviarFactura(numeroFactura) {
+// Enviar factura a CUENTTI
+async function enviarFacturaACuentti(numeroFactura) {
     console.log('📤 Enviando factura a CUENTTI:', numeroFactura);
-    showNotification(`Factura ${numeroFactura} enviada a CUENTTI`, 'success');
-    closeModal();
+    
+    const facturas = getFacturasData();
+    const factura = facturas.find(f => f.id === numeroFactura || f.numero === numeroFactura);
+    
+    if (!factura) {
+        showNotification('Factura no encontrada', 'error');
+        return;
+    }
+    
+    if (!cuenttiConfig || !cuenttiConfig.token) {
+        showNotification('Configuración de CUENTTI no disponible', 'error');
+        return;
+    }
+    
+    try {
+        showNotification('Enviando factura a CUENTTI...', 'info');
+        
+        // Preparar datos para CUENTTI
+        const facturaData = {
+            customer_document: factura.cliente, // Ajustar según API de CUENTTI
+            items: factura.items.map(item => ({
+                product_code: item.codigo,
+                quantity: item.cantidad || 1,
+                unit_price: item.precio || 0,
+                tax_rate: item.iva || 19
+            })),
+            subtotal: factura.subtotalProductos,
+            tax: factura.totalIva,
+            total: factura.total,
+            date: factura.fecha
+        };
+        
+        // Enviar a CUENTTI
+        const response = await cuenttiRequest(cuenttiConfig.endpoints.invoices, 'POST', facturaData);
+        
+        factura.enviadoACuentti = true;
+        factura.estado = 'Enviada';
+        factura.cuenttiId = response.id || response.invoice_id;
+        factura.fechaEnvio = new Date().toISOString();
+        saveFacturasData();
+        
+        showNotification(`✅ Factura ${numeroFactura} enviada a CUENTTI exitosamente`, 'success');
+        closeModal();
+    } catch (error) {
+        console.error('Error enviando factura a CUENTTI:', error);
+        showNotification(`❌ Error enviando factura: ${error.message}`, 'error');
+    }
+}
+
+// Exportar cotización a PDF
+function exportarCotizacionPDF(cotizacionId) {
+    const cotizaciones = getCotizacionesData();
+    const cotizacion = cotizaciones.find(c => c.id === cotizacionId);
+    
+    if (!cotizacion) {
+        showNotification('Cotización no encontrada', 'error');
+        return;
+    }
+    
+    // Crear contenido HTML para PDF
+    const contenido = `
+        <html>
+        <head>
+            <title>Cotización ${cotizacion.numero}</title>
+            <style>
+                body { font-family: Arial, sans-serif; padding: 20px; }
+                h1 { color: #1E3A8A; }
+                table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+                th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+                th { background-color: #1E3A8A; color: white; }
+                .total { font-size: 18px; font-weight: bold; }
+            </style>
+        </head>
+        <body>
+            <h1>Cotización ${cotizacion.numero}</h1>
+            <p><strong>Cliente:</strong> ${cotizacion.cliente}</p>
+            <p><strong>Vehículo:</strong> ${cotizacion.vehiculo}</p>
+            <p><strong>Fecha:</strong> ${new Date(cotizacion.fecha).toLocaleDateString()}</p>
+            <p><strong>Validez:</strong> ${new Date(cotizacion.validez).toLocaleDateString()}</p>
+            
+            <table>
+                <thead>
+                    <tr>
+                        <th>Producto</th>
+                        <th>Cantidad</th>
+                        <th>Precio Unit.</th>
+                        <th>IVA</th>
+                        <th>Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${(cotizacion.items || []).map(item => `
+                        <tr>
+                            <td>${item.nombre} (${item.codigo})</td>
+                            <td>${item.cantidad || 1}</td>
+                            <td>${formatCurrency(item.precio || 0)}</td>
+                            <td>${item.iva || 19}%</td>
+                            <td>${formatCurrency((item.precio || 0) * (item.cantidad || 1) * (1 + (item.iva || 19) / 100))}</td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+            
+            <p><strong>Mano de obra:</strong> ${formatCurrency(cotizacion.manoObra || 0)}</p>
+            <p class="total">TOTAL: ${formatCurrency(cotizacion.total || 0)}</p>
+            
+            ${cotizacion.observaciones ? `<p><strong>Observaciones:</strong> ${cotizacion.observaciones}</p>` : ''}
+        </body>
+        </html>
+    `;
+    
+    // Abrir ventana para imprimir/guardar como PDF
+    const ventana = window.open('', '_blank');
+    ventana.document.write(contenido);
+    ventana.document.close();
+    ventana.print();
 }
 
 // ===== SISTEMA DE MODALES =====
@@ -3618,6 +4425,14 @@ window.enviarFactura = enviarFactura;
 window.buscarClientePorCedula = buscarClientePorCedula;
 window.buscarClienteRecepcion = buscarClienteRecepcion;
 window.agregarItemCotizacion = agregarItemCotizacion;
+window.actualizarCantidadCotizacion = actualizarCantidadCotizacion;
+window.eliminarItemCotizacion = eliminarItemCotizacion;
+window.exportarCotizacionPDF = exportarCotizacionPDF;
+window.enviarFacturaACuentti = enviarFacturaACuentti;
+window.exportarReporteTrabajosPDF = exportarReporteTrabajosPDF;
+window.exportarReporteTrabajosExcel = exportarReporteTrabajosExcel;
+window.exportarReporteFinancieroPDF = exportarReporteFinancieroPDF;
+window.exportarReporteFinancieroExcel = exportarReporteFinancieroExcel;
 window.agendarMantenimiento = agendarMantenimiento;
 window.reabastecerStock = reabastecerStock;
 window.editarProducto = editarProducto;
