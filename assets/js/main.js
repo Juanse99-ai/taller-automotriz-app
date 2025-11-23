@@ -2701,33 +2701,84 @@ async function guardarNuevoCliente(event, contexto = 'ot') {
     const nombre = document.getElementById('ncNombre').value.trim();
     const tel = document.getElementById('ncTel').value.trim();
     const email = document.getElementById('ncEmail').value.trim();
-    if (!doc || !nombre) { showNotification('Cédula y Nombre son obligatorios', 'error'); return; }
-    const nuevo = { cedula: doc, nombre, telefono: tel || null, email: email || null };
+    
+    if (!doc || !nombre) { 
+        showNotification('Cédula y Nombre son obligatorios', 'error'); 
+        return; 
+    }
+    
+    const nuevo = { 
+        cedula: doc, 
+        nombre, 
+        telefono: tel || null, 
+        email: email || null,
+        cuentti_creado: false,
+        fecha_creacion: new Date().toISOString()
+    };
+    
     try {
+        // Intentar crear en CUENTTI primero
+        if (cuenttiConfig && cuenttiConfig.token) {
+            try {
+                console.log('📤 Sincronizando cliente nuevo con CUENTTI...');
+                const customerId = await crearClienteEnCuenttiReal(nuevo);
+                nuevo.id = customerId;
+                nuevo.cuentti_creado = true;
+                console.log('✅ Cliente sincronizado con CUENTTI:', customerId);
+            } catch (error) {
+                console.warn('⚠️ No se pudo sincronizar con CUENTTI inmediatamente:', error.message);
+                // Agregar a cola de sincronización
+                await agregarAColaDeSincronizacion('cliente', nuevo, `Nuevo cliente: ${nombre}`);
+                showNotification('⚠️ Cliente creado localmente. Se sincronizará con CUENTTI cuando haya conexión.', 'warning');
+            }
+        } else {
+            console.warn('⚠️ CUENTTI no disponible, cliente solo local');
+            showNotification('⚠️ Cliente creado localmente (CUENTTI no disponible)', 'warning');
+        }
+        
+        // Guardar localmente (Supabase o memoria)
         if (window.supabase) {
             try {
                 const { data, error } = await supabase.from('clientes').insert(nuevo).select();
                 if (error) console.warn('Supabase insert clientes:', error);
                 if (data && data.length) nuevo.id = data[0].id;
-            } catch(e) { console.warn('Supabase insertar cliente falla', e); }
+            } catch(e) { 
+                console.warn('Supabase insertar cliente falla', e); 
+            }
         }
+        
         // Actualizar listas en memoria
-        if (Array.isArray(window.supabaseClientes)) supabaseClientes.push(nuevo);
-        else clientes.push(nuevo);
+        if (Array.isArray(window.supabaseClientes)) {
+            supabaseClientes.push(nuevo);
+        } else if (Array.isArray(window.cuenttiClientes)) {
+            cuenttiClientes.push(nuevo);
+        } else {
+            clientes.push(nuevo);
+        }
+        
         // Backups
-        localStorage.setItem('supabase_clientes_backup', JSON.stringify(supabaseClientes || clientes));
+        if (Array.isArray(supabaseClientes)) {
+            localStorage.setItem('supabase_clientes_backup', JSON.stringify(supabaseClientes));
+        } else {
+            localStorage.setItem('cuentti_clientes_backup', JSON.stringify(cuenttiClientes || clientes));
+        }
+        
         closeModal();
-        showNotification('Cliente creado', 'success');
+        showNotification(`✅ Cliente ${nombre} creado`, 'success');
+        
         // Autocompletar según contexto
         if (contexto === 'ot') {
             seleccionarCliente(nombre, doc, tel || '', email || '');
         } else {
             seleccionarClienteRecepcion(nombre, doc, tel || '', email || '');
         }
+        
         // Asociar placa si existe valor en el formulario
         try {
-            if (contexto === 'ot') autocompletarClientePorPlacaOT(); else autocompletarClientePorPlacaRecepcion();
+            if (contexto === 'ot') autocompletarClientePorPlacaOT(); 
+            else autocompletarClientePorPlacaRecepcion();
         } catch(e) {}
+        
     } catch (e) {
         console.error('Error creando cliente:', e);
         showNotification('No se pudo crear el cliente', 'error');
@@ -3067,6 +3118,23 @@ async function guardarNuevoTrabajo(event) {
         } catch (e) {
             console.warn('No se pudo guardar trabajo en Supabase:', e);
         }
+        
+        // Descontar stock en CUENTTI para cada item (solo si es nuevo trabajo)
+        if (!trabajoExistente && trabajoCompleto.items && trabajoCompleto.items.length > 0) {
+            console.log('📦 Descontando stock en CUENTTI para items del trabajo...');
+            for (const item of trabajoCompleto.items) {
+                if (!item.isManoObra && item.codigo) {
+                    try {
+                        const cantidad = parseInt(item.cantidad) || 1;
+                        await descontarStockEnCuentti(item.codigo, cantidad, `Trabajo ${trabajoCompleto.id}`);
+                    } catch (error) {
+                        console.warn(`⚠️ No se pudo descontar stock del item ${item.nombre}:`, error.message);
+                        // El error ya fue agregado a la cola, no mostramos alerta
+                    }
+                }
+            }
+        }
+        
     } catch (e) {
         console.warn('No se pudo agregar a trabajos:', e);
     }
@@ -4237,7 +4305,7 @@ async function generarFactura(cotizacionId) {
         `,
         [
             { text: 'Cerrar', class: 'btn-outline', onclick: 'closeModal()' },
-            { text: 'Enviar a CUENTTI', class: 'btn-primary', onclick: `enviarFacturaACuentti('${numeroFactura}')` }
+            { text: 'Enviar a CUENTTI', class: 'btn-primary', onclick: `enviarFacturaACuenttiModal('${numeroFactura}')` }
         ]
     );
     
@@ -4245,8 +4313,8 @@ async function generarFactura(cotizacionId) {
     loadCotizacionesData();
 }
 
-// Enviar factura a CUENTTI
-async function enviarFacturaACuentti(numeroFactura) {
+// Enviar factura a CUENTTI (versión mejorada con reintentos)
+async function enviarFacturaACuenttiModal(numeroFactura) {
     console.log('📤 Enviando factura a CUENTTI:', numeroFactura);
     
     const facturas = getFacturasData();
@@ -4258,42 +4326,37 @@ async function enviarFacturaACuentti(numeroFactura) {
     }
     
     if (!cuenttiConfig || !cuenttiConfig.token) {
-        showNotification('Configuración de CUENTTI no disponible', 'error');
+        showNotification('⚠️ Configuración de CUENTTI no disponible. La factura se agregará a la cola de sincronización.', 'warning');
+        await agregarAColaDeSincronizacion('factura', factura, `Factura ${numeroFactura}`);
+        closeModal();
         return;
     }
     
     try {
-        showNotification('Enviando factura a CUENTTI...', 'info');
+        showNotification('⏳ Enviando factura a CUENTTI...', 'info');
         
-        // Preparar datos para CUENTTI
-        const facturaData = {
-            customer_document: factura.cliente, // Ajustar según API de CUENTTI
-            items: factura.items.map(item => ({
-                product_code: item.codigo,
-                quantity: item.cantidad || 1,
-                unit_price: item.precio || 0,
-                tax_rate: item.iva || 19
-            })),
-            subtotal: factura.subtotalProductos,
-            tax: factura.totalIva,
-            total: factura.total,
-            date: factura.fecha
-        };
+        // Usar la función mejorada con reintentos
+        const resultado = await enviarFacturaACuenttiReal(factura);
         
-        // Enviar a CUENTTI
-        const response = await cuenttiRequest(cuenttiConfig.endpoints.invoices, 'POST', facturaData);
-        
-        factura.enviadoACuentti = true;
-        factura.estado = 'Enviada';
-        factura.cuenttiId = response.id || response.invoice_id;
-        factura.fechaEnvio = new Date().toISOString();
-        saveFacturasData();
-        
-        showNotification(`✅ Factura ${numeroFactura} enviada a CUENTTI exitosamente`, 'success');
-        closeModal();
+        if (resultado) {
+            factura.enviadoACuentti = true;
+            factura.estado = 'Enviada';
+            factura.fechaEnvio = new Date().toISOString();
+            saveFacturasData();
+            
+            showNotification(`✅ Factura ${numeroFactura} enviada a CUENTTI exitosamente`, 'success');
+            closeModal();
+        }
     } catch (error) {
         console.error('Error enviando factura a CUENTTI:', error);
-        showNotification(`❌ Error enviando factura: ${error.message}`, 'error');
+        showNotification(
+            `⚠️ No se pudo enviar ahora. Se reintentará automáticamente. Error: ${error.message}`,
+            'warning'
+        );
+        
+        // Agregar a cola de sincronización
+        await agregarAColaDeSincronizacion('factura', factura, `Factura ${numeroFactura}`);
+        closeModal();
     }
 }
 
@@ -6447,6 +6510,502 @@ window.buscarClientePorCedula = async function(cedula) {
 
 // Sobrescribir función de búsqueda de repuesto (usar CUENTTI)
 window.buscarRepuesto = buscarRepuestoReal;
+
+// =====================================================
+// SISTEMA DE COLA DE SINCRONIZACIÓN
+// =====================================================
+
+let sincronizacionPendiente = [];
+let procesandoCola = false;
+
+function cargarColaSincronizacion() {
+    try {
+        const cola = localStorage.getItem('cuentti_cola_sync');
+        if (cola) {
+            sincronizacionPendiente = JSON.parse(cola);
+            console.log(`🔄 Cola de sincronización cargada: ${sincronizacionPendiente.length} operaciones pendientes`);
+        }
+    } catch (e) {
+        console.warn('Error cargando cola de sincronización:', e);
+    }
+}
+
+function guardarColaSincronizacion() {
+    try {
+        localStorage.setItem('cuentti_cola_sync', JSON.stringify(sincronizacionPendiente));
+    } catch (e) {
+        console.warn('Error guardando cola de sincronización:', e);
+    }
+}
+
+function generarUUID() {
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+        const r = Math.random() * 16 | 0;
+        const v = c === 'x' ? r : (r & 0x3 | 0x8);
+        return v.toString(16);
+    });
+}
+
+async function agregarAColaDeSincronizacion(tipo, datos, descripcion = '') {
+    const operacion = {
+        id: generarUUID(),
+        tipo,
+        datos,
+        descripcion,
+        intentos: 0,
+        proximoReintento: Date.now(),
+        errores: [],
+        timestamp: new Date().toISOString()
+    };
+    
+    sincronizacionPendiente.push(operacion);
+    guardarColaSincronizacion();
+    mostrarIndicadorSincronizacion();
+    
+    console.log(`📥 Operación agregada a cola: ${tipo} - ${descripcion}`);
+    return operacion.id;
+}
+
+async function ejecutarOperacion(operacion) {
+    try {
+        let resultado;
+        
+        switch (operacion.tipo) {
+            case 'factura':
+                resultado = await enviarFacturaACuenttiReal(operacion.datos);
+                break;
+            case 'cliente':
+                resultado = await crearClienteEnCuenttiReal(operacion.datos);
+                break;
+            case 'stock':
+                resultado = await descontarStockEnCuenttiReal(operacion.datos.productoId, operacion.datos.cantidad, operacion.datos.razon);
+                break;
+            case 'pago':
+                resultado = await registrarPagoEnCuenttiReal(operacion.datos);
+                break;
+            case 'actualizar_cliente':
+                resultado = await actualizarClienteEnCuenttiReal(operacion.datos);
+                break;
+            default:
+                throw new Error(`Tipo de operación desconocido: ${operacion.tipo}`);
+        }
+        
+        return resultado;
+    } catch (error) {
+        console.error(`❌ Error ejecutando operación ${operacion.tipo}:`, error);
+        throw error;
+    }
+}
+
+async function procesarColaDeSincronizacion() {
+    if (procesandoCola || sincronizacionPendiente.length === 0) return;
+    
+    procesandoCola = true;
+    console.log(`⏳ Procesando cola de sincronización: ${sincronizacionPendiente.length} operaciones`);
+    
+    try {
+        for (let i = 0; i < sincronizacionPendiente.length; i++) {
+            const operacion = sincronizacionPendiente[i];
+            
+            if (Date.now() >= operacion.proximoReintento) {
+                try {
+                    await ejecutarOperacion(operacion);
+                    
+                    // Éxito: eliminar de cola
+                    console.log(`✅ Operación completada: ${operacion.tipo}`);
+                    sincronizacionPendiente.splice(i, 1);
+                    i--;
+                    
+                } catch (error) {
+                    // Error: incrementar intentos
+                    operacion.intentos++;
+                    operacion.errores.push({
+                        timestamp: new Date().toISOString(),
+                        error: error.message
+                    });
+                    
+                    console.warn(`⚠️ Error en reintento ${operacion.intentos} de ${operacion.tipo}:`, error.message);
+                    
+                    if (operacion.intentos < 5) {
+                        // Reintento exponencial: 1s, 2s, 4s, 8s, 16s
+                        const delay = Math.pow(2, operacion.intentos) * 1000;
+                        operacion.proximoReintento = Date.now() + delay;
+                        console.log(`🔄 Próximo reintento en ${delay/1000} segundos`);
+                    } else {
+                        // Falló después de 5 intentos
+                        console.error(`❌ Operación ${operacion.tipo} falló después de 5 intentos`);
+                        showNotification(
+                            `⚠️ No se pudo sincronizar ${operacion.tipo}: ${error.message}. Verifique la conexión a CUENTTI.`,
+                            'error'
+                        );
+                    }
+                }
+            }
+        }
+    } finally {
+        guardarColaSincronizacion();
+        mostrarIndicadorSincronizacion();
+        procesandoCola = false;
+    }
+}
+
+function mostrarIndicadorSincronizacion() {
+    const pendientes = sincronizacionPendiente.length;
+    const elemento = document.getElementById('indicadorSincronizacion');
+    
+    if (pendientes > 0) {
+        if (elemento) {
+            elemento.innerHTML = `⏳ ${pendientes} operación${pendientes !== 1 ? 'es' : ''} pendiente${pendientes !== 1 ? 's' : ''}`;
+            elemento.style.display = 'block';
+        }
+    } else {
+        if (elemento) {
+            elemento.style.display = 'none';
+        }
+    }
+}
+
+// Procesar cola cada 5 segundos
+setInterval(procesarColaDeSincronizacion, 5000);
+
+// Procesar cuando vuelva conexión
+window.addEventListener('online', () => {
+    console.log('🌐 Conexión restaurada, procesando cola...');
+    procesarColaDeSincronizacion();
+});
+
+// Cargar cola al iniciar
+cargarColaSincronizacion();
+
+window.sincronizarDatosCuentti = cargarDatosDesdeCuentti;
+
+// =====================================================
+// FUNCIONES DE INTEGRACIÓN CUENTTI - CRÍTICAS
+// =====================================================
+
+// 1. ENVÍO DE FACTURAS A CUENTTI
+async function enviarFacturaACuenttiReal(facturaData) {
+    if (!cuenttiConfig || !cuenttiConfig.token) {
+        throw new Error('Configuración de CUENTTI no disponible');
+    }
+    
+    try {
+        // Normalizar datos de factura
+        const invoiceData = {
+            customer_id: facturaData.clienteId || facturaData.cliente?.id,
+            invoice_number: facturaData.numero || `INV-${Date.now()}`,
+            invoice_date: new Date().toISOString().split('T')[0],
+            due_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+            items: (facturaData.items || []).map(item => ({
+                description: item.descripcion || item.nombre || 'Servicio',
+                quantity: parseFloat(item.cantidad) || 1,
+                unit_price: parseFloat(item.precio) || 0,
+                tax_rate: parseFloat(item.iva) || 19
+            })),
+            subtotal: parseFloat(facturaData.subtotal) || 0,
+            tax_amount: parseFloat(facturaData.totalIva) || 0,
+            total: parseFloat(facturaData.total) || 0,
+            status: 'draft',
+            notes: facturaData.notas || facturaData.observaciones || ''
+        };
+        
+        console.log('📤 Enviando factura a CUENTTI:', invoiceData);
+        
+        const response = await cuenttiRequest(
+            `${cuenttiConfig.endpoints.invoices}`,
+            'POST',
+            invoiceData
+        );
+        
+        if (response && (response.id || response.invoice_id)) {
+            const invoiceId = response.id || response.invoice_id;
+            console.log(`✅ Factura enviada a CUENTTI: ${invoiceId}`);
+            
+            // Guardar referencia localmente
+            if (facturaData.id) {
+                const facturas = getFacturasData();
+                const factura = facturas.find(f => f.id === facturaData.id);
+                if (factura) {
+                    factura.cuentti_invoice_id = invoiceId;
+                    factura.cuentti_sync_date = new Date().toISOString();
+                    saveFacturasData();
+                }
+            }
+            
+            showNotification(`✅ Factura #${invoiceId} enviada a CUENTTI correctamente`, 'success');
+            return true;
+        }
+        
+        throw new Error('No se recibió ID de factura de CUENTTI');
+        
+    } catch (error) {
+        console.error('❌ Error enviando factura a CUENTTI:', error);
+        throw error;
+    }
+}
+
+async function enviarFacturaACuentti(factura) {
+    try {
+        return await enviarFacturaACuenttiReal(factura);
+    } catch (error) {
+        console.warn('❌ Fallo inmediato, agregando a cola:', error.message);
+        await agregarAColaDeSincronizacion('factura', factura, `Factura #${factura.numero}`);
+        return false;
+    }
+}
+
+// 2. CREAR CLIENTES EN CUENTTI
+async function crearClienteEnCuenttiReal(clienteData) {
+    if (!cuenttiConfig || !cuenttiConfig.token) {
+        throw new Error('Configuración de CUENTTI no disponible');
+    }
+    
+    try {
+        // Validar campos obligatorios
+        if (!clienteData.cedula || !clienteData.nombre) {
+            throw new Error('Cédula y nombre son obligatorios');
+        }
+        
+        const nuevoCliente = {
+            document: clienteData.cedula,
+            name: clienteData.nombre,
+            phone: clienteData.telefono || '',
+            email: clienteData.email || '',
+            address: clienteData.direccion || '',
+            city: clienteData.ciudad || '',
+            type: clienteData.tipo || 'persona'
+        };
+        
+        console.log('📤 Creando cliente en CUENTTI:', nuevoCliente);
+        
+        const response = await cuenttiRequest(
+            `${cuenttiConfig.endpoints.customers}`,
+            'POST',
+            nuevoCliente
+        );
+        
+        if (response && (response.id || response.customer_id)) {
+            const customerId = response.id || response.customer_id;
+            console.log(`✅ Cliente creado en CUENTTI: ${customerId}`);
+            
+            // Agregar a caché local
+            const clienteCompleto = {
+                id: customerId,
+                cedula: clienteData.cedula,
+                nombre: clienteData.nombre,
+                telefono: clienteData.telefono || '',
+                email: clienteData.email || '',
+                direccion: clienteData.direccion || '',
+                ciudad: clienteData.ciudad || '',
+                tipo: clienteData.tipo || 'persona'
+            };
+            
+            if (!cuenttiClientes.find(c => c.cedula === clienteData.cedula)) {
+                cuenttiClientes.push(clienteCompleto);
+                localStorage.setItem('cuentti_clientes_backup', JSON.stringify(cuenttiClientes));
+            }
+            
+            showNotification(`✅ Cliente ${clienteData.nombre} creado en CUENTTI`, 'success');
+            return customerId;
+        }
+        
+        throw new Error('No se recibió ID de cliente de CUENTTI');
+        
+    } catch (error) {
+        console.error('❌ Error creando cliente en CUENTTI:', error);
+        throw error;
+    }
+}
+
+async function crearClienteEnCuentti(cliente) {
+    try {
+        return await crearClienteEnCuenttiReal(cliente);
+    } catch (error) {
+        console.warn('❌ Fallo inmediato, agregando a cola:', error.message);
+        await agregarAColaDeSincronizacion('cliente', cliente, `Cliente: ${cliente.nombre}`);
+        return false;
+    }
+}
+
+// 3. ACTUALIZAR CLIENTES EN CUENTTI
+async function actualizarClienteEnCuenttiReal(clienteData) {
+    if (!cuenttiConfig || !cuenttiConfig.token) {
+        throw new Error('Configuración de CUENTTI no disponible');
+    }
+    
+    if (!clienteData.id) {
+        throw new Error('ID de cliente es obligatorio para actualizar');
+    }
+    
+    try {
+        const datosActualizacion = {
+            document: clienteData.cedula,
+            name: clienteData.nombre,
+            phone: clienteData.telefono || '',
+            email: clienteData.email || '',
+            address: clienteData.direccion || '',
+            city: clienteData.ciudad || ''
+        };
+        
+        console.log('📤 Actualizando cliente en CUENTTI:', datosActualizacion);
+        
+        const response = await cuenttiRequest(
+            `${cuenttiConfig.endpoints.customers}/${clienteData.id}`,
+            'PUT',
+            datosActualizacion
+        );
+        
+        console.log(`✅ Cliente actualizado en CUENTTI: ${clienteData.id}`);
+        
+        // Actualizar caché local
+        const clienteLocal = cuenttiClientes.find(c => c.id === clienteData.id);
+        if (clienteLocal) {
+            Object.assign(clienteLocal, datosActualizacion);
+            localStorage.setItem('cuentti_clientes_backup', JSON.stringify(cuenttiClientes));
+        }
+        
+        showNotification(`✅ Cliente actualizado en CUENTTI`, 'success');
+        return true;
+        
+    } catch (error) {
+        console.error('❌ Error actualizando cliente en CUENTTI:', error);
+        throw error;
+    }
+}
+
+async function actualizarClienteEnCuentti(cliente) {
+    try {
+        return await actualizarClienteEnCuenttiReal(cliente);
+    } catch (error) {
+        console.warn('❌ Fallo inmediato, agregando a cola:', error.message);
+        await agregarAColaDeSincronizacion('actualizar_cliente', cliente, `Actualizar: ${cliente.nombre}`);
+        return false;
+    }
+}
+
+// 4. DESCUENTO DE STOCK EN CUENTTI
+async function descontarStockEnCuenttiReal(productoId, cantidad, razon = 'trabajo') {
+    if (!cuenttiConfig || !cuenttiConfig.token) {
+        throw new Error('Configuración de CUENTTI no disponible');
+    }
+    
+    try {
+        // Encontrar producto en caché local
+        const producto = cuenttiInventario.find(p => p.id === productoId || p.codigo === productoId);
+        
+        if (!producto) {
+            throw new Error(`Producto no encontrado: ${productoId}`);
+        }
+        
+        const stockActual = parseInt(producto.stock) || 0;
+        if (stockActual < cantidad) {
+            throw new Error(`Stock insuficiente: disponible ${stockActual}, solicitado ${cantidad}`);
+        }
+        
+        const nuevoStock = stockActual - cantidad;
+        
+        console.log(`📤 Descontando stock en CUENTTI: ${producto.nombre} (${stockActual} → ${nuevoStock})`);
+        
+        const response = await cuenttiRequest(
+            `${cuenttiConfig.endpoints.inventory}/${producto.id}`,
+            'PUT',
+            { 
+                quantity: nuevoStock,
+                stock: nuevoStock,
+                reason: razon
+            }
+        );
+        
+        // Actualizar caché local
+        producto.stock = nuevoStock;
+        localStorage.setItem('cuentti_inventario_backup', JSON.stringify(cuenttiInventario));
+        
+        console.log(`✅ Stock actualizado: ${producto.nombre} → ${nuevoStock}`);
+        return true;
+        
+    } catch (error) {
+        console.error('❌ Error descontando stock en CUENTTI:', error);
+        throw error;
+    }
+}
+
+async function descontarStockEnCuentti(productoId, cantidad, razon = 'trabajo') {
+    try {
+        return await descontarStockEnCuenttiReal(productoId, cantidad, razon);
+    } catch (error) {
+        console.warn('❌ Fallo inmediato, agregando a cola:', error.message);
+        await agregarAColaDeSincronizacion('stock', 
+            { productoId, cantidad, razon }, 
+            `Descuento de stock: ${cantidad} unidades`
+        );
+        return false;
+    }
+}
+
+// 5. REGISTRO DE PAGOS EN CUENTTI
+async function registrarPagoEnCuenttiReal(pagoData) {
+    if (!cuenttiConfig || !cuenttiConfig.token) {
+        throw new Error('Configuración de CUENTTI no disponible');
+    }
+    
+    try {
+        if (!pagoData.invoiceId && !pagoData.cuentti_invoice_id) {
+            throw new Error('Invoice ID es obligatorio para registrar pago');
+        }
+        
+        const invoiceId = pagoData.invoiceId || pagoData.cuentti_invoice_id;
+        
+        const datoPago = {
+            invoice_id: invoiceId,
+            amount: parseFloat(pagoData.monto) || parseFloat(pagoData.amount) || 0,
+            payment_method: pagoData.metodoPago || pagoData.payment_method || 'efectivo',
+            payment_date: new Date().toISOString().split('T')[0],
+            reference: pagoData.referencia || pagoData.reference || '',
+            notes: pagoData.notas || pagoData.notes || ''
+        };
+        
+        console.log('📤 Registrando pago en CUENTTI:', datoPago);
+        
+        const response = await cuenttiRequest(
+            `${cuenttiConfig.endpoints.payments}`,
+            'POST',
+            datoPago
+        );
+        
+        if (response && (response.id || response.payment_id)) {
+            const paymentId = response.id || response.payment_id;
+            console.log(`✅ Pago registrado en CUENTTI: ${paymentId}`);
+            
+            showNotification(`✅ Pago registrado en CUENTTI correctamente`, 'success');
+            return paymentId;
+        }
+        
+        throw new Error('No se recibió ID de pago de CUENTTI');
+        
+    } catch (error) {
+        console.error('❌ Error registrando pago en CUENTTI:', error);
+        throw error;
+    }
+}
+
+async function registrarPagoEnCuentti(pago) {
+    try {
+        return await registrarPagoEnCuenttiReal(pago);
+    } catch (error) {
+        console.warn('❌ Fallo inmediato, agregando a cola:', error.message);
+        await agregarAColaDeSincronizacion('pago', pago, `Pago: $${pago.monto}`);
+        return false;
+    }
+}
+
+// Exportar funciones al scope global
+window.enviarFacturaACuentti = enviarFacturaACuentti;
+window.crearClienteEnCuentti = crearClienteEnCuentti;
+window.actualizarClienteEnCuentti = actualizarClienteEnCuentti;
+window.descontarStockEnCuentti = descontarStockEnCuentti;
+window.registrarPagoEnCuentti = registrarPagoEnCuentti;
+window.procesarColaDeSincronizacion = procesarColaDeSincronizacion;
+window.mostrarIndicadorSincronizacion = mostrarIndicadorSincronizacion;
 
 // Función para sincronizar datos manualmente desde CUENTTI
 window.sincronizarDatosCuentti = cargarDatosDesdeCuentti;
