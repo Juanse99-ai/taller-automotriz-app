@@ -58,16 +58,31 @@ async function enviarFacturaACuenttiReal(facturaData)
 - ✅ Si falla, agrega a cola de sincronización
 - ✅ Notifica al usuario del éxito/error
 
-**Integración:**
+**Integración - AUTOMÁTICA AL COMPLETAR TRABAJO:**
 
 ```javascript
-// En generarFactura() se llama:
-await enviarFacturaACuenttiModal(numeroFactura)
+// En completarTrabajo():
+1. Usuario marca trabajo como "Completado"
+2. Sistema genera factura automáticamente
+3. Sistema intenta enviar a CUENTTI
+4. Si éxito → "✅ Trabajo completado y factura enviada"
+5. Si falla → "✅ Se sincronizará automáticamente"
+```
 
-// El usuario ve:
-- "📤 Enviando factura..." (mientras se envía)
-- "✅ Factura enviada a CUENTTI" (éxito)
-- "⚠️ Se reintentará automáticamente" (error)
+**El usuario ve:**
+- "� Generando factura desde trabajo completado..."
+- "📤 Enviando factura a CUENTTI automáticamente..."
+- "✅ Trabajo completado y factura FAC-2025-001 enviada a CUENTTI"
+
+**Nueva función auxiliar:**
+
+```javascript
+async function generarFacturaDesdeTrabajoCompleto(trabajo)
+// Genera factura con:
+// - Todos los items del trabajo
+// - Totales (subtotal, IVA, mano de obra)
+// - Información del cliente y vehículo
+// - Números secuenciales de factura
 ```
 
 **Datos que envía:**
@@ -273,62 +288,57 @@ async function enviarFacturaACuentti(factura) {
 
 ## 🚀 CÓMO FUNCIONA EL FLUJO COMPLETO
 
-### Escenario 1: Crear Factura (conexión disponible)
+### Escenario 1: Completar Trabajo → Generar Factura → Enviar a CUENTTI (NUEVO FLUJO)
 
 ```
-1. Usuario crea cotización y elige "Generar Factura"
+1. Usuario crea orden de trabajo con repuestos
+   ├─ Completa todos los detalles
+   ├─ Stock se descuenta en CUENTTI
+   └─ Trabajo se guarda en Supabase + localStorage
+
+2. Cuando el trabajo está listo, usuario hace click "Completar"
    ↓
-2. Factura se guarda localmente
-   ↓
-3. Usuario hace click "Enviar a CUENTTI"
-   ↓
-4. Sistema intenta enviarFacturaACuenttiReal()
-   ↓
-5. Éxito → "✅ Factura enviada"
-   └─ Se guarda invoice_id en factura local
-   
-6. Próxima vez se pueden registrar pagos contra CUENTTI
+3. Sistema automáticamente:
+   ├─ Marca trabajo como "Completado"
+   ├─ 📄 Genera factura con datos del trabajo
+   ├─ 📤 Intenta enviar factura a CUENTTI
+   └─ ℹ️ Informa al usuario del resultado
+
+4. Resultado:
+   ✅ Éxito → "Trabajo completado y factura enviada a CUENTTI"
+   ⚠️ Falla → "Factura en cola de sincronización, se enviará automáticamente"
+
+5. La factura:
+   - Contiene todos los items del trabajo
+   - Incluye totales (subtotal, IVA, mano de obra)
+   - Tiene número secuencial (FAC-2025-001, etc.)
+   - Se sincroniza con CUENTTI (inmediato o en background)
 ```
 
-### Escenario 2: Crear Factura (sin conexión)
+### Escenario 2: Flujo SIN conexión
 
 ```
-1. Usuario crea y genera factura
-   ↓
-2. Usuario intenta enviar a CUENTTI
-   ↓
-3. Falla por "Configuración de CUENTTI no disponible"
-   ↓
-4. Sistema muestra: "⚠️ Se agregó a cola de sincronización"
-   ↓
-5. Factura se agrega a sincronizacionPendiente en localStorage
-   ↓
-6. Cada 5 segundos intenta reenviar (con reintentos)
-   ↓
+1. Usuario crea trabajo (stock se intenta descontar)
+2. Usuario completa trabajo
+3. Sistema genera factura
+4. Sistema intenta enviar a CUENTTI → ❌ Falla (sin conexión)
+5. Factura entra en cola de sincronización en localStorage
+6. Indicador en dashboard muestra "⏳ 1 operación pendiente"
 7. Cuando vuelve internet → Se sincroniza automáticamente
-   └─ Usuario ve: "✅ Factura sincronizada"
+8. Usuario ve: "✅ Factura sincronizada"
 ```
 
-### Escenario 3: Crear Trabajo con Stock
+### Escenario 3: Cotizaciones (FLUJO ANTERIOR - SIN CAMBIO)
 
 ```
-1. Usuario crea trabajo con 3 repuestos
-   ├─ Producto A: 2 unidades
-   ├─ Producto B: 5 unidades
-   └─ Producto C: 1 unidad
-   ↓
-2. Sistema guarda trabajo localmente
-   ↓
-3. Para cada producto (si es nuevo trabajo):
-   ├─ Valida stock disponible en CUENTTI
-   ├─ Calcula nuevo stock
-   ├─ Intenta hacer PUT a /inventory
-   └─ Si falla → Agrega a cola
-   ↓
-4. Trabajo está creado y disponible
-   ├─ Stock se descuenta en CUENTTI (si hay conexión)
-   ├─ O se reintenta automáticamente (si no hay conexión)
-   └─ Usuario ve "📦 Stock actualizado"
+1. Usuario crea cotización (para presupuestos)
+2. Cliente aprueba cotización
+3. ℹ️ Se genera factura desde cotización
+4. ℹ️ Nota: "La factura será enviada automáticamente al cerrar la orden de trabajo"
+   └─ Esto permite vincular la cotización con la orden de trabajo final
+
+Las facturas desde cotizaciones se enviarán a CUENTTI cuando:
+- Se crea una orden de trabajo asociada Y se completa
 ```
 
 ---
@@ -371,20 +381,33 @@ Después:
 
 ## 🧪 CÓMO PROBAR
 
-### Test 1: Envío de Facturas
+### Test 1: Completar Trabajo y Enviar Factura Automáticamente ⭐ NUEVO
 
 ```bash
-1. Abrir aplicación en navegador
-2. Crear una cotización con varios productos
-3. Generar factura
-4. Hacer click "Enviar a CUENTTI"
+1. Ir a "Trabajos"
+2. Crear un nuevo trabajo con repuestos y detalles
+3. Verificar: Stock se descuenta en CUENTTI
+4. Hacer click "Completar" en la tabla de trabajos
 5. Verificar:
-   - Notificación "✅ Factura enviada"
-   - Consola F12: debe ver "✅ Factura enviada a CUENTTI"
-   - Factura tiene cuentti_invoice_id
+   - Notificación "✅ Trabajo completado"
+   - "📄 Generando factura desde trabajo completado"
+   - "📤 Enviando factura a CUENTTI automáticamente"
+   - "✅ Factura FAC-2025-XXX enviada a CUENTTI"
+   - Consola F12: debe ver logs de éxito
+6. Abrir CUENTTI → Debe existir la factura creada
 ```
 
-### Test 2: Crear Cliente
+### Test 2: Cotizaciones - Nota Informativa
+
+```bash
+1. Crear cotización
+2. Generar factura
+3. En modal ver mensaje:
+   "ℹ️ La factura será enviada automáticamente a CUENTTI cuando cierres la orden de trabajo asociada"
+4. Botón "Enviar a CUENTTI" está removido
+```
+
+### Test 3: Crear Cliente
 
 ```bash
 1. Ir a "Nuevo Trabajo"
@@ -398,7 +421,7 @@ Después:
    - Si no → se sincroniza automáticamente
 ```
 
-### Test 3: Cola de Sincronización
+### Test 4: Cola de Sincronización
 
 ```bash
 1. Abrir DevTools (F12)
@@ -406,15 +429,15 @@ Después:
 3. Buscar "cuentti_cola_sync"
 4. Inicialmente vacía: []
 5. Desconectar internet
-6. Crear factura e intentar enviar
-7. Verá: "⚠️ Se reintentará automáticamente"
+6. Crear trabajo y completarlo
+7. Verá: "⏳ 1 operación pendiente"
 8. En Local Storage aparecerá la operación
 9. Reconectar internet
 10. Después de 5 segundos → Se sincroniza automáticamente
 11. Cola se vacía en Local Storage
 ```
 
-### Test 4: Descuento de Stock
+### Test 5: Descuento de Stock
 
 ```bash
 1. Ver stock de un producto en CUENTTI (ej: 10 unidades)
@@ -423,6 +446,7 @@ Después:
    - Stock en CUENTTI ahora es 7
    - Si está en caché local: también 7
    - Consola: "✅ Stock actualizado"
+4. Completar trabajo → Factura se envía
 ```
 
 ---

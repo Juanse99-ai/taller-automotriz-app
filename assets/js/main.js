@@ -3441,15 +3441,57 @@ function editarTrabajo(trabajoId) {
     showNotification(`Editando trabajo ${trabajo.id}`, 'info');
 }
 
-// Completar trabajo (marcar como 'completado')
-function completarTrabajo(trabajoId) {
+// Completar trabajo (marcar como 'completado' y generar factura)
+async function completarTrabajo(trabajoId) {
     const trabajos = getTrabajosData();
     const t = trabajos.find(x => String(x.id) === String(trabajoId));
-    if (!t) { showNotification('Trabajo no encontrado', 'error'); return; }
+    if (!t) { 
+        showNotification('Trabajo no encontrado', 'error'); 
+        return; 
+    }
+    
+    // Marcar como completado
     t.estado = 'Completado';
+    t.fechaCompletado = new Date().toISOString();
     saveTrabajosData();
+    
+    console.log('✅ Trabajo marcado como completado:', t.id);
+    
+    try {
+        // Generar factura automáticamente desde el trabajo
+        console.log('📄 Generando factura desde trabajo completado...');
+        const factura = await generarFacturaDesdeTrabajoCompleto(t);
+        
+        if (factura) {
+            console.log('📤 Enviando factura a CUENTTI automáticamente...');
+            // Intentar enviar a CUENTTI
+            try {
+                await enviarFacturaACuenttiReal(factura);
+                console.log('✅ Factura enviada a CUENTTI automáticamente');
+                showNotification(
+                    `✅ Trabajo completado y factura ${factura.numero} enviada a CUENTTI`, 
+                    'success'
+                );
+            } catch (error) {
+                console.warn('⚠️ Factura en cola de sincronización:', error.message);
+                await agregarAColaDeSincronizacion('factura', factura, `Factura ${factura.numero}`);
+                showNotification(
+                    `✅ Trabajo completado. Factura se sincronizará con CUENTTI cuando haya conexión`, 
+                    'success'
+                );
+            }
+        }
+        
+    } catch (error) {
+        console.error('❌ Error generando factura:', error);
+        showNotification(
+            `Trabajo completado pero hubo error generando factura: ${error.message}`, 
+            'warning'
+        );
+    }
+    
     renderTrabajosTable();
-    showNotification(`Trabajo ${t.id} marcado como completado`, 'success');
+    
     // Actualizar UI si la fila existe
     try {
         const trabajosTableBody = document.getElementById('trabajosTable');
@@ -3467,7 +3509,65 @@ function completarTrabajo(trabajoId) {
         }
     } catch (e) { /* noop */ }
 }
+
+// Nueva función: Generar factura desde trabajo completado
+async function generarFacturaDesdeTrabajoCompleto(trabajo) {
+    try {
+        if (!trabajo || !trabajo.id) {
+            throw new Error('Trabajo inválido');
+        }
+        
+        // Generar número de factura secuencial
+        const numeroFactura = `FAC-${new Date().getFullYear()}-${nextInvoiceNumber.toString().padStart(3, '0')}`;
+        nextInvoiceNumber++;
+        
+        // Crear factura desde datos del trabajo
+        const factura = {
+            id: numeroFactura,
+            numero: numeroFactura,
+            trabajoId: trabajo.id,
+            fecha: new Date().toISOString().split('T')[0],
+            cliente: trabajo.cliente,
+            cedula: trabajo.cedula,
+            telefonoCliente: trabajo.telefonoCliente,
+            emailCliente: trabajo.emailCliente,
+            vehiculo: `${trabajo.marca} ${trabajo.modelo} ${trabajo.ano} - ${trabajo.placa}`,
+            placa: trabajo.placa,
+            
+            // Items del trabajo
+            items: [...(trabajo.items || [])],
+            
+            // Totales del trabajo
+            subtotalProductos: trabajo.subtotalSinIva || 0,
+            totalIva: trabajo.totalIva || 0,
+            manoObra: trabajo.manoObra || 0,
+            total: trabajo.total || 0,
+            
+            // Estado
+            estado: 'Completada',
+            enviadoACuentti: false,
+            createdAt: new Date().toISOString(),
+            
+            // Referencias
+            cuentti_created: false,
+            cuentti_invoice_id: null,
+            observaciones: trabajo.observaciones || ''
+        };
+        
+        // Guardar factura localmente
+        addFacturaData(factura);
+        
+        console.log('✅ Factura generada desde trabajo:', numeroFactura);
+        return factura;
+        
+    } catch (error) {
+        console.error('❌ Error generando factura desde trabajo:', error);
+        throw error;
+    }
+}
+
 window.completarTrabajo = completarTrabajo;
+window.generarFacturaDesdeTrabajoCompleto = generarFacturaDesdeTrabajoCompleto;
 
 // Nueva recepción
 // ===== MÓDULO UNIFICADO: RECEPCIÓN Y NUEVO TRABAJO =====
@@ -4300,12 +4400,13 @@ async function generarFactura(cotizacionId) {
                 <p><strong>Total:</strong> <span style="font-size: 20px; font-weight: bold; color: var(--primary-500);">${formatCurrency(factura.total)}</span></p>
             </div>
             
-            <p><strong>Estado:</strong> <span class="status-badge status-pendiente">Pendiente de envío a CUENTTI</span></p>
+            <div style="background: #E0F7FA; padding: 12px; border-left: 4px solid #0097A7; border-radius: 4px; margin: 16px 0; font-size: 13px; color: #00695C;">
+                <strong>ℹ️ Información:</strong> La factura será enviada automáticamente a CUENTTI cuando cierres la orden de trabajo asociada.
+            </div>
         </div>
         `,
         [
-            { text: 'Cerrar', class: 'btn-outline', onclick: 'closeModal()' },
-            { text: 'Enviar a CUENTTI', class: 'btn-primary', onclick: `enviarFacturaACuenttiModal('${numeroFactura}')` }
+            { text: 'Cerrar', class: 'btn-outline', onclick: 'closeModal()' }
         ]
     );
     
