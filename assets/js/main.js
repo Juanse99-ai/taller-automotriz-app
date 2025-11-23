@@ -6117,7 +6117,10 @@ async function cargarClientesDesdeCuentti() {
     console.log('🔄 Cargando clientes desde CUENTTI...');
     
     try {
-        const data = await cuenttiRequest(cuenttiConfig.endpoints.customers);
+        const clientesEndpoint = (cuenttiConfig.paths && cuenttiConfig.paths.customers && cuenttiConfig.paths.customers.base)
+            ? cuenttiConfig.paths.customers.base
+            : cuenttiConfig.endpoints.customers;
+        const data = await cuenttiRequest(clientesEndpoint);
         
         // Normalizar datos de CUENTTI al formato interno
         cuenttiClientes = (data.data || data || []).map(cliente => ({
@@ -6161,7 +6164,10 @@ async function cargarInventarioDesdeCuentti() {
     console.log('🔄 Cargando inventario desde CUENTTI...');
     
     try {
-        const data = await cuenttiRequest(cuenttiConfig.endpoints.inventory);
+        const inventarioEndpoint = (cuenttiConfig.paths && cuenttiConfig.paths.inventory && cuenttiConfig.paths.inventory.base)
+            ? cuenttiConfig.paths.inventory.base
+            : cuenttiConfig.endpoints.inventory;
+        const data = await cuenttiRequest(inventarioEndpoint);
         
         // Normalizar datos de CUENTTI al formato interno
         cuenttiInventario = (data.data || data || []).map(producto => ({
@@ -6850,8 +6856,11 @@ async function enviarFacturaACuenttiReal(facturaData) {
         
         console.log('📤 Enviando factura a CUENTTI:', invoiceData);
         
+        const invoicesCreate = (cuenttiConfig.paths && cuenttiConfig.paths.invoices && cuenttiConfig.paths.invoices.create)
+            ? cuenttiConfig.paths.invoices.create
+            : cuenttiConfig.endpoints.invoices;
         const response = await cuenttiRequest(
-            `${cuenttiConfig.endpoints.invoices}`,
+            invoicesCreate,
             'POST',
             invoiceData
         );
@@ -6917,8 +6926,11 @@ async function crearClienteEnCuenttiReal(clienteData) {
         
         console.log('📤 Creando cliente en CUENTTI:', nuevoCliente);
         
+        const crearClienteEndpoint = (cuenttiConfig.paths && cuenttiConfig.paths.customers && cuenttiConfig.paths.customers.create)
+            ? cuenttiConfig.paths.customers.create
+            : cuenttiConfig.endpoints.customers;
         const response = await cuenttiRequest(
-            `${cuenttiConfig.endpoints.customers}`,
+            crearClienteEndpoint,
             'POST',
             nuevoCliente
         );
@@ -6988,8 +7000,11 @@ async function actualizarClienteEnCuenttiReal(clienteData) {
         
         console.log('📤 Actualizando cliente en CUENTTI:', datosActualizacion);
         
+        const actualizarClienteBase = (cuenttiConfig.paths && cuenttiConfig.paths.customers && cuenttiConfig.paths.customers.base)
+            ? cuenttiConfig.paths.customers.base
+            : cuenttiConfig.endpoints.customers;
         const response = await cuenttiRequest(
-            `${cuenttiConfig.endpoints.customers}/${clienteData.id}`,
+            `${actualizarClienteBase}/${clienteData.id}`,
             'PUT',
             datosActualizacion
         );
@@ -7045,8 +7060,11 @@ async function descontarStockEnCuenttiReal(productoId, cantidad, razon = 'trabaj
         
         console.log(`📤 Descontando stock en CUENTTI: ${producto.nombre} (${stockActual} → ${nuevoStock})`);
         
+        const inventoryBase = (cuenttiConfig.paths && cuenttiConfig.paths.inventory && cuenttiConfig.paths.inventory.base)
+            ? cuenttiConfig.paths.inventory.base
+            : cuenttiConfig.endpoints.inventory;
         const response = await cuenttiRequest(
-            `${cuenttiConfig.endpoints.inventory}/${producto.id}`,
+            `${inventoryBase}/${producto.id}`,
             'PUT',
             { 
                 quantity: nuevoStock,
