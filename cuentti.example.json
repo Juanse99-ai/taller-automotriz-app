@@ -13,27 +13,40 @@
     "payments": "/payments"
   },
   "paths": {
-    "inventory": {
-      "base": "/inventory",
-      "stockMini": "/inventory/consultaExistenciasActivosMini/{id_sucursal}",
-      "stockBySku": "/inventory/consultar_existencia_producto_sucursales_sku"
+    "maestros": {
+      "consultarSucursales": "/jServerj4ErpPro/com/j4ErpPro/server/adm/sucursal/consultarSucursalesSimpleNombres/{id_sucursal}",
+      "consultarConsecutivos": "/jServerj4ErpPro/com/j4ErpPro/server/adm/consecutivos/consultarConsecutivos/{id_tipo_documento}",
+      "consultarCategoria": "/jServerj4ErpPro/com/j4ErpPro/server/inv/categoria/consultarCategoria/{es_activo}",
+      "consultarMarca": "/jServerj4ErpPro/com/j4ErpPro/server/inv/marca/consultarMarca/{es_activo}",
+      "consultarImpuestos": "/jServerj4ErpPro/com/j4ErpPro/server/adm/impuestos/consultarImpuestos/{es_activo}",
+      "consultarEmpleados": "/jServerj4ErpPro/com/j4ErpPro/server/adm/empleados/consultarEmpleados/{id_sucursal}",
+      "consultarBanco": "/jServerj4ErpPro/com/j4ErpPro/server/adm/banco/consultarBanco/{id_sucursal}",
+      "consultarMedioPago": "/jServerj4ErpPro/com/j4ErpPro/server/adm/medios_pago/consultarMedioPago/{id_sucursal}"
     },
-    "customers": {
-      "base": "/customers",
-      "create": "/customers/grabarCliente",
-      "byDocument": "/customers/consultarClienteIdentificacion"
+    "productos": {
+      "consultaPaginadaMini": "/jServerj4ErpPro/com/j4ErpPro/server/vent/factura/consultaProductoPaginadaMini/{id_sucursal}/{pagina}",
+      "consultaPaginadaMovil": "/jServerj4ErpPro/com/j4ErpPro/server/vent/factura/consultaProductoPaginadaMovil/{id_sucursal}/{pagina}",
+      "grabarMovil": "/jServerj4ErpPro/com/j4ErpPro/server/inv/producto/grabraProductoMovil",
+      "consultarIdProductoMovil": "/jServerj4ErpPro/com/j4ErpPro/server/inv/producto/consultar_idProducto_movil/{id_sucursal}/{id_producto}",
+      "obtenerPorSku": "/jServerj4ErpPro/com/j4ErpPro/server/inv/producto/obtenerProductoSku/{id_sucursal}/{sku}",
+      "consultarPorId": "/jServerj4ErpPro/com/j4ErpPro/server/inv/producto/consultarProductoId/{id_producto}",
+      "consultarExistencia": "/jServerj4ErpPro/com/j4ErpPro/server/inv/producto/consultarExistencia_producto_boot/{id_producto}"
     },
-    "invoices": {
-      "base": "/invoices",
-      "create": "/invoices/grabarDocumentoFactura",
-      "createConsumerFinal": "/invoices/grabarDocumentoFacturaConsumidorFinal",
-      "emitElectronic": "/invoices/emitirFe/{id_transaccion}/{validarRepetida}",
-      "cancel": "/invoices/anularTransaccion",
-      "addPayment": "/invoices/agregarPagoTransaccion",
-      "getPdfUrl": "/invoices/urlDocumento"
+    "inventario": {
+      "consultaExistenciasActivosMini": "/jServerj4ErpPro/com/j4ErpPro/server/inv/producto/consultaExistenciasActivosMini/{id_sucursal}",
+      "consultarExistenciaProductoSucursalesSku": "/jServerj4ErpPro/com/j4ErpPro/server/transacion/anularTransacion"
     },
-    "payments": {
-      "base": "/payments"
+    "clientes": {
+      "grabar": "/jServerj4ErpPro/com/j4ErpPro/server/adm/cliente/grabarCliente",
+      "consultarPorIdentificacion": "/jServerj4ErpPro/api/token/consultarClienteIdentificacion/{identificacion}"
+    },
+    "facturas": {
+      "grabarSimple": "/jServerj4ErpPro/api/token/grabarFacturaSimple",
+      "grabarConsumidorFinal": "/jServerj4ErpPro/api/token/grabarFacturaSimple",
+      "emitirFe": "/jServerj4ErpPro/com/j4ErpPro/server/transacion/generarFacturaElectronica/{id_transaccion}/{validarRepetidas}/{validar_fecha}",
+      "anular": "/jServerj4ErpPro/com/j4ErpPro/server/transacion/anularTransacion",
+      "agregarPago": "/jServerj4ErpPro/com/j4ErpPro/server/transacion/agregarPagoTransacion",
+      "obtenerUrlDocumento": "/jServerj4ErpPro/com/j4ErpPro/server/transacion/buscarQrId_transacion/{id_transaccion}"
     }
   }
 }

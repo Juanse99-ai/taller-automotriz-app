@@ -6117,8 +6117,8 @@ async function cargarClientesDesdeCuentti() {
     console.log('🔄 Cargando clientes desde CUENTTI...');
     
     try {
-        const clientesEndpoint = (cuenttiConfig.paths && cuenttiConfig.paths.customers && cuenttiConfig.paths.customers.base)
-            ? cuenttiConfig.paths.customers.base
+        const clientesEndpoint = (cuenttiConfig.paths && cuenttiConfig.paths.maestros && cuenttiConfig.paths.maestros.consultarSucursales)
+            ? cuenttiConfig.paths.maestros.consultarSucursales.replace('{id_sucursal}', cuenttiConfig.branchId || '1')
             : cuenttiConfig.endpoints.customers;
         const data = await cuenttiRequest(clientesEndpoint);
         
@@ -6164,8 +6164,8 @@ async function cargarInventarioDesdeCuentti() {
     console.log('🔄 Cargando inventario desde CUENTTI...');
     
     try {
-        const inventarioEndpoint = (cuenttiConfig.paths && cuenttiConfig.paths.inventory && cuenttiConfig.paths.inventory.base)
-            ? cuenttiConfig.paths.inventory.base
+        const inventarioEndpoint = (cuenttiConfig.paths && cuenttiConfig.paths.inventario && cuenttiConfig.paths.inventario.consultaExistenciasActivosMini)
+            ? cuenttiConfig.paths.inventario.consultaExistenciasActivosMini.replace('{id_sucursal}', cuenttiConfig.branchId || '1')
             : cuenttiConfig.endpoints.inventory;
         const data = await cuenttiRequest(inventarioEndpoint);
         
@@ -6346,45 +6346,48 @@ async function buscarClienteEnCuentti(cedula) {
     if (!cedula || !cuenttiConfig || !cuenttiConfig.token) return null;
 
     try {
-        // Preferir paths configurados (más explícitos) y después fallback a endpoints
+        // Usar el path exacto de CUENTTI: consultarPorIdentificacion/{identificacion}
         let endpointPath = null;
-        if (cuenttiConfig.paths && cuenttiConfig.paths.customers && cuenttiConfig.paths.customers.byDocument) {
-            endpointPath = cuenttiConfig.paths.customers.byDocument;
+        
+        if (cuenttiConfig.paths && cuenttiConfig.paths.clientes && cuenttiConfig.paths.clientes.consultarPorIdentificacion) {
+            // Usar path configurado desde Postman
+            endpointPath = cuenttiConfig.paths.clientes.consultarPorIdentificacion;
+            // Reemplazar placeholder {identificacion} con el cedula/documento del cliente
+            endpointPath = endpointPath.replace('{identificacion}', encodeURIComponent(cedula));
         } else if (cuenttiConfig.endpoints && cuenttiConfig.endpoints.customers) {
-            // Intentar usar un path conocido
-            endpointPath = `${cuenttiConfig.endpoints.customers}/consultarClienteIdentificacion`;
+            // Fallback: usar endpoint base + ruta conocida
+            endpointPath = `${cuenttiConfig.endpoints.customers}/consultarClienteIdentificacion/${encodeURIComponent(cedula)}`;
         } else {
-            endpointPath = cuenttiConfig.endpoints.customers || '/customers';
+            endpointPath = `/customers/consultarClienteIdentificacion/${encodeURIComponent(cedula)}`;
         }
 
-        // Reemplazar placeholders si existen (ej: {id_sucursal})
-        if (endpointPath.includes('{id_sucursal}') && cuenttiConfig.branchId) {
-            endpointPath = endpointPath.replace('{id_sucursal}', cuenttiConfig.branchId);
-        }
-
-        // Construir URL con query param `document` (compatible con collection de Postman)
-        const separator = endpointPath.includes('?') ? '&' : '?';
-        const url = endpointPath + `${separator}document=${encodeURIComponent(cedula)}`;
-
-        const data = await cuenttiRequest(url, 'GET');
+        console.log('🔍 Buscando cliente en CUENTTI con path:', endpointPath);
+        const data = await cuenttiRequest(endpointPath, 'GET');
+        
+        if (!data) return null;
+        
+        // La API puede retornar directamente el cliente o envuelto en data
         const cliente = (data && data.data) ? data.data : data;
 
         if (cliente) {
-            // Si la API devuelve un array
+            // Si la API devuelve un array, tomar el primero
             const first = Array.isArray(cliente) ? cliente[0] : cliente;
             if (!first) return null;
 
+            console.log('✅ Cliente encontrado en CUENTTI:', first);
             return {
-                id: first.id || first.customer_id || first.id_cliente,
-                cedula: first.document || first.documento || first.cedula || cedula,
-                nombre: first.name || first.nombre || first.full_name || '',
-                telefono: first.phone || first.telefono || first.mobile || '',
-                email: first.email || first.correo || '',
-                direccion: first.address || first.direccion || ''
+                id: first.id || first.customer_id || first.id_cliente || first.idCliente,
+                cedula: first.document || first.documento || first.cedula || first.identificacion || cedula,
+                nombre: first.name || first.nombre || first.full_name || first.nombreCliente || '',
+                telefono: first.phone || first.telefono || first.mobile || first.telefonoCliente || '',
+                email: first.email || first.correo || first.emailCliente || '',
+                direccion: first.address || first.direccion || first.direccionCliente || ''
             };
         }
+        
+        console.warn('⚠️ Cliente no encontrado en CUENTTI:', cedula);
     } catch (error) {
-        console.warn('Error buscando cliente en CUENTTI:', error);
+        console.warn('⚠️ Error buscando cliente en CUENTTI:', error.message);
     }
 
     return null;
@@ -6856,8 +6859,8 @@ async function enviarFacturaACuenttiReal(facturaData) {
         
         console.log('📤 Enviando factura a CUENTTI:', invoiceData);
         
-        const invoicesCreate = (cuenttiConfig.paths && cuenttiConfig.paths.invoices && cuenttiConfig.paths.invoices.create)
-            ? cuenttiConfig.paths.invoices.create
+        const invoicesCreate = (cuenttiConfig.paths && cuenttiConfig.paths.facturas && cuenttiConfig.paths.facturas.grabarSimple)
+            ? cuenttiConfig.paths.facturas.grabarSimple
             : cuenttiConfig.endpoints.invoices;
         const response = await cuenttiRequest(
             invoicesCreate,
@@ -6926,8 +6929,8 @@ async function crearClienteEnCuenttiReal(clienteData) {
         
         console.log('📤 Creando cliente en CUENTTI:', nuevoCliente);
         
-        const crearClienteEndpoint = (cuenttiConfig.paths && cuenttiConfig.paths.customers && cuenttiConfig.paths.customers.create)
-            ? cuenttiConfig.paths.customers.create
+        const crearClienteEndpoint = (cuenttiConfig.paths && cuenttiConfig.paths.clientes && cuenttiConfig.paths.clientes.grabar)
+            ? cuenttiConfig.paths.clientes.grabar
             : cuenttiConfig.endpoints.customers;
         const response = await cuenttiRequest(
             crearClienteEndpoint,
@@ -7000,8 +7003,8 @@ async function actualizarClienteEnCuenttiReal(clienteData) {
         
         console.log('📤 Actualizando cliente en CUENTTI:', datosActualizacion);
         
-        const actualizarClienteBase = (cuenttiConfig.paths && cuenttiConfig.paths.customers && cuenttiConfig.paths.customers.base)
-            ? cuenttiConfig.paths.customers.base
+        const actualizarClienteBase = (cuenttiConfig.paths && cuenttiConfig.paths.clientes && cuenttiConfig.paths.clientes.grabar)
+            ? cuenttiConfig.paths.clientes.grabar
             : cuenttiConfig.endpoints.customers;
         const response = await cuenttiRequest(
             `${actualizarClienteBase}/${clienteData.id}`,
@@ -7060,8 +7063,8 @@ async function descontarStockEnCuenttiReal(productoId, cantidad, razon = 'trabaj
         
         console.log(`📤 Descontando stock en CUENTTI: ${producto.nombre} (${stockActual} → ${nuevoStock})`);
         
-        const inventoryBase = (cuenttiConfig.paths && cuenttiConfig.paths.inventory && cuenttiConfig.paths.inventory.base)
-            ? cuenttiConfig.paths.inventory.base
+        const inventoryBase = (cuenttiConfig.paths && cuenttiConfig.paths.productos && cuenttiConfig.paths.productos.consultarPorId)
+            ? cuenttiConfig.paths.productos.consultarPorId.split('/{id_producto}')[0]
             : cuenttiConfig.endpoints.inventory;
         const response = await cuenttiRequest(
             `${inventoryBase}/${producto.id}`,
