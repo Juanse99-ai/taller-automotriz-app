@@ -6058,33 +6058,48 @@ async function cuenttiRequest(endpoint, method = 'GET', body = null) {
     if (!cuenttiConfig || !cuenttiConfig.token) {
         throw new Error('Configuración de CUENTTI no disponible');
     }
-    
-    const url = `${cuenttiConfig.baseUrl}${endpoint}`;
-    const options = {
-        method,
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${cuenttiConfig.token}`,
-            'x-api-key': cuenttiConfig.token
-        }
+
+    // Permitir pasar una URL absoluta en 'endpoint'
+    const url = (typeof endpoint === 'string' && (endpoint.startsWith('http://') || endpoint.startsWith('https://')))
+        ? endpoint
+        : `${cuenttiConfig.baseUrl}${endpoint}`;
+
+    // Cabeceras compatibles con el collection de Postman
+    const headers = {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${cuenttiConfig.token}`,
+        'x-api-key': cuenttiConfig.token
     };
-    
+
+    // Agregar información de compañía/sucursal/empleado si está en config
+    if (cuenttiConfig.companyId) headers['x-auth-token-empresa'] = cuenttiConfig.companyId;
+    if (cuenttiConfig.branchId) headers['x-id-sucursal'] = cuenttiConfig.branchId;
+    if (cuenttiConfig.employeeId) headers['x-id-empleado'] = cuenttiConfig.employeeId;
+    if (cuenttiConfig.gtm) headers['x-gtm'] = cuenttiConfig.gtm;
+
+    const options = { method, headers };
+
     if (body) {
+        // Algunos endpoints esperan GET con querystring; aquí enviamos body solo si hay
         options.body = JSON.stringify(body);
     }
-    
+
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), cuenttiConfig.timeoutsMs?.default || 10000);
-    
+
     try {
         const response = await fetch(url, { ...options, signal: controller.signal });
         clearTimeout(timeout);
-        
+
         if (!response.ok) {
-            throw new Error(`CUENTTI API error: ${response.status} ${response.statusText}`);
+            const text = await response.text().catch(() => '');
+            throw new Error(`CUENTTI API error: ${response.status} ${response.statusText} ${text}`);
         }
-        
-        return await response.json();
+
+        // Intentar parsear JSON, si no es JSON retornar texto
+        const ct = response.headers.get('content-type') || '';
+        if (ct.includes('application/json')) return await response.json();
+        return await response.text();
     } catch (error) {
         clearTimeout(timeout);
         if (error.name === 'AbortError') {
@@ -6323,26 +6338,49 @@ function buscarClientePorCedulaReal(cedula) {
 // Buscar cliente en CUENTTI por API (búsqueda en tiempo real)
 async function buscarClienteEnCuentti(cedula) {
     if (!cedula || !cuenttiConfig || !cuenttiConfig.token) return null;
-    
+
     try {
-        const data = await cuenttiRequest(`${cuenttiConfig.endpoints.customers}?document=${cedula}`);
-        const cliente = data.data || data;
-        
-        if (cliente && cliente.length > 0) {
-            const clienteEncontrado = cliente[0];
+        // Preferir paths configurados (más explícitos) y después fallback a endpoints
+        let endpointPath = null;
+        if (cuenttiConfig.paths && cuenttiConfig.paths.customers && cuenttiConfig.paths.customers.byDocument) {
+            endpointPath = cuenttiConfig.paths.customers.byDocument;
+        } else if (cuenttiConfig.endpoints && cuenttiConfig.endpoints.customers) {
+            // Intentar usar un path conocido
+            endpointPath = `${cuenttiConfig.endpoints.customers}/consultarClienteIdentificacion`;
+        } else {
+            endpointPath = cuenttiConfig.endpoints.customers || '/customers';
+        }
+
+        // Reemplazar placeholders si existen (ej: {id_sucursal})
+        if (endpointPath.includes('{id_sucursal}') && cuenttiConfig.branchId) {
+            endpointPath = endpointPath.replace('{id_sucursal}', cuenttiConfig.branchId);
+        }
+
+        // Construir URL con query param `document` (compatible con collection de Postman)
+        const separator = endpointPath.includes('?') ? '&' : '?';
+        const url = endpointPath + `${separator}document=${encodeURIComponent(cedula)}`;
+
+        const data = await cuenttiRequest(url, 'GET');
+        const cliente = (data && data.data) ? data.data : data;
+
+        if (cliente) {
+            // Si la API devuelve un array
+            const first = Array.isArray(cliente) ? cliente[0] : cliente;
+            if (!first) return null;
+
             return {
-                id: clienteEncontrado.id || clienteEncontrado.customer_id,
-                cedula: clienteEncontrado.document || clienteEncontrado.documento || cedula,
-                nombre: clienteEncontrado.name || clienteEncontrado.nombre || '',
-                telefono: clienteEncontrado.phone || clienteEncontrado.telefono || '',
-                email: clienteEncontrado.email || clienteEncontrado.correo || '',
-                direccion: clienteEncontrado.address || clienteEncontrado.direccion || ''
+                id: first.id || first.customer_id || first.id_cliente,
+                cedula: first.document || first.documento || first.cedula || cedula,
+                nombre: first.name || first.nombre || first.full_name || '',
+                telefono: first.phone || first.telefono || first.mobile || '',
+                email: first.email || first.correo || '',
+                direccion: first.address || first.direccion || ''
             };
         }
     } catch (error) {
         console.warn('Error buscando cliente en CUENTTI:', error);
     }
-    
+
     return null;
 }
 

@@ -11,5 +11,29 @@
     "customers": "/customers",
     "invoices": "/invoices",
     "payments": "/payments"
+  },
+  "paths": {
+    "inventory": {
+      "base": "/inventory",
+      "stockMini": "/inventory/consultaExistenciasActivosMini/{id_sucursal}",
+      "stockBySku": "/inventory/consultar_existencia_producto_sucursales_sku"
+    },
+    "customers": {
+      "base": "/customers",
+      "create": "/customers/grabarCliente",
+      "byDocument": "/customers/consultarClienteIdentificacion"
+    },
+    "invoices": {
+      "base": "/invoices",
+      "create": "/invoices/grabarDocumentoFactura",
+      "createConsumerFinal": "/invoices/grabarDocumentoFacturaConsumidorFinal",
+      "emitElectronic": "/invoices/emitirFe/{id_transaccion}/{validarRepetida}",
+      "cancel": "/invoices/anularTransaccion",
+      "addPayment": "/invoices/agregarPagoTransaccion",
+      "getPdfUrl": "/invoices/urlDocumento"
+    },
+    "payments": {
+      "base": "/payments"
+    }
   }
 }
