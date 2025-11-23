@@ -1826,41 +1826,59 @@ async function filtrarClientesModal(termino = '') {
     const contenedor = document.getElementById('modalClientesResultado');
     if (!contenedor) return;
 
-    const terminoLower = (termino || '').toLowerCase();
+    const terminoLower = (termino || '').toLowerCase().trim();
     let resultados = [];
 
-    // Si hay término, buscar en CUENTTI + local
-    if (terminoLower.length >= 1) {
-        // Intentar buscar en CUENTTI primero
+    // Si hay término suficientemente largo, buscar en CUENTTI + local
+    if (terminoLower.length >= 3) {
+        // Intentar buscar en CUENTTI primero (con logging detallado)
+        console.log(`🔎 Modal: Buscando "${terminoLower}" (length: ${terminoLower.length})`);
         try {
-            const clientesCuentti = await buscarClienteEnCuentti(terminoLower) || [];
-            if (clientesCuentti.id) {
+            const clientesCuentti = await buscarClienteEnCuentti(terminoLower);
+            if (clientesCuentti && clientesCuentti.id) {
+                console.log(`✅ Modal: Encontrado en CUENTTI:`, clientesCuentti);
                 resultados = [clientesCuentti];
+            } else {
+                console.log(`ℹ️ Modal: No encontrado en CUENTTI, buscando local...`);
             }
         } catch (e) {
-            console.warn('⚠️ Error buscando en CUENTTI:', e.message);
+            console.warn('⚠️ Modal error en CUENTTI:', e.message);
         }
         
         // Si no encontró en CUENTTI, buscar localmente
         if (resultados.length === 0) {
             const lista = obtenerListaClientes();
+            console.log(`🔍 Modal: Buscando en ${lista.length} clientes locales`);
             resultados = lista.filter(cliente => {
                 const doc = normalizarDocumentoCliente(cliente).toLowerCase();
                 const nombre = normalizarNombreCliente(cliente).toLowerCase();
                 return doc.includes(terminoLower) || nombre.includes(terminoLower);
             }).slice(0, 50);
+            console.log(`📋 Modal: Encontrados ${resultados.length} clientes locales`);
         }
+    } else if (terminoLower.length > 0) {
+        // Búsqueda muy corta - solo buscar locales
+        console.log(`ℹ️ Modal: Término muy corto (${terminoLower.length} chars), buscando local`);
+        const lista = obtenerListaClientes();
+        resultados = lista.filter(cliente => {
+            const doc = normalizarDocumentoCliente(cliente).toLowerCase();
+            const nombre = normalizarNombreCliente(cliente).toLowerCase();
+            return doc.includes(terminoLower) || nombre.includes(terminoLower);
+        }).slice(0, 50);
     } else {
-        // Sin término, mostrar todos los locales
+        // Sin término, mostrar todos los locales (primeros 50)
+        console.log(`ℹ️ Modal: Sin búsqueda, mostrando primeros 50 clientes locales`);
         const lista = obtenerListaClientes();
         resultados = lista.slice(0, 50);
     }
 
     if (!resultados.length) {
+        console.log(`❌ Modal: Sin resultados para: "${termino}"`);
         contenedor.innerHTML = '<div style="padding: 16px; color: #6b7280;">No se encontraron clientes</div>';
         return;
     }
     
+    console.log(`✓ Modal: Renderizando ${resultados.length} resultados`);
     const escapar = valor => valor.replace(/'/g, "\\'").replace(/"/g, '&quot;');
     contenedor.innerHTML = `
         <table>
@@ -1880,8 +1898,9 @@ async function filtrarClientesModal(termino = '') {
                     const telefono = (cliente?.telefono || cliente?.phone || '').toString();
                     const email = (cliente?.email || '').toString();
                     const clienteId = cliente?.id || cliente?.id_cliente || index;
+                    const esDesCuentti = cliente._original ? ' style="background: #f0fdf4; border-left: 4px solid #10b981;"' : '';
                     return `
-                        <tr>
+                        <tr${esDesCuentti}>
                             <td>${doc}</td>
                             <td>${nombre}</td>
                             <td>${telefono || '-'}</td>
@@ -6194,20 +6213,53 @@ async function cargarClientesDesdeCuentti() {
     console.log('🔄 Cargando clientes desde CUENTTI...');
     
     try {
-        const clientesEndpoint = (cuenttiConfig.paths && cuenttiConfig.paths.maestros && cuenttiConfig.paths.maestros.consultarSucursales)
-            ? cuenttiConfig.paths.maestros.consultarSucursales.replace('{id_sucursal}', cuenttiConfig.branchId || '1')
-            : cuenttiConfig.endpoints.customers;
+        // Intentar multiple endpoints para cargar clientes
+        let clientesEndpoint = null;
+        
+        // Opción 1: Si hay path específico para clientes en maestros
+        if (cuenttiConfig.paths?.maestros?.consultarClientes) {
+            clientesEndpoint = cuenttiConfig.paths.maestros.consultarClientes
+                .replace('{id_sucursal}', cuenttiConfig.branchId || '1');
+            console.log('  Usando paths.maestros.consultarClientes');
+        }
+        // Opción 2: Intentar consultarSucursales (aunque no es ideal)
+        else if (cuenttiConfig.paths?.maestros?.consultarSucursales) {
+            clientesEndpoint = cuenttiConfig.paths.maestros.consultarSucursales
+                .replace('{id_sucursal}', cuenttiConfig.branchId || '1');
+            console.log('  Usando paths.maestros.consultarSucursales (fallback)');
+        }
+        // Opción 3: Usar endpoint genérico
+        else if (cuenttiConfig.endpoints?.customers) {
+            clientesEndpoint = cuenttiConfig.endpoints.customers;
+            console.log('  Usando endpoints.customers');
+        }
+        // Opción 4: Path por defecto
+        else {
+            clientesEndpoint = '/jServerj4ErpPro/com/j4ErpPro/server/adm/sucursal/consultarSucursalesSimpleNombres/' + (cuenttiConfig.branchId || '1');
+            console.log('  Usando path por defecto');
+        }
+        
+        console.log(`  Endpoint: ${clientesEndpoint}`);
         const data = await cuenttiRequest(clientesEndpoint);
         
+        console.log(`  Datos recibidos:`, data);
+        
         // Normalizar datos de CUENTTI al formato interno
-        cuenttiClientes = (data.data || data || []).map(cliente => ({
-            id: cliente.id || cliente.customer_id,
-            cedula: cliente.document || cliente.documento || cliente.cedula || cliente.id_number,
-            nombre: cliente.name || cliente.nombre || cliente.full_name,
-            telefono: cliente.phone || cliente.telefono || cliente.mobile,
-            email: cliente.email || cliente.correo,
-            direccion: cliente.address || cliente.direccion || cliente.street,
-            ciudad: cliente.city || cliente.ciudad,
+        const items = Array.isArray(data) ? data : (data?.data || []);
+        if (!Array.isArray(items)) {
+            console.warn('  ⚠️ Respuesta no es array, tipo:', typeof items);
+            cuenttiClientes = [];
+            return false;
+        }
+        
+        cuenttiClientes = items.map(cliente => ({
+            id: cliente.id || cliente.customer_id || cliente.id_cliente,
+            cedula: cliente.document || cliente.documento || cliente.cedula || cliente.id_number || cliente.identificacion || '',
+            nombre: cliente.name || cliente.nombre || cliente.full_name || cliente.nombreCliente || '',
+            telefono: cliente.phone || cliente.telefono || cliente.mobile || cliente.telefonoCliente || '',
+            email: cliente.email || cliente.correo || cliente.emailCliente || '',
+            direccion: cliente.address || cliente.direccion || cliente.direccionCliente || '',
+            ciudad: cliente.city || cliente.ciudad || '',
             tipo: cliente.type || cliente.tipo || 'persona'
         }));
         
@@ -6420,51 +6472,66 @@ function buscarClientePorCedulaReal(cedula) {
 
 // Buscar cliente en CUENTTI por API (búsqueda en tiempo real)
 async function buscarClienteEnCuentti(cedula) {
-    if (!cedula || !cuenttiConfig || !cuenttiConfig.token) return null;
+    if (!cedula || !cuenttiConfig || !cuenttiConfig.token) {
+        console.warn('⚠️ Búsqueda CUENTTI: faltan datos - cedula:', !!cedula, 'config:', !!cuenttiConfig, 'token:', cuenttiConfig?.token ? 'sí' : 'no');
+        return null;
+    }
 
     try {
-        // Usar el path exacto de CUENTTI: consultarPorIdentificacion/{identificacion}
-        let endpointPath = null;
-        
-        if (cuenttiConfig.paths && cuenttiConfig.paths.clientes && cuenttiConfig.paths.clientes.consultarPorIdentificacion) {
-            // Usar path configurado desde Postman
-            endpointPath = cuenttiConfig.paths.clientes.consultarPorIdentificacion;
-            // Reemplazar placeholder {identificacion} con el cedula/documento del cliente
-            endpointPath = endpointPath.replace('{identificacion}', encodeURIComponent(cedula));
-        } else if (cuenttiConfig.endpoints && cuenttiConfig.endpoints.customers) {
-            // Fallback: usar endpoint base + ruta conocida
-            endpointPath = `${cuenttiConfig.endpoints.customers}/consultarClienteIdentificacion/${encodeURIComponent(cedula)}`;
-        } else {
-            endpointPath = `/customers/consultarClienteIdentificacion/${encodeURIComponent(cedula)}`;
+        // Validar que tengamos el path configurado
+        if (!cuenttiConfig.paths?.clientes?.consultarPorIdentificacion) {
+            console.warn('⚠️ Path consultarPorIdentificacion no configurado en cuentti.config.json');
+            return null;
         }
 
-        console.log('🔍 Buscando cliente en CUENTTI con path:', endpointPath);
+        // Construir endpoint completo
+        let endpointPath = cuenttiConfig.paths.clientes.consultarPorIdentificacion;
+        const cedulaEncoded = encodeURIComponent(cedula.toString().trim());
+        endpointPath = endpointPath.replace('{identificacion}', cedulaEncoded);
+        
+        console.log(`🔍 Búsqueda CUENTTI iniciada - Cédula: ${cedula}`);
+        console.log(`   Path: ${endpointPath}`);
+        console.log(`   URL completa: ${cuenttiConfig.baseUrl}${endpointPath}`);
+
         const data = await cuenttiRequest(endpointPath, 'GET');
         
-        if (!data) return null;
+        if (!data) {
+            console.log(`⚠️ Sin datos de respuesta para cédula: ${cedula}`);
+            return null;
+        }
+        
+        console.log(`📦 Respuesta CUENTTI:`, data);
         
         // La API puede retornar directamente el cliente o envuelto en data
-        const cliente = (data && data.data) ? data.data : data;
+        const cliente = (data && typeof data === 'object' && data.data) ? data.data : data;
 
-        if (cliente) {
+        if (cliente && Object.keys(cliente).length > 0) {
             // Si la API devuelve un array, tomar el primero
             const first = Array.isArray(cliente) ? cliente[0] : cliente;
-            if (!first) return null;
+            if (!first || (typeof first === 'object' && Object.keys(first).length === 0)) {
+                console.log(`✗ Cliente encontrado pero vacío para: ${cedula}`);
+                return null;
+            }
 
-            console.log('✅ Cliente encontrado en CUENTTI:', first);
-            return {
+            const clienteNormalizado = {
                 id: first.id || first.customer_id || first.id_cliente || first.idCliente,
                 cedula: first.document || first.documento || first.cedula || first.identificacion || cedula,
                 nombre: first.name || first.nombre || first.full_name || first.nombreCliente || '',
                 telefono: first.phone || first.telefono || first.mobile || first.telefonoCliente || '',
                 email: first.email || first.correo || first.emailCliente || '',
-                direccion: first.address || first.direccion || first.direccionCliente || ''
+                direccion: first.address || first.direccion || first.direccionCliente || '',
+                // Guardar datos originales para debugging
+                _original: first
             };
+
+            console.log(`✅ Cliente ENCONTRADO en CUENTTI:`, clienteNormalizado);
+            return clienteNormalizado;
         }
         
-        console.warn('⚠️ Cliente no encontrado en CUENTTI:', cedula);
+        console.log(`✗ Cliente NO encontrado en CUENTTI para: ${cedula}`);
     } catch (error) {
-        console.warn('⚠️ Error buscando cliente en CUENTTI:', error.message);
+        console.error(`❌ Error buscando cliente en CUENTTI (${cedula}):`, error.message);
+        console.error('   Stack:', error.stack);
     }
 
     return null;
