@@ -1,10 +1,33 @@
 // ===== JAVASCRIPT COMPLETO MULTIDIAGNÓSTICOS AS ===== 
-// Supabase Configuration
-const SUPABASE_URL = 'https://crtdentsfumgrotgvwdj.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNydGRlbnRzZnVtZ3JvdGd2d2RqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI2NTU5NTIsImV4cCI6MjA3ODIzMTk1Mn0.7T_Fd_L1gn3MtkvgqSCePrlK-ZUhp-8gbT5fG8GZoW4';
+// Supabase Configuration (sobrescribible vía supabase.config.json)
+let SUPABASE_URL = 'https://crtdentsfumgrotgvwdj.supabase.co';
+let SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNydGRlbnRzZnVtZ3JvdGd2d2RqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI2NTU5NTIsImV4cCI6MjA3ODIzMTk1Mn0.7T_Fd_L1gn3MtkvgqSCePrlK-ZUhp-8gbT5fG8GZoW4';
 
-// Initialize Supabase
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+let supabase = null;
+
+async function initializeSupabaseClient() {
+    try {
+        // Si existe supabase.config.json, usarlo para evitar credenciales hardcodeadas
+        try {
+            const response = await fetch('supabase.config.json', { cache: 'no-store' });
+            if (response.ok) {
+                const config = await response.json();
+                if (config.url && config.anonKey) {
+                    SUPABASE_URL = config.url;
+                    SUPABASE_ANON_KEY = config.anonKey;
+                    console.log('🔐 Supabase configurado desde supabase.config.json');
+                }
+            }
+        } catch (configError) {
+            console.warn('No se pudo cargar supabase.config.json, usando credenciales por defecto', configError);
+        }
+
+        supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        window.supabaseClient = supabase;
+    } catch (error) {
+        console.error('No se pudo inicializar Supabase:', error);
+    }
+}
 
 // Global state
 let currentSection = 'dashboard';
@@ -86,21 +109,23 @@ window.getTrabajosData = getTrabajosData;
 // Estas funciones deben estar disponibles antes de que el HTML las use
 
 // DOM Content Loaded
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', async function() {
     try {
-    console.log('🚀 Multidiagnósticos AS - Sistema completo iniciado');
-    console.log('🔧 Con todas las funcionalidades restauradas');
-    
-    // Initialize application
-    initializeApp();
-    // Inicializar tema guardado
-    try { initThemeFromStorage(); } catch(e) { console.warn('Tema: no se pudo inicializar', e); }
-    
-    // Set default section
-    showSection('dashboard');
-    try { renderTrabajosTable(); } catch(e) { console.warn('No se pudo inicializar la tabla de trabajos', e); }
-    
-    console.log('✅ Sistema completamente funcional');
+        console.log('🚀 Multidiagnósticos AS - Sistema completo iniciado');
+        console.log('🔧 Con todas las funcionalidades restauradas');
+
+        await initializeSupabaseClient();
+
+        // Initialize application
+        initializeApp();
+        // Inicializar tema guardado
+        try { initThemeFromStorage(); } catch(e) { console.warn('Tema: no se pudo inicializar', e); }
+
+        // Set default section
+        showSection('dashboard');
+        try { renderTrabajosTable(); } catch(e) { console.warn('No se pudo inicializar la tabla de trabajos', e); }
+
+        console.log('✅ Sistema completamente funcional');
     } catch (error) {
         console.error('❌ Error al inicializar la aplicación:', error);
         alert('Error al cargar la aplicación. Por favor, recarga la página.');
@@ -509,7 +534,79 @@ function loadSectionData(sectionName) {
 
 function loadDashboardData() {
     console.log('📊 Cargando datos del dashboard...');
-    // Dashboard ya tiene datos por defecto
+
+    const trabajos = getTrabajosData();
+    const facturas = getFacturasData();
+    const cotizaciones = getCotizacionesData();
+
+    const totalTrabajos = trabajos.length;
+    const completados = trabajos.filter(t => (t.estado || '').toLowerCase().includes('complet')).length;
+    const enProgreso = trabajos.filter(t => {
+        const estado = (t.estado || '').toLowerCase();
+        return estado.includes('progre') || estado.includes('pend');
+    }).length;
+
+    const inicioMes = new Date();
+    inicioMes.setDate(1);
+    const ingresosMes = (facturas.length ? facturas : trabajos)
+        .filter(t => {
+            const fecha = new Date(t.fecha);
+            return fecha >= inicioMes;
+        })
+        .reduce((sum, t) => sum + (t.total || 0), 0);
+
+    const setText = (id, value) => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = value;
+    };
+
+    setText('totalJobs', totalTrabajos);
+    setText('completedJobs', completados);
+    setText('inProgressJobs', enProgreso);
+    setText('monthlyRevenue', formatCurrency(ingresosMes));
+
+    // Trabajos recientes
+    const recientes = [...trabajos]
+        .sort((a, b) => new Date(b.fecha || b.created_at || 0) - new Date(a.fecha || a.created_at || 0))
+        .slice(0, 5);
+    const tbody = document.getElementById('trabajosRecientes');
+    if (tbody) {
+        if (recientes.length === 0) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="6" style="text-align:center; padding: 32px; color: #6b7280;">
+                        No hay trabajos registrados todavía.
+                    </td>
+                </tr>
+            `;
+        } else {
+            tbody.innerHTML = recientes.map(t => {
+                const estadoClass = (t.estado || 'Pendiente').toLowerCase().includes('complet') ? 'status-completado'
+                    : (t.estado || '').toLowerCase().includes('cancel') ? 'status-error'
+                    : 'status-pendiente';
+                return `
+                    <tr>
+                        <td>${t.id || t.numero || '—'}</td>
+                        <td>${t.cliente || '—'}</td>
+                        <td>${[t.placa, t.marca, t.modelo].filter(Boolean).join(' ') || '—'}</td>
+                        <td>${(t.tipoServicio || t.servicio || t.descripcion || 'Servicio / OT')}</td>
+                        <td><span class="status-badge ${estadoClass}">${t.estado || 'Pendiente'}</span></td>
+                        <td>${t.fecha ? new Date(t.fecha).toLocaleDateString() : '—'}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+    }
+
+    // Actualizar diagnóstico con métricas clave
+    const debug = document.getElementById('debugResults');
+    if (debug) {
+        debug.innerHTML = `
+            <p>• Trabajos registrados: <strong>${totalTrabajos}</strong></p>
+            <p>• Cotizaciones activas: <strong>${cotizaciones.filter(c => c.estado !== 'Aprobada').length}</strong></p>
+            <p>• Facturas generadas: <strong>${facturas.length}</strong></p>
+        `;
+    }
 }
 
 function loadTrabajosData() {
@@ -614,15 +711,19 @@ function loadCalendarioData() {
     // Calcular ocupación (trabajos completados vs totales)
     const completados = trabajos.filter(t => (t.estado || '').toLowerCase().includes('complet')).length;
     const ocupacion = trabajos.length > 0 ? ((completados / trabajos.length) * 100).toFixed(1) : 0;
-    
+
+    const cancelaciones = trabajos.filter(t => (t.estado || '').toLowerCase().includes('cancel')).length;
+
     // Actualizar métricas
     const citasHoyEl = document.getElementById('citasHoy');
     const citasSemanaEl = document.getElementById('citasSemana');
     const ocupacionEl = document.getElementById('ocupacion');
-    
+    const cancelacionesEl = document.getElementById('cancelaciones');
+
     if (citasHoyEl) citasHoyEl.textContent = citasHoy;
     if (citasSemanaEl) citasSemanaEl.textContent = citasSemana;
     if (ocupacionEl) ocupacionEl.textContent = ocupacion + '%';
+    if (cancelacionesEl) cancelacionesEl.textContent = cancelaciones;
     
     // Renderizar calendario por técnico
     renderCalendarioTecnicos(trabajos);
@@ -703,7 +804,34 @@ function loadHistorialData() {
 
 function loadNotificacionesData() {
     console.log('🔔 Cargando notificaciones...');
-    // Notificaciones ya tiene datos por defecto
+
+    const trabajos = getTrabajosData();
+    const cotizaciones = getCotizacionesData();
+    const itemsInventario = window.inventario || [];
+
+    const mantenimientosPendientes = trabajos.filter(t => {
+        const tipo = (t.tipoServicio || t.tipo || '').toLowerCase();
+        const estado = (t.estado || '').toLowerCase();
+        return tipo.includes('mantenimiento') || estado.includes('pend');
+    }).length;
+
+    const alertasStock = itemsInventario.filter(item => {
+        const stock = Number(item.stock || item.quantity || 0);
+        const minimo = Number(item.stock_minimo || item.min_stock || 0);
+        return minimo > 0 && stock <= minimo;
+    }).length;
+
+    const seguimientosPendientes = cotizaciones.filter(c => c.estado === 'Pendiente').length +
+        trabajos.filter(t => (t.estado || '').toLowerCase().includes('seguimiento')).length;
+
+    const setText = (id, value) => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = value;
+    };
+
+    setText('mantenimientosPendientes', mantenimientosPendientes);
+    setText('alertasStock', alertasStock);
+    setText('seguimientosPendientes', seguimientosPendientes);
 }
 
 function loadFinanzasData() {

@@ -292,23 +292,22 @@ git push -u origin main
 
 > **⚠️ IMPORTANTE:** A partir de esta versión, Supabase **solo se usa para almacenar órdenes de trabajo**. Los clientes e inventario ahora vienen de CUENTTI.
 
-### Crear Tabla de Trabajos en Supabase
+### ¿Qué código debo correr en Supabase?
 
-1. **Ejecutar el script SQL:**
-   - Abre el archivo `supabase_trabajos.sql` en el editor SQL de Supabase
-   - Ejecuta el script completo para crear la tabla `trabajos` con todos los índices necesarios
+1. **Ejecuta `supabase_trabajos.sql` en el SQL Editor de tu proyecto:**
+   - Carga el archivo completo y presiona “Run”.
+   - El script habilita la extensión `pgcrypto` y crea:
+     - Tabla principal `trabajos` (órdenes de trabajo).
+     - Respaldos locales `clientes`, `inventario` y `vehiculos` para cuando CUENTTI no esté disponible.
+   - Incluye índices, triggers de `updated_at` y comentarios en todas las tablas.
 
-2. **La tabla `trabajos` incluye:**
-   - Información del cliente y vehículo
-   - Items del trabajo (repuestos, servicios)
-   - Totales y cálculos
-   - Estado del trabajo
-   - Información de pago
+2. **Si necesitas seguridad:**
+   - Habilita RLS en las tablas (están comentadas al final del script).
+   - Ajusta o descomenta las políticas de ejemplo incluidas para lectura/inserción según tu caso de uso.
 
-3. **Configurar Row Level Security (RLS):**
-   - En Supabase Dashboard → Authentication → Policies
-   - Habilita políticas según tus necesidades de seguridad
-   - Por defecto, el script no habilita RLS (ajusta según necesites)
+3. **¿Cuándo volver a ejecutar el script?**
+   - Solo si actualizas `supabase_trabajos.sql` y quieres aplicar esos cambios en Supabase.
+   - No hay migraciones adicionales; todo está centralizado en este archivo.
 
 ### ⚠️ Migración desde Versión Anterior
 
@@ -319,11 +318,14 @@ Si tenías clientes e inventario en Supabase:
 
 ### Variables de Configuración
 
-Edita en el archivo HTML:
-```javascript
-const SUPABASE_URL = 'https://tu-proyecto.supabase.co';
-const SUPABASE_ANON_KEY = 'tu-clave-anon-key';
+Usa `supabase.config.json` para evitar credenciales en el código fuente:
+
+```bash
+cp supabase.config.example.json supabase.config.json
+# Rellena url y anonKey con los valores de tu proyecto
 ```
+
+El frontend leerá automáticamente este archivo (o variables inyectadas en la ruta) al cargar y recreará el cliente de Supabase con esa configuración.
 
 ## 💼 Configuración de CUENTTI
 
