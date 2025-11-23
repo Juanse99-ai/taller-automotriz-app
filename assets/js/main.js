@@ -412,8 +412,9 @@ function clearLocalData() {
     // Reset in-memory data
     try {
         if (window.__appData) { window.__appData.trabajos = []; window.__appData.vehiculos=[]; window.__appData.vehiculosAudit=[]; }
-        if (Array.isArray(window.supabaseClientes)) window.supabaseClientes.length = 0;
-        if (Array.isArray(window.supabaseInventario)) window.supabaseInventario.length = 0;
+        // Limpiar datos de CUENTTI
+        if (Array.isArray(cuenttiClientes)) cuenttiClientes.length = 0;
+        if (Array.isArray(cuenttiInventario)) cuenttiInventario.length = 0;
     } catch(e) {}
     showNotification('Datos locales limpiados. Refresca la página.', 'success');
 }
@@ -544,7 +545,25 @@ function loadInventarioData() {
 
 function loadCuenttiData() {
     console.log('💼 Cargando integración CUENTTI...');
-    // CUENTTI ya tiene datos por defecto
+    
+    // Cargar datos de CUENTTI si no están cargados
+    if (cuenttiClientes.length === 0 || cuenttiInventario.length === 0) {
+        inicializarConCuentti();
+    }
+    
+    // Mostrar estado de conexión
+    const estado = document.getElementById('cuenttiStatus');
+    if (estado) {
+        estado.innerHTML = `
+            <div class="card">
+                <h4>Estado de Integración CUENTTI</h4>
+                <p><strong>Clientes cargados:</strong> ${cuenttiClientes.length}</p>
+                <p><strong>Productos cargados:</strong> ${cuenttiInventario.length}</p>
+                <p><strong>Estado:</strong> ${cuenttiConectado ? '✅ Conectado' : '⚠️ Desconectado'}</p>
+                <button class="btn btn-primary" onclick="sincronizarDatosCuentti()">🔄 Sincronizar Ahora</button>
+            </div>
+        `;
+    }
 }
 
 // ===== FUNCIONES DE ACCIÓN =====
@@ -1184,7 +1203,7 @@ function buscarClientePorNombreOT(nombre) {
 }
 
 function obtenerListaClientes() {
-    return Array.isArray(supabaseClientes) && supabaseClientes.length ? supabaseClientes : clientes;
+    return Array.isArray(cuenttiClientes) && cuenttiClientes.length ? cuenttiClientes : clientes;
 }
 
 function abrirBuscadorClientes() {
@@ -1370,76 +1389,37 @@ async function guardarEdicionCliente(event, cedulaOriginal, clienteId) {
             clienteExistente.email = email;
         }
         
-        // Intentar actualizar en Supabase si está disponible
-        // Determinar campo de documento disponible
-        const camposDocumento = ['cedula', 'documento', 'id_cedula', 'nit', 'numero_documento', 'identificacion', 'doc', 'documento_identidad'];
-        const campoDocumento = camposDocumento.find(campo => clienteExistente && clienteExistente.hasOwnProperty(campo) && clienteExistente[campo]);
-        const valorDocumento = campoDocumento ? clienteExistente[campoDocumento] : cedulaOriginal;
-        
-        // Intentar actualizar en Supabase usando el mejor identificador disponible
-        if (window.supabase) {
-            const payload = {
-                nombre: nombre,
-                telefono: telefono || null,
-                email: email || null
-            };
-            let sincronizadoSupabase = false;
-            
-            const tieneIdReal = clienteExistente && Object.prototype.hasOwnProperty.call(clienteExistente, 'id') && clienteExistente.id !== null && clienteExistente.id !== undefined;
-            if (tieneIdReal) {
-                try {
-                    const { data, error } = await supabase
-                        .from('clientes')
-                        .update(payload)
-                        .eq('id', clienteExistente.id)
-                        .select('id');
-                    
-                    if (error) {
-                        console.warn('⚠️ Error al actualizar cliente por ID en Supabase:', error);
-                    } else if (data && data.length > 0) {
-                        sincronizadoSupabase = true;
-                    }
-                } catch (supabaseError) {
-                    console.warn('⚠️ Error de conexión con Supabase (por ID):', supabaseError);
-                }
-            }
-            
-            if (!sincronizadoSupabase && campoDocumento && valorDocumento) {
-                try {
-                    const { data, error } = await supabase
-                        .from('clientes')
-                        .update(payload)
-                        .eq(campoDocumento, valorDocumento)
-                        .select('id');
-                    
-                    if (error) {
-                        console.warn(`⚠️ Error al actualizar cliente por ${campoDocumento} en Supabase:`, error);
-                    } else if (data && data.length > 0) {
-                        sincronizadoSupabase = true;
-                    }
-                } catch (supabaseError) {
-                    console.warn(`⚠️ Error de conexión con Supabase (por ${campoDocumento}):`, supabaseError);
-                }
-            }
-            
-            if (sincronizadoSupabase) {
-                console.log('✅ Cliente sincronizado con Supabase');
-                await cargarDatosDesdeSupabase();
+        // Intentar actualizar en CUENTTI si está disponible
+        if (cuenttiConfig && cuenttiConfig.token && clienteExistente.id) {
+            try {
+                const payload = {
+                    name: nombre,
+                    phone: telefono || null,
+                    email: email || null
+                };
+                
+                await cuenttiRequest(`${cuenttiConfig.endpoints.customers}/${clienteExistente.id}`, 'PUT', payload);
+                console.log('✅ Cliente actualizado en CUENTTI');
+                
+                // Recargar datos de CUENTTI
+                await cargarClientesDesdeCuentti();
+            } catch (error) {
+                console.warn('⚠️ Error actualizando cliente en CUENTTI:', error);
             }
         }
         
-        // Si es cliente de Supabase, actualizar el array
-        if (Array.isArray(supabaseClientes) && supabaseClientes.length > 0) {
-            const index = supabaseClientes.findIndex(c => {
-                const doc = normalizarDocumentoCliente(c);
+        // Si es cliente de CUENTTI, actualizar el array
+        if (Array.isArray(cuenttiClientes) && cuenttiClientes.length > 0) {
+            const index = cuenttiClientes.findIndex(c => {
+                const doc = (c.cedula || c.documento || '').toString().trim();
                 return doc === cedulaOriginal;
             });
             if (index !== -1) {
-                supabaseClientes[index] = { ...supabaseClientes[index], ...clienteExistente };
+                cuenttiClientes[index] = { ...cuenttiClientes[index], ...clienteExistente };
             }
         }
         try {
-            localStorage.setItem('supabase_clientes_backup', JSON.stringify(supabaseClientes));
+            localStorage.setItem('cuentti_clientes_backup', JSON.stringify(cuenttiClientes));
         } catch (storageError) {
             console.warn('⚠️ No se pudo actualizar el backup local de clientes:', storageError);
         }
@@ -1475,8 +1455,8 @@ function buscarEnInventario(termino) {
     const contenedor = document.getElementById('resultadosInventario');
     if (!contenedor) return;
     
-    const baseInventario = Array.isArray(supabaseInventario) && supabaseInventario.length
-        ? supabaseInventario
+    const baseInventario = Array.isArray(cuenttiInventario) && cuenttiInventario.length
+        ? cuenttiInventario
         : [
             { codigo: 'ACE001', nombre: 'Aceite Motor 5W30 Synthetic', referencia: 'ACE001', precio: 45000, categoria: 'Lubricantes' },
             { codigo: 'FRN001', nombre: 'Frenos Delanteros Completos', referencia: 'FRN001', precio: 180000, categoria: 'Frenos' },
@@ -1812,8 +1792,8 @@ window.buscarRepuestoDesdeBoton = buscarRepuestoDesdeBoton;
 
 // Funciones para la nueva interfaz de tabla
 function obtenerSugerenciasInventario(termino, limite = 8) {
-    const baseInventario = Array.isArray(supabaseInventario) && supabaseInventario.length
-        ? supabaseInventario
+    const baseInventario = Array.isArray(cuenttiInventario) && cuenttiInventario.length
+        ? cuenttiInventario
         : [
             { codigo: 'ACE001', nombre: 'Aceite Motor 5W30 Synthetic', referencia: 'ACE001', precio: 45000, categoria: 'Lubricantes' },
             { codigo: 'FRN001', nombre: 'Frenos Delanteros Completos', referencia: 'FRN001', precio: 180000, categoria: 'Frenos' },
@@ -2409,7 +2389,7 @@ function formatCurrency(amount) {
 }
 
 // Guardar nuevo trabajo con sistema POS
-function guardarNuevoTrabajo(event) {
+async function guardarNuevoTrabajo(event) {
     event.preventDefault();
     
     console.log('💾 Iniciando guardado de trabajo con sistema POS...');
@@ -2511,6 +2491,13 @@ function guardarNuevoTrabajo(event) {
             }
         } else {
             addTrabajoData(trabajoCompleto);
+        }
+        
+        // Guardar también en Supabase (solo para trabajos)
+        try {
+            await guardarTrabajoEnSupabase(trabajoCompleto);
+        } catch (e) {
+            console.warn('No se pudo guardar trabajo en Supabase:', e);
         }
     } catch (e) {
         console.warn('No se pudo agregar a trabajos:', e);
@@ -4921,12 +4908,205 @@ function verificarBotones() {
 }
 
 // =====================================================
-// SISTEMA MULTIDIAGNÓSTICOS AS - INTEGRACIÓN SUPABASE
+// SISTEMA MULTIDIAGNÓSTICOS AS - INTEGRACIÓN CUENTTI
 // =====================================================
 
-// Variables globales para datos reales de Supabase
-let supabaseClientes = [];
-let supabaseInventario = [];
+// Variables globales para datos de CUENTTI
+let cuenttiClientes = [];
+let cuenttiInventario = [];
+let cuenttiConectado = false;
+let cuenttiConfig = null;
+
+// Cargar configuración de CUENTTI
+async function cargarConfigCuentti() {
+    try {
+        const response = await fetch('cuentti.config.json');
+        if (response.ok) {
+            cuenttiConfig = await response.json();
+            console.log('✅ Configuración CUENTTI cargada');
+            return true;
+        }
+    } catch (e) {
+        console.warn('⚠️ No se pudo cargar cuentti.config.json, usando valores por defecto');
+    }
+    // Valores por defecto desde ejemplo
+    cuenttiConfig = {
+        baseUrl: 'https://api.cuentti.com/v1',
+        token: '',
+        companyId: '',
+        branchId: '',
+        timeoutsMs: { default: 10000 },
+        endpoints: {
+            inventory: '/inventory',
+            customers: '/customers',
+            invoices: '/invoices',
+            payments: '/payments'
+        }
+    };
+    return false;
+}
+
+// Función para hacer peticiones a CUENTTI
+async function cuenttiRequest(endpoint, method = 'GET', body = null) {
+    if (!cuenttiConfig || !cuenttiConfig.token) {
+        throw new Error('Configuración de CUENTTI no disponible');
+    }
+    
+    const url = `${cuenttiConfig.baseUrl}${endpoint}`;
+    const options = {
+        method,
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${cuenttiConfig.token}`,
+            'x-api-key': cuenttiConfig.token
+        }
+    };
+    
+    if (body) {
+        options.body = JSON.stringify(body);
+    }
+    
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), cuenttiConfig.timeoutsMs?.default || 10000);
+    
+    try {
+        const response = await fetch(url, { ...options, signal: controller.signal });
+        clearTimeout(timeout);
+        
+        if (!response.ok) {
+            throw new Error(`CUENTTI API error: ${response.status} ${response.statusText}`);
+        }
+        
+        return await response.json();
+    } catch (error) {
+        clearTimeout(timeout);
+        if (error.name === 'AbortError') {
+            throw new Error('Timeout al conectar con CUENTTI');
+        }
+        throw error;
+    }
+}
+
+// =====================================================
+// CARGAR DATOS DESDE CUENTTI
+// =====================================================
+
+async function cargarClientesDesdeCuentti() {
+    console.log('🔄 Cargando clientes desde CUENTTI...');
+    
+    try {
+        const data = await cuenttiRequest(cuenttiConfig.endpoints.customers);
+        
+        // Normalizar datos de CUENTTI al formato interno
+        cuenttiClientes = (data.data || data || []).map(cliente => ({
+            id: cliente.id || cliente.customer_id,
+            cedula: cliente.document || cliente.documento || cliente.cedula || cliente.id_number,
+            nombre: cliente.name || cliente.nombre || cliente.full_name,
+            telefono: cliente.phone || cliente.telefono || cliente.mobile,
+            email: cliente.email || cliente.correo,
+            direccion: cliente.address || cliente.direccion || cliente.street,
+            ciudad: cliente.city || cliente.ciudad,
+            tipo: cliente.type || cliente.tipo || 'persona'
+        }));
+        
+        console.log(`✅ Clientes cargados desde CUENTTI: ${cuenttiClientes.length} registros`);
+        
+        // Guardar en localStorage como respaldo
+        localStorage.setItem('cuentti_clientes_backup', JSON.stringify(cuenttiClientes));
+        localStorage.setItem('cuentti_last_sync', new Date().toISOString());
+        
+        return true;
+    } catch (error) {
+        console.error('❌ Error cargando clientes desde CUENTTI:', error);
+        
+        // Intentar cargar desde backup
+        const backup = localStorage.getItem('cuentti_clientes_backup');
+        if (backup) {
+            try {
+                cuenttiClientes = JSON.parse(backup);
+                console.log(`⚠️ Usando backup local: ${cuenttiClientes.length} clientes`);
+                return true;
+            } catch (e) {
+                console.error('Error cargando backup:', e);
+            }
+        }
+        
+        return false;
+    }
+}
+
+async function cargarInventarioDesdeCuentti() {
+    console.log('🔄 Cargando inventario desde CUENTTI...');
+    
+    try {
+        const data = await cuenttiRequest(cuenttiConfig.endpoints.inventory);
+        
+        // Normalizar datos de CUENTTI al formato interno
+        cuenttiInventario = (data.data || data || []).map(producto => ({
+            id: producto.id || producto.product_id,
+            codigo: producto.code || producto.codigo || producto.sku || producto.reference,
+            nombre: producto.name || producto.nombre || producto.description,
+            categoria: producto.category || producto.categoria || producto.type || 'General',
+            precio: parseFloat(producto.price || producto.precio || producto.sale_price || 0),
+            stock: parseInt(producto.stock || producto.quantity || producto.cantidad || 0),
+            stock_minimo: parseInt(producto.min_stock || producto.stock_minimo || producto.minimo || 1),
+            unidad: producto.unit || producto.unidad || 'unidad',
+            iva: parseFloat(producto.tax || producto.iva || producto.tax_rate || 19)
+        }));
+        
+        console.log(`✅ Inventario cargado desde CUENTTI: ${cuenttiInventario.length} productos`);
+        
+        // Guardar en localStorage como respaldo
+        localStorage.setItem('cuentti_inventario_backup', JSON.stringify(cuenttiInventario));
+        
+        return true;
+    } catch (error) {
+        console.error('❌ Error cargando inventario desde CUENTTI:', error);
+        
+        // Intentar cargar desde backup
+        const backup = localStorage.getItem('cuentti_inventario_backup');
+        if (backup) {
+            try {
+                cuenttiInventario = JSON.parse(backup);
+                console.log(`⚠️ Usando backup local: ${cuenttiInventario.length} productos`);
+                return true;
+            } catch (e) {
+                console.error('Error cargando backup:', e);
+            }
+        }
+        
+        return false;
+    }
+}
+
+async function cargarDatosDesdeCuentti() {
+    console.log('🔄 Cargando todos los datos desde CUENTTI...');
+    
+    const configOk = await cargarConfigCuentti();
+    if (!configOk || !cuenttiConfig.token) {
+        console.warn('⚠️ Configuración de CUENTTI no disponible');
+        return false;
+    }
+    
+    const clientesOk = await cargarClientesDesdeCuentti();
+    const inventarioOk = await cargarInventarioDesdeCuentti();
+    
+    cuenttiConectado = clientesOk || inventarioOk;
+    
+    if (cuenttiConectado) {
+        console.log('🎉 Datos de CUENTTI cargados exitosamente');
+    }
+    
+    return cuenttiConectado;
+}
+
+// =====================================================
+// SISTEMA MULTIDIAGNÓSTICOS AS - INTEGRACIÓN SUPABASE
+// (SOLO PARA TRABAJOS Y DATOS INTERNOS)
+// =====================================================
+
+// Variables globales para datos de Supabase (solo trabajos)
+let supabaseTrabajos = [];
 let supabaseConectado = false;
 
 // Configuración Supabase
@@ -4980,14 +5160,14 @@ async function cargarDatosDesdeSupabase() {
             return false;
         }
         
-        supabaseInventario = inventario || [];
-        console.log(`✅ Inventario cargado: ${supabaseInventario.length} registros`);
+        cuenttiInventario = inventario || [];
+        console.log(`✅ Inventario cargado: ${cuenttiInventario.length} registros`);
         
         supabaseConectado = true;
         
         // Guardar en localStorage como respaldo
         localStorage.setItem('supabase_clientes_backup', JSON.stringify(supabaseClientes));
-        localStorage.setItem('supabase_inventario_backup', JSON.stringify(supabaseInventario));
+        localStorage.setItem('supabase_inventario_backup', JSON.stringify(cuenttiInventario));
         localStorage.setItem('supabase_last_sync', new Date().toISOString());
         
         console.log('🎉 Datos de Supabase cargados exitosamente');
@@ -5000,26 +5180,26 @@ async function cargarDatosDesdeSupabase() {
 }
 
 // =====================================================
-// BÚSQUEDA DE CLIENTES (DATOS REALES)
+// BÚSQUEDA DE CLIENTES (DESDE CUENTTI)
 // =====================================================
 
 function buscarClientePorCedulaReal(cedula) {
     if (!cedula) return;
     
-    // Buscar en datos de Supabase
-    const cliente = supabaseClientes.find(c => 
-        c.cedula === cedula || 
-        c.id_cedula === cedula || 
-        c.documento === cedula
-    );
+    // Buscar en datos de CUENTTI
+    const cliente = cuenttiClientes.find(c => {
+        const doc = (c.cedula || c.documento || c.id_number || '').toString().trim();
+        const termino = cedula.toString().trim();
+        return doc === termino || doc.replace(/[^0-9]/g, '') === termino.replace(/[^0-9]/g, '');
+    });
     
     if (cliente) {
-        const nombre = cliente.nombre || cliente.name || cliente.cliente;
+        const nombre = cliente.nombre || cliente.name || '';
         const telefono = cliente.telefono || cliente.phone || '';
         const email = cliente.email || '';
         const direccion = cliente.direccion || cliente.address || '';
         
-        // Llenar campos del formulario (ids reales en el formulario unificado)
+        // Llenar campos del formulario
         const setVal = (id, v) => { const el = document.getElementById(id); if (el && v) el.value = v; };
         setVal('trabajoCliente', nombre);
         setVal('clienteTelefono', telefono);
@@ -5028,24 +5208,50 @@ function buscarClientePorCedulaReal(cedula) {
         showNotification(`👤 Cliente encontrado: ${nombre}`, 'success');
         return cliente;
     } else {
-        showNotification('❌ Cliente no encontrado', 'error');
+        showNotification('❌ Cliente no encontrado en CUENTTI', 'warning');
         return null;
     }
 }
 
+// Buscar cliente en CUENTTI por API (búsqueda en tiempo real)
+async function buscarClienteEnCuentti(cedula) {
+    if (!cedula || !cuenttiConfig || !cuenttiConfig.token) return null;
+    
+    try {
+        const data = await cuenttiRequest(`${cuenttiConfig.endpoints.customers}?document=${cedula}`);
+        const cliente = data.data || data;
+        
+        if (cliente && cliente.length > 0) {
+            const clienteEncontrado = cliente[0];
+            return {
+                id: clienteEncontrado.id || clienteEncontrado.customer_id,
+                cedula: clienteEncontrado.document || clienteEncontrado.documento || cedula,
+                nombre: clienteEncontrado.name || clienteEncontrado.nombre || '',
+                telefono: clienteEncontrado.phone || clienteEncontrado.telefono || '',
+                email: clienteEncontrado.email || clienteEncontrado.correo || '',
+                direccion: clienteEncontrado.address || clienteEncontrado.direccion || ''
+            };
+        }
+    } catch (error) {
+        console.warn('Error buscando cliente en CUENTTI:', error);
+    }
+    
+    return null;
+}
+
 // =====================================================
-// BÚSQUEDA DE REPUESTOS (DATOS REALES)
+// BÚSQUEDA DE REPUESTOS (DESDE CUENTTI)
 // =====================================================
 
 function buscarRepuestoReal(termino) {
     if (!termino) return [];
     
-    // Buscar en inventario de Supabase
-    const resultados = supabaseInventario.filter(item => {
+    // Buscar en inventario de CUENTTI
+    const resultados = cuenttiInventario.filter(item => {
         const codigo = (item.codigo || item.code || item.sku || '').toString().toLowerCase();
-        const referencia = (item.referencia || item.reference || item.codigo_barras || item.barcode || '').toString().toLowerCase();
-        const nombre = (item.nombre || item.name || item.producto || item.descripcion || '').toString().toLowerCase();
-        const categoria = (item.categoria || item.category || item.tipo || '').toString().toLowerCase();
+        const referencia = (item.referencia || item.reference || item.barcode || '').toString().toLowerCase();
+        const nombre = (item.nombre || item.name || item.description || '').toString().toLowerCase();
+        const categoria = (item.categoria || item.category || item.type || '').toString().toLowerCase();
         
         const terminoLower = termino.toLowerCase();
         
@@ -5056,48 +5262,187 @@ function buscarRepuestoReal(termino) {
     });
     
     return resultados.map(item => ({
-        codigo: item.codigo || item.code || item.referencia || item.reference || item.codigo_barras || `ITEM-${item.id}`,
-        nombre: item.nombre || item.name || item.producto || 'Sin nombre',
+        codigo: item.codigo || item.code || item.sku || `ITEM-${item.id}`,
+        nombre: item.nombre || item.name || 'Sin nombre',
         categoria: item.categoria || item.category || 'Sin categoría',
-        precio: item.precio || item.price || item.valor || 0,
-        stock: item.stock || item.cantidad || item.quantity || 0,
-        stock_minimo: item.stock_minimo || item.minimo || item.min_stock || 1
+        precio: item.precio || item.price || 0,
+        stock: item.stock || item.quantity || 0,
+        stock_minimo: item.stock_minimo || item.min_stock || 1,
+        iva: item.iva || 19
     }));
+}
+
+// Buscar producto en CUENTTI por API (búsqueda en tiempo real)
+async function buscarProductoEnCuentti(termino) {
+    if (!termino || !cuenttiConfig || !cuenttiConfig.token) return [];
+    
+    try {
+        const data = await cuenttiRequest(`${cuenttiConfig.endpoints.inventory}?search=${encodeURIComponent(termino)}`);
+        const productos = data.data || data || [];
+        
+        return productos.map(producto => ({
+            id: producto.id || producto.product_id,
+            codigo: producto.code || producto.codigo || producto.sku || '',
+            nombre: producto.name || producto.nombre || producto.description || '',
+            categoria: producto.category || producto.categoria || 'General',
+            precio: parseFloat(producto.price || producto.precio || 0),
+            stock: parseInt(producto.stock || producto.quantity || 0),
+            stock_minimo: parseInt(producto.min_stock || producto.stock_minimo || 1),
+            iva: parseFloat(producto.tax || producto.iva || 19)
+        }));
+    } catch (error) {
+        console.warn('Error buscando producto en CUENTTI:', error);
+        return [];
+    }
 }
 
 // =====================================================
 // FUNCIONES DE INICIALIZACIÓN
 // =====================================================
 
-// Función para inicializar con datos de Supabase
-window.inicializarConSupabase = async function() {
-    console.log('🚀 Inicializando sistema con datos de Supabase...');
+// Función para inicializar con datos de CUENTTI
+window.inicializarConCuentti = async function() {
+    console.log('🚀 Inicializando sistema con datos de CUENTTI...');
     
-    const success = await cargarDatosDesdeSupabase();
+    const success = await cargarDatosDesdeCuentti();
     
     if (success) {
-        showNotification('🎉 Sistema conectado a Supabase exitosamente', 'success');
+        showNotification('🎉 Sistema conectado a CUENTTI exitosamente', 'success');
     } else {
-        showNotification('⚠️ Error conectando a Supabase. Usando datos locales.', 'warning');
+        showNotification('⚠️ Error conectando a CUENTTI. Usando datos locales.', 'warning');
         
         // Intentar cargar desde localStorage
-        const clientesBackup = localStorage.getItem('supabase_clientes_backup');
-        const inventarioBackup = localStorage.getItem('supabase_inventario_backup');
+        const clientesBackup = localStorage.getItem('cuentti_clientes_backup');
+        const inventarioBackup = localStorage.getItem('cuentti_inventario_backup');
         
-        if (clientesBackup) supabaseClientes = JSON.parse(clientesBackup);
-        if (inventarioBackup) supabaseInventario = JSON.parse(inventarioBackup);
+        if (clientesBackup) {
+            try {
+                cuenttiClientes = JSON.parse(clientesBackup);
+            } catch (e) {}
+        }
+        if (inventarioBackup) {
+            try {
+                cuenttiInventario = JSON.parse(inventarioBackup);
+            } catch (e) {}
+        }
     }
     
-    console.log(`📊 Datos disponibles: ${supabaseClientes.length} clientes, ${supabaseInventario.length} productos`);
+    console.log(`📊 Datos disponibles: ${cuenttiClientes.length} clientes, ${cuenttiInventario.length} productos`);
 };
 
-// Función para verificar conexión
+// Función para inicializar Supabase (solo para trabajos)
+async function cargarTrabajosDesdeSupabase() {
+    console.log('🔄 Cargando trabajos desde Supabase...');
+    
+    try {
+        const { data: trabajos, error } = await fetchAllRows('trabajos');
+        
+        if (error) {
+            console.error('❌ Error cargando trabajos:', error);
+            return false;
+        }
+        
+        supabaseTrabajos = trabajos || [];
+        console.log(`✅ Trabajos cargados: ${supabaseTrabajos.length} registros`);
+        
+        // Sincronizar con LocalStorage
+        if (supabaseTrabajos.length > 0) {
+            window.__appData.trabajos = supabaseTrabajos;
+            saveTrabajosData();
+        }
+        
+        supabaseConectado = true;
+        return true;
+    } catch (error) {
+        console.error('❌ Error general:', error);
+        return false;
+    }
+}
+
+// Función para guardar trabajo en Supabase
+async function guardarTrabajoEnSupabase(trabajo) {
+    if (!supabase || !supabaseConectado) {
+        console.warn('⚠️ Supabase no disponible, guardando solo en LocalStorage');
+        return false;
+    }
+    
+    try {
+        const trabajoData = {
+            id: trabajo.id,
+            fecha: trabajo.fecha,
+            cedula_cliente: trabajo.cedula,
+            cliente: trabajo.cliente,
+            telefono_cliente: trabajo.telefonoCliente,
+            email_cliente: trabajo.emailCliente,
+            placa: trabajo.placa,
+            marca: trabajo.marca,
+            modelo: trabajo.modelo,
+            ano: trabajo.ano,
+            kilometraje: trabajo.kilometraje,
+            tecnico_id: trabajo.mecanico,
+            estado: trabajo.estado,
+            observaciones: trabajo.observaciones,
+            items: JSON.stringify(trabajo.items),
+            mano_obra: trabajo.manoObra || 0,
+            subtotal_sin_iva: trabajo.subtotalSinIva,
+            total_iva: trabajo.totalIva,
+            total: trabajo.total,
+            pagado: trabajo.pagado || false,
+            metodo_pago: trabajo.metodoPago || null,
+            created_at: trabajo.fecha,
+            updated_at: new Date().toISOString()
+        };
+        
+        // Intentar insertar o actualizar
+        const { data, error } = await supabase
+            .from('trabajos')
+            .upsert(trabajoData, { onConflict: 'id' })
+            .select();
+        
+        if (error) {
+            console.error('❌ Error guardando trabajo en Supabase:', error);
+            return false;
+        }
+        
+        console.log('✅ Trabajo guardado en Supabase:', trabajo.id);
+        return true;
+    } catch (error) {
+        console.error('❌ Error guardando trabajo:', error);
+        return false;
+    }
+}
+
+// Función para inicializar con datos de Supabase (solo trabajos)
+window.inicializarTrabajosSupabase = async function() {
+    console.log('🚀 Inicializando trabajos desde Supabase...');
+    
+    const success = await cargarTrabajosDesdeSupabase();
+    
+    if (success) {
+        console.log('✅ Trabajos cargados desde Supabase');
+        renderTrabajosTable();
+    } else {
+        console.warn('⚠️ No se pudieron cargar trabajos desde Supabase, usando LocalStorage');
+    }
+};
+
+// Función para verificar conexión CUENTTI
+window.verificarConexionCuentti = function() {
+    return {
+        conectado: cuenttiConectado,
+        clientes: cuenttiClientes.length,
+        inventario: cuenttiInventario.length,
+        ultimaSync: localStorage.getItem('cuentti_last_sync') || 'Nunca',
+        configCargada: cuenttiConfig !== null
+    };
+};
+
+// Función para verificar conexión Supabase (solo trabajos)
 window.verificarConexionSupabase = function() {
     return {
         conectado: supabaseConectado,
-        clientes: supabaseClientes.length,
-        inventario: supabaseInventario.length,
-        ultimaSync: localStorage.getItem('supabase_last_sync') || 'Nunca'
+        trabajos: supabaseTrabajos.length,
+        ultimaSync: localStorage.getItem('supabase_trabajos_last_sync') || 'Nunca'
     };
 };
 
@@ -5105,48 +5450,77 @@ window.verificarConexionSupabase = function() {
 // REEMPLAZAR FUNCIONES ORIGINALES
 // =====================================================
 
-// Integrar búsqueda de cliente: mantener el buscador con sugerencias y completar datos si hay match exacto en Supabase
+// Integrar búsqueda de cliente: usar CUENTTI
 const _buscarClientePorCedulaOriginal = window.buscarClientePorCedula;
-window.buscarClientePorCedula = function(cedula) {
+window.buscarClientePorCedula = async function(cedula) {
     try {
         if (typeof _buscarClientePorCedulaOriginal === 'function') {
             _buscarClientePorCedulaOriginal(cedula);
         }
     } catch (e) {
-        console.warn('Buscar cliente (local) falló, continuando con Supabase si aplica:', e);
+        console.warn('Buscar cliente (local) falló, continuando con CUENTTI:', e);
     }
 
     const termino = (cedula || '').toString().trim();
     if (!termino) return;
+    
     try {
-        const exacto = (supabaseClientes || []).find(c => normalizarDocumentoCliente(c) === termino);
+        // Buscar primero en datos cargados
+        const exacto = (cuenttiClientes || []).find(c => {
+            const doc = (c.cedula || c.documento || '').toString().trim();
+            return doc === termino || doc.replace(/[^0-9]/g, '') === termino.replace(/[^0-9]/g, '');
+        });
+        
         if (exacto) {
-            const nombre = normalizarNombreCliente(exacto);
+            const nombre = exacto.nombre || exacto.name || '';
             const tel = (exacto.telefono || exacto.phone || '').toString();
             const mail = (exacto.email || '').toString();
-            const doc = normalizarDocumentoCliente(exacto);
+            const doc = exacto.cedula || exacto.documento || termino;
             const setVal = (id, v) => { const el = document.getElementById(id); if (el && v) el.value = v; };
             setVal('trabajoCliente', nombre);
             setVal('busquedaCedula', doc);
             setVal('clienteTelefono', tel);
             setVal('clienteEmail', mail);
+        } else {
+            // Intentar búsqueda en tiempo real en CUENTTI
+            const clienteEnTiempoReal = await buscarClienteEnCuentti(termino);
+            if (clienteEnTiempoReal) {
+                const setVal = (id, v) => { const el = document.getElementById(id); if (el && v) el.value = v; };
+                setVal('trabajoCliente', clienteEnTiempoReal.nombre);
+                setVal('busquedaCedula', clienteEnTiempoReal.cedula);
+                setVal('clienteTelefono', clienteEnTiempoReal.telefono);
+                setVal('clienteEmail', clienteEnTiempoReal.email);
+                
+                // Agregar a cache local
+                if (!cuenttiClientes.find(c => c.cedula === clienteEnTiempoReal.cedula)) {
+                    cuenttiClientes.push(clienteEnTiempoReal);
+                }
+            }
         }
     } catch (e) {
-        console.warn('No se pudo autocompletar datos del cliente desde Supabase:', e);
+        console.warn('No se pudo autocompletar datos del cliente desde CUENTTI:', e);
     }
 };
 
-// Sobrescribir función de búsqueda de repuesto
+// Sobrescribir función de búsqueda de repuesto (usar CUENTTI)
 window.buscarRepuesto = buscarRepuestoReal;
 
-// Función para sincronizar datos manualmente
-window.sincronizarDatosSupabase = cargarDatosDesdeSupabase;
+// Función para sincronizar datos manualmente desde CUENTTI
+window.sincronizarDatosCuentti = cargarDatosDesdeCuentti;
 
-// Inicializar sistema con datos de Supabase
+// Función para sincronizar trabajos desde Supabase
+window.sincronizarTrabajosSupabase = cargarTrabajosDesdeSupabase;
+
+// Inicializar sistema con datos de CUENTTI y Supabase
 window.addEventListener('load', function() {
-    // Inicializar con datos de Supabase después de 2 segundos
+    // Inicializar con datos de CUENTTI después de 1 segundo
     setTimeout(() => {
-        inicializarConSupabase();
+        inicializarConCuentti();
+    }, 1000);
+    
+    // Inicializar trabajos desde Supabase después de 2 segundos
+    setTimeout(() => {
+        inicializarTrabajosSupabase();
     }, 2000);
 });
 
@@ -5175,7 +5549,7 @@ function ejecutarDiagnostico() {
     }
 
     const clientesCount = Array.isArray(supabaseClientes) ? supabaseClientes.length : 0;
-    const inventarioCount = Array.isArray(supabaseInventario) ? supabaseInventario.length : 0;
+    const inventarioCount = Array.isArray(cuenttiInventario) ? cuenttiInventario.length : 0;
     const conectado = !!supabaseConectado || (clientesCount + inventarioCount) > 0;
     const ultimaSync = localStorage.getItem('supabase_last_sync');
 

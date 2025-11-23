@@ -1,6 +1,6 @@
 # 🔧 Sistema de Gestión Multidiagnósticos AS
 
-Sistema completo de gestión para talleres automotrices con integración a Supabase, diseñado para administrar trabajos, mecánicos, inventario, finanzas y liquidaciones de manera eficiente.
+Sistema completo de gestión para talleres automotrices con integración a CUENTTI (clientes e inventario) y Supabase (órdenes de trabajo), diseñado para administrar trabajos, mecánicos, finanzas y liquidaciones de manera eficiente.
 
 ## 📋 Tabla de Contenidos
 
@@ -23,7 +23,7 @@ Sistema completo de gestión para talleres automotrices con integración a Supab
 
 ### 🔧 Gestión de Trabajos (Sistema POS/OT)
 - **Sistema POS completo** para crear órdenes de trabajo
-- Búsqueda de clientes por cédula (integración con Supabase)
+- Búsqueda de clientes por cédula (integración con CUENTTI)
 - Registro completo de vehículos (placa, marca, modelo, año, kilometraje)
 - Asignación de técnicos
 - Gestión de repuestos e inventario
@@ -95,7 +95,7 @@ Sistema completo de gestión para talleres automotrices con integración a Supab
 - Control de stock
 - Alertas de stock bajo
 - Valor total del inventario
-- Integración con Supabase para datos reales
+- Integración con CUENTTI para datos reales de inventario
 
 ### 💼 Integración CUENTTI
 - Sincronización con sistema de facturación CUENTTI
@@ -112,7 +112,8 @@ Sistema completo de gestión para talleres automotrices con integración a Supab
   - Font: Inter (Google Fonts)
 
 - **Backend/Database:**
-  - Supabase (PostgreSQL)
+  - CUENTTI (Clientes e Inventario)
+  - Supabase (PostgreSQL) - Solo para órdenes de trabajo
   - LocalStorage (respaldo local)
 
 - **Deployment:**
@@ -289,38 +290,32 @@ git push -u origin main
 
 ## 🔐 Configuración de Supabase
 
-### Crear Tablas en Supabase
+> **⚠️ IMPORTANTE:** A partir de esta versión, Supabase **solo se usa para almacenar órdenes de trabajo**. Los clientes e inventario ahora vienen de CUENTTI.
 
-1. **Tabla `clientes`:**
-```sql
-CREATE TABLE clientes (
-  id SERIAL PRIMARY KEY,
-  nombre VARCHAR(255),
-  cedula VARCHAR(50) UNIQUE,
-  telefono VARCHAR(20),
-  email VARCHAR(255),
-  direccion TEXT,
-  created_at TIMESTAMP DEFAULT NOW()
-);
-```
+### Crear Tabla de Trabajos en Supabase
 
-2. **Tabla `inventario`:**
-```sql
-CREATE TABLE inventario (
-  id SERIAL PRIMARY KEY,
-  codigo VARCHAR(50) UNIQUE,
-  nombre VARCHAR(255),
-  categoria VARCHAR(100),
-  precio DECIMAL(10,2),
-  stock INTEGER,
-  stock_minimo INTEGER DEFAULT 1,
-  created_at TIMESTAMP DEFAULT NOW()
-);
-```
+1. **Ejecutar el script SQL:**
+   - Abre el archivo `supabase_trabajos.sql` en el editor SQL de Supabase
+   - Ejecuta el script completo para crear la tabla `trabajos` con todos los índices necesarios
+
+2. **La tabla `trabajos` incluye:**
+   - Información del cliente y vehículo
+   - Items del trabajo (repuestos, servicios)
+   - Totales y cálculos
+   - Estado del trabajo
+   - Información de pago
 
 3. **Configurar Row Level Security (RLS):**
    - En Supabase Dashboard → Authentication → Policies
-   - Habilita políticas para lectura pública (si es necesario)
+   - Habilita políticas según tus necesidades de seguridad
+   - Por defecto, el script no habilita RLS (ajusta según necesites)
+
+### ⚠️ Migración desde Versión Anterior
+
+Si tenías clientes e inventario en Supabase:
+- **Clientes e Inventario:** Ahora se cargan desde CUENTTI automáticamente
+- **Trabajos:** Se guardan en Supabase en la tabla `trabajos`
+- **Datos locales:** Se mantienen en LocalStorage como respaldo
 
 ### Variables de Configuración
 
