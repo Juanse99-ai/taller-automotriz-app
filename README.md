@@ -152,6 +152,40 @@ python -m http.server 8000
    const SUPABASE_ANON_KEY = 'tu-clave-anon';
    ```
 
+4. **Preparar tu configuración privada de CUENTTI (no se sube a GitHub):**
+   - Duplica `cuentti.example.json` como `cuentti.config.json`.
+   - Pega el token entregado por CUENTTI en el campo `token` y ajusta los demás datos de la empresa.
+   - Este archivo ya está en `.gitignore` para que el token no se publique.
+
+5. **Actualizar el token en la colección de Postman (para pruebas):**
+   - Abre `integracion boot de ventas mejor.postman_collection.json` en Postman.
+   - Crea un Environment en Postman con las variables `id_empresa` y `x_api_key` (usa el token proporcionado).
+   - Asocia el Environment a la colección y verifica las peticiones `Maestros` y `Ventas`.
+
+6. **Subir el proyecto a tu repositorio privado en GitHub:**
+   - Si ya tienes un repositorio **privado**, usa ese mismo (no es necesario crear otro). Verifica si ya tienes configurado el remoto (deberías ver `origin`):
+     ```bash
+     git remote -v
+     ```
+   - Si el remoto **no** existe, agrégalo apuntando a tu repo privado (puede ser HTTPS o SSH):
+     ```bash
+     # Opción SSH (recomendada si ya configuraste llaves)
+     git remote add origin git@github.com:TU_USUARIO/TU_REPO_PRIVADO.git
+
+     # Opción HTTPS (se te pedirá token/pat al hacer push)
+     git remote add origin https://github.com/TU_USUARIO/TU_REPO_PRIVADO.git
+     ```
+   - Sube la rama de trabajo `work` (si es la primera vez, usa `-u` para dejarla enlazada):
+     ```bash
+     git push -u origin work
+     ```
+   - Antes de hacer `git add`, confirma que `cuentti.config.json` siga sin trackearse con `git status`.
+
+7. **Desplegar o probar en la nube (Vercel):**
+   - En [Vercel](https://vercel.com/import), importa el repositorio privado y selecciona la rama `work`.
+   - Deja el framework como **Static Site**; el build command puede ir vacío y el output directory en `.` (raíz) o `assets` según prefieras servir.
+   - Una vez desplegado, comprueba en la URL de vista previa que la app carga y que las peticiones CUENTTI funcionan con tu token configurado en el entorno (si aplica).
+
 ## 📖 Uso del Sistema
 
 ### Crear un Nuevo Trabajo
@@ -295,6 +329,49 @@ Edita en el archivo HTML:
 const SUPABASE_URL = 'https://tu-proyecto.supabase.co';
 const SUPABASE_ANON_KEY = 'tu-clave-anon-key';
 ```
+
+## 💼 Configuración de CUENTTI
+
+- **Plantilla incluida:** usa `cuentti.example.json` como referencia para los campos necesarios (`baseUrl`, `token`, `companyId`, `branchId`, `endpoints`).
+- **Archivo real fuera de Git:** guarda tu archivo privado como `cuentti.config.json` y **no lo subas al repositorio** (está ignorado en `.gitignore`).
+- **Carga segura:** si tu frontend es estático, monta un backend/proxy que lea `cuentti.config.json` en el servidor y haga las peticiones a CUENTTI usando el token, en lugar de exponerlo en el navegador.
+- **Variables de entorno:** en despliegues como Vercel/Render, puedes almacenar el contenido del JSON en variables de entorno y generar `cuentti.config.json` al arrancar el backend o servirlo desde un endpoint protegido.
+
+### Dónde pegar tu API Token de CUENTTI
+
+1. Duplica el archivo de ejemplo y nómbralo `cuentti.config.json` (se mantiene fuera de Git):
+
+   ```bash
+   cp cuentti.example.json cuentti.config.json
+   ```
+
+2. Abre `cuentti.config.json` y reemplaza el campo `"token"` con tu token real de CUENTTI (por ejemplo, el que compartiste). El resto de campos (`baseUrl`, `companyId`, `branchId`) deben corresponder a tu cuenta/empresa.
+
+   ```json
+   {
+     "baseUrl": "https://api.cuentti.com/v1",
+     "token": "TU_TOKEN_REAL",
+     "companyId": "ID_EMPRESA",
+     "branchId": "ID_SUCURSAL",
+     "timeoutsMs": { "default": 10000 },
+     "endpoints": {
+       "inventory": "/inventory",
+       "customers": "/customers",
+       "invoices": "/invoices",
+       "payments": "/payments"
+     }
+   }
+   ```
+
+3. No compartas ese archivo ni el token en GitHub ni en clientes públicos. En producción, lo ideal es que el token viva en el servidor (o en variables de entorno) y las llamadas a CUENTTI pasen por tu backend para no exponerlo en el navegador.
+
+- Si el repositorio permanece **privado** y controlas los accesos, puedes versionar `cuentti.config.json` con tu token para despliegues automatizados. Si en algún momento el repositorio se hace público, rota el token y vuelve a usar `.gitignore` para evitar exponerlo.
+
+### Colección de integración CUENTTI (Postman)
+
+- Archivo incluido: `integracion boot de ventas mejor.postman_collection.json`.
+- Importa la colección en Postman (File → Import) para probar los endpoints con tus credenciales.
+- Actualiza la variable `token` de la colección con el valor de `cuentti.config.json` o con el token que te entregó CUENTTI.
 
 ## 🎨 Personalización
 

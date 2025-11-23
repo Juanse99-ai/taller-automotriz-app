@@ -14,6 +14,7 @@ let nextQuoteNumber = 3;
 let nextInvoiceNumber = 3;
 let previousSectionBeforeNuevoTrabajo = 'dashboard';
 let datosRecepcionTemporal = null;
+let trabajoEditandoId = null;
 
 // Base de datos en memoria (vacía por defecto para pruebas reales)
 const clientes = [];
@@ -37,10 +38,20 @@ window.itemsTrabajo = [];
 // Almacén seguro para evitar colisión con <section id="trabajos">
 window.__appData = window.__appData || {};
 if (!Array.isArray(window.__appData.trabajos)) {
-    window.__appData.trabajos = Array.isArray(window.trabajos) ? window.trabajos : [];
+    try {
+        window.__appData.trabajos = JSON.parse(localStorage.getItem('trabajos_data') || '[]');
+    } catch (e) {
+        window.__appData.trabajos = [];
+    }
+    if (!Array.isArray(window.__appData.trabajos) || window.__appData.trabajos.length === 0) {
+        window.__appData.trabajos = Array.isArray(window.trabajos) ? window.trabajos : [];
+    }
 }
 function getTrabajosData() { return window.__appData.trabajos; }
-function addTrabajoData(t) { window.__appData.trabajos.push(t); }
+function saveTrabajosData() {
+    try { localStorage.setItem('trabajos_data', JSON.stringify(window.__appData.trabajos)); } catch(e) {}
+}
+function addTrabajoData(t) { window.__appData.trabajos.push(t); saveTrabajosData(); }
 window.getTrabajosData = getTrabajosData;
 
 // ===== FUNCIONES CRÍTICAS - DEFINIDAS INMEDIATAMENTE =====
@@ -59,6 +70,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Set default section
     showSection('dashboard');
+    try { renderTrabajosTable(); } catch(e) { console.warn('No se pudo inicializar la tabla de trabajos', e); }
     
     console.log('✅ Sistema completamente funcional');
     } catch (error) {
@@ -477,6 +489,7 @@ function loadTrabajosData() {
     setTimeout(() => {
         mostrarTodosLosRepuestos();
     }, 100);
+    try { renderTrabajosTable(); } catch(e) { console.warn('No se pudo renderizar trabajos', e); }
 }
 
 function loadMecanicosData() {
@@ -973,12 +986,19 @@ function actualizarTotales() {
 
 window.actualizarTotales = actualizarTotales;
 
+function actualizarTextoBotonGuardarTrabajo(texto) {
+    const btn = document.querySelector('#nuevoTrabajoForm button[type="submit"]');
+    if (btn) btn.innerHTML = texto;
+}
+
 function inicializarNuevoTrabajoForm() {
     const form = document.getElementById('nuevoTrabajoForm');
     if (form) form.reset();
 
     window.itemsTrabajo = [];
     actualizarTablaItems();
+    trabajoEditandoId = null;
+    actualizarTextoBotonGuardarTrabajo('💾 Crear Trabajo');
 
     const anoInput = document.getElementById('vehiculoAno');
     if (anoInput) anoInput.value = new Date().getFullYear();
@@ -2432,16 +2452,28 @@ function guardarNuevoTrabajo(event) {
     });
     // Mano de obra (sin IVA) solo para registro; los totales ya lo incluyen como item si aplica
     const manoObraValor = parseMontoInput(document.getElementById('manoObraValor')?.value || 0);
+    const telefonoCliente = document.getElementById('clienteTelefono')?.value.trim() || '';
+    const emailCliente = document.getElementById('clienteEmail')?.value.trim() || '';
+    const trabajos = getTrabajosData();
+    const trabajoExistente = trabajoEditandoId ? trabajos.find(t => String(t.id) === String(trabajoEditandoId)) : null;
+    const correlativo = trabajoExistente?.nextOrderNumber || nextOrderNumber;
+    const trabajoId = trabajoExistente?.id || `TR-${correlativo.toString().padStart(3, '0')}`;
+    if (!trabajoExistente) {
+        nextOrderNumber++;
+    }
+    const fechaTrabajo = trabajoExistente?.fecha || new Date().toISOString();
     
     // Crear objeto de trabajo completo
     const trabajoCompleto = {
-        id: `TR-${nextOrderNumber.toString().padStart(3, '0')}`,
-        nextOrderNumber: nextOrderNumber++,
-        fecha: new Date().toISOString(),
+        id: trabajoId,
+        nextOrderNumber: correlativo,
+        fecha: fechaTrabajo,
         
         // Información del cliente
         cedula: document.getElementById('busquedaCedula').value,
         cliente: cliente,
+        telefonoCliente,
+        emailCliente,
         
         // Información del vehículo
         placa: placa.toUpperCase(),
@@ -2453,7 +2485,7 @@ function guardarNuevoTrabajo(event) {
         // Información del trabajo
         tecnico: document.getElementById('trabajoTecnico').value,
         mecanico: parseInt(document.getElementById('trabajoTecnico').value || '0') || 0,
-        estado: 'Pendiente',
+        estado: trabajoExistente?.estado || 'Pendiente',
         observaciones: document.getElementById('trabajoServicio').value,
         
         // Sistema POS
@@ -2466,18 +2498,31 @@ function guardarNuevoTrabajo(event) {
         total: totalConIva,
         
         // Estado del pago
-        pagado: false,
-        metodoPago: null
+        pagado: trabajoExistente?.pagado || false,
+        metodoPago: trabajoExistente?.metodoPago || null
     };
-    // Añadir al listado de trabajos en memoria para usar en liquidación
-    try { addTrabajoData(trabajoCompleto); } catch (e) { console.warn('No se pudo agregar a trabajos:', e); }
+    // Añadir/actualizar en el listado de trabajos en memoria para usar en liquidación
+    try {
+        if (trabajoExistente) {
+            const idx = trabajos.findIndex(t => String(t.id) === String(trabajoExistente.id));
+            if (idx !== -1) {
+                trabajos[idx] = { ...trabajoExistente, ...trabajoCompleto };
+                saveTrabajosData();
+            }
+        } else {
+            addTrabajoData(trabajoCompleto);
+        }
+    } catch (e) {
+        console.warn('No se pudo agregar a trabajos:', e);
+    }
 
-    console.log('✅ Trabajo creado:', trabajoCompleto);
+    console.log(trabajoExistente ? '✅ Trabajo actualizado:' : '✅ Trabajo creado:', trabajoCompleto);
     // Asociar placa con cliente
     try { asociarPlacaConClienteDesdeForm('ot'); } catch(e) {}
     
     // Simular guardado (en producción se enviaría a Supabase)
-    showNotification(`🎉 Trabajo ${trabajoCompleto.id} creado exitosamente! Total: ${formatCurrency(trabajoCompleto.total)}` , 'success');
+    const mensaje = trabajoExistente ? `✅ Trabajo ${trabajoCompleto.id} actualizado` : `🎉 Trabajo ${trabajoCompleto.id} creado exitosamente`;
+    showNotification(`${mensaje}! Total: ${formatCurrency(trabajoCompleto.total)}` , 'success');
     
     // Ofrecer ir a liquidación del técnico
     try {
@@ -2485,7 +2530,7 @@ function guardarNuevoTrabajo(event) {
         const modal = createModal(
             'Trabajo creado',
             `<div style="padding:16px;line-height:1.6;">
-                <p>El trabajo <strong>${trabajoCompleto.id}</strong> fue creado para la placa <strong>${trabajoCompleto.placa}</strong>.</p>
+                <p>El trabajo <strong>${trabajoCompleto.id}</strong> fue ${trabajoExistente ? 'actualizado' : 'creado'} para la placa <strong>${trabajoCompleto.placa}</strong>.</p>
                 <p>¿Deseas ir a <strong>Liquidación Avanzada</strong> para el técnico seleccionado?</p>
             </div>`,
             [
@@ -2496,28 +2541,8 @@ function guardarNuevoTrabajo(event) {
         showModal(modal);
     } catch(e) { /* noop */ }
 
-    const trabajosTableBody = document.getElementById('trabajosTable');
-    if (trabajosTableBody) {
-        const nuevaFila = document.createElement('tr');
-        const tecnicoNombre = document.getElementById('trabajoTecnico').selectedOptions.length
-            ? document.getElementById('trabajoTecnico').selectedOptions[0].text
-            : '—';
-        nuevaFila.innerHTML = `
-            <td>${trabajoCompleto.placa}</td>
-            <td>${trabajoCompleto.cliente}</td>
-            <td>${trabajoCompleto.marca} ${trabajoCompleto.modelo} ${trabajoCompleto.ano}</td>
-            <td>${trabajoCompleto.observaciones || 'Trabajo sin descripción'}</td>
-            <td>${tecnicoNombre}</td>
-            <td><span class="status-badge status-pendiente">Pendiente</span></td>
-            <td>
-                <button class="btn btn-sm btn-outline" onclick="verTrabajo('${trabajoCompleto.placa}')">Ver</button>
-                <button class="btn btn-sm btn-success" onclick="completarTrabajo('${trabajoCompleto.id}')">Completar</button>
-            </td>
-        `;
-        trabajosTableBody.prepend(nuevaFila);
-    }
+    renderTrabajosTable();
     
-    actualizarMetricasTrabajos();
     cancelarNuevoTrabajo();
     
     // Actualizar vista si es necesario
@@ -2530,6 +2555,84 @@ function guardarNuevoTrabajo(event) {
     console.log('- Placa:', trabajoCompleto.placa);
     console.log('- Items agregados:', trabajoCompleto.items.length);
     console.log('- Total:', formatCurrency(trabajoCompleto.total));
+}
+
+function normalizarTrabajos() {
+    const trabajos = getTrabajosData();
+    let actualizado = false;
+    trabajos.forEach((trabajo, index) => {
+        if (!trabajo.id) {
+            const correlativo = trabajo.nextOrderNumber || index + 1;
+            trabajo.id = `TR-${correlativo.toString().padStart(3, '0')}`;
+            actualizado = true;
+        }
+        if (!trabajo.estado) {
+            trabajo.estado = 'Pendiente';
+            actualizado = true;
+        }
+        if (!Array.isArray(trabajo.items)) {
+            trabajo.items = [];
+            actualizado = true;
+        }
+    });
+    if (actualizado) saveTrabajosData();
+}
+
+function obtenerNombreTecnicoPorId(id) {
+    const tecnico = window.mecanicos.find(m => String(m.id) === String(id));
+    return tecnico ? (tecnico.nombre || tecnico.name || 'Técnico') : 'Técnico';
+}
+
+function renderTrabajosTable() {
+    const trabajosTableBody = document.getElementById('trabajosTable');
+    if (!trabajosTableBody) return;
+    normalizarTrabajos();
+    const trabajos = [...getTrabajosData()];
+    const escapeHtml = (valor = '') => valor
+        .toString()
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    if (!trabajos.length) {
+        trabajosTableBody.innerHTML = `
+            <tr>
+                <td colspan="7" style="text-align:center; padding: 24px; color:#6b7280;">
+                    No hay trabajos registrados. Usa el botón "Nuevo Trabajo" para crear uno.
+                </td>
+            </tr>`;
+        actualizarMetricasTrabajos();
+        return;
+    }
+    const rowsHtml = trabajos
+        .sort((a, b) => new Date(b.fecha || 0) - new Date(a.fecha || 0))
+        .map(trabajo => {
+            const trabajoId = trabajo.id;
+            const vehiculo = [trabajo.marca, trabajo.modelo, trabajo.ano].filter(Boolean).join(' ') || '—';
+            const estado = (trabajo.estado || 'Pendiente').toLowerCase();
+            let badgeClass = 'status-pendiente';
+            if (estado.includes('complet')) badgeClass = 'status-completado';
+            else if (estado.includes('progreso')) badgeClass = 'status-progreso';
+            const tecnicoNombre = obtenerNombreTecnicoPorId(trabajo.mecanico || trabajo.tecnico || '');
+            const descripcion = trabajo.observaciones || 'Trabajo sin descripción';
+            return `
+                <tr>
+                    <td>${escapeHtml(trabajo.placa || '')}</td>
+                    <td>${escapeHtml(trabajo.cliente || '')}</td>
+                    <td>${escapeHtml(vehiculo)}</td>
+                    <td>${escapeHtml(descripcion)}</td>
+                    <td>${escapeHtml(tecnicoNombre)}</td>
+                    <td><span class="status-badge ${badgeClass}">${escapeHtml(trabajo.estado || 'Pendiente')}</span></td>
+                    <td>
+                        <button class="btn btn-sm btn-outline" onclick="verTrabajo('${trabajoId}')">Ver</button>
+                        <button class="btn btn-sm btn-success" onclick="completarTrabajo('${trabajoId}')">Completar</button>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+    trabajosTableBody.innerHTML = rowsHtml;
+    actualizarMetricasTrabajos();
 }
 
 // Exportar OT a formato CUENTTI (CSV)
@@ -2630,38 +2733,89 @@ function actualizarMetricasTrabajos() {
 }
 
 // Ver trabajo
-function verTrabajo(placa) {
-    console.log('👁️ Ver trabajo:', placa);
+function verTrabajo(referencia) {
+    console.log('👁️ Ver trabajo:', referencia);
+    const trabajos = getTrabajosData();
+    let trabajo = trabajos.find(t => String(t.id) === String(referencia));
+    if (!trabajo) {
+        trabajo = trabajos.find(t => (t.placa || '').toUpperCase() === (referencia || '').toUpperCase());
+    }
+    if (!trabajo) {
+        showNotification('Trabajo no encontrado', 'error');
+        return;
+    }
+    const tecnicoNombre = obtenerNombreTecnicoPorId(trabajo.mecanico || trabajo.tecnico || '');
+    const vehiculo = [trabajo.marca, trabajo.modelo, trabajo.ano].filter(Boolean).join(' ') || 'Vehículo sin datos';
+    const itemsHtml = (trabajo.items || []).length
+        ? trabajo.items.map(item => {
+            const cantidad = Number(item.cantidad) || 1;
+            const totalItem = (Number(item.precio) || 0) * cantidad;
+            return `<li>${item.codigo ? `${item.codigo} — ` : ''}${item.nombre || 'Item sin nombre'} (${cantidad}x) - ${formatCurrency(totalItem)}</li>`;
+        }).join('')
+        : '<li>No hay repuestos registrados</li>';
+    const estadoSlug = (trabajo.estado || 'Pendiente').toLowerCase().replace(/\s+/g, '-');
     const modal = createModal(
         'Detalles del Trabajo',
         `
         <div style="line-height: 1.6;">
-            <h4>Trabajo: ${placa}</h4>
-            <p><strong>Cliente:</strong> Juan Pérez</p>
-            <p><strong>Vehículo:</strong> Toyota Corolla 2020</p>
-            <p><strong>Kilometraje:</strong> 45,000 km</p>
-            <p><strong>Servicio:</strong> Cambio de aceite y filtro</p>
-            <p><strong>Técnico:</strong> Víctor Padilla</p>
-            <p><strong>Estado:</strong> <span class="status-badge status-completado">Completado</span></p>
-            <p><strong>Fecha de inicio:</strong> 10/01/2025</p>
-            <p><strong>Fecha de finalización:</strong> 10/01/2025</p>
-            <p><strong>Costo mano de obra:</strong> $25,000</p>
-            <p><strong>Repuestos utilizados:</strong></p>
-            <ul>
-                <li>Filtro de Aceite - $15,000</li>
-                <li>Aceite Motor - $25,000</li>
-            </ul>
-            <p><strong>Total:</strong> $65,000</p>
-            <p><strong>Observaciones:</strong> Trabajo completado satisfactoriamente. Cliente satisfecho con el servicio.</p>
+            <h4>Trabajo: ${trabajo.id}</h4>
+            <p><strong>Cliente:</strong> ${trabajo.cliente || '—'}</p>
+            <p><strong>Documento:</strong> ${trabajo.cedula || '—'}</p>
+            <p><strong>Teléfono:</strong> ${trabajo.telefonoCliente || '—'}</p>
+            <p><strong>Vehículo:</strong> ${vehiculo}</p>
+            <p><strong>Placa:</strong> ${trabajo.placa || '—'}</p>
+            <p><strong>Kilometraje:</strong> ${trabajo.kilometraje ? `${trabajo.kilometraje.toLocaleString()} km` : '—'}</p>
+            <p><strong>Técnico:</strong> ${tecnicoNombre}</p>
+            <p><strong>Estado:</strong> <span class="status-badge status-${estadoSlug}">${trabajo.estado || 'Pendiente'}</span></p>
+            <p><strong>Fecha de registro:</strong> ${trabajo.fecha ? new Date(trabajo.fecha).toLocaleString() : '—'}</p>
+            <p><strong>Subtotal:</strong> ${formatCurrency(trabajo.subtotalSinIva || 0)}</p>
+            <p><strong>IVA:</strong> ${formatCurrency(trabajo.totalIva || 0)}</p>
+            <p><strong>Total:</strong> ${formatCurrency(trabajo.total || 0)}</p>
+            <p><strong>Observaciones:</strong> ${trabajo.observaciones || 'Sin observaciones'}</p>
+            <p><strong>Repuestos / Servicios:</strong></p>
+            <ul>${itemsHtml}</ul>
         </div>
         `,
         [
             { text: 'Cerrar', class: 'btn-outline', onclick: 'closeModal()' },
-            { text: 'Editar', class: 'btn-primary', onclick: 'closeModal(); nuevoTrabajo();' }
+            { text: 'Editar', class: 'btn-primary', onclick: `closeModal(); editarTrabajo('${trabajo.id}')` }
         ]
     );
     
     showModal(modal);
+}
+
+function editarTrabajo(trabajoId) {
+    const trabajos = getTrabajosData();
+    const trabajo = trabajos.find(t => String(t.id) === String(trabajoId));
+    if (!trabajo) {
+        showNotification('No se pudo cargar el trabajo para edición', 'error');
+        return;
+    }
+    trabajoEditandoId = trabajo.id;
+    previousSectionBeforeNuevoTrabajo = 'trabajos';
+    showSection('nuevoTrabajoPage');
+    const setValue = (id, value) => {
+        const el = document.getElementById(id);
+        if (el !== null && el !== undefined) el.value = value ?? '';
+    };
+    setValue('trabajoCliente', trabajo.cliente || '');
+    setValue('busquedaCedula', trabajo.cedula || '');
+    setValue('clienteTelefono', trabajo.telefonoCliente || '');
+    setValue('clienteEmail', trabajo.emailCliente || '');
+    setValue('trabajoPlaca', trabajo.placa || '');
+    setValue('vehiculoMarca', trabajo.marca || '');
+    setValue('vehiculoModelo', trabajo.modelo || '');
+    setValue('vehiculoAno', trabajo.ano || new Date().getFullYear());
+    setValue('trabajoKilometraje', trabajo.kilometraje || '');
+    setValue('trabajoTecnico', trabajo.tecnico || trabajo.mecanico || '');
+    setValue('trabajoServicio', trabajo.observaciones || '');
+    setValue('manoObraValor', trabajo.manoObra || 0);
+    window.itemsTrabajo = Array.isArray(trabajo.items) ? trabajo.items.map(item => ({ ...item })) : [];
+    actualizarTablaItems();
+    actualizarTotales();
+    actualizarTextoBotonGuardarTrabajo('💾 Actualizar Trabajo');
+    showNotification(`Editando trabajo ${trabajo.id}`, 'info');
 }
 
 // Completar trabajo (marcar como 'completado')
@@ -2669,7 +2823,9 @@ function completarTrabajo(trabajoId) {
     const trabajos = getTrabajosData();
     const t = trabajos.find(x => String(x.id) === String(trabajoId));
     if (!t) { showNotification('Trabajo no encontrado', 'error'); return; }
-    t.estado = 'completado';
+    t.estado = 'Completado';
+    saveTrabajosData();
+    renderTrabajosTable();
     showNotification(`Trabajo ${t.id} marcado como completado`, 'success');
     // Actualizar UI si la fila existe
     try {
@@ -3029,7 +3185,8 @@ function guardarNuevaCotizacion(event) {
 
 // Buscar vehículo en historial
 function buscarVehiculo() {
-    const placa = document.getElementById('busquedaPlaca').value;
+    const placaInput = document.getElementById('busquedaPlaca');
+    const placa = (placaInput?.value || '').trim().toUpperCase();
     const resultado = document.getElementById('resultadoHistorial');
     
     if (!placa) {
@@ -3039,76 +3196,66 @@ function buscarVehiculo() {
     
     console.log('🔍 Buscando historial para:', placa);
     
-    // Simulación de datos de historial
-    const historial = {
-        'ABC123': {
-            cliente: 'Juan Pérez',
-            servicios: [
-                { fecha: 'Ene 2025', servicio: 'Mantenimiento preventivo', kilometraje: 45000, costo: 75000, tecnico: 'Víctor Padilla' },
-                { fecha: 'Ago 2024', servicio: 'Reparación frenos', kilometraje: 35000, costo: 120000, tecnico: 'Pedro Barraza' }
-            ],
-            proximoMantenimiento: 'Ene 2026'
-        },
-        'XYZ789': {
-            cliente: 'María González',
-            servicios: [
-                { fecha: 'Ene 2025', servicio: 'Diagnóstico motor', kilometraje: 62000, costo: 85000, tecnico: 'Ismael Cervantes' }
-            ],
-            proximoMantenimiento: 'Jul 2025'
-        }
-    };
+    const trabajos = getTrabajosData().filter(t => (t.placa || '').toUpperCase() === placa);
+    if (!resultado) return;
     
-    const datos = historial[placa.toUpperCase()];
-    
-    if (datos) {
-        resultado.innerHTML = `
-            <div class="card">
-                <h4>Historial: ${placa.toUpperCase()}</h4>
-                <p><strong>Cliente:</strong> ${datos.cliente}</p>
-                
-                <h5 style="margin-top: 16px;">Servicios Realizados:</h5>
-                <div class="table-container">
-                    <table class="table">
-                        <thead>
-                            <tr>
-                                <th>Fecha</th>
-                                <th>Servicio</th>
-                                <th>Kilometraje</th>
-                                <th>Costo</th>
-                                <th>Técnico</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${datos.servicios.map(servicio => `
-                                <tr>
-                                    <td>${servicio.fecha}</td>
-                                    <td>${servicio.servicio}</td>
-                                    <td>${servicio.kilometraje.toLocaleString()} km</td>
-                                    <td>$${servicio.costo.toLocaleString()}</td>
-                                    <td>${servicio.tecnico}</td>
-                                </tr>
-                            `).join('')}
-                        </tbody>
-                    </table>
-                </div>
-                
-                <div class="mt-4">
-                    <p><strong>Próximo mantenimiento recomendado:</strong> ${datos.proximoMantenimiento}</p>
-                    <button class="btn btn-primary" onclick="agendarMantenimiento('${placa.toUpperCase()}')">Agendar Mantenimiento</button>
-                </div>
-            </div>
-        `;
-        showNotification(`Historial encontrado para ${placa.toUpperCase()}`, 'success');
-    } else {
+    if (trabajos.length === 0) {
         resultado.innerHTML = `
             <div class="empty-state">
                 <div class="empty-state-icon">🔍</div>
-                <p>No se encontró historial para la placa ${placa.toUpperCase()}</p>
-                <p style="font-size: 14px; margin-top: 8px;">Esta placa no tiene servicios registrados en el sistema</p>
+                <p>No se encontró historial para la placa ${placa}</p>
+                <p style="font-size: 14px; margin-top: 8px;">Registra trabajos para esta placa y aparecerán aquí.</p>
             </div>
         `;
         showNotification('No se encontró historial para esta placa', 'warning');
+        return;
     }
+    
+    const ordenados = [...trabajos].sort((a, b) => new Date(b.fecha || 0) - new Date(a.fecha || 0));
+    const ultimo = ordenados[0];
+    const vehiculo = [ultimo.marca, ultimo.modelo, ultimo.ano].filter(Boolean).join(' ') || 'Vehículo sin datos';
+    const cliente = ultimo.cliente || 'Sin cliente registrado';
+    const serviciosHtml = ordenados.map(servicio => `
+        <tr>
+            <td>${servicio.fecha ? new Date(servicio.fecha).toLocaleDateString() : '—'}</td>
+            <td>${servicio.observaciones || 'Trabajo sin descripción'}</td>
+            <td>${servicio.kilometraje ? servicio.kilometraje.toLocaleString() + ' km' : '—'}</td>
+            <td>${formatCurrency(servicio.total || 0)}</td>
+            <td>${obtenerNombreTecnicoPorId(servicio.mecanico || servicio.tecnico || '')}</td>
+        </tr>
+    `).join('');
+    
+    resultado.innerHTML = `
+        <div class="card">
+            <h4>Historial: ${placa}</h4>
+            <p><strong>Cliente:</strong> ${cliente}</p>
+            <p><strong>Vehículo:</strong> ${vehiculo}</p>
+            
+            <h5 style="margin-top: 16px;">Servicios Realizados:</h5>
+            <div class="table-container">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Fecha</th>
+                            <th>Servicio</th>
+                            <th>Kilometraje</th>
+                            <th>Costo</th>
+                            <th>Técnico</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${serviciosHtml}
+                    </tbody>
+                </table>
+            </div>
+            
+            <div class="mt-4">
+                <p><strong>Observación reciente:</strong> ${ultimo.observaciones || 'Sin observaciones'}</p>
+                <button class="btn btn-primary" onclick="agendarMantenimiento('${placa}')">Agendar Mantenimiento</button>
+            </div>
+        </div>
+    `;
+    showNotification(`Historial encontrado para ${placa}`, 'success');
 }
 
 // Buscar producto en inventario
@@ -3467,6 +3614,7 @@ function logout() {
 // Global functions for onclick handlers
 window.nuevoTrabajo = nuevoTrabajo;
 window.verTrabajo = verTrabajo;
+window.editarTrabajo = editarTrabajo;
 window.nuevaRecepcion = nuevaRecepcion;
 window.nuevaCotizacion = nuevaCotizacion;
 window.buscarVehiculo = buscarVehiculo;
@@ -3499,6 +3647,7 @@ window.guardarEdicionCliente = guardarEdicionCliente;
 window.procesarLiquidacionAvanzada = procesarLiquidacionAvanzada;
 window.actualizarVistaPrevia = actualizarVistaPrevia;
 window.cerrarModal = closeModal; // Alias adicional
+window.renderTrabajosTable = renderTrabajosTable;
 
 // Additional functions
 function agendarMantenimiento(placa) {

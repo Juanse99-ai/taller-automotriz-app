@@ -1,0 +1,15 @@
+{
+  "baseUrl": "https://api.cuentti.com/v1",
+  "token": "TU_TOKEN_SEGURO",
+  "companyId": "ID_EMPRESA",
+  "branchId": "ID_SUCURSAL",
+  "timeoutsMs": {
+    "default": 10000
+  },
+  "endpoints": {
+    "inventory": "/inventory",
+    "customers": "/customers",
+    "invoices": "/invoices",
+    "payments": "/payments"
+  }
+}
