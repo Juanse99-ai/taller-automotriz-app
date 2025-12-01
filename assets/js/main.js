@@ -71,6 +71,51 @@ function addFacturaData(f) { window.__appData.facturas.push(f); saveFacturasData
 const clientes = [];
 const inventario = [];
 
+// Semilla de clientes locales para operar sin CUENTTI
+const clientesSeed = [
+    { id: 'SEED-001', cedula: '900123456', nombre: 'Cliente Demo SAS', telefono: '3001234567', email: 'contacto@demo.com' },
+    { id: 'SEED-002', cedula: '1012345678', nombre: 'María Rodríguez', telefono: '3017654321', email: 'maria.rodriguez@example.com' },
+    { id: 'SEED-003', cedula: '1029384756', nombre: 'Carlos Pérez', telefono: '3029988776', email: 'carlos.perez@example.com' },
+    { id: 'SEED-004', cedula: '800765432', nombre: 'Repuestos Express LTDA', telefono: '3205556677', email: 'ventas@repuestos-express.com' },
+    { id: 'SEED-005', cedula: '1098765432', nombre: 'Laura Gómez', telefono: '3154443322', email: 'laura.gomez@example.com' }
+];
+
+function sincronizarClientesLocales(listaClientes = []) {
+    if (!Array.isArray(listaClientes)) return [];
+    clientes.length = 0;
+    clientes.push(...listaClientes);
+    cuenttiClientes = [...listaClientes];
+    return cuenttiClientes;
+}
+
+function cargarClientesLocalesBase() {
+    if (Array.isArray(cuenttiClientes) && cuenttiClientes.length > 0) return cuenttiClientes;
+
+    let base = [];
+
+    try {
+        const backup = localStorage.getItem('cuentti_clientes_backup');
+        if (backup) {
+            const parsed = JSON.parse(backup);
+            if (Array.isArray(parsed) && parsed.length) {
+                base = parsed;
+            }
+        }
+    } catch (e) {
+        console.warn('⚠️ No se pudo leer backup local de clientes:', e.message);
+    }
+
+    if (!base.length) {
+        base = clientesSeed;
+    }
+
+    if (Array.isArray(base) && base.length) {
+        sincronizarClientesLocales(base);
+    }
+
+    return cuenttiClientes;
+}
+
 // Mecánicos del taller
 const mecanicos = [
     { id: 1, name: 'Pedro Barraza', specialty: 'Dueño/Frenos', phone: '3002345678', hourlyRate: 20000 },
@@ -86,6 +131,11 @@ window.mecanicos = mecanicos;
 window.clientes = clientes;
 window.inventario = inventario;
 window.itemsTrabajo = [];
+// Variables globales para integración CUENTTI (disponibles para cargas tempranas)
+let cuenttiClientes = [];
+let cuenttiInventario = [];
+let cuenttiConectado = false;
+let cuenttiConfig = null;
 // Almacén seguro para evitar colisión con <section id="trabajos">
 window.__appData = window.__appData || {};
 if (!Array.isArray(window.__appData.trabajos)) {
@@ -115,6 +165,9 @@ document.addEventListener('DOMContentLoaded', async function() {
         console.log('🔧 Con todas las funcionalidades restauradas');
 
         await initializeSupabaseClient();
+
+        // Cargar clientes base si CUENTTI no está configurado
+        cargarClientesLocalesBase();
 
         // Initialize application
         initializeApp();
@@ -1800,7 +1853,19 @@ function buscarClientePorNombreOT(nombre) {
 }
 
 function obtenerListaClientes() {
-    return Array.isArray(cuenttiClientes) && cuenttiClientes.length ? cuenttiClientes : clientes;
+    if (!Array.isArray(cuenttiClientes) || cuenttiClientes.length === 0) {
+        cargarClientesLocalesBase();
+    }
+
+    if (Array.isArray(cuenttiClientes) && cuenttiClientes.length) {
+        return cuenttiClientes;
+    }
+
+    if (!clientes.length) {
+        cargarClientesLocalesBase();
+    }
+
+    return clientes;
 }
 
 function abrirBuscadorClientes() {
@@ -6114,12 +6179,6 @@ function verificarBotones() {
 // SISTEMA MULTIDIAGNÓSTICOS AS - INTEGRACIÓN CUENTTI
 // =====================================================
 
-// Variables globales para datos de CUENTTI
-let cuenttiClientes = [];
-let cuenttiInventario = [];
-let cuenttiConectado = false;
-let cuenttiConfig = null;
-
 // Cargar configuración de CUENTTI
 async function cargarConfigCuentti() {
     try {
@@ -6262,6 +6321,8 @@ async function cargarClientesDesdeCuentti() {
             ciudad: cliente.city || cliente.ciudad || '',
             tipo: cliente.type || cliente.tipo || 'persona'
         }));
+
+        sincronizarClientesLocales(cuenttiClientes);
         
         console.log(`✅ Clientes cargados desde CUENTTI: ${cuenttiClientes.length} registros`);
         
@@ -6278,6 +6339,7 @@ async function cargarClientesDesdeCuentti() {
         if (backup) {
             try {
                 cuenttiClientes = JSON.parse(backup);
+                sincronizarClientesLocales(cuenttiClientes);
                 console.log(`⚠️ Usando backup local: ${cuenttiClientes.length} clientes`);
                 return true;
             } catch (e) {
@@ -6338,10 +6400,11 @@ async function cargarInventarioDesdeCuentti() {
 
 async function cargarDatosDesdeCuentti() {
     console.log('🔄 Cargando todos los datos desde CUENTTI...');
-    
+
     const configOk = await cargarConfigCuentti();
     if (!configOk || !cuenttiConfig.token) {
         console.warn('⚠️ Configuración de CUENTTI no disponible');
+        cargarClientesLocalesBase();
         return false;
     }
     
@@ -6612,16 +6675,22 @@ window.inicializarConCuentti = async function() {
         // Intentar cargar desde localStorage
         const clientesBackup = localStorage.getItem('cuentti_clientes_backup');
         const inventarioBackup = localStorage.getItem('cuentti_inventario_backup');
-        
+
         if (clientesBackup) {
             try {
                 cuenttiClientes = JSON.parse(clientesBackup);
+                sincronizarClientesLocales(cuenttiClientes);
             } catch (e) {}
         }
         if (inventarioBackup) {
             try {
                 cuenttiInventario = JSON.parse(inventarioBackup);
             } catch (e) {}
+        }
+
+        // Si no hay respaldo, usar semilla local
+        if (!cuenttiClientes.length) {
+            cargarClientesLocalesBase();
         }
     }
     
