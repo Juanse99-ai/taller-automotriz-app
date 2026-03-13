@@ -49,17 +49,20 @@ export function escapeHtml(str) {
 // Normalizar documento de cliente (busca en multiples campos)
 export function normalizarDoc(cliente) {
   return (
-    cliente?.cedula || cliente?.documento || cliente?.identification_number ||
-    cliente?.nit || cliente?.id_cedula || cliente?.numero_documento || ''
+    cliente?.cedula || cliente?.identificacion || cliente?.documento ||
+    cliente?.identification_number || cliente?.nit || cliente?.id_cedula ||
+    cliente?.numero_documento || ''
   ).toString().trim()
 }
 
 // Normalizar nombre de cliente
 export function normalizarNombre(cliente) {
-  return (
-    cliente?.nombre_cliente || cliente?.nombre || cliente?.name ||
-    cliente?.full_name || cliente?.razon_social || cliente?.tercero || 'Sin nombre'
-  ).toString().trim()
+  const nombre = cliente?.nombre_cliente || cliente?.nombre || cliente?.name ||
+    cliente?.full_name || cliente?.razon_social || cliente?.tercero || ''
+  if (nombre) return nombre.toString().trim()
+  // Fallback: concatenar campos individuales de Cuentti
+  const partes = [cliente?.primer_nombre, cliente?.segundo_nombre, cliente?.primer_apellido].filter(Boolean)
+  return partes.length ? partes.join(' ').trim() : 'Sin nombre'
 }
 
 // Hoy en formato ISO corto (YYYY-MM-DD)

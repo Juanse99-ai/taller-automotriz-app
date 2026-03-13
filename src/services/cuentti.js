@@ -67,13 +67,20 @@ export async function buscarClientePorCedula(cedula) {
 
     const c = filtered[0]
     console.log('Cuentti API raw response cliente:', JSON.stringify(c, null, 2))
+
+    // Construir nombre: usar nombre_cliente, o concatenar primer_nombre + primer_apellido
+    const nombreCompleto = c.nombre_cliente
+      || c.name || c.nombre || c.full_name || c.razon_social || c.tercero
+      || [c.primer_nombre, c.segundo_nombre, c.primer_apellido].filter(Boolean).join(' ')
+      || ''
+
     return {
-      id: c.id || c.customer_id || c.id_cliente,
-      cedula: c.document || c.documento || c.cedula || c.identificacion || cedula,
-      nombre: c.nombre_cliente || c.name || c.nombre || c.full_name || c.razon_social || c.tercero || c.nombreTercero || c.nombre_tercero || '',
-      telefono: c.mobile || c.celular || c.telefono || c.phone || '',
-      email: c.email || c.correo || '',
-      direccion: c.address || c.direccion || '',
+      id: c.id_cliente || c.id || c.customer_id,
+      cedula: c.identificacion || c.document || c.documento || c.cedula || cedula,
+      nombre: nombreCompleto,
+      telefono: c.telefono1 || c.telefono3 || c.mobile || c.celular || c.telefono || c.phone || '',
+      email: c.email1 || c.email2 || c.email || c.correo || '',
+      direccion: c.direccion || c.address || '',
       _raw: c,
     }
   } catch (e) {
