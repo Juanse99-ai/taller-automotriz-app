@@ -66,10 +66,11 @@ export async function buscarClientePorCedula(cedula) {
     if (!filtered.length) return null
 
     const c = filtered[0]
+    console.log('Cuentti API raw response cliente:', JSON.stringify(c, null, 2))
     return {
       id: c.id || c.customer_id || c.id_cliente,
       cedula: c.document || c.documento || c.cedula || c.identificacion || cedula,
-      nombre: c.nombre_cliente || c.name || c.nombre || c.full_name || c.razon_social || '',
+      nombre: c.nombre_cliente || c.name || c.nombre || c.full_name || c.razon_social || c.tercero || c.nombreTercero || c.nombre_tercero || '',
       telefono: c.mobile || c.celular || c.telefono || c.phone || '',
       email: c.email || c.correo || '',
       direccion: c.address || c.direccion || '',
