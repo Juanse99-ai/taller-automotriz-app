@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { fmt, fmtDate, uid, hoyISO, normalizarDoc, normalizarNombre } from '../utils/helpers'
 import { TECNICOS, ESTADOS, IVA_DEFAULT } from '../utils/constants'
 import { useClientes } from '../hooks/useClientes'
-import { lsGet, LS_KEYS } from '../services/storage'
+import { lsGet, lsSet, LS_KEYS } from '../services/storage'
 import { cargarInventarioCompleto } from '../services/cuentti'
 
 export default function Trabajos({ hook, notify }) {
@@ -178,17 +178,24 @@ function TrabajoForm({ trabajo, onSave, onCancel }) {
 
   // Inventario para busqueda de productos
   const [inventario, setInventario] = useState([])
+  const [invLoading, setInvLoading] = useState(true)
   const [itemSearch, setItemSearch] = useState({}) // { [itemId]: { query, results, show } }
 
   useEffect(() => {
     const cached = lsGet(LS_KEYS.INVENTARIO_CACHE, [])
     if (cached.length > 0) {
       setInventario(cached)
+      setInvLoading(false)
     }
-    // Cargar en background
+    // Siempre cargar desde Cuentti para tener datos frescos
     cargarInventarioCompleto().then(data => {
-      if (data.length > 0) setInventario(data)
-    }).catch(() => {})
+      if (data.length > 0) {
+        setInventario(data)
+        // Guardar en cache para proxima vez
+        lsSet(LS_KEYS.INVENTARIO_CACHE, data)
+      }
+      setInvLoading(false)
+    }).catch(() => { setInvLoading(false) })
   }, [])
 
   const buscarEnInventario = useCallback((itemId, query) => {
@@ -364,7 +371,14 @@ function TrabajoForm({ trabajo, onSave, onCancel }) {
         {/* ITEMS */}
         <div className="card">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
-            <div className="card-title" style={{ marginBottom: 0 }}>Repuestos y Servicios</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <div className="card-title" style={{ marginBottom: 0 }}>Repuestos y Servicios</div>
+              {invLoading ? (
+                <span className="text-xs text-muted">Cargando inventario...</span>
+              ) : (
+                <span className="text-xs text-muted">({inventario.length} productos)</span>
+              )}
+            </div>
             <button type="button" className="btn btn-outline btn-sm" onClick={addItem}>+ Agregar linea</button>
           </div>
           {items.length === 0 ? (

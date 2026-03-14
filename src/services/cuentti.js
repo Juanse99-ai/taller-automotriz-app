@@ -17,6 +17,10 @@ const CONFIG = {
     },
     facturas: {
       grabarSimple: '/jServerj4ErpPro/api/token/grabarFacturaSimple',
+      emitirFE: '/jServerj4ErpPro/com/j4ErpPro/server/transacion/generarFacturaElectronica/{id_transacion}/true/true/',
+      agregarPago: '/jServerj4ErpPro/com/j4ErpPro/server/transacion/agregarPagoTransacion',
+      anular: '/jServerj4ErpPro/com/j4ErpPro/server/transacion/anularTransacion',
+      urlDocumento: '/jServerj4ErpPro/com/j4ErpPro/server/transacion/buscarQrId_transacion/{id_transacion}',
     },
   },
 }
@@ -308,6 +312,97 @@ export async function enviarFactura(factura) {
   }
 
   return cuenttiRequest(CONFIG.paths.facturas.grabarSimple, 'POST', body)
+}
+
+// Emitir Factura Electronica ante la DIAN
+export async function emitirFacturaElectronica(idTransacion) {
+  if (!idTransacion) throw new Error('Se requiere id_transacion')
+  try {
+    const path = CONFIG.paths.facturas.emitirFE.replace('{id_transacion}', idTransacion)
+    return await cuenttiRequest(path)
+  } catch (e) {
+    console.error('Cuentti emitirFE:', e.message)
+    throw e
+  }
+}
+
+// Agregar pago a una transaccion existente
+export async function agregarPagoTransacion(pago) {
+  const body = {
+    n_caja: 0,
+    id_transacion: pago.idTransacion,
+    valor: parseFloat(pago.valor) || 0,
+    es_activo: '1',
+    id_empleado: parseInt(CONFIG.employeeId),
+    nota: pago.nota || '',
+    id_sucursal: parseInt(CONFIG.branchId),
+    id_banco: pago.idBanco || 2,
+    id_medio_pago: pago.idMedioPago || 1,
+    boucher: pago.boucher || '',
+    digitos: pago.digitos || '',
+    devuelta: parseFloat(pago.devuelta) || 0,
+    dinero_entregado: parseFloat(pago.dineroEntregado || pago.valor) || 0,
+    es_ingreso: 1,
+    id_cliente: pago.idCliente || 1,
+    fecha_registro: new Date().toISOString(),
+    id_centro_costo: 1,
+  }
+  return cuenttiRequest(CONFIG.paths.facturas.agregarPago, 'POST', body)
+}
+
+// Obtener URL del documento/factura (QR/PDF)
+export async function obtenerUrlDocumento(idTransacion) {
+  if (!idTransacion) return null
+  try {
+    const path = CONFIG.paths.facturas.urlDocumento.replace('{id_transacion}', idTransacion)
+    return await cuenttiRequest(path)
+  } catch (e) {
+    console.warn('Cuentti urlDocumento:', e.message)
+    return null
+  }
+}
+
+// Anular transaccion
+export async function anularTransacion(datos) {
+  const body = {
+    id_encabezado_anulada: 0,
+    id_transacion: datos.idTransacion,
+    id_cliente: datos.idCliente || 1,
+    id_empleado: parseInt(CONFIG.employeeId),
+    observacion: datos.observacion || '',
+    nota: datos.nota || 'Anulacion',
+    esEliminar: datos.eliminar !== false,
+    fecha_registro: Date.now(),
+    id_transacion_remplazo: null,
+  }
+  return cuenttiRequest(CONFIG.paths.facturas.anular, 'POST', body)
+}
+
+// ---------- PRODUCTOS (Crear/Editar) ----------
+
+export async function grabarProductoMovil(producto) {
+  const body = {
+    idProductoSucursal: producto.idProductoSucursal || 0,
+    id_producto: producto.idProducto || 0,
+    id_sucursal: parseInt(CONFIG.branchId),
+    nombre: producto.nombre || '',
+    precio_venta: parseFloat(producto.precioVenta) || 0,
+    es_servicio: producto.esServicio ? 1 : 10,
+    id_marca: producto.idMarca || 1,
+    id_categoria: producto.idCategoria || 1,
+    sku: producto.sku || '',
+    es_activo: 1,
+    codigo_barras: producto.codigoBarras || '',
+    nota: producto.nota || '',
+    id_empleado: parseInt(CONFIG.employeeId),
+    id_impuesto: producto.idImpuesto || 1,
+    existencias: parseFloat(producto.existencias) || 0,
+  }
+  return cuenttiRequest(
+    '/jServerj4ErpPro/com/j4ErpPro/server/inv/producto/grabraProductoMovil',
+    'POST',
+    body,
+  )
 }
 
 export { CONFIG as cuenttiConfig }
