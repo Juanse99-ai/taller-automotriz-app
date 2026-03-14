@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
-import { fmt } from '../utils/helpers'
+import { fmt, fmtCompact } from '../utils/helpers'
 import { cargarInventarioCompleto } from '../services/cuentti'
 import { lsGet, lsSet, LS_KEYS } from '../services/storage'
 
@@ -86,15 +86,15 @@ export default function Inventario({ notify }) {
     <div>
       <div className="metrics-grid">
         <div className="metric-card">
-          <div className="metric-value">{stats.total}</div>
+          <div className="metric-value">{stats.total.toLocaleString('es-CO')}</div>
           <div className="metric-label">Productos</div>
         </div>
         <div className="metric-card">
-          <div className="metric-value" style={{ color: 'var(--red-500)' }}>{stats.sinStock}</div>
+          <div className="metric-value" style={{ color: 'var(--red-500)' }}>{stats.sinStock.toLocaleString('es-CO')}</div>
           <div className="metric-label">Sin Stock</div>
         </div>
         <div className="metric-card">
-          <div className="metric-value">{fmt(stats.valorTotal)}</div>
+          <div className="metric-value" style={{ fontSize: stats.valorTotal >= 1_000_000 ? '1.4rem' : undefined }}>{fmtCompact(stats.valorTotal)}</div>
           <div className="metric-label">Valor Inventario</div>
         </div>
       </div>

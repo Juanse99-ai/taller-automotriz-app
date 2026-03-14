@@ -8,6 +8,14 @@ export function fmt(n) {
   }).format(n || 0)
 }
 
+// Formato moneda compacto para numeros grandes (tarjetas metricas)
+export function fmtCompact(n) {
+  const val = Math.abs(n || 0)
+  if (val >= 1_000_000_000) return `$ ${(n / 1_000_000_000).toFixed(1)}B`
+  if (val >= 1_000_000) return `$ ${(n / 1_000_000).toFixed(1)}M`
+  return fmt(n)
+}
+
 // Formato fecha corta
 export function fmtDate(iso) {
   if (!iso) return '—'
