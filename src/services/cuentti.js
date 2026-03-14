@@ -95,6 +95,92 @@ export async function buscarClientePorCedula(cedula) {
   }
 }
 
+export async function grabarCliente(clienteData) {
+  const { cedula, nombre, telefono, email, direccion, ciudad, cuenttiId, _raw } = clienteData || {}
+
+  // Split nombre into primer_nombre, segundo_nombre, primer_apellido
+  const partes = (nombre || '').trim().split(/\s+/)
+  const primer_nombre = partes[0] || ''
+  const primer_apellido = partes.length > 1 ? partes[partes.length - 1] : ''
+  const segundo_nombre = partes.length > 2 ? partes.slice(1, -1).join(' ') : ''
+
+  // id_cliente: usar cuenttiId o _raw?.id_cliente para editar, 0 para crear
+  const id_cliente = cuenttiId || _raw?.id_cliente || 0
+
+  const body = {
+    id_cliente,
+    genera_bonos: 1,
+    es_consumidor_final: '0',
+    dias_vencimiento_cartera_cliente: 30,
+    alias: '',
+    regimenImpuesto: 2,
+    codigo_turismo: null,
+    fecha_vencimiento_codigo_turismo: null,
+    legalidad: 29,
+    cliente_predeterminado: '0',
+    tipoOperacion: null,
+    medio_pago: null,
+    id_sucursal: null,
+    nombre_cliente: nombre || '',
+    id_tipo_persona: '1',
+    identificacion: cedula || '',
+    id_empresa_portal: 0,
+    id_usuario_portal: 0,
+    primer_nombre,
+    segundo_nombre,
+    primer_apellido,
+    direccion: direccion || '',
+    telefono1: telefono || '',
+    telefono3: '',
+    email1: email || '',
+    email2: '',
+    sitio_web: '',
+    facebook: '',
+    twitter: '',
+    instagram: '',
+    snapchat: '',
+    puntos_acumulados: 0,
+    nota: '',
+    es_activo: '1',
+    fecha_registro: Date.now(),
+    id_lista_precios: null,
+    id_ruta_despacho: null,
+    es_cliente: 1,
+    es_proveedor: 0,
+    ciudad: ciudad || '',
+    zona: '',
+    contacto: '',
+    clave_portal: '',
+    id_estado_civil: 1,
+    id_estrato_social: 3,
+    id_clase_cliente: 1,
+    id_tipo_cliente: 1,
+    fecha_nacimiento: null,
+    sexo: 'N',
+    saldo_bono: 0,
+    permite_cartera_vencida: '1',
+    codigo_interno: '',
+    numero_matricula: null,
+    permite_saldo_cartera: '0',
+    cupo_cartera: 0,
+    permite_cartera: '1',
+    id_tipo_retencion_ventas: 1,
+    id_tipo_retencion_compra: 1,
+    id_centro_costo: null,
+    id_vendedor: null,
+    lstContactoCliente: [],
+    envioSmsCartera: '0',
+    envioSmsProducto: '0',
+    departamento: '',
+    pais: 'Colombia',
+    regimen: 2,
+    id_tipo_identificacion: '3',
+    id_empleado: parseInt(CONFIG.employeeId),
+  }
+
+  return cuenttiRequest(CONFIG.paths.clientes.grabar, 'POST', body)
+}
+
 // ---------- INVENTARIO ----------
 
 export async function cargarInventario(pagina = 0) {
@@ -105,22 +191,54 @@ export async function cargarInventario(pagina = 0) {
     const data = await cuenttiRequest(path)
     const items = Array.isArray(data) ? data : (data?.data || [])
     return items.map(p => {
-      const precioSinIva = parseFloat(p.price || p.precio || p.precio_venta || 0)
-      const iva = parseFloat(p.tax || p.iva || p.valor_impuesto || 19)
+      const precioSinIva = parseFloat(p.precio_venta || 0)
+      const iva = parseFloat(p.valor_impuesto || 0)
       return {
-        id: p.id || p.id_producto || p.idProductoSucursal,
-        codigo: p.sku || p.codigo_barras || p.code || p.codigo || `PROD-${p.id_producto}`,
-        nombre: p.name || p.nombre || p.description || 'Sin nombre',
-        categoria: p.category || p.categoria || 'General',
-        precio: precioSinIva * (1 + iva / 100), // Precio con IVA incluido
+        id: p.id_producto || p.idProductoSucursal,
+        codigo: p.codigo_barras || p.sku || `PROD-${p.id_producto}`,
+        sku: p.sku || '',
+        codigoBarras: p.codigo_barras || '',
+        nombre: p.nombre || 'Sin nombre',
+        categoria: p.id_categoria ? `Cat-${p.id_categoria}` : 'General',
+        precio: precioSinIva * (1 + iva / 100),
         precioBase: precioSinIva,
-        stock: parseInt(p.stock || p.quantity || p.existencias || 0),
+        stock: parseFloat(p.existencias || 0),
         iva,
+        esServicio: p.es_servicio === 1,
+        vendeSinExistencia: p.vende_sin_existencia === 1,
       }
     })
   } catch (e) {
     console.warn('Cuentti cargarInventario:', e.message)
     return []
+  }
+}
+
+// Buscar producto por SKU o codigo de barras
+export async function buscarProductoPorSku(sku) {
+  if (!sku) return null
+  try {
+    const path = `/jServerj4ErpPro/com/j4ErpPro/server/inv/producto/obtenerProductoSku/${CONFIG.branchId}/${encodeURIComponent(sku.trim())}`
+    const data = await cuenttiRequest(path)
+    if (!data || data.message) return null
+    const p = Array.isArray(data) ? data[0] : data
+    if (!p || !p.id_producto) return null
+    const precioSinIva = parseFloat(p.precio_venta || 0)
+    const iva = parseFloat(p.valor_impuesto || 0)
+    return {
+      id: p.id_producto || p.idProductoSucursal,
+      codigo: p.codigo_barras || p.sku || '',
+      sku: p.sku || '',
+      codigoBarras: p.codigo_barras || '',
+      nombre: p.nombre || 'Sin nombre',
+      precio: precioSinIva * (1 + iva / 100),
+      precioBase: precioSinIva,
+      stock: parseFloat(p.existencias || 0),
+      iva,
+    }
+  } catch (e) {
+    console.warn('Cuentti buscarProductoPorSku:', e.message)
+    return null
   }
 }
 

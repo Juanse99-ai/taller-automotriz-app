@@ -1,7 +1,9 @@
-import { useState, useMemo } from 'react'
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { fmt, fmtDate, uid, hoyISO, normalizarDoc, normalizarNombre } from '../utils/helpers'
 import { TECNICOS, ESTADOS, IVA_DEFAULT } from '../utils/constants'
 import { useClientes } from '../hooks/useClientes'
+import { lsGet, LS_KEYS } from '../services/storage'
+import { cargarInventarioCompleto } from '../services/cuentti'
 
 export default function Trabajos({ hook, notify }) {
   const { trabajos, agregarTrabajo, actualizarTrabajo, eliminarTrabajo } = hook
@@ -174,6 +176,44 @@ function TrabajoForm({ trabajo, onSave, onCancel }) {
 
   const [items, setItems] = useState(trabajo?.items || [])
 
+  // Inventario para busqueda de productos
+  const [inventario, setInventario] = useState([])
+  const [itemSearch, setItemSearch] = useState({}) // { [itemId]: { query, results, show } }
+
+  useEffect(() => {
+    const cached = lsGet(LS_KEYS.INVENTARIO_CACHE, [])
+    if (cached.length > 0) {
+      setInventario(cached)
+    }
+    // Cargar en background
+    cargarInventarioCompleto().then(data => {
+      if (data.length > 0) setInventario(data)
+    }).catch(() => {})
+  }, [])
+
+  const buscarEnInventario = useCallback((itemId, query) => {
+    if (!query || query.length < 2) {
+      setItemSearch(prev => ({ ...prev, [itemId]: { query, results: [], show: false } }))
+      return
+    }
+    const q = query.toLowerCase()
+    const results = inventario.filter(p =>
+      (p.nombre || '').toLowerCase().includes(q) ||
+      (p.codigo || '').toLowerCase().includes(q) ||
+      (p.sku || '').toLowerCase().includes(q) ||
+      (p.codigoBarras || '').toLowerCase().includes(q)
+    ).slice(0, 10)
+    setItemSearch(prev => ({ ...prev, [itemId]: { query, results, show: results.length > 0 } }))
+  }, [inventario])
+
+  const seleccionarProducto = (itemId, producto) => {
+    updateItem(itemId, 'nombre', producto.nombre)
+    updateItem(itemId, 'precio', producto.precio)
+    updateItem(itemId, 'iva', producto.iva)
+    updateItem(itemId, 'codigo', producto.codigo || producto.sku || '')
+    setItemSearch(prev => ({ ...prev, [itemId]: { query: '', results: [], show: false } }))
+  }
+
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
 
   // Seleccionar cliente de resultados
@@ -345,12 +385,36 @@ function TrabajoForm({ trabajo, onSave, onCancel }) {
                 <tbody>
                   {items.map(item => {
                     const lineTotal = (parseFloat(item.precio) || 0) * (parseInt(item.cantidad) || 1)
+                    const searchState = itemSearch[item.id]
                     return (
                       <tr key={item.id}>
-                        <td>
-                          <input className="form-input" value={item.nombre} placeholder="Nombre del item..."
-                            onChange={e => updateItem(item.id, 'nombre', e.target.value)}
+                        <td style={{ position: 'relative' }}>
+                          <input className="form-input" value={item.nombre} placeholder="Buscar por nombre, codigo o referencia..."
+                            onChange={e => {
+                              updateItem(item.id, 'nombre', e.target.value)
+                              buscarEnInventario(item.id, e.target.value)
+                            }}
+                            onFocus={() => {
+                              if (item.nombre && item.nombre.length >= 2) buscarEnInventario(item.id, item.nombre)
+                            }}
+                            onBlur={() => setTimeout(() => setItemSearch(prev => ({ ...prev, [item.id]: { ...prev[item.id], show: false } })), 200)}
                             style={{ padding: '6px 10px', fontSize: 13 }} />
+                          {searchState?.show && searchState.results.length > 0 && (
+                            <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 30, background: '#fff', border: '1px solid var(--slate-200)', borderRadius: 8, maxHeight: 220, overflowY: 'auto', boxShadow: 'var(--shadow-md)' }}>
+                              {searchState.results.map(p => (
+                                <div key={p.id} onClick={() => seleccionarProducto(item.id, p)}
+                                  style={{ padding: '8px 12px', cursor: 'pointer', borderBottom: '1px solid var(--slate-100)', fontSize: 12 }}>
+                                  <div style={{ fontWeight: 600 }}>{p.nombre}</div>
+                                  <div style={{ color: '#666', display: 'flex', gap: 12, marginTop: 2 }}>
+                                    {p.codigo && <span>Cod: {p.codigo}</span>}
+                                    {p.sku && <span>SKU: {p.sku}</span>}
+                                    <span>Precio: {fmt(p.precio)}</span>
+                                    <span>Stock: {p.stock}</span>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
                         </td>
                         <td>
                           <input className="form-input" type="number" value={item.precio} min="0"
