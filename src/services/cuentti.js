@@ -61,8 +61,14 @@ export async function buscarClientePorCedula(cedula) {
   try {
     const path = CONFIG.paths.clientes.consultarPorId.replace('{identificacion}', encodeURIComponent(cedula.trim()))
     const data = await cuenttiRequest(path)
+    // Validar respuesta de error de Cuentti (token invalido, etc)
+    if (data?.message || data?.type === 0) {
+      console.warn('Cuentti API error:', data.message || 'Respuesta invalida')
+      return null
+    }
+
     const items = Array.isArray(data) ? data : (data?.data ? data.data : data ? [data] : [])
-    const filtered = items.filter(r => r && Object.keys(r).length > 0)
+    const filtered = items.filter(r => r && Object.keys(r).length > 0 && !r.message)
     if (!filtered.length) return null
 
     const c = filtered[0]
