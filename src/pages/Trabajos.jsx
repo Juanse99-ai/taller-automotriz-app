@@ -198,19 +198,55 @@ function TrabajoForm({ trabajo, onSave, onCancel }) {
     }).catch(() => { setInvLoading(false) })
   }, [])
 
+  // Debounce timers ref
+  const searchTimers = useRef({})
+
   const buscarEnInventario = useCallback((itemId, query) => {
+    // Clear previous debounce
+    if (searchTimers.current[itemId]) clearTimeout(searchTimers.current[itemId])
+
     if (!query || query.length < 2) {
       setItemSearch(prev => ({ ...prev, [itemId]: { query, results: [], show: false } }))
       return
     }
-    const q = query.toLowerCase()
-    const results = inventario.filter(p =>
-      (p.nombre || '').toLowerCase().includes(q) ||
-      (p.codigo || '').toLowerCase().includes(q) ||
-      (p.sku || '').toLowerCase().includes(q) ||
-      (p.codigoBarras || '').toLowerCase().includes(q)
-    ).slice(0, 10)
-    setItemSearch(prev => ({ ...prev, [itemId]: { query, results, show: results.length > 0 } }))
+
+    // Debounce 150ms
+    searchTimers.current[itemId] = setTimeout(() => {
+      const q = query.toLowerCase().trim()
+      const scored = []
+
+      for (const p of inventario) {
+        const nombre = (p.nombre || '').toLowerCase()
+        const codigo = (p.codigo || '').toLowerCase()
+        const sku = (p.sku || '').toLowerCase()
+        const barras = (p.codigoBarras || '').toLowerCase()
+
+        let score = 0
+        // Exact match on code/sku/barcode = highest priority (POS scanner)
+        if (codigo === q || sku === q || barras === q) score = 100
+        // Starts with on code/sku
+        else if (codigo.startsWith(q) || sku.startsWith(q) || barras.startsWith(q)) score = 80
+        // Exact name match
+        else if (nombre === q) score = 70
+        // Name starts with query
+        else if (nombre.startsWith(q)) score = 60
+        // Name contains query (word boundary)
+        else if (nombre.includes(' ' + q)) score = 50
+        // Name contains query
+        else if (nombre.includes(q)) score = 40
+        // Code/sku contains query
+        else if (codigo.includes(q) || sku.includes(q) || barras.includes(q)) score = 30
+        else continue
+
+        // Boost products with stock
+        if (p.stock > 0) score += 5
+        scored.push({ ...p, _score: score })
+      }
+
+      scored.sort((a, b) => b._score - a._score)
+      const results = scored.slice(0, 12)
+      setItemSearch(prev => ({ ...prev, [itemId]: { query, results, show: results.length > 0 } }))
+    }, 150)
   }, [inventario])
 
   const seleccionarProducto = (itemId, producto) => {
@@ -403,27 +439,72 @@ function TrabajoForm({ trabajo, onSave, onCancel }) {
                     return (
                       <tr key={item.id}>
                         <td style={{ position: 'relative' }}>
-                          <input className="form-input" value={item.nombre} placeholder="Buscar por nombre, codigo o referencia..."
-                            onChange={e => {
-                              updateItem(item.id, 'nombre', e.target.value)
-                              buscarEnInventario(item.id, e.target.value)
-                            }}
-                            onFocus={() => {
-                              if (item.nombre && item.nombre.length >= 2) buscarEnInventario(item.id, item.nombre)
-                            }}
-                            onBlur={() => setTimeout(() => setItemSearch(prev => ({ ...prev, [item.id]: { ...prev[item.id], show: false } })), 200)}
-                            style={{ padding: '6px 10px', fontSize: 13 }} />
+                          <div style={{ position: 'relative' }}>
+                            <input className="form-input" value={item.nombre} placeholder="Nombre, codigo o referencia..."
+                              autoComplete="off"
+                              onChange={e => {
+                                updateItem(item.id, 'nombre', e.target.value)
+                                buscarEnInventario(item.id, e.target.value)
+                              }}
+                              onFocus={() => {
+                                if (item.nombre && item.nombre.length >= 2) buscarEnInventario(item.id, item.nombre)
+                              }}
+                              onBlur={() => setTimeout(() => setItemSearch(prev => ({ ...prev, [item.id]: { ...prev[item.id], show: false } })), 200)}
+                              onKeyDown={e => {
+                                if (e.key === 'Escape') setItemSearch(prev => ({ ...prev, [item.id]: { ...prev[item.id], show: false } }))
+                              }}
+                              style={{ padding: '6px 10px', fontSize: 13 }} />
+                            {invLoading && <span style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', fontSize: 11, color: '#999' }}>...</span>}
+                          </div>
                           {searchState?.show && searchState.results.length > 0 && (
-                            <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 30, background: '#fff', border: '1px solid var(--slate-200)', borderRadius: 8, maxHeight: 220, overflowY: 'auto', boxShadow: 'var(--shadow-md)' }}>
-                              {searchState.results.map(p => (
-                                <div key={p.id} onClick={() => seleccionarProducto(item.id, p)}
-                                  style={{ padding: '8px 12px', cursor: 'pointer', borderBottom: '1px solid var(--slate-100)', fontSize: 12 }}>
-                                  <div style={{ fontWeight: 600 }}>{p.nombre}</div>
-                                  <div style={{ color: '#666', display: 'flex', gap: 12, marginTop: 2 }}>
-                                    {p.codigo && <span>Cod: {p.codigo}</span>}
-                                    {p.sku && <span>SKU: {p.sku}</span>}
-                                    <span>Precio: {fmt(p.precio)}</span>
-                                    <span>Stock: {p.stock}</span>
+                            <div style={{
+                              position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 50,
+                              background: '#fff', border: '1px solid #e2e8f0', borderRadius: 8,
+                              maxHeight: 280, overflowY: 'auto', boxShadow: '0 8px 24px rgba(0,0,0,.12)',
+                              marginTop: 2
+                            }}>
+                              <div style={{ padding: '6px 10px', fontSize: 10, color: '#94a3b8', borderBottom: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', textTransform: 'uppercase', letterSpacing: '.5px', fontWeight: 600 }}>
+                                <span>Producto</span>
+                                <div style={{ display: 'flex', gap: 20 }}>
+                                  <span style={{ width: 70, textAlign: 'right' }}>Precio</span>
+                                  <span style={{ width: 45, textAlign: 'center' }}>Stock</span>
+                                </div>
+                              </div>
+                              {searchState.results.map((p, i) => (
+                                <div key={p.id}
+                                  onClick={() => seleccionarProducto(item.id, p)}
+                                  style={{
+                                    padding: '8px 10px', cursor: 'pointer',
+                                    borderBottom: i < searchState.results.length - 1 ? '1px solid #f8fafc' : 'none',
+                                    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                                    transition: 'background .1s',
+                                    background: p._score >= 80 ? '#f0fdf4' : 'transparent'
+                                  }}
+                                  onMouseEnter={e => e.currentTarget.style.background = '#f1f5f9'}
+                                  onMouseLeave={e => e.currentTarget.style.background = p._score >= 80 ? '#f0fdf4' : 'transparent'}
+                                >
+                                  <div style={{ flex: 1, minWidth: 0 }}>
+                                    <div style={{ fontSize: 13, fontWeight: 600, color: '#1e293b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                      {p.esServicio && <span style={{ fontSize: 10, background: '#dbeafe', color: '#1d4ed8', padding: '1px 5px', borderRadius: 3, marginRight: 6, fontWeight: 500 }}>SRV</span>}
+                                      {p.nombre}
+                                    </div>
+                                    <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 1, display: 'flex', gap: 8 }}>
+                                      {p.codigoBarras && <span>{p.codigoBarras}</span>}
+                                      {p.sku && p.sku !== p.codigoBarras && <span>SKU: {p.sku}</span>}
+                                      {!p.codigoBarras && p.codigo && <span>{p.codigo}</span>}
+                                      {p.categoria && p.categoria !== 'General' && <span style={{ color: '#a78bfa' }}>{p.categoria}</span>}
+                                    </div>
+                                  </div>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginLeft: 8, flexShrink: 0 }}>
+                                    <span style={{ fontSize: 13, fontWeight: 700, color: '#1e293b', fontFamily: 'var(--mono)', width: 80, textAlign: 'right' }}>{fmt(p.precio)}</span>
+                                    <span style={{
+                                      fontSize: 12, fontWeight: 600, fontFamily: 'var(--mono)',
+                                      width: 45, textAlign: 'center', borderRadius: 4, padding: '2px 0',
+                                      background: p.esServicio ? '#f0f9ff' : p.stock > 0 ? '#f0fdf4' : '#fef2f2',
+                                      color: p.esServicio ? '#0369a1' : p.stock > 0 ? '#16a34a' : '#dc2626'
+                                    }}>
+                                      {p.esServicio ? '∞' : p.stock}
+                                    </span>
                                   </div>
                                 </div>
                               ))}
