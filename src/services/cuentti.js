@@ -287,6 +287,7 @@ export async function enviarFactura(factura) {
       precio_venta: precioBase,
       cantidad,
       impuesto,
+      es_servicio: item.esServicio ? 1 : 0,
       total: Math.round(precioConIva * cantidad * 100) / 100,
       descuentoPor: 0,
       descuento_valor: 0,
@@ -306,12 +307,14 @@ export async function enviarFactura(factura) {
     : (RESOLUCIONES.MAS?.id || 4)
 
   const body = {
-    tipoDocumento: 1,
+    id_tipo_documento: 1,
     id_cliente: parseInt(factura.clienteId) || 1,
     id_sucursal: branchId, id_bodega: branchId, id_punto: branchId,
     id_consecutivo: consecutivo,
-    id_documento: null, id_vendedor: empId, id_empleado: empId,
+    id_documento: 0, id_vendedor: empId, id_empleado: empId,
     nota: factura.observaciones || '',
+    fecha_registro: new Date().toISOString(),
+    es_activo: 1,
     total_neto: Math.round(totalNeto * 100) / 100,
     total_impuestos: Math.round(totalImp * 100) / 100,
     total_sin_impuestos: Math.round((totalNeto - totalImp) * 100) / 100,
@@ -319,6 +322,8 @@ export async function enviarFactura(factura) {
       id_cliente: parseInt(factura.clienteId) || 1,
       nombre_cliente: factura.cliente || 'CONSUMIDOR FINAL',
       identificacion: factura.cedula || '222222222222',
+      telefono1: factura.telefonoCliente || '',
+      email1: factura.emailCliente || '',
     },
     objDetalle: items,
     lstPagos: [{
@@ -326,7 +331,7 @@ export async function enviarFactura(factura) {
       valor: Math.round(totalNeto * 100) / 100,
       boucher: '', digitos: '', devuelta: 0,
       dinero_entregado: Math.round(totalNeto * 100) / 100,
-      nota: '', fecha_registro: Date.now(),
+      nota: '', fecha_registro: new Date().toISOString(),
     }],
   }
 
