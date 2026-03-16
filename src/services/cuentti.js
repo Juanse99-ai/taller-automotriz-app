@@ -1,3 +1,5 @@
+import { RESOLUCIONES } from '../utils/constants'
+
 // Configuracion de Cuentti
 const CONFIG = {
   baseUrl: '/api/cuentti',
@@ -25,6 +27,7 @@ const CONFIG = {
   },
 }
 
+// Resoluciones disponibles (prefijos)
 // Request generico al proxy de Cuentti
 async function cuenttiRequest(endpoint, method = 'GET', body = null) {
   const url = `${CONFIG.baseUrl}?path=${encodeURIComponent(endpoint)}`

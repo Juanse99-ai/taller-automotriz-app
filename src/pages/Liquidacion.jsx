@@ -199,7 +199,7 @@ export default function Liquidacion({ trabajos, notify }) {
 
     // Logo
     const logoData = await loadLogo()
-    if (logoData) {
+    if (logoData && typeof logoData === 'string' && logoData.startsWith('data:image')) {
       doc.addImage(logoData, 'PNG', 14, 10, 28, 18)
     }
 
