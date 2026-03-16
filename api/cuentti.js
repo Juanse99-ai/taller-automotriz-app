@@ -29,6 +29,11 @@ export default async function handler(req, res) {
     const fwd = ['authorization','x-api-key','x-auth-token-empresa','x-id-sucursal','x-id-empleado','x-gtm','x-auth-token-id-usuario','token','x-auth-token-usuario','usuario'];
     fwd.forEach(h => { if (req.headers[h]) headers[h] = req.headers[h]; });
 
+    // Defaults de seguridad: evitar valores "undefined" que Cuentti rechaza
+    headers['x-auth-token-id-usuario'] = headers['x-auth-token-id-usuario'] || req.headers['x-auth-token-id-usuario'] || '1';
+    headers['x-auth-token-usuario'] = headers['x-auth-token-usuario'] || req.headers['x-auth-token-usuario'] || '1';
+    headers['x-id-empleado'] = headers['x-id-empleado'] || req.headers['x-id-empleado'] || '1';
+
     const options = { method: req.method, headers };
     if (req.body && (req.method === 'POST' || req.method === 'PUT')) {
       options.body = JSON.stringify(req.body);
