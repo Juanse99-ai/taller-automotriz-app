@@ -296,7 +296,7 @@ export async function enviarFactura(factura) {
       precio_venta: precioBase,
       cantidad,
       impuesto,
-      es_servicio: item.esServicio ? 1 : 0,
+      es_servicio: item.esServicio ? 1 : 10, // 1=servicio, 10=producto en Cuentti
       total: Math.round(precioConIva * cantidad * 100) / 100,
       descuentoPor: 0,
       descuento_valor: 0,
@@ -316,11 +316,11 @@ export async function enviarFactura(factura) {
     : (RESOLUCIONES.MAS?.id || 4)
 
   const body = {
-    id_tipo_documento: 1,
+    tipoDocumento: 1,
     id_cliente: parseInt(factura.clienteId) || 1,
     id_sucursal: branchId, id_bodega: branchId, id_punto: branchId,
     id_consecutivo: consecutivo,
-    id_documento: 0, id_vendedor: empId, id_empleado: empId,
+    id_documento: null, id_vendedor: empId, id_empleado: empId,
     nota: factura.observaciones || '',
     fecha_registro: new Date().toISOString(),
     es_activo: 1,
