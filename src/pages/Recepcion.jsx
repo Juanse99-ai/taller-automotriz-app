@@ -17,6 +17,7 @@ export default function Recepcion({ hook, notify }) {
     placa: '', marca: '', modelo: '', ano: new Date().getFullYear(),
     kilometraje: '', tecnicoId: '', observaciones: '', fecha: hoyISO(),
     programar: false,
+    evidenciasIngreso: [],
   })
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
@@ -46,6 +47,7 @@ export default function Recepcion({ hook, notify }) {
       subtotalSinIva: 0, totalIva: 0, total: 0,
       estado: form.programar ? ESTADOS.PROGRAMADO : ESTADOS.PENDIENTE,
       generarOt: form.programar,
+      evidenciasIngreso: form.evidenciasIngreso,
       fecha: new Date(form.fecha + 'T12:00:00').toISOString(),
     })
     notify('Vehiculo recibido exitosamente', 'success')
@@ -53,7 +55,36 @@ export default function Recepcion({ hook, notify }) {
       cedula: '', cliente: '', telefonoCliente: '', emailCliente: '', clienteId: '',
       placa: '', marca: '', modelo: '', ano: new Date().getFullYear(),
       kilometraje: '', tecnicoId: '', observaciones: '', fecha: hoyISO(), programar: false,
+      evidenciasIngreso: [],
     })
+  }
+
+  const addFotosIngreso = (files) => {
+    if (!files?.length) return
+    Array.from(files).forEach(file => {
+      const reader = new FileReader()
+      reader.onload = () => {
+        setForm(f => ({
+          ...f,
+          evidenciasIngreso: [
+            ...f.evidenciasIngreso,
+            { id: uid(), nombre: file.name, dataUrl: reader.result, nota: '' },
+          ],
+        }))
+      }
+      reader.readAsDataURL(file)
+    })
+  }
+
+  const actualizarNotaFoto = (id, nota) => {
+    setForm(f => ({
+      ...f,
+      evidenciasIngreso: f.evidenciasIngreso.map(fv => fv.id === id ? { ...fv, nota } : fv),
+    }))
+  }
+
+  const quitarFoto = (id) => {
+    setForm(f => ({ ...f, evidenciasIngreso: f.evidenciasIngreso.filter(fv => fv.id !== id) }))
   }
 
   return (
@@ -140,6 +171,28 @@ export default function Recepcion({ hook, notify }) {
             <label className="form-label">Observaciones / Diagnostico inicial</label>
             <textarea className="form-textarea" value={form.observaciones} placeholder="Motivo de ingreso, diagnostico previo, daños visibles..."
               onChange={e => set('observaciones', e.target.value)} />
+          </div>
+
+          <div className="form-group">
+            <label className="form-label">Evidencias de ingreso (fotos)</label>
+            <div className="text-xs text-muted" style={{ marginBottom: 6 }}>
+              Sugerido: frente, lados y parte trasera para evitar reclamos.
+            </div>
+            <input type="file" accept="image/*" multiple onChange={e => addFotosIngreso(e.target.files)} />
+            {form.evidenciasIngreso.length > 0 && (
+              <div className="thumb-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px,1fr))', gap: 8, marginTop: 10 }}>
+                {form.evidenciasIngreso.map(fv => (
+                  <div key={fv.id} style={{ border: '1px solid var(--slate-200)', borderRadius: 8, padding: 6 }}>
+                    <div style={{ position: 'relative', paddingBottom: '70%', overflow: 'hidden', borderRadius: 6, marginBottom: 6 }}>
+                      <img src={fv.dataUrl} alt={fv.nombre} style={{ position: 'absolute', width: '100%', height: '100%', objectFit: 'cover' }} />
+                    </div>
+                    <input className="form-input text-xs" placeholder="Nota breve" value={fv.nota}
+                      onChange={e => actualizarNotaFoto(fv.id, e.target.value)} />
+                    <button type="button" className="btn btn-ghost btn-sm" onClick={() => quitarFoto(fv.id)} style={{ width: '100%', marginTop: 4 }}>Eliminar</button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="form-row" style={{ alignItems: 'center' }}>

@@ -238,9 +238,35 @@ function TrabajoForm({ trabajo, onSave, onCancel }) {
     tecnicoId: trabajo?.tecnicoId || '',
     observaciones: trabajo?.observaciones || '',
     fecha: trabajo?.fecha ? trabajo.fecha.slice(0, 10) : hoyISO(),
+    evidenciasIngreso: trabajo?.evidenciasIngreso || [],
+    evidenciasEntrega: trabajo?.evidenciasEntrega || [],
   })
 
   const [items, setItems] = useState(trabajo?.items || [])
+  const addFotos = (campo, files) => {
+    if (!files?.length) return
+    Array.from(files).forEach(file => {
+      const reader = new FileReader()
+      reader.onload = () => {
+        setForm(f => ({
+          ...f,
+          [campo]: [...(f[campo] || []), { id: uid(), nombre: file.name, dataUrl: reader.result, nota: '' }],
+        }))
+      }
+      reader.readAsDataURL(file)
+    })
+  }
+
+  const actualizarNotaFoto = (campo, id, nota) => {
+    setForm(f => ({
+      ...f,
+      [campo]: f[campo].map(x => x.id === id ? { ...x, nota } : x),
+    }))
+  }
+
+  const quitarFoto = (campo, id) => {
+    setForm(f => ({ ...f, [campo]: f[campo].filter(x => x.id !== id) }))
+  }
 
   // Inventario para busqueda de productos
   const [inventario, setInventario] = useState([])
@@ -394,6 +420,8 @@ function TrabajoForm({ trabajo, onSave, onCancel }) {
       repuestos: totales.repuestos,
       estado: trabajo?.estado || ESTADOS.PENDIENTE,
       fecha: new Date(form.fecha + 'T12:00:00').toISOString(),
+      evidenciasIngreso: form.evidenciasIngreso,
+      evidenciasEntrega: form.evidenciasEntrega,
     })
   }
 
@@ -477,6 +505,25 @@ function TrabajoForm({ trabajo, onSave, onCancel }) {
                 <option value="">Seleccionar</option>
                 {TECNICOS.map(t => <option key={t.id} value={t.id}>{t.nombre}</option>)}
               </select>
+            </div>
+          </div>
+        </div>
+
+        {/* EVIDENCIAS */}
+        <div className="card">
+          <div className="card-title">Evidencias (ingreso y entrega)</div>
+          <div className="form-row">
+            <div className="form-group" style={{ flex: 1 }}>
+              <label className="form-label">Ingreso (como llega)</label>
+              <div className="text-xs text-muted" style={{ marginBottom: 6 }}>Frente, lados, parte trasera.</div>
+              <input type="file" accept="image/*" multiple onChange={e => addFotos('evidenciasIngreso', e.target.files)} />
+              <ThumbGrid fotos={form.evidenciasIngreso} onNota={(id, nota) => actualizarNotaFoto('evidenciasIngreso', id, nota)} onRemove={id => quitarFoto('evidenciasIngreso', id)} />
+            </div>
+            <div className="form-group" style={{ flex: 1 }}>
+              <label className="form-label">Entrega</label>
+              <div className="text-xs text-muted" style={{ marginBottom: 6 }}>Despues del trabajo.</div>
+              <input type="file" accept="image/*" multiple onChange={e => addFotos('evidenciasEntrega', e.target.files)} />
+              <ThumbGrid fotos={form.evidenciasEntrega} onNota={(id, nota) => actualizarNotaFoto('evidenciasEntrega', id, nota)} onRemove={id => quitarFoto('evidenciasEntrega', id)} />
             </div>
           </div>
         </div>
@@ -692,6 +739,24 @@ function TrabajoForm({ trabajo, onSave, onCancel }) {
           <button type="submit" className="btn btn-primary">{isEdit ? 'Actualizar' : 'Crear Trabajo'}</button>
         </div>
       </form>
+    </div>
+  )
+}
+
+function ThumbGrid({ fotos = [], onNota, onRemove }) {
+  if (!fotos.length) return null
+  return (
+    <div className="thumb-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px,1fr))', gap: 8, marginTop: 10 }}>
+      {fotos.map(fv => (
+        <div key={fv.id} style={{ border: '1px solid var(--slate-200)', borderRadius: 8, padding: 6 }}>
+          <div style={{ position: 'relative', paddingBottom: '70%', overflow: 'hidden', borderRadius: 6, marginBottom: 6 }}>
+            <img src={fv.dataUrl} alt={fv.nombre} style={{ position: 'absolute', width: '100%', height: '100%', objectFit: 'cover' }} />
+          </div>
+          <input className="form-input text-xs" placeholder="Nota breve" value={fv.nota || ''}
+            onChange={e => onNota?.(fv.id, e.target.value)} />
+          <button type="button" className="btn btn-ghost btn-sm" onClick={() => onRemove?.(fv.id)} style={{ width: '100%', marginTop: 4 }}>Eliminar</button>
+        </div>
+      ))}
     </div>
   )
 }

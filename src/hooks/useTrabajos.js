@@ -79,6 +79,8 @@ export function useTrabajos() {
       fecha: data.fecha || new Date().toISOString(),
       estado,
       otCodigo,
+      evidenciasIngreso: data.evidenciasIngreso || [],
+      evidenciasEntrega: data.evidenciasEntrega || [],
     }
     setTrabajos(prev => [trabajo, ...prev])
     upsertTrabajo(trabajo) // fire and forget
