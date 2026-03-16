@@ -24,6 +24,7 @@ export function lsRemove(key) {
 // Claves usadas
 export const LS_KEYS = {
   TRABAJOS: 'trabajos',
+  OT_CONSECUTIVO: 'ot_consecutivo',
   CLIENTES_CACHE: 'clientes_cache',
   INVENTARIO_CACHE: 'inventario_cache',
   COTIZACIONES: 'cotizaciones',

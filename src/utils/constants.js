@@ -26,6 +26,7 @@ export const IVA_DEFAULT = 19
 export const ESTADOS = {
   PENDIENTE: 'Pendiente',
   EN_PROGRESO: 'En Progreso',
+  PROGRAMADO: 'Programado',
   COMPLETADO: 'Completado',
   CANCELADO: 'Cancelado',
 }

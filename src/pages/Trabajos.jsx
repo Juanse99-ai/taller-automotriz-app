@@ -1,4 +1,6 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
+import { jsPDF } from 'jspdf'
+import autoTable from 'jspdf-autotable'
 import { fmt, fmtDate, uid, hoyISO, normalizarDoc, normalizarNombre } from '../utils/helpers'
 import { TECNICOS, ESTADOS, IVA_DEFAULT } from '../utils/constants'
 import { useClientes } from '../hooks/useClientes'
@@ -34,6 +36,64 @@ export default function Trabajos({ hook, notify }) {
     await eliminarTrabajo(id)
     setConfirmDel(null)
     notify('Trabajo eliminado', 'info')
+  }
+
+  const loadLogo = async () => {
+    try {
+      const res = await fetch('/logo.png')
+      if (!res.ok) return null
+      const type = res.headers.get('content-type') || ''
+      if (!type.includes('image')) return null
+      const blob = await res.blob()
+      return await new Promise(resolve => {
+        const reader = new FileReader()
+        reader.onloadend = () => resolve(reader.result)
+        reader.readAsDataURL(blob)
+      })
+    } catch { return null }
+  }
+
+  const imprimirOT = async (t) => {
+    const doc = new jsPDF()
+    const logo = await loadLogo()
+    if (logo && logo.startsWith('data:image')) {
+      try { doc.addImage(logo, 'PNG', 14, 10, 28, 18) } catch {}
+    }
+    doc.setFontSize(14)
+    doc.text('Orden de Trabajo', 50, 16)
+    doc.setFontSize(10)
+    doc.text(`OT: ${t.otCodigo || '—'}`, 50, 22)
+    doc.text(`Fecha: ${fmtDate(t.fecha)}`, 50, 28)
+
+    autoTable(doc, {
+      startY: 36,
+      head: [['Cliente', 'Documento', 'Telefono', 'Email']],
+      body: [[t.cliente || '—', t.cedula || '—', t.telefonoCliente || '—', t.emailCliente || '—']],
+      styles: { fontSize: 9 },
+    })
+
+    autoTable(doc, {
+      head: [['Placa', 'Vehiculo', 'Km', 'Tecnico']],
+      body: [[
+        t.placa,
+        [t.marca, t.modelo, t.ano].filter(Boolean).join(' ') || '—',
+        t.kilometraje || '—',
+        tecNombre(t.tecnicoId),
+      ]],
+      styles: { fontSize: 9 },
+      startY: doc.lastAutoTable.finalY + 4,
+    })
+
+    autoTable(doc, {
+      head: [['Observaciones / aprobado por cliente']],
+      body: [[t.observaciones || '—']],
+      styles: { fontSize: 9 },
+      startY: doc.lastAutoTable.finalY + 4,
+    })
+
+    doc.text('Firma cliente: __________________________', 14, doc.lastAutoTable.finalY + 20)
+    doc.text('Firma tecnico: _________________________', 120, doc.lastAutoTable.finalY + 20)
+    doc.save(`${t.otCodigo || 'OT'}.pdf`)
   }
 
   const handleEditar = (id) => {
@@ -99,6 +159,7 @@ export default function Trabajos({ hook, notify }) {
             <table>
               <thead>
                 <tr>
+                  <th>OT</th>
                   <th>Placa</th>
                   <th>Cliente</th>
                   <th>Vehiculo</th>
@@ -111,11 +172,13 @@ export default function Trabajos({ hook, notify }) {
               </thead>
               <tbody>
                 {sorted.map(t => {
-                  const bc = t.estado === ESTADOS.COMPLETADO ? 'badge-success'
+    const bc = t.estado === ESTADOS.COMPLETADO ? 'badge-success'
                     : t.estado === ESTADOS.CANCELADO ? 'badge-danger'
-                    : t.estado === ESTADOS.EN_PROGRESO ? 'badge-info' : 'badge-warning'
+                    : t.estado === ESTADOS.EN_PROGRESO ? 'badge-info'
+                    : t.estado === ESTADOS.PROGRAMADO ? 'badge-primary' : 'badge-warning'
                   return (
                     <tr key={t.id}>
+                      <td className="text-mono">{t.otCodigo || '—'}</td>
                       <td className="text-mono" style={{ fontWeight: 700 }}>{t.placa}</td>
                       <td>{t.cliente || '—'}</td>
                       <td className="text-sm">{[t.marca, t.modelo].filter(Boolean).join(' ') || '—'}</td>
@@ -126,6 +189,9 @@ export default function Trabajos({ hook, notify }) {
                       <td>
                         <div className="flex gap-2">
                           <button className="btn btn-outline btn-sm" onClick={() => handleEditar(t.id)}>Editar</button>
+                          {t.otCodigo && (
+                            <button className="btn btn-outline btn-sm" onClick={() => imprimirOT(t)}>Imprimir OT</button>
+                          )}
                           {t.estado !== ESTADOS.COMPLETADO && (
                             <button className="btn btn-success btn-sm" onClick={() => handleCompletar(t.id)}>Completar</button>
                           )}

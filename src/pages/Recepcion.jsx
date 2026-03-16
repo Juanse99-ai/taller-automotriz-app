@@ -16,6 +16,7 @@ export default function Recepcion({ hook, notify }) {
     cedula: '', cliente: '', telefonoCliente: '', emailCliente: '', clienteId: '',
     placa: '', marca: '', modelo: '', ano: new Date().getFullYear(),
     kilometraje: '', tecnicoId: '', observaciones: '', fecha: hoyISO(),
+    programar: false,
   })
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
@@ -43,14 +44,15 @@ export default function Recepcion({ hook, notify }) {
       tecnicoId: parseInt(form.tecnicoId) || null,
       items: [],
       subtotalSinIva: 0, totalIva: 0, total: 0,
-      estado: ESTADOS.PENDIENTE,
+      estado: form.programar ? ESTADOS.PROGRAMADO : ESTADOS.PENDIENTE,
+      generarOt: form.programar,
       fecha: new Date(form.fecha + 'T12:00:00').toISOString(),
     })
     notify('Vehiculo recibido exitosamente', 'success')
     setForm({
       cedula: '', cliente: '', telefonoCliente: '', emailCliente: '', clienteId: '',
       placa: '', marca: '', modelo: '', ano: new Date().getFullYear(),
-      kilometraje: '', tecnicoId: '', observaciones: '', fecha: hoyISO(),
+      kilometraje: '', tecnicoId: '', observaciones: '', fecha: hoyISO(), programar: false,
     })
   }
 
@@ -138,6 +140,12 @@ export default function Recepcion({ hook, notify }) {
             <label className="form-label">Observaciones / Diagnostico inicial</label>
             <textarea className="form-textarea" value={form.observaciones} placeholder="Motivo de ingreso, diagnostico previo, daños visibles..."
               onChange={e => set('observaciones', e.target.value)} />
+          </div>
+
+          <div className="form-row" style={{ alignItems: 'center' }}>
+            <label className="form-label" style={{ marginRight: 8 }}>Programar (genera OT)</label>
+            <input type="checkbox" checked={form.programar} onChange={e => set('programar', e.target.checked)} />
+            <span className="text-xs text-muted" style={{ marginLeft: 8 }}>Crea orden OT y deja estado "Programado"</span>
           </div>
 
           <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 8 }}>

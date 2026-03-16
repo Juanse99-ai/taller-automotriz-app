@@ -2,21 +2,29 @@ import { useState, useEffect, useCallback } from 'react'
 import { fetchTrabajos, upsertTrabajo, deleteTrabajo as sbDelete } from '../services/supabase'
 import { lsGet, lsSet, LS_KEYS } from '../services/storage'
 import { uid } from '../utils/helpers'
+import { ESTADOS } from '../utils/constants'
 
 export function useTrabajos() {
   const [trabajos, setTrabajos] = useState([])
   const [loading, setLoading] = useState(true)
+
+  const nextOtCodigo = useCallback(() => {
+    const current = lsGet(LS_KEYS.OT_CONSECUTIVO, 0) || 0
+    const next = current + 1
+    lsSet(LS_KEYS.OT_CONSECUTIVO, next)
+    return `OT-${String(next).padStart(4, '0')}`
+  }, [])
 
   // Cargar: Supabase primero, fallback localStorage
   useEffect(() => {
     let mounted = true
     ;(async () => {
       try {
-        const sbData = await fetchTrabajos()
-        if (mounted) {
-          if (sbData.length > 0) {
-            // Normalizar desde formato Supabase
-            const normalized = sbData.map(r => ({
+            const sbData = await fetchTrabajos()
+            if (mounted) {
+              if (sbData.length > 0) {
+                // Normalizar desde formato Supabase
+                const normalized = sbData.map(r => ({
               id: r.id,
               fecha: r.fecha || r.created_at,
               cedula: r.cedula_cliente,
@@ -37,12 +45,13 @@ export function useTrabajos() {
               totalIva: parseFloat(r.total_iva) || 0,
               total: parseFloat(r.total) || 0,
               pagado: r.pagado || false,
-              metodoPago: r.metodo_pago,
-            }))
-            setTrabajos(normalized)
-            lsSet(LS_KEYS.TRABAJOS, normalized)
-          } else {
-            // Fallback localStorage
+                  metodoPago: r.metodo_pago,
+                  otCodigo: r.ot_codigo || r.otCodigo || '',
+                }))
+                setTrabajos(normalized)
+                lsSet(LS_KEYS.TRABAJOS, normalized)
+              } else {
+                // Fallback localStorage
             setTrabajos(lsGet(LS_KEYS.TRABAJOS, []))
           }
         }
@@ -61,11 +70,20 @@ export function useTrabajos() {
   }, [trabajos, loading])
 
   const agregarTrabajo = useCallback(async (data) => {
-    const trabajo = { ...data, id: data.id || `TR-${uid()}`, fecha: data.fecha || new Date().toISOString() }
+    const generarOT = data.generarOt || data.estado === ESTADOS.PROGRAMADO
+    const otCodigo = generarOT ? (data.otCodigo || nextOtCodigo()) : (data.otCodigo || '')
+    const estado = data.estado || (generarOT ? ESTADOS.PROGRAMADO : ESTADOS.PENDIENTE)
+    const trabajo = {
+      ...data,
+      id: data.id || `TR-${uid()}`,
+      fecha: data.fecha || new Date().toISOString(),
+      estado,
+      otCodigo,
+    }
     setTrabajos(prev => [trabajo, ...prev])
     upsertTrabajo(trabajo) // fire and forget
     return trabajo
-  }, [])
+  }, [nextOtCodigo])
 
   const actualizarTrabajo = useCallback(async (id, changes) => {
     setTrabajos(prev => prev.map(t => t.id === id ? { ...t, ...changes } : t))
