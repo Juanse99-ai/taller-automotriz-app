@@ -139,6 +139,23 @@ export default function Liquidacion({ trabajos, notify }) {
         Estado: t.estado,
       }))
       XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(detalleTrab), 'Trabajos')
+
+      // Items por trabajo
+      const detalleItems = trabajosPeriodo.flatMap(t => (t.items || []).map(it => ({
+        Trabajo: t.id,
+        Fecha: t.fecha?.slice(0, 10),
+        Placa: t.placa,
+        Cliente: t.cliente,
+        Item: it.nombre,
+        Cantidad: it.cantidad,
+        Precio: it.precio,
+        IVA: it.iva,
+        Total: (parseFloat(it.precio) || 0) * (parseInt(it.cantidad) || 1),
+        Servicio: it.esServicio ? 'Si' : 'No',
+      })))
+      if (detalleItems.length) {
+        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(detalleItems), 'Items')
+      }
     }
 
     if (movimientos.length > 0) {
@@ -157,17 +174,37 @@ export default function Liquidacion({ trabajos, notify }) {
     notify('Exportado a Excel', 'success')
   }
 
-  const exportPdf = () => {
+  const loadLogo = async () => {
+    try {
+      const res = await fetch('/logo.png')
+      if (!res.ok) return null
+      const blob = await res.blob()
+      return await new Promise(resolve => {
+        const reader = new FileReader()
+        reader.onloadend = () => resolve(reader.result)
+        reader.readAsDataURL(blob)
+      })
+    } catch { return null }
+  }
+
+  const exportPdf = async () => {
     const doc = new jsPDF()
     const period = buildPeriodLabel()
 
+    // Logo
+    const logoData = await loadLogo()
+    if (logoData) {
+      doc.addImage(logoData, 'PNG', 14, 10, 28, 18)
+    }
+
     doc.setFontSize(14)
-    doc.text('Liquidacion de tecnicos', 14, 15)
+    const titleX = logoData ? 44 : 14
+    doc.text('Liquidacion de tecnicos', titleX, 18)
     doc.setFontSize(10)
-    doc.text(`Periodo: ${period}`, 14, 22)
+    doc.text(`Periodo: ${period}`, titleX, 24)
 
     doc.autoTable({
-      startY: 28,
+      startY: 30,
       head: [['Trabajos', 'Mano de obra', 'Comision', 'Cargos', 'Neto']],
       body: [[
         totales.trabajos,
@@ -192,6 +229,50 @@ export default function Liquidacion({ trabajos, notify }) {
       styles: { fontSize: 8 },
       startY: doc.lastAutoTable.finalY + 6,
     })
+
+    // Detalle de trabajos
+    doc.autoTable({
+      head: [['Trabajo', 'Fecha', 'Placa', 'Cliente', 'Tecnico', 'Mano de obra', 'Comision']],
+      body: trabajosPeriodo.map(t => {
+        const mano = getManoObra(t)
+        const tid = parseInt(t.tecnicoId)
+        const com = [1, 2].includes(tid) ? (mano * COMISION.TOTAL) / 2 : mano * COMISION.TOTAL
+        return [
+          t.id,
+          t.fecha?.slice(0, 10),
+          t.placa,
+          t.cliente || '',
+          TECNICOS.find(tc => tc.id === tid)?.nombre || '',
+          fmt(mano),
+          fmt(com),
+        ]
+      }),
+      styles: { fontSize: 7 },
+      startY: doc.lastAutoTable.finalY + 6,
+    })
+
+    // Detalle de items por trabajo
+    const itemsTabla = trabajosPeriodo.flatMap(t => (t.items || []).map(it => {
+      const totalLinea = (parseFloat(it.precio) || 0) * (parseInt(it.cantidad) || 1)
+      return [
+        t.id,
+        t.placa,
+        it.nombre,
+        it.cantidad,
+        fmt(it.precio),
+        `${it.iva}%`,
+        fmt(totalLinea),
+        it.esServicio ? 'Servicio' : 'Repuesto',
+      ]
+    }))
+    if (itemsTabla.length) {
+      doc.autoTable({
+        head: [['Trabajo', 'Placa', 'Item', 'Cant', 'Precio', 'IVA', 'Total', 'Tipo']],
+        body: itemsTabla,
+        styles: { fontSize: 7 },
+        startY: doc.lastAutoTable.finalY + 6,
+      })
+    }
 
     doc.save(`liquidacion_${period.replace(/\\s+/g, '')}.pdf`)
     notify('Exportado a PDF', 'success')
@@ -371,7 +452,7 @@ export default function Liquidacion({ trabajos, notify }) {
       </div>
       <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 12 }}>
         <button className="btn btn-outline btn-sm" onClick={exportExcel}>Exportar Excel</button>
-        <button className="btn btn-outline btn-sm" onClick={exportPdf}>Exportar PDF</button>
+        <button className="btn btn-outline btn-sm" onClick={() => exportPdf()}>Exportar PDF</button>
       </div>
 
       {/* Registro de adelantos / prestamos / consumos */}
