@@ -1,29 +1,14 @@
-import { createClient } from '@supabase/supabase-js'
-
-const SUPABASE_URL = 'https://qvjmyfvrdeebtbhuzzkw.supabase.co'
-const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF2am15ZnZyZGVlYnRiaHV6emt3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA5OTY1MDMsImV4cCI6MjA3NjU3MjUwM30.2V6ag-H06Qw4XDLUnU4KkxEz_gK7w817PwgX3M4ZJC8'
-
-let supabase = null
-
-export function getSupabase() {
-  if (!supabase) {
-    supabase = createClient(SUPABASE_URL, SUPABASE_ANON)
-  }
-  return supabase
-}
+// Cliente a través de proxy backend para evitar CORS
+const baseProxy = '/api/supabase?table=trabajos'
 
 // ---------- TRABAJOS ----------
 
 export async function fetchTrabajos() {
   try {
-    const sb = getSupabase()
-    const { data, error } = await sb
-      .from('trabajos')
-      .select('*')
-      .order('fecha', { ascending: false })
-      .limit(500)
-    if (error) throw error
-    return data || []
+    const url = `${baseProxy}&select=*&order=fecha.desc&limit=500`
+    const res = await fetch(url)
+    if (!res.ok) throw new Error(await res.text())
+    return await res.json()
   } catch (e) {
     console.warn('Supabase fetchTrabajos:', e.message)
     return []
@@ -32,7 +17,6 @@ export async function fetchTrabajos() {
 
 export async function upsertTrabajo(trabajo) {
   try {
-    const sb = getSupabase()
     const row = {
       id: trabajo.id,
       fecha: trabajo.fecha,
@@ -56,9 +40,14 @@ export async function upsertTrabajo(trabajo) {
       pagado: trabajo.pagado || false,
       metodo_pago: trabajo.metodoPago || null,
     }
-    const { data, error } = await sb.from('trabajos').upsert(row, { onConflict: 'id' }).select()
-    if (error) throw error
-    return data?.[0]
+    const res = await fetch(baseProxy, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(row),
+    })
+    if (!res.ok) throw new Error(await res.text())
+    const data = await res.json()
+    return Array.isArray(data) ? data[0] : data
   } catch (e) {
     console.warn('Supabase upsertTrabajo:', e.message)
     return null
@@ -67,9 +56,8 @@ export async function upsertTrabajo(trabajo) {
 
 export async function deleteTrabajo(id) {
   try {
-    const sb = getSupabase()
-    const { error } = await sb.from('trabajos').delete().eq('id', id)
-    if (error) throw error
+    const res = await fetch(`${baseProxy}&id=eq.${encodeURIComponent(id)}`, { method: 'DELETE' })
+    if (!res.ok) throw new Error(await res.text())
     return true
   } catch (e) {
     console.warn('Supabase deleteTrabajo:', e.message)
