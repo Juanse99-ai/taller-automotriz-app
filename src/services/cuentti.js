@@ -286,29 +286,33 @@ export async function cargarInventarioCompleto() {
 // ---------- FACTURACION ----------
 
 export async function enviarFactura(factura) {
+  // Formato exacto segun Postman collection de Cuentti
   const items = (factura.items || []).map(item => {
     const cantidad = parseFloat(item.cantidad) || 1
     const precioConIva = parseFloat(item.precio) || 0
     const impuesto = parseFloat(item.iva) || 19
+    // precio_venta = precio unitario SIN IVA de una sola unidad
     const precioBase = Math.round((precioConIva / (1 + impuesto / 100)) * 100) / 100
+    // total = precio_venta * cantidad * (impuesto/100 + 1)
+    const total = Math.round(precioBase * cantidad * (1 + impuesto / 100) * 100) / 100
     return {
       sku: item.codigo || 'MO1',
       descripcion: item.nombre || 'Servicio Taller',
       precio_venta: precioBase,
       cantidad,
       impuesto,
-      es_servicio: item.esServicio ? 1 : 10, // 1=servicio, 10=producto en Cuentti
-      total: Math.round(precioConIva * cantidad * 100) / 100,
+      total,
       descuentoPor: 0,
       descuento_valor: 0,
     }
   })
 
-  const totalNeto = items.reduce((s, i) => s + i.total, 0)
-  const totalImp = items.reduce((s, i) => {
-    const base = i.precio_venta * i.cantidad
-    return s + (i.total - base)
-  }, 0)
+  // total_neto = sumatoria de total de cada linea de detalle
+  const totalNeto = Math.round(items.reduce((s, i) => s + i.total, 0) * 100) / 100
+  // total_sin_impuestos = sumatoria de precio_venta * cantidad
+  const totalSinImp = Math.round(items.reduce((s, i) => s + (i.precio_venta * i.cantidad), 0) * 100) / 100
+  // total_impuestos = total_neto - total_sin_impuestos
+  const totalImp = Math.round((totalNeto - totalSinImp) * 100) / 100
 
   const empId = parseInt(CONFIG.employeeId) || 1
   const branchId = parseInt(CONFIG.branchId) || 1
@@ -316,35 +320,53 @@ export async function enviarFactura(factura) {
     ? (RESOLUCIONES.FEIC?.id || 2)
     : (RESOLUCIONES.MAS?.id || 4)
 
+  // tipoDocumento: 1=factura, 9=remision, 2=plan separe
+  const tipoDoc = factura.tipoDocumento || 1
+
   const body = {
-    tipoDocumento: 1,
-    id_cliente: parseInt(factura.clienteId) || 1,
-    id_sucursal: branchId, id_bodega: branchId, id_punto: branchId,
+    tipoDocumento: tipoDoc,
+    id_sucursal: branchId,
+    id_bodega: branchId,
     id_consecutivo: consecutivo,
-    id_documento: null, id_vendedor: empId, id_empleado: empId,
+    id_documento: null,
+    id_vendedor: empId,
+    id_empleado: empId,
     nota: factura.observaciones || '',
-    fecha_registro: new Date().toISOString(),
-    es_activo: 1,
-    total_neto: Math.round(totalNeto * 100) / 100,
-    total_impuestos: Math.round(totalImp * 100) / 100,
-    total_sin_impuestos: Math.round((totalNeto - totalImp) * 100) / 100,
+    total_neto: totalNeto,
+    total_impuestos: totalImp,
+    total_sin_impuestos: totalSinImp,
+    observacion: '',
     objClienteMini: {
-      id_cliente: parseInt(factura.clienteId) || 1,
+      id_cliente: parseInt(factura.clienteId) || -1,
       nombre_cliente: factura.cliente || 'CONSUMIDOR FINAL',
       identificacion: factura.cedula || '222222222222',
       telefono1: factura.telefonoCliente || '',
+      telefono2: '',
       email1: factura.emailCliente || '',
+      direccion: factura.direccionCliente || 'N/A',
+      id_tipo_persona: 1,
+      es_cliente: 1,
+      es_proveedor: 0,
+      departamento: factura.departamento || 'ATLANTICO',
+      pais: 'Colombia',
+      ciudad: factura.ciudad || 'BARRANQUILLA',
+      zona: '',
     },
     objDetalle: items,
-    lstPagos: [{
-      id_medio_pago: 1, id_banco: 1,
-      valor: Math.round(totalNeto * 100) / 100,
-      boucher: '', digitos: '', devuelta: 0,
-      dinero_entregado: Math.round(totalNeto * 100) / 100,
-      nota: '', fecha_registro: new Date().toISOString(),
+    lstPagos: factura.aCredito ? [] : [{
+      id_medio_pago: factura.idMedioPago || 1,
+      id_banco: factura.idBanco || 1,
+      valor: totalNeto,
+      boucher: '',
+      digitos: '',
+      devuelta: 0,
+      dinero_entregado: 0,
+      nota: '',
+      fecha_registro: Date.now(),
     }],
   }
 
+  console.log('Cuentti enviarFactura payload:', JSON.stringify(body, null, 2))
   return cuenttiRequest(CONFIG.paths.facturas.grabarSimple, 'POST', body)
 }
 
