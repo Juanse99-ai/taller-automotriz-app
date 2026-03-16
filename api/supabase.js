@@ -34,6 +34,7 @@ export default async function handler(req, res) {
       'apikey': SUPABASE_KEY,
       'Authorization': `Bearer ${SUPABASE_KEY}`,
       'Prefer': 'return=representation',
+      'Accept': 'application/json',
     }
     const options = { method: req.method, headers, cache: 'no-store' }
     if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method) && req.body) {
@@ -47,4 +48,9 @@ export default async function handler(req, res) {
     console.error('Supabase proxy error:', err)
     res.status(500).json({ error: 'Supabase proxy failed', detail: err.message })
   }
+}
+
+// asegurar runtime node para fetch
+export const config = {
+  runtime: 'nodejs',
 }
