@@ -56,7 +56,10 @@ async function cuenttiRequest(endpoint, method = 'GET', body = null) {
   try {
     const res = await fetch(url, { ...opts, signal: controller.signal })
     clearTimeout(timer)
-    if (!res.ok) throw new Error(`Cuentti ${res.status}`)
+    if (!res.ok) {
+      const errText = await res.text()
+      throw new Error(`Cuentti ${res.status}: ${errText || 'sin detalle'}`)
+    }
     const text = await res.text()
     try { return JSON.parse(text) } catch { return text }
   } catch (e) {
@@ -293,12 +296,18 @@ export async function enviarFactura(factura) {
     return s + (i.total - base)
   }, 0)
 
+  const empId = parseInt(CONFIG.employeeId) || 1
+  const branchId = parseInt(CONFIG.branchId) || 1
+  const consecutivo = factura.resolucion === 'FEIC'
+    ? (RESOLUCIONES.FEIC?.id || 2)
+    : (RESOLUCIONES.MAS?.id || 4)
+
   const body = {
     tipoDocumento: 1,
     id_cliente: parseInt(factura.clienteId) || 1,
-    id_sucursal: 1, id_bodega: 1, id_punto: 1,
-    id_consecutivo: factura.resolucion === 'FEIC' ? 2 : 4,
-    id_documento: null, id_vendedor: 1, id_empleado: 1,
+    id_sucursal: branchId, id_bodega: branchId, id_punto: branchId,
+    id_consecutivo: consecutivo,
+    id_documento: null, id_vendedor: empId, id_empleado: empId,
     nota: factura.observaciones || '',
     total_neto: Math.round(totalNeto * 100) / 100,
     total_impuestos: Math.round(totalImp * 100) / 100,

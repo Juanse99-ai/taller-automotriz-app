@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from 'react'
 import * as XLSX from 'xlsx'
 import { jsPDF } from 'jspdf'
-import 'jspdf-autotable'
+import autoTable from 'jspdf-autotable'
 import { fmt, fmtDate, uid } from '../utils/helpers'
 import { TECNICOS, COMISION, ESTADOS } from '../utils/constants'
 import { lsGet, lsSet, LS_KEYS } from '../services/storage'
@@ -209,7 +209,7 @@ export default function Liquidacion({ trabajos, notify }) {
     doc.setFontSize(10)
     doc.text(`Periodo: ${period}`, titleX, 24)
 
-    doc.autoTable({
+    autoTable(doc, {
       startY: 30,
       head: [['Trabajos', 'Mano de obra', 'Comision', 'Cargos', 'Neto']],
       body: [[
@@ -222,7 +222,7 @@ export default function Liquidacion({ trabajos, notify }) {
       styles: { fontSize: 9 },
     })
 
-    doc.autoTable({
+    autoTable(doc, {
       head: [['Tecnico', 'Trabajos', 'Mano de obra', 'Comision', 'Cargos', 'Neto']],
       body: filtrados.map(l => [
         l.tecnico.nombre,
@@ -237,7 +237,7 @@ export default function Liquidacion({ trabajos, notify }) {
     })
 
     // Detalle de trabajos
-    doc.autoTable({
+    autoTable(doc, {
       head: [['Trabajo', 'Fecha', 'Placa', 'Cliente', 'Tecnico', 'Mano de obra', 'Comision']],
       body: trabajosPeriodo.map(t => {
         const mano = getManoObra(t)
@@ -272,7 +272,7 @@ export default function Liquidacion({ trabajos, notify }) {
       ]
     }))
     if (itemsTabla.length) {
-      doc.autoTable({
+      autoTable(doc, {
         head: [['Trabajo', 'Placa', 'Item', 'Cant', 'Precio', 'IVA', 'Total', 'Tipo']],
         body: itemsTabla,
         styles: { fontSize: 7 },
