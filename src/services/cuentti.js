@@ -61,12 +61,14 @@ async function cuenttiRequest(endpoint, method = 'GET', body = null) {
     clearTimeout(timer)
     if (!res.ok) {
       const errText = await res.text()
+      let errJson = null
+      try { errJson = JSON.parse(errText) } catch {}
       console.error('[Cuentti] request', { endpoint, method, body })
-      console.error('[Cuentti] response', res.status, errText)
+      console.error('[Cuentti] response', res.status, errJson || errText)
       const msg = errText || res.statusText || 'sin detalle'
       const error = new Error(`Cuentti ${res.status}: ${msg}`)
       error.status = res.status
-      error.body = errText
+      error.body = errJson || errText
       throw error
     }
     const text = await res.text()
