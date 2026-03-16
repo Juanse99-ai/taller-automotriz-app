@@ -290,6 +290,58 @@ export default function Liquidacion({ trabajos, notify }) {
     notify('Exportado a PDF', 'success')
   }
 
+  const exportPdfIndividual = async (l) => {
+    const doc = new jsPDF()
+    const logoData = await loadLogo()
+    if (logoData && typeof logoData === 'string' && logoData.startsWith('data:image')) {
+      try { doc.addImage(logoData, 'PNG', 14, 10, 28, 18) } catch {}
+    }
+
+    doc.setFontSize(14)
+    const titleX = logoData ? 44 : 14
+    doc.text(`Liquidacion — ${l.tecnico.nombre}`, titleX, 18)
+    doc.setFontSize(10)
+    doc.text(`Periodo: ${buildPeriodLabel()}`, titleX, 24)
+
+    autoTable(doc, {
+      startY: 30,
+      head: [['Trabajos', 'Mano de obra', 'Comision', 'Cargos', 'Neto']],
+      body: [[
+        l.trabajos.length,
+        fmt(l.totalTrabajos),
+        fmt(l.comision),
+        fmt(l.cargos || 0),
+        fmt(l.neto),
+      ]],
+      styles: { fontSize: 9 },
+    })
+
+    autoTable(doc, {
+      head: [['Fecha', 'Placa', 'Cliente', 'Mano de obra', 'Comision']],
+      body: l.trabajos.map(t => {
+        const mano = getManoObra(t)
+        const tid = parseInt(t.tecnicoId)
+        const com = [1, 2].includes(tid) ? (mano * COMISION.TOTAL) / 2 : mano * COMISION.TOTAL
+        return [fmtDate(t.fecha), t.placa, t.cliente || '', fmt(mano), fmt(com)]
+      }),
+      styles: { fontSize: 8 },
+      startY: doc.lastAutoTable.finalY + 6,
+    })
+
+    const movs = movimientos.filter(m => m.tecnicoId === l.tecnico.id)
+    if (movs.length) {
+      autoTable(doc, {
+        head: [['Fecha', 'Tipo', 'Nota', 'Monto']],
+        body: movs.map(m => [fmtDate(m.fecha), m.tipo, m.nota || '—', fmt(m.monto)]),
+        styles: { fontSize: 8 },
+        startY: doc.lastAutoTable.finalY + 6,
+      })
+    }
+
+    doc.save(`liquidacion_${l.tecnico.nombre}_${buildPeriodLabel().replace(/\\s+/g, '')}.pdf`)
+    notify('Exportado PDF individual', 'success')
+  }
+
   const rangoFechas = useMemo(() => {
     const fin = new Date(rango.fin + 'T23:59:59')
     let inicio
@@ -538,17 +590,20 @@ export default function Liquidacion({ trabajos, notify }) {
       {/* Detalle por tecnico */}
       {filtrados.map(l => (
         <div className="card" key={l.tecnico.id}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14, gap: 12 }}>
-            <div>
-              <div className="card-title" style={{ marginBottom: 2 }}>{l.tecnico.nombre}</div>
-              <span className="text-sm text-muted">{l.tecnico.especialidad} — {l.trabajos.length} trabajos</span>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14, gap: 12 }}>
+          <div>
+            <div className="card-title" style={{ marginBottom: 2 }}>{l.tecnico.nombre}</div>
+            <span className="text-sm text-muted">{l.tecnico.especialidad} — {l.trabajos.length} trabajos</span>
+          </div>
+          <div style={{ textAlign: 'right' }}>
+            <div style={{ marginBottom: 6 }}>
+              <button className="btn btn-outline btn-sm" onClick={() => exportPdfIndividual(l)}>PDF</button>
             </div>
-            <div style={{ textAlign: 'right' }}>
-              <div style={{ fontSize: 18, fontWeight: 800, fontFamily: 'var(--mono)', color: 'var(--green-500)' }}>
-                {fmt(l.comision)}
-              </div>
-              <div className="text-xs text-muted">Comision bruta</div>
-              <div style={{ fontSize: 18, fontWeight: 800, fontFamily: 'var(--mono)', color: 'var(--amber-600)' }}>
+            <div style={{ fontSize: 18, fontWeight: 800, fontFamily: 'var(--mono)', color: 'var(--green-500)' }}>
+              {fmt(l.comision)}
+            </div>
+            <div className="text-xs text-muted">Comision bruta</div>
+            <div style={{ fontSize: 18, fontWeight: 800, fontFamily: 'var(--mono)', color: 'var(--amber-600)' }}>
                 {fmt(l.cargos || 0)}
               </div>
               <div className="text-xs text-muted">Cargos / adelantos</div>
