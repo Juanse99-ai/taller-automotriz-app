@@ -449,65 +449,85 @@ function TrabajoForm({ trabajo, onSave, onCancel }) {
                               onFocus={() => {
                                 if (item.nombre && item.nombre.length >= 2) buscarEnInventario(item.id, item.nombre)
                               }}
-                              onBlur={() => setTimeout(() => setItemSearch(prev => ({ ...prev, [item.id]: { ...prev[item.id], show: false } })), 200)}
+                              onBlur={() => setTimeout(() => setItemSearch(prev => ({ ...prev, [item.id]: { ...prev[item.id], show: false } })), 250)}
                               onKeyDown={e => {
                                 if (e.key === 'Escape') setItemSearch(prev => ({ ...prev, [item.id]: { ...prev[item.id], show: false } }))
                               }}
                               style={{ padding: '6px 10px', fontSize: 13 }} />
                             {invLoading && <span style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', fontSize: 11, color: '#999' }}>...</span>}
                           </div>
+                          {/* Overlay POS */}
                           {searchState?.show && searchState.results.length > 0 && (
                             <div style={{
-                              position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 50,
-                              background: '#fff', border: '1px solid #e2e8f0', borderRadius: 8,
-                              maxHeight: 280, overflowY: 'auto', boxShadow: '0 8px 24px rgba(0,0,0,.12)',
-                              marginTop: 2
-                            }}>
-                              <div style={{ padding: '6px 10px', fontSize: 10, color: '#94a3b8', borderBottom: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', textTransform: 'uppercase', letterSpacing: '.5px', fontWeight: 600 }}>
-                                <span>Producto</span>
-                                <div style={{ display: 'flex', gap: 20 }}>
-                                  <span style={{ width: 70, textAlign: 'right' }}>Precio</span>
-                                  <span style={{ width: 45, textAlign: 'center' }}>Stock</span>
+                              position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 99,
+                              background: 'rgba(0,0,0,.3)', display: 'flex', justifyContent: 'center', alignItems: 'flex-start', paddingTop: 80
+                            }} onClick={() => setItemSearch(prev => ({ ...prev, [item.id]: { ...prev[item.id], show: false } }))}>
+                              <div style={{
+                                background: '#fff', borderRadius: 10, width: '90%', maxWidth: 700,
+                                maxHeight: '70vh', display: 'flex', flexDirection: 'column',
+                                boxShadow: '0 20px 60px rgba(0,0,0,.25)', overflow: 'hidden'
+                              }} onClick={e => e.stopPropagation()}>
+                                {/* Header */}
+                                <div style={{ padding: '12px 16px', background: '#1e293b', color: '#fff', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                  <span style={{ fontWeight: 700, fontSize: 14 }}>Buscar Producto</span>
+                                  <span style={{ fontSize: 12, color: '#94a3b8' }}>{searchState.results.length} resultados</span>
+                                </div>
+                                {/* Column headers */}
+                                <div style={{
+                                  display: 'grid', gridTemplateColumns: '1fr 100px 70px', gap: 8,
+                                  padding: '8px 16px', background: '#f8fafc', borderBottom: '2px solid #e2e8f0',
+                                  fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '.5px'
+                                }}>
+                                  <span>Articulo</span>
+                                  <span style={{ textAlign: 'right' }}>P.Venta</span>
+                                  <span style={{ textAlign: 'center' }}>Exist.</span>
+                                </div>
+                                {/* Results list */}
+                                <div style={{ overflowY: 'auto', flex: 1 }}>
+                                  {searchState.results.map((p, i) => (
+                                    <div key={p.id}
+                                      onClick={() => seleccionarProducto(item.id, p)}
+                                      style={{
+                                        display: 'grid', gridTemplateColumns: '1fr 100px 70px', gap: 8,
+                                        padding: '10px 16px', cursor: 'pointer',
+                                        borderBottom: '1px solid #f1f5f9',
+                                        background: i === 0 ? '#1e40af' : 'transparent',
+                                        color: i === 0 ? '#fff' : '#1e293b',
+                                        transition: 'background .1s'
+                                      }}
+                                      onMouseEnter={e => { if (i !== 0) e.currentTarget.style.background = '#f1f5f9' }}
+                                      onMouseLeave={e => { if (i !== 0) e.currentTarget.style.background = 'transparent' }}
+                                    >
+                                      <div style={{ minWidth: 0 }}>
+                                        <div style={{ fontWeight: 700, fontSize: 13, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                          {p.nombre}
+                                        </div>
+                                        <div style={{ fontSize: 11, opacity: .7, marginTop: 2, display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                                          {p.codigoBarras && <span>Cod: {p.codigoBarras}</span>}
+                                          {p.sku && <span>Sku: {p.sku}</span>}
+                                          {(!p.codigoBarras && !p.sku && p.codigo) && <span>Ref: {p.codigo}</span>}
+                                          <span>- P.Venta+imp: {fmt(p.precio)}</span>
+                                          {p.precioBase > 0 && <span>- P.Base: {fmt(p.precioBase)}</span>}
+                                          {p.iva > 0 && <span>IVA: {p.iva}%</span>}
+                                        </div>
+                                      </div>
+                                      <div style={{ textAlign: 'right', fontFamily: 'var(--mono)', fontWeight: 700, fontSize: 13, alignSelf: 'center' }}>
+                                        {fmt(p.precio)}
+                                      </div>
+                                      <div style={{ textAlign: 'center', alignSelf: 'center' }}>
+                                        <span style={{
+                                          fontFamily: 'var(--mono)', fontWeight: 700, fontSize: 13,
+                                          padding: '2px 8px', borderRadius: 4,
+                                          background: i === 0 ? 'rgba(255,255,255,.2)' : p.esServicio ? '#dbeafe' : p.stock > 0 ? '#dcfce7' : '#fee2e2',
+                                          color: i === 0 ? '#fff' : p.esServicio ? '#1d4ed8' : p.stock > 0 ? '#16a34a' : '#dc2626'
+                                        }}>
+                                          {p.esServicio ? '∞' : `(${p.stock})`}
+                                        </span>
+                                      </div>
+                                    </div>
+                                  ))}
                                 </div>
                               </div>
-                              {searchState.results.map((p, i) => (
-                                <div key={p.id}
-                                  onClick={() => seleccionarProducto(item.id, p)}
-                                  style={{
-                                    padding: '8px 10px', cursor: 'pointer',
-                                    borderBottom: i < searchState.results.length - 1 ? '1px solid #f8fafc' : 'none',
-                                    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                                    transition: 'background .1s',
-                                    background: p._score >= 80 ? '#f0fdf4' : 'transparent'
-                                  }}
-                                  onMouseEnter={e => e.currentTarget.style.background = '#f1f5f9'}
-                                  onMouseLeave={e => e.currentTarget.style.background = p._score >= 80 ? '#f0fdf4' : 'transparent'}
-                                >
-                                  <div style={{ flex: 1, minWidth: 0 }}>
-                                    <div style={{ fontSize: 13, fontWeight: 600, color: '#1e293b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                      {p.esServicio && <span style={{ fontSize: 10, background: '#dbeafe', color: '#1d4ed8', padding: '1px 5px', borderRadius: 3, marginRight: 6, fontWeight: 500 }}>SRV</span>}
-                                      {p.nombre}
-                                    </div>
-                                    <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 1, display: 'flex', gap: 8 }}>
-                                      {p.codigoBarras && <span>{p.codigoBarras}</span>}
-                                      {p.sku && p.sku !== p.codigoBarras && <span>SKU: {p.sku}</span>}
-                                      {!p.codigoBarras && p.codigo && <span>{p.codigo}</span>}
-                                      {p.categoria && p.categoria !== 'General' && <span style={{ color: '#a78bfa' }}>{p.categoria}</span>}
-                                    </div>
-                                  </div>
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginLeft: 8, flexShrink: 0 }}>
-                                    <span style={{ fontSize: 13, fontWeight: 700, color: '#1e293b', fontFamily: 'var(--mono)', width: 80, textAlign: 'right' }}>{fmt(p.precio)}</span>
-                                    <span style={{
-                                      fontSize: 12, fontWeight: 600, fontFamily: 'var(--mono)',
-                                      width: 45, textAlign: 'center', borderRadius: 4, padding: '2px 0',
-                                      background: p.esServicio ? '#f0f9ff' : p.stock > 0 ? '#f0fdf4' : '#fef2f2',
-                                      color: p.esServicio ? '#0369a1' : p.stock > 0 ? '#16a34a' : '#dc2626'
-                                    }}>
-                                      {p.esServicio ? '∞' : p.stock}
-                                    </span>
-                                  </div>
-                                </div>
-                              ))}
                             </div>
                           )}
                         </td>
