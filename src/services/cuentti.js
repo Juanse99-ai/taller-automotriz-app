@@ -39,6 +39,7 @@ async function cuenttiRequest(endpoint, method = 'GET', body = null) {
     'x-auth-token-empresa': CONFIG.companyId,
     'x-id-sucursal': CONFIG.branchId,
     'x-gtm': CONFIG.gtm,
+    'usuario': CONFIG.employeeId,
   }
 
   const opts = { method, headers }

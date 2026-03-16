@@ -10,6 +10,7 @@ import {
   obtenerUrlDocumento,
   grabarProductoMovil,
 } from '../services/cuentti'
+import { RESOLUCIONES } from '../utils/constants'
 
 export default function CuenttiPanel({ trabajos, notify }) {
   const [testResult, setTestResult] = useState(null)
@@ -17,6 +18,7 @@ export default function CuenttiPanel({ trabajos, notify }) {
   const [facturaId, setFacturaId] = useState('')
   const [facturando, setFacturando] = useState(false)
   const [facturaResp, setFacturaResp] = useState(null)
+  const [prefijo, setPrefijo] = useState('MAS')
 
   const [emitId, setEmitId] = useState('')
   const [emitiendo, setEmitiendo] = useState(false)
@@ -100,7 +102,7 @@ export default function CuenttiPanel({ trabajos, notify }) {
 
     setFacturando(true)
     try {
-      const result = await enviarFactura(trabajo)
+      const result = await enviarFactura({ ...trabajo, resolucion: prefijo })
       setFacturaResp(result)
       const txId = extractIdTransacion(result)
       if (txId) {
@@ -262,6 +264,15 @@ export default function CuenttiPanel({ trabajos, notify }) {
                 </option>
               ))}
             </select>
+          </div>
+          <div className="form-group" style={{ marginBottom: 0, minWidth: 160 }}>
+            <select className="form-select" value={prefijo} onChange={e => setPrefijo(e.target.value)}>
+              <option value="MAS">MAS (Interna)</option>
+              <option value="FEIC">FEIC (Electronica)</option>
+            </select>
+            <div className="text-xs text-muted" style={{ marginTop: 4 }}>
+              Prefijo / resolucion de salida
+            </div>
           </div>
           <div>
             <button className="btn btn-success" onClick={facturarTrabajo}
