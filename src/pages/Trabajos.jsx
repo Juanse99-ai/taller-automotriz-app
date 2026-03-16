@@ -254,6 +254,7 @@ function TrabajoForm({ trabajo, onSave, onCancel }) {
     updateItem(itemId, 'precio', producto.precio)
     updateItem(itemId, 'iva', producto.iva)
     updateItem(itemId, 'codigo', producto.codigo || producto.sku || '')
+    updateItem(itemId, 'esServicio', !!producto.esServicio)
     setItemSearch(prev => ({ ...prev, [itemId]: { query: '', results: [], show: false } }))
   }
 
@@ -272,7 +273,7 @@ function TrabajoForm({ trabajo, onSave, onCancel }) {
   // Items
   const addItem = () => {
     setItems(prev => [...prev, {
-      id: uid(), codigo: '', nombre: '', precio: 0, cantidad: 1, iva: IVA_DEFAULT,
+      id: uid(), codigo: '', nombre: '', precio: 0, cantidad: 1, iva: IVA_DEFAULT, esServicio: false,
     }])
   }
   const updateItem = (id, field, value) => {
@@ -284,7 +285,7 @@ function TrabajoForm({ trabajo, onSave, onCancel }) {
 
   // Totales
   const totales = useMemo(() => {
-    let subtotal = 0, iva = 0, total = 0
+    let subtotal = 0, iva = 0, total = 0, manoObra = 0, repuestos = 0
     items.forEach(i => {
       const precio = parseFloat(i.precio) || 0
       const cant = parseInt(i.cantidad) || 1
@@ -298,8 +299,16 @@ function TrabajoForm({ trabajo, onSave, onCancel }) {
         subtotal += lineaTotal
       }
       total += lineaTotal
+      if (i.esServicio) manoObra += lineaTotal
+      else repuestos += lineaTotal
     })
-    return { subtotal: Math.round(subtotal), iva: Math.round(iva), total: Math.round(total) }
+    return {
+      subtotal: Math.round(subtotal),
+      iva: Math.round(iva),
+      total: Math.round(total),
+      manoObra: Math.round(manoObra),
+      repuestos: Math.round(repuestos),
+    }
   }, [items])
 
   const handleSubmit = (e) => {
@@ -315,6 +324,8 @@ function TrabajoForm({ trabajo, onSave, onCancel }) {
       subtotalSinIva: totales.subtotal,
       totalIva: totales.iva,
       total: totales.total,
+      manoObra: totales.manoObra,
+      repuestos: totales.repuestos,
       estado: trabajo?.estado || ESTADOS.PENDIENTE,
       fecha: new Date(form.fecha + 'T12:00:00').toISOString(),
     })
@@ -428,6 +439,7 @@ function TrabajoForm({ trabajo, onSave, onCancel }) {
                     <th style={{ width: '15%' }}>Precio</th>
                     <th style={{ width: '10%' }}>Cant.</th>
                     <th style={{ width: '10%' }}>IVA %</th>
+                    <th style={{ width: '10%' }}>Servicio</th>
                     <th style={{ width: '15%' }} className="text-right">Total</th>
                     <th style={{ width: '5%' }}></th>
                   </tr>
@@ -546,6 +558,14 @@ function TrabajoForm({ trabajo, onSave, onCancel }) {
                             onChange={e => updateItem(item.id, 'iva', e.target.value)}
                             style={{ padding: '6px 10px', fontSize: 13, textAlign: 'center', width: 60 }} />
                         </td>
+                        <td style={{ textAlign: 'center' }}>
+                          <input
+                            type="checkbox"
+                            checked={!!item.esServicio}
+                            onChange={e => updateItem(item.id, 'esServicio', e.target.checked)}
+                            title="Marcar como mano de obra / servicio"
+                          />
+                        </td>
                         <td className="text-right text-mono" style={{ fontWeight: 600 }}>{fmt(lineTotal)}</td>
                         <td>
                           <button type="button" className="btn btn-ghost btn-sm" onClick={() => removeItem(item.id)}>🗑</button>
@@ -561,6 +581,14 @@ function TrabajoForm({ trabajo, onSave, onCancel }) {
           {/* Totales */}
           <div style={{ marginTop: 16, borderTop: '1px solid var(--slate-200)', paddingTop: 14 }}>
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 40 }}>
+              <div className="text-sm">
+                <span className="text-muted">Mano de obra:</span>{' '}
+                <span className="text-mono">{fmt(totales.manoObra)}</span>
+              </div>
+              <div className="text-sm">
+                <span className="text-muted">Repuestos:</span>{' '}
+                <span className="text-mono">{fmt(totales.repuestos)}</span>
+              </div>
               <div className="text-sm">
                 <span className="text-muted">Subtotal:</span>{' '}
                 <span className="text-mono">{fmt(totales.subtotal)}</span>
