@@ -184,6 +184,8 @@ export default function Liquidacion({ trabajos, notify }) {
     try {
       const res = await fetch('/logo.png')
       if (!res.ok) return null
+      const type = res.headers.get('content-type') || ''
+      if (!type.includes('image')) return null
       const blob = await res.blob()
       return await new Promise(resolve => {
         const reader = new FileReader()
@@ -199,8 +201,12 @@ export default function Liquidacion({ trabajos, notify }) {
 
     // Logo
     const logoData = await loadLogo()
-    if (logoData && typeof logoData === 'string' && logoData.startsWith('data:image')) {
-      doc.addImage(logoData, 'PNG', 14, 10, 28, 18)
+    try {
+      if (logoData && typeof logoData === 'string' && logoData.startsWith('data:image')) {
+        doc.addImage(logoData, 'PNG', 14, 10, 28, 18)
+      }
+    } catch (err) {
+      console.warn('Logo PDF:', err?.message)
     }
 
     doc.setFontSize(14)
