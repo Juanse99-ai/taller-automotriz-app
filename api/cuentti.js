@@ -42,11 +42,18 @@ export default async function handler(req, res) {
     const response = await fetch(cuenttiUrl, options);
     const data = await response.text();
     if (!response.ok) {
-      res.setHeader('x-cuentti-status', response.status.toString());
-      res.setHeader('x-cuentti-body', encodeURIComponent(data || ''));
+      // Devolver cuerpo y headers para poder diagnosticar desde el frontend
+      let parsed
+      try { parsed = JSON.parse(data) } catch { parsed = null }
+      return res.status(response.status).json({
+        status: response.status,
+        body: data,
+        json: parsed,
+        headers: Object.fromEntries(response.headers.entries()),
+      })
     }
-    res.status(response.status);
-    try { res.json(JSON.parse(data)); } catch { res.send(data); }
+    res.status(response.status)
+    try { res.json(JSON.parse(data)) } catch { res.send(data) }
   } catch (error) {
     console.error('Proxy error:', error);
     res.status(500).json({ error: 'Internal proxy error' });
