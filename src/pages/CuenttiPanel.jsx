@@ -117,9 +117,9 @@ export default function CuenttiPanel({ trabajos, notify }) {
       notify('Factura enviada a Cuentti exitosamente', 'success')
       console.log('Factura result:', result)
     } catch (e) {
-      setFacturaResp({ error: e.message, detalle: e.body || e.stack })
+      setFacturaResp({ error: e.message, detalle: e.body || e.headers || e.stack })
       notify(`Error facturando: ${e.message}`, 'error')
-      console.error('Factura error detalle:', e.body)
+      console.error('Factura error detalle:', e)
     } finally {
       setFacturando(false)
     }

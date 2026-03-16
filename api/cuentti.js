@@ -36,6 +36,10 @@ export default async function handler(req, res) {
 
     const response = await fetch(cuenttiUrl, options);
     const data = await response.text();
+    if (!response.ok) {
+      res.setHeader('x-cuentti-status', response.status.toString());
+      res.setHeader('x-cuentti-body', encodeURIComponent(data || ''));
+    }
     res.status(response.status);
     try { res.json(JSON.parse(data)); } catch { res.send(data); }
   } catch (error) {

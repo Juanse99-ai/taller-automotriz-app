@@ -60,7 +60,9 @@ async function cuenttiRequest(endpoint, method = 'GET', body = null) {
     const res = await fetch(url, { ...opts, signal: controller.signal })
     clearTimeout(timer)
     if (!res.ok) {
-      const errText = await res.text()
+      const hdrBody = res.headers.get('x-cuentti-body')
+      const decodedHdr = hdrBody ? decodeURIComponent(hdrBody) : ''
+      const errText = decodedHdr || await res.text()
       let errJson = null
       try { errJson = JSON.parse(errText) } catch {}
       console.error('[Cuentti] request', { endpoint, method, body })
@@ -69,6 +71,7 @@ async function cuenttiRequest(endpoint, method = 'GET', body = null) {
       const error = new Error(`Cuentti ${res.status}: ${msg}`)
       error.status = res.status
       error.body = errJson || errText
+      error.headers = Object.fromEntries(res.headers.entries())
       throw error
     }
     const text = await res.text()
