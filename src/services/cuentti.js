@@ -28,22 +28,27 @@ const CONFIG = {
 // Request generico al proxy de Cuentti
 async function cuenttiRequest(endpoint, method = 'GET', body = null) {
   const url = `${CONFIG.baseUrl}?path=${encodeURIComponent(endpoint)}`
+  const emp = (CONFIG.employeeId ?? '1').toString()
+  const empId = parseInt(emp, 10) || 1
+  const branch = (CONFIG.branchId ?? '1').toString()
+  const company = (CONFIG.companyId ?? '').toString()
+  const gtm = CONFIG.gtm || 'GMT-0500'
   const headers = {
     'Content-Type': 'application/json',
     'Authorization': `Bearer ${CONFIG.token}`,
     'x-api-key': CONFIG.token,
     'token': CONFIG.token,
-    'X-Auth-Token-id-usuario': CONFIG.employeeId,
-    'X-Auth-Token-usuario': CONFIG.employeeId,
-    'x-id-empleado': CONFIG.employeeId,
-    'x-auth-token-empresa': CONFIG.companyId,
-    'x-id-sucursal': CONFIG.branchId,
-    'x-gtm': CONFIG.gtm,
-    'usuario': CONFIG.employeeId,
+    'X-Auth-Token-id-usuario': emp,
+    'X-Auth-Token-usuario': emp,
+    'x-id-empleado': emp,
+    'x-auth-token-empresa': company || '11464',
+    'x-id-sucursal': branch,
+    'x-gtm': gtm,
+    'usuario': emp,
   }
 
   const opts = { method, headers }
-  if (body) opts.body = JSON.stringify({ ...body, id_usuario: parseInt(CONFIG.employeeId) })
+  if (body) opts.body = JSON.stringify({ ...body, id_usuario: empId })
 
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), CONFIG.timeout)

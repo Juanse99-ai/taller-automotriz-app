@@ -8,18 +8,24 @@ import { lsGet, lsSet, LS_KEYS } from '../services/storage'
 
 // Obtener base de mano de obra (solo servicios) para un trabajo
 const getManoObra = (t) => {
-  if (typeof t?.manoObra === 'number') return t.manoObra
-  if (Array.isArray(t?.items)) {
+  if (typeof t?.manoObra === 'number' && !Number.isNaN(t.manoObra)) return t.manoObra
+  if (typeof t?.mano_obra === 'number' && !Number.isNaN(t.mano_obra)) return t.mano_obra
+
+  if (Array.isArray(t?.items) && t.items.length) {
     const suma = t.items.reduce((s, i) => {
       const precio = parseFloat(i?.precio) || 0
       const cant = parseInt(i?.cantidad) || 1
-      const esServ = !!i?.esServicio
+      const tipo = (i?.tipo || i?.categoria || '').toString().toLowerCase()
+      const esServ = i?.esServicio === true
+        || i?.es_servicio === 1
+        || tipo.includes('serv')
       return s + (esServ ? precio * cant : 0)
     }, 0)
-    if (suma > 0) return suma
+    return Math.max(0, suma)
   }
-  // Fallback para trabajos viejos sin bandera esServicio
-  return parseFloat(t?.total) || 0
+
+  // Sin items marcados como servicio: preferimos no cobrar comision sobre repuestos
+  return 0
 }
 
 const PRESETS = {
@@ -386,11 +392,24 @@ export default function Liquidacion({ trabajos, notify }) {
     }), { trabajos: 0, facturado: 0, comisiones: 0, cargos: 0, neto: 0 })
   }, [filtrados, tecnicoFiltro, baseLiquidacion])
 
+  const periodoLabel = buildPeriodLabel()
+
   return (
     <div>
-      {/* Filtros */}
       <div className="card">
-        <div className="form-row" style={{ alignItems: 'flex-end' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'flex-start', flexWrap: 'wrap' }}>
+          <div>
+            <div className="card-title" style={{ marginBottom: 4 }}>Liquidacion de tecnicos</div>
+            <div className="text-sm text-muted">Por defecto mostramos el dia de hoy. Cambia el periodo o el tecnico y exporta el resumen.</div>
+            <div className="text-xs text-mono" style={{ marginTop: 4 }}>Periodo: {periodoLabel}</div>
+          </div>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <button className="btn btn-outline btn-sm" onClick={exportExcel}>Exportar Excel</button>
+            <button className="btn btn-primary btn-sm" onClick={exportPdf}>Exportar PDF</button>
+          </div>
+        </div>
+
+        <div className="form-row" style={{ alignItems: 'flex-end', marginTop: 12 }}>
           <div className="form-group">
             <label className="form-label">Periodo</label>
             <select className="form-select" value={preset}
@@ -401,20 +420,24 @@ export default function Liquidacion({ trabajos, notify }) {
               <option value={PRESETS.MES}>Ultimos 30 dias</option>
               <option value={PRESETS.RANGO}>Rango personalizado</option>
             </select>
+            <div className="text-xs text-muted" style={{ marginTop: 4 }}>
+              Calculamos hacia atras desde la fecha fin.
+            </div>
+          </div>
+          <div className="form-group">
+            <label className="form-label">Fecha fin (corte)</label>
+            <input className="form-input" type="date" value={rango.fin}
+              onChange={e => setRango(r => ({ ...r, fin: e.target.value }))} />
+            <div className="text-xs text-muted" style={{ marginTop: 4 }}>
+              Para semanal/quincenal/mensual usamos esta fecha como cierre.
+            </div>
           </div>
           {preset === PRESETS.RANGO && (
-            <>
-              <div className="form-group">
-                <label className="form-label">Inicio</label>
-                <input className="form-input" type="date" value={rango.inicio}
-                  onChange={e => setRango(r => ({ ...r, inicio: e.target.value }))} />
-              </div>
-              <div className="form-group">
-                <label className="form-label">Fin</label>
-                <input className="form-input" type="date" value={rango.fin}
-                  onChange={e => setRango(r => ({ ...r, fin: e.target.value }))} />
-              </div>
-            </>
+            <div className="form-group">
+              <label className="form-label">Inicio</label>
+              <input className="form-input" type="date" value={rango.inicio}
+                onChange={e => setRango(r => ({ ...r, inicio: e.target.value }))} />
+            </div>
           )}
           <div className="form-group">
             <label className="form-label">Tecnico</label>
@@ -425,34 +448,29 @@ export default function Liquidacion({ trabajos, notify }) {
             </select>
           </div>
         </div>
-      </div>
 
-      {/* Resumen */}
-      <div className="metrics-grid" style={{ marginBottom: 12 }}>
-        <div className="metric-card">
-          <div className="metric-value">{totales.trabajos}</div>
-          <div className="metric-label">Trabajos Completados</div>
+        <div className="metrics-grid" style={{ marginTop: 12 }}>
+          <div className="metric-card">
+            <div className="metric-value">{totales.trabajos}</div>
+            <div className="metric-label">Trabajos Completados</div>
+          </div>
+          <div className="metric-card">
+            <div className="metric-value">{fmt(totales.facturado)}</div>
+            <div className="metric-label">Base Mano de Obra</div>
+          </div>
+          <div className="metric-card">
+            <div className="metric-value" style={{ color: 'var(--green-500)' }}>{fmt(totales.comisiones)}</div>
+            <div className="metric-label">Comision Bruta ({COMISION.TOTAL * 100}%)</div>
+          </div>
+          <div className="metric-card">
+            <div className="metric-value" style={{ color: 'var(--amber-600)' }}>{fmt(totales.cargos || 0)}</div>
+            <div className="metric-label">Adelantos / Cargos</div>
+          </div>
+          <div className="metric-card">
+            <div className="metric-value" style={{ color: 'var(--green-600)' }}>{fmt((totales.comisiones || 0) - (totales.cargos || 0))}</div>
+            <div className="metric-label">Neto a Pagar</div>
+          </div>
         </div>
-        <div className="metric-card">
-          <div className="metric-value">{fmt(totales.facturado)}</div>
-          <div className="metric-label">Base Mano de Obra</div>
-        </div>
-        <div className="metric-card">
-          <div className="metric-value" style={{ color: 'var(--green-500)' }}>{fmt(totales.comisiones)}</div>
-          <div className="metric-label">Comision Bruta ({COMISION.TOTAL * 100}%)</div>
-        </div>
-        <div className="metric-card">
-          <div className="metric-value" style={{ color: 'var(--amber-600)' }}>{fmt(totales.cargos || 0)}</div>
-          <div className="metric-label">Adelantos / Cargos</div>
-        </div>
-        <div className="metric-card">
-          <div className="metric-value" style={{ color: 'var(--green-600)' }}>{fmt((totales.comisiones || 0) - (totales.cargos || 0))}</div>
-          <div className="metric-label">Neto a Pagar</div>
-        </div>
-      </div>
-      <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 12 }}>
-        <button className="btn btn-outline btn-sm" onClick={exportExcel}>Exportar Excel</button>
-        <button className="btn btn-outline btn-sm" onClick={() => exportPdf()}>Exportar PDF</button>
       </div>
 
       {/* Registro de adelantos / prestamos / consumos */}

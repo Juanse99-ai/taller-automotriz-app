@@ -19,6 +19,10 @@ export default function CuenttiPanel({ trabajos, notify }) {
   const [facturando, setFacturando] = useState(false)
   const [facturaResp, setFacturaResp] = useState(null)
   const [prefijo, setPrefijo] = useState('MAS')
+  const resoluciones = [
+    { code: 'MAS', label: `MAS — ${RESOLUCIONES.MAS?.nombre || 'Interna'}` },
+    { code: 'FEIC', label: `FEIC — ${RESOLUCIONES.FEIC?.nombre || 'Electronica'}` },
+  ]
 
   const [emitId, setEmitId] = useState('')
   const [emitiendo, setEmitiendo] = useState(false)
@@ -267,11 +271,12 @@ export default function CuenttiPanel({ trabajos, notify }) {
           </div>
           <div className="form-group" style={{ marginBottom: 0, minWidth: 160 }}>
             <select className="form-select" value={prefijo} onChange={e => setPrefijo(e.target.value)}>
-              <option value="MAS">MAS (Interna)</option>
-              <option value="FEIC">FEIC (Electronica)</option>
+              {resoluciones.map(r => (
+                <option key={r.code} value={r.code}>{r.label}</option>
+              ))}
             </select>
             <div className="text-xs text-muted" style={{ marginTop: 4 }}>
-              Prefijo / resolucion de salida
+              Prefijo / resolucion que usara Cuentti (MAS o FEIC)
             </div>
           </div>
           <div>
