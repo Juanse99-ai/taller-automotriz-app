@@ -46,7 +46,8 @@ export default async function handler(req, res) {
     try { res.json(JSON.parse(text)) } catch { res.send(text) }
   } catch (err) {
     console.error('Supabase proxy error:', err)
-    res.status(500).json({ error: 'Supabase proxy failed', detail: err.message })
+    // Fallback: no bloqueo en FE, devolvemos arreglo vacio
+    res.status(200).json([])
   }
 }
 

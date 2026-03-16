@@ -63,7 +63,11 @@ async function cuenttiRequest(endpoint, method = 'GET', body = null) {
       const errText = await res.text()
       console.error('[Cuentti] request', { endpoint, method, body })
       console.error('[Cuentti] response', res.status, errText)
-      throw new Error(`Cuentti ${res.status}: ${errText || 'sin detalle'}`)
+      const msg = errText || res.statusText || 'sin detalle'
+      const error = new Error(`Cuentti ${res.status}: ${msg}`)
+      error.status = res.status
+      error.body = errText
+      throw error
     }
     const text = await res.text()
     try { return JSON.parse(text) } catch { return text }
