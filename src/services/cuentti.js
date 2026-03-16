@@ -34,6 +34,7 @@ async function cuenttiRequest(endpoint, method = 'GET', body = null) {
     'x-api-key': CONFIG.token,
     'token': CONFIG.token,
     'X-Auth-Token-id-usuario': CONFIG.employeeId,
+    'X-Auth-Token-usuario': CONFIG.employeeId,
     'x-id-empleado': CONFIG.employeeId,
     'x-auth-token-empresa': CONFIG.companyId,
     'x-id-sucursal': CONFIG.branchId,

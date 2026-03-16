@@ -1,4 +1,7 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
+import * as XLSX from 'xlsx'
+import { jsPDF } from 'jspdf'
+import 'jspdf-autotable'
 import { fmt, fmtDate, uid } from '../utils/helpers'
 import { TECNICOS, COMISION, ESTADOS } from '../utils/constants'
 import { lsGet, lsSet, LS_KEYS } from '../services/storage'
@@ -19,10 +22,21 @@ const getManoObra = (t) => {
   return parseFloat(t?.total) || 0
 }
 
+const PRESETS = {
+  DIA: 'dia',
+  SEMANA: '7',
+  QUINCENA: '15',
+  MES: '30',
+  RANGO: 'rango',
+}
+
 export default function Liquidacion({ trabajos, notify }) {
-  const [periodo, setPeriodo] = useState(() => {
-    const now = new Date()
-    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+  const todayIso = () => new Date().toISOString().slice(0, 10)
+
+  const [preset, setPreset] = useState(PRESETS.DIA) // por defecto día actual
+  const [rango, setRango] = useState({
+    inicio: todayIso(),
+    fin: todayIso(),
   })
   const [tecnicoFiltro, setTecnicoFiltro] = useState('todos')
   const [movimientos, setMovimientos] = useState(() => lsGet(LS_KEYS.MOVIMIENTOS_TECNICOS, []))
@@ -84,15 +98,138 @@ export default function Liquidacion({ trabajos, notify }) {
     guardarMovs(movimientos.filter(m => m.id !== id))
   }
 
+  // ---- Export helpers ----
+  const buildPeriodLabel = () => {
+    const fmtDate = (d) => d.toISOString().slice(0, 10)
+    return `${fmtDate(rangoFechas.inicio)} a ${fmtDate(rangoFechas.fin)}`
+  }
+
+  const exportExcel = () => {
+    const period = buildPeriodLabel()
+    const resumen = [{
+      Periodo: period,
+      Trabajos: totales.trabajos,
+      ManoObra: totales.facturado,
+      Comision: totales.comisiones,
+      Cargos: totales.cargos || 0,
+      Neto: (totales.comisiones || 0) - (totales.cargos || 0),
+    }]
+
+    const porTecnico = filtrados.map(l => ({
+      Tecnico: l.tecnico.nombre,
+      Trabajos: l.trabajos.length,
+      ManoObra: l.totalTrabajos,
+      Comision: l.comision,
+      Cargos: l.cargos || 0,
+      Neto: l.neto,
+    }))
+
+    const wb = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(resumen), 'Resumen')
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(porTecnico), 'Tecnicos')
+
+    if (trabajosPeriodo.length > 0) {
+      const detalleTrab = trabajosPeriodo.map(t => ({
+        Fecha: t.fecha?.slice(0, 10),
+        Placa: t.placa,
+        Cliente: t.cliente,
+        Tecnico: TECNICOS.find(tc => tc.id === parseInt(t.tecnicoId))?.nombre || '',
+        ManoObra: getManoObra(t),
+        Comision: [1, 2].includes(parseInt(t.tecnicoId)) ? (getManoObra(t) * COMISION.TOTAL) / 2 : getManoObra(t) * COMISION.TOTAL,
+        Estado: t.estado,
+      }))
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(detalleTrab), 'Trabajos')
+    }
+
+    if (movimientos.length > 0) {
+      const movs = movimientos.map(m => ({
+        Fecha: m.fecha,
+        Tecnico: TECNICOS.find(t => t.id === parseInt(m.tecnicoId))?.nombre || m.tecnicoId,
+        Tipo: m.tipo,
+        Monto: m.monto,
+        Nota: m.nota || '',
+        Trabajo: m.referencia || '',
+      }))
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(movs), 'Movimientos')
+    }
+
+    XLSX.writeFile(wb, `liquidacion_${period.replace(/\\s+/g, '')}.xlsx`)
+    notify('Exportado a Excel', 'success')
+  }
+
+  const exportPdf = () => {
+    const doc = new jsPDF()
+    const period = buildPeriodLabel()
+
+    doc.setFontSize(14)
+    doc.text('Liquidacion de tecnicos', 14, 15)
+    doc.setFontSize(10)
+    doc.text(`Periodo: ${period}`, 14, 22)
+
+    doc.autoTable({
+      startY: 28,
+      head: [['Trabajos', 'Mano de obra', 'Comision', 'Cargos', 'Neto']],
+      body: [[
+        totales.trabajos,
+        fmt(totales.facturado),
+        fmt(totales.comisiones),
+        fmt(totales.cargos || 0),
+        fmt((totales.comisiones || 0) - (totales.cargos || 0)),
+      ]],
+      styles: { fontSize: 9 },
+    })
+
+    doc.autoTable({
+      head: [['Tecnico', 'Trabajos', 'Mano de obra', 'Comision', 'Cargos', 'Neto']],
+      body: filtrados.map(l => [
+        l.tecnico.nombre,
+        l.trabajos.length,
+        fmt(l.totalTrabajos),
+        fmt(l.comision),
+        fmt(l.cargos || 0),
+        fmt(l.neto),
+      ]),
+      styles: { fontSize: 8 },
+      startY: doc.lastAutoTable.finalY + 6,
+    })
+
+    doc.save(`liquidacion_${period.replace(/\\s+/g, '')}.pdf`)
+    notify('Exportado a PDF', 'success')
+  }
+
+  const rangoFechas = useMemo(() => {
+    const fin = new Date(rango.fin + 'T23:59:59')
+    let inicio
+    if (preset === PRESETS.DIA) {
+      inicio = new Date(rango.fin + 'T00:00:00')
+    } else if (preset === PRESETS.SEMANA) {
+      inicio = new Date(fin)
+      inicio.setDate(fin.getDate() - 6)
+    } else if (preset === PRESETS.QUINCENA) {
+      inicio = new Date(fin)
+      inicio.setDate(fin.getDate() - 14)
+    } else if (preset === PRESETS.MES) {
+      inicio = new Date(fin)
+      inicio.setDate(fin.getDate() - 29)
+    } else {
+      inicio = new Date(rango.inicio + 'T00:00:00')
+    }
+    return { inicio, fin }
+  }, [preset, rango])
+
+  useEffect(() => {
+    // Ajustar rango al cambiar preset (conserva la fecha fin seleccionada)
+    setRango(prev => ({ ...prev, inicio: prev.inicio, fin: prev.fin }))
+  }, [preset])
+
   // Filtrar trabajos completados del periodo
   const trabajosPeriodo = useMemo(() => {
-    const [year, month] = periodo.split('-').map(Number)
     return trabajos.filter(t => {
       if (t.estado !== ESTADOS.COMPLETADO) return false
       const d = new Date(t.fecha)
-      return d.getFullYear() === year && (d.getMonth() + 1) === month
+      return d >= rangoFechas.inicio && d <= rangoFechas.fin
     })
-  }, [trabajos, periodo])
+  }, [trabajos, rangoFechas])
   // Calcular comisiones por tecnico y totales del periodo
   const baseLiquidacion = useMemo(() => {
     const map = {}
@@ -172,12 +309,32 @@ export default function Liquidacion({ trabajos, notify }) {
     <div>
       {/* Filtros */}
       <div className="card">
-        <div className="form-row">
+        <div className="form-row" style={{ alignItems: 'flex-end' }}>
           <div className="form-group">
             <label className="form-label">Periodo</label>
-            <input className="form-input" type="month" value={periodo}
-              onChange={e => setPeriodo(e.target.value)} />
+            <select className="form-select" value={preset}
+              onChange={e => setPreset(e.target.value)}>
+              <option value={PRESETS.DIA}>Hoy</option>
+              <option value={PRESETS.SEMANA}>Ultimos 7 dias</option>
+              <option value={PRESETS.QUINCENA}>Ultimos 15 dias</option>
+              <option value={PRESETS.MES}>Ultimos 30 dias</option>
+              <option value={PRESETS.RANGO}>Rango personalizado</option>
+            </select>
           </div>
+          {preset === PRESETS.RANGO && (
+            <>
+              <div className="form-group">
+                <label className="form-label">Inicio</label>
+                <input className="form-input" type="date" value={rango.inicio}
+                  onChange={e => setRango(r => ({ ...r, inicio: e.target.value }))} />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Fin</label>
+                <input className="form-input" type="date" value={rango.fin}
+                  onChange={e => setRango(r => ({ ...r, fin: e.target.value }))} />
+              </div>
+            </>
+          )}
           <div className="form-group">
             <label className="form-label">Tecnico</label>
             <select className="form-select" value={tecnicoFiltro}
@@ -190,7 +347,7 @@ export default function Liquidacion({ trabajos, notify }) {
       </div>
 
       {/* Resumen */}
-      <div className="metrics-grid">
+      <div className="metrics-grid" style={{ marginBottom: 12 }}>
         <div className="metric-card">
           <div className="metric-value">{totales.trabajos}</div>
           <div className="metric-label">Trabajos Completados</div>
@@ -208,14 +365,21 @@ export default function Liquidacion({ trabajos, notify }) {
           <div className="metric-label">Adelantos / Cargos</div>
         </div>
         <div className="metric-card">
-          <div className="metric-value">{fmt((totales.comisiones || 0) - (totales.cargos || 0))}</div>
+          <div className="metric-value" style={{ color: 'var(--green-600)' }}>{fmt((totales.comisiones || 0) - (totales.cargos || 0))}</div>
           <div className="metric-label">Neto a Pagar</div>
         </div>
+      </div>
+      <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 12 }}>
+        <button className="btn btn-outline btn-sm" onClick={exportExcel}>Exportar Excel</button>
+        <button className="btn btn-outline btn-sm" onClick={exportPdf}>Exportar PDF</button>
       </div>
 
       {/* Registro de adelantos / prestamos / consumos */}
       <div className="card">
-        <div className="card-title">Movimientos de tecnicos (adelantos, prestamos, consumos, pagos)</div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+          <div className="card-title" style={{ marginBottom: 0 }}>Movimientos de tecnicos</div>
+          <span className="text-xs text-muted">Adelantos, prestamos, consumos, pagos</span>
+        </div>
         <form onSubmit={agregarMovimiento} className="form-row">
           <div className="form-group">
             <label className="form-label">Tecnico</label>
@@ -269,7 +433,7 @@ export default function Liquidacion({ trabajos, notify }) {
       {/* Detalle por tecnico */}
       {filtrados.map(l => (
         <div className="card" key={l.tecnico.id}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14, gap: 12 }}>
             <div>
               <div className="card-title" style={{ marginBottom: 2 }}>{l.tecnico.nombre}</div>
               <span className="text-sm text-muted">{l.tecnico.especialidad} — {l.trabajos.length} trabajos</span>

@@ -5,3 +5,5 @@ dist/
 .env
 .env.*
 *.config.json
+.vercel
+.env*.local
