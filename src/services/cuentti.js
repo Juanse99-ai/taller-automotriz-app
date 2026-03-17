@@ -3,7 +3,7 @@ import { RESOLUCIONES } from '../utils/constants'
 // Configuracion de Cuentti
 const CONFIG = {
   baseUrl: '/api/cuentti',
-  token: 'MTE0NjR8MTE0NjR8OTAxNTcyMjI1fDB8ZXlKMGVYQWlPaUpLVjFRaUxDSmhiR2NpT2lKSVV6STFOaUo5LmV5SnpkV0lpT2lJeE1UUTJOQzB5TURJek1EQTVOREF3TUROak5Ea3laRGMwWlMwMU4yRmpMVFJrTVRrdE9HUm1OeTAxTkdSaU9EYzVaVGxtWlRGOE9UQXhOVGN5TWpJMUlpd2lhV0YwSWpveE56Y3pOekEwTkRReExDSmxlSEFpT201MWJHeDkueEh2Nm40YVlUdzFJYWhtak1zdWM0UWRlOGlEa1dyUU1KamV4XzVJV0dKRQ==',
+  token: 'MTE0NjR8MTE0NjR8OTAxNTcyMjI1fDB8ZXlKMGVYQWlPaUpLVjFRaUxDSmhiR2NpT2lKSVV6STFOaUo5LmV5SnpkV0lpT2lJeE1UUTJOQzB5TURJek1EQTVOREF3TUROak5Ea3laRGMwWlMwMU4yRmpMVFJrTVRrdE9HUm1OeTAxTkdSaU9EYzVaVGxtWlRGOE9UQXhOVGN5TWpJMUlpd2lhV0YwSWpveE56Y3pOekF6TlRFNUxDSmxlSEFpT241MWJHeDkuUkJ4UUFMMy1WOWhrc2ZWWlFJSDgtbC16MDRlcVU1TlNkbEdjelRnYWxtWQ==',
   companyId: '11464',
   branchId: '1',
   employeeId: '1',
@@ -27,20 +27,22 @@ const CONFIG = {
   },
 }
 
-// Resoluciones disponibles (prefijos)
-// Request generico al proxy de Cuentti
-async function cuenttiRequest(endpoint, method = 'GET', body = null) {
-  const url = `${CONFIG.baseUrl}?path=${encodeURIComponent(endpoint)}`
+// Construye los headers; se puede enmascarar el token para depurar
+function buildHeaders({ maskToken = false } = {}) {
   const emp = (CONFIG.employeeId ?? '1').toString()
-  const empId = parseInt(emp, 10) || 1
-  const branch = (CONFIG.branchId ?? '1').toString()
   const company = (CONFIG.companyId ?? '').toString()
+  const branch = (CONFIG.branchId ?? '1').toString()
   const gtm = CONFIG.gtm || 'GMT-0500'
-  const headers = {
+  const tok = CONFIG.token || ''
+  const tokenValue = maskToken && tok.length > 10
+    ? `${tok.slice(0, 6)}...${tok.slice(-4)}`
+    : tok
+
+  return {
     'Content-Type': 'application/json',
-    'Authorization': `Bearer ${CONFIG.token}`,
-    'x-api-key': CONFIG.token,
-    'token': CONFIG.token,
+    'Authorization': `Bearer ${tokenValue}`,
+    'x-api-key': tokenValue,
+    'token': tokenValue,
     'X-Auth-Token-id-usuario': emp,
     'X-Auth-Token-usuario': emp,
     'x-id-empleado': emp,
@@ -49,6 +51,13 @@ async function cuenttiRequest(endpoint, method = 'GET', body = null) {
     'x-gtm': gtm,
     'usuario': emp,
   }
+}
+
+// Request generico al proxy de Cuentti
+async function cuenttiRequest(endpoint, method = 'GET', body = null) {
+  const url = `${CONFIG.baseUrl}?path=${encodeURIComponent(endpoint)}`
+  const empId = parseInt(CONFIG.employeeId ?? '1', 10) || 1
+  const headers = buildHeaders()
 
   const opts = { method, headers }
   if (body) opts.body = JSON.stringify({ ...body, id_usuario: empId })
@@ -79,6 +88,11 @@ async function cuenttiRequest(endpoint, method = 'GET', body = null) {
     console.error('[Cuentti] error lanzada', e)
     throw e
   }
+}
+
+// Devuelve headers en formato depuracion (token enmascarado)
+export function getCuenttiDebugHeaders() {
+  return buildHeaders({ maskToken: true })
 }
 
 // ---------- CLIENTES ----------
@@ -285,15 +299,13 @@ export async function cargarInventarioCompleto() {
 
 // ---------- FACTURACION ----------
 
-export async function enviarFactura(factura) {
-  // Formato exacto segun Postman collection de Cuentti
+export function buildFacturaPayload(factura) {
+  // Detalle
   const items = (factura.items || []).map(item => {
     const cantidad = parseFloat(item.cantidad) || 1
     const precioConIva = parseFloat(item.precio) || 0
     const impuesto = parseFloat(item.iva) || 19
-    // precio_venta = precio unitario SIN IVA de una sola unidad
     const precioBase = Math.round((precioConIva / (1 + impuesto / 100)) * 100) / 100
-    // total = precio_venta * cantidad * (impuesto/100 + 1)
     const total = Math.round(precioBase * cantidad * (1 + impuesto / 100) * 100) / 100
     return {
       sku: item.codigo || 'MO1',
@@ -307,11 +319,8 @@ export async function enviarFactura(factura) {
     }
   })
 
-  // total_neto = sumatoria de total de cada linea de detalle
   const totalNeto = Math.round(items.reduce((s, i) => s + i.total, 0) * 100) / 100
-  // total_sin_impuestos = sumatoria de precio_venta * cantidad
   const totalSinImp = Math.round(items.reduce((s, i) => s + (i.precio_venta * i.cantidad), 0) * 100) / 100
-  // total_impuestos = total_neto - total_sin_impuestos
   const totalImp = Math.round((totalNeto - totalSinImp) * 100) / 100
 
   const empId = parseInt(CONFIG.employeeId) || 1
@@ -320,10 +329,12 @@ export async function enviarFactura(factura) {
     ? (RESOLUCIONES.FEIC?.id || 2)
     : (RESOLUCIONES.MAS?.id || 4)
 
-  // tipoDocumento: 1=factura, 9=remision, 2=plan separe
-  const tipoDoc = factura.tipoDocumento || 1
+  const tipoDoc = factura.tipoDocumento || 1 // 1=factura, 9=remision, 2=plan separe
 
-  const body = {
+  const clienteId = parseInt(factura.clienteId || factura.cuenttiId || 0)
+  const idCliente = Number.isFinite(clienteId) && clienteId > 0 ? clienteId : 0
+
+  return {
     tipoDocumento: tipoDoc,
     id_sucursal: branchId,
     id_bodega: branchId,
@@ -337,7 +348,7 @@ export async function enviarFactura(factura) {
     total_sin_impuestos: totalSinImp,
     observacion: '',
     objClienteMini: {
-      id_cliente: parseInt(factura.clienteId) || -1,
+      id_cliente: idCliente,
       nombre_cliente: factura.cliente || 'CONSUMIDOR FINAL',
       identificacion: factura.cedula || '222222222222',
       telefono1: factura.telefonoCliente || '',
@@ -365,7 +376,10 @@ export async function enviarFactura(factura) {
       fecha_registro: Date.now(),
     }],
   }
+}
 
+export async function enviarFactura(factura) {
+  const body = buildFacturaPayload(factura)
   console.log('Cuentti enviarFactura payload:', JSON.stringify(body, null, 2))
   return cuenttiRequest(CONFIG.paths.facturas.grabarSimple, 'POST', body)
 }

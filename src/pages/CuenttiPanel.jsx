@@ -4,11 +4,13 @@ import {
   buscarClientePorCedula,
   cargarInventario,
   enviarFactura,
+  buildFacturaPayload,
   cuenttiConfig,
   emitirFacturaElectronica,
   agregarPagoTransacion,
   obtenerUrlDocumento,
   grabarProductoMovil,
+  getCuenttiDebugHeaders,
 } from '../services/cuentti'
 import { RESOLUCIONES } from '../utils/constants'
 
@@ -18,6 +20,10 @@ export default function CuenttiPanel({ trabajos, notify }) {
   const [facturaId, setFacturaId] = useState('')
   const [facturando, setFacturando] = useState(false)
   const [facturaResp, setFacturaResp] = useState(null)
+  const [previewPayload, setPreviewPayload] = useState(null)
+  const [previewHeaders, setPreviewHeaders] = useState(null)
+  const [ultimoPayload, setUltimoPayload] = useState(null)
+  const [ultimoHeaders, setUltimoHeaders] = useState(null)
   const [prefijo, setPrefijo] = useState('MAS')
   const resoluciones = [
     { code: 'MAS', label: `MAS — ${RESOLUCIONES.MAS?.nombre || 'Interna'}` },
@@ -69,6 +75,24 @@ export default function CuenttiPanel({ trabajos, notify }) {
     || res?.data?.id_transacion || res?.transacion?.id_transacion || res?.transaccion?.id_transaccion
     || ''
 
+  const refreshPreview = (trabajoId, pref = prefijo) => {
+    const trabajoSel = trabajos.find(t => t.id === (trabajoId || '').trim())
+    if (!trabajoSel || !trabajoSel.items || trabajoSel.items.length === 0) {
+      setPreviewPayload(null)
+      setPreviewHeaders(null)
+      return
+    }
+    try {
+      const body = buildFacturaPayload({ ...trabajoSel, resolucion: pref })
+      setPreviewPayload(body)
+      setPreviewHeaders(getCuenttiDebugHeaders())
+    } catch (e) {
+      console.warn('Preview Cuentti error:', e)
+      setPreviewPayload(null)
+      setPreviewHeaders(null)
+    }
+  }
+
   const testConexion = async () => {
     setTesting(true)
     setTestResult(null)
@@ -106,6 +130,11 @@ export default function CuenttiPanel({ trabajos, notify }) {
 
     setFacturando(true)
     try {
+      const payload = buildFacturaPayload({ ...trabajo, resolucion: prefijo })
+      setPreviewPayload(payload)
+      setPreviewHeaders(getCuenttiDebugHeaders())
+      setUltimoPayload(payload)
+      setUltimoHeaders(getCuenttiDebugHeaders())
       const result = await enviarFactura({ ...trabajo, resolucion: prefijo })
       setFacturaResp(result)
       const txId = extractIdTransacion(result)
@@ -262,7 +291,7 @@ export default function CuenttiPanel({ trabajos, notify }) {
         </p>
         <div className="form-row">
           <div className="form-group" style={{ marginBottom: 0 }}>
-            <select className="form-select" value={facturaId} onChange={e => setFacturaId(e.target.value)}>
+            <select className="form-select" value={facturaId} onChange={e => { const v = e.target.value; setFacturaId(v); refreshPreview(v, prefijo) }}>
               <option value="">Seleccionar trabajo...</option>
               {facturables.map(t => (
                 <option key={t.id} value={t.id}>
@@ -272,7 +301,7 @@ export default function CuenttiPanel({ trabajos, notify }) {
             </select>
           </div>
           <div className="form-group" style={{ marginBottom: 0, minWidth: 160 }}>
-            <select className="form-select" value={prefijo} onChange={e => setPrefijo(e.target.value)}>
+            <select className="form-select" value={prefijo} onChange={e => { const v = e.target.value; setPrefijo(v); if (facturaId) refreshPreview(facturaId, v) }}>
               {resoluciones.map(r => (
                 <option key={r.code} value={r.code}>{r.label}</option>
               ))}
@@ -287,8 +316,45 @@ export default function CuenttiPanel({ trabajos, notify }) {
               {facturando ? 'Enviando...' : 'Enviar a Cuentti'}
             </button>
           </div>
-        </div>
       </div>
+    </div>
+
+      {previewPayload && (
+        <div className="card">
+          <div className="card-title">Previsualizacion de envio</div>
+          <p className="text-sm text-muted" style={{ marginBottom: 10 }}>
+            Payload que se enviara a Cuentti (token en headers enmascarado).
+          </p>
+          <pre style={{ background: '#0f172a', color: '#e2e8f0', padding: 12, borderRadius: 8, fontSize: 12, overflowX: 'auto' }}>
+            {formatJson(previewPayload)}
+          </pre>
+          {previewHeaders && (
+            <>
+              <div className="text-xs text-muted" style={{ marginTop: 6 }}>Headers</div>
+              <pre style={{ background: '#0f172a', color: '#e2e8f0', padding: 12, borderRadius: 8, fontSize: 12, overflowX: 'auto' }}>
+                {formatJson(previewHeaders)}
+              </pre>
+            </>
+          )}
+        </div>
+      )}
+
+      {ultimoPayload && (
+        <div className="card">
+          <div className="card-title">Ultimo payload enviado</div>
+          <pre style={{ background: '#0f172a', color: '#e2e8f0', padding: 12, borderRadius: 8, fontSize: 12, overflowX: 'auto' }}>
+            {formatJson(ultimoPayload)}
+          </pre>
+          {ultimoHeaders && (
+            <>
+              <div className="text-xs text-muted" style={{ marginTop: 6 }}>Headers</div>
+              <pre style={{ background: '#0f172a', color: '#e2e8f0', padding: 12, borderRadius: 8, fontSize: 12, overflowX: 'auto' }}>
+                {formatJson(ultimoHeaders)}
+              </pre>
+            </>
+          )}
+        </div>
+      )}
 
       {facturaResp && (
         <div className="card">
