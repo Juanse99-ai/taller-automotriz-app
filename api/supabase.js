@@ -4,8 +4,8 @@ const ALLOWED_ORIGINS = [
   'http://localhost:5173',
 ]
 
-const SUPABASE_URL = 'https://qvjmyfvrdeebtbhuzzkw.supabase.co'
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF2am15ZnZyZGVlYnRiaHV6emt3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA5OTY1MDMsImV4cCI6MjA3NjU3MjUwM30.2V6ag-H06Qw4XDLUnU4KkxEz_gK7w817PwgX3M4ZJC8'
+const SUPABASE_URL = process.env.SUPABASE_URL || 'https://lsobszypdaiiznwxvfyo.supabase.co'
+const SUPABASE_KEY = process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxzb2JzenlwZGFpaXpud3h2ZnlvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM0NjYxNjcsImV4cCI6MjA4OTA0MjE2N30.2ysefMXWKwKuk2hBa_GaDOi992xDIN6kL6qAvwuSQRg'
 
 function getOrigin(reqOrigin = '') {
   if (ALLOWED_ORIGINS.includes(reqOrigin)) return reqOrigin
