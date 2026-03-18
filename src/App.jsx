@@ -92,11 +92,17 @@ export default function App() {
           onHamburger={() => setSidebarOpen(!sidebarOpen)}
         />
         <div className="content">
+          {trabajosHook.connectionError && (
+            <div className="connection-error">
+              <span>No se pudo conectar con el servidor. Mostrando datos guardados localmente.</span>
+              <button onClick={trabajosHook.recargar}>Reintentar</button>
+            </div>
+          )}
           {renderContent()}
         </div>
       </div>
       {toast && <Toast message={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
-      {sidebarOpen && <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.3)', zIndex: 90 }} onClick={() => setSidebarOpen(false)} />}
+      {sidebarOpen && <div className="sidebar-overlay" onClick={() => setSidebarOpen(false)} />}
     </div>
   )
 }

@@ -119,7 +119,7 @@ export default function Cotizaciones({ notify, onCrearTrabajo }) {
                       <td className="text-right text-mono">{fmt(c.total)}</td>
                       <td className="text-sm text-muted">{fmtDate(c.fecha)}</td>
                       <td>
-                        <div style={{ display: 'flex', gap: 6 }}>
+                        <div className="actions-cell">
                           <button className="btn btn-outline btn-sm" onClick={() => { setEditId(c.id); setVista('editar') }}>Editar</button>
                           {c.estado === ESTADO_COT.PENDIENTE && (
                             <>
@@ -293,7 +293,7 @@ function CotizacionForm({ cotizacion, onSave, onCancel }) {
             </div>
           )}
           <div style={{ marginTop: 16, borderTop: '1px solid var(--slate-200)', paddingTop: 14 }}>
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 40 }}>
+            <div className="totals-row">
               <div className="text-sm"><span className="text-muted">Subtotal:</span> <span className="text-mono">{fmt(totales.subtotal)}</span></div>
               <div className="text-sm"><span className="text-muted">IVA:</span> <span className="text-mono">{fmt(totales.iva)}</span></div>
               <div style={{ fontSize: 16, fontWeight: 800 }}>Total: <span className="text-mono" style={{ color: 'var(--green-500)' }}>{fmt(totales.total)}</span></div>

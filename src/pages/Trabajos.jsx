@@ -187,10 +187,10 @@ export default function Trabajos({ hook, notify }) {
                       <td className="text-right text-mono">{fmt(t.total)}</td>
                       <td className="text-sm text-muted">{fmtDate(t.fecha)}</td>
                       <td>
-                        <div className="flex gap-2">
+                        <div className="actions-cell">
                           <button className="btn btn-outline btn-sm" onClick={() => handleEditar(t.id)}>Editar</button>
                           {t.otCodigo && (
-                            <button className="btn btn-outline btn-sm" onClick={() => imprimirOT(t)}>Imprimir OT</button>
+                            <button className="btn btn-outline btn-sm" onClick={() => imprimirOT(t)}>OT</button>
                           )}
                           {t.estado !== ESTADOS.COMPLETADO && (
                             <button className="btn btn-success btn-sm" onClick={() => handleCompletar(t.id)}>Completar</button>
@@ -693,9 +693,9 @@ function TrabajoForm({ trabajo, onSave, onCancel }) {
 
           {/* Totales */}
           <div style={{ marginTop: 16, borderTop: '1px solid var(--slate-200)', paddingTop: 14 }}>
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 40 }}>
+            <div className="totals-row">
               <div className="text-sm">
-                <span className="text-muted">Mano de obra:</span>{' '}
+                <span className="text-muted">M.O.:</span>{' '}
                 <span className="text-mono">{fmt(totales.manoObra)}</span>
               </div>
               <div className="text-sm">
