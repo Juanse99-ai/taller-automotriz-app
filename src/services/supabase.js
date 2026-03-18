@@ -1,18 +1,25 @@
-// Cliente a través de proxy backend para evitar CORS
+// Cliente a traves de proxy backend para evitar CORS
 const baseProxy = '/api/supabase?table=trabajos'
 
 // ---------- TRABAJOS ----------
 
 export async function fetchTrabajos() {
-  try {
-    const url = `${baseProxy}&select=*&order=fecha.desc&limit=500`
-    const res = await fetch(url)
-    if (!res.ok) throw new Error(await res.text())
-    return await res.json()
-  } catch (e) {
-    console.warn('Supabase fetchTrabajos:', e.message)
-    return []
+  const url = `${baseProxy}&select=*&order=fecha.desc&limit=500`
+  const res = await fetch(url)
+
+  // Si el proxy devuelve error (502 = Supabase error, 503 = conexion fallida)
+  if (!res.ok) {
+    let detail = ''
+    try {
+      const err = await res.json()
+      detail = err.detail || err.error || ''
+    } catch {
+      detail = await res.text()
+    }
+    throw new Error(`Supabase no disponible (${res.status}): ${detail}`)
   }
+
+  return await res.json()
 }
 
 export async function upsertTrabajo(trabajo) {
@@ -39,7 +46,6 @@ export async function upsertTrabajo(trabajo) {
       total: trabajo.total || 0,
       pagado: trabajo.pagado || false,
       metodo_pago: trabajo.metodoPago || null,
-      // otCodigo solo vive local; evitar error si tabla no tiene columna
     }
     const res = await fetch(baseProxy, {
       method: 'POST',

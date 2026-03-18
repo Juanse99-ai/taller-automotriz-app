@@ -42,12 +42,26 @@ export default async function handler(req, res) {
     }
     const response = await fetch(url, options)
     const text = await response.text()
+
+    if (!response.ok) {
+      console.error('Supabase responded with error:', response.status, text)
+      // Si Supabase devuelve error, indicar al frontend
+      return res.status(502).json({
+        error: 'Supabase error',
+        status: response.status,
+        detail: text,
+      })
+    }
+
     res.status(response.status)
     try { res.json(JSON.parse(text)) } catch { res.send(text) }
   } catch (err) {
-    console.error('Supabase proxy error:', err)
-    // Fallback: no bloqueo en FE, devolvemos arreglo vacio
-    res.status(200).json([])
+    console.error('Supabase proxy error:', err.message || err)
+    // Devolver error real para que el frontend pueda mostrar el banner
+    res.status(503).json({
+      error: 'No se pudo conectar con Supabase',
+      detail: err.message || 'Connection failed',
+    })
   }
 }
 
