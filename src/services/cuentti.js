@@ -305,14 +305,14 @@ export function buildFacturaPayload(factura) {
     const cantidad = parseFloat(item.cantidad) || 1
     const precioConIva = parseFloat(item.precio) || 0
     const impuesto = parseFloat(item.iva) || 19
-    const precioBase = Math.round((precioConIva / (1 + impuesto / 100)) * 100) / 100
-    const total = Math.round(precioBase * cantidad * (1 + impuesto / 100) * 100) / 100
+    const precioBase = parseFloat((precioConIva / (1 + impuesto / 100)).toFixed(2))
+    const total = parseFloat((precioBase * cantidad * (1 + impuesto / 100)).toFixed(2))
     return {
       sku: item.codigo || 'MO1',
       descripcion: item.nombre || 'Servicio Taller',
       precio_venta: precioBase,
-      cantidad,
-      impuesto,
+      cantidad: parseInt(cantidad),
+      impuesto: parseInt(impuesto),
       total,
       descuentoPor: 0,
       descuento_valor: 0,
@@ -339,13 +339,13 @@ export function buildFacturaPayload(factura) {
     id_sucursal: branchId,
     id_bodega: branchId,
     id_consecutivo: consecutivo,
-    id_documento: null,
+    id_documento: 0,
     id_vendedor: empId,
     id_empleado: empId,
     nota: factura.observaciones || '',
-    total_neto: totalNeto,
-    total_impuestos: totalImp,
-    total_sin_impuestos: totalSinImp,
+    total_neto: parseFloat(totalNeto.toFixed(2)),
+    total_impuestos: parseFloat(totalImp.toFixed(2)),
+    total_sin_impuestos: parseFloat(totalSinImp.toFixed(2)),
     observacion: '',
     objClienteMini: {
       id_cliente: idCliente,
@@ -367,13 +367,13 @@ export function buildFacturaPayload(factura) {
     lstPagos: factura.aCredito ? [] : [{
       id_medio_pago: factura.idMedioPago || 1,
       id_banco: factura.idBanco || 1,
-      valor: totalNeto,
+      valor: parseFloat(totalNeto.toFixed(2)),
       boucher: '',
       digitos: '',
       devuelta: 0,
       dinero_entregado: 0,
       nota: '',
-      fecha_registro: Date.now(),
+      fecha_registro: new Date().toISOString(),
     }],
   }
 }
