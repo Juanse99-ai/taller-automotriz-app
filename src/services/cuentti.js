@@ -3,7 +3,7 @@ import { RESOLUCIONES } from '../utils/constants'
 // Configuracion de Cuentti
 const CONFIG = {
   baseUrl: '/api/cuentti',
-  token: 'MTE0NjR8MTE0NjR8OTAxNTcyMjI1fDB8ZXlKMGVYQWlPaUpLVjFRaUxDSmhiR2NpT2lKSVV6STFOaUo5LmV5SnpkV0lpT2lJeE1UUTJOQzB5TURJek1EQTVOREF3TUROak5Ea3laRGMwWlMwMU4yRmpMVFJrTVRrdE9HUm1OeTAxTkdSaU9EYzVaVGxtWlRGOE9UQXhOVGN5TWpJMUlpd2lhV0YwSWpveE56Y3pPREUwTXpBekxDSmxlSEFpT241MWJHeDkuYTRzWE1zR0JMczk0RkljRk1IZzZuRUY2Rl84V2tqTW9IN25scUVpclIzUQ',
+  token: 'MTE0NjR8MTE0NjR8OTAxNTcyMjI1fDB8ZXlKMGVYQWlPaUpLVjFRaUxDSmhiR2NpT2lKSVV6STFOaUo5LmV5SnpkV0lpT2lJeE1UUTJOQzB5TURJek1EQTVOREF3TUROak5Ea3laRGMwWlMwMU4yRmpMVFJrTVRrdE9HUm1OeTAxTkdSaU9EYzVaVGxtWlRGOE9UQXhOVGN5TWpJMUlpd2lhV0YwSWpveE56Y3pPREUwTXpBekxDSmxlSEFpT251MWJHeDkuYTRzWE1zR0JMczk0RkljRk1IZzZuRUY2Rl84V2tqTW9IN25scUVpclIzUQ==',
   companyId: '11464',
   branchId: '1',
   employeeId: '1',
@@ -40,9 +40,8 @@ function buildHeaders({ maskToken = false } = {}) {
 
   return {
     'Content-Type': 'application/json',
-    'Authorization': `Bearer ${tokenValue}`,
-    'x-api-key': tokenValue,
     'token': tokenValue,
+    'x-auth-token-api': tokenValue,
     'X-Auth-Token-id-usuario': emp,
     'X-Auth-Token-usuario': emp,
     'x-id-empleado': emp,
