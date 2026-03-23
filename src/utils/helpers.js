@@ -68,8 +68,14 @@ export function normalizarNombre(cliente) {
   const nombre = cliente?.nombre_cliente || cliente?.nombre || cliente?.name ||
     cliente?.full_name || cliente?.razon_social || cliente?.tercero || ''
   if (nombre) return nombre.toString().trim()
-  // Fallback: concatenar campos individuales de Cuentti
-  const partes = [cliente?.primer_nombre, cliente?.segundo_nombre, cliente?.primer_apellido].filter(Boolean)
+  // Fallback: concatenar campos individuales de Cuentti (busca en raiz y en _raw)
+  const raw = cliente?._raw
+  const partes = [
+    cliente?.primer_nombre || raw?.primer_nombre,
+    cliente?.segundo_nombre || raw?.segundo_nombre,
+    cliente?.primer_apellido || raw?.primer_apellido,
+    cliente?.segundo_apellido || raw?.segundo_apellido,
+  ].filter(Boolean)
   return partes.length ? partes.join(' ').trim() : 'Sin nombre'
 }
 

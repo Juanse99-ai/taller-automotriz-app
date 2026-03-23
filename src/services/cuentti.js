@@ -114,16 +114,20 @@ export async function buscarClientePorCedula(cedula) {
     const c = filtered[0]
     console.log('Cuentti API raw response cliente:', JSON.stringify(c, null, 2))
 
-    // Construir nombre: usar nombre_cliente, o concatenar primer_nombre + primer_apellido
+    // Construir nombre: usar nombre_cliente, o concatenar partes individuales
     const nombreCompleto = c.nombre_cliente
       || c.name || c.nombre || c.full_name || c.razon_social || c.tercero
-      || [c.primer_nombre, c.segundo_nombre, c.primer_apellido].filter(Boolean).join(' ')
+      || [c.primer_nombre, c.segundo_nombre, c.primer_apellido, c.segundo_apellido].filter(Boolean).join(' ')
       || ''
 
     return {
       id: c.id_cliente || c.id || c.customer_id,
       cedula: c.identificacion || c.document || c.documento || c.cedula || cedula,
       nombre: nombreCompleto,
+      primer_nombre: c.primer_nombre || '',
+      segundo_nombre: c.segundo_nombre || '',
+      primer_apellido: c.primer_apellido || '',
+      segundo_apellido: c.segundo_apellido || '',
       telefono: c.telefono1 || c.telefono3 || c.mobile || c.celular || c.telefono || c.phone || '',
       email: c.email1 || c.email2 || c.email || c.correo || '',
       direccion: c.direccion || c.address || '',
@@ -313,7 +317,7 @@ export function buildFacturaPayload(factura) {
       cantidad: parseInt(cantidad),
       impuesto: parseInt(impuesto),
       total,
-      descuentoPor: 0,
+      descuento_por: 0,
       descuento_valor: 0,
     }
   })
@@ -354,7 +358,7 @@ export function buildFacturaPayload(factura) {
       telefono2: '',
       email1: factura.emailCliente || '',
       direccion: factura.direccionCliente || 'N/A',
-      id_tipo_persona: 1,
+      id_tipo_persona: '1',
       es_cliente: 1,
       es_proveedor: 0,
       departamento: factura.departamento || 'ATLANTICO',
