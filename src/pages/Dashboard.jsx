@@ -2,7 +2,37 @@ import { useMemo } from 'react'
 import { fmt, fmtDate } from '../utils/helpers'
 import { ESTADOS, TECNICOS } from '../utils/constants'
 
-export default function Dashboard({ trabajos, loading }) {
+const IconTotal = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="9" y="2" width="6" height="4" rx="1"/>
+    <path d="M8 4H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-2"/>
+    <line x1="9" y1="12" x2="15" y2="12"/>
+    <line x1="9" y1="16" x2="13" y2="16"/>
+  </svg>
+)
+
+const IconCheck = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="12" cy="12" r="10"/>
+    <path d="m9 12 2 2 4-4"/>
+  </svg>
+)
+
+const IconClock = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="12" cy="12" r="10"/>
+    <polyline points="12 6 12 12 16 14"/>
+  </svg>
+)
+
+const IconTrend = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/>
+    <polyline points="17 6 23 6 23 12"/>
+  </svg>
+)
+
+export default function Dashboard({ trabajos }) {
   const stats = useMemo(() => {
     const total = trabajos.length
     const completados = trabajos.filter(t => t.estado === ESTADOS.COMPLETADO).length
@@ -30,18 +60,22 @@ export default function Dashboard({ trabajos, loading }) {
     <div>
       <div className="metrics-grid">
         <div className="metric-card">
+          <div className="metric-icon metric-icon--blue"><IconTotal /></div>
           <div className="metric-value">{stats.total}</div>
           <div className="metric-label">Total Trabajos</div>
         </div>
         <div className="metric-card">
-          <div className="metric-value" style={{ color: 'var(--green-500)' }}>{stats.completados}</div>
+          <div className="metric-icon metric-icon--green"><IconCheck /></div>
+          <div className="metric-value">{stats.completados}</div>
           <div className="metric-label">Completados</div>
         </div>
         <div className="metric-card">
-          <div className="metric-value" style={{ color: 'var(--amber-500)' }}>{stats.enProgreso}</div>
+          <div className="metric-icon metric-icon--amber"><IconClock /></div>
+          <div className="metric-value">{stats.enProgreso}</div>
           <div className="metric-label">Pendientes</div>
         </div>
         <div className="metric-card">
+          <div className="metric-icon metric-icon--blue"><IconTrend /></div>
           <div className="metric-value">{fmt(stats.ingresosMes)}</div>
           <div className="metric-label">Ingresos del Mes</div>
         </div>
@@ -51,7 +85,7 @@ export default function Dashboard({ trabajos, loading }) {
         <div className="card-title">Trabajos Recientes</div>
         {recientes.length === 0 ? (
           <div className="empty-state">
-            <div className="empty-state-icon">📋</div>
+            <div className="empty-state-icon">🔧</div>
             <p>No hay trabajos registrados.</p>
           </div>
         ) : (
