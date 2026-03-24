@@ -7,7 +7,7 @@ export default defineConfig({
     port: 3000,
     proxy: {
       '/api/cuentti': {
-        target: 'https://api.cuenti.co',
+        target: 'https://app.cuenti.com',
         changeOrigin: true,
         rewrite: (path) => {
           const url = new URL(path, 'http://localhost')

@@ -22,7 +22,7 @@ export default async function handler(req, res) {
     const path = req.query.path || '';
     if (!path.startsWith('/jServerj4ErpPro/')) { res.status(400).json({ error: 'Invalid API path' }); return; }
 
-    const baseUrl = 'https://api.cuenti.co';
+    const baseUrl = 'https://app.cuenti.com';
     const cuenttiUrl = new URL(path, baseUrl).toString();
 
     const headers = { 'Content-Type': 'application/json' };
