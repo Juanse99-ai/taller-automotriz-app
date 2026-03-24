@@ -27,16 +27,25 @@ const CONFIG = {
   },
 }
 
+// Decodifica el outer-base64 del token para obtener el string raw que Cuentti espera
+function getRawToken() {
+  try {
+    return atob(CONFIG.token || '')
+  } catch {
+    return CONFIG.token || ''
+  }
+}
+
 // Construye los headers; se puede enmascarar el token para depurar
 function buildHeaders({ maskToken = false } = {}) {
   const emp = (CONFIG.employeeId ?? '1').toString()
   const company = (CONFIG.companyId ?? '').toString()
   const branch = (CONFIG.branchId ?? '1').toString()
   const gtm = CONFIG.gtm || 'GMT-0500'
-  const tok = CONFIG.token || ''
-  const tokenValue = maskToken && tok.length > 10
-    ? `${tok.slice(0, 6)}...${tok.slice(-4)}`
-    : tok
+  const rawTok = getRawToken()
+  const tokenValue = maskToken && rawTok.length > 10
+    ? `${rawTok.slice(0, 10)}...${rawTok.slice(-6)}`
+    : rawTok
 
   return {
     'Content-Type': 'application/json',
@@ -95,6 +104,17 @@ export function getCuenttiDebugHeaders() {
 }
 
 // ---------- CLIENTES ----------
+
+// Prueba directa del token — devuelve la respuesta cruda de Cuentti sin ocultar errores
+export async function testTokenDirecto() {
+  const path = CONFIG.paths.clientes.consultarPorId.replace('{identificacion}', '222222222222')
+  try {
+    const data = await cuenttiRequest(path)
+    return { ok: true, data }
+  } catch (e) {
+    return { ok: false, error: e.message, body: e.body, status: e.status }
+  }
+}
 
 export async function buscarClientePorCedula(cedula) {
   if (!cedula) return null

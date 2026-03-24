@@ -11,6 +11,7 @@ import {
   obtenerUrlDocumento,
   grabarProductoMovil,
   getCuenttiDebugHeaders,
+  testTokenDirecto,
 } from '../services/cuentti'
 import { RESOLUCIONES } from '../utils/constants'
 
@@ -96,13 +97,15 @@ export default function CuenttiPanel({ trabajos, notify }) {
   const testConexion = async () => {
     setTesting(true)
     setTestResult(null)
-    const results = { clientes: null, inventario: null }
 
-    try {
-      const cliente = await buscarClientePorCedula('222222222222')
-      results.clientes = cliente ? 'OK - Respuesta recibida' : 'OK - Sin datos para cedula de prueba'
-    } catch (e) {
-      results.clientes = `Error: ${e.message}`
+    // Test directo: muestra respuesta cruda de Cuentti sin ocultar errores
+    const tokenTest = await testTokenDirecto()
+    const results = {
+      tokenRaw: tokenTest,
+      clientes: tokenTest.ok
+        ? (tokenTest.data ? 'OK - Respuesta recibida' : 'OK - Sin datos')
+        : `ERROR: ${tokenTest.error || JSON.stringify(tokenTest.body)}`,
+      inventario: null,
     }
 
     try {
@@ -255,31 +258,41 @@ export default function CuenttiPanel({ trabajos, notify }) {
           </button>
         </div>
         {testResult && (
-          <div className="table-wrap">
-            <table>
-              <thead>
-                <tr><th>Endpoint</th><th>Resultado</th></tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td style={{ fontWeight: 600 }}>Clientes</td>
-                  <td>
-                    <span className={`badge ${testResult.clientes.startsWith('OK') ? 'badge-success' : 'badge-danger'}`}>
-                      {testResult.clientes}
-                    </span>
-                  </td>
-                </tr>
-                <tr>
-                  <td style={{ fontWeight: 600 }}>Inventario</td>
-                  <td>
-                    <span className={`badge ${testResult.inventario.startsWith('OK') ? 'badge-success' : 'badge-danger'}`}>
-                      {testResult.inventario}
-                    </span>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
+          <>
+            <div className="table-wrap">
+              <table>
+                <thead>
+                  <tr><th>Endpoint</th><th>Resultado</th></tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td style={{ fontWeight: 600 }}>Clientes</td>
+                    <td>
+                      <span className={`badge ${testResult.clientes.startsWith('OK') ? 'badge-success' : 'badge-danger'}`}>
+                        {testResult.clientes}
+                      </span>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style={{ fontWeight: 600 }}>Inventario</td>
+                    <td>
+                      <span className={`badge ${testResult.inventario.startsWith('OK') ? 'badge-success' : 'badge-danger'}`}>
+                        {testResult.inventario}
+                      </span>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            {testResult.tokenRaw && (
+              <div style={{ marginTop: 12 }}>
+                <div className="text-xs text-muted" style={{ marginBottom: 4 }}>Respuesta cruda del token test (para diagnostico):</div>
+                <pre style={{ background: '#0f172a', color: testResult.tokenRaw.ok ? '#86efac' : '#fca5a5', padding: 12, borderRadius: 8, fontSize: 12, overflowX: 'auto' }}>
+                  {formatJson(testResult.tokenRaw)}
+                </pre>
+              </div>
+            )}
+          </>
         )}
       </div>
 
