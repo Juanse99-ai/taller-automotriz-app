@@ -3,7 +3,7 @@ import { RESOLUCIONES } from '../utils/constants'
 // Configuracion de Cuentti
 const CONFIG = {
   baseUrl: '/api/cuentti',
-  token: 'MTE0NjR8MTE0NjR8OTAxNTcyMjI1fDB8ZXlKMGVYQWlPaUpLVjFRaUxDSmhiR2NpT2lKSVV6STFOaUo5LmV5SnpkV0lpT2lJeE1UUTJOQzB5TURJek1EQTVOREF3TUROak5Ea3laRGMwWlMwMU4yRmpMVFJrTVRrdE9HUm1OeTAxTkdSaU9EYzVaVGxtWlRGOE9UQXhOVGN5TWpJMUlpd2lhV0YwSWpveE56YzJNalUyTlRFd0xDSmxlSEFpT201MWJHeDkucmVXMjNzR1Y1cVExZGZFNEZBaUNfcXpVNDlCaXhQTmFQb3ppRDZnMGVZYw==',
+  token: 'MTE0NjR8MTE0NjR8OTAxNTcyMjI1fDB8ZXlKMGVYQWlPaUpLVjFRaUxDSmhiR2NpT2lKSVV6STFOaUo5LmV5SnpkV0lpT2lJeE1UUTJOQzB5TURJek1EQTVOREF3TUROak5Ea3laRGMwWlMwMU4yRmpMVFJrTVRrdE9HUm1OeTAxTkdSaU9EYzVaVGxtWlRGOE9UQXhOVGN5TWpJMUlpd2lhV0YwSWpveE56YzJNamczTWprNExDSmxlSEFpT201MWJHeDkua1l2WXlCTWxkdUN3NW9vOVFhdFREemtIcHRBSWYzeGw0SE5IZ09wNWZLbw==',
   companyId: '11464',
   branchId: '1',
   employeeId: '1',
@@ -27,30 +27,21 @@ const CONFIG = {
   },
 }
 
-// Decodifica el outer-base64 del token para obtener el string raw que Cuentti espera
-function getRawToken() {
-  try {
-    return atob(CONFIG.token || '')
-  } catch {
-    return CONFIG.token || ''
-  }
-}
-
-// Construye los headers; se puede enmascarar el token para depurar
+// Construye los headers usando el token base64 directamente (sin decodificar)
 function buildHeaders({ maskToken = false } = {}) {
   const emp = (CONFIG.employeeId ?? '1').toString()
   const company = (CONFIG.companyId ?? '').toString()
   const branch = (CONFIG.branchId ?? '1').toString()
   const gtm = CONFIG.gtm || 'GMT-0500'
-  const rawTok = getRawToken()
-  const tokenValue = maskToken && rawTok.length > 10
-    ? `${rawTok.slice(0, 10)}...${rawTok.slice(-6)}`
-    : rawTok
+  const tok = CONFIG.token || ''
+  const tokenValue = maskToken && tok.length > 10
+    ? `${tok.slice(0, 10)}...${tok.slice(-6)}`
+    : tok
 
   return {
     'Content-Type': 'application/json',
     'token': tokenValue,
-    'x-auth-token-api': tokenValue,
+    'Authorization': `Bearer ${tokenValue}`,
     'X-Auth-Token-id-usuario': emp,
     'X-Auth-Token-usuario': emp,
     'x-id-empleado': emp,
@@ -101,6 +92,11 @@ async function cuenttiRequest(endpoint, method = 'GET', body = null) {
 // Devuelve headers en formato depuracion (token enmascarado)
 export function getCuenttiDebugHeaders() {
   return buildHeaders({ maskToken: true })
+}
+
+// Expone el token raw para debugging
+export function getRawToken() {
+  return CONFIG.token || ''
 }
 
 // ---------- CLIENTES ----------
