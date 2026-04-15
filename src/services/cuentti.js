@@ -103,10 +103,6 @@ export function getCuenttiDebugHeaders() {
   return buildHeaders({ maskToken: true })
 }
 
-// Expone el token raw para debugging
-export function getRawToken() {
-  return CONFIG.token || ''
-}
 
 // ---------- CLIENTES ----------
 
