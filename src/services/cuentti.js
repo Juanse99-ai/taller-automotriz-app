@@ -27,30 +27,20 @@ const CONFIG = {
   },
 }
 
-// Decodifica el outer-base64 del token para obtener el string raw que Cuentti espera
-function getRawToken() {
-  try {
-    return atob(CONFIG.token || '')
-  } catch {
-    return CONFIG.token || ''
-  }
-}
-
-// Construye los headers
+// Construye los headers usando el token base64 directamente (formato que Cuentti espera)
 function buildHeaders({ maskToken = false } = {}) {
   const emp = (CONFIG.employeeId ?? '1').toString()
   const company = (CONFIG.companyId ?? '').toString()
   const branch = (CONFIG.branchId ?? '1').toString()
   const gtm = CONFIG.gtm || 'GMT-0500'
-  const rawTok = getRawToken()
-  const tokenValue = maskToken && rawTok.length > 10
-    ? `${rawTok.slice(0, 10)}...${rawTok.slice(-6)}`
-    : rawTok
+  const tok = CONFIG.token || ''
+  const tokenValue = maskToken && tok.length > 10
+    ? `${tok.slice(0, 10)}...${tok.slice(-6)}`
+    : tok
 
   return {
     'Content-Type': 'application/json',
     'token': tokenValue,
-    'x-auth-token-api': tokenValue,
     'X-Auth-Token-id-usuario': emp,
     'X-Auth-Token-usuario': emp,
     'x-id-empleado': emp,
