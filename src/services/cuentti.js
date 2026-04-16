@@ -42,7 +42,7 @@ function buildHeaders({ maskToken = false } = {}) {
   const company = (CONFIG.companyId ?? '11464').toString()
   const branch = (CONFIG.branchId ?? '1').toString()
   const gtm = CONFIG.gtm || 'GMT-0500'
-  const tok = CONFIG.token || ''
+  const tok = getRawToken()
   const tokenValue = maskToken && tok.length > 10
     ? `${tok.slice(0, 10)}...${tok.slice(-6)}`
     : tok

@@ -14,7 +14,7 @@ export default async function handler(req, res) {
   const origin = getCorsOrigin(req.headers.origin || '');
   res.setHeader('Access-Control-Allow-Origin', origin);
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-api-key, x-auth-token-api, x-auth-token-empresa, x-id-sucursal, x-id-empleado, x-gtm, X-Auth-Token-id-usuario, token, X-Auth-Token-usuario, usuario');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-api-key, x-auth-token, x-auth-token-api, x-auth-token-empresa, x-id-sucursal, x-id-empleado, x-gtm, X-Auth-Token-id-usuario, token, X-Auth-Token-usuario, usuario');
 
   if (req.method === 'OPTIONS') { res.status(200).end(); return; }
 
