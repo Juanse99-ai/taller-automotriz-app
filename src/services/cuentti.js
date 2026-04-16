@@ -329,7 +329,7 @@ export function buildFacturaPayload(factura) {
       cantidad: parseInt(cantidad),
       impuesto: parseInt(impuesto),
       total,
-      descuento_por: 0,
+      descuentoPor: 0,
       descuento_valor: 0,
     }
   })
@@ -354,7 +354,7 @@ export function buildFacturaPayload(factura) {
     id_sucursal: branchId,
     id_bodega: branchId,
     id_consecutivo: consecutivo,
-    id_documento: 0,
+    id_documento: null,
     id_vendedor: empId,
     id_empleado: empId,
     nota: factura.observaciones || '',
@@ -370,7 +370,7 @@ export function buildFacturaPayload(factura) {
       telefono2: '',
       email1: factura.emailCliente || '',
       direccion: factura.direccionCliente || 'N/A',
-      id_tipo_persona: '1',
+      id_tipo_persona: 1,
       es_cliente: 1,
       es_proveedor: 0,
       departamento: factura.departamento || 'ATLANTICO',
@@ -388,7 +388,7 @@ export function buildFacturaPayload(factura) {
       devuelta: 0,
       dinero_entregado: 0,
       nota: '',
-      fecha_registro: new Date().toISOString(),
+      fecha_registro: Date.now(),
     }],
   }
 }
