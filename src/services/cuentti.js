@@ -27,11 +27,6 @@ const CONFIG = {
   },
 }
 
-// Decodifica el outer-base64 del token
-function getRawToken() {
-  try { return atob(CONFIG.token || '') } catch { return CONFIG.token || '' }
-}
-
 // Construye los headers
 function buildHeaders({ maskToken = false } = {}) {
   const emp = (CONFIG.employeeId ?? '1').toString()
@@ -39,19 +34,14 @@ function buildHeaders({ maskToken = false } = {}) {
   const branch = (CONFIG.branchId ?? '1').toString()
   const gtm = CONFIG.gtm || 'GMT-0500'
   const tok = CONFIG.token || ''
-  const raw = getRawToken()
   const tokenValue = maskToken && tok.length > 10
     ? `${tok.slice(0, 10)}...${tok.slice(-6)}`
     : tok
-  const rawValue = maskToken && raw.length > 10
-    ? `${raw.slice(0, 10)}...${raw.slice(-6)}`
-    : raw
 
   return {
     'Content-Type': 'application/json',
     'token': tokenValue,
-    'x-auth-token': tokenValue,
-    'x-auth-token-api': rawValue,
+    'Authorization': `Bearer ${tokenValue}`,
     'X-Auth-Token-id-usuario': emp,
     'X-Auth-Token-usuario': emp,
     'x-id-empleado': emp,
