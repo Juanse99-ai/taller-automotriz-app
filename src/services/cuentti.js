@@ -41,6 +41,8 @@ function buildHeaders({ maskToken = false } = {}) {
   return {
     'Content-Type': 'application/json',
     'token': tokenValue,
+    'x-auth-token': tokenValue,
+    'x-auth-token-api': tokenValue,
     'X-Auth-Token-id-usuario': emp,
     'X-Auth-Token-usuario': emp,
     'x-id-empleado': emp,

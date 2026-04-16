@@ -26,7 +26,7 @@ export default async function handler(req, res) {
     const cuenttiUrl = new URL(path, baseUrl).toString();
 
     const headers = { 'Content-Type': 'application/json' };
-    const fwd = ['authorization','x-api-key','x-auth-token-api','x-auth-token-empresa','x-id-sucursal','x-id-empleado','x-gtm','x-auth-token-id-usuario','token','x-auth-token-usuario','usuario'];
+    const fwd = ['authorization','x-api-key','x-auth-token','x-auth-token-api','x-auth-token-empresa','x-id-sucursal','x-id-empleado','x-gtm','x-auth-token-id-usuario','token','x-auth-token-usuario','usuario'];
     fwd.forEach(h => { if (req.headers[h]) headers[h] = req.headers[h]; });
 
     // Defaults de seguridad: evitar valores "undefined" que Cuentti rechaza
