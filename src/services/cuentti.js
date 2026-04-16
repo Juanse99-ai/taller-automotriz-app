@@ -3,7 +3,7 @@ import { RESOLUCIONES } from '../utils/constants'
 // Configuracion de Cuentti
 const CONFIG = {
   baseUrl: '/api/cuentti',
-  token: 'MTE0NjR8MTE0NjR8OTAxNTcyMjI1fDB8ZXlKMGVYQWlPaUpLVjFRaUxDSmhiR2NpT2lKSVV6STFOaUo5LmV5SnpkV0lpT2lJeE1UUTJOQzB5TURJek1EQTVOREF3TUROak5Ea3laRGMwWlMwMU4yRmpMVFJrTVRrdE9HUm1OeTAxTkdSaU9EYzVaVGxtWlRGOE9UQXhOVGN5TWpJMUlpd2lhV0YwSWpveE56YzJNekV3TURZekxDSmxlSEFpT201MWJHeDkuempvT2JNclpWeWZ5aVZVYVM0T2FMTFAzZzdJcUV6VHFXbGNPZ28wemJjdw==',
+  token: 'MTE0NjR8MTE0NjR8OTAxNTcyMjI1fDB8ZXlKMGVYQWlPaUpLVjFRaUxDSmhiR2NpT2lKSVV6STFOaUo5LmV5SnpkV0lpT2lJeE1UUTJOQzB5TURJek1EQTVOREF3TUROak5Ea3laRGMwWlMwMU4yRmpMVFJrTVRrdE9HUm1OeTAxTkdSaU9EYzVaVGxtWlRGOE9UQXhOVGN5TWpJMUlpd2lhV0YwSWpveE56YzJNamczTWprNExDSmxlSEFpT201MWJHeDkua1l2WXlCTWxkdUN3NW9vOVFhdFREemtIcHRBSWYzeGw0SE5IZ09wNWZLbw==',
   companyId: '11464',
   branchId: '1',
   employeeId: '1',
@@ -27,21 +27,30 @@ const CONFIG = {
   },
 }
 
-// Construye los headers
+// Decodifica el outer-base64 del token para obtener el string raw que Cuentti espera
+function getRawToken() {
+  try {
+    return atob(CONFIG.token || '')
+  } catch {
+    return CONFIG.token || ''
+  }
+}
+
+// Construye los headers; se puede enmascarar el token para depurar
 function buildHeaders({ maskToken = false } = {}) {
   const emp = (CONFIG.employeeId ?? '1').toString()
   const company = (CONFIG.companyId ?? '').toString()
   const branch = (CONFIG.branchId ?? '1').toString()
   const gtm = CONFIG.gtm || 'GMT-0500'
-  const tok = CONFIG.token || ''
-  const tokenValue = maskToken && tok.length > 10
-    ? `${tok.slice(0, 10)}...${tok.slice(-6)}`
-    : tok
+  const rawTok = getRawToken()
+  const tokenValue = maskToken && rawTok.length > 10
+    ? `${rawTok.slice(0, 10)}...${rawTok.slice(-6)}`
+    : rawTok
 
   return {
     'Content-Type': 'application/json',
     'token': tokenValue,
-    'Authorization': `Bearer ${tokenValue}`,
+    'x-auth-token-api': tokenValue,
     'X-Auth-Token-id-usuario': emp,
     'X-Auth-Token-usuario': emp,
     'x-id-empleado': emp,
@@ -55,11 +64,10 @@ function buildHeaders({ maskToken = false } = {}) {
 // Request generico al proxy de Cuentti
 async function cuenttiRequest(endpoint, method = 'GET', body = null) {
   const url = `${CONFIG.baseUrl}?path=${encodeURIComponent(endpoint)}`
-  const empId = parseInt(CONFIG.employeeId ?? '1', 10) || 1
   const headers = buildHeaders()
 
   const opts = { method, headers }
-  if (body) opts.body = JSON.stringify({ ...body, id_usuario: empId })
+  if (body) opts.body = JSON.stringify(body)
 
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), CONFIG.timeout)
@@ -93,7 +101,6 @@ async function cuenttiRequest(endpoint, method = 'GET', body = null) {
 export function getCuenttiDebugHeaders() {
   return buildHeaders({ maskToken: true })
 }
-
 
 // ---------- CLIENTES ----------
 
@@ -315,28 +322,31 @@ export async function cargarInventarioCompleto() {
 // ---------- FACTURACION ----------
 
 export function buildFacturaPayload(factura) {
+  const to2 = (n) => parseFloat((parseFloat(n || 0)).toFixed(2))
+  const upper = (v) => (v ?? '').toString().trim().toUpperCase()
+
   // Detalle
   const items = (factura.items || []).map(item => {
     const cantidad = parseFloat(item.cantidad) || 1
     const precioConIva = parseFloat(item.precio) || 0
     const impuesto = parseFloat(item.iva) || 19
-    const precioBase = parseFloat((precioConIva / (1 + impuesto / 100)).toFixed(2))
-    const total = parseFloat((precioBase * cantidad * (1 + impuesto / 100)).toFixed(2))
+    const precioBase = to2(precioConIva / (1 + impuesto / 100))
+    const total = to2(precioBase * cantidad * (1 + impuesto / 100))
     return {
       sku: item.codigo || 'MO1',
       descripcion: item.nombre || 'Servicio Taller',
       precio_venta: precioBase,
-      cantidad: parseInt(cantidad),
-      impuesto: parseInt(impuesto),
+      cantidad: Number.isFinite(cantidad) ? cantidad : 1,
+      impuesto: parseInt(impuesto, 10),
       total,
       descuentoPor: 0,
       descuento_valor: 0,
     }
   })
 
-  const totalNeto = Math.round(items.reduce((s, i) => s + i.total, 0) * 100) / 100
-  const totalSinImp = Math.round(items.reduce((s, i) => s + (i.precio_venta * i.cantidad), 0) * 100) / 100
-  const totalImp = Math.round((totalNeto - totalSinImp) * 100) / 100
+  const totalNeto = to2(items.reduce((s, i) => s + (parseFloat(i.total) || 0), 0))
+  const totalSinImp = to2(items.reduce((s, i) => s + ((parseFloat(i.precio_venta) || 0) * (parseFloat(i.cantidad) || 0)), 0))
+  const totalImp = to2(totalNeto - totalSinImp)
 
   const empId = parseInt(CONFIG.employeeId) || 1
   const branchId = parseInt(CONFIG.branchId) || 1
@@ -346,8 +356,9 @@ export function buildFacturaPayload(factura) {
 
   const tipoDoc = factura.tipoDocumento || 1 // 1=factura, 9=remision, 2=plan separe
 
-  const clienteId = parseInt(factura.clienteId || factura.cuenttiId || 0)
-  const idCliente = Number.isFinite(clienteId) && clienteId > 0 ? clienteId : 0
+  const clienteIdRaw = factura.clienteId ?? factura.cuenttiId
+  const clienteId = parseInt(clienteIdRaw ?? -1, 10)
+  const idCliente = Number.isFinite(clienteId) ? clienteId : -1
 
   return {
     tipoDocumento: tipoDoc,
@@ -358,36 +369,21 @@ export function buildFacturaPayload(factura) {
     id_vendedor: empId,
     id_empleado: empId,
     nota: factura.observaciones || '',
-    total_neto: parseFloat(totalNeto.toFixed(2)),
-    total_impuestos: parseFloat(totalImp.toFixed(2)),
-    total_sin_impuestos: parseFloat(totalSinImp.toFixed(2)),
+    total_neto: to2(totalNeto),
+    total_impuestos: to2(totalImp),
+    total_sin_impuestos: to2(totalSinImp),
     observacion: '',
     objClienteMini: {
       id_cliente: idCliente,
-      nombre_cliente: factura.cliente || 'CONSUMIDOR FINAL',
-      identificacion: factura.cedula || '222222222222',
-      telefono1: factura.telefonoCliente || '',
-      telefono2: '',
-      email1: factura.emailCliente || '',
-      direccion: factura.direccionCliente || 'N/A',
-      id_tipo_persona: 1,
-      es_cliente: 1,
-      es_proveedor: 0,
-      departamento: factura.departamento || 'ATLANTICO',
+      nombre_cliente: upper(factura.cliente || 'CONSUMIDOR FINAL'),
+      identificacion: (factura.cedula || '222222222222').toString(),
+      departamento: upper(factura.departamento || 'ATLANTICO'),
       pais: 'Colombia',
-      ciudad: factura.ciudad || 'BARRANQUILLA',
-      zona: '',
+      ciudad: upper(factura.ciudad || 'BARRANQUILLA'),
     },
     objDetalle: items,
     lstPagos: factura.aCredito ? [] : [{
-      id_medio_pago: factura.idMedioPago || 1,
-      id_banco: factura.idBanco || 1,
-      valor: parseFloat(totalNeto.toFixed(2)),
-      boucher: '',
-      digitos: '',
-      devuelta: 0,
-      dinero_entregado: 0,
-      nota: '',
+      valor: to2(totalNeto),
       fecha_registro: Date.now(),
     }],
   }
