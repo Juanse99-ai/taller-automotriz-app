@@ -76,10 +76,6 @@ body {
 .sidebar.collapsed {
   width: 68px;
 }
-.sidebar.collapsed:hover {
-  width: var(--sidebar-width);
-  box-shadow: 4px 0 24px rgba(0,0,0,0.25);
-}
 .sidebar-is-collapsed .main-area {
   margin-left: 68px;
 }
@@ -162,12 +158,6 @@ body {
 .sidebar.collapsed .sidebar-text-show { display: inline; }
 .sidebar.collapsed .nav-item { justify-content: center; padding: 10px 0; }
 .sidebar.collapsed .nav-group-title { display: none; }
-/* Hover expand: show everything again */
-.sidebar.collapsed:hover .sidebar-text-hide { display: initial; }
-.sidebar.collapsed:hover .sidebar-text-show { display: none; }
-.sidebar.collapsed:hover .nav-item { justify-content: flex-start; padding: 10px 12px; }
-.sidebar.collapsed:hover .nav-group-title { display: block; }
-.sidebar.collapsed:hover .sidebar-brand { justify-content: flex-start; }
 
 .sidebar-collapse-btn {
   display: flex;
@@ -184,7 +174,6 @@ body {
   flex-shrink: 0;
 }
 .sidebar.collapsed .sidebar-collapse-btn { margin: 4px auto 0; }
-.sidebar.collapsed:hover .sidebar-collapse-btn { margin-left: auto; margin-top: 0; }
 .sidebar-collapse-btn:hover { background: rgba(255,255,255,0.15); color: #fff; }
 .sidebar-collapse-btn svg { width: 16px; height: 16px; }
 
