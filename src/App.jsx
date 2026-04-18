@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react'
 import Sidebar from './components/Sidebar'
 import TopBar from './components/TopBar'
 import Toast from './components/Toast'
+import Login from './components/Login'
 import Dashboard from './pages/Dashboard'
 import Trabajos from './pages/Trabajos'
 import Recepcion from './pages/Recepcion'
@@ -12,6 +13,7 @@ import Liquidacion from './pages/Liquidacion'
 import Reportes from './pages/Reportes'
 import CuenttiPanel from './pages/CuenttiPanel'
 import { useTrabajos } from './hooks/useTrabajos'
+import { getSession, logout, getSeccionesPermitidas } from './services/auth'
 
 const SECTIONS = {
   dashboard: { title: 'Dashboard', subtitle: 'Resumen general del taller' },
@@ -26,6 +28,7 @@ const SECTIONS = {
 }
 
 export default function App() {
+  const [user, setUser] = useState(() => getSession())
   const [section, setSection] = useState('dashboard')
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
@@ -42,9 +45,29 @@ export default function App() {
     setSidebarOpen(false)
   }, [])
 
+  const handleLogout = useCallback(() => {
+    logout()
+    setUser(null)
+    setSection('dashboard')
+  }, [])
+
+  // Si no hay sesion, mostrar login
+  if (!user) {
+    return <Login onLogin={(u) => setUser(u)} />
+  }
+
+  const seccionesPermitidas = getSeccionesPermitidas(user.rol)
   const sec = SECTIONS[section] || SECTIONS.dashboard
 
   const renderContent = () => {
+    if (!seccionesPermitidas.includes(section)) {
+      return (
+        <div className="empty-state">
+          <div className="empty-state-icon">🔒</div>
+          <p>No tienes acceso a este modulo.</p>
+        </div>
+      )
+    }
     switch (section) {
       case 'dashboard':
         return <Dashboard trabajos={trabajosHook.trabajos} loading={trabajosHook.loading} />
@@ -91,12 +114,23 @@ export default function App() {
 
   return (
     <div className={`app-shell ${sidebarCollapsed ? 'sidebar-is-collapsed' : ''}`}>
-      <Sidebar active={section} onNavigate={navigate} isOpen={sidebarOpen} collapsed={sidebarCollapsed} onToggleCollapse={() => setSidebarCollapsed(c => !c)} />
+      <Sidebar
+        active={section}
+        onNavigate={navigate}
+        isOpen={sidebarOpen}
+        collapsed={sidebarCollapsed}
+        onToggleCollapse={() => setSidebarCollapsed(c => !c)}
+        seccionesPermitidas={seccionesPermitidas}
+        user={user}
+        onLogout={handleLogout}
+      />
       <div className="main-area">
         <TopBar
           title={sec.title}
           subtitle={sec.subtitle}
           onHamburger={() => setSidebarOpen(!sidebarOpen)}
+          user={user}
+          onLogout={handleLogout}
         />
         <div className="content">
           {trabajosHook.connectionError && (

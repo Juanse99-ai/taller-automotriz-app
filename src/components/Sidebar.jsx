@@ -82,7 +82,9 @@ const NAV = [
   ]},
 ]
 
-export default function Sidebar({ active, onNavigate, isOpen, collapsed, onToggleCollapse }) {
+export default function Sidebar({ active, onNavigate, isOpen, collapsed, onToggleCollapse, seccionesPermitidas, user, onLogout }) {
+  const allowed = seccionesPermitidas || []
+
   return (
     <aside className={`sidebar ${isOpen ? 'open' : ''} ${collapsed ? 'collapsed' : ''}`}>
       <div className="sidebar-brand">
@@ -103,22 +105,45 @@ export default function Sidebar({ active, onNavigate, isOpen, collapsed, onToggl
       </div>
 
       <nav className="sidebar-nav">
-        {NAV.map(g => (
-          <div key={g.group}>
-            <div className="nav-group-title sidebar-text-hide">{g.group}</div>
-            {g.items.map(item => (
-              <div
-                key={item.key}
-                className={`nav-item ${active === item.key ? 'active' : ''}`}
-                onClick={() => onNavigate(item.key)}
-              >
-                {ICONS[item.key]}
-                <span className="sidebar-text-hide">{item.label}</span>
-              </div>
-            ))}
-          </div>
-        ))}
+        {NAV.map(g => {
+          const visibleItems = g.items.filter(item => allowed.includes(item.key))
+          if (!visibleItems.length) return null
+          return (
+            <div key={g.group}>
+              <div className="nav-group-title sidebar-text-hide">{g.group}</div>
+              {visibleItems.map(item => (
+                <div
+                  key={item.key}
+                  className={`nav-item ${active === item.key ? 'active' : ''}`}
+                  onClick={() => onNavigate(item.key)}
+                >
+                  {ICONS[item.key]}
+                  <span className="sidebar-text-hide">{item.label}</span>
+                </div>
+              ))}
+            </div>
+          )
+        })}
       </nav>
+
+      {user && (
+        <div className="sidebar-user">
+          <div className="sidebar-user-avatar sidebar-text-hide">
+            {(user.nombre || user.usuario || '?')[0].toUpperCase()}
+          </div>
+          <div className="sidebar-user-info sidebar-text-hide">
+            <div className="sidebar-user-name">{user.nombre || user.usuario}</div>
+            <div className="sidebar-user-role">{user.rol === 'admin' ? 'Administrador' : 'Jefe de taller'}</div>
+          </div>
+          <button className="sidebar-logout-btn" onClick={onLogout} title="Cerrar sesion">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+              <polyline points="16 17 21 12 16 7"/>
+              <line x1="21" y1="12" x2="9" y2="12"/>
+            </svg>
+          </button>
+        </div>
+      )}
 
       <div className="sidebar-footer">
         <span className="sidebar-text-hide">Taller Automotriz v1.0</span>
