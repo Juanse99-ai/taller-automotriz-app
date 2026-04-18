@@ -277,7 +277,7 @@ function CotizacionForm({ cotizacion, onSave, onCancel }) {
                       <tr key={item.id}>
                         <td><input className="form-input" value={item.nombre} placeholder="Nombre..."
                           onChange={e => updateItem(item.id, 'nombre', e.target.value)} style={{ padding: '6px 10px', fontSize: 13 }} /></td>
-                        <td><input className="form-input" type="number" value={item.precio} min="0"
+                        <td><input className="form-input" type="number" value={Math.round(parseFloat(item.precio) || 0)} min="0"
                           onChange={e => updateItem(item.id, 'precio', e.target.value)} style={{ padding: '6px 10px', fontSize: 13, textAlign: 'right' }} /></td>
                         <td><input className="form-input" type="number" value={item.cantidad} min="1"
                           onChange={e => updateItem(item.id, 'cantidad', e.target.value)} style={{ padding: '6px 10px', fontSize: 13, textAlign: 'center', width: 60 }} /></td>

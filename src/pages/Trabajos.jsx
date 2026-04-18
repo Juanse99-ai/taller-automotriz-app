@@ -658,7 +658,7 @@ function TrabajoForm({ trabajo, onSave, onCancel }) {
                           )}
                         </td>
                         <td>
-                          <input className="form-input" type="number" value={item.precio} min="0"
+                          <input className="form-input" type="number" value={Math.round(parseFloat(item.precio) || 0)} min="0"
                             onChange={e => updateItem(item.id, 'precio', e.target.value)}
                             style={{ padding: '6px 10px', fontSize: 13, textAlign: 'right' }} />
                         </td>

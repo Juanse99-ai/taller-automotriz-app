@@ -64,12 +64,6 @@ const ICONS = {
   ),
 }
 
-const WrenchMark = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
-  </svg>
-)
-
 const NAV = [
   { group: 'Principal', items: [
     { key: 'dashboard',   label: 'Dashboard' },
@@ -88,38 +82,47 @@ const NAV = [
   ]},
 ]
 
-export default function Sidebar({ active, onNavigate, isOpen }) {
+export default function Sidebar({ active, onNavigate, isOpen, collapsed, onToggleCollapse }) {
   return (
-    <aside className={`sidebar ${isOpen ? 'open' : ''}`}>
+    <aside className={`sidebar ${isOpen ? 'open' : ''} ${collapsed ? 'collapsed' : ''}`}>
       <div className="sidebar-brand">
         <div className="sidebar-brand-mark">
-          <WrenchMark />
+          <img src="/logo.png" alt="MDA" className="sidebar-logo" />
         </div>
-        <div className="sidebar-brand-text">
-          <h1>MDA</h1>
-          <p>Multidiagnosticos AS</p>
-        </div>
+        {!collapsed && (
+          <div className="sidebar-brand-text">
+            <h1>MDA</h1>
+            <p>Multidiagnosticos AS</p>
+          </div>
+        )}
       </div>
 
       <nav className="sidebar-nav">
         {NAV.map(g => (
           <div key={g.group}>
-            <div className="nav-group-title">{g.group}</div>
+            {!collapsed && <div className="nav-group-title">{g.group}</div>}
             {g.items.map(item => (
               <div
                 key={item.key}
                 className={`nav-item ${active === item.key ? 'active' : ''}`}
                 onClick={() => onNavigate(item.key)}
+                title={collapsed ? item.label : undefined}
               >
                 {ICONS[item.key]}
-                <span>{item.label}</span>
+                {!collapsed && <span>{item.label}</span>}
               </div>
             ))}
           </div>
         ))}
       </nav>
 
-      <div className="sidebar-footer">Taller Automotriz v1.0</div>
+      <button className="sidebar-collapse-btn" onClick={onToggleCollapse} title={collapsed ? 'Expandir' : 'Colapsar'}>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ transform: collapsed ? 'rotate(180deg)' : 'none', transition: 'transform 0.3s' }}>
+          <polyline points="15 18 9 12 15 6"/>
+        </svg>
+      </button>
+
+      <div className="sidebar-footer">{collapsed ? 'v1.0' : 'Taller Automotriz v1.0'}</div>
     </aside>
   )
 }
