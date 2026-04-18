@@ -82,13 +82,6 @@ const NAV = [
   ]},
 ]
 
-const CollapseIcon = ({ collapsed }) => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
-    style={{ transform: collapsed ? 'rotate(180deg)' : 'none', transition: 'transform 0.3s' }}>
-    <polyline points="15 18 9 12 15 6"/>
-  </svg>
-)
-
 export default function Sidebar({ active, onNavigate, isOpen, collapsed, onToggleCollapse }) {
   return (
     <aside className={`sidebar ${isOpen ? 'open' : ''} ${collapsed ? 'collapsed' : ''}`}>
@@ -96,37 +89,41 @@ export default function Sidebar({ active, onNavigate, isOpen, collapsed, onToggl
         <div className="sidebar-brand-mark">
           <img src="/logo.png" alt="MDA" className="sidebar-logo" />
         </div>
-        {!collapsed && (
-          <div className="sidebar-brand-text">
-            <h1>MDA</h1>
-            <p>Multidiagnosticos AS</p>
-          </div>
-        )}
-        <button className="sidebar-collapse-btn" onClick={onToggleCollapse} title={collapsed ? 'Expandir menu' : 'Colapsar menu'}>
-          <CollapseIcon collapsed={collapsed} />
+        <div className="sidebar-brand-text sidebar-text-hide">
+          <h1>MDA</h1>
+          <p>Multidiagnosticos AS</p>
+        </div>
+        <button className="sidebar-collapse-btn" onClick={onToggleCollapse}
+          title={collapsed ? 'Fijar menu' : 'Colapsar menu'}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+            style={{ transform: collapsed ? 'rotate(180deg)' : 'none', transition: 'transform 0.3s' }}>
+            <polyline points="15 18 9 12 15 6"/>
+          </svg>
         </button>
       </div>
 
       <nav className="sidebar-nav">
         {NAV.map(g => (
           <div key={g.group}>
-            {!collapsed && <div className="nav-group-title">{g.group}</div>}
+            <div className="nav-group-title sidebar-text-hide">{g.group}</div>
             {g.items.map(item => (
               <div
                 key={item.key}
                 className={`nav-item ${active === item.key ? 'active' : ''}`}
                 onClick={() => onNavigate(item.key)}
-                title={collapsed ? item.label : undefined}
               >
                 {ICONS[item.key]}
-                {!collapsed && <span>{item.label}</span>}
+                <span className="sidebar-text-hide">{item.label}</span>
               </div>
             ))}
           </div>
         ))}
       </nav>
 
-      <div className="sidebar-footer">{collapsed ? 'v1.0' : 'Taller Automotriz v1.0'}</div>
+      <div className="sidebar-footer">
+        <span className="sidebar-text-hide">Taller Automotriz v1.0</span>
+        <span className="sidebar-text-show">v1.0</span>
+      </div>
     </aside>
   )
 }

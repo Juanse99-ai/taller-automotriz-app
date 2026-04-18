@@ -525,7 +525,7 @@ export default function Liquidacion({ trabajos, notify }) {
             <div className="metric-label">Adelantos / Cargos</div>
           </div>
           <div className="metric-card">
-            <div className="metric-value" style={{ color: 'var(--green-600)' }}>{fmt((totales.comisiones || 0) - (totales.cargos || 0))}</div>
+            <div className="metric-value" style={{ color: (totales.comisiones || 0) - (totales.cargos || 0) >= 0 ? 'var(--green-600)' : 'var(--red-500)' }}>{fmt((totales.comisiones || 0) - (totales.cargos || 0))}</div>
             <div className="metric-label">Neto a Pagar</div>
           </div>
         </div>
@@ -590,29 +590,29 @@ export default function Liquidacion({ trabajos, notify }) {
       {/* Detalle por tecnico */}
       {filtrados.map(l => (
         <div className="card" key={l.tecnico.id}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14, gap: 12 }}>
-          <div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16, gap: 16, flexWrap: 'wrap' }}>
+          <div style={{ flex: '1 1 200px' }}>
             <div className="card-title" style={{ marginBottom: 2 }}>{l.tecnico.nombre}</div>
             <span className="text-sm text-muted">{l.tecnico.especialidad} — {l.trabajos.length} trabajos</span>
           </div>
-          <div style={{ textAlign: 'right' }}>
-            <div style={{ marginBottom: 6 }}>
+          <div style={{ display: 'flex', gap: 16, alignItems: 'stretch', flexWrap: 'wrap' }}>
+            <div style={{ background: 'var(--slate-50)', borderRadius: 10, padding: '12px 18px', textAlign: 'center', minWidth: 120, border: '1px solid var(--slate-200)' }}>
+              <div style={{ fontSize: 20, fontWeight: 800, fontFamily: 'var(--mono)', color: 'var(--green-500)' }}>{fmt(l.comision)}</div>
+              <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--slate-500)', marginTop: 2 }}>Comision bruta</div>
+            </div>
+            <div style={{ background: 'var(--slate-50)', borderRadius: 10, padding: '12px 18px', textAlign: 'center', minWidth: 120, border: '1px solid var(--slate-200)' }}>
+              <div style={{ fontSize: 20, fontWeight: 800, fontFamily: 'var(--mono)', color: 'var(--amber-500)' }}>{fmt(l.cargos || 0)}</div>
+              <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--slate-500)', marginTop: 2 }}>Cargos</div>
+            </div>
+            <div style={{ background: l.neto >= 0 ? '#f0fdf4' : '#fef2f2', borderRadius: 10, padding: '12px 18px', textAlign: 'center', minWidth: 130, border: `1px solid ${l.neto >= 0 ? '#bbf7d0' : '#fecaca'}` }}>
+              <div style={{ fontSize: 22, fontWeight: 800, fontFamily: 'var(--mono)', color: l.neto >= 0 ? 'var(--green-600)' : 'var(--red-500)' }}>{fmt(l.neto)}</div>
+              <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--slate-500)', marginTop: 2 }}>Neto a pagar</div>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center' }}>
               <button className="btn btn-outline btn-sm" onClick={() => exportPdfIndividual(l)}>PDF</button>
             </div>
-            <div style={{ fontSize: 18, fontWeight: 800, fontFamily: 'var(--mono)', color: 'var(--green-500)' }}>
-              {fmt(l.comision)}
-            </div>
-            <div className="text-xs text-muted">Comision bruta</div>
-            <div style={{ fontSize: 18, fontWeight: 800, fontFamily: 'var(--mono)', color: 'var(--amber-600)' }}>
-                {fmt(l.cargos || 0)}
-              </div>
-              <div className="text-xs text-muted">Cargos / adelantos</div>
-              <div style={{ fontSize: 20, fontWeight: 800, fontFamily: 'var(--mono)' }}>
-                {fmt(l.neto)}
-              </div>
-              <div className="text-xs text-muted">Neto a pagar</div>
-            </div>
           </div>
+        </div>
 
           {l.trabajos.length === 0 ? (
             <p className="text-sm text-muted text-center" style={{ padding: 20 }}>Sin trabajos completados en este periodo.</p>
