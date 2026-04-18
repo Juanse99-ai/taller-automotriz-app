@@ -5,7 +5,6 @@ import {
   cargarInventario,
   enviarFactura,
   buildFacturaPayload,
-  cuenttiConfig,
   emitirFacturaElectronica,
   agregarPagoTransacion,
   obtenerUrlDocumento,
@@ -232,23 +231,6 @@ export default function CuenttiPanel({ trabajos, notify }) {
 
   return (
     <div>
-      {/* Config actual */}
-      <div className="card">
-        <div className="card-title">Configuracion Cuentti</div>
-        <div className="table-wrap">
-          <table>
-            <tbody>
-              <tr><td style={{ fontWeight: 600, width: 180 }}>Empresa ID</td><td className="text-mono">{cuenttiConfig.companyId}</td></tr>
-              <tr><td style={{ fontWeight: 600 }}>Sucursal</td><td className="text-mono">{cuenttiConfig.branchId}</td></tr>
-              <tr><td style={{ fontWeight: 600 }}>Empleado</td><td className="text-mono">{cuenttiConfig.employeeId}</td></tr>
-              <tr><td style={{ fontWeight: 600 }}>Zona horaria</td><td className="text-mono">{cuenttiConfig.gtm}</td></tr>
-              <tr><td style={{ fontWeight: 600 }}>Proxy URL</td><td className="text-mono">{cuenttiConfig.baseUrl}</td></tr>
-              <tr><td style={{ fontWeight: 600 }}>Token</td><td className="text-mono text-sm" style={{ wordBreak: 'break-all' }}>{cuenttiConfig.token.slice(0, 30)}...</td></tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-
       {/* Test de conexion */}
       <div className="card">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
@@ -564,27 +546,6 @@ export default function CuenttiPanel({ trabajos, notify }) {
         )}
       </div>
 
-      {/* Endpoints disponibles */}
-      <div className="card">
-        <div className="card-title">Endpoints API</div>
-        <div className="table-wrap">
-          <table>
-            <thead>
-              <tr><th>Operacion</th><th>Path</th></tr>
-            </thead>
-            <tbody>
-              {Object.entries(cuenttiConfig.paths).map(([grupo, paths]) =>
-                Object.entries(paths).map(([key, path]) => (
-                  <tr key={`${grupo}-${key}`}>
-                    <td style={{ fontWeight: 600 }}>{grupo}.{key}</td>
-                    <td className="text-mono text-sm" style={{ wordBreak: 'break-all' }}>{path}</td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
     </div>
   )
 }
