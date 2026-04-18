@@ -82,6 +82,13 @@ const NAV = [
   ]},
 ]
 
+const CollapseIcon = ({ collapsed }) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+    style={{ transform: collapsed ? 'rotate(180deg)' : 'none', transition: 'transform 0.3s' }}>
+    <polyline points="15 18 9 12 15 6"/>
+  </svg>
+)
+
 export default function Sidebar({ active, onNavigate, isOpen, collapsed, onToggleCollapse }) {
   return (
     <aside className={`sidebar ${isOpen ? 'open' : ''} ${collapsed ? 'collapsed' : ''}`}>
@@ -95,6 +102,9 @@ export default function Sidebar({ active, onNavigate, isOpen, collapsed, onToggl
             <p>Multidiagnosticos AS</p>
           </div>
         )}
+        <button className="sidebar-collapse-btn" onClick={onToggleCollapse} title={collapsed ? 'Expandir menu' : 'Colapsar menu'}>
+          <CollapseIcon collapsed={collapsed} />
+        </button>
       </div>
 
       <nav className="sidebar-nav">
@@ -115,12 +125,6 @@ export default function Sidebar({ active, onNavigate, isOpen, collapsed, onToggl
           </div>
         ))}
       </nav>
-
-      <button className="sidebar-collapse-btn" onClick={onToggleCollapse} title={collapsed ? 'Expandir' : 'Colapsar'}>
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ transform: collapsed ? 'rotate(180deg)' : 'none', transition: 'transform 0.3s' }}>
-          <polyline points="15 18 9 12 15 6"/>
-        </svg>
-      </button>
 
       <div className="sidebar-footer">{collapsed ? 'v1.0' : 'Taller Automotriz v1.0'}</div>
     </aside>
