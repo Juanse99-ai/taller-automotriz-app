@@ -346,6 +346,7 @@ function TrabajoForm({ trabajo, onSave, onCancel }) {
     updateItem(itemId, 'precio', producto.precio)
     updateItem(itemId, 'iva', producto.iva)
     updateItem(itemId, 'codigo', producto.codigo || producto.sku || '')
+    updateItem(itemId, 'sku', producto.sku || '')
     updateItem(itemId, 'esServicio', !!producto.esServicio)
     setItemSearch(prev => ({ ...prev, [itemId]: { query: '', results: [], show: false } }))
   }

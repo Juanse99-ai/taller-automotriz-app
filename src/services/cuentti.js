@@ -323,7 +323,7 @@ export function buildFacturaPayload(factura) {
     const precioBase = to2(precioConIva / (1 + impuesto / 100))
     const total = to2(precioBase * cantidad * (1 + impuesto / 100))
     return {
-      sku: item.codigo || 'MO1',
+      sku: item.sku || item.codigo || 'MO1',
       descripcion: item.nombre || 'Servicio Taller',
       precio_venta: precioBase,
       cantidad: Number.isFinite(cantidad) ? cantidad : 1,
