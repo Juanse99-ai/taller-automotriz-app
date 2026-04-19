@@ -1,11 +1,27 @@
 // Cliente a traves de proxy backend para evitar CORS
 const baseProxy = '/api/supabase?table=trabajos'
+const REQUEST_TIMEOUT_MS = 12000
+
+async function fetchWithTimeout(url, options = {}) {
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS)
+  try {
+    return await fetch(url, { ...options, signal: controller.signal })
+  } catch (error) {
+    if (error?.name === 'AbortError') {
+      throw new Error(`Tiempo de espera agotado (${REQUEST_TIMEOUT_MS}ms)`)
+    }
+    throw error
+  } finally {
+    clearTimeout(timer)
+  }
+}
 
 // ---------- TRABAJOS ----------
 
 export async function fetchTrabajos() {
   const url = `${baseProxy}&select=*&order=fecha.desc&limit=500`
-  const res = await fetch(url)
+  const res = await fetchWithTimeout(url)
 
   // Si el proxy devuelve error (502 = Supabase error, 503 = conexion fallida)
   if (!res.ok) {
@@ -47,7 +63,7 @@ export async function upsertTrabajo(trabajo) {
       pagado: trabajo.pagado || false,
       metodo_pago: trabajo.metodoPago || null,
     }
-    const res = await fetch(baseProxy, {
+    const res = await fetchWithTimeout(baseProxy, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(row),
@@ -63,7 +79,7 @@ export async function upsertTrabajo(trabajo) {
 
 export async function deleteTrabajo(id) {
   try {
-    const res = await fetch(`${baseProxy}&id=eq.${encodeURIComponent(id)}`, { method: 'DELETE' })
+    const res = await fetchWithTimeout(`${baseProxy}&id=eq.${encodeURIComponent(id)}`, { method: 'DELETE' })
     if (!res.ok) throw new Error(await res.text())
     return true
   } catch (e) {

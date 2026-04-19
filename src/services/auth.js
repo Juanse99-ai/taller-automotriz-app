@@ -1,4 +1,5 @@
 const SESSION_KEY = 'taller_session'
+const SESSION_EXPIRY_MS = 24 * 60 * 60 * 1000 // 24 horas
 
 export async function login(usuario, password) {
   const res = await fetch('/api/auth', {
@@ -8,8 +9,9 @@ export async function login(usuario, password) {
   })
   const data = await res.json()
   if (!res.ok) throw new Error(data.error || 'Error de autenticacion')
-  localStorage.setItem(SESSION_KEY, JSON.stringify(data.user))
-  return data.user
+  const session = { ...data.user, _loginAt: Date.now() }
+  localStorage.setItem(SESSION_KEY, JSON.stringify(session))
+  return session
 }
 
 export function logout() {
@@ -19,7 +21,13 @@ export function logout() {
 export function getSession() {
   try {
     const raw = localStorage.getItem(SESSION_KEY)
-    return raw ? JSON.parse(raw) : null
+    if (!raw) return null
+    const session = JSON.parse(raw)
+    if (session._loginAt && (Date.now() - session._loginAt) > SESSION_EXPIRY_MS) {
+      logout()
+      return null
+    }
+    return session
   } catch {
     return null
   }

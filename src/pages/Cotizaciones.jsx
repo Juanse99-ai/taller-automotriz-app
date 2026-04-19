@@ -127,6 +127,9 @@ export default function Cotizaciones({ notify, onCrearTrabajo }) {
                               <button className="btn btn-ghost btn-sm" onClick={() => cambiarEstado(c.id, ESTADO_COT.RECHAZADA)}>Rechazar</button>
                             </>
                           )}
+                          {c.estado === ESTADO_COT.APROBADA && onCrearTrabajo && (
+                            <button className="btn btn-primary btn-sm" onClick={() => onCrearTrabajo(c)}>Crear Trabajo</button>
+                          )}
                           <button className="btn btn-ghost btn-sm" onClick={() => eliminar(c.id)} title="Eliminar">🗑</button>
                         </div>
                       </td>

@@ -82,8 +82,15 @@ const NAV = [
   ]},
 ]
 
-export default function Sidebar({ active, onNavigate, isOpen, collapsed, onToggleCollapse, seccionesPermitidas, user, onLogout }) {
+export default function Sidebar({ active, onNavigate, isOpen, collapsed, onToggleCollapse, seccionesPermitidas, user, onLogout, trabajos = [] }) {
   const allowed = seccionesPermitidas || []
+
+  // Badge counts
+  const pendientes = trabajos.filter(t => t.estado === 'Pendiente' || t.estado === 'En Diagnostico').length
+  const enProgreso = trabajos.filter(t => t.estado === 'En Progreso' || t.estado === 'Esperando Repuestos' || t.estado === 'En Prueba').length
+  const badgeCounts = {
+    trabajos: pendientes + enProgreso || 0,
+  }
 
   return (
     <aside className={`sidebar ${isOpen ? 'open' : ''} ${collapsed ? 'collapsed' : ''}`}>
@@ -119,6 +126,9 @@ export default function Sidebar({ active, onNavigate, isOpen, collapsed, onToggl
                 >
                   {ICONS[item.key]}
                   <span className="sidebar-text-hide">{item.label}</span>
+                  {!collapsed && badgeCounts[item.key] > 0 && (
+                    <span className="nav-badge sidebar-text-hide">{badgeCounts[item.key]}</span>
+                  )}
                 </div>
               ))}
             </div>

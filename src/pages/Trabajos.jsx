@@ -2,12 +2,12 @@ import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import { fmt, fmtDate, uid, hoyISO, normalizarDoc, normalizarNombre } from '../utils/helpers'
-import { TECNICOS, ESTADOS, IVA_DEFAULT } from '../utils/constants'
+import { TECNICOS, ESTADOS, IVA_DEFAULT, DIAS_ESTANCADO } from '../utils/constants'
 import { useClientes } from '../hooks/useClientes'
 import { lsGet, lsSet, LS_KEYS } from '../services/storage'
 import { cargarInventarioCompleto } from '../services/cuentti'
 
-export default function Trabajos({ hook, notify }) {
+export default function Trabajos({ hook, notify, onAutoFacturar }) {
   const { trabajos, agregarTrabajo, actualizarTrabajo, eliminarTrabajo } = hook
   const [vista, setVista] = useState('lista') // lista | nuevo | editar
   const [editId, setEditId] = useState(null)
@@ -27,9 +27,14 @@ export default function Trabajos({ hook, notify }) {
 
   const tecNombre = (id) => TECNICOS.find(t => t.id === parseInt(id))?.nombre || '—'
 
+  const [showFacturarModal, setShowFacturarModal] = useState(null)
+
   const handleCompletar = async (id) => {
     await actualizarTrabajo(id, { estado: ESTADOS.COMPLETADO })
     notify('Trabajo marcado como completado', 'success')
+    // Ofrecer facturar
+    const t = trabajos.find(x => x.id === id)
+    if (t) setShowFacturarModal(t)
   }
 
   const handleEliminar = async (id) => {
@@ -56,43 +61,108 @@ export default function Trabajos({ hook, notify }) {
   const imprimirOT = async (t) => {
     const doc = new jsPDF()
     const logo = await loadLogo()
+
+    // Header con logo y datos del taller
     if (logo && logo.startsWith('data:image')) {
-      try { doc.addImage(logo, 'PNG', 14, 10, 28, 18) } catch {}
+      try { doc.addImage(logo, 'PNG', 14, 8, 30, 20) } catch {}
     }
-    doc.setFontSize(14)
-    doc.text('Orden de Trabajo', 50, 16)
+    doc.setFontSize(16)
+    doc.setFont(undefined, 'bold')
+    doc.text('ORDEN DE TRABAJO', 50, 14)
     doc.setFontSize(10)
-    doc.text(`OT: ${t.otCodigo || '—'}`, 50, 22)
-    doc.text(`Fecha: ${fmtDate(t.fecha)}`, 50, 28)
+    doc.setFont(undefined, 'normal')
+    doc.text('Multidiagnosticos AS', 50, 20)
+    doc.text('Sabanalarga, Atlantico | Tel: 300 365 1525', 50, 25)
+    doc.setFont(undefined, 'bold')
+    doc.text(`OT: ${t.otCodigo || '—'}`, 155, 14)
+    doc.setFont(undefined, 'normal')
+    doc.text(`Fecha: ${fmtDate(t.fecha)}`, 155, 20)
+    doc.text(`Estado: ${t.estado}`, 155, 25)
 
+    doc.setDrawColor(200)
+    doc.line(14, 30, 196, 30)
+
+    // Cliente
     autoTable(doc, {
-      startY: 36,
-      head: [['Cliente', 'Documento', 'Telefono', 'Email']],
-      body: [[t.cliente || '—', t.cedula || '—', t.telefonoCliente || '—', t.emailCliente || '—']],
-      styles: { fontSize: 9 },
+      startY: 34,
+      head: [['DATOS DEL CLIENTE', '', '', '']],
+      body: [
+        ['Cliente:', t.cliente || '—', 'Documento:', t.cedula || '—'],
+        ['Telefono:', t.telefonoCliente || '—', 'Email:', t.emailCliente || '—'],
+      ],
+      styles: { fontSize: 9, cellPadding: 3 },
+      headStyles: { fillColor: [30, 41, 59], textColor: 255, fontSize: 10 },
+      columnStyles: { 0: { fontStyle: 'bold', cellWidth: 28 }, 2: { fontStyle: 'bold', cellWidth: 28 } },
     })
 
+    // Vehiculo
     autoTable(doc, {
-      head: [['Placa', 'Vehiculo', 'Km', 'Tecnico']],
-      body: [[
-        t.placa,
-        [t.marca, t.modelo, t.ano].filter(Boolean).join(' ') || '—',
-        t.kilometraje || '—',
-        tecNombre(t.tecnicoId),
-      ]],
-      styles: { fontSize: 9 },
+      head: [['DATOS DEL VEHICULO', '', '', '']],
+      body: [
+        ['Placa:', t.placa || '—', 'Marca:', t.marca || '—'],
+        ['Modelo:', t.modelo || '—', 'Ano:', String(t.ano || '—')],
+        ['Kilometraje:', `${t.kilometraje || 0} km`, 'Tecnico:', tecNombre(t.tecnicoId)],
+      ],
+      styles: { fontSize: 9, cellPadding: 3 },
+      headStyles: { fillColor: [30, 41, 59], textColor: 255, fontSize: 10 },
+      columnStyles: { 0: { fontStyle: 'bold', cellWidth: 28 }, 2: { fontStyle: 'bold', cellWidth: 28 } },
       startY: doc.lastAutoTable.finalY + 4,
     })
 
-    autoTable(doc, {
-      head: [['Observaciones / aprobado por cliente']],
-      body: [[t.observaciones || '—']],
-      styles: { fontSize: 9 },
-      startY: doc.lastAutoTable.finalY + 4,
-    })
+    // Items (repuestos y servicios)
+    if (t.items?.length) {
+      const itemRows = t.items.map(i => [
+        i.nombre || '—',
+        i.esServicio ? 'Servicio' : 'Repuesto',
+        String(i.cantidad || 1),
+        fmt(parseFloat(i.precio) || 0),
+        `${i.iva || 0}%`,
+        fmt((parseFloat(i.precio) || 0) * (parseInt(i.cantidad) || 1)),
+      ])
+      autoTable(doc, {
+        head: [['Descripcion', 'Tipo', 'Cant.', 'P. Unit.', 'IVA', 'Total']],
+        body: itemRows,
+        styles: { fontSize: 9, cellPadding: 3 },
+        headStyles: { fillColor: [30, 41, 59], textColor: 255, fontSize: 9 },
+        columnStyles: { 3: { halign: 'right' }, 5: { halign: 'right', fontStyle: 'bold' } },
+        startY: doc.lastAutoTable.finalY + 4,
+      })
 
-    doc.text('Firma cliente: __________________________', 14, doc.lastAutoTable.finalY + 20)
-    doc.text('Firma tecnico: _________________________', 120, doc.lastAutoTable.finalY + 20)
+      // Totales
+      autoTable(doc, {
+        body: [
+          ['', '', '', '', 'Subtotal:', fmt(t.subtotalSinIva || 0)],
+          ['', '', '', '', 'IVA:', fmt(t.totalIva || 0)],
+          ['', '', '', '', 'TOTAL:', fmt(t.total || 0)],
+        ],
+        styles: { fontSize: 10, cellPadding: 2 },
+        columnStyles: { 4: { fontStyle: 'bold', halign: 'right' }, 5: { fontStyle: 'bold', halign: 'right' } },
+        startY: doc.lastAutoTable.finalY,
+      })
+    }
+
+    // Observaciones
+    if (t.observaciones) {
+      autoTable(doc, {
+        head: [['OBSERVACIONES']],
+        body: [[t.observaciones]],
+        styles: { fontSize: 9, cellPadding: 4 },
+        headStyles: { fillColor: [30, 41, 59], textColor: 255, fontSize: 10 },
+        startY: doc.lastAutoTable.finalY + 4,
+      })
+    }
+
+    // Firmas
+    const firmaY = doc.lastAutoTable.finalY + 25
+    doc.setDrawColor(100)
+    doc.line(20, firmaY, 85, firmaY)
+    doc.line(120, firmaY, 185, firmaY)
+    doc.setFontSize(9)
+    doc.text('Firma del Cliente', 38, firmaY + 6)
+    doc.text('Firma del Tecnico', 138, firmaY + 6)
+    doc.text('Documento: _______________', 25, firmaY + 14)
+    doc.text('Fecha: _______________', 130, firmaY + 14)
+
     doc.save(`${t.otCodigo || 'OT'}.pdf`)
   }
 
@@ -106,6 +176,7 @@ export default function Trabajos({ hook, notify }) {
     return (
       <TrabajoForm
         trabajo={trabajo}
+        allTrabajos={trabajos}
         onSave={async (data) => {
           if (vista === 'editar') {
             await actualizarTrabajo(editId, data)
@@ -175,15 +246,24 @@ export default function Trabajos({ hook, notify }) {
     const bc = t.estado === ESTADOS.COMPLETADO ? 'badge-success'
                     : t.estado === ESTADOS.CANCELADO ? 'badge-danger'
                     : t.estado === ESTADOS.EN_PROGRESO ? 'badge-info'
-                    : t.estado === ESTADOS.PROGRAMADO ? 'badge-primary' : 'badge-warning'
+                    : t.estado === ESTADOS.EN_DIAGNOSTICO ? 'badge-purple'
+                    : t.estado === ESTADOS.ESPERANDO_REPUESTOS ? 'badge-warning'
+                    : t.estado === ESTADOS.EN_PRUEBA ? 'badge-info'
+                    : t.estado === ESTADOS.PROGRAMADO ? 'badge-purple' : 'badge-warning'
+                  // Indicador de trabajo estancado
+                  const diasSinMover = t.fecha ? Math.floor((Date.now() - new Date(t.fecha).getTime()) / 86400000) : 0
+                  const estancado = t.estado !== ESTADOS.COMPLETADO && t.estado !== ESTADOS.CANCELADO && diasSinMover >= DIAS_ESTANCADO
                   return (
-                    <tr key={t.id}>
+                    <tr key={t.id} style={estancado ? { borderLeft: '4px solid var(--red-500)', background: 'rgba(239,68,68,.06)' } : {}}>
                       <td className="text-mono">{t.otCodigo || '—'}</td>
                       <td className="text-mono" style={{ fontWeight: 700 }}>{t.placa}</td>
                       <td>{t.cliente || '—'}</td>
                       <td className="text-sm">{[t.marca, t.modelo].filter(Boolean).join(' ') || '—'}</td>
                       <td className="text-sm">{tecNombre(t.tecnicoId)}</td>
-                      <td><span className={`badge ${bc}`}>{t.estado}</span></td>
+                      <td>
+                        <span className={`badge ${bc}`}>{t.estado}</span>
+                        {estancado && <span className="badge badge-danger" style={{ marginLeft: 4, fontSize: 10 }} title={`${diasSinMover} dias sin movimiento`}>{diasSinMover}d</span>}
+                      </td>
                       <td className="text-right text-mono">{fmt(t.total)}</td>
                       <td className="text-sm text-muted">{fmtDate(t.fecha)}</td>
                       <td>
@@ -213,6 +293,34 @@ export default function Trabajos({ hook, notify }) {
           </div>
         </div>
       )}
+
+      {/* Modal auto-facturar */}
+      {showFacturarModal && (
+        <div className="modal-overlay" onClick={() => setShowFacturarModal(null)}>
+          <div className="modal" style={{ maxWidth: 420 }} onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <div className="modal-title">Trabajo Completado</div>
+            </div>
+            <div className="modal-body" style={{ textAlign: 'center' }}>
+              <p style={{ fontSize: 15, marginBottom: 8 }}>
+                <strong>{showFacturarModal.placa}</strong> — {showFacturarModal.cliente || 'Sin cliente'}
+              </p>
+              <p className="text-sm text-muted" style={{ marginBottom: 16 }}>
+                Total: <strong className="text-mono">{fmt(showFacturarModal.total)}</strong>
+              </p>
+              <p style={{ fontSize: 14 }}>Deseas facturar este trabajo en Cuentti?</p>
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-outline" onClick={() => setShowFacturarModal(null)}>Despues</button>
+              <button className="btn btn-primary" onClick={() => {
+                setShowFacturarModal(null)
+                if (onAutoFacturar) onAutoFacturar(showFacturarModal)
+                else notify('Ve a la pestana Cuentti para facturar', 'info')
+              }}>Ir a Facturar</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -220,7 +328,7 @@ export default function Trabajos({ hook, notify }) {
 // ========================
 // FORMULARIO DE TRABAJO
 // ========================
-function TrabajoForm({ trabajo, onSave, onCancel }) {
+function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [] }) {
   const isEdit = !!trabajo
   const { resultados, buscando, buscarDebounced, setResultados } = useClientes()
 
@@ -237,6 +345,7 @@ function TrabajoForm({ trabajo, onSave, onCancel }) {
     kilometraje: trabajo?.kilometraje || '',
     tecnicoId: trabajo?.tecnicoId || '',
     observaciones: trabajo?.observaciones || '',
+    estado: trabajo?.estado || ESTADOS.PENDIENTE,
     fecha: trabajo?.fecha ? trabajo.fecha.slice(0, 10) : hoyISO(),
     evidenciasIngreso: trabajo?.evidenciasIngreso || [],
     evidenciasEntrega: trabajo?.evidenciasEntrega || [],
@@ -419,7 +528,7 @@ function TrabajoForm({ trabajo, onSave, onCancel }) {
       total: totales.total,
       manoObra: totales.manoObra,
       repuestos: totales.repuestos,
-      estado: trabajo?.estado || ESTADOS.PENDIENTE,
+      estado: form.estado || trabajo?.estado || ESTADOS.PENDIENTE,
       fecha: new Date(form.fecha + 'T12:00:00').toISOString(),
       evidenciasIngreso: form.evidenciasIngreso,
       evidenciasEntrega: form.evidenciasEntrega,
@@ -480,7 +589,21 @@ function TrabajoForm({ trabajo, onSave, onCancel }) {
             <div className="form-group">
               <label className="form-label">Placa *</label>
               <input className="form-input" value={form.placa} required placeholder="ABC123" style={{ textTransform: 'uppercase' }}
-                onChange={e => set('placa', e.target.value)} />
+                onChange={e => {
+                  const placa = e.target.value.toUpperCase()
+                  set('placa', placa)
+                  // Auto-fill vehicle data from previous work
+                  if (placa.length >= 6) {
+                    const prev = allTrabajos.find(t => (t.placa || '').toUpperCase() === placa && t.id !== trabajo?.id)
+                    if (prev) {
+                      if (!form.marca && prev.marca) set('marca', prev.marca)
+                      if (!form.modelo && prev.modelo) set('modelo', prev.modelo)
+                      if (!form.cliente && prev.cliente) set('cliente', prev.cliente)
+                      if (!form.cedula && prev.cedula) set('cedula', prev.cedula)
+                      if (!form.telefonoCliente && prev.telefonoCliente) set('telefonoCliente', prev.telefonoCliente)
+                    }
+                  }
+                }} />
             </div>
             <div className="form-group">
               <label className="form-label">Marca *</label>
@@ -509,6 +632,43 @@ function TrabajoForm({ trabajo, onSave, onCancel }) {
             </div>
           </div>
         </div>
+
+        {/* HISTORIAL POR PLACA */}
+        {form.placa.length >= 6 && (() => {
+          const historial = allTrabajos.filter(t =>
+            (t.placa || '').toUpperCase() === form.placa.toUpperCase() && t.id !== trabajo?.id
+          ).sort((a, b) => new Date(b.fecha) - new Date(a.fecha))
+          if (!historial.length) return null
+          return (
+            <div className="card" style={{ borderLeft: '4px solid var(--blue-500)' }}>
+              <div className="card-title">Historial de {form.placa.toUpperCase()} ({historial.length} trabajos anteriores)</div>
+              <div className="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>OT</th>
+                      <th>Estado</th>
+                      <th>Tecnico</th>
+                      <th className="text-right">Total</th>
+                      <th>Fecha</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {historial.slice(0, 5).map(h => (
+                      <tr key={h.id}>
+                        <td className="text-mono text-sm">{h.otCodigo || '—'}</td>
+                        <td><span className={`badge ${h.estado === 'Completado' ? 'badge-success' : 'badge-warning'}`}>{h.estado}</span></td>
+                        <td className="text-sm">{TECNICOS.find(t => t.id === parseInt(h.tecnicoId))?.nombre || '—'}</td>
+                        <td className="text-right text-mono">{fmt(h.total)}</td>
+                        <td className="text-sm text-muted">{fmtDate(h.fecha)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )
+        })()}
 
         {/* EVIDENCIAS */}
         <div className="card">
@@ -727,6 +887,14 @@ function TrabajoForm({ trabajo, onSave, onCancel }) {
               <label className="form-label">Fecha</label>
               <input className="form-input" type="date" value={form.fecha} onChange={e => set('fecha', e.target.value)} />
             </div>
+            {isEdit && (
+              <div className="form-group">
+                <label className="form-label">Estado</label>
+                <select className="form-select" value={form.estado} onChange={e => set('estado', e.target.value)}>
+                  {Object.values(ESTADOS).map(e => <option key={e} value={e}>{e}</option>)}
+                </select>
+              </div>
+            )}
           </div>
           <div className="form-group">
             <textarea className="form-textarea" value={form.observaciones} placeholder="Diagnostico, notas, recomendaciones..."

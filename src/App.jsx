@@ -51,6 +51,28 @@ export default function App() {
     setSection('dashboard')
   }, [])
 
+  const handleCrearTrabajoDesdeCotizacion = useCallback(async (cot) => {
+    const data = {
+      cedula: cot.cedula || '',
+      cliente: cot.cliente || '',
+      telefonoCliente: cot.telefonoCliente || '',
+      emailCliente: cot.emailCliente || '',
+      placa: cot.placa || '',
+      marca: cot.marca || '',
+      modelo: cot.modelo || '',
+      items: cot.items || [],
+      observaciones: `Creado desde cotizacion ${cot.id}. ${cot.observaciones || ''}`,
+      total: cot.total || 0,
+      subtotalSinIva: cot.subtotal || 0,
+      totalIva: cot.iva || 0,
+      estado: 'Pendiente',
+      fecha: new Date().toISOString(),
+    }
+    await trabajosHook.agregarTrabajo(data)
+    notify('Trabajo creado desde cotizacion', 'success')
+    setSection('trabajos')
+  }, [trabajosHook, notify])
+
   // Si no hay sesion, mostrar login
   if (!user) {
     return <Login onLogin={(u) => setUser(u)} />
@@ -72,13 +94,13 @@ export default function App() {
       case 'dashboard':
         return <Dashboard trabajos={trabajosHook.trabajos} loading={trabajosHook.loading} />
       case 'trabajos':
-        return <Trabajos hook={trabajosHook} notify={notify} />
+        return <Trabajos hook={trabajosHook} notify={notify} onAutoFacturar={() => navigate('cuentti')} />
       case 'recepcion':
         return <Recepcion hook={trabajosHook} notify={notify} />
       case 'mecanicos':
         return <Mecanicos trabajos={trabajosHook.trabajos} />
       case 'cotizaciones':
-        return <Cotizaciones notify={notify} />
+        return <Cotizaciones notify={notify} onCrearTrabajo={handleCrearTrabajoDesdeCotizacion} />
       case 'inventario':
         return <Inventario notify={notify} />
       case 'liquidacion':
@@ -123,6 +145,7 @@ export default function App() {
         seccionesPermitidas={seccionesPermitidas}
         user={user}
         onLogout={handleLogout}
+        trabajos={trabajosHook.trabajos}
       />
       <div className="main-area">
         <TopBar
@@ -131,6 +154,8 @@ export default function App() {
           onHamburger={() => setSidebarOpen(!sidebarOpen)}
           user={user}
           onLogout={handleLogout}
+          trabajos={trabajosHook.trabajos}
+          onNavigate={navigate}
         />
         <div className="content">
           {trabajosHook.connectionError && (

@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import { fmt, fmtDate } from '../utils/helpers'
-import { ESTADOS, TECNICOS } from '../utils/constants'
+import { ESTADOS, TECNICOS, DIAS_ESTANCADO } from '../utils/constants'
 
 const IconTotal = () => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -51,6 +51,45 @@ export default function Dashboard({ trabajos }) {
       .slice(0, 8)
   }, [trabajos])
 
+  // Trabajos por semana (ultimas 8 semanas)
+  const semanales = useMemo(() => {
+    const weeks = []
+    const now = new Date()
+    for (let i = 7; i >= 0; i--) {
+      const start = new Date(now)
+      start.setDate(now.getDate() - (i * 7 + now.getDay()))
+      start.setHours(0, 0, 0, 0)
+      const end = new Date(start)
+      end.setDate(start.getDate() + 7)
+      const count = trabajos.filter(t => {
+        const f = new Date(t.fecha)
+        return f >= start && f < end
+      }).length
+      const label = `S${8 - i}`
+      weeks.push({ label, count })
+    }
+    return weeks
+  }, [trabajos])
+
+  // Productividad por tecnico
+  const porTecnico = useMemo(() => {
+    return TECNICOS.map(tec => {
+      const trabajosTec = trabajos.filter(t => parseInt(t.tecnicoId) === tec.id)
+      const completados = trabajosTec.filter(t => t.estado === ESTADOS.COMPLETADO).length
+      const ingresos = trabajosTec.reduce((s, t) => s + (t.total || 0), 0)
+      return { nombre: tec.nombre.split(' ')[0], completados, ingresos }
+    })
+  }, [trabajos])
+
+  // Trabajos estancados
+  const estancados = useMemo(() => {
+    return trabajos.filter(t => {
+      if (t.estado === ESTADOS.COMPLETADO || t.estado === ESTADOS.CANCELADO) return false
+      const dias = t.fecha ? Math.floor((Date.now() - new Date(t.fecha).getTime()) / 86400000) : 0
+      return dias >= DIAS_ESTANCADO
+    })
+  }, [trabajos])
+
   const tecnicoNombre = (id) => {
     const t = TECNICOS.find(t => t.id === parseInt(id))
     return t ? t.nombre : '—'
@@ -80,6 +119,83 @@ export default function Dashboard({ trabajos }) {
           <div className="metric-label">Ingresos del Mes</div>
         </div>
       </div>
+
+      {/* Graficos */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 18, marginBottom: 18 }}>
+        <div className="card" style={{ marginBottom: 0 }}>
+          <div className="card-title">Trabajos por Semana</div>
+          <div className="chart-bar-container">
+            {semanales.map((s, i) => {
+              const max = Math.max(...semanales.map(w => w.count), 1)
+              const h = (s.count / max) * 100
+              return (
+                <div key={i} className="chart-bar-wrapper">
+                  <span className="chart-bar-value">{s.count}</span>
+                  <div className="chart-bar" style={{ height: `${h}%`, background: i === semanales.length - 1 ? 'var(--amber-400)' : 'var(--blue-500)' }} />
+                  <span className="chart-bar-label">{s.label}</span>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+
+        <div className="card" style={{ marginBottom: 0 }}>
+          <div className="card-title">Productividad por Tecnico</div>
+          <div className="chart-bar-container">
+            {porTecnico.map((t, i) => {
+              const max = Math.max(...porTecnico.map(x => x.completados), 1)
+              const h = (t.completados / max) * 100
+              const colors = ['var(--blue-500)', 'var(--green-500)', 'var(--amber-400)']
+              return (
+                <div key={i} className="chart-bar-wrapper">
+                  <span className="chart-bar-value">{t.completados}</span>
+                  <div className="chart-bar" style={{ height: `${h}%`, background: colors[i % colors.length] }} />
+                  <span className="chart-bar-label">{t.nombre}</span>
+                </div>
+              )
+            })}
+          </div>
+          <div style={{ marginTop: 10, display: 'flex', gap: 16, justifyContent: 'center' }}>
+            {porTecnico.map((t, i) => (
+              <span key={i} className="text-xs text-muted">{t.nombre}: {fmt(t.ingresos)}</span>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Trabajos estancados */}
+      {estancados.length > 0 && (
+        <div className="card" style={{ borderLeft: '4px solid var(--red-500)' }}>
+          <div className="card-title" style={{ color: 'var(--red-500)' }}>Trabajos Estancados ({estancados.length})</div>
+          <div className="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Placa</th>
+                  <th>Cliente</th>
+                  <th>Estado</th>
+                  <th>Dias</th>
+                  <th>Tecnico</th>
+                </tr>
+              </thead>
+              <tbody>
+                {estancados.map(t => {
+                  const dias = Math.floor((Date.now() - new Date(t.fecha).getTime()) / 86400000)
+                  return (
+                    <tr key={t.id}>
+                      <td className="text-mono" style={{ fontWeight: 700 }}>{t.placa}</td>
+                      <td>{t.cliente || '—'}</td>
+                      <td><span className="badge badge-warning">{t.estado}</span></td>
+                      <td><span className="badge badge-danger">{dias}d</span></td>
+                      <td className="text-sm">{tecnicoNombre(t.tecnicoId)}</td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
       <div className="card">
         <div className="card-title">Trabajos Recientes</div>

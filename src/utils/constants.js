@@ -25,11 +25,17 @@ export const IVA_DEFAULT = 19
 // Estados de trabajo
 export const ESTADOS = {
   PENDIENTE: 'Pendiente',
+  EN_DIAGNOSTICO: 'En Diagnostico',
+  ESPERANDO_REPUESTOS: 'Esperando Repuestos',
   EN_PROGRESO: 'En Progreso',
+  EN_PRUEBA: 'En Prueba',
   PROGRAMADO: 'Programado',
   COMPLETADO: 'Completado',
   CANCELADO: 'Cancelado',
 }
+
+// Dias sin actividad para marcar trabajo como estancado
+export const DIAS_ESTANCADO = 3
 
 // Tipos de resolucion para facturacion
 export const RESOLUCIONES = {
