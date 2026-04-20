@@ -1,4 +1,6 @@
 import { useState, useMemo } from 'react'
+import { jsPDF } from 'jspdf'
+import autoTable from 'jspdf-autotable'
 import { fmt, fmtDate } from '../utils/helpers'
 import { TECNICOS, COMISION, ESTADOS } from '../utils/constants'
 
@@ -70,6 +72,45 @@ export default function Reportes({ trabajos }) {
     URL.revokeObjectURL(url)
   }
 
+  const exportarResumen = () => {
+    const doc = new jsPDF()
+    doc.setFontSize(16)
+    doc.setFont(undefined, 'bold')
+    doc.text('Reporte de Taller - Multidiagnosticos AS', 14, 16)
+    doc.setFontSize(10)
+    doc.setFont(undefined, 'normal')
+    doc.text(`Periodo: ${rango.desde} a ${rango.hasta}`, 14, 23)
+
+    autoTable(doc, {
+      startY: 30,
+      head: [['Metrica', 'Valor']],
+      body: [
+        ['Total Trabajos', String(stats.total)],
+        ['Completados', String(stats.completados)],
+        ['Ingresos', fmt(stats.ingresos)],
+        ['Comisiones', fmt(stats.comisiones)],
+        ['Neto Taller', fmt(stats.ingresos - stats.comisiones)],
+      ],
+      headStyles: { fillColor: [30, 41, 59] },
+    })
+
+    autoTable(doc, {
+      head: [['Tecnico', 'Trabajos', 'Facturado']],
+      body: stats.porTecnico.map(t => [t.nombre, String(t.cantidad), fmt(t.facturado)]),
+      headStyles: { fillColor: [30, 41, 59] },
+      startY: doc.lastAutoTable.finalY + 8,
+    })
+
+    autoTable(doc, {
+      head: [['Estado', 'Cantidad']],
+      body: stats.porEstado.filter(e => e.cantidad > 0).map(e => [e.estado, String(e.cantidad)]),
+      headStyles: { fillColor: [30, 41, 59] },
+      startY: doc.lastAutoTable.finalY + 8,
+    })
+
+    doc.save(`reporte_${rango.desde}_${rango.hasta}.pdf`)
+  }
+
   return (
     <div>
       {/* Filtro de rango */}
@@ -87,7 +128,10 @@ export default function Reportes({ trabajos }) {
                 onChange={e => setRango(r => ({ ...r, hasta: e.target.value }))} />
             </div>
           </div>
-          <button className="btn btn-outline" onClick={exportarCSV}>Exportar CSV</button>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button className="btn btn-outline btn-sm" onClick={exportarCSV}>Exportar CSV</button>
+            <button className="btn btn-outline btn-sm" onClick={() => exportarResumen()}>Resumen PDF</button>
+          </div>
         </div>
       </div>
 

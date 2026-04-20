@@ -886,6 +886,204 @@ tbody tr:hover { background: var(--bg-table-hover); }
 }
 
 /* ============================
+   KANBAN BOARD
+   ============================ */
+.kanban-board {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  padding-bottom: 12px;
+  -webkit-overflow-scrolling: touch;
+}
+.kanban-column {
+  min-width: 220px;
+  max-width: 280px;
+  flex: 1;
+  background: var(--bg-card);
+  border: 1px solid var(--border-card);
+  border-radius: var(--radius-lg);
+  display: flex;
+  flex-direction: column;
+  max-height: 70vh;
+}
+.kanban-column-header {
+  padding: 10px 12px;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-heading);
+  border-top: 3px solid var(--amber-400);
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.kanban-count {
+  background: var(--slate-200);
+  color: var(--text-heading);
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 10px;
+}
+.kanban-cards {
+  padding: 8px;
+  overflow-y: auto;
+  flex: 1;
+}
+.kanban-card {
+  background: var(--bg-body);
+  border: 1px solid var(--border-card);
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin-bottom: 8px;
+  cursor: pointer;
+  transition: box-shadow 0.15s, transform 0.15s;
+}
+.kanban-card:hover {
+  box-shadow: var(--shadow-md);
+  transform: translateY(-1px);
+}
+
+/* ============================
+   PAGE TRANSITION
+   ============================ */
+.page-enter {
+  animation: pageIn 0.25s ease;
+}
+@keyframes pageIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ============================
+   STOCK ALERT
+   ============================ */
+.stock-alert {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  font-size: 13px;
+  color: #991b1b;
+  font-weight: 500;
+  margin-bottom: 6px;
+}
+[data-theme="dark"] .stock-alert {
+  background: rgba(220,38,38,0.12);
+  border-color: rgba(220,38,38,0.3);
+  color: #fca5a5;
+}
+
+/* ============================
+   WIZARD STEPS
+   ============================ */
+.wizard-steps {
+  display: flex;
+  justify-content: center;
+  gap: 0;
+  margin-bottom: 24px;
+}
+.wizard-step {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--slate-400);
+  position: relative;
+}
+.wizard-step.active {
+  color: var(--blue-500);
+}
+.wizard-step.done {
+  color: var(--green-500);
+}
+.wizard-step-num {
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  border: 2px solid var(--slate-300);
+  color: var(--slate-400);
+  flex-shrink: 0;
+}
+.wizard-step.active .wizard-step-num {
+  border-color: var(--blue-500);
+  background: var(--blue-500);
+  color: #fff;
+}
+.wizard-step.done .wizard-step-num {
+  border-color: var(--green-500);
+  background: var(--green-500);
+  color: #fff;
+}
+.wizard-step-line {
+  width: 30px;
+  height: 2px;
+  background: var(--slate-300);
+  flex-shrink: 0;
+}
+.wizard-step.done + .wizard-step-line,
+.wizard-step.active + .wizard-step-line {
+  background: var(--blue-500);
+}
+
+/* ============================
+   CALENDAR GRID
+   ============================ */
+.calendar-week {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.calendar-day {
+  background: var(--bg-card);
+  border: 1px solid var(--border-card);
+  border-radius: 8px;
+  padding: 8px;
+  min-height: 80px;
+}
+.calendar-day-header {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--slate-500);
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+.calendar-day-num {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-heading);
+  margin-bottom: 4px;
+}
+.calendar-day.today {
+  border-color: var(--blue-500);
+  background: rgba(37,99,235,0.05);
+}
+.calendar-task {
+  font-size: 11px;
+  padding: 3px 6px;
+  border-radius: 4px;
+  margin-bottom: 3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  background: var(--blue-50);
+  color: var(--blue-700);
+  font-weight: 500;
+}
+
+/* ============================
    HAMBURGER
    ============================ */
 .hamburger {

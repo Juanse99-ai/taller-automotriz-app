@@ -67,11 +67,19 @@ export default function Inventario({ notify }) {
     return list
   }, [productos, busqueda, categoriaFiltro])
 
+  const STOCK_BAJO_UMBRAL = 3
+
   const stats = useMemo(() => ({
     total: productos.length,
     sinStock: productos.filter(p => p.stock <= 0).length,
+    stockBajo: productos.filter(p => !p.esServicio && p.stock > 0 && p.stock <= STOCK_BAJO_UMBRAL).length,
     valorTotal: productos.reduce((s, p) => s + (p.precio * p.stock), 0),
   }), [productos])
+
+  const alertasStock = useMemo(() =>
+    productos.filter(p => !p.esServicio && p.stock > 0 && p.stock <= STOCK_BAJO_UMBRAL)
+      .sort((a, b) => a.stock - b.stock).slice(0, 10),
+  [productos])
 
   if (loading && productos.length === 0) {
     return (
@@ -94,10 +102,28 @@ export default function Inventario({ notify }) {
           <div className="metric-label">Sin Stock</div>
         </div>
         <div className="metric-card">
+          <div className="metric-value" style={{ color: 'var(--amber-500)' }}>{stats.stockBajo}</div>
+          <div className="metric-label">Stock Bajo</div>
+        </div>
+        <div className="metric-card">
           <div className="metric-value" style={{ fontSize: stats.valorTotal >= 1_000_000 ? '1.4rem' : undefined }}>{fmtCompact(stats.valorTotal)}</div>
           <div className="metric-label">Valor Inventario</div>
         </div>
       </div>
+
+      {/* Alertas de stock bajo */}
+      {alertasStock.length > 0 && (
+        <div className="card" style={{ borderLeft: '4px solid var(--amber-500)' }}>
+          <div className="card-title" style={{ color: 'var(--amber-500)' }}>Stock Bajo ({alertasStock.length} productos)</div>
+          {alertasStock.map(p => (
+            <div key={p.id || p.codigo} className="stock-alert">
+              <span className="badge badge-warning">{p.stock} uds</span>
+              <span style={{ fontWeight: 600 }}>{p.nombre}</span>
+              <span className="text-xs text-muted">Cod: {p.codigo}</span>
+            </div>
+          ))}
+        </div>
+      )}
 
       <div className="card">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14, flexWrap: 'wrap', gap: 10 }}>

@@ -1,8 +1,10 @@
-import { useMemo } from 'react'
-import { fmt } from '../utils/helpers'
+import { useMemo, useState } from 'react'
+import { fmt, fmtDate } from '../utils/helpers'
 import { TECNICOS, COMISION, ESTADOS } from '../utils/constants'
 
 export default function Mecanicos({ trabajos }) {
+  const [vistaAgenda, setVistaAgenda] = useState(false)
+
   const tecnicosData = useMemo(() => {
     return TECNICOS.map(tec => {
       const misTrab = trabajos.filter(t => parseInt(t.tecnicoId) === tec.id)
@@ -51,7 +53,18 @@ export default function Mecanicos({ trabajos }) {
         </div>
       </div>
 
-      {tecnicosData.map(tec => (
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 14 }}>
+        <button className={`btn btn-sm ${vistaAgenda ? 'btn-primary' : 'btn-outline'}`}
+          onClick={() => setVistaAgenda(v => !v)}>
+          {vistaAgenda ? 'Ver Tarjetas' : 'Ver Agenda Semanal'}
+        </button>
+      </div>
+
+      {vistaAgenda ? (
+        <AgendaSemanal trabajos={trabajos} />
+      ) : null}
+
+      {!vistaAgenda && tecnicosData.map(tec => (
         <div className="card" key={tec.id}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 14 }}>
             <div>
@@ -85,6 +98,57 @@ export default function Mecanicos({ trabajos }) {
           </div>
         </div>
       ))}
+    </div>
+  )
+}
+
+function AgendaSemanal({ trabajos }) {
+  const dias = useMemo(() => {
+    const hoy = new Date()
+    const lunes = new Date(hoy)
+    lunes.setDate(hoy.getDate() - ((hoy.getDay() + 6) % 7))
+    lunes.setHours(0, 0, 0, 0)
+
+    const nombres = ['Lun', 'Mar', 'Mie', 'Jue', 'Vie', 'Sab', 'Dom']
+    const result = []
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(lunes)
+      d.setDate(lunes.getDate() + i)
+      const fin = new Date(d)
+      fin.setHours(23, 59, 59, 999)
+      const trabajosDia = trabajos.filter(t => {
+        const f = new Date(t.fecha)
+        return f >= d && f <= fin && t.estado !== ESTADOS.COMPLETADO && t.estado !== ESTADOS.CANCELADO
+      })
+      result.push({
+        nombre: nombres[i],
+        num: d.getDate(),
+        esHoy: d.toDateString() === hoy.toDateString(),
+        trabajos: trabajosDia,
+      })
+    }
+    return result
+  }, [trabajos])
+
+  return (
+    <div className="card">
+      <div className="card-title">Agenda de la Semana</div>
+      <div className="calendar-week">
+        {dias.map((dia, i) => (
+          <div key={i} className={`calendar-day ${dia.esHoy ? 'today' : ''}`}>
+            <div className="calendar-day-header">{dia.nombre}</div>
+            <div className="calendar-day-num">{dia.num}</div>
+            {dia.trabajos.map(t => {
+              const tec = TECNICOS.find(tc => tc.id === parseInt(t.tecnicoId))
+              return (
+                <div key={t.id} className="calendar-task" title={`${t.placa} - ${t.cliente} (${tec?.nombre || 'Sin asignar'})`}>
+                  {t.placa} {tec ? `- ${tec.nombre.split(' ')[0]}` : ''}
+                </div>
+              )
+            })}
+          </div>
+        ))}
+      </div>
     </div>
   )
 }

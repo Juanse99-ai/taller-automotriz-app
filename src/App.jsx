@@ -164,7 +164,9 @@ export default function App() {
               <button onClick={trabajosHook.recargar}>Reintentar</button>
             </div>
           )}
-          {renderContent()}
+          <div className="page-enter" key={section}>
+            {renderContent()}
+          </div>
         </div>
       </div>
       {toast && <Toast message={toast.msg} type={toast.type} onClose={() => setToast(null)} />}

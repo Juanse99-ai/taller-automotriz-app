@@ -9,9 +9,14 @@ import { cargarInventarioCompleto } from '../services/cuentti'
 
 export default function Trabajos({ hook, notify, onAutoFacturar }) {
   const { trabajos, agregarTrabajo, actualizarTrabajo, eliminarTrabajo } = hook
-  const [vista, setVista] = useState('lista') // lista | nuevo | editar
+  const [vista, setVista] = useState('lista') // lista | nuevo | editar | kanban
   const [editId, setEditId] = useState(null)
   const [confirmDel, setConfirmDel] = useState(null)
+
+  // Filtros
+  const [filtroEstado, setFiltroEstado] = useState('todos')
+  const [filtroTecnico, setFiltroTecnico] = useState('todos')
+  const [filtroBusqueda, setFiltroBusqueda] = useState('')
 
   const stats = useMemo(() => {
     const total = trabajos.length
@@ -21,9 +26,20 @@ export default function Trabajos({ hook, notify, onAutoFacturar }) {
     return { total, comp, pend, prog }
   }, [trabajos])
 
-  const sorted = useMemo(() =>
-    [...trabajos].sort((a, b) => new Date(b.fecha) - new Date(a.fecha)),
-  [trabajos])
+  const filtered = useMemo(() => {
+    let list = [...trabajos]
+    if (filtroEstado !== 'todos') list = list.filter(t => t.estado === filtroEstado)
+    if (filtroTecnico !== 'todos') list = list.filter(t => String(t.tecnicoId) === filtroTecnico)
+    if (filtroBusqueda.trim()) {
+      const q = filtroBusqueda.toLowerCase()
+      list = list.filter(t =>
+        (t.placa || '').toLowerCase().includes(q) ||
+        (t.cliente || '').toLowerCase().includes(q) ||
+        (t.otCodigo || '').toLowerCase().includes(q)
+      )
+    }
+    return list.sort((a, b) => new Date(b.fecha) - new Date(a.fecha))
+  }, [trabajos, filtroEstado, filtroTecnico, filtroBusqueda])
 
   const tecNombre = (id) => TECNICOS.find(t => t.id === parseInt(id))?.nombre || '—'
 
@@ -214,12 +230,73 @@ export default function Trabajos({ hook, notify, onAutoFacturar }) {
         </div>
       </div>
 
-      <div className="flex justify-between items-center mb-4" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <h3 style={{ fontSize: 16, fontWeight: 700 }}>Ordenes de Trabajo</h3>
-        <button className="btn btn-primary" onClick={() => setVista('nuevo')}>+ Nuevo Trabajo</button>
+      {/* Filtros y controles */}
+      <div className="card" style={{ paddingBottom: 14 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, flexWrap: 'wrap', gap: 8 }}>
+          <h3 style={{ fontSize: 16, fontWeight: 700 }}>Ordenes de Trabajo ({filtered.length})</h3>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <button className={`btn btn-sm ${vista === 'lista' ? 'btn-primary' : 'btn-outline'}`} onClick={() => setVista('lista')}>Lista</button>
+            <button className={`btn btn-sm ${vista === 'kanban' ? 'btn-primary' : 'btn-outline'}`} onClick={() => setVista('kanban')}>Kanban</button>
+            <button className="btn btn-primary btn-sm" onClick={() => setVista('nuevo')}>+ Nuevo</button>
+          </div>
+        </div>
+        <div className="form-row" style={{ marginBottom: 0 }}>
+          <div className="form-group" style={{ marginBottom: 0 }}>
+            <input className="form-input" placeholder="Buscar placa, cliente, OT..." value={filtroBusqueda}
+              onChange={e => setFiltroBusqueda(e.target.value)} style={{ fontSize: 13 }} />
+          </div>
+          <div className="form-group" style={{ marginBottom: 0 }}>
+            <select className="form-select" value={filtroEstado} onChange={e => setFiltroEstado(e.target.value)} style={{ fontSize: 13 }}>
+              <option value="todos">Todos los estados</option>
+              {Object.values(ESTADOS).map(e => <option key={e} value={e}>{e}</option>)}
+            </select>
+          </div>
+          <div className="form-group" style={{ marginBottom: 0 }}>
+            <select className="form-select" value={filtroTecnico} onChange={e => setFiltroTecnico(e.target.value)} style={{ fontSize: 13 }}>
+              <option value="todos">Todos los tecnicos</option>
+              {TECNICOS.map(t => <option key={t.id} value={t.id}>{t.nombre}</option>)}
+            </select>
+          </div>
+        </div>
       </div>
 
-      {sorted.length === 0 ? (
+      {/* Vista Kanban */}
+      {vista === 'kanban' ? (
+        <div className="kanban-board">
+          {[ESTADOS.PENDIENTE, ESTADOS.EN_DIAGNOSTICO, ESTADOS.EN_PROGRESO, ESTADOS.ESPERANDO_REPUESTOS, ESTADOS.EN_PRUEBA, ESTADOS.COMPLETADO].map(estado => {
+            const col = filtered.filter(t => t.estado === estado)
+            const bc = estado === ESTADOS.COMPLETADO ? 'var(--green-500)'
+              : estado === ESTADOS.EN_PROGRESO ? 'var(--blue-500)'
+              : estado === ESTADOS.ESPERANDO_REPUESTOS ? 'var(--amber-500)'
+              : estado === ESTADOS.EN_DIAGNOSTICO ? 'var(--purple-500)'
+              : estado === ESTADOS.EN_PRUEBA ? 'var(--blue-500)' : 'var(--amber-400)'
+            return (
+              <div key={estado} className="kanban-column">
+                <div className="kanban-column-header" style={{ borderTopColor: bc }}>
+                  <span>{estado}</span>
+                  <span className="kanban-count">{col.length}</span>
+                </div>
+                <div className="kanban-cards">
+                  {col.map(t => (
+                    <div key={t.id} className="kanban-card" onClick={() => handleEditar(t.id)}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                        <span className="text-mono" style={{ fontWeight: 700, fontSize: 13 }}>{t.placa}</span>
+                        <span className="text-xs text-muted">{t.otCodigo || ''}</span>
+                      </div>
+                      <div className="text-sm" style={{ marginBottom: 4 }}>{t.cliente || 'Sin cliente'}</div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span className="text-xs text-muted">{tecNombre(t.tecnicoId)}</span>
+                        <span className="text-mono text-xs" style={{ fontWeight: 600 }}>{fmt(t.total)}</span>
+                      </div>
+                    </div>
+                  ))}
+                  {col.length === 0 && <div className="text-xs text-muted text-center" style={{ padding: 16 }}>Sin trabajos</div>}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      ) : filtered.length === 0 ? (
         <div className="empty-state">
           <div className="empty-state-icon">🔧</div>
           <p>No hay trabajos registrados.</p>
@@ -242,7 +319,7 @@ export default function Trabajos({ hook, notify, onAutoFacturar }) {
                 </tr>
               </thead>
               <tbody>
-                {sorted.map(t => {
+                {filtered.map(t => {
     const bc = t.estado === ESTADOS.COMPLETADO ? 'badge-success'
                     : t.estado === ESTADOS.CANCELADO ? 'badge-danger'
                     : t.estado === ESTADOS.EN_PROGRESO ? 'badge-info'
