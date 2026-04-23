@@ -10,15 +10,27 @@ export default function Mecanicos({ trabajos }) {
       const misTrab = trabajos.filter(t => parseInt(t.tecnicoId) === tec.id)
       const completados = misTrab.filter(t => t.estado === ESTADOS.COMPLETADO)
       const enProgreso = misTrab.filter(t => t.estado === ESTADOS.EN_PROGRESO || t.estado === ESTADOS.PENDIENTE)
-      const totalFacturado = completados.reduce((s, t) => s + (t.total || 0), 0)
-      const comisionTotal = completados.reduce((s, t) => s + ((t.manoObra || t.total || 0) * COMISION.TOTAL), 0)
+      // Mano de obra: solo servicios, no repuestos
+      const getMO = (t) => {
+        if (typeof t?.manoObra === 'number') return t.manoObra
+        if (Array.isArray(t?.items)) {
+          return t.items.reduce((s, i) => {
+            const tipo = (i?.tipo || i?.categoria || '').toString().toLowerCase()
+            const esServ = i?.esServicio === true || tipo.includes('serv')
+            return s + (esServ ? (parseFloat(i?.precio) || 0) * (parseInt(i?.cantidad) || 1) : 0)
+          }, 0)
+        }
+        return 0
+      }
+      const totalFacturado = completados.reduce((s, t) => s + getMO(t), 0)
+      const comisionTotal = completados.reduce((s, t) => s + (getMO(t) * COMISION.TOTAL), 0)
 
       // Mes actual
       const now = new Date()
       const inicioMes = new Date(now.getFullYear(), now.getMonth(), 1)
       const completadosMes = completados.filter(t => new Date(t.fecha) >= inicioMes)
-      const facturadoMes = completadosMes.reduce((s, t) => s + (t.total || 0), 0)
-      const comisionMes = completadosMes.reduce((s, t) => s + ((t.manoObra || t.total || 0) * COMISION.TOTAL), 0)
+      const facturadoMes = completadosMes.reduce((s, t) => s + getMO(t), 0)
+      const comisionMes = completadosMes.reduce((s, t) => s + (getMO(t) * COMISION.TOTAL), 0)
 
       return {
         ...tec,

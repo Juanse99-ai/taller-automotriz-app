@@ -370,14 +370,14 @@ export function buildFacturaPayload(factura) {
     },
     objDetalle: items,
     lstPagos: factura.aCredito ? [] : [{
-      id_medio_pago: factura.idMedioPago || 1,
-      id_banco: factura.idBanco || 1,
+      id_medio_pago: factura.idMedioPago ?? 1,
+      id_banco: factura.idBanco ?? 1,
       valor: to2(totalNeto),
       boucher: '',
       digitos: '',
       devuelta: 0,
       dinero_entregado: 0,
-      nota: '',
+      nota: factura.otCodigo ? `OT: ${factura.otCodigo}` : '',
       fecha_registro: Date.now(),
     }],
   }

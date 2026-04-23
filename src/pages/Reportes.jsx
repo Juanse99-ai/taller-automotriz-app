@@ -26,7 +26,19 @@ export default function Reportes({ trabajos }) {
   const stats = useMemo(() => {
     const completados = filtrados.filter(t => t.estado === ESTADOS.COMPLETADO)
     const ingresos = completados.reduce((s, t) => s + (t.total || 0), 0)
-    const comisiones = completados.reduce((s, t) => s + ((t.manoObra || t.total || 0) * COMISION.TOTAL), 0)
+    // Mano de obra: solo servicios, no repuestos
+    const getMO = (t) => {
+      if (typeof t?.manoObra === 'number') return t.manoObra
+      if (Array.isArray(t?.items)) {
+        return t.items.reduce((s, i) => {
+          const tipo = (i?.tipo || i?.categoria || '').toString().toLowerCase()
+          const esServ = i?.esServicio === true || tipo.includes('serv')
+          return s + (esServ ? (parseFloat(i?.precio) || 0) * (parseInt(i?.cantidad) || 1) : 0)
+        }, 0)
+      }
+      return 0
+    }
+    const comisiones = completados.reduce((s, t) => s + (getMO(t) * COMISION.TOTAL), 0)
 
     // Por tecnico
     const porTecnico = TECNICOS.map(tec => {

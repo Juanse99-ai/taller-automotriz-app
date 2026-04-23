@@ -49,6 +49,17 @@ export default function CuenttiPanel({ trabajos, notify }) {
   const [docResp, setDocResp] = useState(null)
   const [docLoading, setDocLoading] = useState(false)
 
+  // Metodo de pago para facturacion
+  const METODOS_PAGO = [
+    { id: 1, nombre: 'Efectivo' },
+    { id: 2, nombre: 'Tarjeta Debito' },
+    { id: 3, nombre: 'Tarjeta Credito' },
+    { id: 4, nombre: 'Transferencia' },
+    { id: 5, nombre: 'Nequi / Daviplata' },
+    { id: 0, nombre: 'A Credito (sin pago)' },
+  ]
+  const [metodoPago, setMetodoPago] = useState(1)
+
   const [productoForm, setProductoForm] = useState({
     nombre: '',
     precioVenta: '',
@@ -132,12 +143,19 @@ export default function CuenttiPanel({ trabajos, notify }) {
 
     setFacturando(true)
     try {
-      const payload = buildFacturaPayload({ ...trabajo, resolucion: prefijo })
+      const facturaData = {
+        ...trabajo,
+        resolucion: prefijo,
+        idMedioPago: metodoPago,
+        aCredito: metodoPago === 0,
+        observaciones: `OT: ${trabajo.otCodigo || trabajo.id} — ${trabajo.observaciones || ''}`.trim(),
+      }
+      const payload = buildFacturaPayload(facturaData)
       setPreviewPayload(payload)
       setPreviewHeaders(getCuenttiDebugHeaders())
       setUltimoPayload(payload)
       setUltimoHeaders(getCuenttiDebugHeaders())
-      const result = await enviarFactura({ ...trabajo, resolucion: prefijo })
+      const result = await enviarFactura(facturaData)
       setFacturaResp(result)
       const txId = extractIdTransacion(result)
       if (txId) {
@@ -302,7 +320,17 @@ export default function CuenttiPanel({ trabajos, notify }) {
               ))}
             </select>
             <div className="text-xs text-muted" style={{ marginTop: 4 }}>
-              Prefijo / resolucion que usara Cuentti (MAS o FEIC)
+              Resolucion (MAS o FEIC)
+            </div>
+          </div>
+          <div className="form-group" style={{ marginBottom: 0, minWidth: 160 }}>
+            <select className="form-select" value={metodoPago} onChange={e => setMetodoPago(parseInt(e.target.value))}>
+              {METODOS_PAGO.map(m => (
+                <option key={m.id} value={m.id}>{m.nombre}</option>
+              ))}
+            </select>
+            <div className="text-xs text-muted" style={{ marginTop: 4 }}>
+              Metodo de pago
             </div>
           </div>
           <div>

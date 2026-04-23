@@ -11,6 +11,8 @@ import Cotizaciones from './pages/Cotizaciones'
 import Inventario from './pages/Inventario'
 import Liquidacion from './pages/Liquidacion'
 import Reportes from './pages/Reportes'
+import Inspecciones from './pages/Inspecciones'
+import PortalCliente from './pages/PortalCliente'
 import CuenttiPanel from './pages/CuenttiPanel'
 import { useTrabajos } from './hooks/useTrabajos'
 import { getSession, logout, getSeccionesPermitidas } from './services/auth'
@@ -24,10 +26,16 @@ const SECTIONS = {
   inventario: { title: 'Inventario', subtitle: 'Productos y repuestos' },
   liquidacion: { title: 'Liquidacion', subtitle: 'Pagos a tecnicos' },
   reportes: { title: 'Reportes', subtitle: 'Estadisticas y exportacion' },
+  inspecciones: { title: 'Inspecciones', subtitle: 'Inspecciones digitales DVI' },
   cuentti: { title: 'Cuentti', subtitle: 'Integracion de facturacion' },
 }
 
 export default function App() {
+  // Portal de clientes (ruta publica)
+  if (window.location.pathname === '/portal' || window.location.hash === '#portal') {
+    return <PortalCliente />
+  }
+
   const [user, setUser] = useState(() => getSession())
   const [section, setSection] = useState('dashboard')
   const [sidebarOpen, setSidebarOpen] = useState(false)
@@ -107,6 +115,8 @@ export default function App() {
         return <Liquidacion trabajos={trabajosHook.trabajos} notify={notify} />
       case 'reportes':
         return <Reportes trabajos={trabajosHook.trabajos} />
+      case 'inspecciones':
+        return <Inspecciones trabajos={trabajosHook.trabajos} notify={notify} />
       case 'cuentti':
         return <CuenttiPanel trabajos={trabajosHook.trabajos} notify={notify} />
       default:
