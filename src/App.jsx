@@ -116,7 +116,11 @@ export default function App() {
       case 'reportes':
         return <Reportes trabajos={trabajosHook.trabajos} />
       case 'inspecciones':
-        return <Inspecciones trabajos={trabajosHook.trabajos} notify={notify} />
+        return <Inspecciones trabajos={trabajosHook.trabajos} notify={notify}
+          onVincularInspeccion={(trabajoId, inspeccion) => {
+            // Guarda la inspeccion dentro del trabajo para que el portal la muestre
+            trabajosHook.actualizarTrabajo(trabajoId, { inspeccion })
+          }} />
       case 'cuentti':
         return <CuenttiPanel trabajos={trabajosHook.trabajos} notify={notify} />
       default:

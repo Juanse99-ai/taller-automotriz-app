@@ -13,7 +13,7 @@ const ESTADO_COLORS = {
   no_aplica: { bg: '#f1f5f9', color: '#64748b', icon: '—', label: 'No aplica' },
 }
 
-export default function Inspecciones({ trabajos, notify }) {
+export default function Inspecciones({ trabajos, notify, onVincularInspeccion }) {
   const [inspecciones, setInspecciones] = useState(() => lsGet('inspecciones', []))
   const [vista, setVista] = useState('lista')
   const [editId, setEditId] = useState(null)
@@ -21,6 +21,17 @@ export default function Inspecciones({ trabajos, notify }) {
   const guardar = (nuevas) => {
     setInspecciones(nuevas)
     lsSet('inspecciones', nuevas)
+  }
+
+  // Vincular inspeccion al trabajo (para que el cliente la vea en el portal)
+  const vincularATrabajo = (insp) => {
+    if (!insp.placa) { notify('La inspeccion no tiene placa', 'error'); return }
+    const trabajo = trabajos.find(t => (t.placa || '').toUpperCase() === insp.placa.toUpperCase())
+    if (!trabajo) { notify(`No se encontro trabajo con placa ${insp.placa}`, 'error'); return }
+    if (onVincularInspeccion) {
+      onVincularInspeccion(trabajo.id, insp)
+      notify(`Inspeccion vinculada a ${trabajo.otCodigo || trabajo.id}`, 'success')
+    }
   }
 
   const sorted = useMemo(() =>
@@ -125,10 +136,12 @@ export default function Inspecciones({ trabajos, notify }) {
                         <div className="actions-cell">
                           <button className="btn btn-outline btn-sm" onClick={() => { setEditId(i.id); setVista('detalle') }}>Ver</button>
                           <button className="btn btn-outline btn-sm" onClick={() => { setEditId(i.id); setVista('editar') }}>Editar</button>
+                          <button className="btn btn-outline btn-sm" onClick={() => vincularATrabajo(i)}
+                            title="Vincular al trabajo (visible en portal cliente)">Vincular OT</button>
                           <button className="btn btn-ghost btn-sm" onClick={() => {
                             guardar(inspecciones.filter(x => x.id !== i.id))
                             notify('Inspeccion eliminada', 'info')
-                          }}>🗑</button>
+                          }}>X</button>
                         </div>
                       </td>
                     </tr>

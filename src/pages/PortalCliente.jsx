@@ -2,8 +2,7 @@ import { useState } from 'react'
 import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import { InspeccionDetalle } from './Inspecciones'
-import { lsGet } from '../services/storage'
-import { ESTADOS } from '../utils/constants'
+import { ESTADOS, TECNICOS } from '../utils/constants'
 import { fmtDate, fmt } from '../utils/helpers'
 
 const ESTADO_TRABAJO_DISPLAY = {
@@ -17,32 +16,69 @@ const ESTADO_TRABAJO_DISPLAY = {
   [ESTADOS.CANCELADO]: { label: 'Cancelado', color: '#dc2626', icon: '✕', pct: 0 },
 }
 
+// Consulta directa a Supabase via proxy (funciona desde cualquier dispositivo)
+async function buscarTrabajosPorCedula(cedula) {
+  try {
+    const url = `/api/supabase?table=trabajos&cedula_cliente=eq.${encodeURIComponent(cedula)}&order=fecha.desc`
+    const res = await fetch(url)
+    if (!res.ok) throw new Error('Error consultando')
+    const rows = await res.json()
+    return rows.map(r => ({
+      id: r.id,
+      fecha: r.fecha || r.created_at,
+      cedula: r.cedula_cliente,
+      cliente: r.cliente,
+      placa: r.placa,
+      marca: r.marca,
+      modelo: r.modelo,
+      ano: r.ano,
+      kilometraje: r.kilometraje,
+      tecnicoId: r.tecnico_id,
+      estado: r.estado || 'Pendiente',
+      observaciones: r.observaciones,
+      items: typeof r.items === 'string' ? JSON.parse(r.items) : (r.items || []),
+      total: parseFloat(r.total) || 0,
+      otCodigo: r.ot_codigo || '',
+      inspeccion: typeof r.inspeccion === 'string' ? JSON.parse(r.inspeccion) : (r.inspeccion || null),
+    }))
+  } catch (e) {
+    console.warn('Portal: error buscando trabajos', e.message)
+    return []
+  }
+}
+
 export default function PortalCliente() {
   const [cedula, setCedula] = useState('')
   const [autenticado, setAutenticado] = useState(false)
   const [datos, setDatos] = useState(null)
   const [vistaInspeccion, setVistaInspeccion] = useState(null)
   const [error, setError] = useState('')
+  const [cargando, setCargando] = useState(false)
 
-  const buscar = (e) => {
+  const buscar = async (e) => {
     e.preventDefault()
     if (!cedula.trim()) return
 
     const cedulaLimpia = cedula.trim().replace(/[.\-\s]/g, '')
+    setCargando(true)
+    setError('')
 
-    // Buscar trabajos del cliente por cedula
-    const trabajos = lsGet('trabajos', [])
-    const inspecciones = lsGet('inspecciones', [])
+    const misTrab = await buscarTrabajosPorCedula(cedulaLimpia)
 
-    const misTrab = trabajos.filter(t =>
-      (t.cedula || '').replace(/[.\-\s]/g, '') === cedulaLimpia
-    ).sort((a, b) => new Date(b.fecha) - new Date(a.fecha))
+    // Extraer inspecciones embebidas en trabajos
+    const misInsp = misTrab
+      .filter(t => t.inspeccion && t.inspeccion.items)
+      .map(t => ({
+        ...t.inspeccion,
+        placa: t.inspeccion.placa || t.placa,
+        cliente: t.inspeccion.cliente || t.cliente,
+        vehiculo: t.inspeccion.vehiculo || [t.marca, t.modelo, t.ano].filter(Boolean).join(' '),
+        fecha: t.inspeccion.fecha || t.fecha,
+      }))
 
-    const misInsp = inspecciones.filter(i =>
-      (i.cedula || '').replace(/[.\-\s]/g, '') === cedulaLimpia
-    ).sort((a, b) => new Date(b.fecha) - new Date(a.fecha))
+    setCargando(false)
 
-    if (misTrab.length === 0 && misInsp.length === 0) {
+    if (misTrab.length === 0) {
       setError('No se encontraron registros para este documento. Verifica el numero e intenta de nuevo.')
       setDatos(null)
       setAutenticado(false)
@@ -51,7 +87,6 @@ export default function PortalCliente() {
 
     setDatos({ trabajos: misTrab, inspecciones: misInsp, cedula: cedulaLimpia })
     setAutenticado(true)
-    setError('')
   }
 
   const descargarPDF = (insp) => {
@@ -80,7 +115,6 @@ export default function PortalCliente() {
     doc.setFontSize(14)
     doc.text(`Estado general: ${pct}%`, 14, 54)
 
-    // Tabla urgentes
     if (urgentes.length > 0) {
       autoTable(doc, {
         startY: 60,
@@ -91,7 +125,6 @@ export default function PortalCliente() {
       })
     }
 
-    // Tabla sugeridos
     if (sugeridos.length > 0) {
       autoTable(doc, {
         startY: (doc.lastAutoTable?.finalY || 60) + 6,
@@ -102,7 +135,6 @@ export default function PortalCliente() {
       })
     }
 
-    // Tabla buenos
     if (buenos.length > 0) {
       autoTable(doc, {
         startY: (doc.lastAutoTable?.finalY || 60) + 6,
@@ -162,8 +194,8 @@ export default function PortalCliente() {
                 {error}
               </div>
             )}
-            <button type="submit" className="btn btn-primary" style={{ width: '100%', padding: '14px', fontSize: 15 }}>
-              Consultar Estado
+            <button type="submit" className="btn btn-primary" style={{ width: '100%', padding: '14px', fontSize: 15 }} disabled={cargando}>
+              {cargando ? 'Consultando...' : 'Consultar Estado'}
             </button>
           </form>
 
@@ -179,6 +211,8 @@ export default function PortalCliente() {
   const trabajoActivo = datos.trabajos.find(t =>
     t.estado !== ESTADOS.COMPLETADO && t.estado !== ESTADOS.CANCELADO
   )
+
+  const tecNombre = (id) => TECNICOS.find(t => t.id === parseInt(id))?.nombre || ''
 
   return (
     <div className="portal-container">
@@ -199,7 +233,8 @@ export default function PortalCliente() {
             <div><span className="text-sm text-muted">Placa:</span> <strong>{trabajoActivo.placa}</strong></div>
             <div><span className="text-sm text-muted">Vehiculo:</span> <strong>{[trabajoActivo.marca, trabajoActivo.modelo].filter(Boolean).join(' ') || '—'}</strong></div>
             <div><span className="text-sm text-muted">Ingreso:</span> <strong>{fmtDate(trabajoActivo.fecha)}</strong></div>
-            <div><span className="text-sm text-muted">Tecnico:</span> <strong>{trabajoActivo.tecnicoNombre || '—'}</strong></div>
+            <div><span className="text-sm text-muted">Tecnico:</span> <strong>{tecNombre(trabajoActivo.tecnicoId) || '—'}</strong></div>
+            {trabajoActivo.otCodigo && <div><span className="text-sm text-muted">OT:</span> <strong>{trabajoActivo.otCodigo}</strong></div>}
           </div>
 
           {/* Barra de progreso */}
@@ -244,7 +279,7 @@ export default function PortalCliente() {
       {datos.inspecciones.length > 0 && (
         <div className="card">
           <div className="card-title">Inspecciones de su Vehiculo</div>
-          {datos.inspecciones.map(insp => {
+          {datos.inspecciones.map((insp, idx) => {
             const items = insp.items || []
             const urgentes = items.filter(i => i.estado === 'urgente').length
             const sugeridos = items.filter(i => i.estado === 'sugerido').length
@@ -253,7 +288,7 @@ export default function PortalCliente() {
             const pct = total > 0 ? Math.round((buenos / total) * 100) : 0
 
             return (
-              <div key={insp.id} style={{ padding: '14px 0', borderBottom: '1px solid var(--border-card)' }}>
+              <div key={insp.id || idx} style={{ padding: '14px 0', borderBottom: '1px solid var(--border-card)' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
                   <div>
                     <strong>{insp.placa}</strong> — {insp.vehiculo || ''}
@@ -288,7 +323,6 @@ export default function PortalCliente() {
                   <th>Placa</th>
                   <th>Vehiculo</th>
                   <th>Estado</th>
-                  <th className="text-right">Total</th>
                 </tr>
               </thead>
               <tbody>
@@ -299,13 +333,12 @@ export default function PortalCliente() {
                     <td className="text-sm">{[t.marca, t.modelo].filter(Boolean).join(' ') || '—'}</td>
                     <td>
                       <span className="badge" style={{
-                        background: ESTADO_TRABAJO_DISPLAY[t.estado]?.color + '20',
-                        color: ESTADO_TRABAJO_DISPLAY[t.estado]?.color
+                        background: (ESTADO_TRABAJO_DISPLAY[t.estado]?.color || '#64748b') + '20',
+                        color: ESTADO_TRABAJO_DISPLAY[t.estado]?.color || '#64748b'
                       }}>
                         {ESTADO_TRABAJO_DISPLAY[t.estado]?.label || t.estado}
                       </span>
                     </td>
-                    <td className="text-right text-mono">{fmt(t.total)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -314,8 +347,7 @@ export default function PortalCliente() {
         </div>
       )}
 
-      {/* Sin datos activos */}
-      {!trabajoActivo && datos.inspecciones.length === 0 && datos.trabajos.length === 0 && (
+      {!trabajoActivo && datos.trabajos.length === 0 && (
         <div className="empty-state">
           <div className="empty-state-icon">🚗</div>
           <p>No hay trabajos activos en este momento.</p>
