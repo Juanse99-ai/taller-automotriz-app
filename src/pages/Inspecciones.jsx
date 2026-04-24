@@ -38,6 +38,11 @@ export default function Inspecciones({ trabajos, notify, onVincularInspeccion })
     [...inspecciones].sort((a, b) => new Date(b.fecha) - new Date(a.fecha)),
   [inspecciones])
 
+  const stats = useMemo(() => ({
+    total: inspecciones.length,
+    conUrgentes: inspecciones.filter(i => i.items?.some(it => it.estado === ESTADO_ITEM.URGENTE)).length,
+  }), [inspecciones])
+
   if (vista === 'nueva' || vista === 'editar') {
     const insp = vista === 'editar' ? inspecciones.find(i => i.id === editId) : null
     return (
@@ -66,11 +71,6 @@ export default function Inspecciones({ trabajos, notify, onVincularInspeccion })
     if (!insp) { setVista('lista'); return null }
     return <InspeccionDetalle inspeccion={insp} onVolver={() => { setVista('lista'); setEditId(null) }} />
   }
-
-  const stats = useMemo(() => ({
-    total: inspecciones.length,
-    conUrgentes: inspecciones.filter(i => i.items?.some(it => it.estado === ESTADO_ITEM.URGENTE)).length,
-  }), [inspecciones])
 
   return (
     <div>
