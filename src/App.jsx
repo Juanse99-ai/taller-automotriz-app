@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, Component } from 'react'
 import Sidebar from './components/Sidebar'
 import TopBar from './components/TopBar'
 import Toast from './components/Toast'
@@ -16,6 +16,26 @@ import PortalCliente from './pages/PortalCliente'
 import CuenttiPanel from './pages/CuenttiPanel'
 import { useTrabajos } from './hooks/useTrabajos'
 import { getSession, logout, getSeccionesPermitidas } from './services/auth'
+
+class ErrorBoundary extends Component {
+  constructor(props) { super(props); this.state = { error: null } }
+  static getDerivedStateFromError(error) { return { error } }
+  render() {
+    if (this.state.error) {
+      return (
+        <div style={{ padding: 24 }}>
+          <div className="card" style={{ borderLeft: '4px solid #dc2626' }}>
+            <h3 style={{ color: '#dc2626', marginBottom: 8 }}>Error en esta seccion</h3>
+            <p style={{ fontSize: 14, color: '#64748b' }}>{this.state.error?.message || 'Error desconocido'}</p>
+            <button className="btn btn-primary btn-sm" style={{ marginTop: 12 }}
+              onClick={() => this.setState({ error: null })}>Reintentar</button>
+          </div>
+        </div>
+      )
+    }
+    return this.props.children
+  }
+}
 
 const SECTIONS = {
   dashboard: { title: 'Dashboard', subtitle: 'Resumen general del taller' },
@@ -178,9 +198,11 @@ export default function App() {
               <button onClick={trabajosHook.recargar}>Reintentar</button>
             </div>
           )}
-          <div className="page-enter" key={section}>
-            {renderContent()}
-          </div>
+          <ErrorBoundary key={section}>
+            <div className="page-enter">
+              {renderContent()}
+            </div>
+          </ErrorBoundary>
         </div>
       </div>
       {toast && <Toast message={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
