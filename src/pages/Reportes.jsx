@@ -40,11 +40,11 @@ export default function Reportes({ trabajos }) {
     }
     const comisiones = completados.reduce((s, t) => s + (getMO(t) * COMISION.TOTAL), 0)
 
-    // Por tecnico
+    // Por tecnico — solo mano de obra (servicios), no repuestos
     const porTecnico = TECNICOS.map(tec => {
       const susTrab = completados.filter(t => parseInt(t.tecnicoId) === tec.id)
-      const facturado = susTrab.reduce((s, t) => s + (t.total || 0), 0)
-      return { ...tec, cantidad: susTrab.length, facturado }
+      const manoObra = susTrab.reduce((s, t) => s + getMO(t), 0)
+      return { ...tec, cantidad: susTrab.length, facturado: manoObra }
     })
 
     // Por estado
@@ -199,7 +199,7 @@ export default function Reportes({ trabajos }) {
                 <th>Tecnico</th>
                 <th>Especialidad</th>
                 <th className="text-right">Trabajos</th>
-                <th className="text-right">Facturado</th>
+                <th className="text-right">Mano de Obra</th>
               </tr>
             </thead>
             <tbody>

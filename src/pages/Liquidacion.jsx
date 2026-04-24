@@ -47,6 +47,8 @@ export default function Liquidacion({ trabajos, notify }) {
   const [movimientos, setMovimientos] = useState(() => lsGet(LS_KEYS.MOVIMIENTOS_TECNICOS, []))
   const [liquidados, setLiquidados] = useState(() => lsGet('liquidados', []))
   const [compartidos, setCompartidos] = useState(() => lsGet('trabajos_compartidos', {}))
+  const [historial, setHistorial] = useState(() => lsGet('liquidacion_historial', []))
+  const [verHistorial, setVerHistorial] = useState(false)
   const [movForm, setMovForm] = useState({
     tecnicoId: '',
     tipo: 'adelanto',
@@ -64,6 +66,11 @@ export default function Liquidacion({ trabajos, notify }) {
   const guardarLiquidados = (next) => {
     setLiquidados(next)
     lsSet('liquidados', next)
+  }
+
+  const guardarHistorial = (next) => {
+    setHistorial(next)
+    lsSet('liquidacion_historial', next)
   }
 
   const guardarCompartidos = (next) => {
@@ -233,17 +240,39 @@ export default function Liquidacion({ trabajos, notify }) {
     }), { trabajos: 0, facturado: 0, comisiones: 0, cargos: 0, neto: 0 })
   }, [filtrados, tecnicoFiltro, baseLiquidacion])
 
-  // Liquidar: marca los trabajos como liquidados y limpia movimientos
+  // Liquidar: marca los trabajos como liquidados, guarda historial y limpia movimientos
   const liquidar = () => {
     const ids = trabajosPeriodo.map(t => t.id)
     if (ids.length === 0) {
       notify('No hay trabajos para liquidar en este periodo', 'error')
       return
     }
+
+    // Guardar registro en historial
+    const registro = {
+      id: `LQ-${uid()}`,
+      fecha: new Date().toISOString(),
+      periodo: buildPeriodLabel(),
+      trabajosIds: ids,
+      cantidadTrabajos: ids.length,
+      detalleTecnicos: filtrados.map(l => ({
+        tecnico: l.tecnico.nombre,
+        tecnicoId: l.tecnico.id,
+        trabajos: l.trabajos.length,
+        manoObra: l.totalTrabajos,
+        comision: l.comision,
+        cargos: l.cargos,
+        neto: l.neto,
+      })),
+      totales: { ...baseLiquidacion.totalesPeriodo },
+      movimientos: movimientos.map(m => ({ ...m })),
+    }
+    guardarHistorial([registro, ...historial])
+
     guardarLiquidados([...liquidados, ...ids])
     // Limpiar movimientos aplicados
     guardarMovs([])
-    notify(`${ids.length} trabajos marcados como liquidados`, 'success')
+    notify(`${ids.length} trabajos liquidados — ver historial abajo`, 'success')
   }
 
   // Desliquidar: quita todos los IDs de la lista
@@ -555,6 +584,89 @@ export default function Liquidacion({ trabajos, notify }) {
       </div>
 
       {/* Detalle por tecnico */}
+      {/* Historial de liquidaciones */}
+      <div className="card">
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div>
+            <div className="card-title" style={{ marginBottom: 2 }}>Historial de Liquidaciones</div>
+            <span className="text-sm text-muted">{historial.length} liquidaciones realizadas</span>
+          </div>
+          <button className="btn btn-outline btn-sm" onClick={() => setVerHistorial(!verHistorial)}>
+            {verHistorial ? 'Ocultar' : 'Ver Historial'}
+          </button>
+        </div>
+        {verHistorial && (
+          historial.length === 0 ? (
+            <p className="text-sm text-muted text-center" style={{ padding: 20 }}>No hay liquidaciones registradas aun.</p>
+          ) : (
+            <div style={{ marginTop: 12 }}>
+              {historial.map(reg => (
+                <div key={reg.id} style={{ border: '1px solid var(--slate-200)', borderRadius: 10, padding: 14, marginBottom: 10, background: 'var(--slate-50)' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8, marginBottom: 8 }}>
+                    <div>
+                      <span className="text-mono text-sm" style={{ fontWeight: 700 }}>{reg.id}</span>
+                      <span className="text-sm text-muted" style={{ marginLeft: 10 }}>
+                        Realizada: {fmtDate(reg.fecha)}
+                      </span>
+                    </div>
+                    <span className="text-sm text-muted">Periodo: {reg.periodo}</span>
+                  </div>
+                  <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginBottom: 8 }}>
+                    <div className="text-sm"><strong>{reg.cantidadTrabajos}</strong> trabajos</div>
+                    <div className="text-sm">Mano de obra: <strong className="text-mono">{fmt(reg.totales?.facturado || 0)}</strong></div>
+                    <div className="text-sm" style={{ color: 'var(--green-500)' }}>Comisiones: <strong className="text-mono">{fmt(reg.totales?.comisiones || 0)}</strong></div>
+                    <div className="text-sm" style={{ color: 'var(--amber-500)' }}>Cargos: <strong className="text-mono">{fmt(reg.totales?.cargos || 0)}</strong></div>
+                    <div className="text-sm" style={{ color: 'var(--green-600)' }}>Neto: <strong className="text-mono">{fmt(reg.totales?.neto || 0)}</strong></div>
+                  </div>
+                  <div className="table-wrap">
+                    <table>
+                      <thead>
+                        <tr>
+                          <th>Tecnico</th>
+                          <th className="text-right">Trabajos</th>
+                          <th className="text-right">Mano de Obra</th>
+                          <th className="text-right">Comision</th>
+                          <th className="text-right">Cargos</th>
+                          <th className="text-right">Neto</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {(reg.detalleTecnicos || []).filter(d => d.trabajos > 0).map(d => (
+                          <tr key={d.tecnicoId}>
+                            <td style={{ fontWeight: 600 }}>{d.tecnico}</td>
+                            <td className="text-right text-mono">{d.trabajos}</td>
+                            <td className="text-right text-mono">{fmt(d.manoObra)}</td>
+                            <td className="text-right text-mono" style={{ color: 'var(--green-500)' }}>{fmt(d.comision)}</td>
+                            <td className="text-right text-mono" style={{ color: 'var(--amber-500)' }}>{fmt(d.cargos || 0)}</td>
+                            <td className="text-right text-mono" style={{ fontWeight: 700, color: d.neto >= 0 ? 'var(--green-600)' : 'var(--red-500)' }}>{fmt(d.neto)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  {(reg.movimientos || []).length > 0 && (
+                    <div style={{ marginTop: 8 }}>
+                      <div className="text-xs text-muted" style={{ marginBottom: 4 }}>Movimientos aplicados:</div>
+                      {reg.movimientos.map(m => (
+                        <div key={m.id} className="text-xs text-muted">
+                          {TECNICOS.find(t => t.id === m.tecnicoId)?.nombre || '?'} — {m.tipo} — {fmt(m.monto)} {m.nota ? `(${m.nota})` : ''}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))}
+              <div style={{ textAlign: 'right', marginTop: 8 }}>
+                <button className="btn btn-ghost btn-sm" style={{ color: 'var(--red-500)' }}
+                  onClick={() => { if (confirm('Borrar todo el historial de liquidaciones?')) guardarHistorial([]) }}>
+                  Limpiar historial
+                </button>
+              </div>
+            </div>
+          )
+        )}
+      </div>
+
       {filtrados.map(l => (
         <div className="card" key={l.tecnico.id}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16, gap: 16, flexWrap: 'wrap' }}>

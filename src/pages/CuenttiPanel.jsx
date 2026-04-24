@@ -58,7 +58,7 @@ export default function CuenttiPanel({ trabajos, notify }) {
     { id: 5, nombre: 'Nequi / Daviplata' },
     { id: 0, nombre: 'A Credito (sin pago)' },
   ]
-  const [metodoPago, setMetodoPago] = useState(1)
+  const [metodoPago, setMetodoPago] = useState('')
 
   const [productoForm, setProductoForm] = useState({
     nombre: '',
@@ -131,6 +131,10 @@ export default function CuenttiPanel({ trabajos, notify }) {
 
   const facturarTrabajo = async () => {
     if (!facturaId.trim()) return
+    if (metodoPago === '') {
+      notify('Selecciona un metodo de pago antes de facturar', 'error')
+      return
+    }
     const trabajo = trabajos.find(t => t.id === facturaId.trim())
     if (!trabajo) {
       notify('Trabajo no encontrado con ese ID', 'error')
@@ -324,7 +328,8 @@ export default function CuenttiPanel({ trabajos, notify }) {
             </div>
           </div>
           <div className="form-group" style={{ marginBottom: 0, minWidth: 160 }}>
-            <select className="form-select" value={metodoPago} onChange={e => setMetodoPago(parseInt(e.target.value))}>
+            <select className="form-select" value={metodoPago} onChange={e => setMetodoPago(e.target.value === '' ? '' : parseInt(e.target.value))}>
+              <option value="">— Seleccionar metodo —</option>
               {METODOS_PAGO.map(m => (
                 <option key={m.id} value={m.id}>{m.nombre}</option>
               ))}
@@ -335,7 +340,7 @@ export default function CuenttiPanel({ trabajos, notify }) {
           </div>
           <div>
             <button className="btn btn-success" onClick={facturarTrabajo}
-              disabled={!facturaId || facturando}>
+              disabled={!facturaId || metodoPago === '' || facturando}>
               {facturando ? 'Enviando...' : 'Enviar a Cuentti'}
             </button>
           </div>
