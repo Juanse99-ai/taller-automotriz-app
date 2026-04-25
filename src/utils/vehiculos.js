@@ -48,16 +48,49 @@ export function getModelos(marca) {
 // Items de inspeccion digital vehicular (DVI)
 export const INSPECCION_CATEGORIAS = [
   {
+    nombre: 'Frenos',
+    items: [
+      'Pastillas de freno delanteras',
+      'Pastillas de freno traseras',
+      'Discos de freno delanteros',
+      'Discos de freno traseros',
+      'Freno de estacionamiento',
+      'Mangueras y lineas de freno',
+      'Nivel de liquido de frenos',
+    ],
+  },
+  {
+    nombre: 'Suspension y Direccion',
+    items: [
+      'Amortiguadores delanteros',
+      'Amortiguadores traseros',
+      'Resortes / espirales',
+      'Terminales de direccion',
+      'Rotulas',
+      'Bujes de suspension',
+      'Barra estabilizadora',
+      'Cremallera de direccion',
+    ],
+  },
+  {
+    nombre: 'Llantas',
+    items: [
+      'Estado de llantas delanteras (labrado)',
+      'Estado de llantas traseras (labrado)',
+      'Presion de inflado',
+      'Llanta de repuesto',
+      'Rines y tuercas',
+    ],
+  },
+  {
     nombre: 'Exterior del Vehiculo',
     items: [
-      'Inspeccion de frenos delanteros/traseros',
-      'Suspension delantera/trasera',
-      'Rotacion de llantas',
-      'Presion de inflado de las llantas',
-      'Estado de las llantas (labrado)',
       'Estado de la carroceria',
-      'Luces delanteras y traseras',
+      'Luces delanteras',
+      'Luces traseras',
+      'Direccionales y exploradoras',
       'Limpiaparabrisas y liquido',
+      'Vidrios y parabrisas',
       'Estado de los espejos',
       'Pestillo del capo',
     ],
@@ -69,7 +102,6 @@ export const INSPECCION_CATEGORIAS = [
       'Filtro de aceite',
       'Filtro de aire motor',
       'Nivel de refrigerante',
-      'Nivel de liquido de frenos',
       'Nivel de liquido de embrague',
       'Nivel del electrolito de la bateria',
       'Estado de correas de accesorios',
@@ -95,9 +127,8 @@ export const INSPECCION_CATEGORIAS = [
   {
     nombre: 'Recomendaciones',
     items: [
-      'Alineacion',
-      'Rotacion',
-      'Balanceo',
+      'Alineacion y balanceo',
+      'Rotacion de llantas',
       'Cambio de aceite',
       'Programacion de mantenimiento',
     ],
