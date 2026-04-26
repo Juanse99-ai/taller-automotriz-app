@@ -128,7 +128,7 @@ export default function App() {
       case 'mecanicos':
         return <Mecanicos trabajos={trabajosHook.trabajos} />
       case 'cotizaciones':
-        return <Cotizaciones notify={notify} onCrearTrabajo={handleCrearTrabajoDesdeCotizacion} />
+        return <Cotizaciones notify={notify} trabajos={trabajosHook.trabajos} onCrearTrabajo={handleCrearTrabajoDesdeCotizacion} />
       case 'inventario':
         return <Inventario notify={notify} />
       case 'liquidacion':

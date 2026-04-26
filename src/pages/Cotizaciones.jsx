@@ -1,4 +1,6 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react'
+import { jsPDF } from 'jspdf'
+import autoTable from 'jspdf-autotable'
 import { fmt, fmtDate, uid, hoyISO, normalizarDoc, normalizarNombre } from '../utils/helpers'
 import { TECNICOS, IVA_DEFAULT } from '../utils/constants'
 import { MARCAS, getModelos } from '../utils/vehiculos'
@@ -8,7 +10,7 @@ import { lsGet, lsSet, LS_KEYS } from '../services/storage'
 
 const ESTADO_COT = { PENDIENTE: 'Pendiente', APROBADA: 'Aprobada', RECHAZADA: 'Rechazada' }
 
-export default function Cotizaciones({ notify, onCrearTrabajo }) {
+export default function Cotizaciones({ notify, trabajos = [], onCrearTrabajo }) {
   const [cotizaciones, setCotizaciones] = useState(() => lsGet(LS_KEYS.COTIZACIONES, []))
   const [vista, setVista] = useState('lista')
   const [editId, setEditId] = useState(null)
@@ -17,6 +19,125 @@ export default function Cotizaciones({ notify, onCrearTrabajo }) {
     setCotizaciones(nuevas)
     lsSet(LS_KEYS.COTIZACIONES, nuevas)
   }, [])
+
+  const loadLogo = async () => {
+    try {
+      const res = await fetch('/logo.png')
+      if (!res.ok) return null
+      const type = res.headers.get('content-type') || ''
+      if (!type.includes('image')) return null
+      const blob = await res.blob()
+      return await new Promise(resolve => {
+        const reader = new FileReader()
+        reader.onloadend = () => resolve(reader.result)
+        reader.readAsDataURL(blob)
+      })
+    } catch { return null }
+  }
+
+  const imprimirCotizacion = async (c) => {
+    const doc = new jsPDF()
+    const logo = await loadLogo()
+
+    if (logo && logo.startsWith('data:image')) {
+      try { doc.addImage(logo, 'PNG', 14, 8, 30, 20) } catch {}
+    }
+    doc.setFontSize(16)
+    doc.setFont(undefined, 'bold')
+    doc.text('COTIZACION', 50, 14)
+    doc.setFontSize(10)
+    doc.setFont(undefined, 'normal')
+    doc.text('Multidiagnosticos AS', 50, 20)
+    doc.text('Sabanalarga, Atlantico | Tel: 300 365 1525', 50, 25)
+    doc.setFont(undefined, 'bold')
+    doc.text(`No: ${c.id || '—'}`, 155, 14)
+    doc.setFont(undefined, 'normal')
+    doc.text(`Fecha: ${fmtDate(c.fecha)}`, 155, 20)
+    doc.text(`Estado: ${c.estado || 'Pendiente'}`, 155, 25)
+
+    doc.setDrawColor(200)
+    doc.line(14, 30, 196, 30)
+
+    autoTable(doc, {
+      startY: 34,
+      head: [['DATOS DEL CLIENTE', '', '', '']],
+      body: [
+        ['Cliente:', c.cliente || '—', 'Documento:', c.cedula || '—'],
+        ['Telefono:', c.telefonoCliente || '—', '', ''],
+      ],
+      styles: { fontSize: 9, cellPadding: 3 },
+      headStyles: { fillColor: [30, 41, 59], textColor: 255, fontSize: 10 },
+      columnStyles: { 0: { fontStyle: 'bold', cellWidth: 28 }, 2: { fontStyle: 'bold', cellWidth: 28 } },
+    })
+
+    autoTable(doc, {
+      head: [['DATOS DEL VEHICULO', '', '', '']],
+      body: [
+        ['Placa:', c.placa || '—', 'Marca:', c.marca || '—'],
+        ['Modelo:', c.modelo || '—', '', ''],
+      ],
+      styles: { fontSize: 9, cellPadding: 3 },
+      headStyles: { fillColor: [30, 41, 59], textColor: 255, fontSize: 10 },
+      columnStyles: { 0: { fontStyle: 'bold', cellWidth: 28 }, 2: { fontStyle: 'bold', cellWidth: 28 } },
+      startY: doc.lastAutoTable.finalY + 4,
+    })
+
+    if (c.items?.length) {
+      const itemRows = c.items.map(i => [
+        i.nombre || '—',
+        String(i.cantidad || 1),
+        fmt(parseFloat(i.precio) || 0),
+        `${i.iva || 0}%`,
+        fmt((parseFloat(i.precio) || 0) * (parseInt(i.cantidad) || 1)),
+      ])
+      autoTable(doc, {
+        head: [['Descripcion', 'Cant.', 'P. Unit.', 'IVA', 'Total']],
+        body: itemRows,
+        styles: { fontSize: 9, cellPadding: 3 },
+        headStyles: { fillColor: [30, 41, 59], textColor: 255, fontSize: 9 },
+        columnStyles: { 2: { halign: 'right' }, 4: { halign: 'right', fontStyle: 'bold' } },
+        startY: doc.lastAutoTable.finalY + 4,
+      })
+
+      autoTable(doc, {
+        body: [
+          ['', '', '', 'Subtotal:', fmt(c.subtotal || 0)],
+          ['', '', '', 'IVA:', fmt(c.iva || 0)],
+          ['', '', '', 'TOTAL:', fmt(c.total || 0)],
+        ],
+        styles: { fontSize: 10, cellPadding: 2 },
+        columnStyles: { 3: { fontStyle: 'bold', halign: 'right' }, 4: { fontStyle: 'bold', halign: 'right' } },
+        startY: doc.lastAutoTable.finalY,
+      })
+    }
+
+    if (c.observaciones) {
+      autoTable(doc, {
+        head: [['OBSERVACIONES']],
+        body: [[c.observaciones]],
+        styles: { fontSize: 9, cellPadding: 4 },
+        headStyles: { fillColor: [30, 41, 59], textColor: 255, fontSize: 10 },
+        startY: doc.lastAutoTable.finalY + 4,
+      })
+    }
+
+    const notaY = doc.lastAutoTable.finalY + 12
+    doc.setFontSize(9)
+    doc.setFont(undefined, 'italic')
+    doc.text(`Esta cotizacion es valida por ${c.validezDias || 15} dias a partir de la fecha de emision.`, 14, notaY)
+    doc.setFont(undefined, 'normal')
+    doc.text('Precios sujetos a disponibilidad de repuestos al momento de la reparacion.', 14, notaY + 6)
+
+    const firmaY = notaY + 25
+    doc.setDrawColor(100)
+    doc.line(20, firmaY, 85, firmaY)
+    doc.line(120, firmaY, 185, firmaY)
+    doc.setFontSize(9)
+    doc.text('Firma del Cliente', 38, firmaY + 6)
+    doc.text('Autorizado por', 140, firmaY + 6)
+
+    doc.save(`${c.id || 'Cotizacion'}.pdf`)
+  }
 
   const sorted = useMemo(() =>
     [...cotizaciones].sort((a, b) => new Date(b.fecha) - new Date(a.fecha)),
@@ -44,6 +165,7 @@ export default function Cotizaciones({ notify, onCrearTrabajo }) {
     return (
       <CotizacionForm
         cotizacion={cot}
+        trabajos={trabajos}
         onSave={(data) => {
           if (vista === 'editar') {
             guardar(cotizaciones.map(c => c.id === editId ? { ...c, ...data } : c))
@@ -122,6 +244,7 @@ export default function Cotizaciones({ notify, onCrearTrabajo }) {
                       <td className="text-sm text-muted">{fmtDate(c.fecha)}</td>
                       <td>
                         <div className="actions-cell">
+                          <button className="btn btn-outline btn-sm" onClick={() => imprimirCotizacion(c)}>PDF</button>
                           <button className="btn btn-outline btn-sm" onClick={() => { setEditId(c.id); setVista('editar') }}>Editar</button>
                           {c.estado === ESTADO_COT.PENDIENTE && (
                             <>
@@ -147,7 +270,7 @@ export default function Cotizaciones({ notify, onCrearTrabajo }) {
   )
 }
 
-function CotizacionForm({ cotizacion, onSave, onCancel }) {
+function CotizacionForm({ cotizacion, trabajos = [], onSave, onCancel }) {
   const isEdit = !!cotizacion
   const { resultados, buscando, buscarDebounced, setResultados } = useClientes()
 
@@ -301,7 +424,20 @@ function CotizacionForm({ cotizacion, onSave, onCancel }) {
             <div className="form-group">
               <label className="form-label">Placa</label>
               <input className="form-input" value={form.placa} placeholder="ABC123" style={{ textTransform: 'uppercase' }}
-                onChange={e => set('placa', e.target.value)} />
+                onChange={e => {
+                  const placa = e.target.value
+                  set('placa', placa)
+                  if (placa.length >= 6) {
+                    const prev = trabajos.find(t => (t.placa || '').toUpperCase() === placa.toUpperCase())
+                    if (prev) {
+                      if (!form.marca && prev.marca) set('marca', prev.marca)
+                      if (!form.modelo && prev.modelo) set('modelo', prev.modelo)
+                      if (!form.cliente && prev.cliente) set('cliente', prev.cliente)
+                      if (!form.cedula && prev.cedula) set('cedula', prev.cedula)
+                      if (!form.telefonoCliente && prev.telefonoCliente) set('telefonoCliente', prev.telefonoCliente)
+                    }
+                  }
+                }} />
             </div>
             <div className="form-group">
               <label className="form-label">Marca</label>
@@ -319,6 +455,37 @@ function CotizacionForm({ cotizacion, onSave, onCancel }) {
             </div>
           </div>
         </div>
+
+        {form.placa.length >= 6 && (() => {
+          const historial = trabajos.filter(t =>
+            (t.placa || '').toUpperCase() === form.placa.toUpperCase()
+          ).sort((a, b) => new Date(b.fecha) - new Date(a.fecha))
+          if (!historial.length) return null
+          const tecNombre = (id) => { const t = TECNICOS.find(tc => tc.id === parseInt(id)); return t ? t.nombre : '—' }
+          return (
+            <div className="card" style={{ borderLeft: '4px solid var(--blue-500)' }}>
+              <div className="card-title" style={{ color: 'var(--blue-500)' }}>Historial de {form.placa.toUpperCase()} ({historial.length} trabajos anteriores)</div>
+              <div className="table-wrap">
+                <table>
+                  <thead>
+                    <tr><th>OT</th><th>Estado</th><th>Tecnico</th><th className="text-right">Total</th><th>Fecha</th></tr>
+                  </thead>
+                  <tbody>
+                    {historial.slice(0, 5).map(t => (
+                      <tr key={t.id}>
+                        <td className="text-mono text-sm">{t.otCodigo || t.id}</td>
+                        <td><span className={`badge ${t.estado === 'Entregado' ? 'badge-success' : t.estado === 'En Proceso' ? 'badge-warning' : 'badge-info'}`}>{t.estado}</span></td>
+                        <td className="text-sm">{tecNombre(t.tecnicoId)}</td>
+                        <td className="text-right text-mono">{fmt(t.total || 0)}</td>
+                        <td className="text-sm text-muted">{fmtDate(t.fecha)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )
+        })()}
 
         <div className="card">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
