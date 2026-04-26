@@ -514,26 +514,84 @@ function CotizacionForm({ cotizacion, trabajos = [], onSave, onCancel }) {
                     const search = itemSearch[item.id] || {}
                     return (
                       <tr key={item.id}>
-                        <td style={{ position: 'relative' }}>
-                          <input className="form-input" value={item.nombre} placeholder="Buscar producto o escribir..."
-                            onChange={e => { updateItem(item.id, 'nombre', e.target.value); buscarEnInventario(item.id, e.target.value) }}
-                            onFocus={() => { if (item.nombre?.length >= 2) buscarEnInventario(item.id, item.nombre) }}
-                            style={{ padding: '6px 10px', fontSize: 13 }} />
-                          {search.show && (
-                            <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 30, background: '#fff', border: '1px solid var(--slate-200)', borderRadius: 8, maxHeight: 240, overflowY: 'auto', boxShadow: 'var(--shadow-md)' }}>
-                              {search.results.map(p => (
-                                <div key={p.id || p.codigo} onClick={() => seleccionarProducto(item.id, p)}
-                                  style={{ padding: '8px 12px', cursor: 'pointer', borderBottom: '1px solid var(--slate-100)', fontSize: 12 }}>
-                                  <div style={{ fontWeight: 600 }}>{p.nombre}</div>
-                                  <div style={{ display: 'flex', gap: 12, color: 'var(--slate-500)', marginTop: 2 }}>
-                                    <span>{fmt(p.precio)}</span>
-                                    <span style={{ color: p.stock > 0 ? 'var(--green-500)' : p.esServicio ? 'var(--blue-500)' : 'var(--red-500)' }}>
-                                      {p.esServicio ? 'Servicio' : `Stock: ${p.stock || 0}`}
-                                    </span>
-                                    {p.sku && <span>SKU: {p.sku}</span>}
-                                  </div>
+                        <td>
+                          <div style={{ position: 'relative' }}>
+                            <input className="form-input" value={item.nombre} placeholder="Buscar producto o escribir..."
+                              onChange={e => { updateItem(item.id, 'nombre', e.target.value); buscarEnInventario(item.id, e.target.value) }}
+                              onFocus={() => { if (item.nombre?.length >= 2) buscarEnInventario(item.id, item.nombre) }}
+                              onBlur={() => setTimeout(() => setItemSearch(prev => ({ ...prev, [item.id]: { ...prev[item.id], show: false } })), 250)}
+                              onKeyDown={e => { if (e.key === 'Escape') setItemSearch(prev => ({ ...prev, [item.id]: { ...prev[item.id], show: false } })) }}
+                              style={{ padding: '6px 10px', fontSize: 13 }} />
+                            {invLoading && <span style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', fontSize: 11, color: '#999' }}>...</span>}
+                          </div>
+                          {search.show && search.results.length > 0 && (
+                            <div style={{
+                              position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 99,
+                              background: 'rgba(0,0,0,.3)', display: 'flex', justifyContent: 'center', alignItems: 'flex-start', paddingTop: 80
+                            }} onClick={() => setItemSearch(prev => ({ ...prev, [item.id]: { ...prev[item.id], show: false } }))}>
+                              <div style={{
+                                background: '#fff', borderRadius: 10, width: '90%', maxWidth: 700,
+                                maxHeight: '70vh', display: 'flex', flexDirection: 'column',
+                                boxShadow: '0 20px 60px rgba(0,0,0,.25)', overflow: 'hidden'
+                              }} onClick={e => e.stopPropagation()}>
+                                <div style={{ padding: '12px 16px', background: '#1e293b', color: '#fff', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                  <span style={{ fontWeight: 700, fontSize: 14 }}>Buscar Producto</span>
+                                  <span style={{ fontSize: 12, color: '#94a3b8' }}>{search.results.length} resultados</span>
                                 </div>
-                              ))}
+                                <div style={{
+                                  display: 'grid', gridTemplateColumns: '1fr 100px 70px', gap: 8,
+                                  padding: '8px 16px', background: '#f8fafc', borderBottom: '2px solid #e2e8f0',
+                                  fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '.5px'
+                                }}>
+                                  <span>Articulo</span>
+                                  <span style={{ textAlign: 'right' }}>P.Venta</span>
+                                  <span style={{ textAlign: 'center' }}>Exist.</span>
+                                </div>
+                                <div style={{ overflowY: 'auto', flex: 1 }}>
+                                  {search.results.map((p, i) => (
+                                    <div key={p.id || p.codigo}
+                                      onClick={() => seleccionarProducto(item.id, p)}
+                                      style={{
+                                        display: 'grid', gridTemplateColumns: '1fr 100px 70px', gap: 8,
+                                        padding: '10px 16px', cursor: 'pointer',
+                                        borderBottom: '1px solid #f1f5f9',
+                                        background: i === 0 ? '#1e40af' : 'transparent',
+                                        color: i === 0 ? '#fff' : '#1e293b',
+                                        transition: 'background .1s'
+                                      }}
+                                      onMouseEnter={e => { if (i !== 0) e.currentTarget.style.background = '#f1f5f9' }}
+                                      onMouseLeave={e => { if (i !== 0) e.currentTarget.style.background = 'transparent' }}
+                                    >
+                                      <div style={{ minWidth: 0 }}>
+                                        <div style={{ fontWeight: 700, fontSize: 13, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                          {p.nombre}
+                                        </div>
+                                        <div style={{ fontSize: 11, opacity: .7, marginTop: 2, display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                                          {p.codigoBarras && <span>Cod: {p.codigoBarras}</span>}
+                                          {p.sku && <span>Sku: {p.sku}</span>}
+                                          {(!p.codigoBarras && !p.sku && p.codigo) && <span>Ref: {p.codigo}</span>}
+                                          <span>- P.Venta+imp: {fmt(p.precio)}</span>
+                                          {p.precioBase > 0 && <span>- P.Base: {fmt(p.precioBase)}</span>}
+                                          {p.iva > 0 && <span>IVA: {p.iva}%</span>}
+                                        </div>
+                                      </div>
+                                      <div style={{ textAlign: 'right', fontFamily: 'var(--mono)', fontWeight: 700, fontSize: 13, alignSelf: 'center' }}>
+                                        {fmt(p.precio)}
+                                      </div>
+                                      <div style={{ textAlign: 'center', alignSelf: 'center' }}>
+                                        <span style={{
+                                          fontFamily: 'var(--mono)', fontWeight: 700, fontSize: 13,
+                                          padding: '2px 8px', borderRadius: 4,
+                                          background: i === 0 ? 'rgba(255,255,255,.2)' : p.esServicio ? '#dbeafe' : p.stock > 0 ? '#dcfce7' : '#fee2e2',
+                                          color: i === 0 ? '#fff' : p.esServicio ? '#1d4ed8' : p.stock > 0 ? '#16a34a' : '#dc2626'
+                                        }}>
+                                          {p.esServicio ? '∞' : `(${p.stock})`}
+                                        </span>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
                             </div>
                           )}
                         </td>
