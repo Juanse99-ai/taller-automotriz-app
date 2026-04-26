@@ -1,7 +1,9 @@
-import { useState, useMemo, useCallback } from 'react'
+import { useState, useMemo, useCallback, useEffect, useRef } from 'react'
 import { fmt, fmtDate, uid, hoyISO, normalizarDoc, normalizarNombre } from '../utils/helpers'
 import { TECNICOS, IVA_DEFAULT } from '../utils/constants'
+import { MARCAS, getModelos } from '../utils/vehiculos'
 import { useClientes } from '../hooks/useClientes'
+import { cargarInventarioCompleto } from '../services/cuentti'
 import { lsGet, lsSet, LS_KEYS } from '../services/storage'
 
 const ESTADO_COT = { PENDIENTE: 'Pendiente', APROBADA: 'Aprobada', RECHAZADA: 'Rechazada' }
@@ -170,6 +172,65 @@ function CotizacionForm({ cotizacion, onSave, onCancel }) {
     setResultados([])
   }
 
+  // Inventario Cuentti
+  const [inventario, setInventario] = useState([])
+  const [invLoading, setInvLoading] = useState(true)
+  const [itemSearch, setItemSearch] = useState({})
+  const searchTimers = useRef({})
+
+  useEffect(() => {
+    const cached = lsGet(LS_KEYS.INVENTARIO_CACHE, [])
+    if (cached.length > 0) { setInventario(cached); setInvLoading(false) }
+    cargarInventarioCompleto().then(data => {
+      if (data.length > 0) { setInventario(data); lsSet(LS_KEYS.INVENTARIO_CACHE, data) }
+      setInvLoading(false)
+    }).catch(() => setInvLoading(false))
+  }, [])
+
+  const buscarEnInventario = useCallback((itemId, query) => {
+    if (searchTimers.current[itemId]) clearTimeout(searchTimers.current[itemId])
+    if (!query || query.length < 2) {
+      setItemSearch(prev => ({ ...prev, [itemId]: { query, results: [], show: false } }))
+      return
+    }
+    searchTimers.current[itemId] = setTimeout(() => {
+      const q = query.toLowerCase().trim()
+      const scored = []
+      for (const p of inventario) {
+        const nombre = (p.nombre || '').toLowerCase()
+        const codigo = (p.codigo || '').toLowerCase()
+        const sku = (p.sku || '').toLowerCase()
+        const barras = (p.codigoBarras || '').toLowerCase()
+        let score = 0
+        if (codigo === q || sku === q || barras === q) score = 100
+        else if (codigo.startsWith(q) || sku.startsWith(q) || barras.startsWith(q)) score = 80
+        else if (nombre === q) score = 70
+        else if (nombre.startsWith(q)) score = 60
+        else if (nombre.includes(' ' + q)) score = 50
+        else if (nombre.includes(q)) score = 40
+        else if (codigo.includes(q) || sku.includes(q) || barras.includes(q)) score = 30
+        else continue
+        if (p.stock > 0) score += 5
+        scored.push({ ...p, _score: score })
+      }
+      scored.sort((a, b) => b._score - a._score)
+      const results = scored.slice(0, 12)
+      setItemSearch(prev => ({ ...prev, [itemId]: { query, results, show: results.length > 0 } }))
+    }, 150)
+  }, [inventario])
+
+  const seleccionarProducto = (itemId, producto) => {
+    updateItem(itemId, 'nombre', producto.nombre)
+    updateItem(itemId, 'precio', producto.precio)
+    updateItem(itemId, 'iva', producto.iva)
+    updateItem(itemId, 'codigo', producto.codigo || producto.sku || '')
+    updateItem(itemId, 'sku', producto.sku || '')
+    updateItem(itemId, 'esServicio', !!producto.esServicio)
+    setItemSearch(prev => ({ ...prev, [itemId]: { query: '', results: [], show: false } }))
+  }
+
+  const modelos = useMemo(() => getModelos(form.marca), [form.marca])
+
   const addItem = () => setItems(prev => [...prev, { id: uid(), nombre: '', precio: 0, cantidad: 1, iva: IVA_DEFAULT }])
   const updateItem = (id, field, value) => setItems(prev => prev.map(i => i.id === id ? { ...i, [field]: value } : i))
   const removeItem = (id) => setItems(prev => prev.filter(i => i.id !== id))
@@ -244,11 +305,17 @@ function CotizacionForm({ cotizacion, onSave, onCancel }) {
             </div>
             <div className="form-group">
               <label className="form-label">Marca</label>
-              <input className="form-input" value={form.marca} placeholder="Toyota, Mazda..." onChange={e => set('marca', e.target.value)} />
+              <select className="form-select" value={form.marca} onChange={e => { set('marca', e.target.value); set('modelo', '') }}>
+                <option value="">Seleccionar...</option>
+                {MARCAS.map(m => <option key={m} value={m}>{m}</option>)}
+              </select>
             </div>
             <div className="form-group">
               <label className="form-label">Modelo</label>
-              <input className="form-input" value={form.modelo} placeholder="Corolla, CX-5..." onChange={e => set('modelo', e.target.value)} />
+              <select className="form-select" value={form.modelo} onChange={e => set('modelo', e.target.value)} disabled={!form.marca}>
+                <option value="">Seleccionar...</option>
+                {modelos.map(m => <option key={m} value={m}>{m}</option>)}
+              </select>
             </div>
           </div>
         </div>
@@ -258,8 +325,9 @@ function CotizacionForm({ cotizacion, onSave, onCancel }) {
             <div className="card-title" style={{ marginBottom: 0 }}>Items</div>
             <button type="button" className="btn btn-outline btn-sm" onClick={addItem}>+ Agregar linea</button>
           </div>
+          {invLoading && <p className="text-xs text-muted" style={{ marginBottom: 8 }}>Cargando inventario Cuentti...</p>}
           {items.length === 0 ? (
-            <p className="text-sm text-muted text-center" style={{ padding: 24 }}>Sin items.</p>
+            <p className="text-sm text-muted text-center" style={{ padding: 24 }}>Sin items. Agrega una linea y busca productos del inventario.</p>
           ) : (
             <div className="table-wrap">
               <table>
@@ -276,10 +344,32 @@ function CotizacionForm({ cotizacion, onSave, onCancel }) {
                 <tbody>
                   {items.map(item => {
                     const lineTotal = (parseFloat(item.precio) || 0) * (parseInt(item.cantidad) || 1)
+                    const search = itemSearch[item.id] || {}
                     return (
                       <tr key={item.id}>
-                        <td><input className="form-input" value={item.nombre} placeholder="Nombre..."
-                          onChange={e => updateItem(item.id, 'nombre', e.target.value)} style={{ padding: '6px 10px', fontSize: 13 }} /></td>
+                        <td style={{ position: 'relative' }}>
+                          <input className="form-input" value={item.nombre} placeholder="Buscar producto o escribir..."
+                            onChange={e => { updateItem(item.id, 'nombre', e.target.value); buscarEnInventario(item.id, e.target.value) }}
+                            onFocus={() => { if (item.nombre?.length >= 2) buscarEnInventario(item.id, item.nombre) }}
+                            style={{ padding: '6px 10px', fontSize: 13 }} />
+                          {search.show && (
+                            <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 30, background: '#fff', border: '1px solid var(--slate-200)', borderRadius: 8, maxHeight: 240, overflowY: 'auto', boxShadow: 'var(--shadow-md)' }}>
+                              {search.results.map(p => (
+                                <div key={p.id || p.codigo} onClick={() => seleccionarProducto(item.id, p)}
+                                  style={{ padding: '8px 12px', cursor: 'pointer', borderBottom: '1px solid var(--slate-100)', fontSize: 12 }}>
+                                  <div style={{ fontWeight: 600 }}>{p.nombre}</div>
+                                  <div style={{ display: 'flex', gap: 12, color: 'var(--slate-500)', marginTop: 2 }}>
+                                    <span>{fmt(p.precio)}</span>
+                                    <span style={{ color: p.stock > 0 ? 'var(--green-500)' : p.esServicio ? 'var(--blue-500)' : 'var(--red-500)' }}>
+                                      {p.esServicio ? 'Servicio' : `Stock: ${p.stock || 0}`}
+                                    </span>
+                                    {p.sku && <span>SKU: {p.sku}</span>}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </td>
                         <td><input className="form-input" type="number" value={Math.round(parseFloat(item.precio) || 0)} min="0"
                           onChange={e => updateItem(item.id, 'precio', e.target.value)} style={{ padding: '6px 10px', fontSize: 13, textAlign: 'right' }} /></td>
                         <td><input className="form-input" type="number" value={item.cantidad} min="1"

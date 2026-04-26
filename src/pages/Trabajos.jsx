@@ -3,6 +3,7 @@ import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import { fmt, fmtDate, uid, hoyISO, normalizarDoc, normalizarNombre } from '../utils/helpers'
 import { TECNICOS, ESTADOS, IVA_DEFAULT, DIAS_ESTANCADO } from '../utils/constants'
+import { MARCAS, getModelos } from '../utils/vehiculos'
 import { useClientes } from '../hooks/useClientes'
 import { lsGet, lsSet, LS_KEYS } from '../services/storage'
 import { cargarInventarioCompleto } from '../services/cuentti'
@@ -538,6 +539,7 @@ function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [] }) {
   }
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
+  const modelosTrabajo = useMemo(() => getModelos(form.marca), [form.marca])
 
   // Seleccionar cliente de resultados
   const seleccionarCliente = (c) => {
@@ -684,11 +686,17 @@ function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [] }) {
             </div>
             <div className="form-group">
               <label className="form-label">Marca *</label>
-              <input className="form-input" value={form.marca} required placeholder="Toyota, Mazda..." onChange={e => set('marca', e.target.value)} />
+              <select className="form-select" value={form.marca} required onChange={e => { set('marca', e.target.value); set('modelo', '') }}>
+                <option value="">Seleccionar...</option>
+                {MARCAS.map(m => <option key={m} value={m}>{m}</option>)}
+              </select>
             </div>
             <div className="form-group">
               <label className="form-label">Modelo</label>
-              <input className="form-input" value={form.modelo} placeholder="Corolla, CX-5..." onChange={e => set('modelo', e.target.value)} />
+              <select className="form-select" value={form.modelo} onChange={e => set('modelo', e.target.value)} disabled={!form.marca}>
+                <option value="">Seleccionar...</option>
+                {modelosTrabajo.map(m => <option key={m} value={m}>{m}</option>)}
+              </select>
             </div>
           </div>
           <div className="form-row">

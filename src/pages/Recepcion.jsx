@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react'
 import { fmtDate, uid, hoyISO, normalizarDoc, normalizarNombre } from '../utils/helpers'
 import { TECNICOS, ESTADOS } from '../utils/constants'
+import { MARCAS, getModelos } from '../utils/vehiculos'
 import { useClientes } from '../hooks/useClientes'
 
 export default function Recepcion({ hook, notify }) {
@@ -22,6 +23,7 @@ export default function Recepcion({ hook, notify }) {
   })
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
+  const modelosRecepcion = useMemo(() => getModelos(form.marca), [form.marca])
 
   const seleccionarCliente = (c) => {
     set('cedula', normalizarDoc(c))
@@ -168,13 +170,17 @@ export default function Recepcion({ hook, notify }) {
                 </div>
                 <div className="form-group">
                   <label className="form-label">Marca</label>
-                  <input className="form-input" value={form.marca} placeholder="Toyota, Mazda..."
-                    onChange={e => set('marca', e.target.value)} />
+                  <select className="form-select" value={form.marca} onChange={e => { set('marca', e.target.value); set('modelo', '') }}>
+                    <option value="">Seleccionar...</option>
+                    {MARCAS.map(m => <option key={m} value={m}>{m}</option>)}
+                  </select>
                 </div>
                 <div className="form-group">
                   <label className="form-label">Modelo</label>
-                  <input className="form-input" value={form.modelo} placeholder="Corolla, CX-5..."
-                    onChange={e => set('modelo', e.target.value)} />
+                  <select className="form-select" value={form.modelo} onChange={e => set('modelo', e.target.value)} disabled={!form.marca}>
+                    <option value="">Seleccionar...</option>
+                    {modelosRecepcion.map(m => <option key={m} value={m}>{m}</option>)}
+                  </select>
                 </div>
               </div>
               <div className="form-row">
