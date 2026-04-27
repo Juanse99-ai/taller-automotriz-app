@@ -14,6 +14,8 @@ export default function Clientes({ clientes, vehiculos, notify }) {
   const [clienteSeleccionado, setClienteSeleccionado] = useState(null)
   const [editForm, setEditForm] = useState({ nombre: '', telefono: '', email: '', direccion: '' })
   const [guardandoCuentti, setGuardandoCuentti] = useState(false)
+  const [creando, setCreando] = useState(false)
+  const [nuevoForm, setNuevoForm] = useState({ cedula: '', nombre: '', telefono: '', email: '', direccion: '' })
 
   // Metricas
   const totalClientes = clientesTable.length
@@ -92,6 +94,108 @@ export default function Clientes({ clientes, vehiculos, notify }) {
     if (!clienteSeleccionado) return []
     return buscarPorCedula(clienteSeleccionado.cedula)
   }, [clienteSeleccionado, buscarPorCedula])
+
+  const setNuevo = (k, v) => setNuevoForm(f => ({ ...f, [k]: v }))
+
+  const handleCrearCliente = async () => {
+    if (!nuevoForm.cedula || !nuevoForm.nombre) {
+      notify('Cedula y nombre son obligatorios', 'error')
+      return
+    }
+    // Verificar si ya existe localmente
+    const existe = obtenerCliente(nuevoForm.cedula)
+    if (existe) {
+      notify('Ya existe un cliente con esa cedula', 'error')
+      return
+    }
+    // Guardar localmente
+    const local = guardarCliente({
+      cedula: nuevoForm.cedula,
+      nombre: nuevoForm.nombre,
+      telefono: nuevoForm.telefono,
+      email: nuevoForm.email,
+      direccion: nuevoForm.direccion,
+    })
+    // Guardar en Cuentti
+    setGuardandoCuentti(true)
+    try {
+      const result = await guardarEnCuentti({
+        cedula: nuevoForm.cedula,
+        nombre: nuevoForm.nombre,
+        telefono: nuevoForm.telefono,
+        email: nuevoForm.email,
+        direccion: nuevoForm.direccion,
+      })
+      if (result.success) {
+        notify('Cliente creado y guardado en Cuentti', 'success')
+        setCreando(false)
+        setNuevoForm({ cedula: '', nombre: '', telefono: '', email: '', direccion: '' })
+        if (result.data) seleccionar(result.data)
+      } else {
+        notify('Cliente guardado local. Error Cuentti: ' + (result.error || 'desconocido'), 'warning')
+        setCreando(false)
+        setNuevoForm({ cedula: '', nombre: '', telefono: '', email: '', direccion: '' })
+        if (local) seleccionar(local)
+      }
+    } catch {
+      notify('Cliente guardado localmente. No se pudo conectar con Cuentti', 'warning')
+      setCreando(false)
+      if (local) seleccionar(local)
+    } finally {
+      setGuardandoCuentti(false)
+    }
+  }
+
+  // --- VISTA CREAR NUEVO ---
+  if (creando) {
+    return (
+      <div>
+        <div style={{ marginBottom: 16 }}>
+          <button className="btn btn-outline btn-sm" onClick={() => setCreando(false)}>Volver</button>
+        </div>
+        <div className="card">
+          <div className="card-title">Nuevo Cliente</div>
+          <div className="form-row">
+            <div className="form-group">
+              <label className="form-label">Cedula / NIT *</label>
+              <input className="form-input" value={nuevoForm.cedula} placeholder="1234567890"
+                onChange={e => setNuevo('cedula', e.target.value)} />
+            </div>
+            <div className="form-group">
+              <label className="form-label">Nombre Completo *</label>
+              <input className="form-input" value={nuevoForm.nombre} placeholder="Nombre y apellidos"
+                onChange={e => setNuevo('nombre', e.target.value)} />
+            </div>
+          </div>
+          <div className="form-row">
+            <div className="form-group">
+              <label className="form-label">Telefono</label>
+              <input className="form-input" value={nuevoForm.telefono} placeholder="300..."
+                onChange={e => setNuevo('telefono', e.target.value)} />
+            </div>
+            <div className="form-group">
+              <label className="form-label">Email</label>
+              <input className="form-input" type="email" value={nuevoForm.email} placeholder="correo@ejemplo.com"
+                onChange={e => setNuevo('email', e.target.value)} />
+            </div>
+          </div>
+          <div className="form-row">
+            <div className="form-group">
+              <label className="form-label">Direccion</label>
+              <input className="form-input" value={nuevoForm.direccion} placeholder="Calle / Carrera..."
+                onChange={e => setNuevo('direccion', e.target.value)} />
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 12 }}>
+            <button className="btn btn-outline" onClick={() => setCreando(false)}>Cancelar</button>
+            <button className="btn btn-primary" onClick={handleCrearCliente} disabled={guardandoCuentti}>
+              {guardandoCuentti ? 'Guardando...' : 'Crear y Guardar en Cuentti'}
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   // --- VISTA DETALLE ---
   if (clienteSeleccionado) {
@@ -218,15 +322,18 @@ export default function Clientes({ clientes, vehiculos, notify }) {
         </div>
       </div>
 
-      {/* Barra de busqueda */}
+      {/* Barra de busqueda + boton nuevo */}
       <div className="card">
-        <div className="form-group" style={{ marginBottom: 0 }}>
-          <input
-            className="form-input"
-            placeholder="Buscar por cedula o nombre..."
-            value={busqueda}
-            onChange={e => setBusqueda(e.target.value)}
-          />
+        <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+          <div className="form-group" style={{ marginBottom: 0, flex: 1 }}>
+            <input
+              className="form-input"
+              placeholder="Buscar por cedula o nombre..."
+              value={busqueda}
+              onChange={e => setBusqueda(e.target.value)}
+            />
+          </div>
+          <button className="btn btn-primary" onClick={() => setCreando(true)}>+ Nuevo Cliente</button>
         </div>
       </div>
 
