@@ -148,8 +148,31 @@ export async function buscarClientePorCedula(cedula) {
   }
 }
 
+// Tipos de identificacion Cuentti
+export const TIPOS_IDENTIFICACION = [
+  { id: '3', label: 'Cedula de Ciudadania' },
+  { id: '5', label: 'NIT' },
+  { id: '2', label: 'Cedula de Extranjeria' },
+  { id: '4', label: 'Tarjeta de Identidad' },
+  { id: '6', label: 'Pasaporte' },
+]
+
+// Tipos de persona Cuentti
+export const TIPOS_PERSONA = [
+  { id: '1', label: 'Natural' },
+  { id: '2', label: 'Juridica' },
+]
+
+// Regimenes Cuentti
+export const REGIMENES = [
+  { id: 2, label: 'Regimen simple' },
+  { id: 5, label: 'Responsable de IVA' },
+  { id: 49, label: 'No responsable de IVA' },
+]
+
 export async function grabarCliente(clienteData) {
-  const { cedula, nombre, telefono, email, direccion, ciudad, cuenttiId, _raw } = clienteData || {}
+  const { cedula, nombre, telefono, email, direccion, ciudad, cuenttiId, _raw,
+    tipoIdentificacion, tipoPersona, regimen } = clienteData || {}
 
   // Split nombre into primer_nombre, segundo_nombre, primer_apellido
   const partes = (nombre || '').trim().split(/\s+/)
@@ -166,7 +189,7 @@ export async function grabarCliente(clienteData) {
     es_consumidor_final: '0',
     dias_vencimiento_cartera_cliente: 30,
     alias: '',
-    regimenImpuesto: 2,
+    regimenImpuesto: regimen || 2,
     codigo_turismo: null,
     fecha_vencimiento_codigo_turismo: null,
     legalidad: 29,
@@ -175,7 +198,7 @@ export async function grabarCliente(clienteData) {
     medio_pago: null,
     id_sucursal: null,
     nombre_cliente: nombre || '',
-    id_tipo_persona: '1',
+    id_tipo_persona: tipoPersona || '1',
     identificacion: cedula || '',
     id_empresa_portal: 0,
     id_usuario_portal: 0,
@@ -226,8 +249,8 @@ export async function grabarCliente(clienteData) {
     envioSmsProducto: '0',
     departamento: '',
     pais: 'Colombia',
-    regimen: 2,
-    id_tipo_identificacion: '3',
+    regimen: regimen || 2,
+    id_tipo_identificacion: tipoIdentificacion || '3',
     id_empleado: parseInt(CONFIG.employeeId),
   }
 

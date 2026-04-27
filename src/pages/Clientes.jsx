@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react'
 import { fmtDate } from '../utils/helpers'
+import { TIPOS_IDENTIFICACION, TIPOS_PERSONA, REGIMENES } from '../services/cuentti'
 
 export default function Clientes({ clientes, vehiculos, notify }) {
   const {
@@ -15,7 +16,10 @@ export default function Clientes({ clientes, vehiculos, notify }) {
   const [editForm, setEditForm] = useState({ nombre: '', telefono: '', email: '', direccion: '' })
   const [guardandoCuentti, setGuardandoCuentti] = useState(false)
   const [creando, setCreando] = useState(false)
-  const [nuevoForm, setNuevoForm] = useState({ cedula: '', nombre: '', telefono: '', email: '', direccion: '' })
+  const [nuevoForm, setNuevoForm] = useState({
+    cedula: '', nombre: '', telefono: '', email: '', direccion: '',
+    tipoIdentificacion: '3', tipoPersona: '1', regimen: 2,
+  })
 
   // Metricas
   const totalClientes = clientesTable.length
@@ -125,16 +129,19 @@ export default function Clientes({ clientes, vehiculos, notify }) {
         telefono: nuevoForm.telefono,
         email: nuevoForm.email,
         direccion: nuevoForm.direccion,
+        tipoIdentificacion: nuevoForm.tipoIdentificacion,
+        tipoPersona: nuevoForm.tipoPersona,
+        regimen: nuevoForm.regimen,
       })
       if (result.success) {
         notify('Cliente creado y guardado en Cuentti', 'success')
         setCreando(false)
-        setNuevoForm({ cedula: '', nombre: '', telefono: '', email: '', direccion: '' })
+        setNuevoForm({ cedula: '', nombre: '', telefono: '', email: '', direccion: '', tipoIdentificacion: '3', tipoPersona: '1', regimen: 2 })
         if (result.data) seleccionar(result.data)
       } else {
         notify('Cliente guardado local. Error Cuentti: ' + (result.error || 'desconocido'), 'warning')
         setCreando(false)
-        setNuevoForm({ cedula: '', nombre: '', telefono: '', email: '', direccion: '' })
+        setNuevoForm({ cedula: '', nombre: '', telefono: '', email: '', direccion: '', tipoIdentificacion: '3', tipoPersona: '1', regimen: 2 })
         if (local) seleccionar(local)
       }
     } catch {
@@ -157,13 +164,33 @@ export default function Clientes({ clientes, vehiculos, notify }) {
           <div className="card-title">Nuevo Cliente</div>
           <div className="form-row">
             <div className="form-group">
-              <label className="form-label">Cedula / NIT *</label>
-              <input className="form-input" value={nuevoForm.cedula} placeholder="1234567890"
+              <label className="form-label">Tipo Persona</label>
+              <select className="form-select" value={nuevoForm.tipoPersona} onChange={e => setNuevo('tipoPersona', e.target.value)}>
+                {TIPOS_PERSONA.map(t => <option key={t.id} value={t.id}>{t.label}</option>)}
+              </select>
+            </div>
+            <div className="form-group">
+              <label className="form-label">Tipo Identificacion</label>
+              <select className="form-select" value={nuevoForm.tipoIdentificacion} onChange={e => setNuevo('tipoIdentificacion', e.target.value)}>
+                {TIPOS_IDENTIFICACION.map(t => <option key={t.id} value={t.id}>{t.label}</option>)}
+              </select>
+            </div>
+            <div className="form-group">
+              <label className="form-label">Regimen</label>
+              <select className="form-select" value={nuevoForm.regimen} onChange={e => setNuevo('regimen', parseInt(e.target.value))}>
+                {REGIMENES.map(r => <option key={r.id} value={r.id}>{r.label}</option>)}
+              </select>
+            </div>
+          </div>
+          <div className="form-row">
+            <div className="form-group">
+              <label className="form-label">Identificacion *</label>
+              <input className="form-input" value={nuevoForm.cedula} placeholder="Numero de documento"
                 onChange={e => setNuevo('cedula', e.target.value)} />
             </div>
             <div className="form-group">
               <label className="form-label">Nombre Completo *</label>
-              <input className="form-input" value={nuevoForm.nombre} placeholder="Nombre y apellidos"
+              <input className="form-input" value={nuevoForm.nombre} placeholder="Nombre y apellidos / Razon social"
                 onChange={e => setNuevo('nombre', e.target.value)} />
             </div>
           </div>
