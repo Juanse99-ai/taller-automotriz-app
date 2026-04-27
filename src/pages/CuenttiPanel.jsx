@@ -81,10 +81,26 @@ export default function CuenttiPanel({ trabajos, notify }) {
     try { return JSON.stringify(data, null, 2) } catch { return String(data) }
   }
 
-  const extractIdTransacion = (res) =>
-    res?.id_transacion || res?.id_transaccion || res?.idTransacion || res?.idTransaccion
-    || res?.data?.id_transacion || res?.transacion?.id_transacion || res?.transaccion?.id_transaccion
-    || ''
+  const extractIdTransacion = (res) => {
+    // Campo directo
+    const directo = res?.id_transacion || res?.id_transaccion || res?.idTransacion || res?.idTransaccion
+      || res?.data?.id_transacion || res?.transacion?.id_transacion || res?.transaccion?.id_transaccion
+    if (directo) return directo
+
+    // Extraer de retorno: "FEIC437;0;760;5335;2951;..." → posicion 3 es id_transaccion
+    if (res?.retorno && typeof res.retorno === 'string') {
+      const partes = res.retorno.split(';')
+      if (partes.length >= 4 && partes[3]) return partes[3]
+    }
+
+    // Extraer de url_externa: "...?i=11464-1-0-9b16ac1b25b04791b0a4"
+    if (res?.url_externa) {
+      const match = res.url_externa.match(/[?&]i=([^&]+)/)
+      if (match) return match[1]
+    }
+
+    return ''
+  }
 
   const refreshPreview = (trabajoId, pref = prefijo) => {
     const trabajoSel = trabajos.find(t => t.id === (trabajoId || '').trim())
