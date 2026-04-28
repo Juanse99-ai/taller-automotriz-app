@@ -272,6 +272,82 @@ export default function Liquidacion({ trabajos, notify }) {
     notify('PDF de pago exportado', 'success')
   }
 
+  const exportPdfHistorial = async (reg) => {
+    const doc = new jsPDF()
+    const logoData = await loadLogo()
+    if (logoData && typeof logoData === 'string' && logoData.startsWith('data:image')) {
+      try { doc.addImage(logoData, 'PNG', 14, 10, 28, 18) } catch {}
+    }
+    const titleX = logoData ? 44 : 14
+    doc.setFontSize(16)
+    doc.text('ESTADO DE CUENTA', titleX, 16)
+    doc.setFontSize(11)
+    doc.text(`Tecnico: ${reg.tecnico}`, titleX, 23)
+    doc.setFontSize(9)
+    doc.text(`Ref: ${reg.id}`, titleX, 28)
+    doc.text(`Fecha: ${fmtDate(reg.fecha)}`, 160, 16)
+
+    // Detalle de trabajos
+    const detRows = (reg.detalleTrabajo || []).map(d => {
+      const com = d.compartido ? (d.manoObra * COMISION.TOTAL) / 2 : d.manoObra * COMISION.TOTAL
+      return [fmtDate(d.fecha), d.placa, d.cliente || '—', d.compartido ? 'Si (50%)' : 'No', fmt(d.manoObra), fmt(Math.round(com))]
+    })
+    autoTable(doc, {
+      startY: 34,
+      head: [['Fecha', 'Placa', 'Cliente', 'Compartido', 'M.O. (sin IVA)', 'Comision']],
+      body: detRows,
+      styles: { fontSize: 8 },
+      headStyles: { fillColor: [41, 128, 185] },
+    })
+
+    // Movimientos / descuentos
+    if (reg.movimientos && reg.movimientos.length > 0) {
+      doc.setFontSize(10)
+      doc.text('Adelantos / Cargos / Descuentos:', 14, doc.lastAutoTable.finalY + 10)
+      autoTable(doc, {
+        startY: doc.lastAutoTable.finalY + 14,
+        head: [['Fecha', 'Tipo', 'Nota', 'Monto']],
+        body: reg.movimientos.map(m => [fmtDate(m.fecha), m.tipo, m.nota || '—', fmt(m.monto)]),
+        styles: { fontSize: 8 },
+        headStyles: { fillColor: [230, 126, 34] },
+      })
+    }
+
+    // Resumen final
+    const resY = doc.lastAutoTable.finalY + 8
+    autoTable(doc, {
+      startY: resY,
+      body: [
+        [{ content: 'RESUMEN DEL PAGO', colSpan: 2, styles: { fontStyle: 'bold', fillColor: [236, 240, 241], halign: 'center', fontSize: 10 } }],
+        ['Mano de Obra (sin IVA):', fmt(reg.manoObra || 0)],
+        [`Comision (${COMISION.TOTAL * 100}%):`, fmt(reg.comision || 0)],
+        ['Adelantos / Cargos:', `- ${fmt(reg.cargos || 0)}`],
+        [{ content: 'NETO A PAGAR:', styles: { fontStyle: 'bold', fontSize: 11 } },
+         { content: fmt(reg.neto || 0), styles: { fontStyle: 'bold', fontSize: 11, textColor: reg.neto >= 0 ? [39, 174, 96] : [231, 76, 60] } }],
+      ],
+      columnStyles: { 0: { halign: 'right', cellWidth: 100 }, 1: { halign: 'right', fontStyle: 'bold', cellWidth: 60 } },
+      styles: { fontSize: 9, cellPadding: 3 },
+      theme: 'plain',
+    })
+
+    // Firmas
+    const firmaY = doc.lastAutoTable.finalY + 30
+    doc.setDrawColor(100)
+    doc.line(20, firmaY, 85, firmaY)
+    doc.line(120, firmaY, 185, firmaY)
+    doc.setFontSize(9)
+    doc.text('Firma del Tecnico', 38, firmaY + 6)
+    doc.text('Autorizado por', 140, firmaY + 6)
+
+    // Nota al pie
+    doc.setFontSize(7)
+    doc.setTextColor(150)
+    doc.text('Este documento es un comprobante interno de liquidacion de mano de obra.', 14, firmaY + 20)
+
+    doc.save(`pago_${reg.tecnico}_${reg.id}.pdf`)
+    notify('PDF de pago exportado', 'success')
+  }
+
   const desliquidar = () => {
     guardarLiquidados([])
     notify('Todos los trabajos desliquidados', 'info')
@@ -527,6 +603,10 @@ export default function Liquidacion({ trabajos, notify }) {
                     <div className="text-sm" style={{ color: 'var(--green-500)' }}>Comision: <strong className="text-mono">{fmt(reg.comision || 0)}</strong></div>
                     <div className="text-sm" style={{ color: 'var(--amber-500)' }}>Cargos: <strong className="text-mono">{fmt(reg.cargos || 0)}</strong></div>
                     <div className="text-sm" style={{ color: 'var(--green-600)', fontWeight: 700 }}>Neto: <strong className="text-mono">{fmt(reg.neto || 0)}</strong></div>
+                    <button className="btn btn-outline btn-sm" style={{ marginLeft: 'auto' }}
+                      onClick={() => exportPdfHistorial(reg)}>
+                      PDF
+                    </button>
                   </div>
                 </div>
               ))}
