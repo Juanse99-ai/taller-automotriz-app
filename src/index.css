@@ -957,3 +957,22 @@ tbody tr:hover { background: var(--bg-subtle); }
   .card { padding: 14px 12px; border-radius: 10px; }
   .card__h h3 { font-size: 12.5px; }
 }
+
+/* ============================
+   LOGIN RESPONSIVE
+   ============================ */
+@media (max-width: 820px) {
+  #root > div[style*="grid-template-columns"] {
+    grid-template-columns: 1fr !important;
+  }
+  #root > div[style*="grid-template-columns"] > div:first-child {
+    padding: 36px 28px 32px !important;
+    min-height: 300px;
+  }
+  #root > div[style*="grid-template-columns"] > div:first-child h1 {
+    font-size: 30px !important;
+  }
+  #root > div[style*="grid-template-columns"] > div:last-child {
+    padding: 36px 24px 40px !important;
+  }
+}
