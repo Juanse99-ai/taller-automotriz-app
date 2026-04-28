@@ -99,24 +99,32 @@ export default function Dashboard({ trabajos }) {
     <div>
       <div className="metrics-grid">
         <div className="metric-card">
-          <div className="metric-icon metric-icon--blue"><IconTotal /></div>
+          <div className="metric-head">
+            <div className="metric-icon metric-icon--blue"><IconTotal /></div>
+            <div className="metric-label">Total Trabajos</div>
+          </div>
           <div className="metric-value">{stats.total}</div>
-          <div className="metric-label">Total Trabajos</div>
         </div>
         <div className="metric-card">
-          <div className="metric-icon metric-icon--green"><IconCheck /></div>
+          <div className="metric-head">
+            <div className="metric-icon metric-icon--green"><IconCheck /></div>
+            <div className="metric-label">Completados</div>
+          </div>
           <div className="metric-value">{stats.completados}</div>
-          <div className="metric-label">Completados</div>
         </div>
         <div className="metric-card">
-          <div className="metric-icon metric-icon--amber"><IconClock /></div>
+          <div className="metric-head">
+            <div className="metric-icon metric-icon--amber"><IconClock /></div>
+            <div className="metric-label">Pendientes</div>
+          </div>
           <div className="metric-value">{stats.enProgreso}</div>
-          <div className="metric-label">Pendientes</div>
         </div>
         <div className="metric-card">
-          <div className="metric-icon metric-icon--blue"><IconTrend /></div>
+          <div className="metric-head">
+            <div className="metric-icon metric-icon--blue"><IconTrend /></div>
+            <div className="metric-label">Ingresos del Mes</div>
+          </div>
           <div className="metric-value">{fmt(stats.ingresosMes)}</div>
-          <div className="metric-label">Ingresos del Mes</div>
         </div>
       </div>
 
@@ -131,7 +139,7 @@ export default function Dashboard({ trabajos }) {
               return (
                 <div key={i} className="chart-bar-wrapper">
                   <span className="chart-bar-value">{s.count}</span>
-                  <div className="chart-bar" style={{ height: `${h}%`, background: i === semanales.length - 1 ? 'var(--amber-400)' : 'var(--blue-500)' }} />
+                  <div className="chart-bar" style={{ height: `${h}%`, background: i === semanales.length - 1 ? 'linear-gradient(180deg, var(--amber-400) 0%, var(--amber-500) 100%)' : undefined }} />
                   <span className="chart-bar-label">{s.label}</span>
                 </div>
               )
