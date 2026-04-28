@@ -22,18 +22,25 @@ export default async function handler(req, res) {
 
   const table = req.query.table
   if (!table) { res.status(400).json({ error: 'table param requerido' }); return }
-  if (table !== 'trabajos') { res.status(403).json({ error: 'Tabla no permitida' }); return }
+  const ALLOWED_TABLES = [
+    'trabajos', 'cotizaciones', 'clientes', 'vehiculos', 'inspecciones',
+    'movimientos_tecnicos', 'liquidacion_historial', 'liquidados', 'trabajos_compartidos',
+  ]
+  if (!ALLOWED_TABLES.includes(table)) { res.status(403).json({ error: 'Tabla no permitida' }); return }
 
   try {
     const qs = new URL(req.url, 'http://localhost')
     qs.searchParams.delete('table')
+    qs.searchParams.delete('upsert')
     const queryString = qs.searchParams.toString()
     const url = `${SUPABASE_URL}/rest/v1/${table}${queryString ? `?${queryString}` : ''}`
     const headers = {
       'Content-Type': 'application/json',
       'apikey': SUPABASE_KEY,
       'Authorization': `Bearer ${SUPABASE_KEY}`,
-      'Prefer': 'return=representation',
+      'Prefer': req.query.upsert === 'true' && req.method === 'POST'
+        ? 'return=representation,resolution=merge-duplicates'
+        : 'return=representation',
       'Accept': 'application/json',
     }
     const options = { method: req.method, headers, cache: 'no-store' }

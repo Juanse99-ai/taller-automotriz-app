@@ -13,15 +13,10 @@ const ESTADO_COLORS = {
   no_aplica: { bg: '#f1f5f9', color: '#64748b', icon: '—', label: 'No aplica' },
 }
 
-export default function Inspecciones({ trabajos, notify, onVincularInspeccion }) {
-  const [inspecciones, setInspecciones] = useState(() => lsGet('inspecciones', []))
+export default function Inspecciones({ trabajos, notify, onVincularInspeccion, inspeccionesHook }) {
+  const { inspecciones, guardar } = inspeccionesHook || {}
   const [vista, setVista] = useState('lista')
   const [editId, setEditId] = useState(null)
-
-  const guardar = (nuevas) => {
-    setInspecciones(nuevas)
-    lsSet('inspecciones', nuevas)
-  }
 
   // Vincular inspeccion al trabajo (para que el cliente la vea en el portal)
   const vincularATrabajo = (insp) => {

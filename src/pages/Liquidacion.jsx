@@ -4,7 +4,6 @@ import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import { fmt, fmtDate, uid } from '../utils/helpers'
 import { TECNICOS, COMISION, ESTADOS } from '../utils/constants'
-import { lsGet, lsSet, LS_KEYS } from '../services/storage'
 
 // Obtener base de mano de obra SIN IVA (solo servicios)
 const getManoObra = (t) => {
@@ -29,13 +28,17 @@ const getManoObra = (t) => {
   return 0
 }
 
-export default function Liquidacion({ trabajos, notify }) {
+export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
+  const {
+    movimientos, liquidados, compartidos, historial,
+    agregarMovimiento: hookAgregarMov, eliminarMovimiento: hookEliminarMov,
+    guardarLiquidados, desliquidarTodos,
+    toggleCompartido, agregarHistorial, guardarHistorial,
+    guardarMovs,
+  } = liquidacionHook
+
   const [tecnicoSel, setTecnicoSel] = useState('')
-  const [seleccionados, setSeleccionados] = useState({}) // { [trabajoId]: true }
-  const [movimientos, setMovimientos] = useState(() => lsGet(LS_KEYS.MOVIMIENTOS_TECNICOS, []))
-  const [liquidados, setLiquidados] = useState(() => lsGet('liquidados', []))
-  const [compartidos, setCompartidos] = useState(() => lsGet('trabajos_compartidos', {}))
-  const [historial, setHistorial] = useState(() => lsGet('liquidacion_historial', []))
+  const [seleccionados, setSeleccionados] = useState({})
   const [verHistorial, setVerHistorial] = useState(false)
   const [movForm, setMovForm] = useState({
     tecnicoId: '',
@@ -44,18 +47,6 @@ export default function Liquidacion({ trabajos, notify }) {
     nota: '',
     fecha: new Date().toISOString().slice(0, 10),
   })
-
-  const guardarMovs = (next) => { setMovimientos(next); lsSet(LS_KEYS.MOVIMIENTOS_TECNICOS, next) }
-  const guardarLiquidados = (next) => { setLiquidados(next); lsSet('liquidados', next) }
-  const guardarHistorial = (next) => { setHistorial(next); lsSet('liquidacion_historial', next) }
-  const guardarCompartidos = (next) => { setCompartidos(next); lsSet('trabajos_compartidos', next) }
-
-  const toggleCompartido = (trabajoId) => {
-    const next = { ...compartidos }
-    if (next[trabajoId]) delete next[trabajoId]
-    else next[trabajoId] = true
-    guardarCompartidos(next)
-  }
 
   const toggleSeleccion = (trabajoId) => {
     setSeleccionados(prev => {
@@ -149,15 +140,15 @@ export default function Liquidacion({ trabajos, notify }) {
     e?.preventDefault?.()
     const monto = Math.abs(parseFloat(movForm.monto) || 0)
     if (!movForm.tecnicoId || !monto) { notify('Selecciona tecnico y monto', 'error'); return }
-    guardarMovs([...movimientos, {
+    hookAgregarMov({
       id: `MV-${uid()}`, tecnicoId: parseInt(movForm.tecnicoId),
       tipo: movForm.tipo, monto, nota: movForm.nota, fecha: movForm.fecha,
-    }])
+    })
     setMovForm(f => ({ ...f, monto: '', nota: '' }))
     notify('Movimiento registrado', 'success')
   }
 
-  const eliminarMovimiento = (id) => guardarMovs(movimientos.filter(m => m.id !== id))
+  const eliminarMovimiento = (id) => hookEliminarMov(id)
 
   const generarPago = () => {
     const ids = Object.keys(seleccionados).filter(id => seleccionados[id])
@@ -185,7 +176,7 @@ export default function Liquidacion({ trabajos, notify }) {
       }).filter(Boolean),
     }
 
-    guardarHistorial([registro, ...historial])
+    agregarHistorial(registro)
     guardarLiquidados([...liquidados, ...ids])
     // Limpiar movimientos del tecnico liquidado
     guardarMovs(movimientos.filter(m => m.tecnicoId !== parseInt(tecnicoSel)))
@@ -349,7 +340,7 @@ export default function Liquidacion({ trabajos, notify }) {
   }
 
   const desliquidar = () => {
-    guardarLiquidados([])
+    desliquidarTodos()
     notify('Todos los trabajos desliquidados', 'info')
   }
 

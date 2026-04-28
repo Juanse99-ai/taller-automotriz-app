@@ -18,6 +18,9 @@ import Clientes from './pages/Clientes'
 import { useTrabajos } from './hooks/useTrabajos'
 import { useClientes } from './hooks/useClientes'
 import { useVehiculos } from './hooks/useVehiculos'
+import { useCotizaciones } from './hooks/useCotizaciones'
+import { useInspecciones } from './hooks/useInspecciones'
+import { useLiquidacion } from './hooks/useLiquidacion'
 import { getSession, logout, getSeccionesPermitidas } from './services/auth'
 
 class ErrorBoundary extends Component {
@@ -68,6 +71,9 @@ export default function App() {
   const trabajosHook = useTrabajos()
   const clientesHook = useClientes()
   const vehiculosHook = useVehiculos()
+  const cotizacionesHook = useCotizaciones()
+  const inspeccionesHook = useInspecciones()
+  const liquidacionHook = useLiquidacion()
 
   const notify = useCallback((msg, type = 'info') => {
     setToast({ msg, type })
@@ -134,17 +140,17 @@ export default function App() {
       case 'mecanicos':
         return <Mecanicos trabajos={trabajosHook.trabajos} />
       case 'cotizaciones':
-        return <Cotizaciones notify={notify} trabajos={trabajosHook.trabajos} onCrearTrabajo={handleCrearTrabajoDesdeCotizacion} />
+        return <Cotizaciones notify={notify} trabajos={trabajosHook.trabajos} onCrearTrabajo={handleCrearTrabajoDesdeCotizacion} cotizacionesHook={cotizacionesHook} />
       case 'inventario':
         return <Inventario notify={notify} />
       case 'liquidacion':
-        return <Liquidacion trabajos={trabajosHook.trabajos} notify={notify} />
+        return <Liquidacion trabajos={trabajosHook.trabajos} notify={notify} liquidacionHook={liquidacionHook} />
       case 'reportes':
         return <Reportes trabajos={trabajosHook.trabajos} />
       case 'inspecciones':
         return <Inspecciones trabajos={trabajosHook.trabajos} notify={notify}
+          inspeccionesHook={inspeccionesHook}
           onVincularInspeccion={(trabajoId, inspeccion) => {
-            // Guarda la inspeccion dentro del trabajo para que el portal la muestre
             trabajosHook.actualizarTrabajo(trabajoId, { inspeccion })
           }} />
       case 'clientes':
@@ -200,10 +206,10 @@ export default function App() {
           onNavigate={navigate}
         />
         <div className="content">
-          {trabajosHook.connectionError && (
+          {(trabajosHook.connectionError || cotizacionesHook.connectionError || liquidacionHook.connectionError) && (
             <div className="connection-error">
               <span>No se pudo conectar con el servidor. Mostrando datos guardados localmente.</span>
-              <button onClick={trabajosHook.recargar}>Reintentar</button>
+              <button onClick={() => { trabajosHook.recargar(); cotizacionesHook.recargar(); liquidacionHook.recargar() }}>Reintentar</button>
             </div>
           )}
           <ErrorBoundary key={section}>

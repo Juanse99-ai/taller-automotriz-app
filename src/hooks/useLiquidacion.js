@@ -1,0 +1,182 @@
+import { useState, useEffect, useCallback } from 'react'
+import {
+  fetchMovimientos, upsertMovimiento, deleteMovimiento as sbDeleteMov,
+  fetchLiquidacionHistorial, upsertLiquidacionHistorial,
+  fetchLiquidados, upsertLiquidados, deleteAllLiquidados,
+  fetchCompartidos, upsertCompartido, deleteCompartido,
+} from '../services/supabase'
+import { lsGet, lsSet, LS_KEYS } from '../services/storage'
+
+export function useLiquidacion() {
+  const [movimientos, setMovimientos] = useState([])
+  const [liquidados, setLiquidados] = useState([])
+  const [compartidos, setCompartidos] = useState({})
+  const [historial, setHistorial] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [connectionError, setConnectionError] = useState(false)
+
+  const normalizarMov = (r) => ({
+    id: r.id,
+    tecnicoId: r.tecnico_id,
+    tipo: r.tipo || 'adelanto',
+    monto: parseFloat(r.monto) || 0,
+    nota: r.nota || '',
+    fecha: r.fecha,
+  })
+
+  const normalizarHistorial = (r) => ({
+    id: r.id,
+    fecha: r.fecha || r.created_at,
+    tecnico: r.tecnico || '',
+    tecnicoId: r.tecnico_id,
+    trabajosIds: typeof r.trabajos_ids === 'string' ? JSON.parse(r.trabajos_ids) : (r.trabajos_ids || []),
+    cantidadTrabajos: r.cantidad_trabajos || 0,
+    manoObra: parseFloat(r.mano_obra) || 0,
+    comision: parseFloat(r.comision) || 0,
+    cargos: parseFloat(r.cargos) || 0,
+    neto: parseFloat(r.neto) || 0,
+    movimientos: typeof r.movimientos === 'string' ? JSON.parse(r.movimientos) : (r.movimientos || []),
+    detalleTrabajo: typeof r.detalle_trabajo === 'string' ? JSON.parse(r.detalle_trabajo) : (r.detalle_trabajo || []),
+  })
+
+  const cargarDatos = useCallback(async () => {
+    setLoading(true)
+    setConnectionError(false)
+    try {
+      const [sbMovs, sbHist, sbLiq, sbComp] = await Promise.all([
+        fetchMovimientos().catch(() => null),
+        fetchLiquidacionHistorial().catch(() => null),
+        fetchLiquidados().catch(() => null),
+        fetchCompartidos().catch(() => null),
+      ])
+
+      // Movimientos
+      if (sbMovs && sbMovs.length > 0) {
+        const norm = sbMovs.map(normalizarMov)
+        setMovimientos(norm)
+        lsSet(LS_KEYS.MOVIMIENTOS_TECNICOS, norm)
+      } else {
+        const cached = lsGet(LS_KEYS.MOVIMIENTOS_TECNICOS, [])
+        setMovimientos(cached)
+        if (cached.length > 0 && sbMovs !== null) cached.forEach(m => upsertMovimiento(m))
+      }
+
+      // Historial
+      if (sbHist && sbHist.length > 0) {
+        const norm = sbHist.map(normalizarHistorial)
+        setHistorial(norm)
+        lsSet(LS_KEYS.LIQUIDACION_HISTORIAL, norm)
+      } else {
+        const cached = lsGet(LS_KEYS.LIQUIDACION_HISTORIAL, [])
+        setHistorial(cached)
+        if (cached.length > 0 && sbHist !== null) cached.forEach(h => upsertLiquidacionHistorial(h))
+      }
+
+      // Liquidados
+      if (sbLiq && sbLiq.length > 0) {
+        setLiquidados(sbLiq)
+        lsSet(LS_KEYS.LIQUIDADOS, sbLiq)
+      } else {
+        const cached = lsGet(LS_KEYS.LIQUIDADOS, [])
+        setLiquidados(cached)
+        if (cached.length > 0 && sbLiq !== null) upsertLiquidados(cached)
+      }
+
+      // Compartidos
+      if (sbComp && Object.keys(sbComp).length > 0) {
+        setCompartidos(sbComp)
+        lsSet(LS_KEYS.TRABAJOS_COMPARTIDOS, sbComp)
+      } else {
+        const cached = lsGet(LS_KEYS.TRABAJOS_COMPARTIDOS, {})
+        setCompartidos(cached)
+        if (Object.keys(cached).length > 0 && sbComp !== null) {
+          Object.keys(cached).forEach(id => upsertCompartido(id))
+        }
+      }
+
+      if (!sbMovs && !sbHist && !sbLiq && !sbComp) setConnectionError(true)
+    } catch (err) {
+      console.warn('Error cargando liquidacion:', err.message)
+      setConnectionError(true)
+      setMovimientos(lsGet(LS_KEYS.MOVIMIENTOS_TECNICOS, []))
+      setHistorial(lsGet(LS_KEYS.LIQUIDACION_HISTORIAL, []))
+      setLiquidados(lsGet(LS_KEYS.LIQUIDADOS, []))
+      setCompartidos(lsGet(LS_KEYS.TRABAJOS_COMPARTIDOS, {}))
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => { cargarDatos() }, [cargarDatos])
+
+  // Persist to localStorage
+  useEffect(() => { if (!loading) lsSet(LS_KEYS.MOVIMIENTOS_TECNICOS, movimientos) }, [movimientos, loading])
+  useEffect(() => { if (!loading) lsSet(LS_KEYS.LIQUIDADOS, liquidados) }, [liquidados, loading])
+  useEffect(() => { if (!loading) lsSet(LS_KEYS.TRABAJOS_COMPARTIDOS, compartidos) }, [compartidos, loading])
+  useEffect(() => { if (!loading) lsSet(LS_KEYS.LIQUIDACION_HISTORIAL, historial) }, [historial, loading])
+
+  // --- Actions ---
+  const guardarMovs = useCallback((next) => {
+    setMovimientos(next)
+    // Sync: upsert all (simple for small arrays)
+    next.forEach(m => upsertMovimiento(m))
+  }, [])
+
+  const agregarMovimiento = useCallback((mov) => {
+    setMovimientos(prev => [...prev, mov])
+    upsertMovimiento(mov)
+  }, [])
+
+  const eliminarMovimiento = useCallback((id) => {
+    setMovimientos(prev => prev.filter(m => m.id !== id))
+    sbDeleteMov(id)
+  }, [])
+
+  const guardarLiquidados = useCallback((next) => {
+    setLiquidados(next)
+    upsertLiquidados(next)
+  }, [])
+
+  const desliquidarTodos = useCallback(() => {
+    setLiquidados([])
+    deleteAllLiquidados()
+  }, [])
+
+  const guardarCompartidos = useCallback((next) => {
+    setCompartidos(next)
+  }, [])
+
+  const toggleCompartido = useCallback((trabajoId) => {
+    setCompartidos(prev => {
+      const next = { ...prev }
+      if (next[trabajoId]) {
+        delete next[trabajoId]
+        deleteCompartido(trabajoId)
+      } else {
+        next[trabajoId] = true
+        upsertCompartido(trabajoId)
+      }
+      return next
+    })
+  }, [])
+
+  const guardarHistorial = useCallback((next) => {
+    setHistorial(next)
+    next.forEach(h => upsertLiquidacionHistorial(h))
+  }, [])
+
+  const agregarHistorial = useCallback((reg) => {
+    setHistorial(prev => [reg, ...prev])
+    upsertLiquidacionHistorial(reg)
+  }, [])
+
+  return {
+    movimientos, liquidados, compartidos, historial,
+    loading, connectionError,
+    guardarMovs, agregarMovimiento, eliminarMovimiento,
+    guardarLiquidados, desliquidarTodos,
+    guardarCompartidos, toggleCompartido,
+    guardarHistorial, agregarHistorial,
+    recargar: cargarDatos,
+  }
+}

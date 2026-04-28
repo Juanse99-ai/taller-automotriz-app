@@ -34,4 +34,8 @@ export const LS_KEYS = {
   LIQUIDACIONES: 'liquidaciones',
   CLIENTES: 'mda_clientes',
   VEHICULOS_HIST: 'mda_vehiculos_hist',
+  INSPECCIONES: 'inspecciones',
+  LIQUIDADOS: 'liquidados',
+  TRABAJOS_COMPARTIDOS: 'trabajos_compartidos',
+  LIQUIDACION_HISTORIAL: 'liquidacion_historial',
 }

@@ -1,5 +1,6 @@
-import { useState, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { buscarClientePorCedula, grabarCliente } from '../services/cuentti'
+import { fetchClientesLocal, upsertClienteLocal } from '../services/supabase'
 import { lsGet, lsSet, LS_KEYS } from '../services/storage'
 import { normalizarDoc, normalizarNombre } from '../utils/helpers'
 
@@ -38,11 +39,42 @@ export function useClientes() {
   const [clientesTable, setClientesTable] = useState(() => lsGet(LS_KEYS.CLIENTES, []))
   const clientesRef = useRef(clientesTable)
 
-  // Persist helper — syncs ref, state, and localStorage
-  const persistClientes = useCallback((next) => {
+  // Load from Supabase on mount (merge with local, Supabase wins by cedula)
+  useEffect(() => {
+    (async () => {
+      try {
+        const sbData = await fetchClientesLocal()
+        if (sbData.length > 0) {
+          const norm = sbData.map(r => buildRecord({
+            id: r.id, cuenttiId: r.cuentti_id, cedula: r.cedula, nombre: r.nombre,
+            telefono: r.telefono, email: r.email, direccion: r.direccion, ciudad: r.ciudad,
+            vehiculos: typeof r.vehiculos === 'string' ? JSON.parse(r.vehiculos) : (r.vehiculos || []),
+            fechaCreacion: r.fecha_creacion, fechaUltimaVisita: r.fecha_ultima_visita,
+            totalVisitas: r.total_visitas, totalGastado: r.total_gastado,
+          }, null))
+          // Merge: Supabase records win, add locals not in DB
+          const cedDb = new Set(norm.map(c => c.cedula))
+          const cached = lsGet(LS_KEYS.CLIENTES, [])
+          const merged = [...norm]
+          cached.forEach(c => { if (!cedDb.has(c.cedula)) merged.push(c) })
+          clientesRef.current = merged
+          setClientesTable(merged)
+          lsSet(LS_KEYS.CLIENTES, merged)
+        } else {
+          // Seed if we have local data
+          const cached = lsGet(LS_KEYS.CLIENTES, [])
+          if (cached.length > 0) cached.forEach(c => upsertClienteLocal(c))
+        }
+      } catch { /* use local cache */ }
+    })()
+  }, [])
+
+  // Persist helper — syncs ref, state, localStorage, and Supabase
+  const persistClientes = useCallback((next, changedRecord) => {
     clientesRef.current = next
     setClientesTable(next)
     lsSet(LS_KEYS.CLIENTES, next)
+    if (changedRecord) upsertClienteLocal(changedRecord)
   }, [])
 
   // -----------------------------------------------------------
@@ -65,7 +97,7 @@ export function useClientes() {
     } else {
       next = [...table, record]
     }
-    persistClientes(next)
+    persistClientes(next, record)
     return record
   }, [persistClientes])
 
@@ -176,7 +208,7 @@ export function useClientes() {
 
     const next = [...table]
     next[idx] = record
-    persistClientes(next)
+    persistClientes(next, record)
     return record
   }, [persistClientes])
 

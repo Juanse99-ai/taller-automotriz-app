@@ -10,15 +10,10 @@ import { lsGet, lsSet, LS_KEYS } from '../services/storage'
 
 const ESTADO_COT = { PENDIENTE: 'Pendiente', APROBADA: 'Aprobada', RECHAZADA: 'Rechazada' }
 
-export default function Cotizaciones({ notify, trabajos = [], onCrearTrabajo }) {
-  const [cotizaciones, setCotizaciones] = useState(() => lsGet(LS_KEYS.COTIZACIONES, []))
+export default function Cotizaciones({ notify, trabajos = [], onCrearTrabajo, cotizacionesHook }) {
+  const { cotizaciones, guardar } = cotizacionesHook || {}
   const [vista, setVista] = useState('lista')
   const [editId, setEditId] = useState(null)
-
-  const guardar = useCallback((nuevas) => {
-    setCotizaciones(nuevas)
-    lsSet(LS_KEYS.COTIZACIONES, nuevas)
-  }, [])
 
   const loadLogo = async () => {
     try {

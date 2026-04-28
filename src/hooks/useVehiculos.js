@@ -1,15 +1,61 @@
-import { useState, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
+import { fetchVehiculos, upsertVehiculo } from '../services/supabase'
 import { lsGet, lsSet, LS_KEYS } from '../services/storage'
 
 export function useVehiculos() {
   const [vehiculos, setVehiculos] = useState(() => lsGet(LS_KEYS.VEHICULOS_HIST, []))
   const vehiculosRef = useRef(vehiculos)
+  const [loading, setLoading] = useState(true)
+
+  const normalizarRow = (r) => ({
+    id: r.id,
+    placa: r.placa || '',
+    marca: r.marca || '',
+    modelo: r.modelo || '',
+    ano: r.ano || 0,
+    cedulaPropietario: r.cedula_propietario || '',
+    historial: typeof r.historial === 'string' ? JSON.parse(r.historial) : (r.historial || []),
+    fechaCreacion: r.fecha_creacion || r.created_at,
+    fechaUltimoServicio: r.fecha_ultimo_servicio || '',
+  })
+
+  // Cargar de Supabase al montar
+  useEffect(() => {
+    (async () => {
+      try {
+        const sbData = await fetchVehiculos()
+        if (sbData.length > 0) {
+          const norm = sbData.map(normalizarRow)
+          // Merge: Supabase wins por placa
+          const merged = [...norm]
+          const placasDb = new Set(norm.map(v => v.placa))
+          const cached = lsGet(LS_KEYS.VEHICULOS_HIST, [])
+          cached.forEach(v => {
+            if (!placasDb.has(v.placa)) merged.push(v)
+          })
+          vehiculosRef.current = merged
+          setVehiculos(merged)
+          lsSet(LS_KEYS.VEHICULOS_HIST, merged)
+        } else {
+          // Seed si hay datos locales
+          const cached = lsGet(LS_KEYS.VEHICULOS_HIST, [])
+          if (cached.length > 0) cached.forEach(v => upsertVehiculo(v))
+        }
+      } catch {
+        // Usar cache local
+      } finally {
+        setLoading(false)
+      }
+    })()
+  }, [])
 
   // Persistir cambios en localStorage y sincronizar state + ref
-  const persistir = useCallback((nuevoArr) => {
+  const persistir = useCallback((nuevoArr, changedVehiculo) => {
     vehiculosRef.current = nuevoArr
     setVehiculos(nuevoArr)
     lsSet(LS_KEYS.VEHICULOS_HIST, nuevoArr)
+    // Fire-and-forget sync del vehiculo modificado
+    if (changedVehiculo) upsertVehiculo(changedVehiculo)
   }, [])
 
   // Agregar vehiculo nuevo o actualizar existente por placa
@@ -33,7 +79,7 @@ export function useVehiculos() {
       const nuevoArr = vehiculosRef.current.map((v) =>
         v.placa === placaNorm ? actualizado : v
       )
-      persistir(nuevoArr)
+      persistir(nuevoArr, actualizado)
       return actualizado
     }
 
@@ -50,7 +96,7 @@ export function useVehiculos() {
       fechaUltimoServicio: '',
     }
     const nuevoArr = [...vehiculosRef.current, nuevo]
-    persistir(nuevoArr)
+    persistir(nuevoArr, nuevo)
     return nuevo
   }, [persistir])
 
@@ -96,7 +142,7 @@ export function useVehiculos() {
     const nuevoArr = vehiculosRef.current.map((v) =>
       v.placa === placaNorm ? actualizado : v
     )
-    persistir(nuevoArr)
+    persistir(nuevoArr, actualizado)
     return actualizado
   }, [persistir])
 
@@ -112,12 +158,12 @@ export function useVehiculos() {
     const nuevoArr = vehiculosRef.current.map((v) =>
       v.placa === placaNorm ? actualizado : v
     )
-    persistir(nuevoArr)
+    persistir(nuevoArr, actualizado)
     return actualizado
   }, [persistir])
 
   return {
-    vehiculos,
+    vehiculos, loading,
     agregarVehiculo,
     buscarPorPlaca,
     buscarPorCedula,
