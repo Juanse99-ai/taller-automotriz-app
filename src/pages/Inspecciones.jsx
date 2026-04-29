@@ -69,30 +69,24 @@ export default function Inspecciones({ trabajos, notify, onVincularInspeccion, i
 
   return (
     <div>
-      <div className="metrics-grid">
-        <div className="metric-card">
-          <div className="metric-value">{stats.total}</div>
-          <div className="metric-label">Inspecciones</div>
-        </div>
-        <div className="metric-card">
-          <div className="metric-value" style={{ color: 'var(--red-500)' }}>{stats.conUrgentes}</div>
-          <div className="metric-label">Con Urgentes</div>
+      <div className="pagehd">
+        <div><h2>Inspecciones digitales</h2><p className="sub">DVI · {stats.total} inspecciones realizadas · <b style={{color:'var(--red-600)'}}>{stats.conUrgentes}</b> con items urgentes</p></div>
+        <div className="actions">
+          <button className="btn btn-primary" onClick={() => setVista('nueva')}>+ Nueva inspeccion</button>
         </div>
       </div>
 
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
-        <h3 style={{ fontSize: 16, fontWeight: 700 }}>Inspecciones Digitales (DVI)</h3>
-        <button className="btn btn-primary btn-sm" onClick={() => setVista('nueva')}>+ Nueva Inspeccion</button>
+      <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(200px,1fr))',gap:14,marginBottom:18}}>
+        <div className="kpi"><div className="kpi__head"><div className="kpi__ic blue"><svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg></div><div className="kpi__lbl">Total inspecciones</div></div><div className="kpi__v">{stats.total}</div></div>
+        <div className="kpi"><div className="kpi__head"><div className="kpi__ic red"><svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></div><div className="kpi__lbl">Con urgentes</div></div><div className="kpi__v" style={{color:'var(--red-600)'}}>{stats.conUrgentes}</div></div>
       </div>
 
-      {sorted.length === 0 ? (
-        <div className="empty-state">
-          <div className="empty-state-icon">🔍</div>
-          <p>No hay inspecciones registradas.</p>
-        </div>
-      ) : (
-        <div className="card" style={{ padding: 0 }}>
-          <div className="table-wrap">
+      <div className="card">
+        <div className="card__h"><h3>Historial de inspecciones</h3><span className="count">{sorted.length}</span></div>
+        <div className="card__b card__b--flush">
+          {sorted.length === 0 ? (
+            <div className="empty"><h4>Sin inspecciones</h4><p>No hay inspecciones registradas.</p></div>
+          ) : (
             <table>
               <thead>
                 <tr>
@@ -100,9 +94,9 @@ export default function Inspecciones({ trabajos, notify, onVincularInspeccion, i
                   <th>Placa</th>
                   <th>Cliente</th>
                   <th>Tecnico</th>
-                  <th>Estado</th>
+                  <th style={{textAlign:'center'}}>Estado</th>
                   <th>Fecha</th>
-                  <th>Acciones</th>
+                  <th></th>
                 </tr>
               </thead>
               <tbody>
@@ -113,30 +107,25 @@ export default function Inspecciones({ trabajos, notify, onVincularInspeccion, i
                   const totalItems = (i.items || []).filter(it => it.estado !== ESTADO_ITEM.NO_APLICA).length
                   const pct = totalItems > 0 ? Math.round((buenos / totalItems) * 100) : 0
                   return (
-                    <tr key={i.id}>
-                      <td className="text-mono text-sm">{i.id}</td>
-                      <td className="text-mono" style={{ fontWeight: 700 }}>{i.placa || '—'}</td>
+                    <tr key={i.id} style={{cursor:'pointer'}} onClick={() => { setEditId(i.id); setVista('detalle') }}>
+                      <td className="mono" style={{fontSize:12}}>{i.id}</td>
+                      <td className="mono" style={{fontWeight:700}}>{i.placa || '—'}</td>
                       <td>{i.cliente || '—'}</td>
-                      <td className="text-sm">{i.tecnico || '—'}</td>
+                      <td style={{fontSize:13}}>{i.tecnico || '—'}</td>
                       <td>
-                        <div style={{ display: 'flex', gap: 4 }}>
-                          {buenos > 0 && <span className="badge badge-success">{buenos}</span>}
-                          {sugeridos > 0 && <span className="badge badge-warning">{sugeridos}</span>}
-                          {urgentes > 0 && <span className="badge badge-danger">{urgentes}</span>}
-                          <span className="text-xs text-muted" style={{ marginLeft: 4 }}>{pct}%</span>
+                        <div style={{display:'flex',gap:4,justifyContent:'center',alignItems:'center'}}>
+                          {buenos > 0 && <span className="badge badge-s">{buenos}</span>}
+                          {sugeridos > 0 && <span className="badge badge-w">{sugeridos}</span>}
+                          {urgentes > 0 && <span className="badge badge-d">{urgentes}</span>}
+                          <span style={{fontSize:11,color:'var(--text-3)',marginLeft:4}}>{pct}%</span>
                         </div>
                       </td>
-                      <td className="text-sm text-muted">{fmtDate(i.fecha)}</td>
+                      <td style={{color:'var(--text-3)',fontSize:13}}>{fmtDate(i.fecha)}</td>
                       <td>
-                        <div className="actions-cell">
-                          <button className="btn btn-outline btn-sm" onClick={() => { setEditId(i.id); setVista('detalle') }}>Ver</button>
-                          <button className="btn btn-outline btn-sm" onClick={() => { setEditId(i.id); setVista('editar') }}>Editar</button>
-                          <button className="btn btn-outline btn-sm" onClick={() => vincularATrabajo(i)}
-                            title="Vincular al trabajo (visible en portal cliente)">Vincular OT</button>
-                          <button className="btn btn-ghost btn-sm" onClick={() => {
-                            guardar(inspecciones.filter(x => x.id !== i.id))
-                            notify('Inspeccion eliminada', 'info')
-                          }}>X</button>
+                        <div style={{display:'flex',gap:4,justifyContent:'flex-end'}}>
+                          <button className="btn btn-outline btn-sm" onClick={e => { e.stopPropagation(); setEditId(i.id); setVista('editar') }}>Editar</button>
+                          <button className="btn btn-outline btn-sm" onClick={e => { e.stopPropagation(); vincularATrabajo(i) }} title="Vincular al trabajo">OT</button>
+                          <button className="btn btn-ghost btn-sm" onClick={e => { e.stopPropagation(); guardar(inspecciones.filter(x => x.id !== i.id)); notify('Inspeccion eliminada', 'info') }}>X</button>
                         </div>
                       </td>
                     </tr>
@@ -144,9 +133,9 @@ export default function Inspecciones({ trabajos, notify, onVincularInspeccion, i
                 })}
               </tbody>
             </table>
-          </div>
+          )}
         </div>
-      )}
+      </div>
     </div>
   )
 }
@@ -214,96 +203,60 @@ function InspeccionForm({ inspeccion, trabajos, onSave, onCancel }) {
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
-        <h3 style={{ fontSize: 16, fontWeight: 700 }}>{isEdit ? 'Editar Inspeccion' : 'Nueva Inspeccion Digital'}</h3>
-        <button className="btn btn-outline" onClick={onCancel}>Volver</button>
+      <div className="pagehd">
+        <div style={{display:'flex',alignItems:'center',gap:12}}>
+          <button className="btn btn-outline btn-sm" onClick={onCancel}><svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg> Volver</button>
+          <div><h2>{isEdit ? 'Editar inspeccion' : 'Nueva inspeccion digital'}</h2><p className="sub">Recorre el checklist y marca cada item</p></div>
+        </div>
+        <div className="actions">
+          <button type="button" className="btn btn-outline" onClick={onCancel}>Cancelar</button>
+          <button type="submit" form="insp-form" className="btn btn-primary">{isEdit ? 'Actualizar' : 'Guardar inspeccion'}</button>
+        </div>
       </div>
 
-      <form onSubmit={handleSubmit}>
-        <div className="card">
-          <div className="card-title">Datos del Vehiculo</div>
-          <div className="form-row">
-            <div className="form-group">
-              <label className="form-label">Placa *</label>
-              <input className="form-input" value={placa} required placeholder="ABC123" style={{ textTransform: 'uppercase' }}
-                onChange={e => { setPlaca(e.target.value); if (e.target.value.length >= 6) autoFill(e.target.value) }} />
-            </div>
-            <div className="form-group">
-              <label className="form-label">Cliente</label>
-              <input className="form-input" value={cliente} placeholder="Nombre" onChange={e => setCliente(e.target.value)} />
-            </div>
-            <div className="form-group">
-              <label className="form-label">Cedula</label>
-              <input className="form-input" value={cedula} placeholder="Cedula cliente" onChange={e => setCedula(e.target.value)} />
-            </div>
-          </div>
-          <div className="form-row">
-            <div className="form-group">
-              <label className="form-label">Vehiculo</label>
-              <input className="form-input" value={vehiculo} placeholder="Marca Modelo Año" onChange={e => setVehiculo(e.target.value)} />
-            </div>
-            <div className="form-group">
-              <label className="form-label">Tecnico</label>
-              <select className="form-select" value={tecnico} onChange={e => setTecnico(e.target.value)}>
-                <option value="">Seleccionar</option>
-                {TECNICOS.map(t => <option key={t.id} value={t.nombre}>{t.nombre}</option>)}
-              </select>
-            </div>
-            <div className="form-group">
-              <label className="form-label">Kilometraje</label>
-              <input className="form-input" type="number" value={km} placeholder="45000" onChange={e => setKm(e.target.value)} />
-            </div>
+      <form id="insp-form" onSubmit={handleSubmit}>
+        <div className="card" style={{marginBottom:16}}>
+          <div className="card__h"><h3>Datos del vehiculo</h3></div>
+          <div className="card__b" style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:14}}>
+            <div className="field"><label>Placa *</label><input className="input" value={placa} required placeholder="ABC123" style={{textTransform:'uppercase'}} onChange={e => { setPlaca(e.target.value); if (e.target.value.length >= 6) autoFill(e.target.value) }}/></div>
+            <div className="field"><label>Cliente</label><input className="input" value={cliente} placeholder="Nombre" onChange={e => setCliente(e.target.value)}/></div>
+            <div className="field"><label>Cedula</label><input className="input" value={cedula} placeholder="Cedula cliente" onChange={e => setCedula(e.target.value)}/></div>
+            <div className="field"><label>Vehiculo</label><input className="input" value={vehiculo} placeholder="Marca Modelo Ano" onChange={e => setVehiculo(e.target.value)}/></div>
+            <div className="field"><label>Tecnico</label><select className="input" value={tecnico} onChange={e => setTecnico(e.target.value)}><option value="">Seleccionar...</option>{TECNICOS.map(t => <option key={t.id} value={t.nombre}>{t.nombre}</option>)}</select></div>
+            <div className="field"><label>Kilometraje</label><input className="input" type="number" value={km} placeholder="45000" onChange={e => setKm(e.target.value)}/></div>
           </div>
         </div>
 
-        {/* Items de inspeccion por categoria */}
         {categorias.map(cat => (
-          <div key={cat} className="card">
-            <div className="card-title">{cat}</div>
-            {items.filter(i => i.categoria === cat).map(item => (
-              <div key={item.id} className="dvi-item">
-                <div className="dvi-item-header">
-                  <span className="dvi-item-name">{item.nombre}</span>
-                  <div className="dvi-item-states">
-                    {Object.entries(ESTADO_COLORS).filter(([k]) => k !== 'no_aplica').map(([key, val]) => (
-                      <button key={key} type="button"
-                        className={`dvi-state-btn ${item.estado === key ? 'active' : ''}`}
-                        style={{
-                          background: item.estado === key ? val.bg : 'transparent',
-                          color: item.estado === key ? val.color : 'var(--slate-400)',
-                          borderColor: item.estado === key ? val.color : 'var(--slate-300)',
-                        }}
-                        onClick={() => updateItem(item.id, 'estado', key)}
-                        title={val.label}
-                      >
-                        {val.icon}
-                      </button>
-                    ))}
+          <div key={cat} className="card" style={{marginBottom:14}}>
+            <div className="card__h"><h3>{cat}</h3><span className="count">{items.filter(i => i.categoria === cat).length} items</span></div>
+            <div className="card__b" style={{display:'flex',flexDirection:'column',gap:0}}>
+              {items.filter(i => i.categoria === cat).map((item, idx, arr) => (
+                <div key={item.id} style={{display:'flex',alignItems:'center',gap:14,padding:'12px 0',borderBottom:idx<arr.length-1?'1px solid var(--border)':'none'}}>
+                  <span style={{flex:1,fontSize:13.5,color:'var(--text)'}}>{item.nombre}</span>
+                  <div style={{display:'flex',gap:6}}>
+                    {Object.entries(ESTADO_COLORS).filter(([k]) => k !== 'no_aplica').map(([key, val]) => {
+                      const active = item.estado === key
+                      const toneMap = { bueno: {bg:'var(--green-50)',c:'var(--green-700)',bd:'var(--green-200)'}, sugerido: {bg:'var(--amber-50)',c:'var(--amber-700)',bd:'var(--amber-200)'}, urgente: {bg:'var(--red-50)',c:'var(--red-700)',bd:'var(--red-200)'} }
+                      const s = toneMap[key] || {bg:'var(--bg-subtle)',c:'var(--text-3)',bd:'var(--border)'}
+                      return (
+                        <button key={key} type="button" title={val.label}
+                          style={{width:34,height:34,borderRadius:8,border:`1.5px solid ${active?s.c:s.bd}`,background:active?s.bg:'transparent',color:active?s.c:'var(--text-4)',fontSize:14,fontWeight:800,cursor:'pointer'}}
+                          onClick={() => updateItem(item.id, 'estado', key)}>
+                          {val.icon}
+                        </button>
+                      )
+                    })}
                   </div>
+                  <label className="btn btn-outline btn-sm" style={{cursor:'pointer'}}>
+                    + Foto
+                    <input type="file" accept="image/*" multiple hidden onChange={e => addFoto(item.id, e.target.files)}/>
+                  </label>
                 </div>
-                <div className="dvi-item-body">
-                  <input className="form-input" placeholder="Comentarios..." value={item.comentario}
-                    onChange={e => updateItem(item.id, 'comentario', e.target.value)}
-                    style={{ fontSize: 12, padding: '6px 10px' }} />
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4 }}>
-                    <label className="btn btn-ghost btn-sm" style={{ cursor: 'pointer', fontSize: 11 }}>
-                      + Foto
-                      <input type="file" accept="image/*" multiple hidden onChange={e => addFoto(item.id, e.target.files)} />
-                    </label>
-                    {(item.fotos || []).map(f => (
-                      <img key={f.id} src={f.dataUrl} alt="" style={{ width: 36, height: 36, objectFit: 'cover', borderRadius: 4, border: '1px solid var(--border-card)' }} />
-                    ))}
-                  </div>
-                </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         ))}
-
-        <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 8 }}>
-          <button type="button" className="btn btn-outline" onClick={onCancel}>Cancelar</button>
-          <button type="submit" className="btn btn-primary">{isEdit ? 'Actualizar' : 'Guardar Inspeccion'}</button>
-        </div>
       </form>
     </div>
   )
@@ -320,78 +273,83 @@ export function InspeccionDetalle({ inspeccion, onVolver }) {
   const [expandido, setExpandido] = useState({ urgente: true, sugerido: true, bueno: false })
 
   return (
-    <div>
+    <div style={{display:'flex',flexDirection:'column',gap:18}}>
       {onVolver && (
-        <div style={{ marginBottom: 14 }}>
-          <button className="btn btn-outline" onClick={onVolver}>Volver</button>
+        <div className="pagehd">
+          <div style={{display:'flex',alignItems:'center',gap:12}}>
+            <button className="btn btn-outline btn-sm" onClick={onVolver}><svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg> Volver</button>
+            <div><h2>Inspeccion {inspeccion.id}</h2><p className="sub">{inspeccion.vehiculo || ''} · placa <span className="mono" style={{fontWeight:700}}>{inspeccion.placa}</span></p></div>
+          </div>
         </div>
       )}
 
-      {/* Header */}
-      <div className="card" style={{ textAlign: 'center' }}>
-        <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 4 }}>SEGUIMIENTO EN LINEA</h2>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, textAlign: 'left', marginTop: 16 }}>
-          <div><span className="text-sm text-muted">Orden:</span> <strong>{inspeccion.id}</strong></div>
-          <div><span className="text-sm text-muted">Tecnico:</span> <strong>{inspeccion.tecnico || '—'}</strong></div>
-          <div><span className="text-sm text-muted">Vehiculo:</span> <strong>{inspeccion.vehiculo || '—'}</strong></div>
-          <div><span className="text-sm text-muted">Placa:</span> <strong>{inspeccion.placa}</strong></div>
-        </div>
-        <div style={{ marginTop: 20 }}>
-          <div style={{ fontSize: 14 }}>Estado del vehiculo:</div>
-          <div style={{ fontSize: 42, fontWeight: 800, color: pct >= 80 ? 'var(--green-500)' : pct >= 50 ? 'var(--amber-500)' : 'var(--red-500)' }}>{pct}%</div>
-        </div>
-      </div>
-
-      {/* Resumen */}
-      <div className="card">
-        <div className="card-title">Resumen de Diagnostico</div>
-        <div style={{ display: 'flex', gap: 16, justifyContent: 'center', flexWrap: 'wrap' }}>
-          {[
-            { label: 'Buen estado', count: buenos.length, color: '#166534', bg: '#dcfce7' },
-            { label: 'Reparacion sugerida', count: sugeridos.length, color: '#92400e', bg: '#fef3c7' },
-            { label: 'Reparacion urgente', count: urgentes.length, color: '#991b1b', bg: '#fee2e2' },
-          ].map(s => (
-            <div key={s.label} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <div style={{ width: 28, height: 28, borderRadius: '50%', background: s.bg, color: s.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 13 }}>{s.count}</div>
-              <span style={{ fontSize: 13, fontWeight: 500 }}>{s.label}</span>
+      <div style={{display:'grid',gridTemplateColumns:'1.2fr 1fr',gap:18}}>
+        <div className="card" style={{textAlign:'center',padding:'8px 0'}}>
+          <div className="card__b" style={{display:'flex',flexDirection:'column',alignItems:'center',gap:6}}>
+            <div style={{fontSize:11,fontWeight:700,letterSpacing:'.1em',color:'var(--text-3)',textTransform:'uppercase'}}>Estado general del vehiculo</div>
+            <div style={{position:'relative',width:160,height:160,marginTop:6}}>
+              <svg viewBox="0 0 100 100" style={{transform:'rotate(-90deg)'}}>
+                <circle cx="50" cy="50" r="42" fill="none" stroke="var(--border)" strokeWidth="9"/>
+                <circle cx="50" cy="50" r="42" fill="none" stroke={pct>=80?'var(--green-500)':pct>=50?'var(--amber-500)':'var(--red-500)'} strokeWidth="9" strokeLinecap="round" strokeDasharray={`${pct*2.64} 264`}/>
+              </svg>
+              <div style={{position:'absolute',inset:0,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center'}}>
+                <div style={{fontSize:38,fontWeight:800,letterSpacing:'-.02em',color:pct>=80?'var(--green-600)':pct>=50?'var(--amber-600)':'var(--red-600)'}}>{pct}%</div>
+                <div style={{fontSize:11,color:'var(--text-3)',fontWeight:600}}>en buen estado</div>
+              </div>
             </div>
-          ))}
+            <div style={{display:'flex',gap:18,marginTop:14,marginBottom:6}}>
+              {[{n:buenos.length,l:'Buenos',c:'var(--green-600)'},{n:sugeridos.length,l:'Sugeridos',c:'var(--amber-600)'},{n:urgentes.length,l:'Urgentes',c:'var(--red-600)'}].map(s=>(
+                <div key={s.l} style={{textAlign:'center'}}><div style={{fontSize:22,fontWeight:800,color:s.c,lineHeight:1}}>{s.n}</div><div style={{fontSize:10.5,fontWeight:700,letterSpacing:'.04em',color:'var(--text-3)',textTransform:'uppercase',marginTop:3}}>{s.l}</div></div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div className="card">
+          <div className="card__h"><h3>Datos de la inspeccion</h3></div>
+          <div className="card__b" style={{display:'flex',flexDirection:'column',gap:12}}>
+            {[['Cliente',inspeccion.cliente||'—'],['Vehiculo',inspeccion.vehiculo||'—'],['Kilometraje',inspeccion.km?`${inspeccion.km} km`:'—'],['Tecnico',inspeccion.tecnico||'—'],['Fecha',fmtDate(inspeccion.fecha)]].map(([l,v])=>(
+              <div key={l}><div style={{fontSize:11,fontWeight:700,color:'var(--text-3)',textTransform:'uppercase',letterSpacing:'.04em',marginBottom:4}}>{l}</div><div style={{fontSize:14,color:'var(--text)'}}>{v}</div></div>
+            ))}
+          </div>
         </div>
       </div>
 
-      {/* Items urgentes */}
       {urgentes.length > 0 && (
-        <div className="card" style={{ borderLeft: '4px solid var(--red-500)' }}>
-          <div className="card-title" style={{ cursor: 'pointer', color: 'var(--red-500)' }} onClick={() => setExpandido(e => ({ ...e, urgente: !e.urgente }))}>
-            Items Reparacion Urgente ({urgentes.length}) {expandido.urgente ? '▾' : '▸'}
+        <div className="card" style={{borderLeft:'3px solid var(--red-500)'}}>
+          <div className="card__h" style={{cursor:'pointer'}} onClick={() => setExpandido(e => ({...e, urgente: !e.urgente}))}>
+            <h3 style={{color:'var(--red-600)'}}>Atencion urgente</h3><span className="count">{urgentes.length} items {expandido.urgente ? '▾' : '▸'}</span>
           </div>
-          {expandido.urgente && urgentes.map(item => (
-            <InspeccionItemView key={item.id} item={item} />
-          ))}
+          {expandido.urgente && <div className="card__b" style={{display:'flex',flexDirection:'column',gap:0}}>
+            {urgentes.map(item => <InspeccionItemView key={item.id} item={item} />)}
+          </div>}
         </div>
       )}
 
-      {/* Items sugeridos */}
       {sugeridos.length > 0 && (
-        <div className="card" style={{ borderLeft: '4px solid var(--amber-500)' }}>
-          <div className="card-title" style={{ cursor: 'pointer', color: 'var(--amber-500)' }} onClick={() => setExpandido(e => ({ ...e, sugerido: !e.sugerido }))}>
-            Items Reparacion Sugerida ({sugeridos.length}) {expandido.sugerido ? '▾' : '▸'}
+        <div className="card" style={{borderLeft:'3px solid var(--amber-500)'}}>
+          <div className="card__h" style={{cursor:'pointer'}} onClick={() => setExpandido(e => ({...e, sugerido: !e.sugerido}))}>
+            <h3 style={{color:'var(--amber-700)'}}>Reparacion sugerida</h3><span className="count">{sugeridos.length} items {expandido.sugerido ? '▾' : '▸'}</span>
           </div>
-          {expandido.sugerido && sugeridos.map(item => (
-            <InspeccionItemView key={item.id} item={item} />
-          ))}
+          {expandido.sugerido && <div className="card__b" style={{display:'flex',flexDirection:'column',gap:0}}>
+            {sugeridos.map(item => <InspeccionItemView key={item.id} item={item} />)}
+          </div>}
         </div>
       )}
 
-      {/* Items buenos */}
       {buenos.length > 0 && (
-        <div className="card" style={{ borderLeft: '4px solid var(--green-500)' }}>
-          <div className="card-title" style={{ cursor: 'pointer', color: 'var(--green-500)' }} onClick={() => setExpandido(e => ({ ...e, bueno: !e.bueno }))}>
-            Items en Buen Estado ({buenos.length}) {expandido.bueno ? '▾' : '▸'}
+        <div className="card" style={{borderLeft:'3px solid var(--green-500)'}}>
+          <div className="card__h" style={{cursor:'pointer'}} onClick={() => setExpandido(e => ({...e, bueno: !e.bueno}))}>
+            <h3 style={{color:'var(--green-700)'}}>En buen estado</h3><span className="count">{buenos.length} items {expandido.bueno ? '▾' : '▸'}</span>
           </div>
-          {expandido.bueno && buenos.map(item => (
-            <InspeccionItemView key={item.id} item={item} />
-          ))}
+          {expandido.bueno && <div className="card__b" style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:6}}>
+            {buenos.map(item => (
+              <div key={item.id} style={{display:'flex',alignItems:'center',gap:8,padding:'4px 0',fontSize:13}}>
+                <span style={{width:18,height:18,borderRadius:'50%',background:'var(--green-50)',color:'var(--green-700)',display:'inline-flex',alignItems:'center',justifyContent:'center',fontSize:11,fontWeight:700,flexShrink:0}}>✓</span>
+                <span style={{color:'var(--text-2)'}}>{item.categoria}: <b style={{color:'var(--text)'}}>{item.nombre}</b></span>
+              </div>
+            ))}
+          </div>}
         </div>
       )}
     </div>
@@ -400,24 +358,21 @@ export function InspeccionDetalle({ inspeccion, onVolver }) {
 
 function InspeccionItemView({ item }) {
   const est = ESTADO_COLORS[item.estado] || ESTADO_COLORS.bueno
+  const ic = item.estado === 'urgente' ? '✕' : item.estado === 'sugerido' ? '!' : '✓'
   return (
-    <div style={{ padding: '10px 0', borderBottom: '1px solid var(--border-card)' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-        <div style={{ width: 22, height: 22, borderRadius: '50%', background: est.bg, color: est.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, flexShrink: 0 }}>{est.icon}</div>
-        <span style={{ fontWeight: 600, fontSize: 14 }}>{item.nombre}</span>
-        <span className="badge" style={{ background: est.bg, color: est.color, fontSize: 10 }}>{est.label}</span>
+    <div style={{display:'flex',gap:12,padding:'12px 0',borderBottom:'1px solid var(--border)',alignItems:'flex-start'}}>
+      <span style={{width:24,height:24,borderRadius:'50%',background:est.bg,color:est.color,display:'inline-flex',alignItems:'center',justifyContent:'center',fontWeight:800,fontSize:12,flexShrink:0,marginTop:2}}>{ic}</span>
+      <div style={{flex:1}}>
+        <div style={{fontWeight:600,fontSize:13.5,color:'var(--text)'}}>{item.categoria}: {item.nombre}</div>
+        {item.comentario && <div style={{fontSize:12.5,color:'var(--text-3)',marginTop:3,lineHeight:1.5}}>{item.comentario}</div>}
+        {item.fotos?.length > 0 && (
+          <div style={{display:'flex',gap:8,marginTop:6,flexWrap:'wrap'}}>
+            {item.fotos.map(f => (
+              <img key={f.id} src={f.dataUrl} alt="" style={{width:60,height:60,objectFit:'cover',borderRadius:6,border:'1px solid var(--border)'}}/>
+            ))}
+          </div>
+        )}
       </div>
-      {item.comentario && <p className="text-sm" style={{ marginLeft: 30, color: 'var(--slate-600)' }}><strong>Comentarios:</strong> {item.comentario}</p>}
-      {item.fotos?.length > 0 && (
-        <div style={{ display: 'flex', gap: 8, marginLeft: 30, marginTop: 6, flexWrap: 'wrap' }}>
-          {item.fotos.map(f => (
-            <div key={f.id} style={{ textAlign: 'center' }}>
-              <img src={f.dataUrl} alt="" style={{ width: 80, height: 80, objectFit: 'cover', borderRadius: 6, border: '1px solid var(--border-card)' }} />
-              <div className="text-xs text-muted" style={{ marginTop: 2 }}>{new Date(f.fecha).toLocaleDateString('es-CO')}</div>
-            </div>
-          ))}
-        </div>
-      )}
     </div>
   )
 }

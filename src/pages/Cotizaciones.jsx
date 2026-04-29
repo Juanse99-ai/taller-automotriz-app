@@ -179,38 +179,52 @@ export default function Cotizaciones({ notify, trabajos = [], onCrearTrabajo, co
 
   return (
     <div>
-      <div className="metrics-grid">
-        <div className="metric-card">
-          <div className="metric-value">{stats.total}</div>
-          <div className="metric-label">Total Cotizaciones</div>
-        </div>
-        <div className="metric-card">
-          <div className="metric-value" style={{ color: 'var(--amber-500)' }}>{stats.pendientes}</div>
-          <div className="metric-label">Pendientes</div>
-        </div>
-        <div className="metric-card">
-          <div className="metric-value" style={{ color: 'var(--green-500)' }}>{stats.aprobadas}</div>
-          <div className="metric-label">Aprobadas</div>
-        </div>
-        <div className="metric-card">
-          <div className="metric-value">{fmt(stats.valorPendiente)}</div>
-          <div className="metric-label">Valor Pendiente</div>
+      <div className="pagehd">
+        <div><h2>Cotizaciones</h2><p className="sub">{stats.total} cotizaciones · {stats.aprobadas} aprobadas</p></div>
+        <div className="actions">
+          <button className="btn btn-primary" onClick={() => setVista('nueva')}>+ Nueva cotizacion</button>
         </div>
       </div>
 
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
-        <h3 style={{ fontSize: 16, fontWeight: 700 }}>Cotizaciones</h3>
-        <button className="btn btn-primary" onClick={() => setVista('nueva')}>+ Nueva Cotizacion</button>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,minmax(200px,1fr))', gap: 14, marginBottom: 18 }}>
+        <div className="kpi">
+          <div className="kpi__head">
+            <div className="kpi__ic blue"><svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div>
+            <div className="kpi__lbl">Total</div>
+          </div>
+          <div className="kpi__v">{stats.total}</div>
+        </div>
+        <div className="kpi">
+          <div className="kpi__head">
+            <div className="kpi__ic amber"><svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
+            <div className="kpi__lbl">Pendientes</div>
+          </div>
+          <div className="kpi__v" style={{ color: 'var(--amber-500)' }}>{stats.pendientes}</div>
+        </div>
+        <div className="kpi">
+          <div className="kpi__head">
+            <div className="kpi__ic green"><svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><polyline points="20 6 9 17 4 12"/></svg></div>
+            <div className="kpi__lbl">Aprobadas</div>
+          </div>
+          <div className="kpi__v" style={{ color: 'var(--green-600)' }}>{stats.aprobadas}</div>
+        </div>
+        <div className="kpi">
+          <div className="kpi__head">
+            <div className="kpi__ic blue"><svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg></div>
+            <div className="kpi__lbl">Valor pendiente</div>
+          </div>
+          <div className="kpi__v">{fmt(stats.valorPendiente)}</div>
+        </div>
       </div>
 
-      {sorted.length === 0 ? (
-        <div className="empty-state">
-          <div className="empty-state-icon">💰</div>
-          <p>No hay cotizaciones registradas.</p>
-        </div>
-      ) : (
-        <div className="card" style={{ padding: 0 }}>
-          <div className="table-wrap">
+      <div className="card">
+        <div className="card__h"><h3>Cotizaciones</h3><span className="count">{sorted.length}</span></div>
+        <div className="card__b card__b--flush">
+          {sorted.length === 0 ? (
+            <div style={{ padding: 32, textAlign: 'center', color: 'var(--slate-400)' }}>
+              <p>No hay cotizaciones registradas.</p>
+            </div>
+          ) : (
             <table>
               <thead>
                 <tr>
@@ -219,24 +233,24 @@ export default function Cotizaciones({ notify, trabajos = [], onCrearTrabajo, co
                   <th>Placa</th>
                   <th>Vehiculo</th>
                   <th>Estado</th>
-                  <th className="text-right">Total</th>
+                  <th className="c-right">Total</th>
                   <th>Fecha</th>
                   <th>Acciones</th>
                 </tr>
               </thead>
               <tbody>
                 {sorted.map(c => {
-                  const bc = c.estado === ESTADO_COT.APROBADA ? 'badge-success'
-                    : c.estado === ESTADO_COT.RECHAZADA ? 'badge-danger' : 'badge-warning'
+                  const bc = c.estado === ESTADO_COT.APROBADA ? 'badge-s'
+                    : c.estado === ESTADO_COT.RECHAZADA ? 'badge-d' : 'badge-w'
                   return (
                     <tr key={c.id}>
-                      <td className="text-mono text-sm">{c.id}</td>
-                      <td>{c.cliente || '—'}</td>
-                      <td className="text-mono" style={{ fontWeight: 700 }}>{c.placa || '—'}</td>
-                      <td className="text-sm">{[c.marca, c.modelo].filter(Boolean).join(' ') || '—'}</td>
+                      <td className="c-mono">{c.id}</td>
+                      <td className="c-name">{c.cliente || '—'}</td>
+                      <td className="c-mono" style={{ fontWeight: 700 }}>{c.placa || '—'}</td>
+                      <td className="c-muted">{[c.marca, c.modelo].filter(Boolean).join(' ') || '—'}</td>
                       <td><span className={`badge ${bc}`}>{c.estado}</span></td>
-                      <td className="text-right text-mono">{fmt(c.total)}</td>
-                      <td className="text-sm text-muted">{fmtDate(c.fecha)}</td>
+                      <td className="c-right c-mono">{fmt(c.total)}</td>
+                      <td className="c-muted">{fmtDate(c.fecha)}</td>
                       <td>
                         <div className="actions-cell">
                           <button className="btn btn-outline btn-sm" onClick={() => imprimirCotizacion(c)}>PDF</button>
@@ -250,7 +264,7 @@ export default function Cotizaciones({ notify, trabajos = [], onCrearTrabajo, co
                           {c.estado === ESTADO_COT.APROBADA && onCrearTrabajo && (
                             <button className="btn btn-primary btn-sm" onClick={() => onCrearTrabajo(c)}>Crear Trabajo</button>
                           )}
-                          <button className="btn btn-ghost btn-sm" onClick={() => eliminar(c.id)} title="Eliminar">🗑</button>
+                          <button className="btn btn-ghost btn-sm" onClick={() => eliminar(c.id)} title="Eliminar">X</button>
                         </div>
                       </td>
                     </tr>
@@ -258,9 +272,9 @@ export default function Cotizaciones({ notify, trabajos = [], onCrearTrabajo, co
                 })}
               </tbody>
             </table>
-          </div>
+          )}
         </div>
-      )}
+      </div>
     </div>
   )
 }
@@ -377,76 +391,82 @@ function CotizacionForm({ cotizacion, trabajos = [], onSave, onCancel }) {
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
-        <h3 style={{ fontSize: 16, fontWeight: 700 }}>{isEdit ? 'Editar Cotizacion' : 'Nueva Cotizacion'}</h3>
-        <button className="btn btn-outline" onClick={onCancel}>Volver</button>
+      <div className="pagehd">
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <button type="button" className="btn btn-outline btn-sm" onClick={onCancel}>← Volver</button>
+          <h2>{isEdit ? 'Editar Cotizacion' : 'Nueva Cotizacion'}</h2>
+        </div>
       </div>
       <form onSubmit={handleSubmit}>
         <div className="card">
-          <div className="card-title">Cliente</div>
-          <div className="form-row">
-            <div className="form-group" style={{ position: 'relative' }}>
-              <label className="form-label">Cedula / NIT</label>
-              <input className="form-input" value={form.cedula} placeholder="Buscar por documento..."
-                onChange={e => { set('cedula', e.target.value); buscarDebounced(e.target.value) }} />
-              {resultados.length > 0 && (
-                <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 20, background: '#fff', border: '1px solid var(--slate-200)', borderRadius: 8, maxHeight: 200, overflowY: 'auto', boxShadow: 'var(--shadow-md)' }}>
-                  {resultados.map((c, i) => (
-                    <div key={i} onClick={() => seleccionarCliente(c)}
-                      style={{ padding: '10px 14px', cursor: 'pointer', borderBottom: '1px solid var(--slate-100)', fontSize: 13 }}>
-                      <strong>{normalizarDoc(c)}</strong> — {normalizarNombre(c)}
-                    </div>
-                  ))}
-                </div>
-              )}
-              {buscando && <span className="text-xs text-muted mt-2" style={{ display: 'block' }}>Buscando en Cuentti...</span>}
-            </div>
-            <div className="form-group">
-              <label className="form-label">Nombre del Cliente</label>
-              <input className="form-input" value={form.cliente} required placeholder="Nombre completo"
-                onChange={e => { set('cliente', e.target.value); buscarDebounced(e.target.value) }} />
-            </div>
-            <div className="form-group">
-              <label className="form-label">Telefono</label>
-              <input className="form-input" value={form.telefonoCliente} placeholder="300..." onChange={e => set('telefonoCliente', e.target.value)} />
+          <div className="card__h"><h3>Cliente</h3></div>
+          <div className="card__b">
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 14 }}>
+              <div className="field" style={{ position: 'relative' }}>
+                <label>Cedula / NIT</label>
+                <input className="input" value={form.cedula} placeholder="Buscar por documento..."
+                  onChange={e => { set('cedula', e.target.value); buscarDebounced(e.target.value) }} />
+                {resultados.length > 0 && (
+                  <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 20, background: '#fff', border: '1px solid var(--slate-200)', borderRadius: 8, maxHeight: 200, overflowY: 'auto', boxShadow: 'var(--shadow-md)' }}>
+                    {resultados.map((c, i) => (
+                      <div key={i} onClick={() => seleccionarCliente(c)}
+                        style={{ padding: '10px 14px', cursor: 'pointer', borderBottom: '1px solid var(--slate-100)', fontSize: 13 }}>
+                        <strong>{normalizarDoc(c)}</strong> — {normalizarNombre(c)}
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {buscando && <span style={{ display: 'block', fontSize: 11, color: 'var(--slate-400)', marginTop: 4 }}>Buscando en Cuentti...</span>}
+              </div>
+              <div className="field">
+                <label>Nombre del Cliente</label>
+                <input className="input" value={form.cliente} required placeholder="Nombre completo"
+                  onChange={e => { set('cliente', e.target.value); buscarDebounced(e.target.value) }} />
+              </div>
+              <div className="field">
+                <label>Telefono</label>
+                <input className="input" value={form.telefonoCliente} placeholder="300..." onChange={e => set('telefonoCliente', e.target.value)} />
+              </div>
             </div>
           </div>
         </div>
 
         <div className="card">
-          <div className="card-title">Vehiculo</div>
-          <div className="form-row">
-            <div className="form-group">
-              <label className="form-label">Placa</label>
-              <input className="form-input" value={form.placa} placeholder="ABC123" style={{ textTransform: 'uppercase' }}
-                onChange={e => {
-                  const placa = e.target.value
-                  set('placa', placa)
-                  if (placa.length >= 6) {
-                    const prev = trabajos.find(t => (t.placa || '').toUpperCase() === placa.toUpperCase())
-                    if (prev) {
-                      if (!form.marca && prev.marca) set('marca', prev.marca)
-                      if (!form.modelo && prev.modelo) set('modelo', prev.modelo)
-                      if (!form.cliente && prev.cliente) set('cliente', prev.cliente)
-                      if (!form.cedula && prev.cedula) set('cedula', prev.cedula)
-                      if (!form.telefonoCliente && prev.telefonoCliente) set('telefonoCliente', prev.telefonoCliente)
+          <div className="card__h"><h3>Vehiculo</h3></div>
+          <div className="card__b">
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 14 }}>
+              <div className="field">
+                <label>Placa</label>
+                <input className="input" value={form.placa} placeholder="ABC123" style={{ textTransform: 'uppercase' }}
+                  onChange={e => {
+                    const placa = e.target.value
+                    set('placa', placa)
+                    if (placa.length >= 6) {
+                      const prev = trabajos.find(t => (t.placa || '').toUpperCase() === placa.toUpperCase())
+                      if (prev) {
+                        if (!form.marca && prev.marca) set('marca', prev.marca)
+                        if (!form.modelo && prev.modelo) set('modelo', prev.modelo)
+                        if (!form.cliente && prev.cliente) set('cliente', prev.cliente)
+                        if (!form.cedula && prev.cedula) set('cedula', prev.cedula)
+                        if (!form.telefonoCliente && prev.telefonoCliente) set('telefonoCliente', prev.telefonoCliente)
+                      }
                     }
-                  }
-                }} />
-            </div>
-            <div className="form-group">
-              <label className="form-label">Marca</label>
-              <select className="form-select" value={form.marca} onChange={e => { set('marca', e.target.value); set('modelo', '') }}>
-                <option value="">Seleccionar...</option>
-                {MARCAS.map(m => <option key={m} value={m}>{m}</option>)}
-              </select>
-            </div>
-            <div className="form-group">
-              <label className="form-label">Modelo</label>
-              <select className="form-select" value={form.modelo} onChange={e => set('modelo', e.target.value)} disabled={!form.marca}>
-                <option value="">Seleccionar...</option>
-                {modelos.map(m => <option key={m} value={m}>{m}</option>)}
-              </select>
+                  }} />
+              </div>
+              <div className="field">
+                <label>Marca</label>
+                <select className="input" value={form.marca} onChange={e => { set('marca', e.target.value); set('modelo', '') }}>
+                  <option value="">Seleccionar...</option>
+                  {MARCAS.map(m => <option key={m} value={m}>{m}</option>)}
+                </select>
+              </div>
+              <div className="field">
+                <label>Modelo</label>
+                <select className="input" value={form.modelo} onChange={e => set('modelo', e.target.value)} disabled={!form.marca}>
+                  <option value="">Seleccionar...</option>
+                  {modelos.map(m => <option key={m} value={m}>{m}</option>)}
+                </select>
+              </div>
             </div>
           </div>
         </div>
@@ -459,8 +479,8 @@ function CotizacionForm({ cotizacion, trabajos = [], onSave, onCancel }) {
           const tecNombre = (id) => { const t = TECNICOS.find(tc => tc.id === parseInt(id)); return t ? t.nombre : '—' }
           return (
             <div className="card" style={{ borderLeft: '4px solid var(--blue-500)' }}>
-              <div className="card-title" style={{ color: 'var(--blue-500)' }}>Historial de {form.placa.toUpperCase()} ({historial.length} trabajos anteriores)</div>
-              <div className="table-wrap">
+              <div className="card__h" style={{ color: 'var(--blue-500)' }}><h3>Historial de {form.placa.toUpperCase()} ({historial.length} trabajos anteriores)</h3></div>
+              <div className="card__b card__b--flush">
                 <table>
                   <thead>
                     <tr><th>OT</th><th>Estado</th><th>Tecnico</th><th className="text-right">Total</th><th>Fecha</th></tr>

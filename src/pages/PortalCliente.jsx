@@ -151,13 +151,13 @@ export default function PortalCliente() {
   // Vista de detalle de inspeccion
   if (vistaInspeccion) {
     return (
-      <div className="portal-container">
-        <div className="portal-header">
-          <img src="/logo.png" alt="MDA" style={{ width: 40, height: 40, objectFit: 'contain' }} />
-          <h1>Multidiagnosticos AS</h1>
+      <div style={{maxWidth:780,margin:'0 auto',display:'flex',flexDirection:'column',gap:20,padding:'20px 16px'}}>
+        <div style={{display:'flex',alignItems:'center',gap:10,fontSize:11,fontWeight:700,letterSpacing:'.08em',textTransform:'uppercase',color:'var(--text-3)'}}>
+          <img src="/logo.png" alt="MDA" style={{width:28,height:28,objectFit:'contain'}}/>
+          Multidiagnosticos AS
         </div>
         <InspeccionDetalle inspeccion={vistaInspeccion} onVolver={() => setVistaInspeccion(null)} />
-        <div style={{ textAlign: 'center', marginTop: 16 }}>
+        <div style={{textAlign:'center',marginTop:8}}>
           <button className="btn btn-primary" onClick={() => descargarPDF(vistaInspeccion)}>
             Descargar Reporte PDF
           </button>
@@ -169,39 +169,41 @@ export default function PortalCliente() {
   // Vista login por cedula
   if (!autenticado) {
     return (
-      <div className="portal-container">
-        <div className="portal-login-card">
-          <div className="portal-header">
-            <img src="/logo.png" alt="MDA" style={{ width: 50, height: 50, objectFit: 'contain' }} />
-            <h1 style={{ fontSize: 22, fontWeight: 700, margin: '12px 0 4px' }}>Multidiagnosticos AS</h1>
-            <p style={{ fontSize: 14, color: '#64748b', margin: 0 }}>Seguimiento en linea de su vehiculo</p>
-          </div>
-
-          <form onSubmit={buscar} style={{ marginTop: 24 }}>
-            <div className="form-group">
-              <label className="form-label">Ingrese su numero de cedula o NIT</label>
-              <input
-                className="form-input"
-                value={cedula}
-                onChange={e => setCedula(e.target.value)}
-                placeholder="Ej: 1234567890"
-                style={{ fontSize: 16, padding: '14px 16px', textAlign: 'center' }}
-                autoFocus
-              />
+      <div style={{minHeight:'100vh',display:'flex',alignItems:'center',justifyContent:'center',background:'var(--bg)',padding:20}}>
+        <div style={{width:'100%',maxWidth:420}}>
+          <div className="card" style={{padding:0,overflow:'hidden'}}>
+            <div style={{padding:'28px 32px 20px',background:'linear-gradient(135deg,#0d1b35,#152544)',color:'#fff',textAlign:'center'}}>
+              <img src="/logo.png" alt="MDA" style={{width:50,height:50,objectFit:'contain',borderRadius:12,background:'#fff',padding:4,marginBottom:12}}/>
+              <h1 style={{fontSize:20,fontWeight:800,margin:'0 0 4px',letterSpacing:'.02em'}}>Multidiagnosticos AS</h1>
+              <p style={{fontSize:13,opacity:.65,margin:0}}>Seguimiento en linea de su vehiculo</p>
             </div>
-            {error && (
-              <div style={{ background: '#fef2f2', color: '#991b1b', padding: '10px 14px', borderRadius: 8, fontSize: 13, marginBottom: 12 }}>
-                {error}
-              </div>
-            )}
-            <button type="submit" className="btn btn-primary" style={{ width: '100%', padding: '14px', fontSize: 15 }} disabled={cargando}>
-              {cargando ? 'Consultando...' : 'Consultar Estado'}
-            </button>
-          </form>
-
-          <p style={{ fontSize: 12, color: '#94a3b8', textAlign: 'center', marginTop: 20 }}>
-            Su numero de documento es la clave de acceso para ver el estado de sus vehiculos.
-          </p>
+            <div style={{padding:'24px 32px 28px'}}>
+              <form onSubmit={buscar} style={{display:'flex',flexDirection:'column',gap:16}}>
+                <div className="field">
+                  <label>Numero de cedula o NIT</label>
+                  <input
+                    className="input"
+                    value={cedula}
+                    onChange={e => setCedula(e.target.value)}
+                    placeholder="Ej: 1234567890"
+                    style={{fontSize:16,padding:'14px 16px',textAlign:'center'}}
+                    autoFocus
+                  />
+                </div>
+                {error && (
+                  <div style={{background:'var(--red-50,#fef2f2)',color:'var(--red-700,#991b1b)',padding:'10px 14px',borderRadius:8,fontSize:13}}>
+                    {error}
+                  </div>
+                )}
+                <button type="submit" className="btn btn-primary" style={{width:'100%',padding:'14px',fontSize:15}} disabled={cargando}>
+                  {cargando ? 'Consultando...' : 'Consultar Estado'}
+                </button>
+              </form>
+              <p style={{fontSize:12,color:'var(--text-4)',textAlign:'center',marginTop:20}}>
+                Su numero de documento es la clave de acceso para ver el estado de sus vehiculos.
+              </p>
+            </div>
+          </div>
         </div>
       </div>
     )
@@ -214,127 +216,178 @@ export default function PortalCliente() {
 
   const tecNombre = (id) => TECNICOS.find(t => t.id === parseInt(id))?.nombre || ''
 
+  // Timeline steps for active work
+  const pasos = [
+    {lbl:'Recibido',pct:15},{lbl:'Diagnostico',pct:30},{lbl:'Repuestos',pct:45},
+    {lbl:'Reparacion',pct:60},{lbl:'Prueba',pct:80},{lbl:'Entrega',pct:100},
+  ]
+
   return (
-    <div className="portal-container">
-      <div className="portal-header">
-        <img src="/logo.png" alt="MDA" style={{ width: 40, height: 40, objectFit: 'contain' }} />
-        <h1>Multidiagnosticos AS</h1>
-        <button className="btn btn-ghost btn-sm" onClick={() => { setAutenticado(false); setDatos(null); setCedula('') }}
-          style={{ position: 'absolute', right: 16, top: 16 }}>
-          Salir
-        </button>
+    <div style={{maxWidth:780,margin:'0 auto',display:'flex',flexDirection:'column',gap:20,padding:'20px 16px'}}>
+      {/* Hero card */}
+      <div className="card" style={{padding:0,overflow:'hidden'}}>
+        <div style={{padding:'22px 26px',background:'linear-gradient(135deg,#0d1b35,#152544)',color:'#fff',position:'relative'}}>
+          <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start'}}>
+            <div style={{display:'flex',alignItems:'center',gap:10,fontSize:11,fontWeight:700,letterSpacing:'.08em',textTransform:'uppercase',opacity:.7,marginBottom:8}}>
+              <img src="/logo.png" alt="MDA" style={{width:20,height:20,objectFit:'contain',borderRadius:4}}/> Multidiagnosticos AS
+            </div>
+            <button className="btn btn-ghost btn-sm" style={{color:'rgba(255,255,255,.7)',border:'1px solid rgba(255,255,255,.15)'}}
+              onClick={() => { setAutenticado(false); setDatos(null); setCedula('') }}>
+              Salir
+            </button>
+          </div>
+          {trabajoActivo ? (
+            <>
+              <div style={{fontSize:13,opacity:.75,marginBottom:2}}>Hola, {datos.trabajos[0]?.cliente?.split(' ')[0] || ''}</div>
+              <h2 style={{fontSize:22,fontWeight:700,letterSpacing:'-.01em',marginBottom:4}}>
+                {[trabajoActivo.marca,trabajoActivo.modelo].filter(Boolean).join(' ') || 'Su vehiculo'}
+              </h2>
+              <div style={{fontSize:13,opacity:.75}}>
+                Placa <span className="mono" style={{fontWeight:700}}>{trabajoActivo.placa}</span>
+                {trabajoActivo.otCodigo && <> · Orden <span className="mono">{trabajoActivo.otCodigo}</span></>}
+              </div>
+            </>
+          ) : (
+            <>
+              <div style={{fontSize:13,opacity:.75,marginBottom:2}}>Hola, {datos.trabajos[0]?.cliente?.split(' ')[0] || ''}</div>
+              <h2 style={{fontSize:22,fontWeight:700,letterSpacing:'-.01em'}}>Historial de servicios</h2>
+            </>
+          )}
+        </div>
+        {trabajoActivo && (
+          <div style={{padding:'20px 26px',background:'var(--bg-raised)'}}>
+            <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-end',marginBottom:8}}>
+              <div>
+                <div style={{fontSize:11,fontWeight:700,color:'var(--text-3)',letterSpacing:'.06em',textTransform:'uppercase',marginBottom:4}}>Estado actual</div>
+                <div style={{fontSize:18,fontWeight:700,color:ESTADO_TRABAJO_DISPLAY[trabajoActivo.estado]?.color||'var(--text)'}}>
+                  {ESTADO_TRABAJO_DISPLAY[trabajoActivo.estado]?.label || trabajoActivo.estado}
+                </div>
+              </div>
+              <div style={{textAlign:'right'}}>
+                <div style={{fontSize:11,fontWeight:700,color:'var(--text-3)',letterSpacing:'.06em',textTransform:'uppercase',marginBottom:4}}>Ingreso</div>
+                <div style={{fontSize:15,fontWeight:700,color:'var(--text)'}}>{fmtDate(trabajoActivo.fecha)}</div>
+              </div>
+            </div>
+            <div style={{height:8,background:'var(--bg-subtle)',borderRadius:99,overflow:'hidden',marginTop:14}}>
+              <div style={{width:`${ESTADO_TRABAJO_DISPLAY[trabajoActivo.estado]?.pct||0}%`,height:'100%',background:`linear-gradient(90deg,var(--amber-500),var(--amber-400))`,borderRadius:99,transition:'width .4s'}}/>
+            </div>
+            <div style={{fontSize:11,color:'var(--text-3)',marginTop:6,fontWeight:600}}>{ESTADO_TRABAJO_DISPLAY[trabajoActivo.estado]?.pct||0}% completado</div>
+          </div>
+        )}
       </div>
 
-      {/* Trabajo activo - seguimiento */}
+      {/* Tecnico asignado */}
+      {trabajoActivo && tecNombre(trabajoActivo.tecnicoId) && (
+        <div className="card">
+          <div className="card__h"><h3>Tecnico asignado</h3></div>
+          <div className="card__b" style={{display:'flex',gap:14,alignItems:'center'}}>
+            <div style={{width:54,height:54,borderRadius:'50%',background:'linear-gradient(135deg,var(--amber-500),var(--amber-400))',display:'flex',alignItems:'center',justifyContent:'center',color:'#fff',fontWeight:800,fontSize:18,flexShrink:0}}>
+              {tecNombre(trabajoActivo.tecnicoId).split(' ').map(x=>x[0]).slice(0,2).join('')}
+            </div>
+            <div style={{flex:1}}>
+              <div style={{fontWeight:700,fontSize:15}}>{tecNombre(trabajoActivo.tecnicoId)}</div>
+              <div style={{fontSize:12.5,color:'var(--text-3)'}}>Multidiagnosticos AS</div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Timeline de avance */}
       {trabajoActivo && (
         <div className="card">
-          <div className="card-title">Estado de su Vehiculo</div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 16 }}>
-            <div><span className="text-sm text-muted">Placa:</span> <strong>{trabajoActivo.placa}</strong></div>
-            <div><span className="text-sm text-muted">Vehiculo:</span> <strong>{[trabajoActivo.marca, trabajoActivo.modelo].filter(Boolean).join(' ') || '—'}</strong></div>
-            <div><span className="text-sm text-muted">Ingreso:</span> <strong>{fmtDate(trabajoActivo.fecha)}</strong></div>
-            <div><span className="text-sm text-muted">Tecnico:</span> <strong>{tecNombre(trabajoActivo.tecnicoId) || '—'}</strong></div>
-            {trabajoActivo.otCodigo && <div><span className="text-sm text-muted">OT:</span> <strong>{trabajoActivo.otCodigo}</strong></div>}
-          </div>
-
-          {/* Barra de progreso */}
-          <div className="portal-progress">
-            <div className="portal-progress-bar">
-              <div className="portal-progress-fill"
-                style={{ width: `${ESTADO_TRABAJO_DISPLAY[trabajoActivo.estado]?.pct || 0}%`, background: ESTADO_TRABAJO_DISPLAY[trabajoActivo.estado]?.color }} />
+          <div className="card__h"><h3>Avance del trabajo</h3></div>
+          <div className="card__b">
+            <div style={{position:'relative',paddingLeft:32}}>
+              <div style={{position:'absolute',left:11,top:8,bottom:8,width:2,background:'var(--border)'}}/>
+              {pasos.map((p,k)=>{
+                const currentPct = ESTADO_TRABAJO_DISPLAY[trabajoActivo.estado]?.pct || 0
+                const done = currentPct >= p.pct
+                const active = currentPct >= p.pct - 15 && currentPct < p.pct
+                return (
+                  <div key={k} style={{position:'relative',paddingBottom:k<pasos.length-1?20:0}}>
+                    <div style={{position:'absolute',left:-26,top:2,width:24,height:24,borderRadius:'50%',
+                      background:done?'var(--green-500)':active?'var(--amber-500)':'var(--bg-raised)',
+                      border:!done&&!active?'2px solid var(--border)':'none',
+                      display:'flex',alignItems:'center',justifyContent:'center',color:'#fff',fontWeight:800,fontSize:12}}>
+                      {done?<svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3"><path d="M5 13l4 4L19 7"/></svg>:active?<span style={{width:8,height:8,borderRadius:'50%',background:'#fff'}}/>:''}
+                    </div>
+                    <div style={{fontWeight:active?700:600,fontSize:14,color:!done&&!active?'var(--text-3)':'var(--text)'}}>
+                      {p.lbl}
+                      {active && <span className="badge badge-w" style={{marginLeft:8}}>En curso</span>}
+                    </div>
+                  </div>
+                )
+              })}
             </div>
-            <div className="portal-progress-label">
-              <span style={{ color: ESTADO_TRABAJO_DISPLAY[trabajoActivo.estado]?.color, fontWeight: 700 }}>
-                {ESTADO_TRABAJO_DISPLAY[trabajoActivo.estado]?.label || trabajoActivo.estado}
-              </span>
-              <span className="text-sm text-muted">{ESTADO_TRABAJO_DISPLAY[trabajoActivo.estado]?.pct || 0}%</span>
-            </div>
           </div>
+        </div>
+      )}
 
-          {/* Pasos del proceso */}
-          <div className="portal-steps">
-            {['Recibido', 'Diagnostico', 'Repuestos', 'Reparacion', 'Prueba', 'Listo'].map((paso, i) => {
-              const pctStep = [15, 30, 45, 60, 80, 100][i]
-              const currentPct = ESTADO_TRABAJO_DISPLAY[trabajoActivo.estado]?.pct || 0
-              const done = currentPct >= pctStep
-              const active = currentPct >= pctStep - 15 && currentPct < pctStep
-              return (
-                <div key={paso} className={`portal-step ${done ? 'done' : ''} ${active ? 'active' : ''}`}>
-                  <div className="portal-step-circle">{done ? '✓' : i + 1}</div>
-                  <span className="portal-step-label">{paso}</span>
-                </div>
-              )
-            })}
-          </div>
-
-          {trabajoActivo.observaciones && (
-            <div style={{ marginTop: 14, padding: '10px 14px', background: 'var(--slate-50)', borderRadius: 8, fontSize: 13 }}>
-              <strong>Observaciones:</strong> {trabajoActivo.observaciones}
-            </div>
-          )}
+      {/* Observaciones */}
+      {trabajoActivo?.observaciones && (
+        <div className="card" style={{padding:'16px 20px',background:'var(--bg-subtle)',border:'1px solid var(--border)'}}>
+          <div style={{fontSize:12,fontWeight:700,color:'var(--text-3)',textTransform:'uppercase',letterSpacing:'.04em',marginBottom:6}}>Observaciones</div>
+          <div style={{fontSize:13.5,color:'var(--text)',lineHeight:1.55}}>{trabajoActivo.observaciones}</div>
         </div>
       )}
 
       {/* Inspecciones */}
       {datos.inspecciones.length > 0 && (
         <div className="card">
-          <div className="card-title">Inspecciones de su Vehiculo</div>
-          {datos.inspecciones.map((insp, idx) => {
-            const items = insp.items || []
-            const urgentes = items.filter(i => i.estado === 'urgente').length
-            const sugeridos = items.filter(i => i.estado === 'sugerido').length
-            const buenos = items.filter(i => i.estado === 'bueno').length
-            const total = items.filter(i => i.estado !== 'no_aplica').length
-            const pct = total > 0 ? Math.round((buenos / total) * 100) : 0
+          <div className="card__h"><h3>Inspecciones de su vehiculo</h3><span className="count">{datos.inspecciones.length}</span></div>
+          <div className="card__b" style={{display:'flex',flexDirection:'column',gap:0}}>
+            {datos.inspecciones.map((insp, idx) => {
+              const items = insp.items || []
+              const urgentes = items.filter(i => i.estado === 'urgente').length
+              const sugeridos = items.filter(i => i.estado === 'sugerido').length
+              const buenos = items.filter(i => i.estado === 'bueno').length
+              const total = items.filter(i => i.estado !== 'no_aplica').length
+              const pct = total > 0 ? Math.round((buenos / total) * 100) : 0
 
-            return (
-              <div key={insp.id || idx} style={{ padding: '14px 0', borderBottom: '1px solid var(--border-card)' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
-                  <div>
-                    <strong>{insp.placa}</strong> — {insp.vehiculo || ''}
-                    <div className="text-sm text-muted">{fmtDate(insp.fecha)}</div>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <div style={{ display: 'flex', gap: 4 }}>
-                      {buenos > 0 && <span className="badge badge-success">{buenos}</span>}
-                      {sugeridos > 0 && <span className="badge badge-warning">{sugeridos}</span>}
-                      {urgentes > 0 && <span className="badge badge-danger">{urgentes}</span>}
+              return (
+                <div key={insp.id || idx} style={{padding:'14px 0',borderBottom:idx<datos.inspecciones.length-1?'1px solid var(--border)':'none'}}>
+                  <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',flexWrap:'wrap',gap:8}}>
+                    <div>
+                      <div style={{fontWeight:700,fontSize:14}}>{insp.placa} <span style={{color:'var(--text-3)',fontWeight:400,fontSize:13}}>— {insp.vehiculo || ''}</span></div>
+                      <div style={{fontSize:12.5,color:'var(--text-3)',marginTop:2}}>{fmtDate(insp.fecha)}</div>
                     </div>
-                    <span style={{ fontWeight: 700, color: pct >= 80 ? 'var(--green-500)' : pct >= 50 ? 'var(--amber-500)' : 'var(--red-500)' }}>{pct}%</span>
-                    <button className="btn btn-outline btn-sm" onClick={() => setVistaInspeccion(insp)}>Ver Detalle</button>
-                    <button className="btn btn-ghost btn-sm" onClick={() => descargarPDF(insp)}>PDF</button>
+                    <div style={{display:'flex',alignItems:'center',gap:10}}>
+                      <div style={{display:'flex',gap:4}}>
+                        {buenos > 0 && <span className="badge badge-s">{buenos}</span>}
+                        {sugeridos > 0 && <span className="badge badge-w">{sugeridos}</span>}
+                        {urgentes > 0 && <span className="badge badge-d">{urgentes}</span>}
+                      </div>
+                      <span style={{fontWeight:700,fontSize:13,color:pct>=80?'var(--green-600)':pct>=50?'var(--amber-600)':'var(--red-600)'}}>{pct}%</span>
+                      <button className="btn btn-outline btn-sm" onClick={() => setVistaInspeccion(insp)}>Ver</button>
+                      <button className="btn btn-ghost btn-sm" onClick={() => descargarPDF(insp)}>PDF</button>
+                    </div>
                   </div>
                 </div>
-              </div>
-            )
-          })}
+              )
+            })}
+          </div>
         </div>
       )}
 
       {/* Historial de trabajos */}
       {datos.trabajos.length > 0 && (
         <div className="card">
-          <div className="card-title">Historial de Servicios</div>
-          <div className="table-wrap">
+          <div className="card__h"><h3>Historial de servicios</h3><span className="count">{datos.trabajos.length}</span></div>
+          <div className="card__b card__b--flush">
             <table>
               <thead>
-                <tr>
-                  <th>Fecha</th>
-                  <th>Placa</th>
-                  <th>Vehiculo</th>
-                  <th>Estado</th>
-                </tr>
+                <tr><th>Fecha</th><th>Placa</th><th>Vehiculo</th><th>Estado</th></tr>
               </thead>
               <tbody>
                 {datos.trabajos.map(t => (
                   <tr key={t.id}>
-                    <td className="text-sm text-muted">{fmtDate(t.fecha)}</td>
-                    <td className="text-mono" style={{ fontWeight: 700 }}>{t.placa}</td>
-                    <td className="text-sm">{[t.marca, t.modelo].filter(Boolean).join(' ') || '—'}</td>
+                    <td style={{color:'var(--text-3)',fontSize:13}}>{fmtDate(t.fecha)}</td>
+                    <td className="mono" style={{fontWeight:700}}>{t.placa}</td>
+                    <td style={{color:'var(--text-3)',fontSize:13}}>{[t.marca,t.modelo].filter(Boolean).join(' ')||'—'}</td>
                     <td>
                       <span className="badge" style={{
-                        background: (ESTADO_TRABAJO_DISPLAY[t.estado]?.color || '#64748b') + '20',
-                        color: ESTADO_TRABAJO_DISPLAY[t.estado]?.color || '#64748b'
+                        background:(ESTADO_TRABAJO_DISPLAY[t.estado]?.color||'#64748b')+'20',
+                        color:ESTADO_TRABAJO_DISPLAY[t.estado]?.color||'#64748b'
                       }}>
                         {ESTADO_TRABAJO_DISPLAY[t.estado]?.label || t.estado}
                       </span>
@@ -348,11 +401,14 @@ export default function PortalCliente() {
       )}
 
       {!trabajoActivo && datos.trabajos.length === 0 && (
-        <div className="empty-state">
-          <div className="empty-state-icon">🚗</div>
+        <div className="empty">
           <p>No hay trabajos activos en este momento.</p>
         </div>
       )}
+
+      <div style={{textAlign:'center',fontSize:12,color:'var(--text-4)',padding:'8px 0 18px'}}>
+        Multidiagnosticos AS · Sabanalarga, Atlantico
+      </div>
     </div>
   )
 }

@@ -210,47 +210,92 @@ export default function Trabajos({ hook, notify, onAutoFacturar }) {
     )
   }
 
+  const estadoBadge = (estado) => {
+    if (estado === ESTADOS.COMPLETADO) return 'badge-s'
+    if (estado === ESTADOS.CANCELADO) return 'badge-d'
+    if (estado === ESTADOS.EN_PROGRESO || estado === ESTADOS.EN_PRUEBA) return 'badge-i'
+    if (estado === ESTADOS.PENDIENTE || estado === ESTADOS.ESPERANDO_REPUESTOS) return 'badge-w'
+    if (estado === ESTADOS.EN_DIAGNOSTICO || estado === ESTADOS.PROGRAMADO) return 'badge-n'
+    return 'badge-w'
+  }
+
+  const tecIniciales = (id) => {
+    const nombre = tecNombre(id)
+    if (nombre === '—') return '?'
+    const parts = nombre.split(' ')
+    return parts.length >= 2 ? (parts[0][0] + parts[1][0]).toUpperCase() : nombre.slice(0, 2).toUpperCase()
+  }
+
+  const statesTabs = [
+    ['todos', 'Todas'],
+    [ESTADOS.PENDIENTE, 'Pendientes'],
+    [ESTADOS.EN_DIAGNOSTICO, 'Diagnostico'],
+    [ESTADOS.EN_PROGRESO, 'En Progreso'],
+    [ESTADOS.ESPERANDO_REPUESTOS, 'Esperando Rep.'],
+    [ESTADOS.EN_PRUEBA, 'En Prueba'],
+    [ESTADOS.COMPLETADO, 'Completados'],
+    [ESTADOS.CANCELADO, 'Cancelados'],
+  ]
+
   return (
     <div>
-      <div className="metrics-grid">
-        <div className="metric-card">
-          <div className="metric-value">{stats.total}</div>
-          <div className="metric-label">Total</div>
+      {/* Page header */}
+      <div className="pagehd">
+        <div>
+          <h2>Ordenes de trabajo</h2>
+          <p className="sub">{stats.total} OT registradas</p>
         </div>
-        <div className="metric-card">
-          <div className="metric-value" style={{ color: 'var(--green-500)' }}>{stats.comp}</div>
-          <div className="metric-label">Completados</div>
-        </div>
-        <div className="metric-card">
-          <div className="metric-value" style={{ color: 'var(--amber-500)' }}>{stats.pend}</div>
-          <div className="metric-label">Pendientes</div>
-        </div>
-        <div className="metric-card">
-          <div className="metric-value" style={{ color: 'var(--blue-500)' }}>{stats.prog}</div>
-          <div className="metric-label">En Progreso</div>
+        <div className="actions">
+          <button className={`btn ${vista === 'lista' ? 'btn-primary' : 'btn-outline'}`} onClick={() => setVista('lista')}>Lista</button>
+          <button className={`btn ${vista === 'kanban' ? 'btn-primary' : 'btn-outline'}`} onClick={() => setVista('kanban')}>Kanban</button>
+          <button className="btn btn-primary" onClick={() => setVista('nuevo')}>+ Nueva OT</button>
         </div>
       </div>
 
-      {/* Filtros y controles */}
-      <div className="card" style={{ paddingBottom: 14 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, flexWrap: 'wrap', gap: 8 }}>
-          <h3 style={{ fontSize: 16, fontWeight: 700 }}>Ordenes de Trabajo ({filtered.length})</h3>
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            <button className={`btn btn-sm ${vista === 'lista' ? 'btn-primary' : 'btn-outline'}`} onClick={() => setVista('lista')}>Lista</button>
-            <button className={`btn btn-sm ${vista === 'kanban' ? 'btn-primary' : 'btn-outline'}`} onClick={() => setVista('kanban')}>Kanban</button>
-            <button className="btn btn-primary btn-sm" onClick={() => setVista('nuevo')}>+ Nuevo</button>
+      {/* KPI cards */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(200px,1fr))', gap: 14, marginBottom: 18 }}>
+        <div className="kpi">
+          <div className="kpi__head">
+            <div className="kpi__ic blue"><svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg></div>
+            <div className="kpi__lbl">Total OTs</div>
           </div>
+          <div className="kpi__v">{stats.total}</div>
         </div>
+        <div className="kpi">
+          <div className="kpi__head">
+            <div className="kpi__ic green"><svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path d="M5 13l4 4L19 7"/></svg></div>
+            <div className="kpi__lbl">Completados</div>
+          </div>
+          <div className="kpi__v">{stats.comp}</div>
+        </div>
+        <div className="kpi">
+          <div className="kpi__head">
+            <div className="kpi__ic amber"><svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg></div>
+            <div className="kpi__lbl">Pendientes</div>
+          </div>
+          <div className="kpi__v">{stats.pend}</div>
+        </div>
+        <div className="kpi">
+          <div className="kpi__head">
+            <div className="kpi__ic blue"><svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path d="M13 10V3L4 14h7v7l9-11h-7z"/></svg></div>
+            <div className="kpi__lbl">En Progreso</div>
+          </div>
+          <div className="kpi__v">{stats.prog}</div>
+        </div>
+      </div>
+
+      {/* Tabs + search/filter bar */}
+      <div className="tabs" style={{ marginBottom: 12 }}>
+        {statesTabs.map(([key, label]) => (
+          <button key={key} className={filtroEstado === key ? 'on' : ''} onClick={() => setFiltroEstado(key)}>{label}</button>
+        ))}
+      </div>
+
+      <div className="card" style={{ padding: '12px 16px', marginBottom: 14 }}>
         <div className="form-row" style={{ marginBottom: 0 }}>
-          <div className="form-group" style={{ marginBottom: 0 }}>
+          <div className="form-group" style={{ marginBottom: 0, flex: 2 }}>
             <input className="form-input" placeholder="Buscar placa, cliente, OT..." value={filtroBusqueda}
               onChange={e => setFiltroBusqueda(e.target.value)} style={{ fontSize: 13 }} />
-          </div>
-          <div className="form-group" style={{ marginBottom: 0 }}>
-            <select className="form-select" value={filtroEstado} onChange={e => setFiltroEstado(e.target.value)} style={{ fontSize: 13 }}>
-              <option value="todos">Todos los estados</option>
-              {Object.values(ESTADOS).map(e => <option key={e} value={e}>{e}</option>)}
-            </select>
           </div>
           <div className="form-group" style={{ marginBottom: 0 }}>
             <select className="form-select" value={filtroTecnico} onChange={e => setFiltroTecnico(e.target.value)} style={{ fontSize: 13 }}>
@@ -278,96 +323,116 @@ export default function Trabajos({ hook, notify, onAutoFacturar }) {
                   <span className="kanban-count">{col.length}</span>
                 </div>
                 <div className="kanban-cards">
-                  {col.map(t => (
-                    <div key={t.id} className="kanban-card" onClick={() => handleEditar(t.id)}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                        <span className="text-mono" style={{ fontWeight: 700, fontSize: 13 }}>{t.placa}</span>
-                        <span className="text-xs text-muted">{t.otCodigo || ''}</span>
+                  {col.map(t => {
+                    const diasSinMover = t.fecha ? Math.floor((Date.now() - new Date(t.fecha).getTime()) / 86400000) : 0
+                    const estancado = t.estado !== ESTADOS.COMPLETADO && t.estado !== ESTADOS.CANCELADO && diasSinMover >= DIAS_ESTANCADO
+                    return (
+                      <div key={t.id} className="card" style={{ padding: '12px 14px', marginBottom: 8, cursor: 'pointer', borderLeft: estancado ? '3px solid var(--red-500)' : 'none' }} onClick={() => handleEditar(t.id)}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                          <span style={{ color: 'var(--blue-600)', fontWeight: 700, fontFamily: 'var(--mono)', fontSize: 13 }}>{t.otCodigo || '—'}</span>
+                          <span className="text-mono" style={{ fontWeight: 700, fontSize: 13, letterSpacing: '.5px' }}>{t.placa}</span>
+                        </div>
+                        <div className="text-sm" style={{ marginBottom: 6, fontWeight: 500 }}>{t.cliente || 'Sin cliente'}</div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <span className={`av av-${(parseInt(t.tecnicoId) || 0) % 6}`} style={{ width: 22, height: 22, fontSize: 10 }}>{tecIniciales(t.tecnicoId)}</span>
+                            <span className="text-xs text-muted">{tecNombre(t.tecnicoId)}</span>
+                          </div>
+                          <span className="text-mono" style={{ fontWeight: 700, fontSize: 13 }}>{fmt(t.total)}</span>
+                        </div>
+                        {estancado && <div style={{ marginTop: 6 }}><span className="badge badge-d" style={{ fontSize: 10 }}>{diasSinMover}d sin movimiento</span></div>}
                       </div>
-                      <div className="text-sm" style={{ marginBottom: 4 }}>{t.cliente || 'Sin cliente'}</div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span className="text-xs text-muted">{tecNombre(t.tecnicoId)}</span>
-                        <span className="text-mono text-xs" style={{ fontWeight: 600 }}>{fmt(t.total)}</span>
-                      </div>
+                    )
+                  })}
+                  {col.length === 0 && (
+                    <div className="empty" style={{ padding: 24 }}>
+                      <svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5" style={{ opacity: .4, marginBottom: 6 }}><path d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"/></svg>
+                      <span className="text-xs text-muted">Sin trabajos</span>
                     </div>
-                  ))}
-                  {col.length === 0 && <div className="text-xs text-muted text-center" style={{ padding: 16 }}>Sin trabajos</div>}
+                  )}
                 </div>
               </div>
             )
           })}
         </div>
       ) : filtered.length === 0 ? (
-        <div className="empty-state">
-          <div className="empty-state-icon">🔧</div>
-          <p>No hay trabajos registrados.</p>
+        <div className="empty" style={{ padding: '48px 24px', textAlign: 'center' }}>
+          <svg width="40" height="40" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5" style={{ opacity: .35, marginBottom: 12 }}><path d="M11.42 15.17l-5.71-5.71a8 8 0 1111.31 0l-5.6 5.71z"/><circle cx="12" cy="10" r="3"/></svg>
+          <p style={{ fontSize: 15, fontWeight: 600, marginBottom: 4 }}>No hay trabajos registrados</p>
+          <p className="text-sm text-muted">Crea una nueva OT para comenzar.</p>
         </div>
       ) : (
         <div className="card" style={{ padding: 0 }}>
-          <div className="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>OT</th>
-                  <th>Placa</th>
-                  <th>Cliente</th>
-                  <th>Vehiculo</th>
-                  <th>Tecnico</th>
-                  <th>Estado</th>
-                  <th className="text-right">Total</th>
-                  <th>Fecha</th>
-                  <th>Acciones</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.map(t => {
-    const bc = t.estado === ESTADOS.COMPLETADO ? 'badge-success'
-                    : t.estado === ESTADOS.CANCELADO ? 'badge-danger'
-                    : t.estado === ESTADOS.EN_PROGRESO ? 'badge-info'
-                    : t.estado === ESTADOS.EN_DIAGNOSTICO ? 'badge-purple'
-                    : t.estado === ESTADOS.ESPERANDO_REPUESTOS ? 'badge-warning'
-                    : t.estado === ESTADOS.EN_PRUEBA ? 'badge-info'
-                    : t.estado === ESTADOS.PROGRAMADO ? 'badge-purple' : 'badge-warning'
-                  // Indicador de trabajo estancado
-                  const diasSinMover = t.fecha ? Math.floor((Date.now() - new Date(t.fecha).getTime()) / 86400000) : 0
-                  const estancado = t.estado !== ESTADOS.COMPLETADO && t.estado !== ESTADOS.CANCELADO && diasSinMover >= DIAS_ESTANCADO
-                  return (
-                    <tr key={t.id} style={estancado ? { borderLeft: '4px solid var(--red-500)', background: 'rgba(239,68,68,.06)' } : {}}>
-                      <td className="text-mono">{t.otCodigo || '—'}</td>
-                      <td className="text-mono" style={{ fontWeight: 700 }}>{t.placa}</td>
-                      <td>{t.cliente || '—'}</td>
-                      <td className="text-sm">{[t.marca, t.modelo].filter(Boolean).join(' ') || '—'}</td>
-                      <td className="text-sm">{tecNombre(t.tecnicoId)}</td>
-                      <td>
-                        <span className={`badge ${bc}`}>{t.estado}</span>
-                        {estancado && <span className="badge badge-danger" style={{ marginLeft: 4, fontSize: 10 }} title={`${diasSinMover} dias sin movimiento`}>{diasSinMover}d</span>}
-                      </td>
-                      <td className="text-right text-mono">{fmt(t.total)}</td>
-                      <td className="text-sm text-muted">{fmtDate(t.fecha)}</td>
-                      <td>
-                        <div className="actions-cell">
-                          <button className="btn btn-outline btn-sm" onClick={() => handleEditar(t.id)}>Editar</button>
-                          {t.otCodigo && (
-                            <button className="btn btn-outline btn-sm" onClick={() => imprimirOT(t)}>OT</button>
-                          )}
-                          {t.estado !== ESTADOS.COMPLETADO && (
-                            <button className="btn btn-success btn-sm" onClick={() => handleCompletar(t.id)}>Completar</button>
-                          )}
-                          {confirmDel === t.id ? (
-                            <>
-                              <button className="btn btn-danger btn-sm" onClick={() => handleEliminar(t.id)}>Si</button>
-                              <button className="btn btn-outline btn-sm" onClick={() => setConfirmDel(null)}>No</button>
-                            </>
-                          ) : (
-                            <button className="btn btn-ghost btn-sm" onClick={() => setConfirmDel(t.id)} title="Eliminar">🗑</button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
+          <div className="card__h" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontWeight: 600, fontSize: 14 }}>{filtered.length} resultado{filtered.length !== 1 ? 's' : ''}</span>
+          </div>
+          <div className="card__b card__b--flush">
+            <div className="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>OT</th>
+                    <th>Placa</th>
+                    <th>Cliente</th>
+                    <th>Vehiculo</th>
+                    <th>Tecnico</th>
+                    <th>Estado</th>
+                    <th className="text-right">Total</th>
+                    <th>Fecha</th>
+                    <th>Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filtered.map(t => {
+                    const bc = estadoBadge(t.estado)
+                    // Indicador de trabajo estancado
+                    const diasSinMover = t.fecha ? Math.floor((Date.now() - new Date(t.fecha).getTime()) / 86400000) : 0
+                    const estancado = t.estado !== ESTADOS.COMPLETADO && t.estado !== ESTADOS.CANCELADO && diasSinMover >= DIAS_ESTANCADO
+                    return (
+                      <tr key={t.id} style={estancado ? { borderLeft: '4px solid var(--red-500)', background: 'rgba(239,68,68,.06)' } : {}}>
+                        <td><span style={{ color: 'var(--blue-600)', fontWeight: 700, fontFamily: 'var(--mono)' }}>{t.otCodigo || '—'}</span></td>
+                        <td className="text-mono" style={{ fontWeight: 700 }}>{t.placa}</td>
+                        <td>{t.cliente || '—'}</td>
+                        <td className="text-sm">{[t.marca, t.modelo].filter(Boolean).join(' ') || '—'}</td>
+                        <td>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <span className={`av av-${(parseInt(t.tecnicoId) || 0) % 6}`}>{tecIniciales(t.tecnicoId)}</span>
+                            <span className="text-sm">{tecNombre(t.tecnicoId)}</span>
+                          </div>
+                        </td>
+                        <td>
+                          <span className={`badge ${bc}`}>{t.estado}</span>
+                          {estancado && <span className="badge badge-d" style={{ marginLeft: 4, fontSize: 10 }} title={`${diasSinMover} dias sin movimiento`}>{diasSinMover}d</span>}
+                        </td>
+                        <td className="text-right" style={{ fontFamily: 'var(--mono)', fontWeight: 600 }}>{fmt(t.total)}</td>
+                        <td className="text-sm text-muted">{fmtDate(t.fecha)}</td>
+                        <td>
+                          <div className="actions-cell">
+                            <button className="btn btn-ghost btn-sm" onClick={() => handleEditar(t.id)}>Editar</button>
+                            {t.otCodigo && (
+                              <button className="btn btn-ghost btn-sm" onClick={() => imprimirOT(t)}>PDF</button>
+                            )}
+                            {t.estado !== ESTADOS.COMPLETADO && (
+                              <button className="btn btn-ghost btn-sm" style={{ color: 'var(--green-600)' }} onClick={() => handleCompletar(t.id)}>Completar</button>
+                            )}
+                            {confirmDel === t.id ? (
+                              <>
+                                <button className="btn btn-danger btn-sm" onClick={() => handleEliminar(t.id)}>Si</button>
+                                <button className="btn btn-ghost btn-sm" onClick={() => setConfirmDel(null)}>No</button>
+                              </>
+                            ) : (
+                              <button className="btn btn-ghost btn-sm" onClick={() => setConfirmDel(t.id)} title="Eliminar" style={{ color: 'var(--red-500)' }}>
+                                <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       )}

@@ -345,91 +345,70 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
   }
 
   // ===== RENDER =====
+  const totalFacturado = resumenTecnicos.reduce((s,t) => s + t.moTotal, 0)
+  const totalComisiones = resumenTecnicos.reduce((s,t) => s + t.comisionTotal, 0)
+
   return (
     <div>
-      {/* Resumen por tecnico */}
-      <div className="card">
-        <div className="card-title">Estado de Cuenta — Tecnicos</div>
-        <div className="text-sm text-muted" style={{ marginBottom: 12 }}>
-          Mano de obra calculada antes de IVA. Selecciona un tecnico para ver sus trabajos pendientes.
+      <div className="pagehd">
+        <div><h2>Liquidacion de comisiones</h2><p className="sub">Cierre de periodo · {COMISION.TOTAL*100}% comision total · {COMISION.TOTAL*50}% c/u si trabajo compartido</p></div>
+        <div className="actions">
+          <button className="btn btn-outline" onClick={() => setVerHistorial(!verHistorial)}>{verHistorial ? 'Ocultar historial' : 'Ver historial'}</button>
         </div>
-
-        <div className="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Tecnico</th>
-                <th className="text-center">Trabajos Pendientes</th>
-                <th className="text-right">M.O. Total (sin IVA)</th>
-                <th className="text-right">Comision ({COMISION.TOTAL * 100}%)</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody>
-              {resumenTecnicos.map(t => (
-                <tr key={t.id} style={{ background: tecnicoSel === String(t.id) ? 'var(--blue-50, #eff6ff)' : undefined }}>
-                  <td style={{ fontWeight: 700 }}>{t.nombre}</td>
-                  <td className="text-center">
-                    <span className={`badge ${t.pendientes > 0 ? 'badge-warning' : 'badge-success'}`}>{t.pendientes}</span>
-                  </td>
-                  <td className="text-right text-mono">{fmt(t.moTotal)}</td>
-                  <td className="text-right text-mono" style={{ color: 'var(--green-500)' }}>{fmt(t.comisionTotal)}</td>
-                  <td>
-                    <button className="btn btn-primary btn-sm"
-                      onClick={() => { setTecnicoSel(String(t.id)); setSeleccionados({}) }}
-                      disabled={t.pendientes === 0}>
-                      {tecnicoSel === String(t.id) ? 'Seleccionado' : 'Ver'}
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-
-        {liquidados.length > 0 && (
-          <div className="text-xs text-muted" style={{ marginTop: 8 }}>
-            {liquidados.length} trabajos ya liquidados (ocultos).{' '}
-            <button className="btn btn-ghost btn-sm" onClick={desliquidar} style={{ fontSize: 11, padding: '2px 6px' }}>Desliquidar todos</button>
-          </div>
-        )}
       </div>
 
-      {/* Detalle del tecnico seleccionado */}
-      {tecData && (
-        <>
-          {/* Trabajos pendientes — seleccion */}
-          <div className="card">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, flexWrap: 'wrap', gap: 8 }}>
-              <div>
-                <div className="card-title" style={{ marginBottom: 2 }}>{tecData.tecnico.nombre} — Trabajos Pendientes</div>
-                <span className="text-sm text-muted">Selecciona los trabajos que vas a liquidar</span>
-              </div>
-              <div style={{ display: 'flex', gap: 8 }}>
-                <button className="btn btn-outline btn-sm"
-                  onClick={() => seleccionarTodos(tecTrabajos.map(t => t.id))}>
-                  {tecTrabajos.every(t => seleccionados[t.id]) ? 'Deseleccionar todos' : 'Seleccionar todos'}
+      <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(220px,1fr))',gap:14,marginBottom:18}}>
+        <div className="kpi"><div className="kpi__head"><div className="kpi__ic blue"><svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg></div><div className="kpi__lbl">Facturado en OTs</div></div><div className="kpi__v" style={{fontSize:24}}>{fmt(totalFacturado)}</div></div>
+        <div className="kpi"><div className="kpi__head"><div className="kpi__ic amber"><svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg></div><div className="kpi__lbl">Comisiones a pagar</div></div><div className="kpi__v" style={{fontSize:24,color:'var(--amber-500)'}}>{fmt(totalComisiones)}</div></div>
+        <div className="kpi"><div className="kpi__head"><div className="kpi__ic green"><svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path d="M5 13l4 4L19 7"/></svg></div><div className="kpi__lbl">Utilidad taller</div></div><div className="kpi__v" style={{fontSize:24,color:'var(--green-600)'}}>{fmt(totalFacturado - totalComisiones)}</div></div>
+      </div>
+
+      {/* Per-tech cards */}
+      <div style={{display:'flex',flexDirection:'column',gap:14}}>
+        {resumenTecnicos.map((t, i) => (
+          <div className="card" key={t.id}>
+            <div className="card__h">
+              <h3>
+                <span className={`av av-${(i%5)+1}`} style={{width:30,height:30,marginLeft:-2}}>{t.nombre.split(' ').map(x=>x[0]).slice(0,2).join('')}</span>
+                {t.nombre} <span style={{fontSize:12,color:'var(--text-3)',fontWeight:500,marginLeft:4}}>· {t.especialidad}</span>
+              </h3>
+              <div style={{display:'flex',alignItems:'center',gap:8}}>
+                <span style={{fontSize:11,color:'var(--text-3)',fontWeight:700,textTransform:'uppercase',letterSpacing:.5}}>{t.pendientes} OTs · Comision</span>
+                <span className="mono" style={{fontSize:17,fontWeight:800,color:'var(--green-600)',marginLeft:8}}>{fmt(t.comisionTotal)}</span>
+                <button className="btn btn-primary btn-sm" style={{marginLeft:12}} onClick={()=>{setTecnicoSel(String(t.id));setSeleccionados({})}} disabled={t.pendientes===0}>
+                  {tecnicoSel===String(t.id)?'Seleccionado':'Ver'}
                 </button>
               </div>
             </div>
+          </div>
+        ))}
+      </div>
 
-            {tecTrabajos.length === 0 ? (
-              <p className="text-sm text-muted text-center" style={{ padding: 20 }}>Sin trabajos pendientes de liquidar.</p>
-            ) : (
-              <div className="table-wrap">
+      {liquidados.length > 0 && (
+        <div style={{fontSize:12,color:'var(--text-3)',marginTop:8}}>
+          {liquidados.length} trabajos ya liquidados (ocultos).{' '}
+          <button className="btn btn-ghost btn-sm" onClick={desliquidar} style={{fontSize:11,padding:'2px 6px'}}>Desliquidar todos</button>
+        </div>
+      )}
+
+      {tecData && (
+        <>
+          <div className="card" style={{marginTop:16}}>
+            <div className="card__h">
+              <h3>{tecData.tecnico.nombre} — Trabajos pendientes</h3>
+              <div style={{display:'flex',gap:8}}>
+                <span style={{fontSize:13,color:'var(--text-3)'}}>Selecciona los que vas a liquidar</span>
+                <button className="btn btn-outline btn-sm" onClick={() => seleccionarTodos(tecTrabajos.map(t => t.id))}>
+                  {tecTrabajos.every(t => seleccionados[t.id]) ? 'Deseleccionar' : 'Todos'}
+                </button>
+              </div>
+            </div>
+            <div className="card__b card__b--flush">
+              {tecTrabajos.length === 0 ? (
+                <div className="empty"><h4>Sin pendientes</h4><p>No hay trabajos pendientes de liquidar.</p></div>
+              ) : (
                 <table>
-                  <thead>
-                    <tr>
-                      <th style={{ width: 40 }}></th>
-                      <th>Fecha</th>
-                      <th>OT</th>
-                      <th>Placa</th>
-                      <th>Cliente</th>
-                      <th className="text-center">Compartido</th>
-                      <th className="text-right">M.O. (sin IVA)</th>
-                      <th className="text-right">Comision</th>
-                    </tr>
-                  </thead>
+                  <thead><tr><th style={{width:40}}></th><th>Fecha</th><th>OT</th><th>Placa</th><th>Cliente</th><th style={{textAlign:'center'}}>Comp.</th><th style={{textAlign:'right'}}>M.O.</th><th style={{textAlign:'right'}}>Comision</th></tr></thead>
                   <tbody>
                     {tecTrabajos.map(t => {
                       const mano = getManoObra(t)
@@ -437,178 +416,117 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
                       const com = esComp ? (mano * COMISION.TOTAL) / 2 : mano * COMISION.TOTAL
                       const selected = !!seleccionados[t.id]
                       return (
-                        <tr key={t.id} style={{ background: selected ? '#f0fdf4' : undefined, cursor: 'pointer' }}
-                          onClick={() => toggleSeleccion(t.id)}>
-                          <td className="text-center">
-                            <input type="checkbox" checked={selected} onChange={() => {}} />
-                          </td>
-                          <td className="text-sm text-muted">{fmtDate(t.fecha)}</td>
-                          <td className="text-mono text-sm">{t.otCodigo || t.id}</td>
-                          <td className="text-mono" style={{ fontWeight: 700 }}>{t.placa}</td>
+                        <tr key={t.id} style={{background:selected?'var(--green-50,#f0fdf4)':undefined,cursor:'pointer'}} onClick={() => toggleSeleccion(t.id)}>
+                          <td style={{textAlign:'center'}}><input type="checkbox" checked={selected} onChange={() => {}}/></td>
+                          <td style={{color:'var(--text-3)',fontSize:13}}>{fmtDate(t.fecha)}</td>
+                          <td className="mono" style={{color:'var(--blue-600)',fontWeight:700,fontSize:12}}>{t.otCodigo || t.id}</td>
+                          <td className="mono" style={{fontWeight:700}}>{t.placa}</td>
                           <td>{t.cliente || '—'}</td>
-                          <td className="text-center">
-                            <input type="checkbox" checked={esComp}
-                              onClick={e => e.stopPropagation()}
-                              onChange={() => toggleCompartido(t.id)} />
-                          </td>
-                          <td className="text-right text-mono">{fmt(mano)}</td>
-                          <td className="text-right text-mono" style={{ color: 'var(--green-500)', fontWeight: 600 }}>
+                          <td style={{textAlign:'center'}}><input type="checkbox" checked={esComp} onClick={e=>e.stopPropagation()} onChange={()=>toggleCompartido(t.id)}/></td>
+                          <td className="mono" style={{textAlign:'right'}}>{fmt(mano)}</td>
+                          <td className="mono" style={{textAlign:'right',color:'var(--green-600)',fontWeight:600}}>
                             {fmt(Math.round(com))}
-                            {esComp && <span className="text-xs text-muted" style={{ display: 'block' }}>50/50</span>}
+                            {esComp && <span style={{display:'block',fontSize:10,color:'var(--text-3)'}}>50/50</span>}
                           </td>
                         </tr>
                       )
                     })}
                   </tbody>
                 </table>
-              </div>
-            )}
+              )}
+            </div>
           </div>
 
-          {/* Movimientos del tecnico */}
           <div className="card">
-            <div className="card-title" style={{ marginBottom: 8 }}>Adelantos / Cargos — {tecData.tecnico.nombre}</div>
-            <form onSubmit={agregarMovimiento} className="form-row" style={{ marginBottom: 12 }}>
-              <input type="hidden" value={tecnicoSel} />
-              <div className="form-group">
-                <label className="form-label">Tipo</label>
-                <select className="form-select" value={movForm.tipo}
-                  onChange={e => setMovForm(f => ({ ...f, tipo: e.target.value }))}>
-                  <option value="adelanto">Adelanto</option>
-                  <option value="prestamo">Prestamo</option>
-                  <option value="consumo">Consumo (almuerzo)</option>
-                  <option value="descuento">Descuento</option>
-                </select>
-              </div>
-              <div className="form-group">
-                <label className="form-label">Monto</label>
-                <input className="form-input" type="number" value={movForm.monto}
-                  onChange={e => setMovForm(f => ({ ...f, monto: e.target.value }))} placeholder="0" />
-              </div>
-              <div className="form-group">
-                <label className="form-label">Fecha</label>
-                <input className="form-input" type="date" value={movForm.fecha}
-                  onChange={e => setMovForm(f => ({ ...f, fecha: e.target.value }))} />
-              </div>
-              <div className="form-group" style={{ flex: 1 }}>
-                <label className="form-label">Nota</label>
-                <input className="form-input" value={movForm.nota}
-                  onChange={e => setMovForm(f => ({ ...f, nota: e.target.value }))}
-                  placeholder="Ej: Almuerzo, anticipo..." />
-              </div>
-              <div style={{ display: 'flex', alignItems: 'flex-end' }}>
-                <button type="submit" className="btn btn-outline"
-                  onClick={() => setMovForm(f => ({ ...f, tecnicoId: tecnicoSel }))}>Agregar</button>
-              </div>
-            </form>
-
-            {tecMovs.length === 0 ? (
-              <p className="text-sm text-muted">Sin movimientos registrados.</p>
-            ) : (
-              <div className="table-wrap">
+            <div className="card__h"><h3>Adelantos / Cargos — {tecData.tecnico.nombre}</h3></div>
+            <div className="card__b">
+              <form onSubmit={agregarMovimiento} style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr 2fr auto',gap:12,marginBottom:12}}>
+                <input type="hidden" value={tecnicoSel}/>
+                <div className="field"><label>Tipo</label><select className="input" value={movForm.tipo} onChange={e=>setMovForm(f=>({...f,tipo:e.target.value}))}><option value="adelanto">Adelanto</option><option value="prestamo">Prestamo</option><option value="consumo">Consumo</option><option value="descuento">Descuento</option></select></div>
+                <div className="field"><label>Monto</label><input className="input" type="number" value={movForm.monto} onChange={e=>setMovForm(f=>({...f,monto:e.target.value}))} placeholder="0"/></div>
+                <div className="field"><label>Fecha</label><input className="input" type="date" value={movForm.fecha} onChange={e=>setMovForm(f=>({...f,fecha:e.target.value}))}/></div>
+                <div className="field"><label>Nota</label><input className="input" value={movForm.nota} onChange={e=>setMovForm(f=>({...f,nota:e.target.value}))} placeholder="Almuerzo, anticipo..."/></div>
+                <div style={{display:'flex',alignItems:'flex-end'}}><button type="submit" className="btn btn-outline" onClick={()=>setMovForm(f=>({...f,tecnicoId:tecnicoSel}))}>Agregar</button></div>
+              </form>
+              {tecMovs.length === 0 ? (
+                <p style={{fontSize:13,color:'var(--text-3)'}}>Sin movimientos registrados.</p>
+              ) : (
                 <table>
-                  <thead><tr><th>Fecha</th><th>Tipo</th><th>Nota</th><th className="text-right">Monto</th><th></th></tr></thead>
+                  <thead><tr><th>Fecha</th><th>Tipo</th><th>Nota</th><th style={{textAlign:'right'}}>Monto</th><th></th></tr></thead>
                   <tbody>
-                    {tecMovs.sort((a, b) => new Date(b.fecha) - new Date(a.fecha)).map(m => (
+                    {tecMovs.sort((a,b)=>new Date(b.fecha)-new Date(a.fecha)).map(m=>(
                       <tr key={m.id}>
-                        <td className="text-sm text-muted">{fmtDate(m.fecha)}</td>
-                        <td className="text-sm" style={{ textTransform: 'capitalize' }}>{m.tipo}</td>
-                        <td className="text-sm">{m.nota || '—'}</td>
-                        <td className="text-right text-mono" style={{ color: 'var(--amber-500)' }}>{fmt(m.monto)}</td>
-                        <td><button className="btn btn-ghost btn-sm" onClick={() => eliminarMovimiento(m.id)}>X</button></td>
+                        <td style={{color:'var(--text-3)',fontSize:13}}>{fmtDate(m.fecha)}</td>
+                        <td style={{fontSize:13,textTransform:'capitalize'}}>{m.tipo}</td>
+                        <td style={{fontSize:13}}>{m.nota||'—'}</td>
+                        <td className="mono" style={{textAlign:'right',color:'var(--amber-500)'}}>{fmt(m.monto)}</td>
+                        <td><button className="btn btn-ghost btn-sm" onClick={()=>eliminarMovimiento(m.id)}>X</button></td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
-              </div>
-            )}
+              )}
+            </div>
           </div>
 
-          {/* Resumen del pago */}
           {cantSeleccionados > 0 && (
-            <div className="card" style={{ borderLeft: '4px solid var(--green-500)', background: '#f0fdf4' }}>
-              <div className="card-title" style={{ color: 'var(--green-600)' }}>Resumen del Pago — {tecData.tecnico.nombre}</div>
-              <div className="metrics-grid" style={{ marginBottom: 16 }}>
-                <div className="metric-card">
-                  <div className="metric-value">{cantSeleccionados}</div>
-                  <div className="metric-label">Trabajos Seleccionados</div>
+            <div className="card" style={{borderLeft:'3px solid var(--green-500)'}}>
+              <div className="card__h"><h3 style={{color:'var(--green-600)'}}>Resumen del pago — {tecData.tecnico.nombre}</h3></div>
+              <div className="card__b">
+                <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(140px,1fr))',gap:12,marginBottom:16}}>
+                  {[[cantSeleccionados,'Trabajos'],[fmt(totalSeleccion.manoObra),'M.O. (sin IVA)'],[fmt(totalSeleccion.comision),'Comision','var(--green-600)'],[fmt(totalSeleccion.cargos),'Cargos','var(--amber-500)'],[fmt(totalSeleccion.neto),'NETO A PAGAR',totalSeleccion.neto>=0?'var(--green-600)':'var(--red-500)']].map(([v,l,c],i)=>(
+                    <div key={i} style={{padding:'12px 14px',background:'var(--bg-subtle)',borderRadius:10,border:'1px solid var(--border)'}}>
+                      <div className="mono" style={{fontSize:i===4?22:18,fontWeight:800,color:c||'var(--text)'}}>{v}</div>
+                      <div style={{fontSize:10.5,color:'var(--text-3)',fontWeight:700,textTransform:'uppercase',letterSpacing:.5,marginTop:4}}>{l}</div>
+                    </div>
+                  ))}
                 </div>
-                <div className="metric-card">
-                  <div className="metric-value">{fmt(totalSeleccion.manoObra)}</div>
-                  <div className="metric-label">Mano de Obra (sin IVA)</div>
+                <div style={{display:'flex',gap:10,justifyContent:'flex-end'}}>
+                  <button className="btn btn-outline" onClick={exportPdfPago}>Exportar PDF</button>
+                  <button className="btn btn-primary" onClick={generarPago}>Generar Pago</button>
                 </div>
-                <div className="metric-card">
-                  <div className="metric-value" style={{ color: 'var(--green-500)' }}>{fmt(totalSeleccion.comision)}</div>
-                  <div className="metric-label">Comision ({COMISION.TOTAL * 100}%)</div>
-                </div>
-                <div className="metric-card">
-                  <div className="metric-value" style={{ color: 'var(--amber-500)' }}>{fmt(totalSeleccion.cargos)}</div>
-                  <div className="metric-label">Cargos / Adelantos</div>
-                </div>
-                <div className="metric-card">
-                  <div className="metric-value" style={{ fontSize: 24, color: totalSeleccion.neto >= 0 ? 'var(--green-600)' : 'var(--red-500)' }}>
-                    {fmt(totalSeleccion.neto)}
-                  </div>
-                  <div className="metric-label">NETO A PAGAR</div>
-                </div>
-              </div>
-              <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
-                <button className="btn btn-outline" onClick={exportPdfPago}>Exportar PDF</button>
-                <button className="btn btn-primary" onClick={generarPago}>
-                  Generar Pago
-                </button>
               </div>
             </div>
           )}
         </>
       )}
 
-      {/* Historial de pagos */}
-      <div className="card">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div>
-            <div className="card-title" style={{ marginBottom: 2 }}>Historial de Pagos</div>
-            <span className="text-sm text-muted">{historial.length} pagos realizados</span>
+      <div className="card" style={{marginTop:16}}>
+        <div className="card__h">
+          <h3>Historial de pagos</h3>
+          <div style={{display:'flex',alignItems:'center',gap:8}}>
+            <span className="count">{historial.length} pagos</span>
+            <button className="btn btn-outline btn-sm" onClick={() => setVerHistorial(!verHistorial)}>{verHistorial ? 'Ocultar' : 'Ver'}</button>
           </div>
-          <button className="btn btn-outline btn-sm" onClick={() => setVerHistorial(!verHistorial)}>
-            {verHistorial ? 'Ocultar' : 'Ver Historial'}
-          </button>
         </div>
         {verHistorial && (
-          historial.length === 0 ? (
-            <p className="text-sm text-muted text-center" style={{ padding: 20 }}>No hay pagos registrados.</p>
-          ) : (
-            <div style={{ marginTop: 12 }}>
-              {historial.map(reg => (
-                <div key={reg.id} style={{ border: '1px solid var(--slate-200)', borderRadius: 10, padding: 14, marginBottom: 10, background: 'var(--slate-50)' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8, marginBottom: 8 }}>
-                    <div>
-                      <span className="text-mono text-sm" style={{ fontWeight: 700 }}>{reg.id}</span>
-                      <span className="badge badge-info" style={{ marginLeft: 8 }}>{reg.tecnico}</span>
+          <div className="card__b">
+            {historial.length === 0 ? (
+              <div className="empty"><h4>Sin pagos</h4><p>No hay pagos registrados.</p></div>
+            ) : (
+              <>
+                {historial.map(reg => (
+                  <div key={reg.id} style={{border:'1px solid var(--border)',borderRadius:10,padding:14,marginBottom:10,background:'var(--bg-subtle)'}}>
+                    <div style={{display:'flex',justifyContent:'space-between',flexWrap:'wrap',gap:8,marginBottom:8}}>
+                      <div><span className="mono" style={{fontSize:12,fontWeight:700}}>{reg.id}</span><span className="badge badge-i" style={{marginLeft:8}}>{reg.tecnico}</span></div>
+                      <span style={{fontSize:13,color:'var(--text-3)'}}>{fmtDate(reg.fecha)}</span>
                     </div>
-                    <span className="text-sm text-muted">{fmtDate(reg.fecha)}</span>
+                    <div style={{display:'flex',gap:16,flexWrap:'wrap',alignItems:'center'}}>
+                      <span style={{fontSize:13}}><strong>{reg.cantidadTrabajos}</strong> trabajos</span>
+                      <span style={{fontSize:13}}>M.O.: <strong className="mono">{fmt(reg.manoObra||0)}</strong></span>
+                      <span style={{fontSize:13,color:'var(--green-600)'}}>Comision: <strong className="mono">{fmt(reg.comision||0)}</strong></span>
+                      <span style={{fontSize:13,color:'var(--amber-500)'}}>Cargos: <strong className="mono">{fmt(reg.cargos||0)}</strong></span>
+                      <span style={{fontSize:13,color:'var(--green-600)',fontWeight:700}}>Neto: <strong className="mono">{fmt(reg.neto||0)}</strong></span>
+                      <button className="btn btn-outline btn-sm" style={{marginLeft:'auto'}} onClick={()=>exportPdfHistorial(reg)}>PDF</button>
+                    </div>
                   </div>
-                  <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
-                    <div className="text-sm"><strong>{reg.cantidadTrabajos}</strong> trabajos</div>
-                    <div className="text-sm">M.O.: <strong className="text-mono">{fmt(reg.manoObra || 0)}</strong></div>
-                    <div className="text-sm" style={{ color: 'var(--green-500)' }}>Comision: <strong className="text-mono">{fmt(reg.comision || 0)}</strong></div>
-                    <div className="text-sm" style={{ color: 'var(--amber-500)' }}>Cargos: <strong className="text-mono">{fmt(reg.cargos || 0)}</strong></div>
-                    <div className="text-sm" style={{ color: 'var(--green-600)', fontWeight: 700 }}>Neto: <strong className="text-mono">{fmt(reg.neto || 0)}</strong></div>
-                    <button className="btn btn-outline btn-sm" style={{ marginLeft: 'auto' }}
-                      onClick={() => exportPdfHistorial(reg)}>
-                      PDF
-                    </button>
-                  </div>
+                ))}
+                <div style={{textAlign:'right',marginTop:8}}>
+                  <button className="btn btn-ghost btn-sm" style={{color:'var(--red-500)'}} onClick={()=>{if(confirm('Borrar todo el historial de pagos?'))guardarHistorial([])}}>Limpiar historial</button>
                 </div>
-              ))}
-              <div style={{ textAlign: 'right', marginTop: 8 }}>
-                <button className="btn btn-ghost btn-sm" style={{ color: 'var(--red-500)' }}
-                  onClick={() => { if (confirm('Borrar todo el historial de pagos?')) guardarHistorial([]) }}>
-                  Limpiar historial
-                </button>
-              </div>
-            </div>
-          )
+              </>
+            )}
+          </div>
         )}
       </div>
     </div>

@@ -125,118 +125,95 @@ export default function Reportes({ trabajos }) {
 
   return (
     <div>
-      {/* Filtro de rango */}
-      <div className="card">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', flexWrap: 'wrap', gap: 14 }}>
-          <div className="form-row" style={{ flex: 1, marginBottom: 0 }}>
-            <div className="form-group" style={{ marginBottom: 0 }}>
-              <label className="form-label">Desde</label>
-              <input className="form-input" type="date" value={rango.desde}
-                onChange={e => setRango(r => ({ ...r, desde: e.target.value }))} />
-            </div>
-            <div className="form-group" style={{ marginBottom: 0 }}>
-              <label className="form-label">Hasta</label>
-              <input className="form-input" type="date" value={rango.hasta}
-                onChange={e => setRango(r => ({ ...r, hasta: e.target.value }))} />
-            </div>
+      <div className="pagehd">
+        <div><h2>Reportes</h2><p className="sub">Metricas del periodo {rango.desde} al {rango.hasta}</p></div>
+        <div className="actions">
+          <div className="card__b" style={{display:'flex',gap:10,alignItems:'center',padding:0}}>
+            <input className="input" type="date" value={rango.desde} onChange={e => setRango(r => ({...r, desde: e.target.value}))} style={{width:140}}/>
+            <input className="input" type="date" value={rango.hasta} onChange={e => setRango(r => ({...r, hasta: e.target.value}))} style={{width:140}}/>
           </div>
-          <div style={{ display: 'flex', gap: 8 }}>
-            <button className="btn btn-outline btn-sm" onClick={exportarCSV}>Exportar CSV</button>
-            <button className="btn btn-outline btn-sm" onClick={() => exportarResumen()}>Resumen PDF</button>
+          <button className="btn btn-outline" onClick={exportarCSV}>CSV</button>
+          <button className="btn btn-outline" onClick={() => exportarResumen()}>PDF</button>
+        </div>
+      </div>
+
+      {/* KPI cards */}
+      <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(200px,1fr))',gap:14,marginBottom:18}}>
+        <div className="kpi"><div className="kpi__head"><div className="kpi__ic blue"><svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div><div className="kpi__lbl">Total trabajos</div></div><div className="kpi__v">{stats.total}</div></div>
+        <div className="kpi"><div className="kpi__head"><div className="kpi__ic green"><svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path d="M5 13l4 4L19 7"/></svg></div><div className="kpi__lbl">Completados</div></div><div className="kpi__v" style={{color:'var(--green-600)'}}>{stats.completados}</div></div>
+        <div className="kpi"><div className="kpi__head"><div className="kpi__ic amber"><svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg></div><div className="kpi__lbl">Ingresos</div></div><div className="kpi__v">{fmt(stats.ingresos)}</div></div>
+        <div className="kpi"><div className="kpi__head"><div className="kpi__ic red"><svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div><div className="kpi__lbl">Comisiones</div></div><div className="kpi__v">{fmt(stats.comisiones)}</div></div>
+        <div className="kpi"><div className="kpi__head"><div className="kpi__ic green"><svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg></div><div className="kpi__lbl">Neto taller</div></div><div className="kpi__v" style={{color:'var(--green-600)'}}>{fmt(stats.ingresos - stats.comisiones)}</div></div>
+      </div>
+
+      {/* Distribution by state - stacked bar */}
+      <div className="card" style={{marginBottom:16}}>
+        <div className="card__h"><h3>Distribucion por estado</h3></div>
+        <div className="card__b" style={{display:'flex',flexDirection:'column',gap:16}}>
+          <div style={{display:'flex',height:14,borderRadius:7,overflow:'hidden',border:'1px solid var(--border)'}}>
+            {stats.porEstado.filter(e=>e.cantidad>0).map((e,i)=>{
+              const colors = {'Completado':'var(--green-500)','Cancelado':'var(--red-500)','En Proceso':'var(--blue-500)','Pendiente':'var(--amber-400)','En Diagnostico':'var(--blue-400)','Esperando Repuestos':'var(--amber-500)','En Prueba':'var(--purple-500,#7c3aed)','Programado':'var(--slate-400)'}
+              return <div key={i} style={{width:`${(e.cantidad/stats.total)*100}%`,background:colors[e.estado]||'var(--slate-400)'}}/>
+            })}
+          </div>
+          <div style={{display:'flex',flexDirection:'column',gap:9}}>
+            {stats.porEstado.filter(e=>e.cantidad>0).map((e,i)=>{
+              const colors = {'Completado':'var(--green-500)','Cancelado':'var(--red-500)','En Proceso':'var(--blue-500)','Pendiente':'var(--amber-400)','En Diagnostico':'var(--blue-400)','Esperando Repuestos':'var(--amber-500)','En Prueba':'var(--purple-500,#7c3aed)','Programado':'var(--slate-400)'}
+              return (
+                <div key={i} style={{display:'flex',alignItems:'center',gap:10,fontSize:13}}>
+                  <div style={{width:10,height:10,borderRadius:3,background:colors[e.estado]||'var(--slate-400)',flexShrink:0}}/>
+                  <span style={{flex:1,fontWeight:500}}>{e.estado}</span>
+                  <span className="mono" style={{fontWeight:700}}>{e.cantidad}</span>
+                  <span className="mono" style={{color:'var(--text-3)'}}>{stats.total>0?Math.round(e.cantidad/stats.total*100):0}%</span>
+                </div>
+              )
+            })}
           </div>
         </div>
       </div>
 
-      {/* Metricas principales */}
-      <div className="metrics-grid">
-        <div className="metric-card">
-          <div className="metric-value">{stats.total}</div>
-          <div className="metric-label">Total Trabajos</div>
-        </div>
-        <div className="metric-card">
-          <div className="metric-value" style={{ color: 'var(--green-500)' }}>{stats.completados}</div>
-          <div className="metric-label">Completados</div>
-        </div>
-        <div className="metric-card">
-          <div className="metric-value">{fmt(stats.ingresos)}</div>
-          <div className="metric-label">Ingresos</div>
-        </div>
-        <div className="metric-card">
-          <div className="metric-value">{fmt(stats.comisiones)}</div>
-          <div className="metric-label">Comisiones</div>
-        </div>
-        <div className="metric-card">
-          <div className="metric-value">{fmt(stats.ingresos - stats.comisiones)}</div>
-          <div className="metric-label">Neto Taller</div>
-        </div>
-      </div>
-
-      {/* Por estado */}
-      <div className="card">
-        <div className="card-title">Distribucion por Estado</div>
-        <div className="metrics-grid" style={{ marginBottom: 0 }}>
-          {stats.porEstado.map(e => {
-            const bc = e.estado === ESTADOS.COMPLETADO ? 'var(--green-500)'
-              : e.estado === ESTADOS.CANCELADO ? 'var(--red-500)'
-              : e.estado === ESTADOS.EN_PROGRESO ? 'var(--blue-500)' : 'var(--amber-500)'
-            return (
-              <div className="metric-card" key={e.estado}>
-                <div className="metric-value" style={{ fontSize: 22, color: bc }}>{e.cantidad}</div>
-                <div className="metric-label">{e.estado}</div>
-              </div>
-            )
-          })}
-        </div>
-      </div>
-
-      {/* Por tecnico */}
-      <div className="card">
-        <div className="card-title">Rendimiento por Tecnico</div>
-        <div className="table-wrap">
+      {/* Technician ranking */}
+      <div className="card" style={{marginBottom:16}}>
+        <div className="card__h"><h3>Rendimiento del equipo</h3></div>
+        <div className="card__b card__b--flush">
           <table>
-            <thead>
-              <tr>
-                <th>Tecnico</th>
-                <th>Especialidad</th>
-                <th className="text-right">Trabajos</th>
-                <th className="text-right">Mano de Obra</th>
-              </tr>
-            </thead>
+            <thead><tr><th>Mecanico</th><th style={{textAlign:'right'}}>Trabajos</th><th style={{textAlign:'right'}}>Mano de obra</th><th style={{width:'25%'}}/></tr></thead>
             <tbody>
-              {stats.porTecnico.map(t => (
-                <tr key={t.id}>
-                  <td style={{ fontWeight: 600 }}>{t.nombre}</td>
-                  <td className="text-sm text-muted">{t.especialidad}</td>
-                  <td className="text-right text-mono">{t.cantidad}</td>
-                  <td className="text-right text-mono">{fmt(t.facturado)}</td>
-                </tr>
-              ))}
+              {stats.porTecnico.map((t,i)=>{
+                const maxFact = Math.max(...stats.porTecnico.map(x=>x.facturado),1)
+                const pct = Math.round((t.facturado/maxFact)*100)
+                return (
+                  <tr key={t.id}>
+                    <td><div style={{display:'flex',alignItems:'center',gap:10}}><span className={`av av-${(i%5)+1}`}>{t.nombre.split(' ').map(x=>x[0]).slice(0,2).join('')}</span><span style={{fontWeight:600}}>{t.nombre}</span></div></td>
+                    <td className="mono" style={{textAlign:'right',fontWeight:700}}>{t.cantidad}</td>
+                    <td className="mono" style={{textAlign:'right',fontWeight:700,color:'var(--green-600)'}}>{fmt(t.facturado)}</td>
+                    <td>
+                      <div style={{height:6,background:'var(--bg-subtle)',borderRadius:3,overflow:'hidden',border:'1px solid var(--border)'}}>
+                        <div style={{width:`${pct}%`,height:'100%',background:pct>=70?'var(--green-500)':'var(--amber-400)'}}/>
+                      </div>
+                    </td>
+                  </tr>
+                )
+              })}
             </tbody>
           </table>
         </div>
       </div>
 
-      {/* Top vehiculos */}
+      {/* Top vehicles */}
       {stats.topVehiculos.length > 0 && (
         <div className="card">
-          <div className="card-title">Vehiculos Frecuentes</div>
-          <div className="table-wrap">
+          <div className="card__h"><h3>Vehiculos frecuentes</h3><span className="count">{stats.topVehiculos.length}</span></div>
+          <div className="card__b card__b--flush">
             <table>
-              <thead>
-                <tr>
-                  <th>Placa</th>
-                  <th>Vehiculo</th>
-                  <th className="text-right">Visitas</th>
-                  <th className="text-right">Total Facturado</th>
-                </tr>
-              </thead>
+              <thead><tr><th>Placa</th><th>Vehiculo</th><th style={{textAlign:'right'}}>Visitas</th><th style={{textAlign:'right'}}>Total facturado</th></tr></thead>
               <tbody>
-                {stats.topVehiculos.map(v => (
+                {stats.topVehiculos.map(v=>(
                   <tr key={v.placa}>
-                    <td className="text-mono" style={{ fontWeight: 700 }}>{v.placa}</td>
-                    <td className="text-sm">{[v.marca, v.modelo].filter(Boolean).join(' ') || '—'}</td>
-                    <td className="text-right text-mono">{v.visitas}</td>
-                    <td className="text-right text-mono">{fmt(v.total)}</td>
+                    <td className="mono" style={{fontWeight:700}}>{v.placa}</td>
+                    <td style={{color:'var(--text-3)',fontSize:13}}>{[v.marca,v.modelo].filter(Boolean).join(' ')||'—'}</td>
+                    <td className="mono" style={{textAlign:'right',fontWeight:700}}>{v.visitas}</td>
+                    <td className="mono" style={{textAlign:'right',fontWeight:700}}>{fmt(v.total)}</td>
                   </tr>
                 ))}
               </tbody>
