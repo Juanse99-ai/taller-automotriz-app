@@ -163,10 +163,14 @@ export default function CuenttiPanel({ trabajos, notify }) {
 
     setFacturando(true)
     try {
+      // Mapear id_banco segun metodo de pago:
+      // Efectivo(1)/Nequi(5) no requieren banco, Transferencia(4)/Tarjetas(2,3) si
+      const idBanco = [2, 3, 4].includes(metodoPago) ? 2 : 0
       const facturaData = {
         ...trabajo,
         resolucion: prefijo,
         idMedioPago: metodoPago,
+        idBanco,
         aCredito: metodoPago === 0,
         observaciones: `OT: ${trabajo.otCodigo || trabajo.id} — ${trabajo.observaciones || ''}`.trim(),
       }

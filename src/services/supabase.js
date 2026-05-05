@@ -63,9 +63,10 @@ export async function upsertTrabajo(trabajo) {
       total: trabajo.total || 0,
       pagado: trabajo.pagado || false,
       metodo_pago: trabajo.metodoPago || null,
+      ot_codigo: trabajo.otCodigo || '',
       inspeccion: trabajo.inspeccion ? JSON.stringify(trabajo.inspeccion) : null,
     }
-    const res = await fetchWithTimeout(baseProxy, {
+    const res = await fetchWithTimeout(`${baseProxy}&upsert=true`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(row),
