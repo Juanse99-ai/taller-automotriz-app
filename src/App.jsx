@@ -66,7 +66,6 @@ export default function App() {
   const [user, setUser] = useState(() => getSession())
   const [section, setSection] = useState('dashboard')
   const [sidebarOpen, setSidebarOpen] = useState(false)
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [toast, setToast] = useState(null)
   const trabajosHook = useTrabajos()
   const clientesHook = useClientes()
@@ -132,7 +131,7 @@ export default function App() {
     }
     switch (section) {
       case 'dashboard':
-        return <Dashboard trabajos={trabajosHook.trabajos} loading={trabajosHook.loading} />
+        return <Dashboard trabajos={trabajosHook.trabajos} loading={trabajosHook.loading} onNavigate={navigate} />
       case 'trabajos':
         return <Trabajos hook={trabajosHook} notify={notify} onAutoFacturar={() => navigate('cuentti')} />
       case 'recepcion':
@@ -156,7 +155,7 @@ export default function App() {
       case 'clientes':
         return <Clientes clientes={clientesHook} vehiculos={vehiculosHook} notify={notify} />
       case 'cuentti':
-        return <CuenttiPanel trabajos={trabajosHook.trabajos} notify={notify} />
+        return <CuenttiPanel trabajos={trabajosHook.trabajos} actualizarTrabajo={trabajosHook.actualizarTrabajo} notify={notify} />
       default:
         return (
           <div className="empty-state">
@@ -183,23 +182,21 @@ export default function App() {
   }
 
   return (
-    <div className={`app-shell ${sidebarCollapsed ? 'sidebar-is-collapsed' : ''}`}>
+    <div className="app">
       <Sidebar
         active={section}
         onNavigate={navigate}
         isOpen={sidebarOpen}
-        collapsed={sidebarCollapsed}
-        onToggleCollapse={() => setSidebarCollapsed(c => !c)}
         seccionesPermitidas={seccionesPermitidas}
         user={user}
         onLogout={handleLogout}
         trabajos={trabajosHook.trabajos}
       />
-      <div className="main-area">
+      <div className="main">
         <TopBar
           title={sec.title}
           subtitle={sec.subtitle}
-          onHamburger={() => setSidebarOpen(!sidebarOpen)}
+          onHamburger={() => setSidebarOpen(o => !o)}
           user={user}
           onLogout={handleLogout}
           trabajos={trabajosHook.trabajos}
@@ -220,7 +217,7 @@ export default function App() {
         </div>
       </div>
       {toast && <Toast message={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
-      {sidebarOpen && <div className="sidebar-overlay" onClick={() => setSidebarOpen(false)} />}
+      <div className={`scrim ${sidebarOpen ? 'on' : ''}`} onClick={() => setSidebarOpen(false)} />
     </div>
   )
 }

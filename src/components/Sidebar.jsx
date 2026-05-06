@@ -17,11 +17,32 @@ const ICONS = {
       <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
     </svg>
   ),
+  inspecciones: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M9 11l3 3L22 4"/>
+      <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+    </svg>
+  ),
   mecanicos: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
       <circle cx="9" cy="7" r="4"/>
       <path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>
+    </svg>
+  ),
+  clientes: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+      <circle cx="9" cy="7" r="4"/>
+      <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+      <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+    </svg>
+  ),
+  vehiculos: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M14 16H9m10 0h3v-3.15a1 1 0 0 0-.84-.99L16 11l-2.7-3.6a1 1 0 0 0-.8-.4H5.24a2 2 0 0 0-1.8 1.1l-.8 1.63A6 6 0 0 0 2 12.42V16h2"/>
+      <circle cx="6.5" cy="16.5" r="2.5"/>
+      <circle cx="16.5" cy="16.5" r="2.5"/>
     </svg>
   ),
   cotizaciones: (
@@ -53,20 +74,6 @@ const ICONS = {
       <line x1="2"  y1="20" x2="22" y2="20"/>
     </svg>
   ),
-  inspecciones: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M9 11l3 3L22 4"/>
-      <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
-    </svg>
-  ),
-  clientes: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-      <circle cx="9" cy="7" r="4"/>
-      <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
-      <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-    </svg>
-  ),
   cuentti: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
@@ -76,76 +83,81 @@ const ICONS = {
       <line x1="10" y1="9"  x2="8" y2="9"/>
     </svg>
   ),
+  logout: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+      <polyline points="16 17 21 12 16 7"/>
+      <line x1="21" y1="12" x2="9" y2="12"/>
+    </svg>
+  ),
 }
 
+// Estructura de navegacion en grupos (segun prototipo)
 const NAV = [
   { group: 'Principal', items: [
     { key: 'dashboard',   label: 'Dashboard' },
-    { key: 'recepcion',   label: 'Recepcion' },
-    { key: 'trabajos',    label: 'Trabajos' },
-    { key: 'mecanicos',   label: 'Mecanicos' },
   ]},
-  { group: 'Operaciones', items: [
-    { key: 'cotizaciones', label: 'Cotizaciones' },
+  { group: 'Operacion', items: [
+    { key: 'recepcion',    label: 'Recepcion' },
+    { key: 'trabajos',     label: 'Trabajos' },
     { key: 'inspecciones', label: 'Inspecciones' },
-    { key: 'inventario',   label: 'Inventario' },
+    { key: 'mecanicos',    label: 'Mecanicos' },
   ]},
   { group: 'Gestion', items: [
-    { key: 'clientes',    label: 'Clientes' },
-    { key: 'liquidacion', label: 'Liquidacion' },
-    { key: 'reportes',    label: 'Reportes' },
-    { key: 'cuentti',     label: 'Cuentti' },
+    { key: 'clientes',  label: 'Clientes' },
+    { key: 'vehiculos', label: 'Vehiculos' },
+  ]},
+  { group: 'Facturacion', items: [
+    { key: 'cotizaciones', label: 'Cotizaciones' },
+    { key: 'inventario',   label: 'Inventario' },
+    { key: 'liquidacion',  label: 'Liquidacion' },
+  ]},
+  { group: 'Analisis', items: [
+    { key: 'reportes', label: 'Reportes' },
+    { key: 'cuentti',  label: 'Cuentti' },
   ]},
 ]
 
-export default function Sidebar({ active, onNavigate, isOpen, collapsed, onToggleCollapse, seccionesPermitidas, user, onLogout, trabajos = [] }) {
+export default function Sidebar({ active, onNavigate, isOpen, seccionesPermitidas, user, onLogout, trabajos = [] }) {
   const allowed = seccionesPermitidas || []
 
-  // Badge counts
+  // Pill rojo en Trabajos: pendientes + en progreso (alerta de carga del taller)
   const pendientes = trabajos.filter(t => t.estado === 'Pendiente' || t.estado === 'En Diagnostico').length
   const enProgreso = trabajos.filter(t => t.estado === 'En Progreso' || t.estado === 'Esperando Repuestos' || t.estado === 'En Prueba').length
-  const badgeCounts = {
-    trabajos: pendientes + enProgreso || 0,
-  }
+  const pillCounts = { trabajos: pendientes + enProgreso || 0 }
+
+  const inicial = (user?.nombre || user?.usuario || '?')[0].toUpperCase()
+  const rolLabel = user?.rol === 'admin' ? 'Administrador' : 'Jefe de taller'
 
   return (
-    <aside className={`sidebar ${isOpen ? 'open' : ''} ${collapsed ? 'collapsed' : ''}`}>
-      <div className="sidebar-brand">
-        <div className="sidebar-brand-mark">
-          <img src="/logo.png" alt="MDA" className="sidebar-logo" />
+    <aside className={`sidebar ${isOpen ? 'open' : ''}`}>
+      <div className="sidebar__brand">
+        <div className="logo">
+          <img src="/logo.png" alt="MDA" />
         </div>
-        <div className="sidebar-brand-text sidebar-text-hide">
-          <h1>MDA</h1>
-          <p>Multidiagnosticos AS</p>
+        <div className="wm">
+          <div className="n">Multidiagnosticos</div>
+          <div className="s">AS · Taller</div>
         </div>
-        <button className="sidebar-collapse-btn" onClick={onToggleCollapse}
-          title={collapsed ? 'Fijar menu' : 'Colapsar menu'}>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
-            style={{ transform: collapsed ? 'rotate(180deg)' : 'none', transition: 'transform 0.3s' }}>
-            <polyline points="15 18 9 12 15 6"/>
-          </svg>
-        </button>
       </div>
 
-      <nav className="sidebar-nav">
+      <nav className="sidebar__nav">
         {NAV.map(g => {
-          const visibleItems = g.items.filter(item => allowed.includes(item.key))
-          if (!visibleItems.length) return null
+          const visible = g.items.filter(item => allowed.includes(item.key))
+          if (!visible.length) return null
           return (
             <div key={g.group}>
-              <div className="nav-group-title sidebar-text-hide">{g.group}</div>
-              {visibleItems.map(item => (
-                <div
+              <div className="sidebar__group">{g.group}</div>
+              {visible.map(item => (
+                <a
                   key={item.key}
-                  className={`nav-item ${active === item.key ? 'active' : ''}`}
+                  className={`navlink ${active === item.key ? 'active' : ''}`}
                   onClick={() => onNavigate(item.key)}
                 >
                   {ICONS[item.key]}
-                  <span className="sidebar-text-hide">{item.label}</span>
-                  {!collapsed && badgeCounts[item.key] > 0 && (
-                    <span className="nav-badge sidebar-text-hide">{badgeCounts[item.key]}</span>
-                  )}
-                </div>
+                  <span>{item.label}</span>
+                  {pillCounts[item.key] > 0 && <span className="pill">{pillCounts[item.key]}</span>}
+                </a>
               ))}
             </div>
           )
@@ -153,28 +165,17 @@ export default function Sidebar({ active, onNavigate, isOpen, collapsed, onToggl
       </nav>
 
       {user && (
-        <div className="sidebar-user">
-          <div className="sidebar-user-avatar sidebar-text-hide">
-            {(user.nombre || user.usuario || '?')[0].toUpperCase()}
+        <div className="sidebar__foot">
+          <div className="av">{inicial}</div>
+          <div className="me">
+            <div className="n">{user.nombre || user.usuario}</div>
+            <div className="r">{rolLabel}</div>
           </div>
-          <div className="sidebar-user-info sidebar-text-hide">
-            <div className="sidebar-user-name">{user.nombre || user.usuario}</div>
-            <div className="sidebar-user-role">{user.rol === 'admin' ? 'Administrador' : 'Jefe de taller'}</div>
-          </div>
-          <button className="sidebar-logout-btn" onClick={onLogout} title="Cerrar sesion">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
-              <polyline points="16 17 21 12 16 7"/>
-              <line x1="21" y1="12" x2="9" y2="12"/>
-            </svg>
+          <button className="icobtn" onClick={onLogout} title="Cerrar sesion" style={{ color: 'rgba(255,255,255,.45)' }}>
+            {ICONS.logout}
           </button>
         </div>
       )}
-
-      <div className="sidebar-footer">
-        <span className="sidebar-text-hide">Taller Automotriz v1.0</span>
-        <span className="sidebar-text-show">v1.0</span>
-      </div>
     </aside>
   )
 }

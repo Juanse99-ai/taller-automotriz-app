@@ -39,7 +39,9 @@ export function useCotizaciones() {
         setCotizaciones(cached)
         // Seed: si hay datos locales pero Supabase esta vacio, subir
         if (cached.length > 0) {
-          cached.forEach(c => upsertCotizacion(c))
+          for (const c of cached) {
+            try { await upsertCotizacion(c) } catch (e) { console.warn('Seed cotizacion fallo:', e.message) }
+          }
         }
       }
     } catch (err) {
@@ -57,25 +59,31 @@ export function useCotizaciones() {
     if (!loading) lsSet(LS_KEYS.COTIZACIONES, cotizaciones)
   }, [cotizaciones, loading])
 
-  const guardar = useCallback((nuevas) => {
-    setCotizaciones(nuevas)
-    lsSet(LS_KEYS.COTIZACIONES, nuevas)
-    // Sync diferencial: upsert cada cotizacion nueva/modificada
-    nuevas.forEach(c => upsertCotizacion(c))
-  }, [])
-
-  const guardarUna = useCallback((cot) => {
+  // Guardar UNA cotizacion (crear o actualizar). Async: throws si Supabase falla.
+  const guardarUna = useCallback(async (cot) => {
     setCotizaciones(prev => {
       const idx = prev.findIndex(c => c.id === cot.id)
-      const next = idx >= 0 ? prev.map(c => c.id === cot.id ? cot : c) : [cot, ...prev]
-      return next
+      return idx >= 0 ? prev.map(c => c.id === cot.id ? cot : c) : [cot, ...prev]
     })
-    upsertCotizacion(cot)
+    await upsertCotizacion(cot)
+    return cot
   }, [])
 
-  const eliminar = useCallback((id) => {
+  // Reemplazar el array completo (legacy). Persiste cada cotizacion individualmente
+  // y devuelve { ok, fallidas } para que el componente notifique fallos.
+  const guardar = useCallback(async (nuevas) => {
+    setCotizaciones(nuevas)
+    lsSet(LS_KEYS.COTIZACIONES, nuevas)
+    const results = await Promise.allSettled(nuevas.map(c => upsertCotizacion(c)))
+    const fallidas = results
+      .map((r, i) => r.status === 'rejected' ? nuevas[i].id : null)
+      .filter(Boolean)
+    return { ok: fallidas.length === 0, fallidas }
+  }, [])
+
+  const eliminar = useCallback(async (id) => {
     setCotizaciones(prev => prev.filter(c => c.id !== id))
-    deleteCotizacion(id)
+    return await deleteCotizacion(id)
   }, [])
 
   return {

@@ -45,6 +45,9 @@ export function useTrabajos() {
           pagado: r.pagado || false,
           metodoPago: r.metodo_pago,
           otCodigo: r.ot_codigo || r.otCodigo || '',
+          cuenttiTransacionId: r.cuentti_id_transacion || null,
+          facturadoEn: r.facturado_en || null,
+          cuenttiResolucion: r.cuentti_resolucion || null,
         }))
         setTrabajos(normalized)
         lsSet(LS_KEYS.TRABAJOS, normalized)
@@ -70,6 +73,9 @@ export function useTrabajos() {
                 totalIva: parseFloat(r.total_iva) || 0, total: parseFloat(r.total) || 0,
                 pagado: r.pagado || false, metodoPago: r.metodo_pago,
                 otCodigo: r.ot_codigo || r.otCodigo || '',
+                cuenttiTransacionId: r.cuentti_id_transacion || null,
+                facturadoEn: r.facturado_en || null,
+                cuenttiResolucion: r.cuentti_resolucion || null,
               }))
               setTrabajos(normalized)
               lsSet(LS_KEYS.TRABAJOS, normalized)

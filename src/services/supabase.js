@@ -66,6 +66,10 @@ export async function upsertTrabajo(trabajo) {
       ot_codigo: trabajo.otCodigo || '',
       inspeccion: trabajo.inspeccion ? JSON.stringify(trabajo.inspeccion) : null,
     }
+    // Campos opcionales: solo enviar si tienen valor (evita rechazo por columna inexistente)
+    if (trabajo.cuenttiTransacionId) row.cuentti_id_transacion = String(trabajo.cuenttiTransacionId)
+    if (trabajo.facturadoEn) row.facturado_en = trabajo.facturadoEn
+    if (trabajo.cuenttiResolucion) row.cuentti_resolucion = trabajo.cuenttiResolucion
     const res = await fetchWithTimeout(`${baseProxy}&upsert=true`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -100,35 +104,35 @@ export async function fetchCotizaciones() {
 }
 
 export async function upsertCotizacion(cot) {
-  try {
-    const row = {
-      id: cot.id,
-      fecha: cot.fecha,
-      cedula: cot.cedula || '',
-      cliente: cot.cliente || '',
-      telefono_cliente: cot.telefonoCliente || cot.telefono || '',
-      placa: cot.placa || '',
-      marca: cot.marca || '',
-      modelo: cot.modelo || '',
-      items: JSON.stringify(cot.items || []),
-      subtotal: cot.subtotal || 0,
-      iva: cot.iva || 0,
-      total: cot.total || 0,
-      observaciones: cot.observaciones || '',
-      validez_dias: cot.validezDias || 15,
-      estado: cot.estado || 'Pendiente',
-    }
-    const res = await fetchWithTimeout(`${proxy('cotizaciones')}&upsert=true`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(row),
-    })
-    if (!res.ok) throw new Error(await res.text())
-    return await res.json()
-  } catch (e) {
-    console.warn('Supabase upsertCotizacion:', e.message)
-    return null
+  const row = {
+    id: cot.id,
+    fecha: cot.fecha,
+    cedula: cot.cedula || '',
+    cliente: cot.cliente || '',
+    telefono_cliente: cot.telefonoCliente || cot.telefono || '',
+    placa: cot.placa || '',
+    marca: cot.marca || '',
+    modelo: cot.modelo || '',
+    items: JSON.stringify(cot.items || []),
+    subtotal: cot.subtotal || 0,
+    iva: cot.iva || 0,
+    total: cot.total || 0,
+    observaciones: cot.observaciones || '',
+    validez_dias: cot.validezDias || 15,
+    estado: cot.estado || 'Pendiente',
   }
+  const res = await fetchWithTimeout(`${proxy('cotizaciones')}&upsert=true`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(row),
+  })
+  if (!res.ok) {
+    const detail = await res.text().catch(() => '')
+    const err = new Error(`Cotizacion no se pudo guardar en Supabase (${res.status}): ${detail.slice(0, 200)}`)
+    console.error('Supabase upsertCotizacion:', err.message)
+    throw err
+  }
+  return await res.json()
 }
 
 export async function deleteCotizacion(id) {

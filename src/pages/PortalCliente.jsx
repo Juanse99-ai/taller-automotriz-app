@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import { InspeccionDetalle } from './Inspecciones'
@@ -48,18 +48,21 @@ async function buscarTrabajosPorCedula(cedula) {
 }
 
 export default function PortalCliente() {
-  const [cedula, setCedula] = useState('')
+  // Leer ?c=<cedula> de la URL al montar (link prellenado para el cliente)
+  const urlParams = new URLSearchParams(window.location.search)
+  const cedulaInicial = urlParams.get('c') || ''
+
+  const [cedula, setCedula] = useState(cedulaInicial)
   const [autenticado, setAutenticado] = useState(false)
   const [datos, setDatos] = useState(null)
   const [vistaInspeccion, setVistaInspeccion] = useState(null)
   const [error, setError] = useState('')
   const [cargando, setCargando] = useState(false)
 
-  const buscar = async (e) => {
-    e.preventDefault()
-    if (!cedula.trim()) return
+  const ejecutarBusqueda = async (cedulaInput) => {
+    const cedulaLimpia = (cedulaInput || '').trim().replace(/[.\-\s]/g, '')
+    if (!cedulaLimpia) return
 
-    const cedulaLimpia = cedula.trim().replace(/[.\-\s]/g, '')
     setCargando(true)
     setError('')
 
@@ -87,6 +90,30 @@ export default function PortalCliente() {
 
     setDatos({ trabajos: misTrab, inspecciones: misInsp, cedula: cedulaLimpia })
     setAutenticado(true)
+  }
+
+  // Si vino con ?c= en URL, autobuscar al montar
+  useEffect(() => {
+    if (cedulaInicial) {
+      ejecutarBusqueda(cedulaInicial)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  const buscar = (e) => {
+    e.preventDefault()
+    ejecutarBusqueda(cedula)
+  }
+
+  const salir = () => {
+    setAutenticado(false)
+    setDatos(null)
+    setCedula('')
+    setError('')
+    // Limpiar ?c= de la URL para que no quede expuesta al cerrar sesion
+    if (window.history.replaceState) {
+      window.history.replaceState({}, '', window.location.pathname)
+    }
   }
 
   const descargarPDF = (insp) => {
@@ -232,7 +259,7 @@ export default function PortalCliente() {
               <img src="/logo.png" alt="MDA" style={{width:20,height:20,objectFit:'contain',borderRadius:4}}/> Multidiagnosticos AS
             </div>
             <button className="btn btn-ghost btn-sm" style={{color:'rgba(255,255,255,.7)',border:'1px solid rgba(255,255,255,.15)'}}
-              onClick={() => { setAutenticado(false); setDatos(null); setCedula('') }}>
+              onClick={salir}>
               Salir
             </button>
           </div>

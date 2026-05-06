@@ -14,7 +14,8 @@ import {
 } from '../services/cuentti'
 import { RESOLUCIONES } from '../utils/constants'
 
-export default function CuenttiPanel({ trabajos, notify }) {
+export default function CuenttiPanel({ trabajos, actualizarTrabajo, notify }) {
+  const [verFacturados, setVerFacturados] = useState(false)
   const [testResult, setTestResult] = useState(null)
   const [testing, setTesting] = useState(false)
   const [facturaId, setFacturaId] = useState('')
@@ -160,6 +161,21 @@ export default function CuenttiPanel({ trabajos, notify }) {
       notify('El trabajo no tiene items para facturar', 'error')
       return
     }
+    // Anti-duplicado: si ya fue facturado, pedir confirmacion explicita
+    if (trabajo.cuenttiTransacionId) {
+      const fechaFmt = trabajo.facturadoEn ? new Date(trabajo.facturadoEn).toLocaleString('es-CO') : 'fecha desconocida'
+      const ok = window.confirm(
+        `Este trabajo ya fue facturado en Cuentti.\n\n` +
+        `id_transacion: ${trabajo.cuenttiTransacionId}\n` +
+        `Fecha: ${fechaFmt}\n\n` +
+        `Si continuas se creara una NUEVA factura duplicada en Cuentti.\n\n` +
+        `¿Reenviar de todas formas?`
+      )
+      if (!ok) {
+        notify('Envio cancelado para evitar duplicado', 'info')
+        return
+      }
+    }
 
     setFacturando(true)
     try {
@@ -186,6 +202,18 @@ export default function CuenttiPanel({ trabajos, notify }) {
         setEmitId(txId.toString())
         setPagoForm(p => ({ ...p, idTransacion: txId.toString(), valor: trabajo.total || p.valor }))
         setDocId(txId.toString())
+        // Marcar trabajo como facturado (anti-duplicado entre dispositivos)
+        if (actualizarTrabajo) {
+          try {
+            await actualizarTrabajo(trabajo.id, {
+              cuenttiTransacionId: txId.toString(),
+              facturadoEn: new Date().toISOString(),
+              cuenttiResolucion: prefijo,
+            })
+          } catch (err) {
+            console.warn('No se pudo persistir el id_transacion en el trabajo:', err.message)
+          }
+        }
       }
       notify('Factura enviada a Cuentti exitosamente', 'success')
       console.log('Factura result:', result)
@@ -266,10 +294,16 @@ export default function CuenttiPanel({ trabajos, notify }) {
     }
   }
 
-  // Trabajos facturables (completados con items)
-  const facturables = trabajos.filter(t =>
+  // Trabajos facturables (completados con items). Excluye los ya facturados
+  // por defecto, salvo que el usuario active "ver ya facturados" para reenviar.
+  const facturablesAll = trabajos.filter(t =>
     t.estado === 'Completado' && t.items && t.items.length > 0
   )
+  const yaFacturadosCount = facturablesAll.filter(t => t.cuenttiTransacionId).length
+  const facturables = verFacturados
+    ? facturablesAll
+    : facturablesAll.filter(t => !t.cuenttiTransacionId)
+  const trabajoFacturaSel = trabajos.find(t => t.id === (facturaId || '').trim())
 
   return (
     <div>
@@ -338,18 +372,40 @@ export default function CuenttiPanel({ trabajos, notify }) {
 
       {/* Facturacion directa */}
       <div className="card">
-        <div className="card__h"><h3>Facturar Trabajo</h3></div>
+        <div className="card__h">
+          <h3>Facturar Trabajo</h3>
+          {yaFacturadosCount > 0 && (
+            <label style={{fontSize:12,color:'var(--text-3)',display:'flex',alignItems:'center',gap:6,cursor:'pointer'}}>
+              <input type="checkbox" checked={verFacturados} onChange={e => setVerFacturados(e.target.checked)} />
+              Mostrar ya facturados ({yaFacturadosCount})
+            </label>
+          )}
+        </div>
         <div className="card__b">
           <p style={{fontSize:13,color:'var(--text-3)',marginBottom:14}}>
             Selecciona un trabajo completado para enviar la factura a Cuentti.
+            {!verFacturados && yaFacturadosCount > 0 && ` Los ${yaFacturadosCount} trabajos ya facturados estan ocultos.`}
           </p>
+          {trabajoFacturaSel?.cuenttiTransacionId && (
+            <div style={{padding:'10px 14px',background:'rgba(220,38,38,.08)',border:'1px solid var(--red-500)',borderRadius:10,marginBottom:14,display:'flex',alignItems:'center',gap:10}}>
+              <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="var(--red-600)" strokeWidth="2"><path d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+              <div style={{flex:1,fontSize:13}}>
+                <div style={{fontWeight:700,color:'var(--red-700)'}}>Este trabajo ya fue facturado</div>
+                <div style={{color:'var(--text-3)',fontSize:12,marginTop:2}}>
+                  id_transacion <span className="mono" style={{color:'var(--text)'}}>{trabajoFacturaSel.cuenttiTransacionId}</span>
+                  {trabajoFacturaSel.facturadoEn && ` · ${new Date(trabajoFacturaSel.facturadoEn).toLocaleDateString('es-CO')}`}
+                  . Volver a enviar duplicara la factura en Cuentti.
+                </div>
+              </div>
+            </div>
+          )}
           <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:14}}>
             <div className="field">
               <select className="input" value={facturaId} onChange={e => { const v = e.target.value; setFacturaId(v); refreshPreview(v, prefijo) }}>
                 <option value="">Seleccionar trabajo...</option>
                 {facturables.map(t => (
                   <option key={t.id} value={t.id}>
-                    {t.id} — {t.placa} — {t.cliente} — {fmt(t.total)}
+                    {t.cuenttiTransacionId ? '✓ ' : ''}{t.id} — {t.placa} — {t.cliente} — {fmt(t.total)}
                   </option>
                 ))}
               </select>

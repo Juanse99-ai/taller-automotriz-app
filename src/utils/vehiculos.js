@@ -1,7 +1,7 @@
 // Marcas y modelos populares en el mercado colombiano
 export const MARCAS_MODELOS = {
   'Chevrolet': ['Spark', 'Sail', 'Beat', 'Onix', 'Tracker', 'Captiva', 'Equinox', 'Traverse', 'Trax', 'Orlando', 'Cruze', 'Aveo', 'Optra', 'Sonic', 'N300', 'N400', 'NHR', 'NKR', 'NPR', 'Silverado', 'Colorado', 'D-Max', 'Luv'],
-  'Renault': ['Kwid', 'Sandero', 'Stepway', 'Logan', 'Duster', 'Koleos', 'Captur', 'Oroch', 'Kangoo', 'Master', 'Clio', 'Symbol', 'Megane', 'Fluence', 'Scala'],
+  'Renault': ['Kwid', 'Sandero', 'Stepway', 'Logan', 'Duster', 'Koleos', 'Captur', 'Oroch', 'Alaskan', 'Kangoo', 'Master', 'Clio', 'Symbol', 'Megane', 'Fluence', 'Scala'],
   'Mazda': ['2', '3', '6', 'CX-3', 'CX-30', 'CX-5', 'CX-50', 'CX-9', 'MX-5', 'BT-50'],
   'Toyota': ['Corolla', 'Yaris', 'Hilux', 'Fortuner', 'Prado', 'Land Cruiser', 'RAV4', 'Rush', 'Camry', 'Hiace', 'Hino', '4Runner', 'Tacoma', 'Tundra', 'Supra', 'C-HR'],
   'Kia': ['Picanto', 'Rio', 'Cerato', 'Forte', 'K5', 'Sportage', 'Seltos', 'Sorento', 'Carnival', 'Soul', 'Stinger', 'EV6', 'Niro', 'Stonic'],

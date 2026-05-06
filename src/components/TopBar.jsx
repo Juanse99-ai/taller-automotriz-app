@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
+import CompartirPortalModal from './CompartirPortalModal'
 
 const SunIcon = () => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -13,21 +14,42 @@ const MoonIcon = () => (
     <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
   </svg>
 )
+const SearchIcon = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+  </svg>
+)
+const BellIcon = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/>
+    <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+  </svg>
+)
+const PortalIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="5" y="2" width="14" height="20" rx="2" ry="2"/>
+    <line x1="12" y1="18" x2="12.01" y2="18"/>
+  </svg>
+)
+const HamburgerIcon = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+    <line x1="3" y1="6"  x2="21" y2="6"/>
+    <line x1="3" y1="12" x2="21" y2="12"/>
+    <line x1="3" y1="18" x2="21" y2="18"/>
+  </svg>
+)
 
-export default function TopBar({ title, subtitle, onHamburger, user, onLogout, trabajos, onNavigate }) {
-  const today = new Date().toLocaleDateString('es-CO', {
-    weekday: 'long', day: 'numeric', month: 'long',
-  })
-
+export default function TopBar({ title, subtitle, onHamburger, user, trabajos, onNavigate }) {
   const [query, setQuery] = useState('')
   const [results, setResults] = useState([])
   const [showResults, setShowResults] = useState(false)
   const searchRef = useRef(null)
-  const [dark, setDark] = useState(() => localStorage.getItem('theme') === 'dark')
+  const [dark, setDark] = useState(() => localStorage.getItem('mda-theme') === 'dark')
+  const [compartirOpen, setCompartirOpen] = useState(false)
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light')
-    localStorage.setItem('theme', dark ? 'dark' : 'light')
+    localStorage.setItem('mda-theme', dark ? 'dark' : 'light')
   }, [dark])
 
   useEffect(() => {
@@ -53,7 +75,7 @@ export default function TopBar({ title, subtitle, onHamburger, user, onLogout, t
     setShowResults(found.length > 0)
   }
 
-  const selectResult = (t) => {
+  const selectResult = () => {
     setQuery('')
     setShowResults(false)
     if (onNavigate) onNavigate('trabajos')
@@ -61,61 +83,69 @@ export default function TopBar({ title, subtitle, onHamburger, user, onLogout, t
 
   return (
     <>
-      <button className="hamburger" onClick={onHamburger} aria-label="Menu">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-          <line x1="3" y1="6"  x2="21" y2="6"/>
-          <line x1="3" y1="12" x2="21" y2="12"/>
-          <line x1="3" y1="18" x2="21" y2="18"/>
-        </svg>
+      <button className="mobile-toggle" onClick={onHamburger} aria-label="Menu">
+        <HamburgerIcon />
       </button>
-      <div className="top-bar">
-        <div>
-          <h2>{title}</h2>
+
+      <header className="topbar">
+        <div className="title">
+          <h1>{title}</h1>
           <p>{subtitle}</p>
         </div>
-        <div className="top-bar-right">
-          <div className="top-bar-search" ref={searchRef}>
-            <svg className="top-bar-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
-            </svg>
-            <input
-              className="top-bar-search-input"
-              type="text"
-              value={query}
-              onChange={e => handleSearch(e.target.value)}
-              onFocus={() => { if (results.length) setShowResults(true) }}
-              placeholder="Buscar placa, cliente, ID..."
-            />
-            {showResults && (
-              <div className="top-bar-search-results">
-                {results.map(t => (
-                  <div key={t.id} className="top-bar-search-item" onClick={() => selectResult(t)}>
-                    <span style={{ fontWeight: 700, fontFamily: 'var(--mono)' }}>{t.placa}</span>
-                    <span style={{ color: 'var(--slate-500)' }}>{t.cliente || 'Sin cliente'}</span>
-                    <span className="badge" style={{ fontSize: 10 }}>{t.estado}</span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-          <button className="theme-toggle" onClick={() => setDark(d => !d)} title={dark ? 'Modo claro' : 'Modo oscuro'}>
-            {dark ? <SunIcon /> : <MoonIcon />}
-          </button>
-          <span className="top-bar-date">{today}</span>
-          {user && (
-            <div className="top-bar-user">
-              <span className="top-bar-user-name">{user.nombre || user.usuario}</span>
-              <button className="btn btn-ghost btn-sm" onClick={onLogout} title="Cerrar sesion" style={{ padding: 6 }}>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
-                  <polyline points="16 17 21 12 16 7"/>
-                  <line x1="21" y1="12" x2="9" y2="12"/>
-                </svg>
-              </button>
+
+        <div className="sp" />
+
+        <div className="search" ref={searchRef} style={{ position: 'relative' }}>
+          <SearchIcon />
+          <input
+            type="text"
+            value={query}
+            onChange={e => handleSearch(e.target.value)}
+            onFocus={() => { if (results.length) setShowResults(true) }}
+            placeholder="Buscar placa, cliente, OT..."
+          />
+          {showResults && (
+            <div style={{ position: 'absolute', top: 'calc(100% + 6px)', left: 0, right: 0, background: 'var(--bg-raised)', border: '1px solid var(--border)', borderRadius: 10, boxShadow: 'var(--shadow-md)', maxHeight: 320, overflowY: 'auto', zIndex: 100 }}>
+              {results.map(t => (
+                <div
+                  key={t.id}
+                  onClick={selectResult}
+                  style={{ padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 10, fontSize: 13, cursor: 'pointer', borderBottom: '1px solid var(--border)' }}
+                >
+                  <span className="mono" style={{ fontWeight: 700 }}>{t.placa}</span>
+                  <span style={{ color: 'var(--text-3)' }}>{t.cliente || 'Sin cliente'}</span>
+                  <span className="badge badge-n" style={{ fontSize: 10, marginLeft: 'auto' }}>{t.estado}</span>
+                </div>
+              ))}
             </div>
           )}
         </div>
-      </div>
+
+        <button
+          className="btn btn-outline btn-sm"
+          onClick={() => setCompartirOpen(true)}
+          title="Compartir Portal del Cliente"
+          style={{ gap: 6 }}
+        >
+          <PortalIcon /> Portal Cliente
+        </button>
+
+        <button className="icobtn" title="Notificaciones">
+          <BellIcon />
+        </button>
+
+        <button
+          className="icobtn"
+          onClick={() => setDark(d => !d)}
+          title={dark ? 'Modo claro' : 'Modo oscuro'}
+        >
+          {dark ? <SunIcon /> : <MoonIcon />}
+        </button>
+      </header>
+
+      {compartirOpen && (
+        <CompartirPortalModal onClose={() => setCompartirOpen(false)} />
+      )}
     </>
   )
 }

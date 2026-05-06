@@ -11,7 +11,7 @@ import { lsGet, lsSet, LS_KEYS } from '../services/storage'
 const ESTADO_COT = { PENDIENTE: 'Pendiente', APROBADA: 'Aprobada', RECHAZADA: 'Rechazada' }
 
 export default function Cotizaciones({ notify, trabajos = [], onCrearTrabajo, cotizacionesHook }) {
-  const { cotizaciones, guardar } = cotizacionesHook || {}
+  const { cotizaciones, guardarUna, eliminar: eliminarHook } = cotizacionesHook || {}
   const [vista, setVista] = useState('lista')
   const [editId, setEditId] = useState(null)
 
@@ -145,14 +145,24 @@ export default function Cotizaciones({ notify, trabajos = [], onCrearTrabajo, co
     valorPendiente: cotizaciones.filter(c => c.estado === ESTADO_COT.PENDIENTE).reduce((s, c) => s + (c.total || 0), 0),
   }), [cotizaciones])
 
-  const cambiarEstado = (id, estado) => {
-    guardar(cotizaciones.map(c => c.id === id ? { ...c, estado } : c))
-    notify(`Cotizacion ${estado.toLowerCase()}`, estado === ESTADO_COT.APROBADA ? 'success' : 'info')
+  const cambiarEstado = async (id, estado) => {
+    const cot = cotizaciones.find(c => c.id === id)
+    if (!cot) return
+    try {
+      await guardarUna({ ...cot, estado })
+      notify(`Cotizacion ${estado.toLowerCase()}`, estado === ESTADO_COT.APROBADA ? 'success' : 'info')
+    } catch (e) {
+      notify(`No se pudo sincronizar: ${e.message}`, 'error')
+    }
   }
 
-  const eliminar = (id) => {
-    guardar(cotizaciones.filter(c => c.id !== id))
-    notify('Cotizacion eliminada', 'info')
+  const eliminar = async (id) => {
+    try {
+      await eliminarHook(id)
+      notify('Cotizacion eliminada', 'info')
+    } catch (e) {
+      notify(`No se pudo eliminar en la nube: ${e.message}`, 'error')
+    }
   }
 
   if (vista === 'nueva' || vista === 'editar') {
@@ -161,16 +171,25 @@ export default function Cotizaciones({ notify, trabajos = [], onCrearTrabajo, co
       <CotizacionForm
         cotizacion={cot}
         trabajos={trabajos}
-        onSave={(data) => {
-          if (vista === 'editar') {
-            guardar(cotizaciones.map(c => c.id === editId ? { ...c, ...data } : c))
-            notify('Cotizacion actualizada', 'success')
-          } else {
-            guardar([{ ...data, id: `COT-${uid()}`, estado: ESTADO_COT.PENDIENTE, fecha: new Date().toISOString() }, ...cotizaciones])
-            notify('Cotizacion creada', 'success')
+        onSave={async (data) => {
+          try {
+            if (vista === 'editar') {
+              const original = cotizaciones.find(c => c.id === editId)
+              await guardarUna({ ...original, ...data, id: editId })
+              notify('Cotizacion actualizada y sincronizada', 'success')
+            } else {
+              const nueva = { ...data, id: `COT-${uid()}`, estado: ESTADO_COT.PENDIENTE, fecha: new Date().toISOString() }
+              await guardarUna(nueva)
+              notify('Cotizacion creada y sincronizada', 'success')
+            }
+            setVista('lista')
+            setEditId(null)
+          } catch (e) {
+            // Quedo guardada en local pero no en la nube
+            notify(`Guardada solo en este dispositivo. Sync fallo: ${e.message}`, 'error')
+            setVista('lista')
+            setEditId(null)
           }
-          setVista('lista')
-          setEditId(null)
         }}
         onCancel={() => { setVista('lista'); setEditId(null) }}
       />

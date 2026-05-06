@@ -119,19 +119,24 @@ export default function Recepcion({ hook, notify }) {
         </div>
       </div>
 
-      {/* Wizard Steps */}
-      <div className="wizard-steps">
+      {/* Stepper (parche-correcciones-tablet) */}
+      <div className="rc-stepper">
         {['Cliente', 'Vehiculo', 'Fotos', 'Confirmar'].map((label, i) => {
           const num = i + 1
-          const cls = paso > num ? 'done' : paso === num ? 'active' : ''
+          const isActive = paso === num
+          const isDone = paso > num
+          const clickable = num <= paso || isDone
           return [
-            i > 0 && <div key={`line-${i}`} className="wizard-step-line" style={{ background: paso > num ? 'var(--green-500)' : paso === num ? 'var(--blue-500)' : undefined }} />,
-            <div key={label} className={`wizard-step ${cls}`} onClick={() => {
-              if (num < paso) setPaso(num)
-            }} style={{ cursor: num < paso ? 'pointer' : 'default' }}>
-              <div className="wizard-step-num">{paso > num ? '\u2713' : num}</div>
-              <span className="sidebar-text-hide">{label}</span>
-            </div>
+            i > 0 && <span key={`sep-${i}`} className="rc-step__sep" aria-hidden="true" />,
+            <a
+              key={label}
+              className={`rc-step ${isActive ? 'is-active' : ''}`}
+              onClick={(e) => { e.preventDefault(); if (clickable) setPaso(num) }}
+              style={{ cursor: clickable ? 'pointer' : 'default', opacity: clickable ? 1 : 0.55 }}
+            >
+              <span className="rc-step__n">{isDone ? '\u2713' : num}</span>
+              <span className="rc-step__l">{label}</span>
+            </a>,
           ]
         })}
       </div>
@@ -143,7 +148,7 @@ export default function Recepcion({ hook, notify }) {
           <form onSubmit={handleRecibir}>
             {/* Paso 1: Cliente */}
             {paso === 1 && (
-              <div className="card">
+              <div className="card" id="rc-cliente">
                 <div className="card__h"><h3>Cliente</h3></div>
                 <div className="card__b" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
                   <div className="field" style={{ position: 'relative' }}>
@@ -189,7 +194,7 @@ export default function Recepcion({ hook, notify }) {
 
             {/* Paso 2: Vehiculo */}
             {paso === 2 && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              <div id="rc-vehiculo" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                 <div className="card">
                   <div className="card__h"><h3>Vehiculo</h3></div>
                   <div className="card__b" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 14 }}>
@@ -260,7 +265,7 @@ export default function Recepcion({ hook, notify }) {
 
             {/* Paso 3: Fotos */}
             {paso === 3 && (
-              <div className="card">
+              <div className="card" id="rc-fotos">
                 <div className="card__h"><h3>Evidencia fotografica</h3><span className="count">{form.evidenciasIngreso.length} / {maxPhotos}</span></div>
                 <div className="card__b">
                   <p style={{ fontSize: 13, color: 'var(--text-3)', marginBottom: 12 }}>
@@ -297,7 +302,7 @@ export default function Recepcion({ hook, notify }) {
 
             {/* Paso 4: Confirmar */}
             {paso === 4 && (
-              <div className="card">
+              <div className="card" id="rc-confirmar">
                 <div className="card__h"><h3>Confirmar Recepcion</h3></div>
                 <div className="card__b" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                   <div><span style={{ fontSize: 13, color: 'var(--text-3)' }}>Cliente:</span> <strong>{form.cliente}</strong></div>
