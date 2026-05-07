@@ -189,7 +189,8 @@ export default function App() {
     }
   }
 
-  if (trabajosHook.loading) {
+  // Solo mostrar pantalla de carga la primera vez (cuando no hay cache local)
+  if (trabajosHook.loading && trabajosHook.trabajos.length === 0) {
     return (
       <div className="loading-screen">
         <div className="loading-brand">

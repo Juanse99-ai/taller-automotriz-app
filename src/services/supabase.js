@@ -39,49 +39,58 @@ export async function fetchTrabajos() {
   return await res.json()
 }
 
-export async function upsertTrabajo(trabajo) {
-  try {
-    const row = {
-      id: trabajo.id,
-      fecha: trabajo.fecha,
-      cedula_cliente: trabajo.cedula,
-      cliente: trabajo.cliente,
-      telefono_cliente: trabajo.telefonoCliente || '',
-      email_cliente: trabajo.emailCliente || '',
-      placa: trabajo.placa,
-      marca: trabajo.marca,
-      modelo: trabajo.modelo,
-      ano: trabajo.ano,
-      kilometraje: trabajo.kilometraje,
-      tecnico_id: trabajo.tecnicoId,
-      estado: trabajo.estado,
-      observaciones: trabajo.observaciones || '',
-      items: JSON.stringify(trabajo.items || []),
-      mano_obra: trabajo.manoObra || 0,
-      subtotal_sin_iva: trabajo.subtotalSinIva || 0,
-      total_iva: trabajo.totalIva || 0,
-      total: trabajo.total || 0,
-      pagado: trabajo.pagado || false,
-      metodo_pago: trabajo.metodoPago || null,
-      ot_codigo: trabajo.otCodigo || '',
-      inspeccion: trabajo.inspeccion ? JSON.stringify(trabajo.inspeccion) : null,
-    }
-    // Campos opcionales: solo enviar si tienen valor (evita rechazo por columna inexistente)
-    if (trabajo.cuenttiTransacionId) row.cuentti_id_transacion = String(trabajo.cuenttiTransacionId)
-    if (trabajo.facturadoEn) row.facturado_en = trabajo.facturadoEn
-    if (trabajo.cuenttiResolucion) row.cuentti_resolucion = trabajo.cuenttiResolucion
-    const res = await fetchWithTimeout(`${baseProxy}&upsert=true`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(row),
-    })
-    if (!res.ok) throw new Error(await res.text())
-    const data = await res.json()
-    return Array.isArray(data) ? data[0] : data
-  } catch (e) {
-    console.warn('Supabase upsertTrabajo:', e.message)
-    return null
+export async function upsertTrabajo(trabajo, opts = {}) {
+  const maxRetries = opts.retries ?? 2
+  const row = {
+    id: trabajo.id,
+    fecha: trabajo.fecha,
+    cedula_cliente: trabajo.cedula,
+    cliente: trabajo.cliente,
+    telefono_cliente: trabajo.telefonoCliente || '',
+    email_cliente: trabajo.emailCliente || '',
+    placa: trabajo.placa,
+    marca: trabajo.marca,
+    modelo: trabajo.modelo,
+    ano: trabajo.ano,
+    kilometraje: trabajo.kilometraje,
+    tecnico_id: trabajo.tecnicoId,
+    estado: trabajo.estado,
+    observaciones: trabajo.observaciones || '',
+    items: JSON.stringify(trabajo.items || []),
+    mano_obra: trabajo.manoObra || 0,
+    subtotal_sin_iva: trabajo.subtotalSinIva || 0,
+    total_iva: trabajo.totalIva || 0,
+    total: trabajo.total || 0,
+    pagado: trabajo.pagado || false,
+    metodo_pago: trabajo.metodoPago || null,
+    ot_codigo: trabajo.otCodigo || '',
+    inspeccion: trabajo.inspeccion ? JSON.stringify(trabajo.inspeccion) : null,
   }
+  if (trabajo.cuenttiTransacionId) row.cuentti_id_transacion = String(trabajo.cuenttiTransacionId)
+  if (trabajo.facturadoEn) row.facturado_en = trabajo.facturadoEn
+  if (trabajo.cuenttiResolucion) row.cuentti_resolucion = trabajo.cuenttiResolucion
+
+  let lastErr = null
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      const res = await fetchWithTimeout(`${baseProxy}&upsert=true`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(row),
+      })
+      if (!res.ok) throw new Error(`${res.status}: ${await res.text()}`)
+      const data = await res.json()
+      return Array.isArray(data) ? data[0] : data
+    } catch (e) {
+      lastErr = e
+      if (attempt < maxRetries) {
+        // Backoff: 500ms, 1500ms
+        await new Promise(r => setTimeout(r, 500 * (attempt + 1) * (attempt + 1)))
+      }
+    }
+  }
+  console.warn(`Supabase upsertTrabajo (${trabajo.id}) fallo despues de ${maxRetries + 1} intentos:`, lastErr?.message)
+  return null
 }
 
 export async function deleteTrabajo(id) {

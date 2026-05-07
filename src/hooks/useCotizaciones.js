@@ -1,13 +1,9 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { fetchCotizaciones, upsertCotizacion, deleteCotizacion } from '../services/supabase'
 import { lsGet, lsSet, LS_KEYS } from '../services/storage'
 
-export function useCotizaciones() {
-  const [cotizaciones, setCotizaciones] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [connectionError, setConnectionError] = useState(false)
-
-  const normalizarRow = (r) => ({
+function normalizarRow(r) {
+  return {
     id: r.id,
     fecha: r.fecha || r.created_at,
     cedula: r.cedula || '',
@@ -23,9 +19,45 @@ export function useCotizaciones() {
     observaciones: r.observaciones || '',
     validezDias: r.validez_dias || 15,
     estado: r.estado || 'Pendiente',
-  })
+  }
+}
 
-  const cargarDatos = useCallback(async () => {
+export function useCotizaciones() {
+  // Cargar inicial desde cache local
+  const [cotizaciones, setCotizaciones] = useState(() => lsGet(LS_KEYS.COTIZACIONES, []))
+  const [loading, setLoading] = useState(true)
+  const [connectionError, setConnectionError] = useState(false)
+  const ref = useRef(cotizaciones)
+  ref.current = cotizaciones
+
+  // Sincronizacion silenciosa
+  const sincronizar = useCallback(async () => {
+    try {
+      const sbData = await fetchCotizaciones()
+      setConnectionError(false)
+      if (sbData.length > 0) {
+        const normalized = sbData.map(normalizarRow)
+        const prev = ref.current
+        const changed = prev.length !== normalized.length ||
+          normalized.some((n, i) => {
+            const p = prev[i]
+            if (!p) return true
+            return p.id !== n.id || p.estado !== n.estado || p.total !== n.total
+          })
+        if (changed) {
+          setCotizaciones(normalized)
+          lsSet(LS_KEYS.COTIZACIONES, normalized)
+        }
+      }
+      return true
+    } catch (err) {
+      console.warn('Sync cotizaciones:', err.message)
+      setConnectionError(true)
+      return false
+    }
+  }, [])
+
+  const cargarInicial = useCallback(async () => {
     setLoading(true)
     setConnectionError(false)
     try {
@@ -36,7 +68,6 @@ export function useCotizaciones() {
         lsSet(LS_KEYS.COTIZACIONES, normalized)
       } else {
         const cached = lsGet(LS_KEYS.COTIZACIONES, [])
-        setCotizaciones(cached)
         // Seed: si hay datos locales pero Supabase esta vacio, subir
         if (cached.length > 0) {
           for (const c of cached) {
@@ -45,21 +76,30 @@ export function useCotizaciones() {
         }
       }
     } catch (err) {
-      console.warn('Error cargando cotizaciones:', err.message)
+      console.warn('Carga inicial cotizaciones:', err.message)
       setConnectionError(true)
-      setCotizaciones(lsGet(LS_KEYS.COTIZACIONES, []))
     } finally {
       setLoading(false)
     }
   }, [])
 
-  useEffect(() => { cargarDatos() }, [cargarDatos])
+  useEffect(() => { cargarInicial() }, [cargarInicial])
+
+  // Polling silencioso 30s + focus
+  useEffect(() => {
+    const interval = setInterval(() => { sincronizar() }, 60000)
+    const handleFocus = () => sincronizar()
+    window.addEventListener('focus', handleFocus)
+    return () => {
+      clearInterval(interval)
+      window.removeEventListener('focus', handleFocus)
+    }
+  }, [sincronizar])
 
   useEffect(() => {
     if (!loading) lsSet(LS_KEYS.COTIZACIONES, cotizaciones)
   }, [cotizaciones, loading])
 
-  // Guardar UNA cotizacion (crear o actualizar). Async: throws si Supabase falla.
   const guardarUna = useCallback(async (cot) => {
     setCotizaciones(prev => {
       const idx = prev.findIndex(c => c.id === cot.id)
@@ -69,8 +109,6 @@ export function useCotizaciones() {
     return cot
   }, [])
 
-  // Reemplazar el array completo (legacy). Persiste cada cotizacion individualmente
-  // y devuelve { ok, fallidas } para que el componente notifique fallos.
   const guardar = useCallback(async (nuevas) => {
     setCotizaciones(nuevas)
     lsSet(LS_KEYS.COTIZACIONES, nuevas)
@@ -89,6 +127,7 @@ export function useCotizaciones() {
   return {
     cotizaciones, loading, connectionError,
     guardar, guardarUna, eliminar,
-    recargar: cargarDatos,
+    recargar: cargarInicial,
+    sincronizar,
   }
 }

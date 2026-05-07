@@ -8,10 +8,11 @@ import {
 import { lsGet, lsSet, LS_KEYS } from '../services/storage'
 
 export function useLiquidacion() {
-  const [movimientos, setMovimientos] = useState([])
-  const [liquidados, setLiquidados] = useState([])
-  const [compartidos, setCompartidos] = useState({})
-  const [historial, setHistorial] = useState([])
+  // Cargar inicial desde cache local para evitar loading screen
+  const [movimientos, setMovimientos] = useState(() => lsGet(LS_KEYS.MOVIMIENTOS_TECNICOS, []))
+  const [liquidados, setLiquidados] = useState(() => lsGet(LS_KEYS.LIQUIDADOS, []))
+  const [compartidos, setCompartidos] = useState(() => lsGet(LS_KEYS.TRABAJOS_COMPARTIDOS, {}))
+  const [historial, setHistorial] = useState(() => lsGet(LS_KEYS.LIQUIDACION_HISTORIAL, []))
   const [loading, setLoading] = useState(true)
   const [connectionError, setConnectionError] = useState(false)
 
@@ -39,6 +40,55 @@ export function useLiquidacion() {
     detalleTrabajo: typeof r.detalle_trabajo === 'string' ? JSON.parse(r.detalle_trabajo) : (r.detalle_trabajo || []),
   })
 
+  // Sincronizacion silenciosa (polling): no toca loading
+  const sincronizar = useCallback(async () => {
+    try {
+      const [sbMovs, sbHist, sbLiq, sbComp] = await Promise.all([
+        fetchMovimientos().catch(() => null),
+        fetchLiquidacionHistorial().catch(() => null),
+        fetchLiquidados().catch(() => null),
+        fetchCompartidos().catch(() => null),
+      ])
+
+      let anyOk = false
+
+      if (sbMovs && sbMovs.length > 0) {
+        const norm = sbMovs.map(normalizarMov)
+        setMovimientos(norm)
+        lsSet(LS_KEYS.MOVIMIENTOS_TECNICOS, norm)
+        anyOk = true
+      }
+
+      if (sbHist && sbHist.length > 0) {
+        const norm = sbHist.map(normalizarHistorial)
+        setHistorial(norm)
+        lsSet(LS_KEYS.LIQUIDACION_HISTORIAL, norm)
+        anyOk = true
+      }
+
+      if (sbLiq && sbLiq.length > 0) {
+        setLiquidados(sbLiq)
+        lsSet(LS_KEYS.LIQUIDADOS, sbLiq)
+        anyOk = true
+      }
+
+      if (sbComp && Object.keys(sbComp).length > 0) {
+        setCompartidos(sbComp)
+        lsSet(LS_KEYS.TRABAJOS_COMPARTIDOS, sbComp)
+        anyOk = true
+      }
+
+      if (anyOk || sbMovs !== null || sbHist !== null || sbLiq !== null || sbComp !== null) {
+        setConnectionError(false)
+      }
+      return true
+    } catch (err) {
+      console.warn('Sync liquidacion:', err.message)
+      setConnectionError(true)
+      return false
+    }
+  }, [])
+
   const cargarDatos = useCallback(async () => {
     setLoading(true)
     setConnectionError(false)
@@ -57,7 +107,6 @@ export function useLiquidacion() {
         lsSet(LS_KEYS.MOVIMIENTOS_TECNICOS, norm)
       } else {
         const cached = lsGet(LS_KEYS.MOVIMIENTOS_TECNICOS, [])
-        setMovimientos(cached)
         if (cached.length > 0 && sbMovs !== null) cached.forEach(m => upsertMovimiento(m))
       }
 
@@ -68,7 +117,6 @@ export function useLiquidacion() {
         lsSet(LS_KEYS.LIQUIDACION_HISTORIAL, norm)
       } else {
         const cached = lsGet(LS_KEYS.LIQUIDACION_HISTORIAL, [])
-        setHistorial(cached)
         if (cached.length > 0 && sbHist !== null) cached.forEach(h => upsertLiquidacionHistorial(h))
       }
 
@@ -78,7 +126,6 @@ export function useLiquidacion() {
         lsSet(LS_KEYS.LIQUIDADOS, sbLiq)
       } else {
         const cached = lsGet(LS_KEYS.LIQUIDADOS, [])
-        setLiquidados(cached)
         if (cached.length > 0 && sbLiq !== null) upsertLiquidados(cached)
       }
 
@@ -88,7 +135,6 @@ export function useLiquidacion() {
         lsSet(LS_KEYS.TRABAJOS_COMPARTIDOS, sbComp)
       } else {
         const cached = lsGet(LS_KEYS.TRABAJOS_COMPARTIDOS, {})
-        setCompartidos(cached)
         if (Object.keys(cached).length > 0 && sbComp !== null) {
           Object.keys(cached).forEach(id => upsertCompartido(id))
         }
@@ -98,16 +144,23 @@ export function useLiquidacion() {
     } catch (err) {
       console.warn('Error cargando liquidacion:', err.message)
       setConnectionError(true)
-      setMovimientos(lsGet(LS_KEYS.MOVIMIENTOS_TECNICOS, []))
-      setHistorial(lsGet(LS_KEYS.LIQUIDACION_HISTORIAL, []))
-      setLiquidados(lsGet(LS_KEYS.LIQUIDADOS, []))
-      setCompartidos(lsGet(LS_KEYS.TRABAJOS_COMPARTIDOS, {}))
     } finally {
       setLoading(false)
     }
   }, [])
 
   useEffect(() => { cargarDatos() }, [cargarDatos])
+
+  // Polling silencioso 30s + focus
+  useEffect(() => {
+    const interval = setInterval(() => { sincronizar() }, 60000)
+    const handleFocus = () => sincronizar()
+    window.addEventListener('focus', handleFocus)
+    return () => {
+      clearInterval(interval)
+      window.removeEventListener('focus', handleFocus)
+    }
+  }, [sincronizar])
 
   // Persist to localStorage
   useEffect(() => { if (!loading) lsSet(LS_KEYS.MOVIMIENTOS_TECNICOS, movimientos) }, [movimientos, loading])
