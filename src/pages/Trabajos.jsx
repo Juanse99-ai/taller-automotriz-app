@@ -8,7 +8,7 @@ import { useClientes } from '../hooks/useClientes'
 import { lsGet, lsSet, LS_KEYS } from '../services/storage'
 import { cargarInventarioCompleto } from '../services/cuentti'
 
-export default function Trabajos({ hook, notify, onAutoFacturar }) {
+export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, onAutoFacturar }) {
   const { trabajos, agregarTrabajo, actualizarTrabajo, eliminarTrabajo } = hook
   const [vista, setVista] = useState('lista') // lista | nuevo | editar | kanban
   const [editId, setEditId] = useState(null)
@@ -200,6 +200,26 @@ export default function Trabajos({ hook, notify, onAutoFacturar }) {
             notify('Trabajo actualizado', 'success')
           } else {
             await agregarTrabajo(data)
+            // Registrar vehiculo y vincular al cliente
+            const placa = (data.placa || '').trim().toUpperCase()
+            if (vehiculosHook && placa) {
+              vehiculosHook.agregarVehiculo({
+                placa,
+                marca: data.marca || '',
+                modelo: data.modelo || '',
+                ano: parseInt(data.ano) || 0,
+                cedulaPropietario: data.cedula || '',
+              })
+            }
+            if (clientesHook && data.cedula) {
+              clientesHook.guardarCliente({
+                cedula: data.cedula,
+                nombre: data.cliente || '',
+                telefono: data.telefonoCliente || '',
+                email: data.emailCliente || '',
+              })
+              if (placa) clientesHook.vincularVehiculo(data.cedula, placa)
+            }
             notify('Trabajo creado', 'success')
           }
           setVista('lista')

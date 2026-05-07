@@ -4,7 +4,7 @@ import { TECNICOS, ESTADOS } from '../utils/constants'
 import { MARCAS, getModelos } from '../utils/vehiculos'
 import { useClientes } from '../hooks/useClientes'
 
-export default function Recepcion({ hook, notify }) {
+export default function Recepcion({ hook, vehiculosHook, clientesHook, notify }) {
   const { trabajos, agregarTrabajo } = hook
   const { resultados, buscando, buscarDebounced, setResultados } = useClientes()
 
@@ -40,9 +40,10 @@ export default function Recepcion({ hook, notify }) {
       notify('Placa y cliente son obligatorios', 'error')
       return
     }
+    const placaNorm = form.placa.toUpperCase()
     await agregarTrabajo({
       ...form,
-      placa: form.placa.toUpperCase(),
+      placa: placaNorm,
       ano: parseInt(form.ano) || new Date().getFullYear(),
       kilometraje: parseInt(form.kilometraje) || 0,
       tecnicoId: parseInt(form.tecnicoId) || null,
@@ -53,6 +54,32 @@ export default function Recepcion({ hook, notify }) {
       evidenciasIngreso: form.evidenciasIngreso,
       fecha: new Date(form.fecha + 'T12:00:00').toISOString(),
     })
+
+    // Registrar vehiculo en la tabla de vehiculos (vincula placa con cedula)
+    if (vehiculosHook && placaNorm) {
+      vehiculosHook.agregarVehiculo({
+        placa: placaNorm,
+        marca: form.marca || '',
+        modelo: form.modelo || '',
+        ano: parseInt(form.ano) || 0,
+        cedulaPropietario: form.cedula || '',
+      })
+    }
+
+    // Registrar/actualizar cliente en la tabla de clientes + vincular vehiculo
+    if (clientesHook && form.cedula) {
+      clientesHook.guardarCliente({
+        cedula: form.cedula,
+        nombre: form.cliente || '',
+        telefono: form.telefonoCliente || '',
+        email: form.emailCliente || '',
+      })
+      // Vincular placa al array de vehiculos del cliente
+      if (placaNorm) {
+        clientesHook.vincularVehiculo(form.cedula, placaNorm)
+      }
+    }
+
     notify('Vehiculo recibido exitosamente', 'success')
     setPaso(1)
     setForm({

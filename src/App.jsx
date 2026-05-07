@@ -1,4 +1,4 @@
-import { useState, useCallback, Component } from 'react'
+import { useState, useCallback, useEffect, useRef, Component } from 'react'
 import Sidebar from './components/Sidebar'
 import TopBar from './components/TopBar'
 import Toast from './components/Toast'
@@ -79,6 +79,31 @@ export default function App() {
   const inspeccionesHook = useInspecciones()
   const liquidacionHook = useLiquidacion()
 
+  // Sync retroactivo: registrar vehiculos de trabajos existentes que no esten en vehiculosHook
+  const syncDone = useRef(false)
+  useEffect(() => {
+    if (syncDone.current || trabajosHook.loading || !trabajosHook.trabajos.length) return
+    syncDone.current = true
+    const vehiculosExistentes = new Set(vehiculosHook.vehiculos.map(v => v.placa))
+    trabajosHook.trabajos.forEach(t => {
+      const placa = (t.placa || '').trim().toUpperCase()
+      if (placa && !vehiculosExistentes.has(placa)) {
+        vehiculosHook.agregarVehiculo({
+          placa,
+          marca: t.marca || '',
+          modelo: t.modelo || '',
+          ano: parseInt(t.ano) || 0,
+          cedulaPropietario: t.cedula || '',
+        })
+        vehiculosExistentes.add(placa)
+      }
+      // Vincular vehiculo al cliente
+      if (t.cedula && placa) {
+        clientesHook.vincularVehiculo(t.cedula, placa)
+      }
+    })
+  }, [trabajosHook.loading, trabajosHook.trabajos])
+
   const notify = useCallback((msg, type = 'info') => {
     setToast({ msg, type })
     setTimeout(() => setToast(null), 3500)
@@ -154,9 +179,9 @@ export default function App() {
       case 'dashboard':
         return <Dashboard trabajos={trabajosHook.trabajos} loading={trabajosHook.loading} onNavigate={navigate} />
       case 'trabajos':
-        return <Trabajos hook={trabajosHook} notify={notify} onAutoFacturar={() => navigate('cuentti')} />
+        return <Trabajos hook={trabajosHook} vehiculosHook={vehiculosHook} clientesHook={clientesHook} notify={notify} onAutoFacturar={() => navigate('cuentti')} />
       case 'recepcion':
-        return <Recepcion hook={trabajosHook} notify={notify} />
+        return <Recepcion hook={trabajosHook} vehiculosHook={vehiculosHook} clientesHook={clientesHook} notify={notify} />
       case 'mecanicos':
         return <Mecanicos trabajos={trabajosHook.trabajos} onNavigate={navigate} />
       case 'cotizaciones':
