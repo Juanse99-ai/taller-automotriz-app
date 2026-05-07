@@ -3,11 +3,13 @@
    Tokens + Components (from prototipo) + LEGACY COMPAT
    ============================================ */
 
+/* @import must precede all other rules (CSS spec) */
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;600;700&display=swap');
+
 /* === TOKENS (prototipo/tokens.css) === */
 @font-face{font-family:'Arial MDA';src:url('/fonts/Arial-Regular.ttf') format('truetype');font-weight:400 500;font-style:normal;font-display:swap}
 @font-face{font-family:'Arial MDA';src:url('/fonts/Arial-Bold.ttf') format('truetype');font-weight:600 700;font-style:normal;font-display:swap}
 @font-face{font-family:'Arial MDA';src:url('/fonts/Arial-Black.ttf') format('truetype');font-weight:800 900;font-style:normal;font-display:swap}
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;600;700&display=swap');
 
 :root{
   --font:'Arial MDA',Arial,'Helvetica Neue',Helvetica,system-ui,sans-serif;
