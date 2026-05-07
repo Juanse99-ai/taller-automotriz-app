@@ -4,7 +4,7 @@ import { TECNICOS, COMISION, ESTADOS } from '../utils/constants'
 
 const ACTIVOS = [ESTADOS.PENDIENTE, ESTADOS.EN_DIAGNOSTICO, ESTADOS.ESPERANDO_REPUESTOS, ESTADOS.EN_PROGRESO]
 
-export default function Mecanicos({ trabajos }) {
+export default function Mecanicos({ trabajos, onNavigate }) {
   const [vistaAgenda, setVistaAgenda] = useState(false)
 
   const tecnicosData = useMemo(() => {
@@ -138,8 +138,8 @@ export default function Mecanicos({ trabajos }) {
 
                 {/* Actions */}
                 <div style={{ display: 'flex', gap: 8 }}>
-                  <button className="btn btn-outline btn-sm" style={{ flex: 1 }}>👁 Ver trabajos</button>
-                  <button className="btn btn-outline btn-sm" style={{ flex: 1 }}>✏️ Editar</button>
+                  <button className="btn btn-outline btn-sm" style={{ flex: 1 }} onClick={() => onNavigate && onNavigate('trabajos')}>👁 Ver trabajos</button>
+                  <button className="btn btn-outline btn-sm" style={{ flex: 1 }} onClick={() => alert(`Editar tecnico: ${tec.nombre}\n(Funcion en desarrollo)`)}>✏️ Editar</button>
                 </div>
               </div>
             </div>

@@ -66,6 +66,7 @@ export default function App() {
   const [user, setUser] = useState(() => getSession())
   const [section, setSection] = useState('dashboard')
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => localStorage.getItem('mda-sidebar-collapsed') === 'true')
   const [toast, setToast] = useState(null)
   const trabajosHook = useTrabajos()
   const clientesHook = useClientes()
@@ -82,6 +83,13 @@ export default function App() {
   const navigate = useCallback((s) => {
     setSection(s)
     setSidebarOpen(false)
+  }, [])
+
+  const toggleSidebarCollapse = useCallback(() => {
+    setSidebarCollapsed(c => {
+      localStorage.setItem('mda-sidebar-collapsed', String(!c))
+      return !c
+    })
   }, [])
 
   const handleLogout = useCallback(() => {
@@ -137,7 +145,7 @@ export default function App() {
       case 'recepcion':
         return <Recepcion hook={trabajosHook} notify={notify} />
       case 'mecanicos':
-        return <Mecanicos trabajos={trabajosHook.trabajos} />
+        return <Mecanicos trabajos={trabajosHook.trabajos} onNavigate={navigate} />
       case 'cotizaciones':
         return <Cotizaciones notify={notify} trabajos={trabajosHook.trabajos} onCrearTrabajo={handleCrearTrabajoDesdeCotizacion} cotizacionesHook={cotizacionesHook} />
       case 'inventario':
@@ -182,11 +190,13 @@ export default function App() {
   }
 
   return (
-    <div className="app">
+    <div className={`app${sidebarCollapsed ? ' sidebar-is-collapsed' : ''}`}>
       <Sidebar
         active={section}
         onNavigate={navigate}
         isOpen={sidebarOpen}
+        collapsed={sidebarCollapsed}
+        onToggleCollapse={toggleSidebarCollapse}
         seccionesPermitidas={seccionesPermitidas}
         user={user}
         onLogout={handleLogout}

@@ -118,7 +118,7 @@ const NAV = [
   ]},
 ]
 
-export default function Sidebar({ active, onNavigate, isOpen, seccionesPermitidas, user, onLogout, trabajos = [] }) {
+export default function Sidebar({ active, onNavigate, isOpen, collapsed, onToggleCollapse, seccionesPermitidas, user, onLogout, trabajos = [] }) {
   const allowed = seccionesPermitidas || []
 
   // Pill rojo en Trabajos: pendientes + en progreso (alerta de carga del taller)
@@ -130,7 +130,7 @@ export default function Sidebar({ active, onNavigate, isOpen, seccionesPermitida
   const rolLabel = user?.rol === 'admin' ? 'Administrador' : 'Jefe de taller'
 
   return (
-    <aside className={`sidebar ${isOpen ? 'open' : ''}`}>
+    <aside className={`sidebar ${isOpen ? 'open' : ''}${collapsed ? ' collapsed' : ''}`}>
       <div className="sidebar__brand">
         <div className="logo">
           <img src="/logo.png" alt="MDA" />
@@ -163,6 +163,15 @@ export default function Sidebar({ active, onNavigate, isOpen, seccionesPermitida
           )
         })}
       </nav>
+
+      <button className="sidebar-collapse-btn" onClick={onToggleCollapse} title={collapsed ? 'Expandir sidebar' : 'Colapsar sidebar'}>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          {collapsed
+            ? <><polyline points="9 18 15 12 9 6"/></>
+            : <><polyline points="15 18 9 12 15 6"/></>
+          }
+        </svg>
+      </button>
 
       {user && (
         <div className="sidebar__foot">
