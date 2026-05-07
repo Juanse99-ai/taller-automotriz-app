@@ -39,6 +39,19 @@ const HamburgerIcon = () => (
   </svg>
 )
 
+// Helper to format relative time
+function timeAgo(dateStr) {
+  if (!dateStr) return ''
+  const diff = Date.now() - new Date(dateStr).getTime()
+  const mins = Math.floor(diff / 60000)
+  if (mins < 1) return 'Ahora'
+  if (mins < 60) return `Hace ${mins}m`
+  const hrs = Math.floor(mins / 60)
+  if (hrs < 24) return `Hace ${hrs}h`
+  const days = Math.floor(hrs / 24)
+  return `Hace ${days}d`
+}
+
 export default function TopBar({ title, subtitle, onToggleSidebar, user, trabajos, onNavigate }) {
   const [query, setQuery] = useState('')
   const [results, setResults] = useState([])
@@ -46,6 +59,8 @@ export default function TopBar({ title, subtitle, onToggleSidebar, user, trabajo
   const searchRef = useRef(null)
   const [dark, setDark] = useState(() => localStorage.getItem('mda-theme') === 'dark')
   const [compartirOpen, setCompartirOpen] = useState(false)
+  const [notifOpen, setNotifOpen] = useState(false)
+  const notifRef = useRef(null)
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light')
@@ -55,6 +70,7 @@ export default function TopBar({ title, subtitle, onToggleSidebar, user, trabajo
   useEffect(() => {
     const handler = (e) => {
       if (searchRef.current && !searchRef.current.contains(e.target)) setShowResults(false)
+      if (notifRef.current && !notifRef.current.contains(e.target)) setNotifOpen(false)
     }
     document.addEventListener('mousedown', handler)
     return () => document.removeEventListener('mousedown', handler)
@@ -69,22 +85,40 @@ export default function TopBar({ title, subtitle, onToggleSidebar, user, trabajo
       (t.cliente || '').toLowerCase().includes(term) ||
       (t.id || '').toLowerCase().includes(term) ||
       (t.marca || '').toLowerCase().includes(term) ||
-      (t.modelo || '').toLowerCase().includes(term)
+      (t.modelo || '').toLowerCase().includes(term) ||
+      (t.otCodigo || '').toLowerCase().includes(term) ||
+      (t.cedula || '').toLowerCase().includes(term)
     ).slice(0, 8)
     setResults(found)
     setShowResults(found.length > 0)
   }
 
-  const selectResult = () => {
+  const selectResult = (t) => {
     setQuery('')
     setShowResults(false)
     if (onNavigate) onNavigate('trabajos')
   }
 
+  // Notifications: recent activity from trabajos
+  const notifications = (trabajos || [])
+    .filter(t => t.fecha)
+    .sort((a, b) => new Date(b.fecha) - new Date(a.fecha))
+    .slice(0, 10)
+    .map(t => ({
+      id: t.id,
+      text: `${t.placa || 'Sin placa'} - ${t.cliente || 'Sin cliente'}`,
+      estado: t.estado,
+      time: timeAgo(t.fecha),
+    }))
+
+  const pendientesCount = (trabajos || []).filter(t =>
+    t.estado === 'Pendiente' || t.estado === 'En Diagnostico'
+  ).length
+
   return (
     <>
       <header className="topbar">
-        <button className="topbar__menu" onClick={onToggleSidebar} aria-label="Abrir menú">
+        <button className="topbar__menu" onClick={onToggleSidebar} aria-label="Abrir menu">
           <HamburgerIcon />
         </button>
         <div className="title">
@@ -108,11 +142,12 @@ export default function TopBar({ title, subtitle, onToggleSidebar, user, trabajo
               {results.map(t => (
                 <div
                   key={t.id}
-                  onClick={selectResult}
+                  onClick={() => selectResult(t)}
                   style={{ padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 10, fontSize: 13, cursor: 'pointer', borderBottom: '1px solid var(--border)' }}
                 >
                   <span className="mono" style={{ fontWeight: 700 }}>{t.placa}</span>
                   <span style={{ color: 'var(--text-3)' }}>{t.cliente || 'Sin cliente'}</span>
+                  {t.otCodigo && <span className="mono" style={{ fontSize: 11, color: 'var(--accent)' }}>{t.otCodigo}</span>}
                   <span className="badge badge-n" style={{ fontSize: 10, marginLeft: 'auto' }}>{t.estado}</span>
                 </div>
               ))}
@@ -129,9 +164,51 @@ export default function TopBar({ title, subtitle, onToggleSidebar, user, trabajo
           <PortalIcon /> Portal Cliente
         </button>
 
-        <button className="icobtn" title="Notificaciones">
-          <BellIcon />
-        </button>
+        {/* Notifications */}
+        <div style={{ position: 'relative' }} ref={notifRef}>
+          <button className="icobtn" title="Notificaciones" onClick={() => setNotifOpen(o => !o)} style={{ position: 'relative' }}>
+            <BellIcon />
+            {pendientesCount > 0 && (
+              <span style={{
+                position: 'absolute', top: 2, right: 2, width: 16, height: 16,
+                background: '#ef4444', borderRadius: '50%', fontSize: 9,
+                color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontWeight: 700, lineHeight: 1,
+              }}>{pendientesCount > 9 ? '9+' : pendientesCount}</span>
+            )}
+          </button>
+          {notifOpen && (
+            <div style={{
+              position: 'absolute', top: 'calc(100% + 8px)', right: 0, width: 320,
+              background: 'var(--bg-raised)', border: '1px solid var(--border)',
+              borderRadius: 12, boxShadow: 'var(--shadow-md)', zIndex: 200,
+              maxHeight: 400, overflowY: 'auto',
+            }}>
+              <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)', fontWeight: 700, fontSize: 14 }}>
+                Actividad Reciente
+              </div>
+              {notifications.length === 0 ? (
+                <div style={{ padding: 24, textAlign: 'center', color: 'var(--text-3)', fontSize: 13 }}>
+                  Sin actividad reciente
+                </div>
+              ) : (
+                notifications.map(n => (
+                  <div
+                    key={n.id}
+                    onClick={() => { setNotifOpen(false); if (onNavigate) onNavigate('trabajos') }}
+                    style={{ padding: '10px 16px', borderBottom: '1px solid var(--border)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 10, fontSize: 13 }}
+                  >
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{n.text}</div>
+                      <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 2 }}>{n.time}</div>
+                    </div>
+                    <span className="badge badge-n" style={{ fontSize: 10, flexShrink: 0 }}>{n.estado}</span>
+                  </div>
+                ))
+              )}
+            </div>
+          )}
+        </div>
 
         <button
           className="icobtn"

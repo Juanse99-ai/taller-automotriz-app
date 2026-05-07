@@ -99,6 +99,20 @@ export function useTrabajos() {
     cargarDatos()
   }, [cargarDatos])
 
+  // Polling: re-sync cada 30 segundos para mantener dispositivos actualizados
+  useEffect(() => {
+    const interval = setInterval(() => {
+      cargarDatos()
+    }, 30000)
+    // Tambien re-sync cuando la ventana vuelve a tener foco
+    const handleFocus = () => cargarDatos()
+    window.addEventListener('focus', handleFocus)
+    return () => {
+      clearInterval(interval)
+      window.removeEventListener('focus', handleFocus)
+    }
+  }, [cargarDatos])
+
   // Persistir en localStorage cada cambio
   useEffect(() => {
     if (!loading) lsSet(LS_KEYS.TRABAJOS, trabajos)

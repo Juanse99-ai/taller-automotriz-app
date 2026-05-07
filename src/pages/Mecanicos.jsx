@@ -6,6 +6,8 @@ const ACTIVOS = [ESTADOS.PENDIENTE, ESTADOS.EN_DIAGNOSTICO, ESTADOS.ESPERANDO_RE
 
 export default function Mecanicos({ trabajos, onNavigate }) {
   const [vistaAgenda, setVistaAgenda] = useState(false)
+  const [editando, setEditando] = useState(null)
+  const [editForm, setEditForm] = useState({})
 
   const tecnicosData = useMemo(() => {
     return TECNICOS.map((tec, idx) => {
@@ -81,7 +83,7 @@ export default function Mecanicos({ trabajos, onNavigate }) {
       </div>
 
       {vistaAgenda ? (
-        <AgendaSemanal trabajos={trabajos} />
+        <AgendaSemanal trabajos={trabajos} onNavigate={onNavigate} />
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(300px,1fr))', gap: 16 }}>
           {tecnicosData.map((tec) => (
@@ -107,7 +109,7 @@ export default function Mecanicos({ trabajos, onNavigate }) {
                   }
                 </div>
 
-                {/* Teléfono */}
+                {/* Telefono */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12.5, color: 'var(--text-3)' }}>
                   <span>📞</span>
                   <span className="mono">{tec.telefono}</span>
@@ -132,25 +134,57 @@ export default function Mecanicos({ trabajos, onNavigate }) {
                   </div>
                   <div>
                     <div className="mono" style={{ fontSize: 20, fontWeight: 700, color: 'var(--green-600)' }}>{fmt(tec.comisionMes)}</div>
-                    <div style={{ fontSize: 10.5, color: 'var(--text-3)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5 }}>Comisión</div>
+                    <div style={{ fontSize: 10.5, color: 'var(--text-3)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5 }}>Comision</div>
                   </div>
                 </div>
 
                 {/* Actions */}
                 <div style={{ display: 'flex', gap: 8 }}>
                   <button className="btn btn-outline btn-sm" style={{ flex: 1 }} onClick={() => onNavigate && onNavigate('trabajos')}>👁 Ver trabajos</button>
-                  <button className="btn btn-outline btn-sm" style={{ flex: 1 }} onClick={() => alert(`Editar tecnico: ${tec.nombre}\n(Funcion en desarrollo)`)}>✏️ Editar</button>
+                  <button className="btn btn-outline btn-sm" style={{ flex: 1 }} onClick={() => { setEditando(tec); setEditForm({ nombre: tec.nombre, especialidad: tec.especialidad, telefono: tec.telefono }) }}>✏️ Editar</button>
                 </div>
               </div>
             </div>
           ))}
         </div>
       )}
+
+      {/* Modal Editar Tecnico */}
+      {editando && (
+        <div className="modal-overlay" onClick={() => setEditando(null)}>
+          <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 440 }}>
+            <div className="modal__h">
+              <h3>Editar Tecnico</h3>
+              <button className="icobtn" onClick={() => setEditando(null)}>✕</button>
+            </div>
+            <div className="modal__b">
+              <div className="field">
+                <label>Nombre</label>
+                <input className="input" value={editForm.nombre || ''} onChange={e => setEditForm(f => ({ ...f, nombre: e.target.value }))} />
+              </div>
+              <div className="field">
+                <label>Especialidad</label>
+                <input className="input" value={editForm.especialidad || ''} onChange={e => setEditForm(f => ({ ...f, especialidad: e.target.value }))} />
+              </div>
+              <div className="field">
+                <label>Telefono</label>
+                <input className="input" value={editForm.telefono || ''} onChange={e => setEditForm(f => ({ ...f, telefono: e.target.value }))} />
+              </div>
+              <p style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 8 }}>
+                Los tecnicos se gestionan en <code>src/utils/constants.js</code>. Esta vista es de solo lectura por ahora.
+              </p>
+            </div>
+            <div className="modal__f">
+              <button className="btn btn-outline btn-sm" onClick={() => setEditando(null)}>Cerrar</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
 
-function AgendaSemanal({ trabajos }) {
+function AgendaSemanal({ trabajos, onNavigate }) {
   const dias = useMemo(() => {
     const hoy = new Date()
     const lunes = new Date(hoy)
@@ -191,7 +225,9 @@ function AgendaSemanal({ trabajos }) {
                 const tec = TECNICOS.find(tc => tc.id === parseInt(t.tecnicoId))
                 return (
                   <div key={t.id} className="calendar-task"
-                    title={`${t.placa} - ${t.cliente} (${tec?.nombre || 'Sin asignar'})`}>
+                    style={{ cursor: 'pointer' }}
+                    onClick={() => onNavigate && onNavigate('trabajos')}
+                    title={`${t.placa} - ${t.cliente} (${tec?.nombre || 'Sin asignar'})\nClick para ver trabajos`}>
                     {t.placa} {tec ? `- ${tec.nombre.split(' ')[0]}` : ''}
                   </div>
                 )

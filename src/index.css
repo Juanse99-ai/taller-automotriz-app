@@ -117,6 +117,7 @@ input,select,textarea{font-family:inherit;font-size:14px;color:inherit}
 .modal{background:var(--bg-raised);border-radius:16px;width:100%;max-width:520px;max-height:90vh;overflow-y:auto;box-shadow:0 30px 80px -20px rgba(0,0,0,.4);animation:slideUp .2s ease-out}
 .modal__h{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;padding:18px 22px;border-bottom:1px solid var(--border)}
 .modal__b{padding:20px 22px 22px}
+.modal__f{display:flex;gap:10px;justify-content:flex-end;padding:14px 22px;border-top:1px solid var(--border)}
 @keyframes fadeIn{from{opacity:0}to{opacity:1}}
 @keyframes slideUp{from{transform:translateY(12px);opacity:0}to{transform:translateY(0);opacity:1}}
 

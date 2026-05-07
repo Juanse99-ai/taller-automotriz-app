@@ -48,23 +48,8 @@ export default function Vehiculos({ vehiculos, clientes, notify }) {
     )
   }, [vehiculosList, busqueda, clientesTable])
 
-  const seleccionar = (vehiculo) => {
-    setVehiculoSeleccionado(vehiculo)
-  }
-
-  const volver = () => {
-    setVehiculoSeleccionado(null)
-  }
-
-  // Badge class segun estado
-  const badgeEstado = (estado) => {
-    if (!estado) return 'badge'
-    const e = estado.toLowerCase()
-    if (e === 'completado' || e === 'finalizado' || e === 'entregado') return 'badge badge-success'
-    if (e === 'en proceso' || e === 'en progreso' || e === 'pendiente') return 'badge badge-warning'
-    if (e === 'cancelado') return 'badge badge-danger'
-    return 'badge badge-info'
-  }
+  const seleccionar = (vehiculo) => setVehiculoSeleccionado(vehiculo)
+  const volver = () => setVehiculoSeleccionado(null)
 
   // --- VISTA DETALLE ---
   if (vehiculoSeleccionado) {
@@ -75,109 +60,78 @@ export default function Vehiculos({ vehiculos, clientes, notify }) {
 
     return (
       <div>
-        <div style={{ marginBottom: 16 }}>
-          <button className="btn btn-outline btn-sm" onClick={volver}>
-            Volver
-          </button>
-        </div>
-
-        {/* Info del vehiculo */}
-        <div className="card">
-          <div className="card-title">Informacion del Vehiculo</div>
-          <div className="form-row">
-            <div className="form-group">
-              <label className="form-label">Placa</label>
-              <input className="form-input" value={vehiculoSeleccionado.placa || ''} disabled
-                style={{ background: 'var(--slate-50)', color: 'var(--slate-500)' }} />
-            </div>
-            <div className="form-group">
-              <label className="form-label">Marca</label>
-              <input className="form-input" value={vehiculoSeleccionado.marca || ''} disabled
-                style={{ background: 'var(--slate-50)', color: 'var(--slate-500)' }} />
-            </div>
+        <div className="pagehd">
+          <div>
+            <h2>{vehiculoSeleccionado.placa}</h2>
+            <p className="sub">{vehiculoSeleccionado.marca} {vehiculoSeleccionado.modelo} {vehiculoSeleccionado.ano}</p>
           </div>
-          <div className="form-row">
-            <div className="form-group">
-              <label className="form-label">Modelo</label>
-              <input className="form-input" value={vehiculoSeleccionado.modelo || ''} disabled
-                style={{ background: 'var(--slate-50)', color: 'var(--slate-500)' }} />
-            </div>
-            <div className="form-group">
-              <label className="form-label">Ano</label>
-              <input className="form-input" value={vehiculoSeleccionado.ano || ''} disabled
-                style={{ background: 'var(--slate-50)', color: 'var(--slate-500)' }} />
-            </div>
+          <div className="actions">
+            <button className="btn btn-outline btn-sm" onClick={volver}>← Volver</button>
           </div>
         </div>
 
-        {/* Propietario */}
-        <div className="card">
-          <div className="card-title">Propietario</div>
-          <div className="form-row">
-            <div className="form-group">
-              <label className="form-label">Cedula</label>
-              <input className="form-input" value={propietarioCedula || '--'} disabled
-                style={{ background: 'var(--slate-50)', color: 'var(--slate-500)' }} />
+        {/* Info del vehiculo + Propietario */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(320px,1fr))', gap: 16, marginBottom: 16 }}>
+          <div className="card">
+            <div className="card__h"><h3>Informacion del Vehiculo</h3></div>
+            <div className="card__b">
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                <div className="field"><label>Placa</label><div className="input" style={{ background: 'var(--bg-subtle)', cursor: 'default' }}>{vehiculoSeleccionado.placa || '--'}</div></div>
+                <div className="field"><label>Marca</label><div className="input" style={{ background: 'var(--bg-subtle)', cursor: 'default' }}>{vehiculoSeleccionado.marca || '--'}</div></div>
+                <div className="field"><label>Modelo</label><div className="input" style={{ background: 'var(--bg-subtle)', cursor: 'default' }}>{vehiculoSeleccionado.modelo || '--'}</div></div>
+                <div className="field"><label>Ano</label><div className="input" style={{ background: 'var(--bg-subtle)', cursor: 'default' }}>{vehiculoSeleccionado.ano || '--'}</div></div>
+              </div>
             </div>
-            <div className="form-group">
-              <label className="form-label">Nombre</label>
-              <input className="form-input" value={propietarioNombre} disabled
-                style={{ background: 'var(--slate-50)', color: 'var(--slate-500)' }} />
+          </div>
+
+          <div className="card">
+            <div className="card__h"><h3>Propietario</h3></div>
+            <div className="card__b">
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                <div className="field"><label>Cedula</label><div className="input" style={{ background: 'var(--bg-subtle)', cursor: 'default' }}>{propietarioCedula || '--'}</div></div>
+                <div className="field"><label>Nombre</label><div className="input" style={{ background: 'var(--bg-subtle)', cursor: 'default' }}>{propietarioNombre}</div></div>
+              </div>
             </div>
           </div>
         </div>
 
         {/* Historial de Servicio */}
         <div className="card">
-          <div className="card-title">Historial de Servicio ({historial.length})</div>
-          {historialOrdenado.length === 0 ? (
-            <div className="empty-state">
-              <p className="text-muted">Sin historial de servicio</p>
-            </div>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              {historialOrdenado.map((h, idx) => (
-                <div key={h.id || idx} style={{
-                  border: '1px solid var(--slate-200)',
-                  borderRadius: 'var(--radius)',
-                  padding: 16,
-                  position: 'relative',
-                  borderLeft: '3px solid var(--blue-500)',
-                }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                    <span style={{ fontWeight: 700, fontSize: 14, color: 'var(--slate-800)' }}>
-                      {fmtDate(h.fecha)}
-                    </span>
-                    {h.estado && (
-                      <span className={badgeEstado(h.estado)}>
-                        {h.estado}
-                      </span>
+          <div className="card__h"><h3>Historial de Servicio</h3><span className="badge badge-n">{historial.length}</span></div>
+          <div className="card__b">
+            {historialOrdenado.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: 32, color: 'var(--text-3)' }}>
+                <div style={{ fontSize: 32, marginBottom: 8 }}>📋</div>
+                <p>Sin historial de servicio</p>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                {historialOrdenado.map((h, idx) => (
+                  <div key={h.id || idx} style={{
+                    border: '1px solid var(--border)',
+                    borderRadius: 10,
+                    padding: 16,
+                    borderLeft: '3px solid var(--accent)',
+                  }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                      <span style={{ fontWeight: 700, fontSize: 14 }}>{fmtDate(h.fecha)}</span>
+                      {h.estado && <span className="badge badge-n">{h.estado}</span>}
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 8, fontSize: 13 }}>
+                      <div><span style={{ color: 'var(--text-3)', fontWeight: 600 }}>Km: </span><span className="mono">{h.kilometraje != null ? h.kilometraje.toLocaleString('es-CO') : '--'}</span></div>
+                      <div><span style={{ color: 'var(--text-3)', fontWeight: 600 }}>Tecnico: </span><span>{h.tecnico || '--'}</span></div>
+                      <div><span style={{ color: 'var(--text-3)', fontWeight: 600 }}>Total: </span><span className="mono" style={{ fontWeight: 700, color: 'var(--green-600)' }}>{fmt(h.total)}</span></div>
+                    </div>
+                    {h.observaciones && (
+                      <div style={{ marginTop: 8, fontSize: 13, color: 'var(--text-2)' }}>
+                        <span style={{ color: 'var(--text-3)', fontWeight: 600 }}>Obs: </span>{h.observaciones}
+                      </div>
                     )}
                   </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 8, fontSize: 13 }}>
-                    <div>
-                      <span className="text-muted" style={{ fontWeight: 600 }}>Kilometraje: </span>
-                      <span>{h.kilometraje != null ? h.kilometraje.toLocaleString('es-CO') : '--'}</span>
-                    </div>
-                    <div>
-                      <span className="text-muted" style={{ fontWeight: 600 }}>Tecnico: </span>
-                      <span>{h.tecnico || '--'}</span>
-                    </div>
-                    <div>
-                      <span className="text-muted" style={{ fontWeight: 600 }}>Total: </span>
-                      <span style={{ fontWeight: 700, color: 'var(--green-600)' }}>{fmt(h.total)}</span>
-                    </div>
-                  </div>
-                  {h.observaciones && (
-                    <div style={{ marginTop: 8, fontSize: 13, color: 'var(--slate-600)' }}>
-                      <span className="text-muted" style={{ fontWeight: 600 }}>Observaciones: </span>
-                      {h.observaciones}
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       </div>
     )
@@ -186,84 +140,94 @@ export default function Vehiculos({ vehiculos, clientes, notify }) {
   // --- VISTA LISTA ---
   return (
     <div>
-      {/* Metricas */}
-      <div className="metrics-grid">
-        <div className="metric-card">
-          <div className="metric-value">{totalVehiculos}</div>
-          <div className="metric-label">Total Vehiculos</div>
-        </div>
-        <div className="metric-card">
-          <div className="metric-value" style={{ color: 'var(--green-500)' }}>{conHistorial}</div>
-          <div className="metric-label">Con Historial</div>
-        </div>
-        <div className="metric-card">
-          <div className="metric-value" style={{ color: 'var(--purple-500)' }}>{marcasUnicas}</div>
-          <div className="metric-label">Marcas Unicas</div>
+      <div className="pagehd">
+        <div>
+          <h2>Vehiculos</h2>
+          <p className="sub">Historial y seguimiento vehicular</p>
         </div>
       </div>
 
-      {/* Barra de busqueda */}
-      <div className="card">
-        <div className="form-group" style={{ marginBottom: 0 }}>
-          <input
-            className="form-input"
-            placeholder="Buscar por placa, marca o propietario..."
-            value={busqueda}
-            onChange={e => setBusqueda(e.target.value)}
-          />
+      {/* KPI row */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(160px,1fr))', gap: 14, marginBottom: 24 }}>
+        <div className="kpi">
+          <div className="kpi__head"><span>Total Vehiculos</span><span className="kpi__ic blue">🚗</span></div>
+          <div className="kpi__v">{totalVehiculos}</div>
+        </div>
+        <div className="kpi">
+          <div className="kpi__head"><span>Con Historial</span><span className="kpi__ic green">📋</span></div>
+          <div className="kpi__v">{conHistorial}</div>
+        </div>
+        <div className="kpi">
+          <div className="kpi__head"><span>Marcas Unicas</span><span className="kpi__ic purple">🏷</span></div>
+          <div className="kpi__v">{marcasUnicas}</div>
         </div>
       </div>
 
-      {/* Tabla de vehiculos */}
+      {/* Busqueda */}
+      <div className="card" style={{ marginBottom: 16 }}>
+        <div className="card__b" style={{ padding: '12px 16px' }}>
+          <div className="field" style={{ marginBottom: 0 }}>
+            <input
+              className="input"
+              placeholder="Buscar por placa, marca o propietario..."
+              value={busqueda}
+              onChange={e => setBusqueda(e.target.value)}
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Tabla */}
       <div className="card">
-        <div className="card-title">Vehiculos ({vehiculosFiltrados.length})</div>
-        {vehiculosFiltrados.length === 0 ? (
-          <div className="empty-state">
-            <p className="text-muted">No se encontraron vehiculos</p>
-          </div>
-        ) : (
-          <div className="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>Placa</th>
-                  <th>Marca</th>
-                  <th>Modelo</th>
-                  <th>Ano</th>
-                  <th>Propietario</th>
-                  <th># Visitas</th>
-                  <th>Ultimo Servicio</th>
-                  <th>Acciones</th>
-                </tr>
-              </thead>
-              <tbody>
-                {vehiculosFiltrados.map(v => {
-                  const ultimo = ultimoServicio(v)
-                  return (
-                    <tr key={v.placa}>
-                      <td className="text-mono" style={{ fontWeight: 700 }}>{v.placa}</td>
-                      <td>{v.marca || '--'}</td>
-                      <td>{v.modelo || '--'}</td>
-                      <td>{v.ano || '--'}</td>
-                      <td>{nombrePropietario(v.cedulaPropietario)}</td>
-                      <td className="text-center">
-                        <span className="badge badge-info">{(v.historial || []).length}</span>
-                      </td>
-                      <td className="text-sm text-muted">
-                        {ultimo ? fmtDate(ultimo.fecha) : fmtDate(v.fechaUltimoServicio)}
-                      </td>
-                      <td>
-                        <button className="btn btn-primary btn-sm" onClick={() => seleccionar(v)}>
-                          Ver
-                        </button>
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
+        <div className="card__h"><h3>Vehiculos</h3><span className="badge badge-n">{vehiculosFiltrados.length}</span></div>
+        <div className="card__b" style={{ padding: 0 }}>
+          {vehiculosFiltrados.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: 40, color: 'var(--text-3)' }}>
+              <div style={{ fontSize: 32, marginBottom: 8 }}>🚗</div>
+              <p>No se encontraron vehiculos</p>
+            </div>
+          ) : (
+            <div className="tbl">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Placa</th>
+                    <th>Marca</th>
+                    <th>Modelo</th>
+                    <th>Ano</th>
+                    <th>Propietario</th>
+                    <th>Visitas</th>
+                    <th>Ultimo Servicio</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {vehiculosFiltrados.map(v => {
+                    const ultimo = ultimoServicio(v)
+                    return (
+                      <tr key={v.placa}>
+                        <td><span className="mono" style={{ fontWeight: 700 }}>{v.placa}</span></td>
+                        <td>{v.marca || '--'}</td>
+                        <td>{v.modelo || '--'}</td>
+                        <td>{v.ano || '--'}</td>
+                        <td>{nombrePropietario(v.cedulaPropietario)}</td>
+                        <td><span className="badge badge-n">{(v.historial || []).length}</span></td>
+                        <td style={{ fontSize: 12, color: 'var(--text-3)' }}>
+                          {ultimo ? fmtDate(ultimo.fecha) : fmtDate(v.fechaUltimoServicio)}
+                        </td>
+                        <td>
+                          <button className="btn btn-outline btn-sm" onClick={() => seleccionar(v)}>
+                            Ver
+                          </button>
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   )
