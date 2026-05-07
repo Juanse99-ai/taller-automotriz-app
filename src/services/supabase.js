@@ -41,20 +41,22 @@ export async function fetchTrabajos() {
 
 export async function upsertTrabajo(trabajo, opts = {}) {
   const maxRetries = opts.retries ?? 2
+  // NOTA: No enviar 'id' — es integer auto-generado en Supabase
+  // Usar 'ot_codigo' como clave de sincronizacion entre dispositivos
   const row = {
-    id: trabajo.id,
+    plate: trabajo.placa || 'N/A', // NOT NULL en esquema original
     fecha: trabajo.fecha,
-    cedula_cliente: trabajo.cedula,
-    cliente: trabajo.cliente,
+    cedula_cliente: trabajo.cedula || '',
+    cliente: trabajo.cliente || '',
     telefono_cliente: trabajo.telefonoCliente || '',
     email_cliente: trabajo.emailCliente || '',
-    placa: trabajo.placa,
-    marca: trabajo.marca,
-    modelo: trabajo.modelo,
-    ano: trabajo.ano,
-    kilometraje: trabajo.kilometraje,
-    tecnico_id: trabajo.tecnicoId,
-    estado: trabajo.estado,
+    placa: trabajo.placa || '',
+    marca: trabajo.marca || '',
+    modelo: trabajo.modelo || '',
+    ano: trabajo.ano || null,
+    kilometraje: trabajo.kilometraje || null,
+    tecnico_id: trabajo.tecnicoId || null,
+    estado: trabajo.estado || 'Pendiente',
     observaciones: trabajo.observaciones || '',
     items: JSON.stringify(trabajo.items || []),
     mano_obra: trabajo.manoObra || 0,
@@ -70,12 +72,45 @@ export async function upsertTrabajo(trabajo, opts = {}) {
   if (trabajo.facturadoEn) row.facturado_en = trabajo.facturadoEn
   if (trabajo.cuenttiResolucion) row.cuentti_resolucion = trabajo.cuenttiResolucion
 
+  const otCodigo = trabajo.otCodigo || ''
+
+  // Patron find-then-update: buscar por ot_codigo, si existe → PATCH, si no → INSERT
+  if (otCodigo) {
+    try {
+      const findRes = await fetchWithTimeout(
+        `${baseProxy}&ot_codigo=eq.${encodeURIComponent(otCodigo)}&select=id&limit=1`
+      )
+      if (findRes.ok) {
+        const existing = await findRes.json()
+        if (existing.length > 0) {
+          // PATCH registro existente
+          const patchRes = await fetchWithTimeout(
+            `${baseProxy}&ot_codigo=eq.${encodeURIComponent(otCodigo)}`,
+            {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json', 'Prefer': 'return=representation' },
+              body: JSON.stringify(row),
+            }
+          )
+          if (patchRes.ok) {
+            const data = await patchRes.json()
+            return Array.isArray(data) ? data[0] : data
+          }
+        }
+      }
+    } catch (e) {
+      // Si falla la busqueda, intentar INSERT
+      console.warn('Find existente fallo, intentando insert:', e.message)
+    }
+  }
+
+  // INSERT nuevo registro (sin id — auto-generado)
   let lastErr = null
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
-      const res = await fetchWithTimeout(`${baseProxy}&upsert=true`, {
+      const res = await fetchWithTimeout(baseProxy, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'Prefer': 'return=representation' },
         body: JSON.stringify(row),
       })
       if (!res.ok) throw new Error(`${res.status}: ${await res.text()}`)
@@ -84,18 +119,22 @@ export async function upsertTrabajo(trabajo, opts = {}) {
     } catch (e) {
       lastErr = e
       if (attempt < maxRetries) {
-        // Backoff: 500ms, 1500ms
         await new Promise(r => setTimeout(r, 500 * (attempt + 1) * (attempt + 1)))
       }
     }
   }
-  console.warn(`Supabase upsertTrabajo (${trabajo.id}) fallo despues de ${maxRetries + 1} intentos:`, lastErr?.message)
+  console.warn(`Supabase upsertTrabajo (${otCodigo || trabajo.id}) fallo:`, lastErr?.message)
   return null
 }
 
-export async function deleteTrabajo(id) {
+export async function deleteTrabajo(otCodigo) {
+  if (!otCodigo) return false
   try {
-    const res = await fetchWithTimeout(`${baseProxy}&id=eq.${encodeURIComponent(id)}`, { method: 'DELETE' })
+    // Buscar por ot_codigo (no por id, que es integer auto-generado)
+    const res = await fetchWithTimeout(
+      `${baseProxy}&ot_codigo=eq.${encodeURIComponent(otCodigo)}`,
+      { method: 'DELETE' }
+    )
     if (!res.ok) throw new Error(await res.text())
     return true
   } catch (e) {
