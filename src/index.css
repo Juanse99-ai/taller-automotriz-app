@@ -301,6 +301,17 @@ textarea.input{min-height:88px;resize:vertical;padding-top:11px}
 .chartbar .bar.a{background:linear-gradient(180deg,var(--amber-400) 0%,var(--amber-500) 100%)}
 .chart-x{display:flex;justify-content:space-between;font-size:10px;color:var(--text-4);padding:6px 2px 0;font-family:var(--mono);font-weight:600;letter-spacing:.3px;text-transform:uppercase}
 
+/* calendar / agenda semanal */
+.calendar-week{display:grid;grid-template-columns:repeat(7,1fr);gap:8px}
+.calendar-day{display:flex;flex-direction:column;align-items:center;gap:6px;padding:10px 4px;border-radius:10px;border:1px solid var(--border);background:var(--bg-raised);min-height:100px}
+.calendar-day.today{border-color:var(--amber-400);background:rgba(245,158,11,.05);box-shadow:0 0 0 1px rgba(245,158,11,.15)}
+.calendar-day-header{font-size:11px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:.5px}
+.calendar-day-num{font-family:var(--mono);font-size:20px;font-weight:800;color:var(--text);line-height:1}
+.calendar-day.today .calendar-day-num{color:var(--amber-500)}
+.calendar-task{width:100%;font-size:10.5px;font-weight:600;padding:4px 6px;border-radius:5px;background:rgba(37,99,235,.1);color:var(--blue-600);text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}
+[data-theme="dark"] .calendar-task{background:rgba(37,99,235,.18);color:#93c5fd}
+[data-theme="dark"] .calendar-day.today{background:rgba(245,158,11,.08)}
+
 /* mobile */
 .mobile-toggle{display:none;position:fixed;top:12px;left:12px;z-index:60;width:40px;height:40px;border-radius:10px;background:var(--bg-raised);border:1px solid var(--border);box-shadow:var(--shadow);align-items:center;justify-content:center;color:var(--text)}
 .mobile-toggle svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:2}
@@ -560,6 +571,10 @@ tbody tr:hover{background:var(--bg-subtle)}
   .kpi__ic{width:30px;height:30px}
   .kpi__ic svg{width:15px;height:15px}
   .kpi__lbl{font-size:10.5px}
+
+  .calendar-week{grid-template-columns:repeat(4,1fr)}
+  .calendar-day{min-height:80px;padding:8px 4px}
+  .calendar-day-num{font-size:16px}
 
   .card__b--flush{overflow-x:auto;-webkit-overflow-scrolling:touch}
   .tbl,table{min-width:580px}
