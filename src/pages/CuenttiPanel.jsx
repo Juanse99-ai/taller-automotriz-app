@@ -335,7 +335,7 @@ export default function CuenttiPanel({ trabajos, actualizarTrabajo, notify }) {
         <div className="card">
           <div className="card__h"><h3>Test de Conexion</h3></div>
           <div className="card__b">
-            <table>
+            <table className="tbl">
               <thead>
                 <tr><th>Endpoint</th><th>Resultado</th></tr>
               </thead>
