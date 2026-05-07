@@ -367,72 +367,67 @@ export default function Trabajos({ hook, notify, onAutoFacturar }) {
             <span style={{ fontWeight: 600, fontSize: 14 }}>{filtered.length} resultado{filtered.length !== 1 ? 's' : ''}</span>
           </div>
           <div className="card__b card__b--flush">
-            <div className="table-wrap">
-              <table>
-                <thead>
-                  <tr>
-                    <th>OT</th>
-                    <th>Placa</th>
-                    <th>Cliente</th>
-                    <th>Vehiculo</th>
-                    <th>Tecnico</th>
-                    <th>Estado</th>
-                    <th className="text-right">Total</th>
-                    <th>Fecha</th>
-                    <th>Acciones</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filtered.map(t => {
-                    const bc = estadoBadge(t.estado)
-                    // Indicador de trabajo estancado
-                    const diasSinMover = t.fecha ? Math.floor((Date.now() - new Date(t.fecha).getTime()) / 86400000) : 0
-                    const estancado = t.estado !== ESTADOS.COMPLETADO && t.estado !== ESTADOS.CANCELADO && diasSinMover >= DIAS_ESTANCADO
-                    return (
-                      <tr key={t.id} style={estancado ? { borderLeft: '4px solid var(--red-500)', background: 'rgba(239,68,68,.06)' } : {}}>
-                        <td><span style={{ color: 'var(--blue-600)', fontWeight: 700, fontFamily: 'var(--mono)' }}>{t.otCodigo || '—'}</span></td>
-                        <td className="text-mono" style={{ fontWeight: 700 }}>{t.placa}</td>
-                        <td>{t.cliente || '—'}</td>
-                        <td className="text-sm">{[t.marca, t.modelo].filter(Boolean).join(' ') || '—'}</td>
-                        <td>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                            <span className={`av av-${(parseInt(t.tecnicoId) || 0) % 6}`}>{tecIniciales(t.tecnicoId)}</span>
-                            <span className="text-sm">{tecNombre(t.tecnicoId)}</span>
-                          </div>
-                        </td>
-                        <td>
-                          <span className={`badge ${bc}`}>{t.estado}</span>
-                          {estancado && <span className="badge badge-d" style={{ marginLeft: 4, fontSize: 10 }} title={`${diasSinMover} dias sin movimiento`}>{diasSinMover}d</span>}
-                        </td>
-                        <td className="text-right" style={{ fontFamily: 'var(--mono)', fontWeight: 600 }}>{fmt(t.total)}</td>
-                        <td className="text-sm text-muted">{fmtDate(t.fecha)}</td>
-                        <td>
-                          <div className="actions-cell">
-                            <button className="btn btn-ghost btn-sm" onClick={() => handleEditar(t.id)}>Editar</button>
-                            {t.otCodigo && (
-                              <button className="btn btn-ghost btn-sm" onClick={() => imprimirOT(t)}>PDF</button>
-                            )}
-                            {t.estado !== ESTADOS.COMPLETADO && (
-                              <button className="btn btn-ghost btn-sm" style={{ color: 'var(--green-600)' }} onClick={() => handleCompletar(t.id)}>Completar</button>
-                            )}
-                            {confirmDel === t.id ? (
-                              <>
-                                <button className="btn btn-danger btn-sm" onClick={() => handleEliminar(t.id)}>Si</button>
-                                <button className="btn btn-ghost btn-sm" onClick={() => setConfirmDel(null)}>No</button>
-                              </>
-                            ) : (
-                              <button className="btn btn-ghost btn-sm" onClick={() => setConfirmDel(t.id)} title="Eliminar" style={{ color: 'var(--red-500)' }}>
-                                <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
-                              </button>
-                            )}
-                          </div>
-                        </td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
-            </div>
+            <table className="tbl">
+              <thead>
+                <tr>
+                  <th>OT</th>
+                  <th>Placa</th>
+                  <th>Cliente</th>
+                  <th>Vehiculo</th>
+                  <th>Tecnico</th>
+                  <th>Estado</th>
+                  <th className="c-right">Total</th>
+                  <th>Fecha</th>
+                  <th />
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map(t => {
+                  const bc = estadoBadge(t.estado)
+                  const diasSinMover = t.fecha ? Math.floor((Date.now() - new Date(t.fecha).getTime()) / 86400000) : 0
+                  const estancado = t.estado !== ESTADOS.COMPLETADO && t.estado !== ESTADOS.CANCELADO && diasSinMover >= DIAS_ESTANCADO
+                  return (
+                    <tr key={t.id} style={estancado ? { borderLeft: '3px solid var(--red-500)', background: 'rgba(239,68,68,.04)' } : {}}>
+                      <td className="c-mono" style={{ color: 'var(--blue-600)', fontWeight: 700 }}>{t.otCodigo || '—'}</td>
+                      <td className="c-mono" style={{ fontWeight: 700 }}>{t.placa}</td>
+                      <td className="c-name">{t.cliente || '—'}</td>
+                      <td className="c-muted">{[t.marca, t.modelo].filter(Boolean).join(' ') || '—'}</td>
+                      <td>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                          <span className={`av av-${(parseInt(t.tecnicoId) || 1) % 5 + 1}`} style={{ width: 26, height: 26, fontSize: 10 }}>{tecIniciales(t.tecnicoId)}</span>
+                          <span style={{ fontSize: 12.5 }}>{tecNombre(t.tecnicoId)}</span>
+                        </div>
+                      </td>
+                      <td>
+                        <span className={`badge ${bc}`}>{t.estado}</span>
+                        {estancado && <span className="badge badge-d" style={{ marginLeft: 4, fontSize: 10 }}>{diasSinMover}d</span>}
+                      </td>
+                      <td className="c-mono c-right" style={{ fontWeight: 700 }}>{fmt(t.total)}</td>
+                      <td className="c-mono c-muted" style={{ fontSize: 12 }}>{fmtDate(t.fecha)}</td>
+                      <td className="c-right">
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 4 }}>
+                          <button className="btn btn-ghost btn-sm" onClick={() => handleEditar(t.id)}>Editar</button>
+                          {t.otCodigo && <button className="btn btn-ghost btn-sm" onClick={() => imprimirOT(t)}>PDF</button>}
+                          {t.estado !== ESTADOS.COMPLETADO && (
+                            <button className="btn btn-ghost btn-sm" style={{ color: 'var(--green-600)' }} onClick={() => handleCompletar(t.id)}>✓</button>
+                          )}
+                          {confirmDel === t.id ? (
+                            <>
+                              <button className="btn btn-ghost btn-sm" style={{ color: 'var(--red-600)' }} onClick={() => handleEliminar(t.id)}>Si</button>
+                              <button className="btn btn-ghost btn-sm" onClick={() => setConfirmDel(null)}>No</button>
+                            </>
+                          ) : (
+                            <button className="btn btn-ghost btn-sm" style={{ color: 'var(--red-500)' }} onClick={() => setConfirmDel(t.id)}>
+                              <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
           </div>
         </div>
       )}

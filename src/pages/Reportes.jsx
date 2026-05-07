@@ -176,8 +176,8 @@ export default function Reportes({ trabajos }) {
       <div className="card" style={{marginBottom:16}}>
         <div className="card__h"><h3>Rendimiento del equipo</h3></div>
         <div className="card__b card__b--flush">
-          <table>
-            <thead><tr><th>Mecanico</th><th style={{textAlign:'right'}}>Trabajos</th><th style={{textAlign:'right'}}>Mano de obra</th><th style={{width:'25%'}}/></tr></thead>
+          <table className="tbl">
+            <thead><tr><th>Mecánico</th><th className="c-right">Trabajos</th><th className="c-right">Mano de obra</th><th style={{width:'25%'}}/></tr></thead>
             <tbody>
               {stats.porTecnico.map((t,i)=>{
                 const maxFact = Math.max(...stats.porTecnico.map(x=>x.facturado),1)
@@ -185,8 +185,8 @@ export default function Reportes({ trabajos }) {
                 return (
                   <tr key={t.id}>
                     <td><div style={{display:'flex',alignItems:'center',gap:10}}><span className={`av av-${(i%5)+1}`}>{t.nombre.split(' ').map(x=>x[0]).slice(0,2).join('')}</span><span style={{fontWeight:600}}>{t.nombre}</span></div></td>
-                    <td className="mono" style={{textAlign:'right',fontWeight:700}}>{t.cantidad}</td>
-                    <td className="mono" style={{textAlign:'right',fontWeight:700,color:'var(--green-600)'}}>{fmt(t.facturado)}</td>
+                    <td className="c-mono c-right" style={{fontWeight:700}}>{t.cantidad}</td>
+                    <td className="c-mono c-right" style={{fontWeight:700,color:'var(--green-600)'}}>{fmt(t.facturado)}</td>
                     <td>
                       <div style={{height:6,background:'var(--bg-subtle)',borderRadius:3,overflow:'hidden',border:'1px solid var(--border)'}}>
                         <div style={{width:`${pct}%`,height:'100%',background:pct>=70?'var(--green-500)':'var(--amber-400)'}}/>
@@ -205,15 +205,15 @@ export default function Reportes({ trabajos }) {
         <div className="card">
           <div className="card__h"><h3>Vehiculos frecuentes</h3><span className="count">{stats.topVehiculos.length}</span></div>
           <div className="card__b card__b--flush">
-            <table>
-              <thead><tr><th>Placa</th><th>Vehiculo</th><th style={{textAlign:'right'}}>Visitas</th><th style={{textAlign:'right'}}>Total facturado</th></tr></thead>
+            <table className="tbl">
+              <thead><tr><th>Placa</th><th>Vehículo</th><th className="c-right">Visitas</th><th className="c-right">Total facturado</th></tr></thead>
               <tbody>
                 {stats.topVehiculos.map(v=>(
                   <tr key={v.placa}>
-                    <td className="mono" style={{fontWeight:700}}>{v.placa}</td>
-                    <td style={{color:'var(--text-3)',fontSize:13}}>{[v.marca,v.modelo].filter(Boolean).join(' ')||'—'}</td>
-                    <td className="mono" style={{textAlign:'right',fontWeight:700}}>{v.visitas}</td>
-                    <td className="mono" style={{textAlign:'right',fontWeight:700}}>{fmt(v.total)}</td>
+                    <td className="c-mono" style={{fontWeight:700}}>{v.placa}</td>
+                    <td className="c-muted">{[v.marca,v.modelo].filter(Boolean).join(' ')||'—'}</td>
+                    <td className="c-mono c-right" style={{fontWeight:700}}>{v.visitas}</td>
+                    <td className="c-mono c-right" style={{fontWeight:700}}>{fmt(v.total)}</td>
                   </tr>
                 ))}
               </tbody>

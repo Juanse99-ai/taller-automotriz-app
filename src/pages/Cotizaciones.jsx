@@ -244,13 +244,13 @@ export default function Cotizaciones({ notify, trabajos = [], onCrearTrabajo, co
               <p>No hay cotizaciones registradas.</p>
             </div>
           ) : (
-            <table>
+            <table className="tbl">
               <thead>
                 <tr>
                   <th>ID</th>
                   <th>Cliente</th>
                   <th>Placa</th>
-                  <th>Vehiculo</th>
+                  <th>Vehículo</th>
                   <th>Estado</th>
                   <th className="c-right">Total</th>
                   <th>Fecha</th>

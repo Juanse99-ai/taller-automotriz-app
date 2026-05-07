@@ -310,28 +310,28 @@ export default function Clientes({ clientes, vehiculos, notify }) {
               </div>
             ) : (
               <div className="card__b card__b--flush">
-                <table>
+                <table className="tbl">
                   <thead>
                     <tr>
                       <th>Placa</th>
                       <th>Marca</th>
                       <th>Modelo</th>
-                      <th>Ano</th>
+                      <th>Año</th>
                       <th style={{textAlign:'center'}}># Visitas</th>
-                      <th>Ultimo Servicio</th>
+                      <th>Último Servicio</th>
                     </tr>
                   </thead>
                   <tbody>
                     {vehiculosCliente.map(v => (
                       <tr key={v.placa}>
-                        <td className="text-mono" style={{ fontWeight: 700 }}>{v.placa}</td>
+                        <td className="c-mono" style={{ fontWeight: 700 }}>{v.placa}</td>
                         <td>{v.marca || '--'}</td>
-                        <td>{v.modelo || '--'}</td>
-                        <td>{v.ano || '--'}</td>
+                        <td className="c-muted">{v.modelo || '--'}</td>
+                        <td className="c-mono c-muted">{v.ano || '--'}</td>
                         <td style={{textAlign:'center'}}>
                           <span className="badge badge-i">{(v.historial || []).length}</span>
                         </td>
-                        <td style={{color:'var(--text-3)',fontSize:13}}>{fmtDate(v.fechaUltimoServicio)}</td>
+                        <td className="c-muted">{fmtDate(v.fechaUltimoServicio)}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -373,15 +373,15 @@ export default function Clientes({ clientes, vehiculos, notify }) {
           {clientesFiltrados.length === 0 ? (
             <div className="empty"><h4>Sin resultados</h4><p>No se encontraron clientes.</p></div>
           ) : (
-            <table>
+            <table className="tbl">
               <thead>
                 <tr>
                   <th>CC/NIT</th>
                   <th>Nombre</th>
-                  <th>Telefono</th>
+                  <th>Teléfono</th>
                   <th>Email</th>
                   <th style={{textAlign:'center'}}>Veh.</th>
-                  <th>Ultima Visita</th>
+                  <th>Última Visita</th>
                   <th>Cuentti</th>
                   <th></th>
                 </tr>
@@ -389,18 +389,18 @@ export default function Clientes({ clientes, vehiculos, notify }) {
               <tbody>
                 {clientesFiltrados.map(c => (
                   <tr key={c.id || c.cedula} style={{cursor:'pointer'}} onClick={() => seleccionar(c)}>
-                    <td className="text-mono" style={{fontSize:12.5}}>{c.cedula || '--'}</td>
-                    <td style={{fontWeight:600}}>{c.nombre || '--'}</td>
-                    <td className="text-mono">{c.telefono || '--'}</td>
-                    <td style={{color:'var(--text-3)',fontSize:13}}>{c.email || '--'}</td>
+                    <td className="c-mono" style={{fontSize:12.5}}>{c.cedula || '--'}</td>
+                    <td className="c-name">{c.nombre || '--'}</td>
+                    <td className="c-mono">{c.telefono || '--'}</td>
+                    <td className="c-muted">{c.email || '--'}</td>
                     <td style={{textAlign:'center'}}>
                       <span className={`badge ${(c.vehiculos || []).length > 0 ? 'badge-i' : 'badge-w'}`}>
                         {(c.vehiculos || []).length}
                       </span>
                     </td>
-                    <td style={{color:'var(--text-3)'}}>{fmtDate(c.fechaUltimaVisita)}</td>
+                    <td className="c-muted">{fmtDate(c.fechaUltimaVisita)}</td>
                     <td>{c.cuenttiId ? <span className="badge badge-s">OK</span> : <span className="badge badge-w">Pendiente</span>}</td>
-                    <td><svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" style={{opacity:.5}}><path d="M5 12h14M12 5l7 7-7 7"/></svg></td>
+                    <td style={{opacity:.5}}>›</td>
                   </tr>
                 ))}
               </tbody>

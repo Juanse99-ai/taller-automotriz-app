@@ -1,16 +1,18 @@
 import { useMemo, useState } from 'react'
-import { fmt, fmtDate } from '../utils/helpers'
+import { fmt } from '../utils/helpers'
 import { TECNICOS, COMISION, ESTADOS } from '../utils/constants'
+
+const ACTIVOS = [ESTADOS.PENDIENTE, ESTADOS.EN_DIAGNOSTICO, ESTADOS.ESPERANDO_REPUESTOS, ESTADOS.EN_PROGRESO]
 
 export default function Mecanicos({ trabajos }) {
   const [vistaAgenda, setVistaAgenda] = useState(false)
 
   const tecnicosData = useMemo(() => {
-    return TECNICOS.map(tec => {
+    return TECNICOS.map((tec, idx) => {
       const misTrab = trabajos.filter(t => parseInt(t.tecnicoId) === tec.id)
       const completados = misTrab.filter(t => t.estado === ESTADOS.COMPLETADO)
-      const enProgreso = misTrab.filter(t => t.estado === ESTADOS.EN_PROGRESO || t.estado === ESTADOS.PENDIENTE)
-      // Mano de obra: solo servicios, no repuestos
+      const activos = misTrab.filter(t => ACTIVOS.includes(t.estado))
+
       const getMO = (t) => {
         if (typeof t?.manoObra === 'number') return t.manoObra
         if (Array.isArray(t?.items)) {
@@ -22,94 +24,128 @@ export default function Mecanicos({ trabajos }) {
         }
         return 0
       }
-      const totalFacturado = completados.reduce((s, t) => s + getMO(t), 0)
-      const comisionTotal = completados.reduce((s, t) => s + (getMO(t) * COMISION.TOTAL), 0)
 
-      // Mes actual
       const now = new Date()
       const inicioMes = new Date(now.getFullYear(), now.getMonth(), 1)
       const completadosMes = completados.filter(t => new Date(t.fecha) >= inicioMes)
-      const facturadoMes = completadosMes.reduce((s, t) => s + getMO(t), 0)
-      const comisionMes = completadosMes.reduce((s, t) => s + (getMO(t) * COMISION.TOTAL), 0)
+      const comisionMes = completadosMes.reduce((s, t) => s + getMO(t) * COMISION.TOTAL, 0)
 
       return {
         ...tec,
+        idx,
         totalTrabajos: misTrab.length,
-        completados: completados.length,
-        enProgreso: enProgreso.length,
-        totalFacturado,
-        comisionTotal,
+        activosCount: activos.length,
         completadosMes: completadosMes.length,
-        facturadoMes,
         comisionMes,
+        libre: activos.length === 0,
       }
     })
   }, [trabajos])
 
+  const totalActivos = tecnicosData.reduce((s, t) => s + t.activosCount, 0)
+  const totalComisionesMes = tecnicosData.reduce((s, t) => s + t.comisionMes, 0)
+
+  const initials = (nombre) => nombre.split(' ').map(x => x[0]).slice(0, 2).join('')
+
   return (
     <div>
-      <div className="metrics-grid">
-        <div className="metric-card">
-          <div className="metric-value">{TECNICOS.length}</div>
-          <div className="metric-label">Tecnicos Activos</div>
+      <div className="pagehd">
+        <div>
+          <h2>Equipo técnico</h2>
+          <p className="sub">{TECNICOS.length} mecánicos · comisión {COMISION.TOTAL * 100}% c/u</p>
         </div>
-        <div className="metric-card">
-          <div className="metric-value">
-            {tecnicosData.reduce((s, t) => s + t.enProgreso, 0)}
-          </div>
-          <div className="metric-label">Trabajos en Curso</div>
-        </div>
-        <div className="metric-card">
-          <div className="metric-value">{fmt(tecnicosData.reduce((s, t) => s + t.comisionMes, 0))}</div>
-          <div className="metric-label">Comisiones del Mes</div>
+        <div className="actions">
+          <button
+            className={`btn btn-sm ${vistaAgenda ? 'btn-primary' : 'btn-outline'}`}
+            onClick={() => setVistaAgenda(v => !v)}
+          >
+            {vistaAgenda ? 'Ver Tarjetas' : 'Ver Agenda Semanal'}
+          </button>
         </div>
       </div>
 
-      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 14 }}>
-        <button className={`btn btn-sm ${vistaAgenda ? 'btn-primary' : 'btn-outline'}`}
-          onClick={() => setVistaAgenda(v => !v)}>
-          {vistaAgenda ? 'Ver Tarjetas' : 'Ver Agenda Semanal'}
-        </button>
+      {/* KPI row */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(160px,1fr))', gap: 14, marginBottom: 24 }}>
+        <div className="kpi">
+          <div className="kpi__head"><span>Técnicos activos</span><span className="kpi__ic blue">👷</span></div>
+          <div className="kpi__v">{TECNICOS.length}</div>
+        </div>
+        <div className="kpi">
+          <div className="kpi__head"><span>Trabajos en curso</span><span className="kpi__ic amber">🔧</span></div>
+          <div className="kpi__v">{totalActivos}</div>
+        </div>
+        <div className="kpi">
+          <div className="kpi__head"><span>Comisiones del mes</span><span className="kpi__ic green">💰</span></div>
+          <div className="kpi__v" style={{ fontSize: 20 }}>{fmt(totalComisionesMes)}</div>
+        </div>
       </div>
 
       {vistaAgenda ? (
         <AgendaSemanal trabajos={trabajos} />
-      ) : null}
+      ) : (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(300px,1fr))', gap: 16 }}>
+          {tecnicosData.map((tec) => (
+            <div key={tec.id} className="card">
+              <div className="card__b" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                {/* Avatar + nombre + badge */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <div
+                    className={`av av-${(tec.idx % 5) + 1}`}
+                    style={{ width: 52, height: 52, fontSize: 16, flexShrink: 0 }}
+                  >
+                    {initials(tec.nombre)}
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontWeight: 700, fontSize: 15 }}>{tec.nombre}</div>
+                    <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2 }}>
+                      Especialidad · {tec.especialidad}
+                    </div>
+                  </div>
+                  {tec.libre
+                    ? <span className="badge badge-s">Libre</span>
+                    : <span className="badge badge-i">Ocupado</span>
+                  }
+                </div>
 
-      {!vistaAgenda && tecnicosData.map(tec => (
-        <div className="card" key={tec.id}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 14 }}>
-            <div>
-              <div className="card-title" style={{ marginBottom: 4 }}>{tec.nombre}</div>
-              <p className="text-sm text-muted">Especialidad: {tec.especialidad} — Tel: {tec.telefono}</p>
-            </div>
-            <div style={{ textAlign: 'right' }}>
-              <span className={`badge ${tec.enProgreso > 0 ? 'badge-info' : 'badge-success'}`}>
-                {tec.enProgreso > 0 ? `${tec.enProgreso} en curso` : 'Disponible'}
-              </span>
-            </div>
-          </div>
+                {/* Teléfono */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12.5, color: 'var(--text-3)' }}>
+                  <span>📞</span>
+                  <span className="mono">{tec.telefono}</span>
+                </div>
 
-          <div className="metrics-grid" style={{ marginTop: 16, marginBottom: 0 }}>
-            <div className="metric-card">
-              <div className="metric-value" style={{ fontSize: 20 }}>{tec.totalTrabajos}</div>
-              <div className="metric-label">Total Trabajos</div>
+                {/* Stats grid */}
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(3,1fr)',
+                  gap: 10,
+                  padding: '12px 0',
+                  borderTop: '1px solid var(--border)',
+                  borderBottom: '1px solid var(--border)',
+                }}>
+                  <div>
+                    <div className="mono" style={{ fontSize: 20, fontWeight: 700 }}>{tec.activosCount}</div>
+                    <div style={{ fontSize: 10.5, color: 'var(--text-3)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5 }}>Activos</div>
+                  </div>
+                  <div>
+                    <div className="mono" style={{ fontSize: 20, fontWeight: 700 }}>{tec.completadosMes}</div>
+                    <div style={{ fontSize: 10.5, color: 'var(--text-3)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5 }}>Este mes</div>
+                  </div>
+                  <div>
+                    <div className="mono" style={{ fontSize: 20, fontWeight: 700, color: 'var(--green-600)' }}>{fmt(tec.comisionMes)}</div>
+                    <div style={{ fontSize: 10.5, color: 'var(--text-3)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5 }}>Comisión</div>
+                  </div>
+                </div>
+
+                {/* Actions */}
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button className="btn btn-outline btn-sm" style={{ flex: 1 }}>👁 Ver trabajos</button>
+                  <button className="btn btn-outline btn-sm" style={{ flex: 1 }}>✏️ Editar</button>
+                </div>
+              </div>
             </div>
-            <div className="metric-card">
-              <div className="metric-value" style={{ fontSize: 20, color: 'var(--green-500)' }}>{tec.completados}</div>
-              <div className="metric-label">Completados</div>
-            </div>
-            <div className="metric-card">
-              <div className="metric-value" style={{ fontSize: 20 }}>{fmt(tec.facturadoMes)}</div>
-              <div className="metric-label">Facturado Mes</div>
-            </div>
-            <div className="metric-card">
-              <div className="metric-value" style={{ fontSize: 20, color: 'var(--green-500)' }}>{fmt(tec.comisionMes)}</div>
-              <div className="metric-label">Comision Mes ({COMISION.TOTAL * 100}%)</div>
-            </div>
-          </div>
+          ))}
         </div>
-      ))}
+      )}
     </div>
   )
 }
@@ -144,22 +180,25 @@ function AgendaSemanal({ trabajos }) {
 
   return (
     <div className="card">
-      <div className="card-title">Agenda de la Semana</div>
-      <div className="calendar-week">
-        {dias.map((dia, i) => (
-          <div key={i} className={`calendar-day ${dia.esHoy ? 'today' : ''}`}>
-            <div className="calendar-day-header">{dia.nombre}</div>
-            <div className="calendar-day-num">{dia.num}</div>
-            {dia.trabajos.map(t => {
-              const tec = TECNICOS.find(tc => tc.id === parseInt(t.tecnicoId))
-              return (
-                <div key={t.id} className="calendar-task" title={`${t.placa} - ${t.cliente} (${tec?.nombre || 'Sin asignar'})`}>
-                  {t.placa} {tec ? `- ${tec.nombre.split(' ')[0]}` : ''}
-                </div>
-              )
-            })}
-          </div>
-        ))}
+      <div className="card__h"><h3>Agenda de la Semana</h3></div>
+      <div className="card__b">
+        <div className="calendar-week">
+          {dias.map((dia, i) => (
+            <div key={i} className={`calendar-day ${dia.esHoy ? 'today' : ''}`}>
+              <div className="calendar-day-header">{dia.nombre}</div>
+              <div className="calendar-day-num">{dia.num}</div>
+              {dia.trabajos.map(t => {
+                const tec = TECNICOS.find(tc => tc.id === parseInt(t.tecnicoId))
+                return (
+                  <div key={t.id} className="calendar-task"
+                    title={`${t.placa} - ${t.cliente} (${tec?.nombre || 'Sin asignar'})`}>
+                    {t.placa} {tec ? `- ${tec.nombre.split(' ')[0]}` : ''}
+                  </div>
+                )
+              })}
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   )

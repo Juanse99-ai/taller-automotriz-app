@@ -87,13 +87,13 @@ export default function Inspecciones({ trabajos, notify, onVincularInspeccion, i
           {sorted.length === 0 ? (
             <div className="empty"><h4>Sin inspecciones</h4><p>No hay inspecciones registradas.</p></div>
           ) : (
-            <table>
+            <table className="tbl">
               <thead>
                 <tr>
                   <th>ID</th>
                   <th>Placa</th>
                   <th>Cliente</th>
-                  <th>Tecnico</th>
+                  <th>Técnico</th>
                   <th style={{textAlign:'center'}}>Estado</th>
                   <th>Fecha</th>
                   <th></th>
@@ -108,10 +108,10 @@ export default function Inspecciones({ trabajos, notify, onVincularInspeccion, i
                   const pct = totalItems > 0 ? Math.round((buenos / totalItems) * 100) : 0
                   return (
                     <tr key={i.id} style={{cursor:'pointer'}} onClick={() => { setEditId(i.id); setVista('detalle') }}>
-                      <td className="mono" style={{fontSize:12}}>{i.id}</td>
-                      <td className="mono" style={{fontWeight:700}}>{i.placa || '—'}</td>
-                      <td>{i.cliente || '—'}</td>
-                      <td style={{fontSize:13}}>{i.tecnico || '—'}</td>
+                      <td className="c-mono" style={{fontSize:12}}>{i.id}</td>
+                      <td className="c-mono" style={{fontWeight:700}}>{i.placa || '—'}</td>
+                      <td className="c-name">{i.cliente || '—'}</td>
+                      <td className="c-muted">{i.tecnico || '—'}</td>
                       <td>
                         <div style={{display:'flex',gap:4,justifyContent:'center',alignItems:'center'}}>
                           {buenos > 0 && <span className="badge badge-s">{buenos}</span>}
@@ -120,12 +120,12 @@ export default function Inspecciones({ trabajos, notify, onVincularInspeccion, i
                           <span style={{fontSize:11,color:'var(--text-3)',marginLeft:4}}>{pct}%</span>
                         </div>
                       </td>
-                      <td style={{color:'var(--text-3)',fontSize:13}}>{fmtDate(i.fecha)}</td>
+                      <td className="c-muted">{fmtDate(i.fecha)}</td>
                       <td>
                         <div style={{display:'flex',gap:4,justifyContent:'flex-end'}}>
                           <button className="btn btn-outline btn-sm" onClick={e => { e.stopPropagation(); setEditId(i.id); setVista('editar') }}>Editar</button>
                           <button className="btn btn-outline btn-sm" onClick={e => { e.stopPropagation(); vincularATrabajo(i) }} title="Vincular al trabajo">OT</button>
-                          <button className="btn btn-ghost btn-sm" onClick={e => { e.stopPropagation(); guardar(inspecciones.filter(x => x.id !== i.id)); notify('Inspeccion eliminada', 'info') }}>X</button>
+                          <button className="btn btn-ghost btn-sm" onClick={e => { e.stopPropagation(); guardar(inspecciones.filter(x => x.id !== i.id)); notify('Inspeccion eliminada', 'info') }}>✕</button>
                         </div>
                       </td>
                     </tr>

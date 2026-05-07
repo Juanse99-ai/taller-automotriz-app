@@ -407,8 +407,8 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
               {tecTrabajos.length === 0 ? (
                 <div className="empty"><h4>Sin pendientes</h4><p>No hay trabajos pendientes de liquidar.</p></div>
               ) : (
-                <table>
-                  <thead><tr><th style={{width:40}}></th><th>Fecha</th><th>OT</th><th>Placa</th><th>Cliente</th><th style={{textAlign:'center'}}>Comp.</th><th style={{textAlign:'right'}}>M.O.</th><th style={{textAlign:'right'}}>Comision</th></tr></thead>
+                <table className="tbl">
+                  <thead><tr><th style={{width:40}}></th><th>Fecha</th><th>OT</th><th>Placa</th><th>Cliente</th><th style={{textAlign:'center'}}>Comp.</th><th className="c-right">M.O.</th><th className="c-right">Comisión</th></tr></thead>
                   <tbody>
                     {tecTrabajos.map(t => {
                       const mano = getManoObra(t)
@@ -418,13 +418,13 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
                       return (
                         <tr key={t.id} style={{background:selected?'var(--green-50,#f0fdf4)':undefined,cursor:'pointer'}} onClick={() => toggleSeleccion(t.id)}>
                           <td style={{textAlign:'center'}}><input type="checkbox" checked={selected} onChange={() => {}}/></td>
-                          <td style={{color:'var(--text-3)',fontSize:13}}>{fmtDate(t.fecha)}</td>
-                          <td className="mono" style={{color:'var(--blue-600)',fontWeight:700,fontSize:12}}>{t.otCodigo || t.id}</td>
-                          <td className="mono" style={{fontWeight:700}}>{t.placa}</td>
-                          <td>{t.cliente || '—'}</td>
+                          <td className="c-muted">{fmtDate(t.fecha)}</td>
+                          <td className="c-mono" style={{color:'var(--blue-600)',fontWeight:700}}>{t.otCodigo || t.id}</td>
+                          <td className="c-mono" style={{fontWeight:700}}>{t.placa}</td>
+                          <td className="c-name">{t.cliente || '—'}</td>
                           <td style={{textAlign:'center'}}><input type="checkbox" checked={esComp} onClick={e=>e.stopPropagation()} onChange={()=>toggleCompartido(t.id)}/></td>
-                          <td className="mono" style={{textAlign:'right'}}>{fmt(mano)}</td>
-                          <td className="mono" style={{textAlign:'right',color:'var(--green-600)',fontWeight:600}}>
+                          <td className="c-mono c-right">{fmt(mano)}</td>
+                          <td className="c-mono c-right" style={{color:'var(--green-600)',fontWeight:600}}>
                             {fmt(Math.round(com))}
                             {esComp && <span style={{display:'block',fontSize:10,color:'var(--text-3)'}}>50/50</span>}
                           </td>
@@ -451,16 +451,16 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
               {tecMovs.length === 0 ? (
                 <p style={{fontSize:13,color:'var(--text-3)'}}>Sin movimientos registrados.</p>
               ) : (
-                <table>
-                  <thead><tr><th>Fecha</th><th>Tipo</th><th>Nota</th><th style={{textAlign:'right'}}>Monto</th><th></th></tr></thead>
+                <table className="tbl">
+                  <thead><tr><th>Fecha</th><th>Tipo</th><th>Nota</th><th className="c-right">Monto</th><th></th></tr></thead>
                   <tbody>
                     {tecMovs.sort((a,b)=>new Date(b.fecha)-new Date(a.fecha)).map(m=>(
                       <tr key={m.id}>
-                        <td style={{color:'var(--text-3)',fontSize:13}}>{fmtDate(m.fecha)}</td>
-                        <td style={{fontSize:13,textTransform:'capitalize'}}>{m.tipo}</td>
-                        <td style={{fontSize:13}}>{m.nota||'—'}</td>
-                        <td className="mono" style={{textAlign:'right',color:'var(--amber-500)'}}>{fmt(m.monto)}</td>
-                        <td><button className="btn btn-ghost btn-sm" onClick={()=>eliminarMovimiento(m.id)}>X</button></td>
+                        <td className="c-muted">{fmtDate(m.fecha)}</td>
+                        <td style={{textTransform:'capitalize'}}>{m.tipo}</td>
+                        <td className="c-muted">{m.nota||'—'}</td>
+                        <td className="c-mono c-right" style={{color:'var(--amber-500)'}}>{fmt(m.monto)}</td>
+                        <td><button className="btn btn-ghost btn-sm" onClick={()=>eliminarMovimiento(m.id)}>✕</button></td>
                       </tr>
                     ))}
                   </tbody>
