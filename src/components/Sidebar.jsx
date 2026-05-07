@@ -136,8 +136,8 @@ export default function Sidebar({ active, onNavigate, isOpen, collapsed, onColla
           <img src="/logo.png" alt="MDA" />
         </div>
         <div className="wm">
-          <div className="n">Multidiagnosticos</div>
-          <div className="s">AS · Taller</div>
+          <div className="n">Multidiagnosticos AS</div>
+          <div className="s">Taller Automotriz</div>
         </div>
       </div>
 
