@@ -39,7 +39,7 @@ const HamburgerIcon = () => (
   </svg>
 )
 
-export default function TopBar({ title, subtitle, onHamburger, user, trabajos, onNavigate }) {
+export default function TopBar({ title, subtitle, onToggleSidebar, user, trabajos, onNavigate }) {
   const [query, setQuery] = useState('')
   const [results, setResults] = useState([])
   const [showResults, setShowResults] = useState(false)
@@ -83,11 +83,10 @@ export default function TopBar({ title, subtitle, onHamburger, user, trabajos, o
 
   return (
     <>
-      <button className="mobile-toggle" onClick={onHamburger} aria-label="Menu">
-        <HamburgerIcon />
-      </button>
-
       <header className="topbar">
+        <button className="topbar__menu" onClick={onToggleSidebar} aria-label="Abrir menú">
+          <HamburgerIcon />
+        </button>
         <div className="title">
           <h1>{title}</h1>
           <p>{subtitle}</p>

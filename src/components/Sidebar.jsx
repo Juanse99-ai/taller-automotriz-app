@@ -118,7 +118,7 @@ const NAV = [
   ]},
 ]
 
-export default function Sidebar({ active, onNavigate, isOpen, collapsed, onToggleCollapse, seccionesPermitidas, user, onLogout, trabajos = [] }) {
+export default function Sidebar({ active, onNavigate, isOpen, collapsed, onCollapse, seccionesPermitidas, user, onLogout, trabajos = [] }) {
   const allowed = seccionesPermitidas || []
 
   // Pill rojo en Trabajos: pendientes + en progreso (alerta de carga del taller)
@@ -139,6 +139,17 @@ export default function Sidebar({ active, onNavigate, isOpen, collapsed, onToggl
           <div className="n">Multidiagnosticos</div>
           <div className="s">AS · Taller</div>
         </div>
+        <button
+          className="sidebar__collapse"
+          onClick={onCollapse}
+          title={collapsed ? 'Expandir' : 'Colapsar'}
+          aria-label="Colapsar menú"
+        >
+          {collapsed
+            ? <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+            : <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          }
+        </button>
       </div>
 
       <nav className="sidebar__nav">
@@ -163,15 +174,6 @@ export default function Sidebar({ active, onNavigate, isOpen, collapsed, onToggl
           )
         })}
       </nav>
-
-      <button className="sidebar-collapse-btn" onClick={onToggleCollapse} title={collapsed ? 'Expandir sidebar' : 'Colapsar sidebar'}>
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          {collapsed
-            ? <><polyline points="9 18 15 12 9 6"/></>
-            : <><polyline points="15 18 9 12 15 6"/></>
-          }
-        </svg>
-      </button>
 
       {user && (
         <div className="sidebar__foot">

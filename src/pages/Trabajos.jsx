@@ -676,62 +676,59 @@ function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [] }) {
 
   return (
     <div>
-      <div className="flex justify-between items-center mb-4" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <h3 style={{ fontSize: 16, fontWeight: 700 }}>{isEdit ? 'Editar Trabajo' : 'Nuevo Trabajo'}</h3>
-        <button className="btn btn-outline" onClick={onCancel}>Volver</button>
+      <div className="pagehd">
+        <div><h2>{isEdit ? 'Editar Trabajo' : 'Nuevo Trabajo'}</h2></div>
+        <div className="actions"><button className="btn btn-outline" onClick={onCancel}>Volver</button></div>
       </div>
 
       <form onSubmit={handleSubmit}>
         {/* CLIENTE */}
         <div className="card">
-          <div className="card-title">Cliente</div>
-          <div className="form-row">
-            <div className="form-group" style={{ position: 'relative' }}>
-              <label className="form-label">Cedula / NIT</label>
-              <input className="form-input" value={form.cedula} placeholder="Buscar por documento..."
+          <div className="card__h"><h3>Cliente</h3></div>
+          <div className="card__b" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+            <div className="field" style={{ position: 'relative' }}>
+              <label>Cedula / NIT <span className="req">*</span></label>
+              <input className="input" value={form.cedula} placeholder="Buscar por documento..."
                 onChange={e => { set('cedula', e.target.value); buscarDebounced(e.target.value) }} />
               {resultados.length > 0 && (
-                <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 20, background: '#fff', border: '1px solid var(--slate-200)', borderRadius: 8, maxHeight: 200, overflowY: 'auto', boxShadow: 'var(--shadow-md)' }}>
+                <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 20, background: 'var(--bg-raised)', border: '1px solid var(--border)', borderRadius: 8, maxHeight: 200, overflowY: 'auto', boxShadow: 'var(--shadow-md)' }}>
                   {resultados.map((c, i) => (
                     <div key={i} onClick={() => seleccionarCliente(c)}
-                      style={{ padding: '10px 14px', cursor: 'pointer', borderBottom: '1px solid var(--slate-100)', fontSize: 13 }}>
+                      style={{ padding: '10px 14px', cursor: 'pointer', borderBottom: '1px solid var(--border)', fontSize: 13 }}>
                       <strong>{normalizarDoc(c)}</strong> — {normalizarNombre(c)}
-                      {c.telefono && <span className="text-muted" style={{ marginLeft: 8 }}>{c.telefono}</span>}
+                      {c.telefono && <span style={{ marginLeft: 8, color: 'var(--text-3)' }}>{c.telefono}</span>}
                     </div>
                   ))}
                 </div>
               )}
-              {buscando && <span className="text-xs text-muted mt-2" style={{ display: 'block' }}>Buscando en Cuentti...</span>}
+              {buscando && <span className="help">Buscando en Cuentti...</span>}
             </div>
-            <div className="form-group">
-              <label className="form-label">Nombre del Cliente</label>
-              <input className="form-input" value={form.cliente} required placeholder="Nombre completo"
+            <div className="field">
+              <label>Nombre del Cliente</label>
+              <input className="input" value={form.cliente} required placeholder="Nombre completo"
                 onChange={e => { set('cliente', e.target.value); buscarDebounced(e.target.value) }} />
             </div>
-          </div>
-          <div className="form-row">
-            <div className="form-group">
-              <label className="form-label">Telefono</label>
-              <input className="form-input" value={form.telefonoCliente} placeholder="300..." onChange={e => set('telefonoCliente', e.target.value)} />
+            <div className="field">
+              <label>Telefono</label>
+              <input className="input" value={form.telefonoCliente} placeholder="300..." onChange={e => set('telefonoCliente', e.target.value)} />
             </div>
-            <div className="form-group">
-              <label className="form-label">Email</label>
-              <input className="form-input" type="email" value={form.emailCliente} placeholder="email@..." onChange={e => set('emailCliente', e.target.value)} />
+            <div className="field">
+              <label>Email</label>
+              <input className="input" type="email" value={form.emailCliente} placeholder="email@..." onChange={e => set('emailCliente', e.target.value)} />
             </div>
           </div>
         </div>
 
         {/* VEHICULO */}
         <div className="card">
-          <div className="card-title">Vehiculo</div>
-          <div className="form-row">
-            <div className="form-group">
-              <label className="form-label">Placa *</label>
-              <input className="form-input" value={form.placa} required placeholder="ABC123" style={{ textTransform: 'uppercase' }}
+          <div className="card__h"><h3>Vehiculo</h3></div>
+          <div className="card__b" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 14 }}>
+            <div className="field">
+              <label>Placa <span className="req">*</span></label>
+              <input className="input" value={form.placa} required placeholder="ABC123" style={{ textTransform: 'uppercase' }}
                 onChange={e => {
                   const placa = e.target.value.toUpperCase()
                   set('placa', placa)
-                  // Auto-fill vehicle data from previous work
                   if (placa.length >= 6) {
                     const prev = allTrabajos.find(t => (t.placa || '').toUpperCase() === placa && t.id !== trabajo?.id)
                     if (prev) {
@@ -744,33 +741,31 @@ function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [] }) {
                   }
                 }} />
             </div>
-            <div className="form-group">
-              <label className="form-label">Marca *</label>
-              <select className="form-select" value={form.marca} required onChange={e => { set('marca', e.target.value); set('modelo', '') }}>
+            <div className="field">
+              <label>Marca <span className="req">*</span></label>
+              <select className="input" value={form.marca} required onChange={e => { set('marca', e.target.value); set('modelo', '') }}>
                 <option value="">Seleccionar...</option>
                 {MARCAS.map(m => <option key={m} value={m}>{m}</option>)}
               </select>
             </div>
-            <div className="form-group">
-              <label className="form-label">Modelo</label>
-              <select className="form-select" value={form.modelo} onChange={e => set('modelo', e.target.value)} disabled={!form.marca}>
+            <div className="field">
+              <label>Modelo</label>
+              <select className="input" value={form.modelo} onChange={e => set('modelo', e.target.value)} disabled={!form.marca}>
                 <option value="">Seleccionar...</option>
                 {modelosTrabajo.map(m => <option key={m} value={m}>{m}</option>)}
               </select>
             </div>
-          </div>
-          <div className="form-row">
-            <div className="form-group">
-              <label className="form-label">Ano</label>
-              <input className="form-input" type="number" value={form.ano} min="1980" max="2030" onChange={e => set('ano', e.target.value)} />
+            <div className="field">
+              <label>Ano</label>
+              <input className="input" type="number" value={form.ano} min="1980" max="2030" onChange={e => set('ano', e.target.value)} />
             </div>
-            <div className="form-group">
-              <label className="form-label">Kilometraje</label>
-              <input className="form-input" type="number" value={form.kilometraje} min="0" placeholder="45000" onChange={e => set('kilometraje', e.target.value)} />
+            <div className="field">
+              <label>Kilometraje</label>
+              <input className="input" type="number" value={form.kilometraje} min="0" placeholder="45000" onChange={e => set('kilometraje', e.target.value)} />
             </div>
-            <div className="form-group">
-              <label className="form-label">Tecnico</label>
-              <select className="form-select" value={form.tecnicoId} onChange={e => set('tecnicoId', e.target.value)}>
+            <div className="field">
+              <label>Tecnico</label>
+              <select className="input" value={form.tecnicoId} onChange={e => set('tecnicoId', e.target.value)}>
                 <option value="">Seleccionar</option>
                 {TECNICOS.map(t => <option key={t.id} value={t.id}>{t.nombre}</option>)}
               </select>
@@ -817,17 +812,17 @@ function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [] }) {
 
         {/* EVIDENCIAS */}
         <div className="card">
-          <div className="card-title">Evidencias (ingreso y entrega)</div>
-          <div className="form-row">
-            <div className="form-group" style={{ flex: 1 }}>
-              <label className="form-label">Ingreso (como llega)</label>
-              <div className="text-xs text-muted" style={{ marginBottom: 6 }}>Frente, lados, parte trasera.</div>
+          <div className="card__h"><h3>Evidencias (ingreso y entrega)</h3></div>
+          <div className="card__b" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+            <div className="field">
+              <label>Ingreso (como llega)</label>
+              <span className="help">Frente, lados, parte trasera.</span>
               <input type="file" accept="image/*" multiple onChange={e => addFotos('evidenciasIngreso', e.target.files)} />
               <ThumbGrid fotos={form.evidenciasIngreso} onNota={(id, nota) => actualizarNotaFoto('evidenciasIngreso', id, nota)} onRemove={id => quitarFoto('evidenciasIngreso', id)} />
             </div>
-            <div className="form-group" style={{ flex: 1 }}>
-              <label className="form-label">Entrega</label>
-              <div className="text-xs text-muted" style={{ marginBottom: 6 }}>Despues del trabajo.</div>
+            <div className="field">
+              <label>Entrega</label>
+              <span className="help">Despues del trabajo.</span>
               <input type="file" accept="image/*" multiple onChange={e => addFotos('evidenciasEntrega', e.target.files)} />
               <ThumbGrid fotos={form.evidenciasEntrega} onNota={(id, nota) => actualizarNotaFoto('evidenciasEntrega', id, nota)} onRemove={id => quitarFoto('evidenciasEntrega', id)} />
             </div>
@@ -836,19 +831,19 @@ function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [] }) {
 
         {/* ITEMS */}
         <div className="card">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <div className="card-title" style={{ marginBottom: 0 }}>Repuestos y Servicios</div>
-              {invLoading ? (
-                <span className="text-xs text-muted">Cargando inventario...</span>
-              ) : (
-                <span className="text-xs text-muted">({inventario.length} productos)</span>
-              )}
-            </div>
+          <div className="card__h">
+            <h3>Repuestos y Servicios {invLoading
+              ? <span className="count">Cargando...</span>
+              : <span className="count">{inventario.length} productos</span>
+            }</h3>
             <button type="button" className="btn btn-outline btn-sm" onClick={addItem}>+ Agregar linea</button>
           </div>
           {items.length === 0 ? (
-            <p className="text-sm text-muted text-center" style={{ padding: 24 }}>Sin items. Usa el boton para agregar repuestos o servicios.</p>
+            <div style={{ padding: '36px 20px', textAlign: 'center', color: 'var(--text-3)', fontSize: 13.5 }}>
+              <div style={{ fontSize: 28, opacity: .3, marginBottom: 8 }}>📦</div>
+              <div style={{ fontWeight: 600, color: 'var(--text-2)' }}>Sin repuestos ni servicios</div>
+              <div style={{ marginTop: 4, fontSize: 12.5 }}>Usa el boton <strong>+ Agregar linea</strong> para anadir items.</div>
+            </div>
           ) : (
             <div className="table-wrap">
               <table>
@@ -998,52 +993,40 @@ function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [] }) {
           )}
 
           {/* Totales */}
-          <div style={{ marginTop: 16, borderTop: '1px solid var(--slate-200)', paddingTop: 14 }}>
-            <div className="totals-row">
-              <div className="text-sm">
-                <span className="text-muted">M.O.:</span>{' '}
-                <span className="text-mono">{fmt(totales.manoObra)}</span>
-              </div>
-              <div className="text-sm">
-                <span className="text-muted">Repuestos:</span>{' '}
-                <span className="text-mono">{fmt(totales.repuestos)}</span>
-              </div>
-              <div className="text-sm">
-                <span className="text-muted">Subtotal:</span>{' '}
-                <span className="text-mono">{fmt(totales.subtotal)}</span>
-              </div>
-              <div className="text-sm">
-                <span className="text-muted">IVA:</span>{' '}
-                <span className="text-mono">{fmt(totales.iva)}</span>
-              </div>
-              <div style={{ fontSize: 16, fontWeight: 800 }}>
-                <span>Total: </span>
-                <span className="text-mono" style={{ color: 'var(--green-500)' }}>{fmt(totales.total)}</span>
-              </div>
-            </div>
+          <div style={{
+            display: 'flex', justifyContent: 'flex-end', gap: 24, padding: '14px 18px',
+            background: 'var(--bg-subtle)', borderTop: '1px solid var(--border)',
+            fontSize: 13, fontFamily: 'var(--mono)'
+          }}>
+            <span><span style={{ color: 'var(--text-3)' }}>M.O.:</span> {fmt(totales.manoObra)}</span>
+            <span><span style={{ color: 'var(--text-3)' }}>Repuestos:</span> {fmt(totales.repuestos)}</span>
+            <span><span style={{ color: 'var(--text-3)' }}>Subtotal:</span> {fmt(totales.subtotal)}</span>
+            <span><span style={{ color: 'var(--text-3)' }}>IVA:</span> {fmt(totales.iva)}</span>
+            <span style={{ fontWeight: 800, color: 'var(--green-600)' }}>Total: {fmt(totales.total)}</span>
           </div>
         </div>
 
         {/* OBSERVACIONES */}
         <div className="card">
-          <div className="card-title">Observaciones</div>
-          <div className="form-row">
-            <div className="form-group">
-              <label className="form-label">Fecha</label>
-              <input className="form-input" type="date" value={form.fecha} onChange={e => set('fecha', e.target.value)} />
+          <div className="card__h"><h3>Observaciones</h3></div>
+          <div className="card__b" style={{ display: 'grid', gridTemplateColumns: isEdit ? '1fr 1fr' : '1fr', gap: 14 }}>
+            <div className="field">
+              <label>Fecha</label>
+              <input className="input" type="date" value={form.fecha} onChange={e => set('fecha', e.target.value)} />
             </div>
             {isEdit && (
-              <div className="form-group">
-                <label className="form-label">Estado</label>
-                <select className="form-select" value={form.estado} onChange={e => set('estado', e.target.value)}>
+              <div className="field">
+                <label>Estado</label>
+                <select className="input" value={form.estado} onChange={e => set('estado', e.target.value)}>
                   {Object.values(ESTADOS).map(e => <option key={e} value={e}>{e}</option>)}
                 </select>
               </div>
             )}
-          </div>
-          <div className="form-group">
-            <textarea className="form-textarea" value={form.observaciones} placeholder="Diagnostico, notas, recomendaciones..."
-              onChange={e => set('observaciones', e.target.value)} />
+            <div className="field" style={{ gridColumn: '1 / -1' }}>
+              <label>Diagnostico / Notas</label>
+              <textarea className="input" value={form.observaciones} placeholder="Diagnostico, notas, recomendaciones..."
+                onChange={e => set('observaciones', e.target.value)} style={{ minHeight: 88, resize: 'vertical' }} />
+            </div>
           </div>
         </div>
 

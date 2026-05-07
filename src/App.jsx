@@ -66,7 +66,9 @@ export default function App() {
   const [user, setUser] = useState(() => getSession())
   const [section, setSection] = useState('dashboard')
   const [sidebarOpen, setSidebarOpen] = useState(false)
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => localStorage.getItem('mda-sidebar-collapsed') === 'true')
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
+    try { return localStorage.getItem('mda:sidebar') === 'collapsed' } catch { return false }
+  })
   const [toast, setToast] = useState(null)
   const trabajosHook = useTrabajos()
   const clientesHook = useClientes()
@@ -87,10 +89,19 @@ export default function App() {
 
   const toggleSidebarCollapse = useCallback(() => {
     setSidebarCollapsed(c => {
-      localStorage.setItem('mda-sidebar-collapsed', String(!c))
-      return !c
+      const v = !c
+      try { localStorage.setItem('mda:sidebar', v ? 'collapsed' : 'expanded') } catch {}
+      return v
     })
   }, [])
+
+  const onToggleSidebar = useCallback(() => {
+    if (window.matchMedia('(max-width:960px)').matches) {
+      setSidebarOpen(o => !o)
+    } else {
+      toggleSidebarCollapse()
+    }
+  }, [toggleSidebarCollapse])
 
   const handleLogout = useCallback(() => {
     logout()
@@ -190,13 +201,13 @@ export default function App() {
   }
 
   return (
-    <div className={`app${sidebarCollapsed ? ' sidebar-is-collapsed' : ''}`}>
+    <div className={`app${sidebarCollapsed ? ' has-collapsed' : ''}`}>
       <Sidebar
         active={section}
         onNavigate={navigate}
         isOpen={sidebarOpen}
         collapsed={sidebarCollapsed}
-        onToggleCollapse={toggleSidebarCollapse}
+        onCollapse={toggleSidebarCollapse}
         seccionesPermitidas={seccionesPermitidas}
         user={user}
         onLogout={handleLogout}
@@ -206,7 +217,7 @@ export default function App() {
         <TopBar
           title={sec.title}
           subtitle={sec.subtitle}
-          onHamburger={() => setSidebarOpen(o => !o)}
+          onToggleSidebar={onToggleSidebar}
           user={user}
           onLogout={handleLogout}
           trabajos={trabajosHook.trabajos}
