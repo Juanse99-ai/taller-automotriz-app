@@ -5,13 +5,10 @@ import { uid } from '../utils/helpers'
 import { ESTADOS } from '../utils/constants'
 
 // Normaliza un row de Supabase al modelo del front
-// NOTA: Supabase 'id' es integer auto-generado, usamos 'ot_codigo' como ID logico
+// Despues de migracion: id es text en Supabase — mismo ID que el front
 function normalizar(r) {
-  // Si viene de Supabase (tiene ot_codigo y id numerico), usar ot_codigo como id local
-  // Si viene de localStorage (id es texto), mantener como esta
-  const esDeSupabase = typeof r.id === 'number' || (r.plate !== undefined)
   return {
-    id: esDeSupabase ? (r.ot_codigo || `sb-${r.id}`) : (r.id || r.ot_codigo || r.otCodigo || ''),
+    id: r.id || r.ot_codigo || r.otCodigo || '',
     fecha: r.fecha || r.created_at,
     cedula: r.cedula_cliente || r.cedula || '',
     cliente: r.cliente || '',
@@ -67,13 +64,14 @@ export function useTrabajos() {
   // Merge inteligente: Supabase es fuente de verdad, pero preservar datos solo-locales
   const mergeConLocal = useCallback((sbNormalized) => {
     const local = trabajosRef.current
-    const sbByOt = new Map()
-    sbNormalized.forEach(t => { if (t.otCodigo) sbByOt.set(t.otCodigo, t) })
+    const sbById = new Set(sbNormalized.map(t => t.id).filter(Boolean))
+    const sbByOt = new Set(sbNormalized.map(t => t.otCodigo).filter(Boolean))
 
     // Trabajos que estan en local pero NO en Supabase (pendientes de subir)
     const soloLocales = local.filter(t => {
-      if (!t.otCodigo) return true // Sin OT code, mantener local
-      return !sbByOt.has(t.otCodigo)
+      if (sbById.has(t.id)) return false
+      if (t.otCodigo && sbByOt.has(t.otCodigo)) return false
+      return true
     })
 
     // Resultado: Supabase primero (fuente de verdad) + solo-locales al final
@@ -89,8 +87,11 @@ export function useTrabajos() {
 
       // Detectar trabajos locales sin subir y reintentar
       const local = trabajosRef.current
+      const sbIds = new Set(normalized.map(t => t.id).filter(Boolean))
       const sbOtCodigos = new Set(normalized.map(t => t.otCodigo).filter(Boolean))
-      const pendientes = local.filter(t => t.otCodigo && !sbOtCodigos.has(t.otCodigo))
+      const pendientes = local.filter(t =>
+        !sbIds.has(t.id) && (!t.otCodigo || !sbOtCodigos.has(t.otCodigo))
+      )
 
       if (pendientes.length > 0) {
         console.log(`[Sync] Subiendo ${pendientes.length} trabajos pendientes`)
@@ -247,11 +248,9 @@ export function useTrabajos() {
   }, [nextOtCodigo])
 
   const eliminarTrabajo = useCallback(async (id) => {
-    const trabajo = trabajosRef.current.find(t => t.id === id)
     setTrabajos(prev => prev.filter(t => t.id !== id))
-    // Usar otCodigo para eliminar en Supabase (no el id local)
-    if (trabajo?.otCodigo) {
-      sbDelete(trabajo.otCodigo)
+    if (id) {
+      sbDelete(id)
     }
   }, [])
 

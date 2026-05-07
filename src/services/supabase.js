@@ -41,10 +41,10 @@ export async function fetchTrabajos() {
 
 export async function upsertTrabajo(trabajo, opts = {}) {
   const maxRetries = opts.retries ?? 2
-  // NOTA: No enviar 'id' — es integer auto-generado en Supabase
-  // Usar 'ot_codigo' como clave de sincronizacion entre dispositivos
+  // Despues de migracion: id es text — enviar id del front directamente
   const row = {
-    plate: trabajo.placa || 'N/A', // NOT NULL en esquema original
+    id: trabajo.id,
+    plate: trabajo.placa || null,
     fecha: trabajo.fecha,
     cedula_cliente: trabajo.cedula || '',
     cliente: trabajo.cliente || '',
@@ -72,45 +72,13 @@ export async function upsertTrabajo(trabajo, opts = {}) {
   if (trabajo.facturadoEn) row.facturado_en = trabajo.facturadoEn
   if (trabajo.cuenttiResolucion) row.cuentti_resolucion = trabajo.cuenttiResolucion
 
-  const otCodigo = trabajo.otCodigo || ''
-
-  // Patron find-then-update: buscar por ot_codigo, si existe → PATCH, si no → INSERT
-  if (otCodigo) {
-    try {
-      const findRes = await fetchWithTimeout(
-        `${baseProxy}&ot_codigo=eq.${encodeURIComponent(otCodigo)}&select=id&limit=1`
-      )
-      if (findRes.ok) {
-        const existing = await findRes.json()
-        if (existing.length > 0) {
-          // PATCH registro existente
-          const patchRes = await fetchWithTimeout(
-            `${baseProxy}&ot_codigo=eq.${encodeURIComponent(otCodigo)}`,
-            {
-              method: 'PATCH',
-              headers: { 'Content-Type': 'application/json', 'Prefer': 'return=representation' },
-              body: JSON.stringify(row),
-            }
-          )
-          if (patchRes.ok) {
-            const data = await patchRes.json()
-            return Array.isArray(data) ? data[0] : data
-          }
-        }
-      }
-    } catch (e) {
-      // Si falla la busqueda, intentar INSERT
-      console.warn('Find existente fallo, intentando insert:', e.message)
-    }
-  }
-
-  // INSERT nuevo registro (sin id — auto-generado)
+  // Upsert estandar: si existe id → actualiza, si no → inserta
   let lastErr = null
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
-      const res = await fetchWithTimeout(baseProxy, {
+      const res = await fetchWithTimeout(`${baseProxy}&upsert=true`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Prefer': 'return=representation' },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(row),
       })
       if (!res.ok) throw new Error(`${res.status}: ${await res.text()}`)
@@ -123,16 +91,15 @@ export async function upsertTrabajo(trabajo, opts = {}) {
       }
     }
   }
-  console.warn(`Supabase upsertTrabajo (${otCodigo || trabajo.id}) fallo:`, lastErr?.message)
+  console.warn(`Supabase upsertTrabajo (${trabajo.id}) fallo:`, lastErr?.message)
   return null
 }
 
-export async function deleteTrabajo(otCodigo) {
-  if (!otCodigo) return false
+export async function deleteTrabajo(id) {
+  if (!id) return false
   try {
-    // Buscar por ot_codigo (no por id, que es integer auto-generado)
     const res = await fetchWithTimeout(
-      `${baseProxy}&ot_codigo=eq.${encodeURIComponent(otCodigo)}`,
+      `${baseProxy}&id=eq.${encodeURIComponent(id)}`,
       { method: 'DELETE' }
     )
     if (!res.ok) throw new Error(await res.text())
