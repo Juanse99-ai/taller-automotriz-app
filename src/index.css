@@ -144,13 +144,6 @@ input,select,textarea{font-family:inherit;font-size:14px;color:inherit}
 .sidebar__foot .me .n{font-size:12.5px;font-weight:600;color:#fff;line-height:1.2}
 .sidebar__foot .me .r{font-size:10.5px;color:rgba(255,255,255,.45);margin-top:1px}
 
-/* sidebar collapse button (desktop) */
-.sidebar__brand{position:relative}
-.sidebar__collapse{position:absolute;right:10px;top:14px;width:28px;height:28px;border-radius:7px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.08);color:rgba(255,255,255,.7);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:background .12s}
-.sidebar__collapse:hover{background:rgba(255,255,255,.12);color:#fff}
-.sidebar__collapse svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2}
-@media(max-width:960px){.sidebar__collapse{display:none}}
-
 /* sidebar collapsed state (desktop only) */
 .sidebar.collapsed{width:72px}
 .sidebar.collapsed .wm,
@@ -160,7 +153,6 @@ input,select,textarea{font-family:inherit;font-size:14px;color:inherit}
 .sidebar.collapsed .sidebar__foot .me{display:none}
 .sidebar.collapsed .navlink{justify-content:center;padding:10px}
 .sidebar.collapsed .sidebar__brand{justify-content:center;padding:18px 8px}
-.sidebar.collapsed .sidebar__collapse{position:static;margin-top:8px}
 .sidebar.collapsed .sidebar__foot{justify-content:center;padding:14px 8px}
 .sidebar.collapsed .sidebar__foot .icobtn{display:none}
 .app.has-collapsed .main{margin-left:72px}
