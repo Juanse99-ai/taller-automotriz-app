@@ -176,7 +176,7 @@ input,select,textarea{font-family:inherit;font-size:14px;color:inherit}
 .topbar .icobtn:hover{background:var(--bg-subtle);color:var(--text)}
 .topbar .icobtn svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.8}
 .topbar .icobtn .dot{position:absolute;top:7px;right:7px;width:7px;height:7px;border-radius:50%;background:var(--red-500);box-shadow:0 0 0 2px var(--bg-raised)}
-.content{padding:26px 28px 48px;max-width:1440px}
+.content{padding:26px 28px 48px;max-width:1440px;width:100%}
 
 /* page head */
 .pagehd{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:22px;flex-wrap:wrap}
