@@ -1,6 +1,9 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48">
-  <rect width="48" height="48" rx="10" fill="#1e293b"/>
-  <text x="11" y="28" font-family="Arial Black, Arial, sans-serif" font-weight="900" font-size="20" fill="#3b82f6">A</text>
-  <text x="24" y="38" font-family="Arial Black, Arial, sans-serif" font-weight="900" font-size="20" fill="#ef4444">S</text>
-  <rect x="4" y="40" width="40" height="4" rx="2" fill="#1d4ed8"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
+  <rect width="64" height="64" rx="14" fill="#1e293b"/>
+  <!-- A -->
+  <path d="M12 44 L22 16 L26 16 L36 44 L31 44 L29 38 L19 38 L17 44 Z M20.5 34 L27.5 34 L24 22 Z" fill="#3b82f6"/>
+  <!-- S -->
+  <path d="M38 28 C38 23 40 20 46 20 C52 20 54 23 54 26 L50 26 C50 24.5 49 23 46 23 C43 23 42 24.5 42 26 C42 27.5 43 28.5 46 29.5 C51 31 54 32.5 54 37 C54 42 51 45 46 45 C40 45 38 42 38 38 L42 38 C42 40.5 43.5 42 46 42 C49 42 50 40.5 50 38 C50 36 49 35 46 34 C41 32 38 31 38 28 Z" fill="#ef4444"/>
+  <!-- Barra inferior -->
+  <rect x="8" y="52" width="48" height="5" rx="2.5" fill="#1d4ed8"/>
 </svg>
