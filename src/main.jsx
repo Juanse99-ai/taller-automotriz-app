@@ -3,15 +3,20 @@ import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.jsx'
 
-// Forzar favicon desde logo.png (evitar cache del viejo)
+// Forzar favicon — elimina TODOS los viejos e inyecta .ico con cache-bust
 ;(() => {
-  const old = document.querySelector('link[rel="icon"]')
-  if (old) old.remove()
-  const link = document.createElement('link')
-  link.rel = 'icon'
-  link.type = 'image/png'
-  link.href = '/logo.png?' + Date.now()
-  document.head.appendChild(link)
+  document.querySelectorAll('link[rel="icon"], link[rel="shortcut icon"]').forEach(el => el.remove())
+  const ico = document.createElement('link')
+  ico.rel = 'icon'
+  ico.type = 'image/x-icon'
+  ico.href = '/favicon.ico?' + Date.now()
+  document.head.appendChild(ico)
+  const png = document.createElement('link')
+  png.rel = 'icon'
+  png.type = 'image/png'
+  png.sizes = '64x64'
+  png.href = '/logo.png?' + Date.now()
+  document.head.appendChild(png)
 })()
 
 createRoot(document.getElementById('root')).render(
