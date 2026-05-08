@@ -69,7 +69,8 @@ export default function Cotizaciones({ notify, trabajos = [], onCrearTrabajo, co
       head: [['DATOS DEL VEHICULO', '', '', '']],
       body: [
         ['Placa:', c.placa || '—', 'Marca:', c.marca || '—'],
-        ['Modelo:', c.modelo || '—', '', ''],
+        ['Modelo:', c.modelo || '—', 'Ano:', c.ano ? String(c.ano) : '—'],
+        ...(c.cilindraje ? [['Cilindraje:', c.cilindraje, '', '']] : []),
       ],
       styles: { fontSize: 9, cellPadding: 3 },
       headStyles: { fillColor: [30, 41, 59], textColor: 255, fontSize: 10 },
@@ -266,7 +267,7 @@ export default function Cotizaciones({ notify, trabajos = [], onCrearTrabajo, co
                       <td className="c-mono">{c.id}</td>
                       <td className="c-name">{c.cliente || '—'}</td>
                       <td className="c-mono" style={{ fontWeight: 700 }}>{c.placa || '—'}</td>
-                      <td className="c-muted">{[c.marca, c.modelo].filter(Boolean).join(' ') || '—'}</td>
+                      <td className="c-muted">{[c.marca, c.modelo, c.ano].filter(Boolean).join(' ') || '—'}</td>
                       <td><span className={`badge ${bc}`}>{c.estado}</span></td>
                       <td className="c-right c-mono">{fmt(c.total)}</td>
                       <td className="c-muted">{fmtDate(c.fecha)}</td>
@@ -309,6 +310,8 @@ function CotizacionForm({ cotizacion, trabajos = [], onSave, onCancel }) {
     placa: cotizacion?.placa || '',
     marca: cotizacion?.marca || '',
     modelo: cotizacion?.modelo || '',
+    ano: cotizacion?.ano || '',
+    cilindraje: cotizacion?.cilindraje || '',
     observaciones: cotizacion?.observaciones || '',
     validezDias: cotizacion?.validezDias || 15,
   })
@@ -405,7 +408,7 @@ function CotizacionForm({ cotizacion, trabajos = [], onSave, onCancel }) {
   const handleSubmit = (e) => {
     e.preventDefault()
     if (!form.cliente) return
-    onSave({ ...form, placa: (form.placa || '').toUpperCase(), items, ...totales })
+    onSave({ ...form, placa: (form.placa || '').toUpperCase(), ano: parseInt(form.ano) || null, items, ...totales })
   }
 
   return (
@@ -487,39 +490,21 @@ function CotizacionForm({ cotizacion, trabajos = [], onSave, onCancel }) {
                 </select>
               </div>
             </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 14, marginTop: 14 }}>
+              <div className="field">
+                <label>Ano</label>
+                <input className="input" type="number" value={form.ano} placeholder="2024" min="1950" max="2030"
+                  onChange={e => set('ano', e.target.value)} />
+              </div>
+              <div className="field">
+                <label>Cilindraje (cc)</label>
+                <input className="input" value={form.cilindraje} placeholder="Ej: 1600, 2000, 3.0L"
+                  onChange={e => set('cilindraje', e.target.value)} />
+              </div>
+              <div className="field" />
+            </div>
           </div>
         </div>
-
-        {form.placa.length >= 6 && (() => {
-          const historial = trabajos.filter(t =>
-            (t.placa || '').toUpperCase() === form.placa.toUpperCase()
-          ).sort((a, b) => new Date(b.fecha) - new Date(a.fecha))
-          if (!historial.length) return null
-          const tecNombre = (id) => { const t = TECNICOS.find(tc => tc.id === parseInt(id)); return t ? t.nombre : '—' }
-          return (
-            <div className="card" style={{ borderLeft: '4px solid var(--blue-500)' }}>
-              <div className="card__h" style={{ color: 'var(--blue-500)' }}><h3>Historial de {form.placa.toUpperCase()} ({historial.length} trabajos anteriores)</h3></div>
-              <div className="card__b card__b--flush">
-                <table>
-                  <thead>
-                    <tr><th>OT</th><th>Estado</th><th>Tecnico</th><th className="text-right">Total</th><th>Fecha</th></tr>
-                  </thead>
-                  <tbody>
-                    {historial.slice(0, 5).map(t => (
-                      <tr key={t.id}>
-                        <td className="text-mono text-sm">{t.otCodigo || t.id}</td>
-                        <td><span className={`badge ${t.estado === 'Entregado' ? 'badge-success' : t.estado === 'En Proceso' ? 'badge-warning' : 'badge-info'}`}>{t.estado}</span></td>
-                        <td className="text-sm">{tecNombre(t.tecnicoId)}</td>
-                        <td className="text-right text-mono">{fmt(t.total || 0)}</td>
-                        <td className="text-sm text-muted">{fmtDate(t.fecha)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )
-        })()}
 
         <div className="card">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>

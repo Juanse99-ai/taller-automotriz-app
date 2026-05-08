@@ -12,6 +12,8 @@ function normalizarRow(r) {
     placa: r.placa || '',
     marca: r.marca || '',
     modelo: r.modelo || '',
+    ano: r.ano || null,
+    cilindraje: r.cilindraje || '',
     items: typeof r.items === 'string' ? JSON.parse(r.items) : (r.items || []),
     subtotal: parseFloat(r.subtotal) || 0,
     iva: parseFloat(r.iva) || 0,
@@ -85,9 +87,9 @@ export function useCotizaciones() {
 
   useEffect(() => { cargarInicial() }, [cargarInicial])
 
-  // Polling silencioso 30s + focus
+  // Polling silencioso 15s + focus
   useEffect(() => {
-    const interval = setInterval(() => { sincronizar() }, 60000)
+    const interval = setInterval(() => { sincronizar() }, 15000)
     const handleFocus = () => sincronizar()
     window.addEventListener('focus', handleFocus)
     return () => {

@@ -47,7 +47,7 @@ export function useClientes() {
         if (sbData.length > 0) {
           const norm = sbData.map(r => buildRecord({
             id: r.id, cuenttiId: r.cuentti_id, cedula: r.cedula, nombre: r.nombre,
-            telefono: r.telefono, email: r.email, direccion: r.direccion, ciudad: r.ciudad,
+            telefono: r.telefono1 || r.telefono || '', email: r.email, direccion: r.direccion, ciudad: r.ciudad,
             vehiculos: typeof r.vehiculos === 'string' ? JSON.parse(r.vehiculos) : (r.vehiculos || []),
             fechaCreacion: r.fecha_creacion, fechaUltimaVisita: r.fecha_ultima_visita,
             totalVisitas: r.total_visitas, totalGastado: r.total_gastado,
@@ -67,6 +67,37 @@ export function useClientes() {
         }
       } catch { /* use local cache */ }
     })()
+  }, [])
+
+  // Polling silencioso 15s + focus — sync clientes en tiempo real
+  useEffect(() => {
+    const syncClientes = async () => {
+      try {
+        const sbData = await fetchClientesLocal()
+        if (sbData.length > 0) {
+          const norm = sbData.map(r => buildRecord({
+            id: r.id, cuenttiId: r.cuentti_id, cedula: r.cedula, nombre: r.nombre,
+            telefono: r.telefono1 || r.telefono || '', email: r.email, direccion: r.direccion, ciudad: r.ciudad,
+            vehiculos: typeof r.vehiculos === 'string' ? JSON.parse(r.vehiculos) : (r.vehiculos || []),
+            fechaCreacion: r.fecha_creacion, fechaUltimaVisita: r.fecha_ultima_visita,
+            totalVisitas: r.total_visitas, totalGastado: r.total_gastado,
+          }, null))
+          const cedDb = new Set(norm.map(c => c.cedula))
+          const cached = clientesRef.current
+          const merged = [...norm]
+          cached.forEach(c => { if (!cedDb.has(c.cedula)) merged.push(c) })
+          if (merged.length !== clientesRef.current.length || merged.some((m, i) => m.cedula !== (clientesRef.current[i]?.cedula))) {
+            clientesRef.current = merged
+            setClientesTable(merged)
+            lsSet(LS_KEYS.CLIENTES, merged)
+          }
+        }
+      } catch { /* silent */ }
+    }
+    const interval = setInterval(syncClientes, 15000)
+    const handleFocus = () => syncClientes()
+    window.addEventListener('focus', handleFocus)
+    return () => { clearInterval(interval); window.removeEventListener('focus', handleFocus) }
   }, [])
 
   // Persist helper — syncs ref, state, localStorage, and Supabase

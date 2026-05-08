@@ -2,16 +2,43 @@
 -- MIGRACION SUPABASE - App Gestion Taller MDA
 -- Ejecutar en: Supabase Dashboard > SQL Editor > New Query
 -- ============================================================
--- Esta migracion:
--- 1. Desactiva RLS en todas las tablas (permite lectura/escritura desde la app)
--- 2. Corrige tipos de ID (integer → text) para compatibilidad con la app
--- 3. Hace nullable la columna 'plate' legacy
--- 4. Agrega columnas faltantes en 'clientes'
--- ============================================================
+
+-- ==========================================
+-- PASO 0: Eliminar TODAS las FOREIGN KEYS en todas las tablas
+-- (Necesario para poder cambiar tipos de columna)
+-- ==========================================
+DO $$
+DECLARE r RECORD;
+BEGIN
+  FOR r IN (
+    SELECT conname, conrelid::regclass AS tabla
+    FROM pg_constraint
+    WHERE contype = 'f'
+    AND conrelid::regclass::text IN (
+      'trabajos','cotizaciones','vehiculos','clientes','inspecciones',
+      'movimientos_tecnicos','liquidacion_historial','liquidados','trabajos_compartidos'
+    )
+  ) LOOP
+    EXECUTE format('ALTER TABLE %s DROP CONSTRAINT %I', r.tabla, r.conname);
+    RAISE NOTICE 'Eliminada FK: % en tabla %', r.conname, r.tabla;
+  END LOOP;
+  -- Tambien eliminar FKs que REFERENCIAN estas tablas desde otras
+  FOR r IN (
+    SELECT conname, conrelid::regclass AS tabla
+    FROM pg_constraint
+    WHERE contype = 'f'
+    AND confrelid::regclass::text IN (
+      'trabajos','cotizaciones','vehiculos','clientes','inspecciones',
+      'movimientos_tecnicos','liquidacion_historial','liquidados','trabajos_compartidos'
+    )
+  ) LOOP
+    EXECUTE format('ALTER TABLE %s DROP CONSTRAINT %I', r.tabla, r.conname);
+    RAISE NOTICE 'Eliminada FK referenciando: % en tabla %', r.conname, r.tabla;
+  END LOOP;
+END $$;
 
 -- ==========================================
 -- PASO 1: Desactivar Row Level Security
--- (La app usa anon key sin autenticacion de usuario)
 -- ==========================================
 ALTER TABLE IF EXISTS trabajos DISABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS cotizaciones DISABLE ROW LEVEL SECURITY;
@@ -26,15 +53,9 @@ ALTER TABLE IF EXISTS trabajos_compartidos DISABLE ROW LEVEL SECURITY;
 -- ==========================================
 -- PASO 2: Corregir tabla 'trabajos'
 -- ==========================================
--- 2a. Hacer 'plate' nullable (columna legacy, usamos 'placa')
 ALTER TABLE trabajos ALTER COLUMN plate DROP NOT NULL;
-
--- 2b. Cambiar 'id' de integer a text (la app genera IDs como "TR-abc123")
--- Primero quitar el default del sequence
 ALTER TABLE trabajos ALTER COLUMN id DROP DEFAULT;
--- Cambiar tipo a text
 ALTER TABLE trabajos ALTER COLUMN id TYPE text USING id::text;
--- Eliminar sequence huerfano si existe
 DROP SEQUENCE IF EXISTS trabajos_id_seq CASCADE;
 
 -- ==========================================
@@ -44,7 +65,6 @@ ALTER TABLE cotizaciones ALTER COLUMN id DROP DEFAULT;
 ALTER TABLE cotizaciones ALTER COLUMN id TYPE text USING id::text;
 DROP SEQUENCE IF EXISTS cotizaciones_id_seq CASCADE;
 
--- Agregar columnas si no existen
 ALTER TABLE cotizaciones ADD COLUMN IF NOT EXISTS fecha timestamptz;
 ALTER TABLE cotizaciones ADD COLUMN IF NOT EXISTS cedula text DEFAULT '';
 ALTER TABLE cotizaciones ADD COLUMN IF NOT EXISTS cliente text DEFAULT '';
@@ -83,7 +103,6 @@ ALTER TABLE clientes ALTER COLUMN id DROP DEFAULT;
 ALTER TABLE clientes ALTER COLUMN id TYPE text USING id::text;
 DROP SEQUENCE IF EXISTS clientes_id_seq CASCADE;
 
--- Agregar columnas que nuestra app necesita
 ALTER TABLE clientes ADD COLUMN IF NOT EXISTS cedula text DEFAULT '';
 ALTER TABLE clientes ADD COLUMN IF NOT EXISTS vehiculos jsonb DEFAULT '[]';
 ALTER TABLE clientes ADD COLUMN IF NOT EXISTS fecha_creacion timestamptz DEFAULT now();
@@ -91,7 +110,6 @@ ALTER TABLE clientes ADD COLUMN IF NOT EXISTS fecha_ultima_visita timestamptz;
 ALTER TABLE clientes ADD COLUMN IF NOT EXISTS total_visitas integer DEFAULT 0;
 ALTER TABLE clientes ADD COLUMN IF NOT EXISTS total_gastado numeric DEFAULT 0;
 ALTER TABLE clientes ADD COLUMN IF NOT EXISTS cuentti_id text;
--- Copiar 'identificacion' a 'cedula' para registros existentes
 UPDATE clientes SET cedula = identificacion WHERE cedula IS NULL OR cedula = '';
 
 -- ==========================================
@@ -143,16 +161,18 @@ ALTER TABLE liquidacion_historial ADD COLUMN IF NOT EXISTS movimientos jsonb DEF
 ALTER TABLE liquidacion_historial ADD COLUMN IF NOT EXISTS detalle_trabajo jsonb DEFAULT '[]';
 
 -- ==========================================
--- PASO 9: Verificar tablas auxiliares
+-- PASO 9: Tablas auxiliares (trabajo_id a text)
 -- ==========================================
--- liquidados: usa trabajo_id como PK (no tiene columna 'id')
--- Asegurar que trabajo_id sea text
 ALTER TABLE liquidados ALTER COLUMN trabajo_id TYPE text USING trabajo_id::text;
-
--- trabajos_compartidos: usa trabajo_id como PK
 ALTER TABLE trabajos_compartidos ALTER COLUMN trabajo_id TYPE text USING trabajo_id::text;
 
 -- ==========================================
--- VERIFICACION: Mostrar estado final
+-- PASO 10: Columnas adicionales cotizaciones (ano, cilindraje)
+-- ==========================================
+ALTER TABLE cotizaciones ADD COLUMN IF NOT EXISTS ano integer;
+ALTER TABLE cotizaciones ADD COLUMN IF NOT EXISTS cilindraje text DEFAULT '';
+
+-- ==========================================
+-- VERIFICACION
 -- ==========================================
 SELECT 'Migracion completada exitosamente' AS resultado;

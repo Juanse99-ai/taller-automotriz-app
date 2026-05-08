@@ -187,9 +187,9 @@ export function useTrabajos() {
 
   useEffect(() => { cargarInicial() }, [cargarInicial])
 
-  // Polling silencioso cada 60s + re-sync al volver foco
+  // Polling silencioso cada 15s + re-sync al volver foco
   useEffect(() => {
-    const interval = setInterval(() => { sincronizar() }, 60000)
+    const interval = setInterval(() => { sincronizar() }, 15000)
     const handleFocus = () => sincronizar()
     window.addEventListener('focus', handleFocus)
     return () => {
