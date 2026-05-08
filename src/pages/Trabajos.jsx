@@ -117,7 +117,7 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
       head: [['DATOS DEL VEHICULO', '', '', '']],
       body: [
         ['Placa:', t.placa || '—', 'Marca:', t.marca || '—'],
-        ['Modelo:', t.modelo || '—', 'Ano:', String(t.ano || '—')],
+        ['Modelo:', t.modelo || '—', 'Año:', String(t.ano || '—')],
         ['Kilometraje:', `${t.kilometraje || 0} km`, 'Tecnico:', tecNombre(t.tecnicoId)],
       ],
       styles: { fontSize: 9, cellPadding: 3 },
@@ -776,7 +776,7 @@ function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [] }) {
               </select>
             </div>
             <div className="field">
-              <label>Ano</label>
+              <label>Año</label>
               <input className="input" type="number" value={form.ano} min="1980" max="2030" onChange={e => set('ano', e.target.value)} />
             </div>
             <div className="field">

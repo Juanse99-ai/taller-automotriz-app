@@ -79,7 +79,7 @@ export default function Vehiculos({ vehiculos, clientes, notify }) {
                 <div className="field"><label>Placa</label><div className="input" style={{ background: 'var(--bg-subtle)', cursor: 'default' }}>{vehiculoSeleccionado.placa || '--'}</div></div>
                 <div className="field"><label>Marca</label><div className="input" style={{ background: 'var(--bg-subtle)', cursor: 'default' }}>{vehiculoSeleccionado.marca || '--'}</div></div>
                 <div className="field"><label>Modelo</label><div className="input" style={{ background: 'var(--bg-subtle)', cursor: 'default' }}>{vehiculoSeleccionado.modelo || '--'}</div></div>
-                <div className="field"><label>Ano</label><div className="input" style={{ background: 'var(--bg-subtle)', cursor: 'default' }}>{vehiculoSeleccionado.ano || '--'}</div></div>
+                <div className="field"><label>Año</label><div className="input" style={{ background: 'var(--bg-subtle)', cursor: 'default' }}>{vehiculoSeleccionado.ano || '--'}</div></div>
               </div>
             </div>
           </div>
@@ -194,7 +194,7 @@ export default function Vehiculos({ vehiculos, clientes, notify }) {
                     <th>Placa</th>
                     <th>Marca</th>
                     <th>Modelo</th>
-                    <th>Ano</th>
+                    <th>Año</th>
                     <th>Propietario</th>
                     <th>Visitas</th>
                     <th>Ultimo Servicio</th>

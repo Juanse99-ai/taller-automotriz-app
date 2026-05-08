@@ -245,7 +245,7 @@ export default function Recepcion({ hook, vehiculosHook, clientesHook, notify })
                       </select>
                     </div>
                     <div className="field">
-                      <label>Ano</label>
+                      <label>Año</label>
                       <input className="input" type="number" value={form.ano} min="1980" max="2030"
                         onChange={e => set('ano', e.target.value)} />
                     </div>

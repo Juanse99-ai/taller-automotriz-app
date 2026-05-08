@@ -69,7 +69,7 @@ export default function Cotizaciones({ notify, trabajos = [], onCrearTrabajo, co
       head: [['DATOS DEL VEHICULO', '', '', '']],
       body: [
         ['Placa:', c.placa || '—', 'Marca:', c.marca || '—'],
-        ['Modelo:', c.modelo || '—', 'Ano:', c.ano ? String(c.ano) : '—'],
+        ['Modelo:', c.modelo || '—', 'Año:', c.ano ? String(c.ano) : '—'],
         ...(c.cilindraje ? [['Cilindraje:', c.cilindraje, '', '']] : []),
       ],
       styles: { fontSize: 9, cellPadding: 3 },
@@ -492,7 +492,7 @@ function CotizacionForm({ cotizacion, trabajos = [], onSave, onCancel }) {
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 14, marginTop: 14 }}>
               <div className="field">
-                <label>Ano</label>
+                <label>Año</label>
                 <input className="input" type="number" value={form.ano} placeholder="2024" min="1950" max="2030"
                   onChange={e => set('ano', e.target.value)} />
               </div>
