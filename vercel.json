@@ -1,5 +1,6 @@
 {
   "rewrites": [
-    { "source": "/api/cuentti", "destination": "/api/cuentti.js" }
+    { "source": "/api/cuentti", "destination": "/api/cuentti.js" },
+    { "source": "/((?!api|assets|fonts|.*\\..*).*)", "destination": "/index.html" }
   ]
 }
