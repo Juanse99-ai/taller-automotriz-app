@@ -168,6 +168,83 @@ export default function CuenttiPanel({ trabajos, actualizarTrabajo, notify }) {
     }
   }
 
+  // Auto-probar IDs 1-15 hasta encontrar el primero que funcione
+  const autoProbarIds = async (key) => {
+    if (!window.confirm(
+      `Voy a probar IDs 1, 2, 3... hasta 15 para "${METODOS_DEFAULT.find(m => m.key === key)?.nombre}".\n\n` +
+      `Cada prueba crea y anula una factura TEST de $1.\n` +
+      `Maximo 15 facturas test (que se anulan automaticamente).\n` +
+      `Tardara ~30 segundos.\n\n` +
+      `Cuando encuentre el ID correcto, se detiene y lo guarda.\n\n` +
+      `¿Continuar?`
+    )) return
+    setProbandoId({ key, id: 'auto' })
+    let foundId = null
+    for (let id = 1; id <= 15; id++) {
+      setResultadoPrueba(prev => ({ ...prev, [key]: { loading: true, mensaje: `Probando ID ${id}...` } }))
+      try {
+        const res = await probarIdMedioPago(id, idBancoConfig)
+        if (res.ok) {
+          foundId = id
+          guardarMetodoId(key, id)
+          setResultadoPrueba(prev => ({ ...prev, [key]: { ok: true, mensaje: `ID ${id} VALIDO` } }))
+          notify(`✓ Encontrado: ${key} = ID ${id}`, 'success')
+          break
+        }
+        // Si NO es FK violation, es otro tipo de error y debemos parar
+        if (!res.esFkViolation) {
+          setResultadoPrueba(prev => ({ ...prev, [key]: { ok: false, mensaje: `Error en ID ${id}: ${res.mensaje}` } }))
+          notify(`Error inesperado: ${res.mensaje}`, 'error')
+          break
+        }
+      } catch (e) {
+        setResultadoPrueba(prev => ({ ...prev, [key]: { ok: false, mensaje: e.message } }))
+        break
+      }
+    }
+    if (!foundId) {
+      setResultadoPrueba(prev => ({ ...prev, [key]: { ok: false, mensaje: 'Ningun ID 1-15 funciono. Tu Cuentti puede usar IDs mayores.' } }))
+      notify(`No se encontro ID valido en 1-15 para ${key}`, 'error')
+    }
+    setProbandoId(null)
+  }
+
+  // Auto-probar id_banco 1-15
+  const autoProbarBanco = async () => {
+    if (!window.confirm(
+      `Voy a probar id_banco 1, 2, 3... hasta 15 usando un metodo que requiera banco real.\n\n` +
+      `Maximo 15 facturas test (que se anulan automaticamente).\n` +
+      `Tardara ~30 segundos.\n\n` +
+      `¿Continuar?`
+    )) return
+    // Necesitamos un id_medio_pago valido que requiera banco. Usamos transferencia
+    // si esta configurada y validada, sino usamos el primero que tenga ID > 0
+    const transId = metodosConfig.find(m => m.key === 'transferencia')?.id
+    if (!transId) { notify('Configura primero el ID de Transferencia', 'error'); return }
+    setProbandoId({ key: 'banco', id: 'auto' })
+    let foundId = null
+    for (let id = 1; id <= 15; id++) {
+      try {
+        const res = await probarIdMedioPago(transId, id)
+        if (res.ok) {
+          foundId = id
+          guardarIdBanco(id)
+          notify(`✓ Encontrado: id_banco = ${id}`, 'success')
+          break
+        }
+        if (!res.esFkViolation) {
+          notify(`Error inesperado: ${res.mensaje}`, 'error')
+          break
+        }
+      } catch (e) {
+        notify('Error: ' + e.message, 'error')
+        break
+      }
+    }
+    if (!foundId) notify('No se encontro id_banco valido en 1-15', 'error')
+    setProbandoId(null)
+  }
+
   const [productoForm, setProductoForm] = useState({
     nombre: '',
     precioVenta: '',
@@ -637,46 +714,58 @@ export default function CuenttiPanel({ trabajos, actualizarTrabajo, notify }) {
                     const res = resultadoPrueba[m.key]
                     const isLoading = probandoId?.key === m.key
                     return (
-                      <div key={m.key} style={{display:'flex',alignItems:'center',gap:8,padding:'8px 10px',background:'var(--bg-subtle)',borderRadius:6,flexWrap:'wrap'}}>
+                      <div key={m.key} style={{display:'flex',alignItems:'center',gap:6,padding:'8px 10px',background:'var(--bg-subtle)',borderRadius:6,flexWrap:'wrap'}}>
                         <div style={{flex:'1 1 140px',minWidth:0}}>
                           <div style={{fontSize:12.5,fontWeight:600}}>{m.nombre}</div>
                           {res && (
                             <div style={{fontSize:10.5,marginTop:2,color: res.ok ? 'var(--green-700)' : 'var(--red-700)',fontWeight:600}}>
-                              {res.loading ? 'Probando...' : (res.ok ? '✓ ID valido' : '✗ ' + (res.mensaje || '').slice(0,50))}
+                              {res.loading ? (res.mensaje || 'Probando...') : (res.ok ? `✓ ${res.mensaje || 'ID valido'}` : '✗ ' + (res.mensaje || '').slice(0,50))}
                             </div>
                           )}
                         </div>
                         <input type="number" min="0" max="50" className="input"
                           value={m.id}
                           onChange={e => guardarMetodoId(m.key, parseInt(e.target.value) || 0)}
-                          style={{width:60,fontFamily:'var(--mono)',fontWeight:700,textAlign:'center',fontSize:13,padding:'5px 6px'}}
+                          style={{width:54,fontFamily:'var(--mono)',fontWeight:700,textAlign:'center',fontSize:13,padding:'5px 6px'}}
                         />
                         <button type="button" onClick={() => probarIdEspecifico(m.key, m.id)}
                           disabled={isLoading}
                           className="btn btn-outline btn-sm"
-                          style={{minWidth:75,fontSize:11.5}}>
-                          {isLoading ? '⏳ Probando' : '▶ Probar'}
+                          style={{minWidth:60,fontSize:11.5,padding:'5px 8px'}}>
+                          {isLoading ? '⏳' : '▶'}
+                        </button>
+                        <button type="button" onClick={() => autoProbarIds(m.key)}
+                          disabled={isLoading}
+                          className="btn btn-primary btn-sm"
+                          style={{minWidth:80,fontSize:11.5,padding:'5px 10px'}}>
+                          {isLoading && probandoId?.id === 'auto' ? '🔍...' : '🤖 Auto 1-15'}
                         </button>
                       </div>
                     )
                   })}
                 </div>
 
-                <div style={{marginTop:10,padding:'8px 10px',background:'var(--bg-subtle)',borderRadius:6,display:'flex',alignItems:'center',gap:10}}>
-                  <div style={{flex:1}}>
+                <div style={{marginTop:10,padding:'8px 10px',background:'var(--bg-subtle)',borderRadius:6,display:'flex',alignItems:'center',gap:6,flexWrap:'wrap'}}>
+                  <div style={{flex:'1 1 140px',minWidth:0}}>
                     <div style={{fontSize:12,fontWeight:600}}>Banco para transferencia/tarjetas</div>
-                    <div style={{fontSize:10.5,color:'var(--text-3)'}}>id_banco · prueba 1, 2, 3...</div>
+                    <div style={{fontSize:10.5,color:'var(--text-3)'}}>id_banco</div>
                   </div>
                   <input type="number" min="1" className="input"
                     value={idBancoConfig}
                     onChange={e => guardarIdBanco(parseInt(e.target.value) || 1)}
-                    style={{width:60,fontFamily:'var(--mono)',fontWeight:700,textAlign:'center',fontSize:13,padding:'5px 6px'}}
+                    style={{width:54,fontFamily:'var(--mono)',fontWeight:700,textAlign:'center',fontSize:13,padding:'5px 6px'}}
                   />
+                  <button type="button" onClick={autoProbarBanco}
+                    disabled={probandoId !== null}
+                    className="btn btn-primary btn-sm"
+                    style={{minWidth:80,fontSize:11.5,padding:'5px 10px'}}>
+                    🤖 Auto 1-15
+                  </button>
                 </div>
               </div>
 
-              <div style={{fontSize:11,color:'var(--text-3)',marginTop:8,fontStyle:'italic',lineHeight:1.5}}>
-                💡 Estrategia recomendada: 1) Auto-detectar arriba. Si no funciona, 2) Para cada metodo prueba IDs 1, 2, 3... hasta 15. El que diga "✓ ID valido" es el correcto. Cada prueba crea-y-anula una factura test de $1 (no afecta tu contabilidad).
+              <div style={{fontSize:11.5,color:'var(--text-3)',marginTop:10,padding:'8px 10px',background:'var(--blue-50,#eff6ff)',borderRadius:6,lineHeight:1.5}}>
+                <strong>💡 Recomendado:</strong> click <strong>"🤖 Auto 1-15"</strong> al lado de cada metodo. La app prueba IDs del 1 al 15 hasta encontrar el correcto, lo guarda y se detiene. Tarda ~30 segundos por metodo. Cada prueba crea-y-anula una factura test de $1.
               </div>
             </div>
           )}
