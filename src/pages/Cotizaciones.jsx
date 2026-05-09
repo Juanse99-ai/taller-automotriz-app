@@ -633,9 +633,9 @@ function CotizacionForm({ cotizacion, trabajos = [], onSave, onCancel }) {
           <button type="button" className="btn btn-outline" onClick={onCancel}>Volver</button>
         </div>
       </div>
-      <form onSubmit={handleSubmit}>
+      <form onSubmit={handleSubmit} className="form-stack">
         {/* Cliente + Vehiculo side-by-side at desktop */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+        <div className="form-row-2">
         <div className="card">
           <div className="card__h"><h3>Cliente</h3></div>
           <div className="card__b">
@@ -857,7 +857,7 @@ function CotizacionForm({ cotizacion, trabajos = [], onSave, onCancel }) {
         </div>
 
         {/* Observaciones (2/3) + Validez (1/3) side-by-side */}
-        <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 14 }}>
+        <div className="form-row-2" style={{ gridTemplateColumns: '2fr 1fr' }}>
           <div className="card">
             <div className="card__h"><h3>Observaciones</h3></div>
             <div className="card__b">
@@ -881,7 +881,7 @@ function CotizacionForm({ cotizacion, trabajos = [], onSave, onCancel }) {
           </div>
         </div>
 
-        <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 8 }}>
+        <div className="form-actions">
           <button type="button" className="btn btn-outline" onClick={onCancel}>Cancelar</button>
           <button type="submit" className="btn btn-primary">{isEdit ? 'Actualizar' : 'Crear Cotizacion'}</button>
         </div>

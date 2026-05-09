@@ -306,7 +306,7 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
       doc.setFont(undefined, 'normal')
       cursorY += 9
 
-      // ============= ESTADO INGRESO (left) + TOTALS BOX (right) =============
+      // ============= OBSERVACIONES INGRESO (left, only if real data) + TOTALS BOX (right) =============
       const subtotal = t.subtotalSinIva || 0
       const iva = t.totalIva || 0
       const total = t.total || 0
@@ -315,22 +315,25 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
       const boxX = 122
       const boxW = 74
 
-      // Estado de ingreso (left card)
-      const estadoText = t.estadoIngreso || `Combustible: ${t.combustibleNivel || '1/4 tanque'}\nKilometraje: ${t.kilometraje || 0} km\nTecnico responsable: ${tecNombre(t.tecnicoId)}\nEstado al ingreso: revisado por personal del taller`
-      const estadoLines = doc.splitTextToSize(estadoText, 100)
-      const estadoH = Math.max(50, estadoLines.length * 4 + 10)
-      doc.setDrawColor(...SLATE_300)
-      doc.rect(14, cursorY, 104, estadoH)
-      doc.setFontSize(7)
-      doc.setTextColor(...SLATE_500)
-      doc.setFont(undefined, 'bold')
-      doc.text('ESTADO DE INGRESO', 17, cursorY + 4)
-      doc.setFontSize(8)
-      doc.setTextColor(...NAVY)
-      doc.setFont(undefined, 'normal')
-      doc.text(estadoLines, 17, cursorY + 9)
+      // Observaciones de ingreso (left card) — SOLO si hay datos reales del usuario
+      const obsIngresoReal = t.observacionesIngreso || t.estadoIngreso || ''
+      let leftBlockH = 0
+      if (obsIngresoReal && obsIngresoReal.trim().length > 0) {
+        const lines = doc.splitTextToSize(obsIngresoReal, 100)
+        leftBlockH = Math.max(40, lines.length * 4 + 10)
+        doc.setDrawColor(...SLATE_300)
+        doc.rect(14, cursorY, 104, leftBlockH)
+        doc.setFontSize(7)
+        doc.setTextColor(...SLATE_500)
+        doc.setFont(undefined, 'bold')
+        doc.text('OBSERVACIONES DE INGRESO', 17, cursorY + 4)
+        doc.setFontSize(8)
+        doc.setTextColor(...NAVY)
+        doc.setFont(undefined, 'normal')
+        doc.text(lines, 17, cursorY + 9)
+      }
 
-      // TOTALS BOX (right)
+      // TOTALS BOX (right) — siempre se muestra
       doc.setFontSize(8.5)
       let tY = cursorY + 4
       const totalsRows = [
@@ -363,7 +366,7 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
       doc.setFontSize(12.5)
       doc.text(fmt(total), boxX + boxW - 4, tY + 7, { align: 'right' })
 
-      cursorY += estadoH + 8
+      cursorY += Math.max(leftBlockH, tY + 11 - cursorY) + 8
     }
 
     // ============= FIRMAS =============
@@ -927,7 +930,7 @@ function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [] }) {
         <div className="actions"><button className="btn btn-outline" onClick={onCancel}>Volver</button></div>
       </div>
 
-      <form onSubmit={handleSubmit}>
+      <form onSubmit={handleSubmit} className="form-stack">
         {/* CLIENTE */}
         <div className="card">
           <div className="card__h"><h3>Cliente</h3></div>
@@ -1267,7 +1270,7 @@ function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [] }) {
         </div>
 
         {/* ACCIONES */}
-        <div className="flex gap-2" style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 8 }}>
+        <div className="form-actions">
           <button type="button" className="btn btn-outline" onClick={onCancel}>Cancelar</button>
           <button type="submit" className="btn btn-primary">{isEdit ? 'Actualizar' : 'Crear Trabajo'}</button>
         </div>
