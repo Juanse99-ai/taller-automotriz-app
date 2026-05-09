@@ -50,20 +50,42 @@ export default function CuenttiPanel({ trabajos, actualizarTrabajo, notify }) {
   const [docResp, setDocResp] = useState(null)
   const [docLoading, setDocLoading] = useState(false)
 
-  // Metodo de pago para facturacion
-  const METODOS_PAGO = [
-    { id: 1, nombre: 'Efectivo' },
-    { id: 2, nombre: 'Tarjeta Debito' },
-    { id: 3, nombre: 'Tarjeta Credito' },
-    { id: 4, nombre: 'Transferencia' },
-    { id: 5, nombre: 'Nequi / Daviplata' },
-    { id: 0, nombre: 'A Credito (sin pago)' },
+  // Metodos de pago — cada Cuentti usa sus propios IDs en la tabla vent_medio_pago.
+  // Los defaults son los mas comunes pero el usuario los configura desde el panel.
+  // Se persisten en localStorage para que solo se configure una vez.
+  const METODOS_DEFAULT = [
+    { key: 'efectivo', nombre: 'Efectivo', defaultId: 1 },
+    { key: 'tdebito', nombre: 'Tarjeta Debito', defaultId: 2 },
+    { key: 'tcredito', nombre: 'Tarjeta Credito', defaultId: 3 },
+    { key: 'transferencia', nombre: 'Transferencia', defaultId: 4 },
+    { key: 'nequi', nombre: 'Nequi / Daviplata', defaultId: 5 },
+    { key: 'credito', nombre: 'A Credito (sin pago)', defaultId: 0 },
   ]
-  const [metodoPago, setMetodoPago] = useState('')
-  // ID del banco de la cuenta del taller en Cuentti (configurable por usuario, persistido).
-  // Se usa para Transferencia, Tarjeta Debito, Tarjeta Credito, Nequi/Daviplata.
-  // El default 1 suele ser el primer banco registrado en Cuentti (Bancolombia/principal).
-  // El usuario puede ajustarlo si su Cuentti usa otro ID.
+  const [metodosConfig, setMetodosConfig] = useState(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem('cuentti:metodos_pago') || '{}')
+      return METODOS_DEFAULT.map(m => ({ ...m, id: saved[m.key] ?? m.defaultId }))
+    } catch {
+      return METODOS_DEFAULT.map(m => ({ ...m, id: m.defaultId }))
+    }
+  })
+  const guardarMetodoId = (key, id) => {
+    setMetodosConfig(prev => {
+      const next = prev.map(m => m.key === key ? { ...m, id } : m)
+      try {
+        const obj = next.reduce((acc, m) => { acc[m.key] = m.id; return acc }, {})
+        localStorage.setItem('cuentti:metodos_pago', JSON.stringify(obj))
+      } catch {}
+      return next
+    })
+  }
+  // Lista visible (con IDs configurados)
+  const METODOS_PAGO = metodosConfig.map(m => ({ id: m.id, key: m.key, nombre: m.nombre }))
+  const [metodoPagoKey, setMetodoPagoKey] = useState('')
+  // ID actual seleccionado (resuelto desde la key)
+  const metodoPago = metodoPagoKey === '' ? '' : (METODOS_PAGO.find(m => m.key === metodoPagoKey)?.id ?? '')
+
+  // ID del banco de la cuenta del taller en Cuentti (configurable, persistido).
   const [idBancoConfig, setIdBancoConfig] = useState(() => {
     try { return parseInt(localStorage.getItem('cuentti:id_banco')) || 1 } catch { return 1 }
   })
@@ -71,6 +93,8 @@ export default function CuenttiPanel({ trabajos, actualizarTrabajo, notify }) {
     setIdBancoConfig(val)
     try { localStorage.setItem('cuentti:id_banco', String(val)) } catch {}
   }
+  // Toggle para mostrar panel de configuracion de IDs
+  const [showConfigIds, setShowConfigIds] = useState(false)
 
   const [productoForm, setProductoForm] = useState({
     nombre: '',
@@ -159,7 +183,7 @@ export default function CuenttiPanel({ trabajos, actualizarTrabajo, notify }) {
 
   const facturarTrabajo = async () => {
     if (!facturaId.trim()) return
-    if (metodoPago === '') {
+    if (metodoPagoKey === '') {
       notify('Selecciona un metodo de pago antes de facturar', 'error')
       return
     }
@@ -190,20 +214,18 @@ export default function CuenttiPanel({ trabajos, actualizarTrabajo, notify }) {
 
     setFacturando(true)
     try {
-      // Mapear id_banco segun metodo de pago:
-      // - Efectivo (1): id_banco = 2 (caja/efectivo en Cuentti)
-      // - Nequi/Daviplata (5): id_banco = 2 (caja, Cuentti acepta)
-      // - Transferencia (4) / Tarjetas (2,3): id_banco = idBancoConfig (banco real
-      //   registrado en Cuentti, configurable por el usuario)
-      // - A Credito (0): no aplica (lstPagos vacio)
-      const requiereBancoReal = [2, 3, 4].includes(metodoPago)
-      const idBanco = requiereBancoReal ? idBancoConfig : (metodoPago === 0 ? 0 : 2)
+      // Mapear id_banco segun la KEY del metodo de pago (no el ID que es configurable):
+      // - efectivo / nequi: id_banco = 2 (caja en Cuentti)
+      // - tdebito / tcredito / transferencia: id_banco = idBancoConfig (banco real configurable)
+      // - credito: lstPagos vacio (no aplica banco)
+      const requiereBancoReal = ['tdebito', 'tcredito', 'transferencia'].includes(metodoPagoKey)
+      const idBanco = requiereBancoReal ? idBancoConfig : (metodoPagoKey === 'credito' ? 0 : 2)
       const facturaData = {
         ...trabajo,
         resolucion: prefijo,
         idMedioPago: metodoPago,
         idBanco,
-        aCredito: metodoPago === 0,
+        aCredito: metodoPagoKey === 'credito',
         observaciones: `OT: ${trabajo.otCodigo || trabajo.id} — ${trabajo.observaciones || ''}`.trim(),
       }
       const payload = buildFacturaPayload(facturaData)
@@ -476,46 +498,63 @@ export default function CuenttiPanel({ trabajos, actualizarTrabajo, notify }) {
               </div>
             </div>
             <div className="field">
-              <select className="input" value={metodoPago} onChange={e => setMetodoPago(e.target.value === '' ? '' : parseInt(e.target.value))}>
+              <select className="input" value={metodoPagoKey} onChange={e => setMetodoPagoKey(e.target.value)}>
                 <option value="">— Seleccionar metodo —</option>
                 {METODOS_PAGO.map(m => (
-                  <option key={m.id} value={m.id}>{m.nombre}</option>
+                  <option key={m.key} value={m.key}>{m.nombre} (ID {m.id})</option>
                 ))}
               </select>
-              <div style={{fontSize:11,color:'var(--text-3)',marginTop:4}}>
-                Metodo de pago
+              <div style={{fontSize:11,color:'var(--text-3)',marginTop:4,display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+                <span>Metodo de pago</span>
+                <button type="button" onClick={() => setShowConfigIds(s => !s)}
+                  style={{background:'none',border:'none',color:'var(--blue-600)',fontSize:11,cursor:'pointer',padding:0,fontWeight:600}}>
+                  {showConfigIds ? '▼ Ocultar' : '⚙ Configurar IDs'}
+                </button>
               </div>
             </div>
           </div>
 
-          {/* Configuracion de id_banco cuando aplica (Transferencia, Tarjetas) */}
-          {[2,3,4].includes(metodoPago) && (
-            <div style={{marginTop:14,padding:'12px 14px',background:'var(--bg-subtle)',border:'1px solid var(--border)',borderRadius:10,display:'flex',alignItems:'center',gap:14,flexWrap:'wrap'}}>
-              <div style={{flex:'1 1 280px',minWidth:0}}>
-                <label style={{display:'block',fontSize:11.5,fontWeight:700,color:'var(--text-2)',marginBottom:4,textTransform:'uppercase',letterSpacing:'.5px'}}>
-                  ID del banco en Cuentti
-                </label>
-                <div style={{fontSize:12,color:'var(--text-3)',lineHeight:1.4}}>
-                  Para <strong>{METODOS_PAGO.find(m => m.id === metodoPago)?.nombre}</strong> Cuentti requiere el ID de un banco real registrado en tu cuenta. Si no sabes cual es, prueba con 1, 2 o 3 (Bancolombia/Davivienda suelen estar entre los primeros).
-                </div>
+          {/* Panel de configuracion de IDs (medio de pago + banco) */}
+          {showConfigIds && (
+            <div style={{marginTop:14,padding:'14px 16px',background:'var(--bg-subtle)',border:'1px solid var(--border)',borderRadius:10}}>
+              <div style={{fontSize:12.5,color:'var(--text-2)',marginBottom:10,lineHeight:1.5}}>
+                <strong>Configuracion de IDs Cuentti.</strong> Cada cuenta de Cuentti usa IDs distintos en su tabla <code className="mono">vent_medio_pago</code> y de bancos. Si al facturar te sale <code className="mono">DataIntegrityViolationException</code> en <code className="mono">id_medio_pago</code> o <code className="mono">id_banco</code>, ajusta los IDs aqui hasta que coincidan con los de tu Cuentti. Se guardan automaticamente.
               </div>
-              <div style={{display:'flex',alignItems:'center',gap:8}}>
-                <input
-                  type="number"
-                  min="1"
-                  className="input"
+              <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(200px,1fr))',gap:10,marginBottom:12}}>
+                {metodosConfig.map(m => (
+                  <div key={m.key} style={{display:'flex',alignItems:'center',gap:8,padding:'8px 10px',background:'var(--bg-raised)',border:'1px solid var(--border)',borderRadius:8}}>
+                    <div style={{flex:1,minWidth:0}}>
+                      <div style={{fontSize:12.5,fontWeight:600,color:'var(--text)'}}>{m.nombre}</div>
+                      <div style={{fontSize:10.5,color:'var(--text-3)'}}>id_medio_pago</div>
+                    </div>
+                    <input type="number" min="0" className="input"
+                      value={m.id}
+                      onChange={e => guardarMetodoId(m.key, parseInt(e.target.value) || 0)}
+                      style={{width:60,fontFamily:'var(--mono)',fontWeight:700,textAlign:'center',fontSize:13,padding:'6px 8px'}}
+                    />
+                  </div>
+                ))}
+              </div>
+              <div style={{display:'flex',alignItems:'center',gap:10,padding:'10px 12px',background:'var(--bg-raised)',border:'1px solid var(--border)',borderRadius:8}}>
+                <div style={{flex:1}}>
+                  <div style={{fontSize:12.5,fontWeight:600,color:'var(--text)'}}>Banco para transferencia / tarjetas</div>
+                  <div style={{fontSize:10.5,color:'var(--text-3)'}}>id_banco · banco real registrado en Cuentti</div>
+                </div>
+                <input type="number" min="1" className="input"
                   value={idBancoConfig}
                   onChange={e => guardarIdBanco(parseInt(e.target.value) || 1)}
-                  style={{width:80,fontFamily:'var(--mono)',fontWeight:700,textAlign:'center',fontSize:14}}
+                  style={{width:60,fontFamily:'var(--mono)',fontWeight:700,textAlign:'center',fontSize:13,padding:'6px 8px'}}
                 />
-                <span style={{fontSize:11,color:'var(--text-3)'}}>guardado</span>
+              </div>
+              <div style={{fontSize:11,color:'var(--text-3)',marginTop:8,fontStyle:'italic'}}>
+                Tip: mira el error de Cuentti. Si dice <code className="mono">id_medio_pago</code>, prueba 1-10 hasta acertar. Si dice <code className="mono">id_banco</code>, prueba 1-5.
               </div>
             </div>
           )}
 
           <div style={{display:'flex',justifyContent:'flex-end',marginTop:14}}>
             <button className="btn btn-primary" onClick={facturarTrabajo}
-              disabled={!facturaId || metodoPago === '' || facturando}>
+              disabled={!facturaId || metodoPagoKey === '' || facturando}>
               {facturando ? 'Enviando...' : 'Enviar a Cuentti'}
             </button>
           </div>
