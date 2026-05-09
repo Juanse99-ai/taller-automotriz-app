@@ -11,7 +11,6 @@ import {
   grabarProductoMovil,
   getCuenttiDebugHeaders,
   testTokenDirecto,
-  detectarMediosPago,
 } from '../services/cuentti'
 import { RESOLUCIONES } from '../utils/constants'
 
@@ -51,115 +50,11 @@ export default function CuenttiPanel({ trabajos, actualizarTrabajo, notify }) {
   const [docResp, setDocResp] = useState(null)
   const [docLoading, setDocLoading] = useState(false)
 
-  // Metodos de pago — cada Cuentti usa sus propios IDs en la tabla vent_medio_pago.
-  // Los defaults son los mas comunes pero el usuario los configura desde el panel.
-  // Se persisten en localStorage para que solo se configure una vez.
-  const METODOS_DEFAULT = [
-    { key: 'efectivo', nombre: 'Efectivo', defaultId: 1 },
-    { key: 'tdebito', nombre: 'Tarjeta Debito', defaultId: 2 },
-    { key: 'tcredito', nombre: 'Tarjeta Credito', defaultId: 3 },
-    { key: 'transferencia', nombre: 'Transferencia', defaultId: 4 },
-    { key: 'nequi', nombre: 'Nequi / Daviplata', defaultId: 5 },
-    { key: 'credito', nombre: 'A Credito (sin pago)', defaultId: 0 },
-  ]
-  const [metodosConfig, setMetodosConfig] = useState(() => {
-    try {
-      const saved = JSON.parse(localStorage.getItem('cuentti:metodos_pago') || '{}')
-      return METODOS_DEFAULT.map(m => ({ ...m, id: saved[m.key] ?? m.defaultId }))
-    } catch {
-      return METODOS_DEFAULT.map(m => ({ ...m, id: m.defaultId }))
-    }
-  })
-  const guardarMetodoId = (key, id) => {
-    setMetodosConfig(prev => {
-      const next = prev.map(m => m.key === key ? { ...m, id } : m)
-      try {
-        const obj = next.reduce((acc, m) => { acc[m.key] = m.id; return acc }, {})
-        localStorage.setItem('cuentti:metodos_pago', JSON.stringify(obj))
-      } catch {}
-      return next
-    })
-  }
-  // Lista visible (con IDs configurados)
-  const METODOS_PAGO = metodosConfig.map(m => ({ id: m.id, key: m.key, nombre: m.nombre }))
-  // Default: "credito" (sin pago) — siempre funciona, no requiere id_medio_pago en lstPagos
-  const [metodoPagoKey, setMetodoPagoKey] = useState(() => {
-    try { return localStorage.getItem('cuentti:metodo_default') || 'credito' } catch { return 'credito' }
-  })
-  // Persistir la seleccion para el proximo uso
-  const setMetodoPagoKeyPersist = (k) => {
-    setMetodoPagoKey(k)
-    try { localStorage.setItem('cuentti:metodo_default', k) } catch {}
-  }
-  // ID actual seleccionado (resuelto desde la key)
-  const metodoPago = metodoPagoKey === '' ? '' : (METODOS_PAGO.find(m => m.key === metodoPagoKey)?.id ?? '')
-
-  // ID del banco de la cuenta del taller en Cuentti (configurable, persistido).
-  const [idBancoConfig, setIdBancoConfig] = useState(() => {
-    try { return parseInt(localStorage.getItem('cuentti:id_banco')) || 1 } catch { return 1 }
-  })
-  const guardarIdBanco = (val) => {
-    setIdBancoConfig(val)
-    try { localStorage.setItem('cuentti:id_banco', String(val)) } catch {}
-  }
-
-  // SKUs genericos de fallback (cuando el item no viene del inventario)
-  // Para mano de obra (servicios) y repuestos sueltos sin SKU especifico.
-  // Estos SKUs DEBEN existir en la tabla de productos de Cuentti.
-  const [skuServicio, setSkuServicio] = useState(() => {
-    try { return localStorage.getItem('cuentti:sku_servicio') || 'MO1' } catch { return 'MO1' }
-  })
-  const [skuRepuesto, setSkuRepuesto] = useState(() => {
-    try { return localStorage.getItem('cuentti:sku_repuesto') || 'MO1' } catch { return 'MO1' }
-  })
-  const guardarSkuServicio = (val) => {
-    setSkuServicio(val)
-    try { localStorage.setItem('cuentti:sku_servicio', val) } catch {}
-  }
-  const guardarSkuRepuesto = (val) => {
-    setSkuRepuesto(val)
-    try { localStorage.setItem('cuentti:sku_repuesto', val) } catch {}
-  }
-  // Toggle para mostrar panel de configuracion de IDs
-  const [showConfigIds, setShowConfigIds] = useState(false)
-  // Estado de la deteccion automatica de medios de pago
-  const [detectandoMedios, setDetectandoMedios] = useState(false)
-  const [mediosDetectados, setMediosDetectados] = useState(null)
-
-  const detectarIdsAutomaticamente = async () => {
-    setDetectandoMedios(true)
-    setMediosDetectados(null)
-    try {
-      const res = await detectarMediosPago()
-      setMediosDetectados(res)
-      if (res.ok && res.medios.length > 0) {
-        notify(`Detectados ${res.medios.length} medios de pago en tu Cuentti`, 'success')
-      } else {
-        notify('No se encontro endpoint publico de medios de pago en tu Cuentti', 'error')
-      }
-    } catch (e) {
-      notify('Error detectando medios: ' + e.message, 'error')
-    } finally {
-      setDetectandoMedios(false)
-    }
-  }
-
-  // Mapear un medio detectado al key local segun su nombre
-  const aplicarMedioDetectado = (medio) => {
-    const nombre = (medio.nombre || '').toLowerCase()
-    let key = null
-    if (nombre.includes('efectivo')) key = 'efectivo'
-    else if (nombre.includes('debito') || nombre.includes('débito')) key = 'tdebito'
-    else if (nombre.includes('credito') || nombre.includes('crédito') || nombre.includes('tarjeta de credito')) key = 'tcredito'
-    else if (nombre.includes('transferencia') || nombre.includes('transfer')) key = 'transferencia'
-    else if (nombre.includes('nequi') || nombre.includes('daviplata') || nombre.includes('digital')) key = 'nequi'
-    if (key) {
-      guardarMetodoId(key, medio.id)
-      notify(`"${medio.nombre}" → ${key} ahora usa ID ${medio.id}`, 'success')
-    } else {
-      notify(`No se mapeo automaticamente "${medio.nombre}". Asignalo manualmente.`, 'info')
-    }
-  }
+  // SIMPLIFICADO: ya no manejamos IDs de medio_pago/banco. Toda factura se
+  // envia como "A Credito" (sin pago). El usuario registra el pago real
+  // manualmente en cuentti.co despues, donde Cuentti ya tiene sus propios
+  // IDs internos resueltos. Asi evitamos los errores FK violation y el
+  // usuario no tiene que adivinar numeros.
 
   const [productoForm, setProductoForm] = useState({
     nombre: '',
@@ -248,10 +143,6 @@ export default function CuenttiPanel({ trabajos, actualizarTrabajo, notify }) {
 
   const facturarTrabajo = async () => {
     if (!facturaId.trim()) return
-    if (metodoPagoKey === '') {
-      notify('Selecciona un metodo de pago antes de facturar', 'error')
-      return
-    }
     const trabajo = trabajos.find(t => t.id === facturaId.trim())
     if (!trabajo) {
       notify('Trabajo no encontrado con ese ID', 'error')
@@ -279,18 +170,13 @@ export default function CuenttiPanel({ trabajos, actualizarTrabajo, notify }) {
 
     setFacturando(true)
     try {
-      // Mapear id_banco segun la KEY del metodo de pago (no el ID que es configurable):
-      // - efectivo / nequi: id_banco = 2 (caja en Cuentti)
-      // - tdebito / tcredito / transferencia: id_banco = idBancoConfig (banco real configurable)
-      // - credito: lstPagos vacio (no aplica banco)
-      const requiereBancoReal = ['tdebito', 'tcredito', 'transferencia'].includes(metodoPagoKey)
-      const idBanco = requiereBancoReal ? idBancoConfig : (metodoPagoKey === 'credito' ? 0 : 2)
+      // Siempre enviamos como "A Credito" (sin pago en lstPagos). Esto evita
+      // los errores FK violation con id_medio_pago e id_banco. El usuario
+      // registra el pago real manualmente en cuentti.co despues si quiere.
       const facturaData = {
         ...trabajo,
         resolucion: prefijo,
-        idMedioPago: metodoPago,
-        idBanco,
-        aCredito: metodoPagoKey === 'credito',
+        aCredito: true,
         observaciones: `OT: ${trabajo.otCodigo || trabajo.id} — ${trabajo.observaciones || ''}`.trim(),
       }
       const payload = buildFacturaPayload(facturaData)
@@ -559,156 +445,22 @@ export default function CuenttiPanel({ trabajos, actualizarTrabajo, notify }) {
                 ))}
               </select>
               <div style={{fontSize:11,color:'var(--text-3)',marginTop:4}}>
-                Resolucion (MAS o FEIC)
-              </div>
-            </div>
-            <div className="field">
-              <select className="input" value={metodoPagoKey} onChange={e => setMetodoPagoKeyPersist(e.target.value)}>
-                <option value="">— Seleccionar metodo —</option>
-                {METODOS_PAGO.map(m => (
-                  <option key={m.key} value={m.key}>{m.nombre}{m.key !== 'credito' ? ` (ID ${m.id})` : ''}</option>
-                ))}
-              </select>
-              <div style={{fontSize:11,color:'var(--text-3)',marginTop:4,display:'flex',justifyContent:'space-between',alignItems:'center'}}>
-                <span>Metodo de pago</span>
-                <button type="button" onClick={() => setShowConfigIds(s => !s)}
-                  style={{background:'none',border:'none',color:'var(--blue-600)',fontSize:11,cursor:'pointer',padding:0,fontWeight:600}}>
-                  {showConfigIds ? '▼ Ocultar' : '⚙ Configurar IDs'}
-                </button>
+                Resolucion (MAS = factura interna · FEIC = factura electronica DIAN)
               </div>
             </div>
           </div>
 
-          {/* Banner explicando workaround "A Credito" si selecciona un metodo con ID */}
-          {metodoPagoKey && metodoPagoKey !== 'credito' && (
-            <div style={{marginTop:14,padding:'10px 14px',background:'rgba(245,158,11,.08)',border:'1px solid rgba(245,158,11,.3)',borderRadius:8,fontSize:12.5,color:'var(--text-2)',lineHeight:1.5}}>
-              <strong style={{color:'var(--amber-600,#d97706)'}}>⚠ Tip si te sale FK violation:</strong> Cada Cuentti tiene IDs distintos en <code className="mono">vent_medio_pago</code>. Si <strong>{METODOS_PAGO.find(m => m.key === metodoPagoKey)?.nombre}</strong> con ID <code className="mono">{METODOS_PAGO.find(m => m.key === metodoPagoKey)?.id}</code> falla, cambia a <strong>"A Credito (sin pago)"</strong> — emite la factura electronica sin registrar pago en caja. Puedes registrar el pago manualmente en cuentti.co despues.
+          {/* Info: enviamos como "A Credito" — sin pago. Simplifica todo. */}
+          <div style={{marginTop:14,padding:'10px 14px',background:'var(--bg-subtle)',border:'1px solid var(--border)',borderRadius:8,fontSize:12.5,color:'var(--text-2)',lineHeight:1.5,display:'flex',alignItems:'flex-start',gap:10}}>
+            <span style={{fontSize:16,flexShrink:0}}>ℹ️</span>
+            <div>
+              <strong>La factura se emite sin metodo de pago en Cuentti.</strong> Esto evita los errores tecnicos con IDs internos. Tu factura electronica (FEIC) si va a la DIAN normalmente. Si quieres registrar el pago real (efectivo, transferencia, etc.), entras a <strong>cuentti.co</strong> y lo marcas alli en 1 click — Cuentti tiene tus medios de pago configurados con sus IDs correctos.
             </div>
-          )}
-
-          {/* Panel de configuracion de IDs (medio de pago + banco) */}
-          {showConfigIds && (
-            <div style={{marginTop:14,padding:'14px 16px',background:'var(--bg-subtle)',border:'1px solid var(--border)',borderRadius:10}}>
-              <div style={{fontSize:12.5,color:'var(--text-2)',marginBottom:10,lineHeight:1.5}}>
-                <strong>Configuracion de IDs Cuentti.</strong> Cada cuenta de Cuentti usa IDs distintos en su tabla <code className="mono">vent_medio_pago</code> y de bancos. Si al facturar te sale <code className="mono">DataIntegrityViolationException</code> en <code className="mono">id_medio_pago</code> o <code className="mono">id_banco</code>, ajusta los IDs aqui hasta que coincidan con los de tu Cuentti. Se guardan automaticamente.
-              </div>
-
-              {/* Boton de deteccion automatica */}
-              <div style={{marginBottom:12,padding:'10px 12px',background:'var(--blue-50,#eff6ff)',border:'1px solid var(--blue-300,#93c5fd)',borderRadius:8}}>
-                <div style={{display:'flex',alignItems:'center',gap:10,flexWrap:'wrap'}}>
-                  <button type="button" onClick={detectarIdsAutomaticamente}
-                    disabled={detectandoMedios}
-                    className="btn btn-primary btn-sm">
-                    {detectandoMedios ? '🔍 Detectando...' : '🔍 Detectar IDs automaticamente'}
-                  </button>
-                  <div style={{fontSize:11.5,color:'var(--text-3)',flex:'1 1 200px'}}>
-                    Prueba 11 endpoints comunes de Cuentti j4ErpPro hasta encontrar uno que liste tus medios de pago.
-                  </div>
-                </div>
-
-                {mediosDetectados && (
-                  <div style={{marginTop:10,padding:'10px',background:'var(--bg-raised)',borderRadius:6,fontSize:12}}>
-                    {mediosDetectados.ok ? (
-                      <>
-                        <div style={{color:'var(--green-700)',fontWeight:700,marginBottom:6}}>
-                          ✓ Detectados en {mediosDetectados.endpoint}
-                        </div>
-                        <div style={{display:'flex',flexDirection:'column',gap:4}}>
-                          {mediosDetectados.medios.map((m, i) => (
-                            <div key={i} style={{display:'flex',alignItems:'center',gap:8,padding:'4px 0',borderBottom:i < mediosDetectados.medios.length - 1 ? '1px dashed var(--border)' : 'none'}}>
-                              <span className="mono" style={{minWidth:30,fontWeight:700,color:'var(--blue-600)'}}>{m.id}</span>
-                              <span style={{flex:1}}>{m.nombre}</span>
-                              <button type="button" onClick={() => aplicarMedioDetectado(m)}
-                                style={{background:'var(--blue-600)',color:'#fff',border:'none',padding:'3px 8px',borderRadius:4,fontSize:11,cursor:'pointer',fontWeight:600}}>
-                                Aplicar
-                              </button>
-                            </div>
-                          ))}
-                        </div>
-                      </>
-                    ) : (
-                      <div>
-                        <div style={{color:'var(--red-700)',fontWeight:700,marginBottom:4}}>
-                          ✗ Ningun endpoint respondio con la lista
-                        </div>
-                        <div style={{fontSize:11,color:'var(--text-3)'}}>
-                          Tu Cuentti no expone publicamente los medios de pago. Tendras que encontrarlos manualmente en <strong>cuentti.co</strong> (Configuracion → Medios de Pago) o llamando a soporte Cuentti.
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-              <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(200px,1fr))',gap:10,marginBottom:12}}>
-                {metodosConfig.map(m => (
-                  <div key={m.key} style={{display:'flex',alignItems:'center',gap:8,padding:'8px 10px',background:'var(--bg-raised)',border:'1px solid var(--border)',borderRadius:8}}>
-                    <div style={{flex:1,minWidth:0}}>
-                      <div style={{fontSize:12.5,fontWeight:600,color:'var(--text)'}}>{m.nombre}</div>
-                      <div style={{fontSize:10.5,color:'var(--text-3)'}}>id_medio_pago</div>
-                    </div>
-                    <input type="number" min="0" className="input"
-                      value={m.id}
-                      onChange={e => guardarMetodoId(m.key, parseInt(e.target.value) || 0)}
-                      style={{width:60,fontFamily:'var(--mono)',fontWeight:700,textAlign:'center',fontSize:13,padding:'6px 8px'}}
-                    />
-                  </div>
-                ))}
-              </div>
-              <div style={{display:'flex',alignItems:'center',gap:10,padding:'10px 12px',background:'var(--bg-raised)',border:'1px solid var(--border)',borderRadius:8,marginBottom:10}}>
-                <div style={{flex:1}}>
-                  <div style={{fontSize:12.5,fontWeight:600,color:'var(--text)'}}>Banco para transferencia / tarjetas</div>
-                  <div style={{fontSize:10.5,color:'var(--text-3)'}}>id_banco · banco real registrado en Cuentti</div>
-                </div>
-                <input type="number" min="1" className="input"
-                  value={idBancoConfig}
-                  onChange={e => guardarIdBanco(parseInt(e.target.value) || 1)}
-                  style={{width:60,fontFamily:'var(--mono)',fontWeight:700,textAlign:'center',fontSize:13,padding:'6px 8px'}}
-                />
-              </div>
-
-              {/* SKUs genericos para items sin SKU del inventario */}
-              <div style={{padding:'10px 12px',background:'var(--bg-raised)',border:'1px solid var(--border)',borderRadius:8,marginBottom:8}}>
-                <div style={{fontSize:12.5,fontWeight:700,color:'var(--text)',marginBottom:8}}>SKUs genericos para items sin SKU</div>
-                <div style={{fontSize:11,color:'var(--text-3)',marginBottom:10,lineHeight:1.4}}>
-                  Cuando una linea de la OT no viene del inventario (ej. "SALDO REPUESTO" o mano de obra escrita a mano), se usa uno de estos SKUs como fallback. <strong>Deben existir en tu Cuentti</strong>. Crealos con cualquier descripcion en cuentti.co y pon aqui sus Referencias.
-                </div>
-                <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
-                  <div style={{display:'flex',alignItems:'center',gap:8}}>
-                    <div style={{flex:1,minWidth:0}}>
-                      <div style={{fontSize:12,fontWeight:600,color:'var(--text)'}}>Mano de obra / Servicios</div>
-                      <div style={{fontSize:10,color:'var(--text-3)'}}>SKU para "esServicio: true"</div>
-                    </div>
-                    <input type="text" className="input"
-                      value={skuServicio}
-                      onChange={e => guardarSkuServicio(e.target.value.trim().toUpperCase())}
-                      placeholder="MO1"
-                      style={{width:90,fontFamily:'var(--mono)',fontWeight:700,textAlign:'center',fontSize:12,padding:'6px 8px'}}
-                    />
-                  </div>
-                  <div style={{display:'flex',alignItems:'center',gap:8}}>
-                    <div style={{flex:1,minWidth:0}}>
-                      <div style={{fontSize:12,fontWeight:600,color:'var(--text)'}}>Repuestos sin SKU</div>
-                      <div style={{fontSize:10,color:'var(--text-3)'}}>SKU para SALDO REPUESTO, etc.</div>
-                    </div>
-                    <input type="text" className="input"
-                      value={skuRepuesto}
-                      onChange={e => guardarSkuRepuesto(e.target.value.trim().toUpperCase())}
-                      placeholder="GENERICO"
-                      style={{width:90,fontFamily:'var(--mono)',fontWeight:700,textAlign:'center',fontSize:12,padding:'6px 8px'}}
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div style={{fontSize:11,color:'var(--text-3)',marginTop:8,fontStyle:'italic'}}>
-                Tip: si Cuentti devuelve <code className="mono">"Sku XXX No existe"</code>, debes crear ese producto en cuentti.co o cambiar el SKU aqui. Si dice <code className="mono">id_medio_pago</code> o <code className="mono">id_banco</code>, ajusta los IDs arriba.
-              </div>
-            </div>
-          )}
+          </div>
 
           <div style={{display:'flex',justifyContent:'flex-end',marginTop:14}}>
             <button className="btn btn-primary" onClick={facturarTrabajo}
-              disabled={!facturaId || metodoPagoKey === '' || facturando}>
+              disabled={!facturaId || facturando}>
               {facturando ? 'Enviando...' : 'Enviar a Cuentti'}
             </button>
           </div>
