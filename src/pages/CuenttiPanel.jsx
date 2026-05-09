@@ -81,7 +81,15 @@ export default function CuenttiPanel({ trabajos, actualizarTrabajo, notify }) {
   }
   // Lista visible (con IDs configurados)
   const METODOS_PAGO = metodosConfig.map(m => ({ id: m.id, key: m.key, nombre: m.nombre }))
-  const [metodoPagoKey, setMetodoPagoKey] = useState('')
+  // Default: "credito" (sin pago) — siempre funciona, no requiere id_medio_pago en lstPagos
+  const [metodoPagoKey, setMetodoPagoKey] = useState(() => {
+    try { return localStorage.getItem('cuentti:metodo_default') || 'credito' } catch { return 'credito' }
+  })
+  // Persistir la seleccion para el proximo uso
+  const setMetodoPagoKeyPersist = (k) => {
+    setMetodoPagoKey(k)
+    try { localStorage.setItem('cuentti:metodo_default', k) } catch {}
+  }
   // ID actual seleccionado (resuelto desde la key)
   const metodoPago = metodoPagoKey === '' ? '' : (METODOS_PAGO.find(m => m.key === metodoPagoKey)?.id ?? '')
 
@@ -498,10 +506,10 @@ export default function CuenttiPanel({ trabajos, actualizarTrabajo, notify }) {
               </div>
             </div>
             <div className="field">
-              <select className="input" value={metodoPagoKey} onChange={e => setMetodoPagoKey(e.target.value)}>
+              <select className="input" value={metodoPagoKey} onChange={e => setMetodoPagoKeyPersist(e.target.value)}>
                 <option value="">— Seleccionar metodo —</option>
                 {METODOS_PAGO.map(m => (
-                  <option key={m.key} value={m.key}>{m.nombre} (ID {m.id})</option>
+                  <option key={m.key} value={m.key}>{m.nombre}{m.key !== 'credito' ? ` (ID ${m.id})` : ''}</option>
                 ))}
               </select>
               <div style={{fontSize:11,color:'var(--text-3)',marginTop:4,display:'flex',justifyContent:'space-between',alignItems:'center'}}>
@@ -513,6 +521,13 @@ export default function CuenttiPanel({ trabajos, actualizarTrabajo, notify }) {
               </div>
             </div>
           </div>
+
+          {/* Banner explicando workaround "A Credito" si selecciona un metodo con ID */}
+          {metodoPagoKey && metodoPagoKey !== 'credito' && (
+            <div style={{marginTop:14,padding:'10px 14px',background:'rgba(245,158,11,.08)',border:'1px solid rgba(245,158,11,.3)',borderRadius:8,fontSize:12.5,color:'var(--text-2)',lineHeight:1.5}}>
+              <strong style={{color:'var(--amber-600,#d97706)'}}>⚠ Tip si te sale FK violation:</strong> Cada Cuentti tiene IDs distintos en <code className="mono">vent_medio_pago</code>. Si <strong>{METODOS_PAGO.find(m => m.key === metodoPagoKey)?.nombre}</strong> con ID <code className="mono">{METODOS_PAGO.find(m => m.key === metodoPagoKey)?.id}</code> falla, cambia a <strong>"A Credito (sin pago)"</strong> — emite la factura electronica sin registrar pago en caja. Puedes registrar el pago manualmente en cuentti.co despues.
+            </div>
+          )}
 
           {/* Panel de configuracion de IDs (medio de pago + banco) */}
           {showConfigIds && (
