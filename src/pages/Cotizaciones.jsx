@@ -32,251 +32,294 @@ export default function Cotizaciones({ notify, trabajos = [], onCrearTrabajo, co
 
   const imprimirCotizacion = async (c) => {
     const doc = new jsPDF()
-    const logo = await loadLogo()
     const NAVY = [13, 27, 53]
     const SLATE_50 = [248, 250, 252]
+    const SLATE_100 = [241, 245, 249]
+    const SLATE_300 = [203, 213, 225]
+    const SLATE_400 = [148, 163, 184]
     const SLATE_500 = [100, 116, 139]
+    const SLATE_600 = [71, 85, 105]
     const SLATE_700 = [51, 65, 85]
     const AMBER = [245, 158, 11]
 
     // ============= HEADER =============
-    if (logo && logo.startsWith('data:image')) {
-      try { doc.addImage(logo, 'PNG', 14, 10, 18, 18) } catch {}
-    }
-
+    // Logo: chip amber MDA (replicating handoff design)
+    doc.setFillColor(...AMBER)
+    doc.roundedRect(14, 12, 16, 16, 1.5, 1.5, 'F')
     doc.setTextColor(...NAVY)
-    doc.setFontSize(12)
+    doc.setFontSize(11)
     doc.setFont(undefined, 'bold')
-    doc.text(TALLER.razonSocial || TALLER.nombre, 36, 14)
-    doc.setFontSize(7.5)
+    doc.text('MDA', 22, 22, { align: 'center' })
+
+    // Company info (next to logo)
+    doc.setTextColor(...NAVY)
+    doc.setFontSize(13)
+    doc.setFont(undefined, 'bold')
+    doc.text(TALLER.razonSocial || TALLER.nombre, 35, 17)
+    doc.setFontSize(7)
     doc.setTextColor(...SLATE_500)
     doc.setFont(undefined, 'bold')
-    doc.text('TALLER AUTOMOTRIZ', 36, 18)
+    doc.text('TALLER AUTOMOTRIZ', 35, 21)
     doc.setFont(undefined, 'normal')
-    doc.text(`NIT ${TALLER.nit} · No responsable de IVA`, 36, 22)
-    doc.text(TALLER.direccion, 36, 25.5)
-    doc.text(`Cel. ${TALLER.celular} · ${TALLER.email}`, 36, 29)
+    doc.text(`NIT ${TALLER.nit} · No responsable de IVA — Regimen Simple`, 35, 24.5)
+    doc.text(TALLER.direccion, 35, 28)
+    doc.text(`Cel. ${TALLER.celular} · ${TALLER.email}`, 35, 31.5)
 
-    // Right side: doc type/number
+    // Right side: doc type
     doc.setFontSize(8)
     doc.setTextColor(...SLATE_500)
     doc.setFont(undefined, 'bold')
-    doc.text('COTIZACION', 196, 13, { align: 'right' })
+    doc.text('COTIZACION', 196, 14, { align: 'right' })
     doc.setFontSize(15)
     doc.setTextColor(...NAVY)
-    doc.text(c.id || '—', 196, 19, { align: 'right' })
+    doc.text(c.id || '—', 196, 21, { align: 'right' })
 
     // Status badge
     const estado = c.estado || 'Pendiente'
     const badgeColors = {
-      'Aprobada': { bg: [220, 252, 231], fg: [22, 101, 52], bd: [134, 239, 172] },
-      'Rechazada': { bg: [254, 226, 226], fg: [153, 27, 27], bd: [252, 165, 165] },
-      'Pendiente': { bg: [254, 243, 199], fg: [146, 64, 14], bd: [253, 230, 138] },
-    }[estado] || { bg: [241, 245, 249], fg: [51, 65, 85], bd: [203, 213, 225] }
-    const estadoUpper = estado.toUpperCase()
-    doc.setFontSize(7.5)
+      'Aprobada': { bg: [220, 252, 231], fg: [22, 101, 52], bd: [134, 239, 172], lbl: 'APROBADA' },
+      'Rechazada': { bg: [254, 226, 226], fg: [153, 27, 27], bd: [252, 165, 165], lbl: 'RECHAZADA' },
+      'Pendiente': { bg: [254, 243, 199], fg: [146, 64, 14], bd: [253, 230, 138], lbl: `VIGENTE · ${c.validezDias || 15} DIAS` },
+    }[estado] || { bg: [241, 245, 249], fg: [51, 65, 85], bd: [203, 213, 225], lbl: estado.toUpperCase() }
+    doc.setFontSize(7)
     doc.setFont(undefined, 'bold')
-    const badgeW = doc.getTextWidth(estadoUpper) + 6
-    const badgeX = 196 - badgeW
+    const badgeW = doc.getTextWidth(badgeColors.lbl) + 6
     doc.setFillColor(...badgeColors.bg)
     doc.setDrawColor(...badgeColors.bd)
-    doc.roundedRect(badgeX, 21, badgeW, 5, 1, 1, 'FD')
+    doc.roundedRect(196 - badgeW, 23.5, badgeW, 4.5, 0.7, 0.7, 'FD')
     doc.setTextColor(...badgeColors.fg)
-    doc.text(estadoUpper, 196 - 3, 24.5, { align: 'right' })
+    doc.text(badgeColors.lbl, 196 - 3, 26.5, { align: 'right' })
 
-    // Fecha
-    doc.setFontSize(7.5)
-    doc.setTextColor(...SLATE_500)
-    doc.setFont(undefined, 'bold')
-    doc.text('FECHA', 196 - 28, 30, { align: 'left' })
-    doc.setTextColor(...NAVY)
-    doc.text(fmtDate(c.fecha), 196, 30, { align: 'right' })
+    // Fechas (right column, label left, value right — properly spaced)
+    const dateRows = [
+      { lbl: 'FECHA EMISION', val: fmtDate(c.fecha) },
+      { lbl: 'VENCE', val: c.validezDias ? fmtDate(new Date(new Date(c.fecha).getTime() + (c.validezDias || 15) * 24 * 60 * 60 * 1000).toISOString()) : '—' },
+    ]
+    doc.setFontSize(7)
+    let dateY = 32
+    dateRows.forEach(r => {
+      doc.setTextColor(...SLATE_500)
+      doc.setFont(undefined, 'bold')
+      doc.text(r.lbl, 152, dateY)
+      doc.setTextColor(...NAVY)
+      doc.setFont(undefined, 'normal')
+      doc.text(r.val, 196, dateY, { align: 'right' })
+      dateY += 4
+    })
 
+    // Top divider
     doc.setDrawColor(...NAVY)
     doc.setLineWidth(0.6)
-    doc.line(14, 33, 196, 33)
+    doc.line(14, 42, 196, 42)
     doc.setLineWidth(0.2)
 
-    // ============= SECTIONS =============
-    let cursorY = 38
+    // ============= HELPERS =============
+    let cursorY = 47
     const sectionHeader = (title, y) => {
       doc.setFillColor(...NAVY)
-      doc.rect(14, y, 182, 5.5, 'F')
+      doc.rect(14, y, 182, 5.2, 'F')
       doc.setTextColor(255, 255, 255)
-      doc.setFontSize(7.5)
+      doc.setFontSize(7)
       doc.setFont(undefined, 'bold')
-      doc.text(title, 17, y + 3.7)
+      doc.text(title, 17, y + 3.5)
       doc.setTextColor(...NAVY)
     }
-    const dataRow = (items, y) => {
-      doc.setFontSize(7)
+    const dataBlock = (items, y, height = 11) => {
+      doc.setDrawColor(...SLATE_300)
+      doc.setLineWidth(0.2)
+      doc.rect(14, y, 182, height)
       const colW = 182 / items.length
       items.forEach((it, i) => {
         const x = 14 + i * colW
+        doc.setFontSize(6.5)
         doc.setFont(undefined, 'bold')
         doc.setTextColor(...SLATE_500)
-        doc.text((it.label || '').toUpperCase(), x + 3, y + 3)
+        doc.text((it.label || '').toUpperCase(), x + 4, y + 3.5)
         doc.setFont(undefined, it.bold ? 'bold' : 'normal')
         doc.setTextColor(...NAVY)
-        doc.setFontSize(9)
+        doc.setFontSize(it.size || 9)
         const val = (it.value || '—').toString()
-        doc.text(val.length > 32 ? val.slice(0, 30) + '..' : val, x + 3, y + 7.5)
-        doc.setFontSize(7)
+        doc.text(val.length > 30 ? val.slice(0, 28) + '..' : val, x + 4, y + 8)
       })
     }
 
-    // Cliente
-    sectionHeader('DATOS DEL CLIENTE', cursorY)
-    cursorY += 5.5
-    doc.setDrawColor(...[203, 213, 225])
-    doc.rect(14, cursorY, 182, 11)
-    dataRow([
-      { label: 'Cliente', value: c.cliente, bold: true },
-      { label: 'Documento', value: c.cedula },
+    // ============= CLIENTE =============
+    sectionHeader('CLIENTE', cursorY)
+    cursorY += 5.2
+    dataBlock([
+      { label: 'Nombre', value: c.cliente, bold: true },
+      { label: 'Cedula / NIT', value: c.cedula },
       { label: 'Telefono', value: c.telefonoCliente },
     ], cursorY)
     cursorY += 14
 
-    // Vehiculo
-    sectionHeader('DATOS DEL VEHICULO', cursorY)
-    cursorY += 5.5
-    doc.rect(14, cursorY, 182, 11)
-    dataRow([
+    // ============= VEHICULO =============
+    sectionHeader('VEHICULO', cursorY)
+    cursorY += 5.2
+    dataBlock([
       { label: 'Placa', value: (c.placa || '').toUpperCase(), bold: true },
-      { label: 'Marca', value: c.marca },
-      { label: 'Modelo', value: c.modelo },
-      { label: 'Año', value: String(c.ano || '—') },
-      ...(c.cilindraje ? [{ label: 'Cilindraje', value: c.cilindraje }] : []),
+      { label: 'Marca / Modelo', value: `${c.marca || '—'} ${c.modelo || ''}`.trim() },
+      { label: 'Ano', value: String(c.ano || '—') },
+      { label: 'Cilindraje', value: c.cilindraje || '—' },
     ], cursorY)
     cursorY += 14
 
-    // Items
+    // ============= ITEMS =============
     if (c.items?.length) {
+      sectionHeader('ITEMS COTIZADOS', cursorY)
+      cursorY += 5.2
+
+      const itemSkus = c.items.map(i => i.sku || i.codigo || '')
       const itemRows = c.items.map((i, idx) => [
         String(idx + 1),
         i.nombre || '—',
         String(i.cantidad || 1),
         fmt(parseFloat(i.precio) || 0),
-        `${i.iva || 0}%`,
+        i.iva > 0 ? `${i.iva}%` : '—',
         fmt((parseFloat(i.precio) || 0) * (parseInt(i.cantidad) || 1)),
       ])
+
       autoTable(doc, {
         startY: cursorY,
-        head: [['#', 'DESCRIPCION', 'CANT.', 'P. UNIT.', 'IVA', 'TOTAL']],
+        head: [['#', 'DESCRIPCION', 'CANT.', 'V. UNIT.', 'IVA', 'TOTAL']],
         body: itemRows,
-        styles: { fontSize: 8.5, cellPadding: 2.5, lineColor: [226, 232, 240], lineWidth: 0.1 },
+        styles: { fontSize: 8.5, cellPadding: { top: 3, right: 3, bottom: itemSkus.some(s => s) ? 7 : 3, left: 3 }, lineColor: SLATE_100, lineWidth: 0.1 },
         headStyles: {
           fillColor: SLATE_50,
-          textColor: SLATE_700,
-          fontSize: 7.5,
+          textColor: SLATE_600,
+          fontSize: 7,
           fontStyle: 'bold',
           lineColor: NAVY,
           lineWidth: { bottom: 0.6 },
+          cellPadding: { top: 3, right: 3, bottom: 3, left: 3 },
         },
         columnStyles: {
-          0: { halign: 'center', cellWidth: 8, textColor: SLATE_500 },
-          1: { cellWidth: 'auto' },
-          2: { halign: 'center', cellWidth: 14 },
-          3: { halign: 'right', cellWidth: 28 },
+          0: { halign: 'center', cellWidth: 8, textColor: SLATE_400 },
+          1: { cellWidth: 'auto', fontStyle: 'bold' },
+          2: { halign: 'center', cellWidth: 16 },
+          3: { halign: 'right', cellWidth: 24 },
           4: { halign: 'center', cellWidth: 14 },
-          5: { halign: 'right', cellWidth: 30, fontStyle: 'bold' },
+          5: { halign: 'right', cellWidth: 28, fontStyle: 'bold' },
         },
         margin: { left: 14, right: 14 },
+        didDrawCell: (data) => {
+          if (data.row.section === 'body' && data.column.index === 1) {
+            const sku = itemSkus[data.row.index]
+            if (sku) {
+              doc.setFontSize(6.5)
+              doc.setTextColor(...SLATE_400)
+              doc.setFont('courier', 'normal')
+              doc.text(`SKU ${sku}`, data.cell.x + 3, data.cell.y + data.cell.height - 2)
+              doc.setFont(undefined, 'normal')
+            }
+          }
+        },
       })
 
-      cursorY = doc.lastAutoTable.finalY + 6
+      cursorY = doc.lastAutoTable.finalY + 8
 
-      // ============= TOTALS BOX =============
+      // ============= OBSERVACIONES (left) + TOTALS BOX (right) =============
       const subtotal = c.subtotal || 0
       const iva = c.iva || 0
       const total = c.total || 0
-      const boxX = 116
-      const boxW = 80
-      const boxY = cursorY
+      const boxX = 122
+      const boxW = 74
 
-      // Validez (left)
-      doc.setFontSize(8)
-      doc.setTextColor(...SLATE_500)
+      // OBSERVACIONES (left side)
+      const obsText = c.observaciones || 'Precios sujetos a disponibilidad de inventario al momento de la aprobacion. Tiempo estimado de entrega: 1 dia habil. Incluye garantia de 90 dias en repuestos originales y mano de obra. Esta cotizacion no genera obligacion de compra ni reserva de inventario.'
+      // Section header (left side only)
+      doc.setFillColor(...NAVY)
+      doc.rect(14, cursorY, 104, 5.2, 'F')
+      doc.setTextColor(255, 255, 255)
+      doc.setFontSize(7)
       doc.setFont(undefined, 'bold')
-      doc.text('VALIDEZ', 14, boxY + 3)
-      doc.setFont(undefined, 'normal')
-      doc.setTextColor(...NAVY)
-      doc.text(`${c.validezDias || 15} dias desde la emision`, 14, boxY + 8)
+      doc.text('OBSERVACIONES', 17, cursorY + 3.5)
 
-      // Subtotal
+      const obsLines = doc.splitTextToSize(obsText, 96)
+      const obsHeight = Math.max(40, obsLines.length * 3.8 + 6)
+      doc.setDrawColor(...SLATE_300)
+      doc.rect(14, cursorY + 5.2, 104, obsHeight)
       doc.setFontSize(8)
-      doc.setTextColor(...SLATE_500)
+      doc.setTextColor(...NAVY)
       doc.setFont(undefined, 'normal')
-      doc.text('Subtotal', boxX + 4, boxY + 4)
-      doc.setTextColor(...NAVY)
-      doc.text(fmt(subtotal), boxX + boxW - 4, boxY + 4, { align: 'right' })
-      // IVA
-      doc.setTextColor(...SLATE_500)
-      doc.text('IVA', boxX + 4, boxY + 9)
-      doc.setTextColor(...NAVY)
-      doc.text(fmt(iva), boxX + boxW - 4, boxY + 9, { align: 'right' })
-      // Separator
-      doc.setDrawColor(203, 213, 225)
-      doc.setLineDashPattern([0.5, 0.5], 0)
-      doc.line(boxX, boxY + 11.5, boxX + boxW, boxY + 11.5)
-      doc.setLineDashPattern([], 0)
+      doc.text(obsLines, 17, cursorY + 9)
+
+      // TOTALS BOX (right side)
+      doc.setFontSize(8.5)
+      let tY = cursorY + 4
+      const totalsRows = [
+        { lbl: 'Subtotal', val: fmt(subtotal) },
+        { lbl: 'Descuento', val: '$ 0' },
+        { lbl: 'IVA (19%)', val: fmt(iva) },
+      ]
+      totalsRows.forEach(r => {
+        doc.setTextColor(...SLATE_500)
+        doc.setFont(undefined, 'normal')
+        doc.text(r.lbl, boxX + 4, tY)
+        doc.setTextColor(...NAVY)
+        doc.text(r.val, boxX + boxW - 4, tY, { align: 'right' })
+        // dotted separator
+        doc.setDrawColor(...SLATE_300)
+        doc.setLineDashPattern([0.5, 0.5], 0)
+        doc.line(boxX + 4, tY + 2, boxX + boxW - 4, tY + 2)
+        doc.setLineDashPattern([], 0)
+        tY += 6
+      })
+
       // TOTAL navy box
       doc.setFillColor(...NAVY)
-      doc.rect(boxX, boxY + 13, boxW, 10, 'F')
+      doc.rect(boxX, tY, boxW, 11, 'F')
       doc.setTextColor(...AMBER)
-      doc.setFontSize(7.5)
+      doc.setFontSize(7)
       doc.setFont(undefined, 'bold')
-      doc.text('TOTAL COTIZADO', boxX + 4, boxY + 19)
+      doc.text('TOTAL COTIZADO', boxX + 4, tY + 6.5)
       doc.setTextColor(255, 255, 255)
-      doc.setFontSize(13)
-      doc.setFont(undefined, 'bold')
-      doc.text(fmt(total), boxX + boxW - 4, boxY + 20, { align: 'right' })
+      doc.setFontSize(12.5)
+      doc.text(fmt(total), boxX + boxW - 4, tY + 7, { align: 'right' })
 
-      cursorY = boxY + 28
-    }
-
-    // Observaciones
-    if (c.observaciones) {
-      sectionHeader('OBSERVACIONES', cursorY)
-      cursorY += 5.5
-      const obsLines = doc.splitTextToSize(c.observaciones, 178)
-      const obsHeight = Math.max(12, obsLines.length * 4 + 6)
-      doc.setDrawColor(...[203, 213, 225])
-      doc.rect(14, cursorY, 182, obsHeight)
-      doc.setFontSize(8.5)
-      doc.setTextColor(...NAVY)
+      // Card aprobacion (below totals box)
+      tY += 15
+      doc.setDrawColor(...SLATE_300)
+      doc.setLineDashPattern([1, 1], 0)
+      doc.roundedRect(boxX, tY, boxW, 14, 1, 1, 'D')
+      doc.setLineDashPattern([], 0)
+      doc.setFontSize(7)
+      doc.setTextColor(...SLATE_600)
       doc.setFont(undefined, 'normal')
-      doc.text(obsLines, 17, cursorY + 4.5)
-      cursorY += obsHeight + 4
+      doc.text('Para aprobar esta cotizacion', boxX + boxW / 2, tY + 5, { align: 'center' })
+      doc.text(`responda este correo o llame al`, boxX + boxW / 2, tY + 8.5, { align: 'center' })
+      doc.setFont(undefined, 'bold')
+      doc.setTextColor(...NAVY)
+      doc.text(TALLER.celular, boxX + boxW / 2, tY + 12, { align: 'center' })
+
+      cursorY += obsHeight + 12
     }
 
-    // Notas legales
-    cursorY += 4
-    doc.setFontSize(7.5)
-    doc.setTextColor(...SLATE_500)
-    doc.setFont(undefined, 'italic')
-    doc.text(`* Esta cotizacion es valida por ${c.validezDias || 15} dias a partir de la fecha de emision.`, 14, cursorY)
-    doc.text('* Precios sujetos a disponibilidad de repuestos al momento de la reparacion.', 14, cursorY + 4)
-    doc.setFont(undefined, 'normal')
-
-    // Firmas
-    const firmaY = Math.max(cursorY + 22, 250)
-    doc.setDrawColor(...SLATE_500)
+    // ============= FIRMAS =============
+    const firmaY = Math.max(cursorY + 16, 252)
+    doc.setDrawColor(...SLATE_400)
     doc.setLineWidth(0.3)
-    doc.line(20, firmaY, 85, firmaY)
-    doc.line(120, firmaY, 185, firmaY)
-    doc.setFontSize(8)
+    doc.line(14, firmaY, 90, firmaY)
+    doc.line(110, firmaY, 196, firmaY)
+    doc.setFontSize(7.5)
     doc.setTextColor(...NAVY)
     doc.setFont(undefined, 'bold')
-    doc.text('Firma del Cliente', 52, firmaY + 4, { align: 'center' })
-    doc.text('Autorizado por', 152, firmaY + 4, { align: 'center' })
+    doc.text('FIRMA CLIENTE · APROBACION', 14, firmaY + 4)
+    doc.text('ASESOR DE SERVICIO', 110, firmaY + 4)
+    doc.setFontSize(7)
+    doc.setTextColor(...SLATE_400)
+    doc.setFont(undefined, 'normal')
+    doc.text('Nombre, documento, fecha', 14, firmaY + 8)
+    doc.text('Nombre, documento, fecha', 110, firmaY + 8)
 
     // Footer
-    doc.setFontSize(7)
-    doc.setTextColor(...SLATE_500)
-    doc.setFont(undefined, 'normal')
-    doc.text(`${TALLER.razonSocial || TALLER.nombre} · ${TALLER.direccion}`, 105, 287, { align: 'center' })
-    doc.text(`Cel. ${TALLER.celular} · ${TALLER.email}`, 105, 290, { align: 'center' })
+    doc.setDrawColor(...SLATE_300)
+    doc.setLineWidth(0.2)
+    doc.line(14, 285, 196, 285)
+    doc.setFontSize(6.5)
+    doc.setTextColor(...SLATE_400)
+    doc.text(`Generado por taller-automotriz-app.vercel.app · ${TALLER.razonSocial || TALLER.nombre}`, 14, 290)
+    doc.text('Pagina 1 de 1', 196, 290, { align: 'right' })
 
     doc.save(`${c.id || 'Cotizacion'}.pdf`)
   }
@@ -580,10 +623,12 @@ function CotizacionForm({ cotizacion, trabajos = [], onSave, onCancel }) {
         </div>
       </div>
       <form onSubmit={handleSubmit}>
+        {/* Cliente + Vehiculo side-by-side at desktop */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
         <div className="card">
           <div className="card__h"><h3>Cliente</h3></div>
           <div className="card__b">
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 14 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
               <div className="field" style={{ position: 'relative' }}>
                 <label>Cedula / NIT</label>
                 <input className="input" value={form.cedula} placeholder="Buscar por documento..."
@@ -616,7 +661,7 @@ function CotizacionForm({ cotizacion, trabajos = [], onSave, onCancel }) {
         <div className="card">
           <div className="card__h"><h3>Vehiculo</h3></div>
           <div className="card__b">
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 14 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
               <div className="field">
                 <label>Placa</label>
                 <input className="input" value={form.placa} placeholder="ABC123" style={{ textTransform: 'uppercase' }}
@@ -636,6 +681,11 @@ function CotizacionForm({ cotizacion, trabajos = [], onSave, onCancel }) {
                   }} />
               </div>
               <div className="field">
+                <label>Año</label>
+                <input className="input" type="number" value={form.ano} placeholder="2024" min="1950" max="2030"
+                  onChange={e => set('ano', e.target.value)} />
+              </div>
+              <div className="field">
                 <label>Marca</label>
                 <select className="input" value={form.marca} onChange={e => { set('marca', e.target.value); set('modelo', '') }}>
                   <option value="">Seleccionar...</option>
@@ -649,22 +699,15 @@ function CotizacionForm({ cotizacion, trabajos = [], onSave, onCancel }) {
                   {modelos.map(m => <option key={m} value={m}>{m}</option>)}
                 </select>
               </div>
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 14, marginTop: 14 }}>
-              <div className="field">
-                <label>Año</label>
-                <input className="input" type="number" value={form.ano} placeholder="2024" min="1950" max="2030"
-                  onChange={e => set('ano', e.target.value)} />
-              </div>
-              <div className="field">
+              <div className="field" style={{ gridColumn: '1 / -1' }}>
                 <label>Cilindraje (cc)</label>
                 <input className="input" value={form.cilindraje} placeholder="Ej: 1600, 2000, 3.0L"
                   onChange={e => set('cilindraje', e.target.value)} />
               </div>
-              <div className="field" />
             </div>
           </div>
         </div>
+        </div>{/* end Cliente+Vehiculo grid */}
 
         <div className="card">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
