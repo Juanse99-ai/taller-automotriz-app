@@ -131,15 +131,26 @@ export default function Cotizaciones({ notify, trabajos = [], onCrearTrabajo, co
       const colW = 182 / items.length
       items.forEach((it, i) => {
         const x = 14 + i * colW
+        const maxW = colW - 8
         doc.setFontSize(6.5)
         doc.setFont(undefined, 'bold')
         doc.setTextColor(...SLATE_500)
         doc.text((it.label || '').toUpperCase(), x + 4, y + 3.5)
         doc.setFont(undefined, it.bold ? 'bold' : 'normal')
         doc.setTextColor(...NAVY)
-        doc.setFontSize(it.size || 9)
-        const val = (it.value || '—').toString()
-        doc.text(val.length > 30 ? val.slice(0, 28) + '..' : val, x + 4, y + 8)
+        const valStr = (it.value || '—').toString()
+        const baseSize = it.size || 9
+        let fontSize = baseSize
+        let val = valStr
+        doc.setFontSize(fontSize)
+        while (doc.getTextWidth(val) > maxW && fontSize > 7) {
+          fontSize -= 0.5
+          doc.setFontSize(fontSize)
+        }
+        while (doc.getTextWidth(val) > maxW && val.length > 4) {
+          val = val.slice(0, -2) + '..'
+        }
+        doc.text(val, x + 4, y + 8)
       })
     }
 

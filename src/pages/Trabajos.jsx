@@ -180,15 +180,28 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
       const colW = 182 / items.length
       items.forEach((it, i) => {
         const x = 14 + i * colW
+        const maxW = colW - 8 // leave 4mm padding on each side
         doc.setFontSize(6.5)
         doc.setFont(undefined, 'bold')
         doc.setTextColor(...SLATE_500)
         doc.text((it.label || '').toUpperCase(), x + 4, y + 3.5)
         doc.setFont(undefined, it.bold ? 'bold' : 'normal')
         doc.setTextColor(...NAVY)
-        doc.setFontSize(it.size || 9)
-        const val = (it.value || '—').toString()
-        doc.text(val.length > 26 ? val.slice(0, 24) + '..' : val, x + 4, y + 8)
+        // Use smaller font when value is long, and truncate to fit column width
+        const valStr = (it.value || '—').toString()
+        const baseSize = it.size || 9
+        let fontSize = baseSize
+        let val = valStr
+        doc.setFontSize(fontSize)
+        // If text width exceeds column, try smaller font, then truncate
+        while (doc.getTextWidth(val) > maxW && fontSize > 7) {
+          fontSize -= 0.5
+          doc.setFontSize(fontSize)
+        }
+        while (doc.getTextWidth(val) > maxW && val.length > 4) {
+          val = val.slice(0, -2) + '..'
+        }
+        doc.text(val, x + 4, y + 8)
       })
     }
 
