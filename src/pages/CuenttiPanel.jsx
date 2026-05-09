@@ -102,6 +102,24 @@ export default function CuenttiPanel({ trabajos, actualizarTrabajo, notify }) {
     setIdBancoConfig(val)
     try { localStorage.setItem('cuentti:id_banco', String(val)) } catch {}
   }
+
+  // SKUs genericos de fallback (cuando el item no viene del inventario)
+  // Para mano de obra (servicios) y repuestos sueltos sin SKU especifico.
+  // Estos SKUs DEBEN existir en la tabla de productos de Cuentti.
+  const [skuServicio, setSkuServicio] = useState(() => {
+    try { return localStorage.getItem('cuentti:sku_servicio') || 'MO1' } catch { return 'MO1' }
+  })
+  const [skuRepuesto, setSkuRepuesto] = useState(() => {
+    try { return localStorage.getItem('cuentti:sku_repuesto') || 'MO1' } catch { return 'MO1' }
+  })
+  const guardarSkuServicio = (val) => {
+    setSkuServicio(val)
+    try { localStorage.setItem('cuentti:sku_servicio', val) } catch {}
+  }
+  const guardarSkuRepuesto = (val) => {
+    setSkuRepuesto(val)
+    try { localStorage.setItem('cuentti:sku_repuesto', val) } catch {}
+  }
   // Toggle para mostrar panel de configuracion de IDs
   const [showConfigIds, setShowConfigIds] = useState(false)
   // Estado de la deteccion automatica de medios de pago
@@ -636,7 +654,7 @@ export default function CuenttiPanel({ trabajos, actualizarTrabajo, notify }) {
                   </div>
                 ))}
               </div>
-              <div style={{display:'flex',alignItems:'center',gap:10,padding:'10px 12px',background:'var(--bg-raised)',border:'1px solid var(--border)',borderRadius:8}}>
+              <div style={{display:'flex',alignItems:'center',gap:10,padding:'10px 12px',background:'var(--bg-raised)',border:'1px solid var(--border)',borderRadius:8,marginBottom:10}}>
                 <div style={{flex:1}}>
                   <div style={{fontSize:12.5,fontWeight:600,color:'var(--text)'}}>Banco para transferencia / tarjetas</div>
                   <div style={{fontSize:10.5,color:'var(--text-3)'}}>id_banco · banco real registrado en Cuentti</div>
@@ -647,8 +665,43 @@ export default function CuenttiPanel({ trabajos, actualizarTrabajo, notify }) {
                   style={{width:60,fontFamily:'var(--mono)',fontWeight:700,textAlign:'center',fontSize:13,padding:'6px 8px'}}
                 />
               </div>
+
+              {/* SKUs genericos para items sin SKU del inventario */}
+              <div style={{padding:'10px 12px',background:'var(--bg-raised)',border:'1px solid var(--border)',borderRadius:8,marginBottom:8}}>
+                <div style={{fontSize:12.5,fontWeight:700,color:'var(--text)',marginBottom:8}}>SKUs genericos para items sin SKU</div>
+                <div style={{fontSize:11,color:'var(--text-3)',marginBottom:10,lineHeight:1.4}}>
+                  Cuando una linea de la OT no viene del inventario (ej. "SALDO REPUESTO" o mano de obra escrita a mano), se usa uno de estos SKUs como fallback. <strong>Deben existir en tu Cuentti</strong>. Crealos con cualquier descripcion en cuentti.co y pon aqui sus Referencias.
+                </div>
+                <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
+                  <div style={{display:'flex',alignItems:'center',gap:8}}>
+                    <div style={{flex:1,minWidth:0}}>
+                      <div style={{fontSize:12,fontWeight:600,color:'var(--text)'}}>Mano de obra / Servicios</div>
+                      <div style={{fontSize:10,color:'var(--text-3)'}}>SKU para "esServicio: true"</div>
+                    </div>
+                    <input type="text" className="input"
+                      value={skuServicio}
+                      onChange={e => guardarSkuServicio(e.target.value.trim().toUpperCase())}
+                      placeholder="MO1"
+                      style={{width:90,fontFamily:'var(--mono)',fontWeight:700,textAlign:'center',fontSize:12,padding:'6px 8px'}}
+                    />
+                  </div>
+                  <div style={{display:'flex',alignItems:'center',gap:8}}>
+                    <div style={{flex:1,minWidth:0}}>
+                      <div style={{fontSize:12,fontWeight:600,color:'var(--text)'}}>Repuestos sin SKU</div>
+                      <div style={{fontSize:10,color:'var(--text-3)'}}>SKU para SALDO REPUESTO, etc.</div>
+                    </div>
+                    <input type="text" className="input"
+                      value={skuRepuesto}
+                      onChange={e => guardarSkuRepuesto(e.target.value.trim().toUpperCase())}
+                      placeholder="GENERICO"
+                      style={{width:90,fontFamily:'var(--mono)',fontWeight:700,textAlign:'center',fontSize:12,padding:'6px 8px'}}
+                    />
+                  </div>
+                </div>
+              </div>
+
               <div style={{fontSize:11,color:'var(--text-3)',marginTop:8,fontStyle:'italic'}}>
-                Tip: mira el error de Cuentti. Si dice <code className="mono">id_medio_pago</code>, prueba 1-10 hasta acertar. Si dice <code className="mono">id_banco</code>, prueba 1-5.
+                Tip: si Cuentti devuelve <code className="mono">"Sku XXX No existe"</code>, debes crear ese producto en cuentti.co o cambiar el SKU aqui. Si dice <code className="mono">id_medio_pago</code> o <code className="mono">id_banco</code>, ajusta los IDs arriba.
               </div>
             </div>
           )}

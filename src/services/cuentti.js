@@ -338,6 +338,16 @@ export function buildFacturaPayload(factura) {
   const to2 = (n) => parseFloat((parseFloat(n || 0)).toFixed(2))
   const upper = (v) => (v ?? '').toString().trim().toUpperCase()
 
+  // Resolver SKUs por defecto desde localStorage. El usuario los configura
+  // una vez con SKUs reales que existan en su Cuentti (ej "MO1" para mano de
+  // obra, "GENERICO" o "SALDO" para repuestos sin SKU especifico).
+  let skuServicioDefault = 'MO1'
+  let skuRepuestoDefault = 'MO1'
+  try {
+    skuServicioDefault = localStorage.getItem('cuentti:sku_servicio') || 'MO1'
+    skuRepuestoDefault = localStorage.getItem('cuentti:sku_repuesto') || skuServicioDefault
+  } catch {}
+
   // Detalle
   const items = (factura.items || []).map(item => {
     const cantidad = parseFloat(item.cantidad) || 1
@@ -345,9 +355,14 @@ export function buildFacturaPayload(factura) {
     const impuesto = parseFloat(item.iva) || 19
     const precioBase = to2(precioConIva / (1 + impuesto / 100))
     const total = to2(precioBase * cantidad * (1 + impuesto / 100))
+    // SKU: si la linea tiene uno (porque vino de inventario), se usa ese.
+    // Si no, se usa el SKU generico configurado por el usuario segun si es
+    // servicio (mano de obra) o repuesto (sin sku, ej saldo de inventario viejo).
+    const skuFallback = item.esServicio ? skuServicioDefault : skuRepuestoDefault
+    const sku = item.sku || item.codigo || skuFallback
     return {
-      sku: item.sku || item.codigo || 'MO1',
-      descripcion: item.nombre || 'Servicio Taller',
+      sku,
+      descripcion: item.nombre || (item.esServicio ? 'Servicio Taller' : 'Repuesto'),
       precio_venta: precioBase,
       cantidad: Number.isFinite(cantidad) ? cantidad : 1,
       impuesto: parseInt(impuesto, 10),

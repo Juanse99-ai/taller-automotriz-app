@@ -824,13 +824,27 @@ function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [] }) {
   }, [inventario])
 
   const seleccionarProducto = (itemId, producto) => {
+    // Guardar el nombre original del producto del inventario por separado
+    // para que la descripcion (item.nombre) sea editable libremente sin perder
+    // la referencia al SKU. nombreInventario sirve para mostrar "Cambiar producto".
     updateItem(itemId, 'nombre', producto.nombre)
+    updateItem(itemId, 'nombreInventario', producto.nombre)
     updateItem(itemId, 'precio', producto.precio)
     updateItem(itemId, 'iva', producto.iva)
     updateItem(itemId, 'codigo', producto.codigo || producto.sku || '')
     updateItem(itemId, 'sku', producto.sku || '')
     updateItem(itemId, 'esServicio', !!producto.esServicio)
+    // _bloqueado evita que el siguiente onChange del input dispare otra busqueda
+    updateItem(itemId, '_bloqueado', true)
     setItemSearch(prev => ({ ...prev, [itemId]: { query: '', results: [], show: false } }))
+  }
+
+  const cambiarProducto = (itemId) => {
+    // Permite volver a buscar otro producto: limpia bloqueo y SKU
+    updateItem(itemId, '_bloqueado', false)
+    updateItem(itemId, 'nombreInventario', '')
+    updateItem(itemId, 'sku', '')
+    updateItem(itemId, 'codigo', '')
   }
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
@@ -1115,22 +1129,35 @@ function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [] }) {
                       <tr key={item.id}>
                         <td style={{ position: 'relative' }}>
                           <div style={{ position: 'relative' }}>
-                            <input className="form-input" value={item.nombre} placeholder="Nombre, codigo o referencia..."
+                            <input className="form-input" value={item.nombre} placeholder={item._bloqueado ? 'Edita la descripcion libremente...' : 'Nombre, codigo o referencia...'}
                               autoComplete="off"
                               onChange={e => {
                                 updateItem(item.id, 'nombre', e.target.value)
-                                buscarEnInventario(item.id, e.target.value)
+                                // Solo dispara busqueda si el item NO ha sido bloqueado por una seleccion previa
+                                if (!item._bloqueado) buscarEnInventario(item.id, e.target.value)
                               }}
                               onFocus={() => {
-                                if (item.nombre && item.nombre.length >= 2) buscarEnInventario(item.id, item.nombre)
+                                if (!item._bloqueado && item.nombre && item.nombre.length >= 2) buscarEnInventario(item.id, item.nombre)
                               }}
                               onBlur={() => setTimeout(() => setItemSearch(prev => ({ ...prev, [item.id]: { ...prev[item.id], show: false } })), 250)}
                               onKeyDown={e => {
                                 if (e.key === 'Escape') setItemSearch(prev => ({ ...prev, [item.id]: { ...prev[item.id], show: false } }))
                               }}
-                              style={{ padding: '6px 10px', fontSize: 13 }} />
-                            {invLoading && <span style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', fontSize: 11, color: '#999' }}>...</span>}
+                              style={{ padding: '6px 32px 6px 10px', fontSize: 13 }} />
+                            {invLoading && !item._bloqueado && <span style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', fontSize: 11, color: '#999' }}>...</span>}
+                            {item._bloqueado && (
+                              <button type="button" onClick={() => cambiarProducto(item.id)}
+                                title={`Cambiar producto (actual: ${item.nombreInventario || item.sku || 'sin SKU'})`}
+                                style={{ position: 'absolute', right: 4, top: '50%', transform: 'translateY(-50%)', background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--blue-600)', fontSize: 11, padding: '2px 6px', borderRadius: 4 }}>
+                                🔄
+                              </button>
+                            )}
                           </div>
+                          {item._bloqueado && item.sku && (
+                            <div style={{ fontSize: 10.5, color: 'var(--text-3)', marginTop: 2, fontFamily: 'var(--mono)' }}>
+                              SKU: {item.sku}{item.nombreInventario && item.nombreInventario !== item.nombre ? ` · ${item.nombreInventario}` : ''}
+                            </div>
+                          )}
                           {/* Command Palette — Product Search */}
                           {searchState?.show && searchState.results.length > 0 && (
                             <div className="cmd-backdrop" onClick={() => setItemSearch(prev => ({ ...prev, [item.id]: { ...prev[item.id], show: false } }))}>
