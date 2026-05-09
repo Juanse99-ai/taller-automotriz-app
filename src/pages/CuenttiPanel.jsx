@@ -405,6 +405,10 @@ export default function CuenttiPanel({ trabajos, actualizarTrabajo, notify }) {
         </div>
       )}
 
+      {/* Facturacion flow + Side panel (2-column layout matching handoff) */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,2fr) minmax(0,1fr)', gap: 16, alignItems: 'start' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 14, minWidth: 0 }}>
+
       {/* Facturacion directa */}
       <div className="card">
         <div className="card__h">
@@ -641,6 +645,98 @@ export default function CuenttiPanel({ trabajos, actualizarTrabajo, notify }) {
           )}
         </div>
       </div>
+
+      </div>{/* end left column */}
+
+      {/* SIDE PANEL: Estado de envio + Ultimas facturas */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 14, minWidth: 0 }}>
+        {(() => {
+          const hasTrabajo = !!facturaId
+          const conexionOK = !!testResult && testResult.clientes?.startsWith('OK')
+          const hasFactura = !!facturaResp && !facturaResp.error
+          const hasDian = !!emitResp && !emitResp.error
+          const hasPago = !!pagoResp && !pagoResp.error
+          const statusItems = [
+            { lbl: 'Trabajo seleccionado', ok: hasTrabajo },
+            { lbl: 'Cliente sincronizado', ok: conexionOK && hasTrabajo },
+            { lbl: 'Inventario actualizado', ok: conexionOK },
+            { lbl: 'Enviado a Cuentti', ok: hasFactura },
+            { lbl: 'Firmado y aprobado DIAN', ok: hasDian },
+            { lbl: 'Pago registrado', ok: hasPago },
+          ]
+          return (
+            <div className="card">
+              <div className="card__h"><h3>Estado de envio</h3></div>
+              <div className="card__b" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {statusItems.map((s, i) => (
+                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 13 }}>
+                    <span style={{
+                      width: 18, height: 18, borderRadius: '50%',
+                      display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                      background: s.ok ? 'var(--green-500)' : 'var(--bg-subtle)',
+                      border: s.ok ? 'none' : '1px solid var(--border)',
+                      color: '#fff', flexShrink: 0,
+                    }}>
+                      {s.ok ? (
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                      ) : (
+                        <span style={{ width: 5, height: 5, borderRadius: '50%', background: 'var(--text-3)' }} />
+                      )}
+                    </span>
+                    <span style={{ color: s.ok ? 'var(--text)' : 'var(--text-3)', fontWeight: s.ok ? 600 : 500 }}>{s.lbl}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )
+        })()}
+
+        {/* Ultimas facturas */}
+        {(() => {
+          const ultimas = trabajos
+            .filter(t => t.cuenttiTransacionId)
+            .sort((a, b) => new Date(b.facturadoEn || b.fecha || 0) - new Date(a.facturadoEn || a.fecha || 0))
+            .slice(0, 5)
+          return (
+            <div className="card">
+              <div className="card__h"><h3>Ultimas facturas</h3>{ultimas.length > 0 && <span className="count">{ultimas.length}</span>}</div>
+              {ultimas.length === 0 ? (
+                <div className="card__b" style={{ textAlign: 'center', color: 'var(--text-3)', fontSize: 13, padding: '20px 12px' }}>
+                  <div style={{ fontSize: 22, opacity: .35, marginBottom: 4 }}>📄</div>
+                  <div>Sin facturas registradas</div>
+                  <div style={{ fontSize: 11, marginTop: 2 }}>Las facturas emitidas aparecen aqui.</div>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                  {ultimas.map((f, i) => {
+                    const tipo = f.cuenttiPrefijo || (f.cuenttiTransacionId?.toString().startsWith('FE') ? 'FEIC' : 'MAS')
+                    const num = f.cuenttiTransacionId
+                    const estadoBadge = f.cuenttiPagado ? { c: 'badge-success', l: 'pagada' } : f.cuenttiAprobado ? { c: 'badge-success', l: 'aprobada' } : { c: 'badge-warning', l: 'pendiente' }
+                    return (
+                      <div key={i} style={{
+                        padding: '12px 16px',
+                        borderBottom: i < ultimas.length - 1 ? '1px solid var(--border)' : 'none',
+                        display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10,
+                      }}>
+                        <div style={{ minWidth: 0 }}>
+                          <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '.4px' }}>{tipo}</div>
+                          <div className="mono" style={{ fontSize: 12, fontWeight: 700, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{num}</div>
+                          <div style={{ fontSize: 11, color: 'var(--text-3)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{f.cliente || '—'}</div>
+                        </div>
+                        <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                          <div className="mono" style={{ fontSize: 12, fontWeight: 700 }}>{fmt(f.total || 0)}</div>
+                          <span className={`badge ${estadoBadge.c}`} style={{ fontSize: 9.5, marginTop: 2, textTransform: 'uppercase', letterSpacing: '.4px' }}>{estadoBadge.l}</span>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+          )
+        })()}
+      </div>
+      </div>{/* end 2-column grid */}
 
       <div className="card">
         <div className="card__h"><h3>Grabar / Actualizar Producto Movil</h3></div>
