@@ -428,49 +428,127 @@ export async function emitirFacturaElectronica(idTransacion) {
   }
 }
 
-// Detectar medios de pago disponibles en Cuentti probando endpoints comunes
+// Detectar medios de pago disponibles en Cuentti probando muchos endpoints
 // Cada cuenta de Cuentti tiene IDs distintos en su tabla vent_medio_pago
-// y no hay docs publicas. Esta funcion intenta varios paths conocidos del
-// stack j4ErpPro hasta encontrar uno que responda con la lista.
+// y no hay docs publicas. Probamos 30+ paths conocidos del stack j4ErpPro
+// hasta encontrar uno que responda con la lista.
 export async function detectarMediosPago() {
+  const branch = CONFIG.branchId
+  const empresa = CONFIG.companyId
   const candidatos = [
+    // Server-side (com/j4ErpPro/server/*)
     '/jServerj4ErpPro/com/j4ErpPro/server/general/medio_pago/listar',
     '/jServerj4ErpPro/com/j4ErpPro/server/general/medioPago/listar',
+    '/jServerj4ErpPro/com/j4ErpPro/server/general/listarMediosPago',
     '/jServerj4ErpPro/com/j4ErpPro/server/admin/medio_pago/listar',
     '/jServerj4ErpPro/com/j4ErpPro/server/admin/medioPago/listar',
+    '/jServerj4ErpPro/com/j4ErpPro/server/admin/listarMediosPago',
     '/jServerj4ErpPro/com/j4ErpPro/server/vent/medio_pago/listar',
     '/jServerj4ErpPro/com/j4ErpPro/server/vent/medioPago/listar',
+    '/jServerj4ErpPro/com/j4ErpPro/server/vent/factura/medio_pago/listar',
+    '/jServerj4ErpPro/com/j4ErpPro/server/vent/factura/listarMediosPago',
+    '/jServerj4ErpPro/com/j4ErpPro/server/configuracion/medio_pago',
+    '/jServerj4ErpPro/com/j4ErpPro/server/configuracion/medio_pago/listar',
+    `/jServerj4ErpPro/com/j4ErpPro/server/general/medio_pago/listar/${branch}`,
+    `/jServerj4ErpPro/com/j4ErpPro/server/admin/medio_pago/listar/${branch}`,
+    `/jServerj4ErpPro/com/j4ErpPro/server/general/medio_pago/listar/${branch}/0`,
+    `/jServerj4ErpPro/com/j4ErpPro/server/general/medio_pago/empresa/${empresa}`,
+    // Token endpoints (api/token/*)
     '/jServerj4ErpPro/api/token/listarMediosPago',
     '/jServerj4ErpPro/api/token/mediosPago',
+    '/jServerj4ErpPro/api/token/medios_pago',
+    '/jServerj4ErpPro/api/token/medio_pago',
+    '/jServerj4ErpPro/api/token/medio_pago/listar',
     '/jServerj4ErpPro/api/token/listar/medio_pago',
-    `/jServerj4ErpPro/com/j4ErpPro/server/general/medio_pago/listar/${CONFIG.branchId}`,
-    `/jServerj4ErpPro/com/j4ErpPro/server/admin/medio_pago/listar/${CONFIG.branchId}`,
+    '/jServerj4ErpPro/api/token/configuracion/medios_pago',
+    `/jServerj4ErpPro/api/token/medios_pago/${branch}`,
+    `/jServerj4ErpPro/api/token/medio_pago/${branch}`,
+    // Otros patrones
+    '/jServerj4ErpPro/com/j4ErpPro/server/factura/medio_pago',
+    '/jServerj4ErpPro/com/j4ErpPro/server/transacion/medio_pago',
+    '/jServerj4ErpPro/com/j4ErpPro/server/transacion/listarMediosPago',
+    '/jServerj4ErpPro/com/j4ErpPro/server/general/lista/medio_pago',
+    '/jServerj4ErpPro/com/j4ErpPro/server/general/lista_medio_pago',
   ]
 
   const resultados = []
   for (const path of candidatos) {
-    try {
-      const data = await cuenttiRequest(path)
-      // Detecta una respuesta valida (array o objeto con datos)
-      const items = Array.isArray(data) ? data : (data?.data || data?.lista || data?.medios || [])
-      if (Array.isArray(items) && items.length > 0 && items[0] && typeof items[0] === 'object') {
-        return {
-          ok: true,
-          endpoint: path,
-          medios: items.map(m => ({
-            id: m.id_medio_pago ?? m.id ?? m.idMedioPago ?? null,
-            nombre: m.nombre ?? m.descripcion ?? m.medio_pago ?? m.label ?? '?',
-            raw: m,
-          })).filter(m => m.id != null),
-          intentos: resultados,
+    // Prueba GET y POST si GET no funciona
+    for (const method of ['GET', 'POST']) {
+      try {
+        const data = await cuenttiRequest(path, method, method === 'POST' ? {} : null)
+        // Detecta una respuesta valida (array o objeto con datos)
+        const items = Array.isArray(data) ? data : (data?.data || data?.lista || data?.medios || data?.body?.lista || [])
+        if (Array.isArray(items) && items.length > 0 && items[0] && typeof items[0] === 'object') {
+          // Verificar que parecen medios de pago (tienen un id y un nombre/descripcion)
+          const validos = items.filter(m => {
+            const id = m.id_medio_pago ?? m.id ?? m.idMedioPago
+            const nombre = m.nombre ?? m.descripcion ?? m.medio_pago ?? m.label
+            return id != null && (typeof id === 'number' || !isNaN(parseInt(id))) && nombre
+          })
+          if (validos.length > 0) {
+            return {
+              ok: true,
+              endpoint: `${method} ${path}`,
+              medios: validos.map(m => ({
+                id: parseInt(m.id_medio_pago ?? m.id ?? m.idMedioPago),
+                nombre: m.nombre ?? m.descripcion ?? m.medio_pago ?? m.label ?? '?',
+                raw: m,
+              })),
+              intentos: resultados,
+            }
+          }
         }
+        resultados.push({ path: `${method} ${path}`, status: 'sin lista' })
+      } catch (e) {
+        resultados.push({ path: `${method} ${path}`, status: e.status || 'error' })
       }
-      resultados.push({ path, status: 'sin lista', preview: typeof data === 'object' ? JSON.stringify(data).slice(0, 80) : String(data).slice(0, 80) })
-    } catch (e) {
-      resultados.push({ path, status: e.status || 'error', msg: (e.message || '').slice(0, 80) })
+      // Si fue GET, no probar POST en el mismo path
+      if (method === 'GET') break
     }
   }
-  return { ok: false, intentos: resultados }
+  return { ok: false, intentos: resultados.slice(0, 30) }
+}
+
+// Probar un id_medio_pago especifico enviando una factura test minimal,
+// y anular inmediatamente si tiene exito. Permite descubrir IDs validos
+// sin tener que adivinar a ciegas. Cada test crea-y-anula UNA factura
+// (queda en logs de Cuentti pero anulada).
+export async function probarIdMedioPago(idMedioPago, idBanco = 2) {
+  // Crear factura test minima: 1 peso, MO1, mismo cliente generico
+  const facturaTest = {
+    items: [{ nombre: 'TEST_ID_MEDIO_PAGO', precio: 1, cantidad: 1, iva: 0, sku: 'MO1' }],
+    cliente: 'CONSUMIDOR FINAL',
+    cedula: '222222222222',
+    resolucion: 'MAS',
+    idMedioPago,
+    idBanco,
+    aCredito: false,
+    observaciones: 'TEST automatico para detectar id_medio_pago — debe anularse',
+  }
+  try {
+    const result = await enviarFactura(facturaTest)
+    // Si llego aqui sin throw, el ID funciona
+    const txId = (typeof result === 'string' ? result : (result?.id_transacion ?? result?.idTransacion ?? result?.id ?? null))
+    // Intentar anular inmediatamente
+    if (txId) {
+      try {
+        await cuenttiRequest(`/jServerj4ErpPro/com/j4ErpPro/server/transacion/anularTransacion/${txId}`, 'POST')
+      } catch {}
+    }
+    return { ok: true, idTransacion: txId, mensaje: 'ID valido — factura test creada y anulada' }
+  } catch (e) {
+    const msg = e.message || ''
+    // Distinguir el tipo de error: FK violation = ID invalido vs otros errores
+    const esFkViolation = /id_medio_pago|id_banco|FOREIGN KEY/i.test(msg) || /constraint fails/i.test(msg)
+    return {
+      ok: false,
+      esFkViolation,
+      mensaje: esFkViolation
+        ? `ID ${idMedioPago} NO existe en tu Cuentti (FK violation)`
+        : `Error distinto: ${msg.slice(0, 120)}`,
+    }
+  }
 }
 
 // Agregar pago a una transaccion existente

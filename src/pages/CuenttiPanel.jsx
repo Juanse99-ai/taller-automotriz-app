@@ -11,6 +11,8 @@ import {
   grabarProductoMovil,
   getCuenttiDebugHeaders,
   testTokenDirecto,
+  detectarMediosPago,
+  probarIdMedioPago,
 } from '../services/cuentti'
 import { RESOLUCIONES } from '../utils/constants'
 
@@ -50,11 +52,121 @@ export default function CuenttiPanel({ trabajos, actualizarTrabajo, notify }) {
   const [docResp, setDocResp] = useState(null)
   const [docLoading, setDocLoading] = useState(false)
 
-  // SIMPLIFICADO: ya no manejamos IDs de medio_pago/banco. Toda factura se
-  // envia como "A Credito" (sin pago). El usuario registra el pago real
-  // manualmente en cuentti.co despues, donde Cuentti ya tiene sus propios
-  // IDs internos resueltos. Asi evitamos los errores FK violation y el
-  // usuario no tiene que adivinar numeros.
+  // Metodos de pago configurables. Cada Cuentti tiene IDs distintos en
+  // vent_medio_pago — los descubrimos con el detector automatico o probando
+  // uno por uno. Se persisten en localStorage para no reconfigurar.
+  const METODOS_DEFAULT = [
+    { key: 'efectivo', nombre: 'Efectivo', defaultId: 1 },
+    { key: 'tdebito', nombre: 'Tarjeta Debito', defaultId: 2 },
+    { key: 'tcredito', nombre: 'Tarjeta Credito', defaultId: 3 },
+    { key: 'transferencia', nombre: 'Transferencia', defaultId: 4 },
+    { key: 'nequi', nombre: 'Nequi / Daviplata', defaultId: 5 },
+    { key: 'credito', nombre: 'A Credito (sin pago)', defaultId: 0 },
+  ]
+  const [metodosConfig, setMetodosConfig] = useState(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem('cuentti:metodos_pago') || '{}')
+      return METODOS_DEFAULT.map(m => ({ ...m, id: saved[m.key] ?? m.defaultId }))
+    } catch {
+      return METODOS_DEFAULT.map(m => ({ ...m, id: m.defaultId }))
+    }
+  })
+  const guardarMetodoId = (key, id) => {
+    setMetodosConfig(prev => {
+      const next = prev.map(m => m.key === key ? { ...m, id } : m)
+      try {
+        const obj = next.reduce((acc, m) => { acc[m.key] = m.id; return acc }, {})
+        localStorage.setItem('cuentti:metodos_pago', JSON.stringify(obj))
+      } catch {}
+      return next
+    })
+  }
+  const METODOS_PAGO = metodosConfig.map(m => ({ id: m.id, key: m.key, nombre: m.nombre }))
+  // Default a "efectivo" porque el usuario confirmo que id=1 funciona
+  const [metodoPagoKey, setMetodoPagoKey] = useState(() => {
+    try { return localStorage.getItem('cuentti:metodo_default') || 'efectivo' } catch { return 'efectivo' }
+  })
+  const setMetodoPagoKeyPersist = (k) => {
+    setMetodoPagoKey(k)
+    try { localStorage.setItem('cuentti:metodo_default', k) } catch {}
+  }
+  const metodoPago = metodoPagoKey === '' ? '' : (METODOS_PAGO.find(m => m.key === metodoPagoKey)?.id ?? '')
+
+  // ID del banco
+  const [idBancoConfig, setIdBancoConfig] = useState(() => {
+    try { return parseInt(localStorage.getItem('cuentti:id_banco')) || 2 } catch { return 2 }
+  })
+  const guardarIdBanco = (val) => {
+    setIdBancoConfig(val)
+    try { localStorage.setItem('cuentti:id_banco', String(val)) } catch {}
+  }
+
+  // Estados de configuracion / deteccion
+  const [showConfigIds, setShowConfigIds] = useState(false)
+  const [detectandoMedios, setDetectandoMedios] = useState(false)
+  const [mediosDetectados, setMediosDetectados] = useState(null)
+  const [probandoId, setProbandoId] = useState(null) // {key, id}
+  const [resultadoPrueba, setResultadoPrueba] = useState({}) // {key: {ok, mensaje}}
+
+  // Detectar IDs probando 30+ endpoints
+  const detectarIdsAutomaticamente = async () => {
+    setDetectandoMedios(true)
+    setMediosDetectados(null)
+    try {
+      const res = await detectarMediosPago()
+      setMediosDetectados(res)
+      if (res.ok && res.medios.length > 0) {
+        notify(`Detectados ${res.medios.length} medios de pago en tu Cuentti`, 'success')
+      } else {
+        notify('Tu Cuentti no expone los medios de pago publicamente. Usa "Probar este ID" para encontrarlos.', 'info')
+      }
+    } catch (e) {
+      notify('Error detectando medios: ' + e.message, 'error')
+    } finally {
+      setDetectandoMedios(false)
+    }
+  }
+
+  const aplicarMedioDetectado = (medio) => {
+    const nombre = (medio.nombre || '').toLowerCase()
+    let key = null
+    if (nombre.includes('efectivo') || nombre.includes('cash')) key = 'efectivo'
+    else if (nombre.includes('debito') || nombre.includes('débito')) key = 'tdebito'
+    else if (nombre.includes('credito tc') || nombre.includes('crédito tc') || nombre.includes('tarjeta credito') || nombre.includes('tarjeta crédito')) key = 'tcredito'
+    else if (nombre.includes('transferencia') || nombre.includes('transfer')) key = 'transferencia'
+    else if (nombre.includes('nequi') || nombre.includes('daviplata') || nombre.includes('digital')) key = 'nequi'
+    else if (nombre.includes('credito') || nombre.includes('crédito')) key = 'credito'
+    if (key) {
+      guardarMetodoId(key, medio.id)
+      notify(`"${medio.nombre}" → ${key} ahora usa ID ${medio.id}`, 'success')
+    } else {
+      notify(`No se mapeo automaticamente "${medio.nombre}". Asignalo manualmente.`, 'info')
+    }
+  }
+
+  // Probar si un ID funciona enviando una factura test de $1 que se anula
+  const probarIdEspecifico = async (key, id) => {
+    if (!window.confirm(
+      `Voy a crear una factura TEST de $1 con id_medio_pago=${id} y anularla inmediatamente.\n\n` +
+      `Esto va a aparecer en los logs de tu Cuentti como una transaccion anulada.\n\n` +
+      `¿Continuar?`
+    )) return
+    setProbandoId({ key, id })
+    setResultadoPrueba(prev => ({ ...prev, [key]: { loading: true } }))
+    try {
+      const res = await probarIdMedioPago(id, idBancoConfig)
+      setResultadoPrueba(prev => ({ ...prev, [key]: res }))
+      if (res.ok) {
+        notify(`✓ ID ${id} VALIDO para ${key}`, 'success')
+      } else {
+        notify(res.mensaje, 'error')
+      }
+    } catch (e) {
+      setResultadoPrueba(prev => ({ ...prev, [key]: { ok: false, mensaje: e.message } }))
+    } finally {
+      setProbandoId(null)
+    }
+  }
 
   const [productoForm, setProductoForm] = useState({
     nombre: '',
@@ -170,13 +282,18 @@ export default function CuenttiPanel({ trabajos, actualizarTrabajo, notify }) {
 
     setFacturando(true)
     try {
-      // Siempre enviamos como "A Credito" (sin pago en lstPagos). Esto evita
-      // los errores FK violation con id_medio_pago e id_banco. El usuario
-      // registra el pago real manualmente en cuentti.co despues si quiere.
+      // Mapear id_banco segun el metodo de pago:
+      // - efectivo / nequi: id_banco = 2 (caja en Cuentti)
+      // - tdebito / tcredito / transferencia: id_banco = idBancoConfig
+      // - credito: lstPagos vacio (no aplica)
+      const requiereBancoReal = ['tdebito', 'tcredito', 'transferencia'].includes(metodoPagoKey)
+      const idBanco = requiereBancoReal ? idBancoConfig : (metodoPagoKey === 'credito' ? 0 : 2)
       const facturaData = {
         ...trabajo,
         resolucion: prefijo,
-        aCredito: true,
+        idMedioPago: metodoPago,
+        idBanco,
+        aCredito: metodoPagoKey === 'credito',
         observaciones: `OT: ${trabajo.otCodigo || trabajo.id} — ${trabajo.observaciones || ''}`.trim(),
       }
       const payload = buildFacturaPayload(facturaData)
@@ -445,18 +562,124 @@ export default function CuenttiPanel({ trabajos, actualizarTrabajo, notify }) {
                 ))}
               </select>
               <div style={{fontSize:11,color:'var(--text-3)',marginTop:4}}>
-                Resolucion (MAS = factura interna · FEIC = factura electronica DIAN)
+                Resolucion (MAS = interna · FEIC = electronica DIAN)
+              </div>
+            </div>
+            <div className="field">
+              <select className="input" value={metodoPagoKey} onChange={e => setMetodoPagoKeyPersist(e.target.value)}>
+                {METODOS_PAGO.map(m => (
+                  <option key={m.key} value={m.key}>{m.nombre}{m.key !== 'credito' ? ` (ID ${m.id})` : ''}</option>
+                ))}
+              </select>
+              <div style={{fontSize:11,color:'var(--text-3)',marginTop:4,display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+                <span>Metodo de pago</span>
+                <button type="button" onClick={() => setShowConfigIds(s => !s)}
+                  style={{background:'none',border:'none',color:'var(--blue-600)',fontSize:11,cursor:'pointer',padding:0,fontWeight:600}}>
+                  {showConfigIds ? '▼ Cerrar' : '⚙ Encontrar IDs'}
+                </button>
               </div>
             </div>
           </div>
 
-          {/* Info: enviamos como "A Credito" — sin pago. Simplifica todo. */}
-          <div style={{marginTop:14,padding:'10px 14px',background:'var(--bg-subtle)',border:'1px solid var(--border)',borderRadius:8,fontSize:12.5,color:'var(--text-2)',lineHeight:1.5,display:'flex',alignItems:'flex-start',gap:10}}>
-            <span style={{fontSize:16,flexShrink:0}}>ℹ️</span>
-            <div>
-              <strong>La factura se emite sin metodo de pago en Cuentti.</strong> Esto evita los errores tecnicos con IDs internos. Tu factura electronica (FEIC) si va a la DIAN normalmente. Si quieres registrar el pago real (efectivo, transferencia, etc.), entras a <strong>cuentti.co</strong> y lo marcas alli en 1 click — Cuentti tiene tus medios de pago configurados con sus IDs correctos.
+          {/* Panel para encontrar los IDs reales de Cuentti */}
+          {showConfigIds && (
+            <div style={{marginTop:14,padding:'14px 16px',background:'var(--bg-subtle)',border:'1px solid var(--border)',borderRadius:10}}>
+              <div style={{fontSize:13,fontWeight:700,color:'var(--text)',marginBottom:6}}>🔍 Encontrar IDs reales de tu Cuentti</div>
+              <div style={{fontSize:12,color:'var(--text-2)',marginBottom:12,lineHeight:1.5}}>
+                Tu Cuentti tiene IDs unicos en su tabla <code className="mono">vent_medio_pago</code>. Hay 2 formas de encontrarlos:
+              </div>
+
+              {/* Opcion 1: detector automatico */}
+              <div style={{marginBottom:12,padding:'10px 12px',background:'var(--bg-raised)',border:'1px solid var(--border)',borderRadius:8}}>
+                <div style={{fontSize:12.5,fontWeight:700,marginBottom:6}}>Opcion 1: Auto-detectar (rapido)</div>
+                <div style={{display:'flex',alignItems:'center',gap:10,flexWrap:'wrap',marginBottom:8}}>
+                  <button type="button" onClick={detectarIdsAutomaticamente}
+                    disabled={detectandoMedios}
+                    className="btn btn-primary btn-sm">
+                    {detectandoMedios ? '🔍 Probando 30 endpoints...' : '🔍 Auto-detectar'}
+                  </button>
+                  <div style={{fontSize:11.5,color:'var(--text-3)',flex:'1 1 200px'}}>
+                    Prueba 30+ endpoints comunes hasta encontrar uno que liste tus medios.
+                  </div>
+                </div>
+                {mediosDetectados && mediosDetectados.ok && (
+                  <div style={{padding:'8px 10px',background:'var(--green-50,#dcfce7)',border:'1px solid var(--green-300,#86efac)',borderRadius:6,fontSize:12}}>
+                    <div style={{color:'var(--green-700)',fontWeight:700,marginBottom:6}}>✓ {mediosDetectados.medios.length} medios encontrados</div>
+                    <div style={{display:'flex',flexDirection:'column',gap:4}}>
+                      {mediosDetectados.medios.map((m, i) => (
+                        <div key={i} style={{display:'flex',alignItems:'center',gap:8,padding:'4px 0'}}>
+                          <span className="mono" style={{minWidth:30,fontWeight:700,color:'var(--blue-600)'}}>{m.id}</span>
+                          <span style={{flex:1}}>{m.nombre}</span>
+                          <button type="button" onClick={() => aplicarMedioDetectado(m)}
+                            style={{background:'var(--blue-600)',color:'#fff',border:'none',padding:'3px 8px',borderRadius:4,fontSize:11,cursor:'pointer',fontWeight:600}}>
+                            Aplicar
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {mediosDetectados && !mediosDetectados.ok && (
+                  <div style={{padding:'8px 10px',background:'rgba(245,158,11,.08)',border:'1px solid rgba(245,158,11,.3)',borderRadius:6,fontSize:11.5,color:'var(--text-2)'}}>
+                    Tu Cuentti no expone los medios via API. Usa la <strong>Opcion 2</strong> abajo para probar IDs uno por uno.
+                  </div>
+                )}
+              </div>
+
+              {/* Opcion 2: probar IDs manualmente */}
+              <div style={{padding:'10px 12px',background:'var(--bg-raised)',border:'1px solid var(--border)',borderRadius:8}}>
+                <div style={{fontSize:12.5,fontWeight:700,marginBottom:6}}>Opcion 2: Probar ID con factura test</div>
+                <div style={{fontSize:11.5,color:'var(--text-3)',marginBottom:10,lineHeight:1.4}}>
+                  Cambia el numero al lado de cada metodo y dale "Probar". La app crea una factura de $1 con ese ID y la anula inmediatamente. Si funciona, el ID es valido.
+                </div>
+                <div style={{display:'flex',flexDirection:'column',gap:8}}>
+                  {metodosConfig.filter(m => m.key !== 'credito').map(m => {
+                    const res = resultadoPrueba[m.key]
+                    const isLoading = probandoId?.key === m.key
+                    return (
+                      <div key={m.key} style={{display:'flex',alignItems:'center',gap:8,padding:'8px 10px',background:'var(--bg-subtle)',borderRadius:6,flexWrap:'wrap'}}>
+                        <div style={{flex:'1 1 140px',minWidth:0}}>
+                          <div style={{fontSize:12.5,fontWeight:600}}>{m.nombre}</div>
+                          {res && (
+                            <div style={{fontSize:10.5,marginTop:2,color: res.ok ? 'var(--green-700)' : 'var(--red-700)',fontWeight:600}}>
+                              {res.loading ? 'Probando...' : (res.ok ? '✓ ID valido' : '✗ ' + (res.mensaje || '').slice(0,50))}
+                            </div>
+                          )}
+                        </div>
+                        <input type="number" min="0" max="50" className="input"
+                          value={m.id}
+                          onChange={e => guardarMetodoId(m.key, parseInt(e.target.value) || 0)}
+                          style={{width:60,fontFamily:'var(--mono)',fontWeight:700,textAlign:'center',fontSize:13,padding:'5px 6px'}}
+                        />
+                        <button type="button" onClick={() => probarIdEspecifico(m.key, m.id)}
+                          disabled={isLoading}
+                          className="btn btn-outline btn-sm"
+                          style={{minWidth:75,fontSize:11.5}}>
+                          {isLoading ? '⏳ Probando' : '▶ Probar'}
+                        </button>
+                      </div>
+                    )
+                  })}
+                </div>
+
+                <div style={{marginTop:10,padding:'8px 10px',background:'var(--bg-subtle)',borderRadius:6,display:'flex',alignItems:'center',gap:10}}>
+                  <div style={{flex:1}}>
+                    <div style={{fontSize:12,fontWeight:600}}>Banco para transferencia/tarjetas</div>
+                    <div style={{fontSize:10.5,color:'var(--text-3)'}}>id_banco · prueba 1, 2, 3...</div>
+                  </div>
+                  <input type="number" min="1" className="input"
+                    value={idBancoConfig}
+                    onChange={e => guardarIdBanco(parseInt(e.target.value) || 1)}
+                    style={{width:60,fontFamily:'var(--mono)',fontWeight:700,textAlign:'center',fontSize:13,padding:'5px 6px'}}
+                  />
+                </div>
+              </div>
+
+              <div style={{fontSize:11,color:'var(--text-3)',marginTop:8,fontStyle:'italic',lineHeight:1.5}}>
+                💡 Estrategia recomendada: 1) Auto-detectar arriba. Si no funciona, 2) Para cada metodo prueba IDs 1, 2, 3... hasta 15. El que diga "✓ ID valido" es el correcto. Cada prueba crea-y-anula una factura test de $1 (no afecta tu contabilidad).
+              </div>
             </div>
-          </div>
+          )}
 
           <div style={{display:'flex',justifyContent:'flex-end',marginTop:14}}>
             <button className="btn btn-primary" onClick={facturarTrabajo}
