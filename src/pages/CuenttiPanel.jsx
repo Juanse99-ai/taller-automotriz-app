@@ -52,15 +52,12 @@ export default function CuenttiPanel({ trabajos, actualizarTrabajo, notify }) {
   const [docResp, setDocResp] = useState(null)
   const [docLoading, setDocLoading] = useState(false)
 
-  // Metodos de pago configurables. Cada Cuentti tiene IDs distintos en
-  // vent_medio_pago — los descubrimos con el detector automatico o probando
-  // uno por uno. Se persisten en localStorage para no reconfigurar.
+  // Metodos de pago — solo los que el taller usa: Efectivo + Transferencia.
+  // Los IDs se configuran una vez con el boton "Auto 1-15" del panel
+  // "Encontrar IDs" y se guardan en localStorage.
   const METODOS_DEFAULT = [
     { key: 'efectivo', nombre: 'Efectivo', defaultId: 1 },
-    { key: 'tdebito', nombre: 'Tarjeta Debito', defaultId: 2 },
-    { key: 'tcredito', nombre: 'Tarjeta Credito', defaultId: 3 },
-    { key: 'transferencia', nombre: 'Transferencia', defaultId: 4 },
-    { key: 'nequi', nombre: 'Nequi / Daviplata', defaultId: 5 },
+    { key: 'transferencia', nombre: 'Transferencia', defaultId: 7 },
     { key: 'credito', nombre: 'A Credito (sin pago)', defaultId: 0 },
   ]
   const [metodosConfig, setMetodosConfig] = useState(() => {
@@ -360,11 +357,12 @@ export default function CuenttiPanel({ trabajos, actualizarTrabajo, notify }) {
     setFacturando(true)
     try {
       // Mapear id_banco segun el metodo de pago:
-      // - efectivo / nequi: id_banco = 2 (caja en Cuentti)
-      // - tdebito / tcredito / transferencia: id_banco = idBancoConfig
+      // - efectivo: id_banco = 2 (caja en Cuentti)
+      // - transferencia: id_banco = idBancoConfig (banco real configurado, ej Nequi=3)
       // - credito: lstPagos vacio (no aplica)
-      const requiereBancoReal = ['tdebito', 'tcredito', 'transferencia'].includes(metodoPagoKey)
-      const idBanco = requiereBancoReal ? idBancoConfig : (metodoPagoKey === 'credito' ? 0 : 2)
+      const idBanco = metodoPagoKey === 'transferencia' ? idBancoConfig
+                    : metodoPagoKey === 'credito' ? 0
+                    : 2
       const facturaData = {
         ...trabajo,
         resolucion: prefijo,
