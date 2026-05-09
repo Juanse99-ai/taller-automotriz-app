@@ -3,7 +3,7 @@ import * as XLSX from 'xlsx'
 import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import { fmt, fmtDate, uid } from '../utils/helpers'
-import { TECNICOS, COMISION, ESTADOS } from '../utils/constants'
+import { TECNICOS, COMISION, ESTADOS, TALLER } from '../utils/constants'
 
 // Obtener base de mano de obra SIN IVA (solo servicios)
 const getManoObra = (t) => {
@@ -206,9 +206,17 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
     }
     const titleX = logoData ? 44 : 14
     doc.setFontSize(14)
-    doc.text(`Estado de Cuenta — ${tecData.tecnico.nombre}`, titleX, 18)
+    doc.setFont(undefined, 'bold')
+    doc.text(`Estado de Cuenta — ${tecData.tecnico.nombre}`, titleX, 14)
+    doc.setFontSize(9)
+    doc.text(TALLER.razonSocial || TALLER.nombre, titleX, 20)
+    doc.setFont(undefined, 'normal')
+    doc.text(`NIT: ${TALLER.nit} · ${TALLER.direccion}`, titleX, 24)
+    doc.text(`Cel: ${TALLER.celular} · ${TALLER.email}`, titleX, 28)
     doc.setFontSize(10)
-    doc.text(`Fecha: ${fmtDate(new Date().toISOString())}`, titleX, 24)
+    doc.setFont(undefined, 'bold')
+    doc.text(`Fecha: ${fmtDate(new Date().toISOString())}`, titleX, 34)
+    doc.setFont(undefined, 'normal')
 
     // Trabajos seleccionados
     const rows = []
@@ -222,7 +230,7 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
     })
 
     autoTable(doc, {
-      startY: 30,
+      startY: 40,
       head: [['Fecha', 'Placa', 'Cliente', 'Compartido', 'M.O. (sin IVA)', 'Comision']],
       body: rows,
       styles: { fontSize: 8 },
@@ -270,13 +278,21 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
       try { doc.addImage(logoData, 'PNG', 14, 10, 28, 18) } catch {}
     }
     const titleX = logoData ? 44 : 14
-    doc.setFontSize(16)
-    doc.text('ESTADO DE CUENTA', titleX, 16)
-    doc.setFontSize(11)
-    doc.text(`Tecnico: ${reg.tecnico}`, titleX, 23)
+    doc.setFontSize(14)
+    doc.setFont(undefined, 'bold')
+    doc.text('ESTADO DE CUENTA', titleX, 13)
     doc.setFontSize(9)
-    doc.text(`Ref: ${reg.id}`, titleX, 28)
-    doc.text(`Fecha: ${fmtDate(reg.fecha)}`, 160, 16)
+    doc.text(TALLER.razonSocial || TALLER.nombre, titleX, 18)
+    doc.setFont(undefined, 'normal')
+    doc.text(`NIT: ${TALLER.nit} · ${TALLER.direccion}`, titleX, 22)
+    doc.text(`Cel: ${TALLER.celular} · ${TALLER.email}`, titleX, 26)
+    doc.setFontSize(11)
+    doc.setFont(undefined, 'bold')
+    doc.text(`Tecnico: ${reg.tecnico}`, titleX, 32)
+    doc.setFontSize(9)
+    doc.setFont(undefined, 'normal')
+    doc.text(`Ref: ${reg.id}`, titleX, 36)
+    doc.text(`Fecha: ${fmtDate(reg.fecha)}`, 160, 13)
 
     // Detalle de trabajos
     const detRows = (reg.detalleTrabajo || []).map(d => {
@@ -284,7 +300,7 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
       return [fmtDate(d.fecha), d.placa, d.cliente || '—', d.compartido ? 'Si (50%)' : 'No', fmt(d.manoObra), fmt(Math.round(com))]
     })
     autoTable(doc, {
-      startY: 34,
+      startY: 42,
       head: [['Fecha', 'Placa', 'Cliente', 'Compartido', 'M.O. (sin IVA)', 'Comision']],
       body: detRows,
       styles: { fontSize: 8 },

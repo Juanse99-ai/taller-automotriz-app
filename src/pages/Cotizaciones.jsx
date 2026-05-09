@@ -2,7 +2,7 @@ import { useState, useMemo, useCallback, useEffect, useRef } from 'react'
 import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import { fmt, fmtDate, uid, hoyISO, normalizarDoc, normalizarNombre } from '../utils/helpers'
-import { TECNICOS, IVA_DEFAULT } from '../utils/constants'
+import { TECNICOS, IVA_DEFAULT, TALLER } from '../utils/constants'
 import { MARCAS, getModelos } from '../utils/vehiculos'
 import { useClientes } from '../hooks/useClientes'
 import { cargarInventarioCompleto } from '../services/cuentti'
@@ -39,22 +39,25 @@ export default function Cotizaciones({ notify, trabajos = [], onCrearTrabajo, co
     }
     doc.setFontSize(16)
     doc.setFont(undefined, 'bold')
-    doc.text('COTIZACION', 50, 14)
-    doc.setFontSize(10)
-    doc.setFont(undefined, 'normal')
-    doc.text('Multidiagnosticos AS', 50, 20)
-    doc.text('Sabanalarga, Atlantico | Tel: 300 365 1525', 50, 25)
+    doc.text('COTIZACION', 50, 13)
+    doc.setFontSize(9)
     doc.setFont(undefined, 'bold')
-    doc.text(`No: ${c.id || '—'}`, 155, 14)
+    doc.text(TALLER.razonSocial || TALLER.nombre, 50, 18)
     doc.setFont(undefined, 'normal')
-    doc.text(`Fecha: ${fmtDate(c.fecha)}`, 155, 20)
-    doc.text(`Estado: ${c.estado || 'Pendiente'}`, 155, 25)
+    doc.text(`NIT: ${TALLER.nit}`, 50, 22)
+    doc.text(TALLER.direccion, 50, 26)
+    doc.text(`Cel: ${TALLER.celular} · ${TALLER.email}`, 50, 30)
+    doc.setFont(undefined, 'bold')
+    doc.text(`No: ${c.id || '—'}`, 155, 13)
+    doc.setFont(undefined, 'normal')
+    doc.text(`Fecha: ${fmtDate(c.fecha)}`, 155, 22)
+    doc.text(`Estado: ${c.estado || 'Pendiente'}`, 155, 26)
 
     doc.setDrawColor(200)
-    doc.line(14, 30, 196, 30)
+    doc.line(14, 33, 196, 33)
 
     autoTable(doc, {
-      startY: 34,
+      startY: 36,
       head: [['DATOS DEL CLIENTE', '', '', '']],
       body: [
         ['Cliente:', c.cliente || '—', 'Documento:', c.cedula || '—'],
@@ -414,9 +417,23 @@ function CotizacionForm({ cotizacion, trabajos = [], onSave, onCancel }) {
   return (
     <div>
       <div className="pagehd">
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <button type="button" className="btn btn-outline btn-sm" onClick={onCancel}>← Volver</button>
+        <div>
           <h2>{isEdit ? 'Editar Cotizacion' : 'Nueva Cotizacion'}</h2>
+          {isEdit && cotizacion && (
+            <div className="pagehd__meta">
+              {cotizacion.id && <span className="pagehd__ot">{String(cotizacion.id).startsWith('COT-') ? cotizacion.id : `COT-${cotizacion.id}`}</span>}
+              {cotizacion.fecha && <><span className="pagehd__sep">·</span><span>Creada {fmtDate(cotizacion.fecha)}</span></>}
+              {cotizacion.validezDias && <><span className="pagehd__sep">·</span><span>Valida {cotizacion.validezDias} dias</span></>}
+              {cotizacion.estado && <><span className="pagehd__sep">·</span><span className={`badge ${
+                cotizacion.estado === ESTADO_COT.APROBADA ? 'badge-success' :
+                cotizacion.estado === ESTADO_COT.RECHAZADA ? 'badge-danger' :
+                'badge-warning'
+              }`}>{cotizacion.estado}</span></>}
+            </div>
+          )}
+        </div>
+        <div className="actions">
+          <button type="button" className="btn btn-outline" onClick={onCancel}>Volver</button>
         </div>
       </div>
       <form onSubmit={handleSubmit}>
@@ -629,27 +646,41 @@ function CotizacionForm({ cotizacion, trabajos = [], onSave, onCancel }) {
               </table>
             </div>
           )}
-          <div style={{ marginTop: 16, borderTop: '1px solid var(--slate-200)', paddingTop: 14 }}>
-            <div className="totals-row">
-              <div className="text-sm"><span className="text-muted">Subtotal:</span> <span className="text-mono">{fmt(totales.subtotal)}</span></div>
-              <div className="text-sm"><span className="text-muted">IVA:</span> <span className="text-mono">{fmt(totales.iva)}</span></div>
-              <div style={{ fontSize: 16, fontWeight: 800 }}>Total: <span className="text-mono" style={{ color: 'var(--green-500)' }}>{fmt(totales.total)}</span></div>
+          {/* Totalizer rediseñado */}
+          <div className="ot-totals" style={{ marginTop: 14 }}>
+            <div className="ot-totals__group">
+              <span style={{ fontSize: 12, color: 'var(--text-3)' }}>{items.length} {items.length === 1 ? 'item' : 'items'} · Validez <strong style={{ color: 'var(--text-2)' }}>{form.validezDias} dias</strong></span>
+            </div>
+            <div className="ot-totals__group">
+              <span className="ot-stat"><span className="ot-stat__lbl">Subtotal</span><span className="ot-stat__val">{fmt(totales.subtotal)}</span></span>
+              <span className="ot-stat"><span className="ot-stat__lbl">IVA</span><span className="ot-stat__val">{fmt(totales.iva)}</span></span>
+              <span className="ot-stat ot-stat--big"><span className="ot-stat__lbl">Total</span><span className="ot-stat__val">{fmt(totales.total)}</span></span>
             </div>
           </div>
         </div>
 
-        <div className="card">
-          <div className="form-row">
-            <div className="form-group">
-              <label className="form-label">Validez (dias)</label>
-              <input className="form-input" type="number" value={form.validezDias} min="1"
-                onChange={e => set('validezDias', parseInt(e.target.value) || 15)} />
+        {/* Observaciones (2/3) + Validez (1/3) side-by-side */}
+        <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 14 }}>
+          <div className="card">
+            <div className="card__h"><h3>Observaciones</h3></div>
+            <div className="card__b">
+              <div className="field">
+                <label>Notas adicionales <span className="help" style={{ marginLeft: 6, fontWeight: 400, color: 'var(--text-3)' }}>(visibles en el PDF)</span></label>
+                <textarea className="input" value={form.observaciones} placeholder="Condiciones, garantias, terminos especiales..."
+                  rows={3}
+                  onChange={e => set('observaciones', e.target.value)} />
+              </div>
             </div>
           </div>
-          <div className="form-group">
-            <label className="form-label">Observaciones</label>
-            <textarea className="form-textarea" value={form.observaciones} placeholder="Notas adicionales..."
-              onChange={e => set('observaciones', e.target.value)} />
+          <div className="card">
+            <div className="card__h"><h3>Validez</h3></div>
+            <div className="card__b">
+              <div className="field">
+                <label>Dias de vigencia</label>
+                <input className="input" type="number" value={form.validezDias} min="1"
+                  onChange={e => set('validezDias', parseInt(e.target.value) || 15)} />
+              </div>
+            </div>
           </div>
         </div>
 

@@ -1,9 +1,12 @@
-// Configuracion global del taller
+// Configuracion global del taller — datos formales para PDFs y facturas
 export const TALLER = {
-  nombre: 'Multidiagnosticos AS',
-  nit: '',
-  direccion: 'Sabanalarga, Atlantico',
-  telefono: '300 365 1525',
+  nombre: 'MULTIDIAGNOSTICOS AS',
+  razonSocial: 'MULTIDIAGNOSTICOS AS',
+  nit: '901.572.225-2',
+  direccion: 'Carrera 27 #13-05, Sabanalarga, Atlantico',
+  ciudad: 'Sabanalarga, Atlantico',
+  telefono: '302 319 1749',
+  celular: '302 319 1749',
   email: 'multidiagnosticosas@gmail.com',
 }
 

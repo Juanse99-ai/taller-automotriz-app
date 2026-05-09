@@ -309,11 +309,46 @@ export default function CuenttiPanel({ trabajos, actualizarTrabajo, notify }) {
     <div>
       {/* Page header */}
       <div className="pagehd">
-        <div><h2>Cuentti</h2><p className="sub">Facturacion electronica · sincronizacion DIAN</p></div>
+        <div>
+          <h2>Cuentti</h2>
+          <p className="sub">Facturacion electronica · sincronizacion DIAN</p>
+        </div>
         <div className="actions">
+          {testResult && testResult.clientes?.startsWith('OK') && (
+            <span className="badge badge-success" style={{ marginRight: 6 }}>● Conexion OK</span>
+          )}
           <button className="btn btn-primary" onClick={testConexion} disabled={testing}>{testing ? 'Probando...' : 'Probar Conexion'}</button>
         </div>
       </div>
+
+      {/* Step indicator — flow del proceso de facturacion */}
+      {(() => {
+        const hasTrabajo = !!facturaId
+        const hasFactura = !!facturaResp && !facturaResp.error
+        const hasDian = !!emitResp && !emitResp.error
+        const hasPago = !!pagoResp && !pagoResp.error
+        const hasDoc = !!docResp && !docResp.error
+        const steps = [
+          { n: 1, lbl: 'Seleccionar trabajo', done: hasTrabajo, active: !hasTrabajo },
+          { n: 2, lbl: 'Facturar', done: hasFactura, active: hasTrabajo && !hasFactura },
+          { n: 3, lbl: 'Emitir DIAN', done: hasDian, active: hasFactura && !hasDian },
+          { n: 4, lbl: 'Pago / Abono', done: hasPago, active: hasFactura && !hasPago },
+          { n: 5, lbl: 'URL · QR', done: hasDoc, active: hasPago && !hasDoc },
+        ]
+        return (
+          <div className="rc-stepper" style={{ marginBottom: 16 }}>
+            {steps.map((s, i) => (
+              <span key={s.n} style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                <span className={`rc-step ${s.active ? 'is-active' : ''} ${s.done ? 'is-done' : ''}`}>
+                  <span className="rc-step__n">{s.done ? '✓' : s.n}</span>
+                  <span>{s.lbl}</span>
+                </span>
+                {i < steps.length - 1 && <span className={`rc-step__sep ${s.done ? 'is-done' : ''}`} />}
+              </span>
+            ))}
+          </div>
+        )
+      })()}
 
       {/* Connection banner */}
       {testResult && (

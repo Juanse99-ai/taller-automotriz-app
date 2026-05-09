@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import { fmt, fmtDate, uid, hoyISO, normalizarDoc, normalizarNombre } from '../utils/helpers'
-import { TECNICOS, ESTADOS, IVA_DEFAULT, DIAS_ESTANCADO } from '../utils/constants'
+import { TECNICOS, ESTADOS, IVA_DEFAULT, DIAS_ESTANCADO, TALLER } from '../utils/constants'
 import { MARCAS, getModelos } from '../utils/vehiculos'
 import { useClientes } from '../hooks/useClientes'
 import { lsGet, lsSet, LS_KEYS } from '../services/storage'
@@ -85,23 +85,26 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
     }
     doc.setFontSize(16)
     doc.setFont(undefined, 'bold')
-    doc.text('ORDEN DE TRABAJO', 50, 14)
-    doc.setFontSize(10)
-    doc.setFont(undefined, 'normal')
-    doc.text('Multidiagnosticos AS', 50, 20)
-    doc.text('Sabanalarga, Atlantico | Tel: 300 365 1525', 50, 25)
+    doc.text('ORDEN DE TRABAJO', 50, 13)
+    doc.setFontSize(9)
     doc.setFont(undefined, 'bold')
-    doc.text(`OT: ${t.otCodigo || '—'}`, 155, 14)
+    doc.text(TALLER.razonSocial || TALLER.nombre, 50, 18)
     doc.setFont(undefined, 'normal')
-    doc.text(`Fecha: ${fmtDate(t.fecha)}`, 155, 20)
-    doc.text(`Estado: ${t.estado}`, 155, 25)
+    doc.text(`NIT: ${TALLER.nit}`, 50, 22)
+    doc.text(TALLER.direccion, 50, 26)
+    doc.text(`Cel: ${TALLER.celular} · ${TALLER.email}`, 50, 30)
+    doc.setFont(undefined, 'bold')
+    doc.text(`OT: ${t.otCodigo || '—'}`, 155, 13)
+    doc.setFont(undefined, 'normal')
+    doc.text(`Fecha: ${fmtDate(t.fecha)}`, 155, 22)
+    doc.text(`Estado: ${t.estado}`, 155, 26)
 
     doc.setDrawColor(200)
-    doc.line(14, 30, 196, 30)
+    doc.line(14, 33, 196, 33)
 
     // Cliente
     autoTable(doc, {
-      startY: 34,
+      startY: 36,
       head: [['DATOS DEL CLIENTE', '', '', '']],
       body: [
         ['Cliente:', t.cliente || '—', 'Documento:', t.cedula || '—'],
@@ -603,7 +606,7 @@ function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [] }) {
       }
 
       scored.sort((a, b) => b._score - a._score)
-      const results = scored.slice(0, 12)
+      const results = scored
       setItemSearch(prev => ({ ...prev, [itemId]: { query, results, show: results.length > 0 } }))
     }, 150)
   }, [inventario])
@@ -697,7 +700,21 @@ function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [] }) {
   return (
     <div>
       <div className="pagehd">
-        <div><h2>{isEdit ? 'Editar Trabajo' : 'Nuevo Trabajo'}</h2></div>
+        <div>
+          <h2>{isEdit ? 'Editar Trabajo' : 'Nuevo Trabajo'}</h2>
+          {isEdit && trabajo && (
+            <div className="pagehd__meta">
+              {trabajo.otCodigo && <span className="pagehd__ot">{trabajo.otCodigo}</span>}
+              {trabajo.fecha && <><span className="pagehd__sep">·</span><span>Creado {fmtDate(trabajo.fecha)}</span></>}
+              {trabajo.estado && <><span className="pagehd__sep">·</span><span className={`badge ${
+                trabajo.estado === ESTADOS.COMPLETADO ? 'badge-success' :
+                trabajo.estado === ESTADOS.EN_PROGRESO ? 'badge-info' :
+                trabajo.estado === ESTADOS.PENDIENTE ? 'badge-warning' :
+                'badge-neutral'
+              }`}>{trabajo.estado}</span></>}
+            </div>
+          )}
+        </div>
         <div className="actions"><button className="btn btn-outline" onClick={onCancel}>Volver</button></div>
       </div>
 
@@ -902,76 +919,66 @@ function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [] }) {
                               style={{ padding: '6px 10px', fontSize: 13 }} />
                             {invLoading && <span style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', fontSize: 11, color: '#999' }}>...</span>}
                           </div>
-                          {/* Overlay POS */}
+                          {/* Command Palette — Product Search */}
                           {searchState?.show && searchState.results.length > 0 && (
-                            <div style={{
-                              position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 99,
-                              background: 'rgba(0,0,0,.3)', display: 'flex', justifyContent: 'center', alignItems: 'flex-start', paddingTop: 80
-                            }} onClick={() => setItemSearch(prev => ({ ...prev, [item.id]: { ...prev[item.id], show: false } }))}>
-                              <div style={{
-                                background: '#fff', borderRadius: 10, width: '90%', maxWidth: 700,
-                                maxHeight: '70vh', display: 'flex', flexDirection: 'column',
-                                boxShadow: '0 20px 60px rgba(0,0,0,.25)', overflow: 'hidden'
-                              }} onClick={e => e.stopPropagation()}>
-                                {/* Header */}
-                                <div style={{ padding: '12px 16px', background: '#1e293b', color: '#fff', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                  <span style={{ fontWeight: 700, fontSize: 14 }}>Buscar Producto</span>
-                                  <span style={{ fontSize: 12, color: '#94a3b8' }}>{searchState.results.length} resultados</span>
+                            <div className="cmd-backdrop" onClick={() => setItemSearch(prev => ({ ...prev, [item.id]: { ...prev[item.id], show: false } }))}>
+                              <div className="cmd-palette" onClick={e => e.stopPropagation()}>
+                                {/* Search header */}
+                                <div className="cmd-header">
+                                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--slate-400)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
+                                  </svg>
+                                  <span className="cmd-header__query">{searchState.query}</span>
+                                  <span className="cmd-header__count">
+                                    <strong>{searchState.results.length}</strong> resultados
+                                    {(form.marca || form.modelo) && <> &middot; {form.marca} {form.modelo} {form.ano}</>}
+                                  </span>
+                                  <kbd className="cmd-kbd" onClick={() => setItemSearch(prev => ({ ...prev, [item.id]: { ...prev[item.id], show: false } }))}>ESC</kbd>
                                 </div>
-                                {/* Column headers */}
-                                <div style={{
-                                  display: 'grid', gridTemplateColumns: '1fr 100px 70px', gap: 8,
-                                  padding: '8px 16px', background: '#f8fafc', borderBottom: '2px solid #e2e8f0',
-                                  fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '.5px'
-                                }}>
-                                  <span>Articulo</span>
-                                  <span style={{ textAlign: 'right' }}>P.Venta</span>
-                                  <span style={{ textAlign: 'center' }}>Exist.</span>
-                                </div>
-                                {/* Results list */}
-                                <div style={{ overflowY: 'auto', flex: 1 }}>
-                                  {searchState.results.map((p, i) => (
-                                    <div key={p.id}
-                                      onClick={() => seleccionarProducto(item.id, p)}
-                                      style={{
-                                        display: 'grid', gridTemplateColumns: '1fr 100px 70px', gap: 8,
-                                        padding: '10px 16px', cursor: 'pointer',
-                                        borderBottom: '1px solid #f1f5f9',
-                                        background: i === 0 ? '#1e40af' : 'transparent',
-                                        color: i === 0 ? '#fff' : '#1e293b',
-                                        transition: 'background .1s'
-                                      }}
-                                      onMouseEnter={e => { if (i !== 0) e.currentTarget.style.background = '#f1f5f9' }}
-                                      onMouseLeave={e => { if (i !== 0) e.currentTarget.style.background = 'transparent' }}
-                                    >
-                                      <div style={{ minWidth: 0 }}>
-                                        <div style={{ fontWeight: 700, fontSize: 13, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                          {p.nombre}
+
+                                {/* Results */}
+                                <div className="cmd-results">
+                                  {searchState.results.map((p, i) => {
+                                    const q = (searchState.query || '').toLowerCase()
+                                    const nombre = p.nombre || ''
+                                    const idx = nombre.toLowerCase().indexOf(q)
+                                    return (
+                                      <div key={p.id} className="cmd-row"
+                                        onClick={() => seleccionarProducto(item.id, p)}>
+                                        <div className="cmd-row__info">
+                                          <div className="cmd-row__name">
+                                            {idx >= 0 && q.length >= 2
+                                              ? <>{nombre.slice(0, idx)}<mark>{nombre.slice(idx, idx + q.length)}</mark>{nombre.slice(idx + q.length)}</>
+                                              : nombre}
+                                          </div>
+                                          <div className="cmd-row__meta">
+                                            {p.codigoBarras && <span>Cod: {p.codigoBarras}</span>}
+                                            {p.sku && <span>SKU: {p.sku}</span>}
+                                            {(!p.codigoBarras && !p.sku && p.codigo) && <span>Ref: {p.codigo}</span>}
+                                            {p.precioBase > 0 && <><span>&middot;</span><span>Base: {fmt(p.precioBase)}</span></>}
+                                            {p.iva > 0 && <><span>&middot;</span><span>IVA {p.iva}%</span></>}
+                                          </div>
                                         </div>
-                                        <div style={{ fontSize: 11, opacity: .7, marginTop: 2, display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                                          {p.codigoBarras && <span>Cod: {p.codigoBarras}</span>}
-                                          {p.sku && <span>Sku: {p.sku}</span>}
-                                          {(!p.codigoBarras && !p.sku && p.codigo) && <span>Ref: {p.codigo}</span>}
-                                          <span>- P.Venta+imp: {fmt(p.precio)}</span>
-                                          {p.precioBase > 0 && <span>- P.Base: {fmt(p.precioBase)}</span>}
-                                          {p.iva > 0 && <span>IVA: {p.iva}%</span>}
+                                        <div className="cmd-row__price">
+                                          <div className="cmd-row__price-val">{fmt(p.precio)}</div>
+                                          <div className="cmd-row__price-lbl">P. venta</div>
+                                        </div>
+                                        <div className="cmd-row__stock">
+                                          <span className={`badge ${p.esServicio ? 'badge-info' : p.stock > 3 ? 'badge-success' : p.stock > 0 ? 'badge-warning' : 'badge-danger'}`}
+                                            style={{ fontFamily: 'var(--mono)', fontSize: 11 }}>
+                                            {p.esServicio ? 'Servicio' : `${p.stock} und`}
+                                          </span>
                                         </div>
                                       </div>
-                                      <div style={{ textAlign: 'right', fontFamily: 'var(--mono)', fontWeight: 700, fontSize: 13, alignSelf: 'center' }}>
-                                        {fmt(p.precio)}
-                                      </div>
-                                      <div style={{ textAlign: 'center', alignSelf: 'center' }}>
-                                        <span style={{
-                                          fontFamily: 'var(--mono)', fontWeight: 700, fontSize: 13,
-                                          padding: '2px 8px', borderRadius: 4,
-                                          background: i === 0 ? 'rgba(255,255,255,.2)' : p.esServicio ? '#dbeafe' : p.stock > 0 ? '#dcfce7' : '#fee2e2',
-                                          color: i === 0 ? '#fff' : p.esServicio ? '#1d4ed8' : p.stock > 0 ? '#16a34a' : '#dc2626'
-                                        }}>
-                                          {p.esServicio ? '∞' : `(${p.stock})`}
-                                        </span>
-                                      </div>
-                                    </div>
-                                  ))}
+                                    )
+                                  })}
+                                </div>
+
+                                {/* Footer shortcuts */}
+                                <div className="cmd-footer">
+                                  <span><kbd className="cmd-kbd-sm">&uarr;&darr;</kbd> navegar</span>
+                                  <span><kbd className="cmd-kbd-sm">&crarr;</kbd> seleccionar</span>
+                                  <span style={{ marginLeft: 'auto', opacity: .7 }}>Inventario sincronizado con Cuentti</span>
                                 </div>
                               </div>
                             </div>
@@ -1012,17 +1019,17 @@ function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [] }) {
             </div>
           )}
 
-          {/* Totales */}
-          <div style={{
-            display: 'flex', justifyContent: 'flex-end', gap: 24, padding: '14px 18px',
-            background: 'var(--bg-subtle)', borderTop: '1px solid var(--border)',
-            fontSize: 13, fontFamily: 'var(--mono)'
-          }}>
-            <span><span style={{ color: 'var(--text-3)' }}>M.O.:</span> {fmt(totales.manoObra)}</span>
-            <span><span style={{ color: 'var(--text-3)' }}>Repuestos:</span> {fmt(totales.repuestos)}</span>
-            <span><span style={{ color: 'var(--text-3)' }}>Subtotal:</span> {fmt(totales.subtotal)}</span>
-            <span><span style={{ color: 'var(--text-3)' }}>IVA:</span> {fmt(totales.iva)}</span>
-            <span style={{ fontWeight: 800, color: 'var(--green-600)' }}>Total: {fmt(totales.total)}</span>
+          {/* Totales — totalizer redesigned (M.O./Repuestos breakdown + Total destacado) */}
+          <div className="ot-totals">
+            <div className="ot-totals__group">
+              <span className="ot-stat"><span className="ot-stat__lbl">M.O.</span><span className="ot-stat__val">{fmt(totales.manoObra)}</span></span>
+              <span className="ot-stat"><span className="ot-stat__lbl">Repuestos</span><span className="ot-stat__val">{fmt(totales.repuestos)}</span></span>
+            </div>
+            <div className="ot-totals__group">
+              <span className="ot-stat"><span className="ot-stat__lbl">Subtotal</span><span className="ot-stat__val">{fmt(totales.subtotal)}</span></span>
+              <span className="ot-stat"><span className="ot-stat__lbl">IVA</span><span className="ot-stat__val">{fmt(totales.iva)}</span></span>
+              <span className="ot-stat ot-stat--big"><span className="ot-stat__lbl">Total</span><span className="ot-stat__val">{fmt(totales.total)}</span></span>
+            </div>
           </div>
         </div>
 

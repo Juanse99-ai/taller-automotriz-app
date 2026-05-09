@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react'
 import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import { fmt, fmtDate } from '../utils/helpers'
-import { TECNICOS, COMISION, ESTADOS } from '../utils/constants'
+import { TECNICOS, COMISION, ESTADOS, TALLER } from '../utils/constants'
 
 export default function Reportes({ trabajos }) {
   const [rango, setRango] = useState(() => {
@@ -88,13 +88,19 @@ export default function Reportes({ trabajos }) {
     const doc = new jsPDF()
     doc.setFontSize(16)
     doc.setFont(undefined, 'bold')
-    doc.text('Reporte de Taller - Multidiagnosticos AS', 14, 16)
-    doc.setFontSize(10)
+    doc.text('Reporte de Taller', 14, 14)
+    doc.setFontSize(9)
+    doc.setFont(undefined, 'bold')
+    doc.text(TALLER.razonSocial || TALLER.nombre, 14, 20)
     doc.setFont(undefined, 'normal')
-    doc.text(`Periodo: ${rango.desde} a ${rango.hasta}`, 14, 23)
+    doc.text(`NIT: ${TALLER.nit} · ${TALLER.direccion}`, 14, 24)
+    doc.text(`Cel: ${TALLER.celular} · ${TALLER.email}`, 14, 28)
+    doc.setFontSize(10)
+    doc.setFont(undefined, 'bold')
+    doc.text(`Periodo: ${rango.desde} a ${rango.hasta}`, 14, 35)
 
     autoTable(doc, {
-      startY: 30,
+      startY: 40,
       head: [['Metrica', 'Valor']],
       body: [
         ['Total Trabajos', String(stats.total)],

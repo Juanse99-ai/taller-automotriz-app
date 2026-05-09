@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import { InspeccionDetalle } from './Inspecciones'
-import { ESTADOS, TECNICOS } from '../utils/constants'
+import { ESTADOS, TECNICOS, TALLER } from '../utils/constants'
 import { fmtDate, fmt } from '../utils/helpers'
 
 const ESTADO_TRABAJO_DISPLAY = {
@@ -120,17 +120,22 @@ export default function PortalCliente() {
     const doc = new jsPDF()
     doc.setFontSize(16)
     doc.setFont(undefined, 'bold')
-    doc.text('Reporte de Inspeccion Vehicular', 14, 16)
-    doc.setFontSize(10)
+    doc.text('Reporte de Inspeccion Vehicular', 14, 14)
+    doc.setFontSize(9)
+    doc.setFont(undefined, 'bold')
+    doc.text(TALLER.razonSocial || TALLER.nombre, 14, 20)
     doc.setFont(undefined, 'normal')
-    doc.text(`Multidiagnosticos AS — ${new Date().toLocaleDateString('es-CO')}`, 14, 22)
+    doc.text(`NIT: ${TALLER.nit} · ${TALLER.direccion}`, 14, 24)
+    doc.text(`Cel: ${TALLER.celular} · ${TALLER.email}`, 14, 28)
+    doc.setFontSize(10)
+    doc.text(`Generado: ${new Date().toLocaleDateString('es-CO')}`, 14, 33)
 
     doc.setFontSize(11)
-    doc.text(`Vehiculo: ${insp.vehiculo || insp.placa}`, 14, 32)
-    doc.text(`Placa: ${insp.placa}`, 14, 38)
-    doc.text(`Cliente: ${insp.cliente || '—'}`, 14, 44)
-    doc.text(`Tecnico: ${insp.tecnico || '—'}`, 120, 32)
-    doc.text(`Fecha: ${new Date(insp.fecha).toLocaleDateString('es-CO')}`, 120, 38)
+    doc.text(`Vehiculo: ${insp.vehiculo || insp.placa}`, 14, 42)
+    doc.text(`Placa: ${insp.placa}`, 14, 48)
+    doc.text(`Cliente: ${insp.cliente || '—'}`, 14, 54)
+    doc.text(`Tecnico: ${insp.tecnico || '—'}`, 120, 42)
+    doc.text(`Fecha: ${new Date(insp.fecha).toLocaleDateString('es-CO')}`, 120, 48)
 
     const items = insp.items || []
     const urgentes = items.filter(i => i.estado === 'urgente')
@@ -140,11 +145,11 @@ export default function PortalCliente() {
     const pct = total > 0 ? Math.round((buenos.length / total) * 100) : 0
 
     doc.setFontSize(14)
-    doc.text(`Estado general: ${pct}%`, 14, 54)
+    doc.text(`Estado general: ${pct}%`, 14, 64)
 
     if (urgentes.length > 0) {
       autoTable(doc, {
-        startY: 60,
+        startY: 70,
         head: [['REPARACION URGENTE', 'Observaciones']],
         body: urgentes.map(i => [i.nombre, i.comentario || '—']),
         headStyles: { fillColor: [220, 38, 38] },
@@ -154,7 +159,7 @@ export default function PortalCliente() {
 
     if (sugeridos.length > 0) {
       autoTable(doc, {
-        startY: (doc.lastAutoTable?.finalY || 60) + 6,
+        startY: (doc.lastAutoTable?.finalY || 70) + 6,
         head: [['REPARACION SUGERIDA', 'Observaciones']],
         body: sugeridos.map(i => [i.nombre, i.comentario || '—']),
         headStyles: { fillColor: [217, 119, 6] },
@@ -164,7 +169,7 @@ export default function PortalCliente() {
 
     if (buenos.length > 0) {
       autoTable(doc, {
-        startY: (doc.lastAutoTable?.finalY || 60) + 6,
+        startY: (doc.lastAutoTable?.finalY || 70) + 6,
         head: [['BUEN ESTADO', 'Observaciones']],
         body: buenos.map(i => [i.nombre, i.comentario || '—']),
         headStyles: { fillColor: [22, 163, 74] },
