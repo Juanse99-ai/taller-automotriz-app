@@ -11,6 +11,7 @@ import {
   grabarProductoMovil,
   getCuenttiDebugHeaders,
   testTokenDirecto,
+  detectarMediosPago,
 } from '../services/cuentti'
 import { RESOLUCIONES } from '../utils/constants'
 
@@ -103,6 +104,44 @@ export default function CuenttiPanel({ trabajos, actualizarTrabajo, notify }) {
   }
   // Toggle para mostrar panel de configuracion de IDs
   const [showConfigIds, setShowConfigIds] = useState(false)
+  // Estado de la deteccion automatica de medios de pago
+  const [detectandoMedios, setDetectandoMedios] = useState(false)
+  const [mediosDetectados, setMediosDetectados] = useState(null)
+
+  const detectarIdsAutomaticamente = async () => {
+    setDetectandoMedios(true)
+    setMediosDetectados(null)
+    try {
+      const res = await detectarMediosPago()
+      setMediosDetectados(res)
+      if (res.ok && res.medios.length > 0) {
+        notify(`Detectados ${res.medios.length} medios de pago en tu Cuentti`, 'success')
+      } else {
+        notify('No se encontro endpoint publico de medios de pago en tu Cuentti', 'error')
+      }
+    } catch (e) {
+      notify('Error detectando medios: ' + e.message, 'error')
+    } finally {
+      setDetectandoMedios(false)
+    }
+  }
+
+  // Mapear un medio detectado al key local segun su nombre
+  const aplicarMedioDetectado = (medio) => {
+    const nombre = (medio.nombre || '').toLowerCase()
+    let key = null
+    if (nombre.includes('efectivo')) key = 'efectivo'
+    else if (nombre.includes('debito') || nombre.includes('débito')) key = 'tdebito'
+    else if (nombre.includes('credito') || nombre.includes('crédito') || nombre.includes('tarjeta de credito')) key = 'tcredito'
+    else if (nombre.includes('transferencia') || nombre.includes('transfer')) key = 'transferencia'
+    else if (nombre.includes('nequi') || nombre.includes('daviplata') || nombre.includes('digital')) key = 'nequi'
+    if (key) {
+      guardarMetodoId(key, medio.id)
+      notify(`"${medio.nombre}" → ${key} ahora usa ID ${medio.id}`, 'success')
+    } else {
+      notify(`No se mapeo automaticamente "${medio.nombre}". Asignalo manualmente.`, 'info')
+    }
+  }
 
   const [productoForm, setProductoForm] = useState({
     nombre: '',
@@ -534,6 +573,53 @@ export default function CuenttiPanel({ trabajos, actualizarTrabajo, notify }) {
             <div style={{marginTop:14,padding:'14px 16px',background:'var(--bg-subtle)',border:'1px solid var(--border)',borderRadius:10}}>
               <div style={{fontSize:12.5,color:'var(--text-2)',marginBottom:10,lineHeight:1.5}}>
                 <strong>Configuracion de IDs Cuentti.</strong> Cada cuenta de Cuentti usa IDs distintos en su tabla <code className="mono">vent_medio_pago</code> y de bancos. Si al facturar te sale <code className="mono">DataIntegrityViolationException</code> en <code className="mono">id_medio_pago</code> o <code className="mono">id_banco</code>, ajusta los IDs aqui hasta que coincidan con los de tu Cuentti. Se guardan automaticamente.
+              </div>
+
+              {/* Boton de deteccion automatica */}
+              <div style={{marginBottom:12,padding:'10px 12px',background:'var(--blue-50,#eff6ff)',border:'1px solid var(--blue-300,#93c5fd)',borderRadius:8}}>
+                <div style={{display:'flex',alignItems:'center',gap:10,flexWrap:'wrap'}}>
+                  <button type="button" onClick={detectarIdsAutomaticamente}
+                    disabled={detectandoMedios}
+                    className="btn btn-primary btn-sm">
+                    {detectandoMedios ? '🔍 Detectando...' : '🔍 Detectar IDs automaticamente'}
+                  </button>
+                  <div style={{fontSize:11.5,color:'var(--text-3)',flex:'1 1 200px'}}>
+                    Prueba 11 endpoints comunes de Cuentti j4ErpPro hasta encontrar uno que liste tus medios de pago.
+                  </div>
+                </div>
+
+                {mediosDetectados && (
+                  <div style={{marginTop:10,padding:'10px',background:'var(--bg-raised)',borderRadius:6,fontSize:12}}>
+                    {mediosDetectados.ok ? (
+                      <>
+                        <div style={{color:'var(--green-700)',fontWeight:700,marginBottom:6}}>
+                          ✓ Detectados en {mediosDetectados.endpoint}
+                        </div>
+                        <div style={{display:'flex',flexDirection:'column',gap:4}}>
+                          {mediosDetectados.medios.map((m, i) => (
+                            <div key={i} style={{display:'flex',alignItems:'center',gap:8,padding:'4px 0',borderBottom:i < mediosDetectados.medios.length - 1 ? '1px dashed var(--border)' : 'none'}}>
+                              <span className="mono" style={{minWidth:30,fontWeight:700,color:'var(--blue-600)'}}>{m.id}</span>
+                              <span style={{flex:1}}>{m.nombre}</span>
+                              <button type="button" onClick={() => aplicarMedioDetectado(m)}
+                                style={{background:'var(--blue-600)',color:'#fff',border:'none',padding:'3px 8px',borderRadius:4,fontSize:11,cursor:'pointer',fontWeight:600}}>
+                                Aplicar
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      </>
+                    ) : (
+                      <div>
+                        <div style={{color:'var(--red-700)',fontWeight:700,marginBottom:4}}>
+                          ✗ Ningun endpoint respondio con la lista
+                        </div>
+                        <div style={{fontSize:11,color:'var(--text-3)'}}>
+                          Tu Cuentti no expone publicamente los medios de pago. Tendras que encontrarlos manualmente en <strong>cuentti.co</strong> (Configuracion → Medios de Pago) o llamando a soporte Cuentti.
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
               <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(200px,1fr))',gap:10,marginBottom:12}}>
                 {metodosConfig.map(m => (

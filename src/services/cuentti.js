@@ -424,6 +424,51 @@ export async function emitirFacturaElectronica(idTransacion) {
   }
 }
 
+// Detectar medios de pago disponibles en Cuentti probando endpoints comunes
+// Cada cuenta de Cuentti tiene IDs distintos en su tabla vent_medio_pago
+// y no hay docs publicas. Esta funcion intenta varios paths conocidos del
+// stack j4ErpPro hasta encontrar uno que responda con la lista.
+export async function detectarMediosPago() {
+  const candidatos = [
+    '/jServerj4ErpPro/com/j4ErpPro/server/general/medio_pago/listar',
+    '/jServerj4ErpPro/com/j4ErpPro/server/general/medioPago/listar',
+    '/jServerj4ErpPro/com/j4ErpPro/server/admin/medio_pago/listar',
+    '/jServerj4ErpPro/com/j4ErpPro/server/admin/medioPago/listar',
+    '/jServerj4ErpPro/com/j4ErpPro/server/vent/medio_pago/listar',
+    '/jServerj4ErpPro/com/j4ErpPro/server/vent/medioPago/listar',
+    '/jServerj4ErpPro/api/token/listarMediosPago',
+    '/jServerj4ErpPro/api/token/mediosPago',
+    '/jServerj4ErpPro/api/token/listar/medio_pago',
+    `/jServerj4ErpPro/com/j4ErpPro/server/general/medio_pago/listar/${CONFIG.branchId}`,
+    `/jServerj4ErpPro/com/j4ErpPro/server/admin/medio_pago/listar/${CONFIG.branchId}`,
+  ]
+
+  const resultados = []
+  for (const path of candidatos) {
+    try {
+      const data = await cuenttiRequest(path)
+      // Detecta una respuesta valida (array o objeto con datos)
+      const items = Array.isArray(data) ? data : (data?.data || data?.lista || data?.medios || [])
+      if (Array.isArray(items) && items.length > 0 && items[0] && typeof items[0] === 'object') {
+        return {
+          ok: true,
+          endpoint: path,
+          medios: items.map(m => ({
+            id: m.id_medio_pago ?? m.id ?? m.idMedioPago ?? null,
+            nombre: m.nombre ?? m.descripcion ?? m.medio_pago ?? m.label ?? '?',
+            raw: m,
+          })).filter(m => m.id != null),
+          intentos: resultados,
+        }
+      }
+      resultados.push({ path, status: 'sin lista', preview: typeof data === 'object' ? JSON.stringify(data).slice(0, 80) : String(data).slice(0, 80) })
+    } catch (e) {
+      resultados.push({ path, status: e.status || 'error', msg: (e.message || '').slice(0, 80) })
+    }
+  }
+  return { ok: false, intentos: resultados }
+}
+
 // Agregar pago a una transaccion existente
 export async function agregarPagoTransacion(pago) {
   const body = {
