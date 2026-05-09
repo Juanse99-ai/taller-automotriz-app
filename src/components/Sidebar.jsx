@@ -83,6 +83,14 @@ const ICONS = {
       <line x1="10" y1="9"  x2="8" y2="9"/>
     </svg>
   ),
+  usuarios: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M20 21v-2a4 4 0 0 0-3-3.87"/>
+      <path d="M4 21v-2a4 4 0 0 1 3-3.87"/>
+      <circle cx="12" cy="7" r="4"/>
+      <path d="M12 11v0"/>
+    </svg>
+  ),
   logout: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
@@ -115,6 +123,9 @@ const NAV = [
   { group: 'Analisis', items: [
     { key: 'reportes', label: 'Reportes' },
     { key: 'cuentti',  label: 'Cuentti' },
+  ]},
+  { group: 'Sistema', items: [
+    { key: 'usuarios', label: 'Usuarios' },
   ]},
 ]
 

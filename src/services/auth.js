@@ -35,8 +35,8 @@ export function getSession() {
 
 // Roles y permisos
 const PERMISOS = {
-  admin: ['dashboard', 'recepcion', 'trabajos', 'mecanicos', 'cotizaciones', 'inspecciones', 'inventario', 'clientes', 'liquidacion', 'reportes', 'cuentti'],
-  jefe_taller: ['dashboard', 'recepcion', 'trabajos', 'mecanicos', 'cotizaciones', 'inspecciones', 'inventario', 'clientes'],
+  admin: ['dashboard', 'recepcion', 'trabajos', 'mecanicos', 'cotizaciones', 'inspecciones', 'inventario', 'clientes', 'vehiculos', 'liquidacion', 'reportes', 'cuentti', 'usuarios'],
+  jefe_taller: ['dashboard', 'recepcion', 'trabajos', 'mecanicos', 'cotizaciones', 'inspecciones', 'inventario', 'clientes', 'vehiculos'],
 }
 
 export function getSeccionesPermitidas(rol) {
