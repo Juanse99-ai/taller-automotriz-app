@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { login } from '../services/auth'
+import { TALLER } from '../utils/constants'
 
 const ArrowRight = () => (
   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -52,30 +53,34 @@ export default function Login({ onLogin }) {
             <img src="/logo.png" alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
           </div>
           <div>
-            <div style={{ fontSize: 18, fontWeight: 800, letterSpacing: 0.3 }}>Multidiagnosticos AS</div>
-            <div style={{ fontSize: 11.5, color: 'rgba(255,255,255,.5)', textTransform: 'uppercase', letterSpacing: 1.2, marginTop: 2, fontWeight: 600 }}>Taller · Barranquilla</div>
+            <div style={{ fontSize: 18, fontWeight: 800, letterSpacing: 0.3 }}>{TALLER.razonSocial || TALLER.nombre}</div>
+            <div style={{ fontSize: 11.5, color: 'rgba(255,255,255,.5)', textTransform: 'uppercase', letterSpacing: 1.2, marginTop: 2, fontWeight: 600 }}>Taller Automotriz · Sabanalarga</div>
           </div>
         </div>
 
         <div style={{ position: 'relative', marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: 22 }}>
           <div>
-            <div style={{ display: 'inline-block', padding: '5px 11px', background: 'rgba(245,158,11,.18)', color: '#fbbf24', fontSize: 10.5, fontWeight: 800, textTransform: 'uppercase', letterSpacing: 1.2, borderRadius: 6, marginBottom: 18 }}>v2.0 · 2026</div>
+            <div style={{ display: 'inline-block', padding: '5px 11px', background: 'rgba(245,158,11,.18)', color: '#fbbf24', fontSize: 10.5, fontWeight: 800, textTransform: 'uppercase', letterSpacing: 1.2, borderRadius: 6, marginBottom: 18 }}>NIT {TALLER.nit}</div>
             <h1 style={{ margin: 0, fontSize: 44, fontWeight: 900, lineHeight: 1.05, letterSpacing: -0.8 }}>
               Todo el taller,<br />
               <span style={{ color: '#fbbf24' }}>en una sola pantalla.</span>
             </h1>
             <p style={{ marginTop: 16, fontSize: 14.5, color: 'rgba(255,255,255,.7)', lineHeight: 1.55, maxWidth: 440 }}>
-              Recibe vehiculos, organiza el trabajo de Pedro, Victor e Ismael, cotiza, factura con Cuentti y liquida comisiones. Sin papeles, sin desorden.
+              Recibe vehiculos, organiza el trabajo del equipo, cotiza, factura con Cuentti y liquida comisiones. Sin papeles, sin desorden.
             </p>
           </div>
 
-          <div style={{ display: 'flex', gap: 28, paddingTop: 16, borderTop: '1px solid rgba(255,255,255,.08)' }}>
-            {[['OTs activas', '12'], ['Mecanicos', '3'], ['Uptime', '99.9%']].map(([l, v], i) => (
-              <div key={i}>
-                <div className="mono" style={{ fontSize: 22, fontWeight: 800, color: '#fbbf24' }}>{v}</div>
-                <div style={{ fontSize: 10.5, color: 'rgba(255,255,255,.45)', textTransform: 'uppercase', letterSpacing: 0.8, fontWeight: 600, marginTop: 2 }}>{l}</div>
-              </div>
-            ))}
+          <div style={{ display: 'flex', gap: 28, paddingTop: 16, borderTop: '1px solid rgba(255,255,255,.08)', flexWrap: 'wrap' }}>
+            <div>
+              <div style={{ fontSize: 11, color: 'rgba(255,255,255,.45)', textTransform: 'uppercase', letterSpacing: 0.8, fontWeight: 600, marginBottom: 4 }}>Direccion</div>
+              <div style={{ fontSize: 13, color: 'rgba(255,255,255,.85)' }}>Carrera 27 #13-05</div>
+              <div style={{ fontSize: 12, color: 'rgba(255,255,255,.55)' }}>Sabanalarga, Atlantico</div>
+            </div>
+            <div>
+              <div style={{ fontSize: 11, color: 'rgba(255,255,255,.45)', textTransform: 'uppercase', letterSpacing: 0.8, fontWeight: 600, marginBottom: 4 }}>Contacto</div>
+              <div className="mono" style={{ fontSize: 13, color: 'rgba(255,255,255,.85)', fontWeight: 700 }}>{TALLER.celular}</div>
+              <div style={{ fontSize: 11.5, color: 'rgba(255,255,255,.55)' }}>{TALLER.email}</div>
+            </div>
           </div>
         </div>
       </div>
@@ -130,8 +135,8 @@ export default function Login({ onLogin }) {
           </form>
 
           <div style={{ marginTop: 40, paddingTop: 22, borderTop: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 11.5, color: 'var(--text-4)' }}>
-            <span>2026 Multidiagnosticos AS</span>
-            <span>Soporte: 301 234 5678</span>
+            <span>{new Date().getFullYear()} {TALLER.razonSocial || TALLER.nombre}</span>
+            <span>{TALLER.celular}</span>
           </div>
         </div>
       </div>

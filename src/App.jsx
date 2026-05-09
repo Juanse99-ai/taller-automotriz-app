@@ -23,6 +23,8 @@ import { useCotizaciones } from './hooks/useCotizaciones'
 import { useInspecciones } from './hooks/useInspecciones'
 import { useLiquidacion } from './hooks/useLiquidacion'
 import { getSession, logout, getSeccionesPermitidas } from './services/auth'
+import { cargarInventarioCompleto } from './services/cuentti'
+import { lsGet, lsSet, LS_KEYS } from './services/storage'
 
 class ErrorBoundary extends Component {
   constructor(props) { super(props); this.state = { error: null } }
@@ -128,6 +130,25 @@ export default function App() {
     setToast({ msg, type })
     setTimeout(() => setToast(null), 3500)
   }, [])
+
+  // Pre-cargar inventario de Cuentti en background al iniciar la app y luego
+  // cada 5 minutos. Asi cuando se abre Trabajos/Cotizaciones ya esta fresco.
+  useEffect(() => {
+    if (!user) return
+    let active = true
+    const sync = () => {
+      cargarInventarioCompleto()
+        .then(data => {
+          if (active && data && data.length > 0) {
+            lsSet(LS_KEYS.INVENTARIO_CACHE, data)
+          }
+        })
+        .catch(() => { /* ignorar errores de red, seguimos con cache */ })
+    }
+    sync()
+    const interval = setInterval(sync, 5 * 60 * 1000) // cada 5 min
+    return () => { active = false; clearInterval(interval) }
+  }, [user])
 
   const navigate = useCallback((s) => {
     setSection(s)

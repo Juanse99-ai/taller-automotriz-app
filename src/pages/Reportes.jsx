@@ -129,17 +129,90 @@ export default function Reportes({ trabajos }) {
     doc.save(`reporte_${rango.desde}_${rango.hasta}.pdf`)
   }
 
+  // Presets rapidos de rango de fechas
+  const aplicarPreset = (preset) => {
+    const now = new Date()
+    const yyyymmdd = (d) => d.toISOString().slice(0, 10)
+    let desde, hasta = yyyymmdd(now)
+    switch (preset) {
+      case 'hoy':
+        desde = hasta
+        break
+      case 'semana': {
+        const d = new Date(now)
+        d.setDate(d.getDate() - 6)
+        desde = yyyymmdd(d)
+        break
+      }
+      case 'mes':
+        desde = yyyymmdd(new Date(now.getFullYear(), now.getMonth(), 1))
+        break
+      case 'mesPasado': {
+        desde = yyyymmdd(new Date(now.getFullYear(), now.getMonth() - 1, 1))
+        hasta = yyyymmdd(new Date(now.getFullYear(), now.getMonth(), 0))
+        break
+      }
+      case 'trimestre': {
+        const d = new Date(now)
+        d.setMonth(d.getMonth() - 3)
+        desde = yyyymmdd(d)
+        break
+      }
+      case 'anio':
+        desde = `${now.getFullYear()}-01-01`
+        break
+      case 'todo':
+        desde = '2020-01-01'
+        break
+      default:
+        return
+    }
+    setRango({ desde, hasta })
+  }
+
   return (
     <div>
       <div className="pagehd">
-        <div><h2>Reportes</h2><p className="sub">Metricas del periodo {rango.desde} al {rango.hasta}</p></div>
-        <div className="actions">
-          <div className="card__b" style={{display:'flex',gap:10,alignItems:'center',padding:0}}>
-            <input className="input" type="date" value={rango.desde} onChange={e => setRango(r => ({...r, desde: e.target.value}))} style={{width:140}}/>
-            <input className="input" type="date" value={rango.hasta} onChange={e => setRango(r => ({...r, hasta: e.target.value}))} style={{width:140}}/>
+        <div><h2>Reportes</h2><p className="sub">Metricas del periodo {fmtDate(rango.desde)} al {fmtDate(rango.hasta)} · {filtrados.length} {filtrados.length === 1 ? 'OT' : 'OTs'}</p></div>
+        <div className="actions" style={{ flexWrap: 'wrap', gap: 8 }}>
+          <button className="btn btn-outline btn-sm" onClick={exportarCSV}>📊 CSV</button>
+          <button className="btn btn-outline btn-sm" onClick={() => exportarResumen()}>📄 PDF</button>
+        </div>
+      </div>
+
+      {/* Filtros rapidos + custom */}
+      <div className="card" style={{ marginBottom: 16 }}>
+        <div className="card__b" style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '.5px' }}>Periodo rapido</span>
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+              {[
+                ['hoy', 'Hoy'],
+                ['semana', '7 dias'],
+                ['mes', 'Mes actual'],
+                ['mesPasado', 'Mes pasado'],
+                ['trimestre', '3 meses'],
+                ['anio', 'Este año'],
+                ['todo', 'Todo'],
+              ].map(([k, l]) => (
+                <button key={k} type="button"
+                  className="btn btn-outline btn-sm"
+                  onClick={() => aplicarPreset(k)}
+                  style={{ padding: '5px 12px', fontSize: 12 }}>
+                  {l}
+                </button>
+              ))}
+            </div>
           </div>
-          <button className="btn btn-outline" onClick={exportarCSV}>CSV</button>
-          <button className="btn btn-outline" onClick={() => exportarResumen()}>PDF</button>
+          <div style={{ width: 1, height: 36, background: 'var(--border)', margin: '0 6px' }} />
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '.5px' }}>Personalizado</span>
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+              <input className="input" type="date" value={rango.desde} onChange={e => setRango(r => ({...r, desde: e.target.value}))} style={{ width: 150, fontSize: 13 }} />
+              <span style={{ color: 'var(--text-3)', fontSize: 12 }}>→</span>
+              <input className="input" type="date" value={rango.hasta} onChange={e => setRango(r => ({...r, hasta: e.target.value}))} style={{ width: 150, fontSize: 13 }} />
+            </div>
+          </div>
         </div>
       </div>
 

@@ -182,6 +182,38 @@ export default function Dashboard({ trabajos = [], onNavigate }) {
         </div>
       </div>
 
+      {/* ── Alerta de trabajos estancados (>3 dias sin moverse) ───────────── */}
+      {estancados.length > 0 && (
+        <div style={{
+          padding: '14px 18px',
+          background: 'linear-gradient(90deg, rgba(220,38,38,.10), rgba(245,158,11,.08))',
+          border: '1px solid rgba(220,38,38,.35)',
+          borderLeft: '4px solid var(--red-500)',
+          borderRadius: 10,
+          display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap',
+        }}>
+          <div style={{
+            width: 38, height: 38, borderRadius: 10, background: 'var(--red-500)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', flexShrink: 0,
+          }}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
+          </div>
+          <div style={{ flex: 1, minWidth: 200 }}>
+            <div style={{ fontWeight: 800, fontSize: 14.5, color: 'var(--red-700, #b91c1c)' }}>
+              {estancados.length} {estancados.length === 1 ? 'trabajo estancado' : 'trabajos estancados'}
+            </div>
+            <div style={{ fontSize: 12.5, color: 'var(--text-2)', marginTop: 2 }}>
+              {estancados.length === 1 ? 'Lleva' : 'Llevan'} más de {DIAS_ESTANCADO} días sin actualizarse — revísalos para mover el avance o cambiar estado.
+            </div>
+          </div>
+          {onNavigate && (
+            <button className="btn btn-primary btn-sm" onClick={() => onNavigate('trabajos')} style={{ background: 'var(--red-600)' }}>
+              Ver estancados <IcArrow />
+            </button>
+          )}
+        </div>
+      )}
+
       {/* ── KPIs ────────────────────────────────────────────────────────── */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 14 }}>
         <div className="kpi">
