@@ -60,6 +60,17 @@ export default function CuenttiPanel({ trabajos, actualizarTrabajo, notify }) {
     { id: 0, nombre: 'A Credito (sin pago)' },
   ]
   const [metodoPago, setMetodoPago] = useState('')
+  // ID del banco de la cuenta del taller en Cuentti (configurable por usuario, persistido).
+  // Se usa para Transferencia, Tarjeta Debito, Tarjeta Credito, Nequi/Daviplata.
+  // El default 1 suele ser el primer banco registrado en Cuentti (Bancolombia/principal).
+  // El usuario puede ajustarlo si su Cuentti usa otro ID.
+  const [idBancoConfig, setIdBancoConfig] = useState(() => {
+    try { return parseInt(localStorage.getItem('cuentti:id_banco')) || 1 } catch { return 1 }
+  })
+  const guardarIdBanco = (val) => {
+    setIdBancoConfig(val)
+    try { localStorage.setItem('cuentti:id_banco', String(val)) } catch {}
+  }
 
   const [productoForm, setProductoForm] = useState({
     nombre: '',
@@ -180,8 +191,13 @@ export default function CuenttiPanel({ trabajos, actualizarTrabajo, notify }) {
     setFacturando(true)
     try {
       // Mapear id_banco segun metodo de pago:
-      // Efectivo(1)/Nequi(5) no requieren banco, Transferencia(4)/Tarjetas(2,3) si
-      const idBanco = [2, 3, 4].includes(metodoPago) ? 2 : 0
+      // - Efectivo (1): id_banco = 2 (caja/efectivo en Cuentti)
+      // - Nequi/Daviplata (5): id_banco = 2 (caja, Cuentti acepta)
+      // - Transferencia (4) / Tarjetas (2,3): id_banco = idBancoConfig (banco real
+      //   registrado en Cuentti, configurable por el usuario)
+      // - A Credito (0): no aplica (lstPagos vacio)
+      const requiereBancoReal = [2, 3, 4].includes(metodoPago)
+      const idBanco = requiereBancoReal ? idBancoConfig : (metodoPago === 0 ? 0 : 2)
       const facturaData = {
         ...trabajo,
         resolucion: prefijo,
@@ -471,6 +487,32 @@ export default function CuenttiPanel({ trabajos, actualizarTrabajo, notify }) {
               </div>
             </div>
           </div>
+
+          {/* Configuracion de id_banco cuando aplica (Transferencia, Tarjetas) */}
+          {[2,3,4].includes(metodoPago) && (
+            <div style={{marginTop:14,padding:'12px 14px',background:'var(--bg-subtle)',border:'1px solid var(--border)',borderRadius:10,display:'flex',alignItems:'center',gap:14,flexWrap:'wrap'}}>
+              <div style={{flex:'1 1 280px',minWidth:0}}>
+                <label style={{display:'block',fontSize:11.5,fontWeight:700,color:'var(--text-2)',marginBottom:4,textTransform:'uppercase',letterSpacing:'.5px'}}>
+                  ID del banco en Cuentti
+                </label>
+                <div style={{fontSize:12,color:'var(--text-3)',lineHeight:1.4}}>
+                  Para <strong>{METODOS_PAGO.find(m => m.id === metodoPago)?.nombre}</strong> Cuentti requiere el ID de un banco real registrado en tu cuenta. Si no sabes cual es, prueba con 1, 2 o 3 (Bancolombia/Davivienda suelen estar entre los primeros).
+                </div>
+              </div>
+              <div style={{display:'flex',alignItems:'center',gap:8}}>
+                <input
+                  type="number"
+                  min="1"
+                  className="input"
+                  value={idBancoConfig}
+                  onChange={e => guardarIdBanco(parseInt(e.target.value) || 1)}
+                  style={{width:80,fontFamily:'var(--mono)',fontWeight:700,textAlign:'center',fontSize:14}}
+                />
+                <span style={{fontSize:11,color:'var(--text-3)'}}>guardado</span>
+              </div>
+            </div>
+          )}
+
           <div style={{display:'flex',justifyContent:'flex-end',marginTop:14}}>
             <button className="btn btn-primary" onClick={facturarTrabajo}
               disabled={!facturaId || metodoPago === '' || facturando}>
