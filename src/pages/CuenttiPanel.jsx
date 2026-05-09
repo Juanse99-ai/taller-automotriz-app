@@ -58,7 +58,7 @@ export default function CuenttiPanel({ trabajos, actualizarTrabajo, notify }) {
   const METODOS_DEFAULT = [
     { key: 'efectivo', nombre: 'Efectivo', defaultId: 1 },
     { key: 'transferencia', nombre: 'Transferencia', defaultId: 7 },
-    { key: 'credito', nombre: 'A Credito (sin pago)', defaultId: 0 },
+    { key: 'credito', nombre: 'Credito', defaultId: 0 },
   ]
   const [metodosConfig, setMetodosConfig] = useState(() => {
     try {
