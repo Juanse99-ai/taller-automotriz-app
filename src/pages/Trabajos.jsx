@@ -15,7 +15,9 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
   const [confirmDel, setConfirmDel] = useState(null)
 
   // Filtros
-  const [filtroEstado, setFiltroEstado] = useState('todos')
+  // Default: 'activos' = todos los que NO estan terminados (Completado/Cancelado).
+  // Asi al abrir Trabajos solo ves los que estan en proceso, no los ya cerrados.
+  const [filtroEstado, setFiltroEstado] = useState('activos')
   const [filtroTecnico, setFiltroTecnico] = useState('todos')
   const [filtroBusqueda, setFiltroBusqueda] = useState('')
 
@@ -29,7 +31,12 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
 
   const filtered = useMemo(() => {
     let list = [...trabajos]
-    if (filtroEstado !== 'todos') list = list.filter(t => t.estado === filtroEstado)
+    if (filtroEstado === 'activos') {
+      // Activos = todo lo que NO esta cerrado
+      list = list.filter(t => t.estado !== ESTADOS.COMPLETADO && t.estado !== ESTADOS.CANCELADO)
+    } else if (filtroEstado !== 'todos') {
+      list = list.filter(t => t.estado === filtroEstado)
+    }
     if (filtroTecnico !== 'todos') list = list.filter(t => String(t.tecnicoId) === filtroTecnico)
     if (filtroBusqueda.trim()) {
       const q = filtroBusqueda.toLowerCase()
@@ -410,12 +417,9 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
         trabajo={trabajo}
         allTrabajos={trabajos}
         onSave={async (data) => {
-          if (vista === 'editar') {
-            await actualizarTrabajo(editId, data)
-            notify('Trabajo actualizado', 'success')
-          } else {
-            await agregarTrabajo(data)
-            // Registrar vehiculo y vincular al cliente
+          // Helper: registrar/actualizar cliente y vehiculo en BD local
+          // (se ejecuta tanto al crear como al editar)
+          const sincronizarClienteVehiculo = () => {
             const placa = (data.placa || '').trim().toUpperCase()
             if (vehiculosHook && placa) {
               vehiculosHook.agregarVehiculo({
@@ -435,6 +439,15 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
               })
               if (placa) clientesHook.vincularVehiculo(data.cedula, placa)
             }
+          }
+
+          if (vista === 'editar') {
+            await actualizarTrabajo(editId, data)
+            sincronizarClienteVehiculo()
+            notify('Trabajo actualizado', 'success')
+          } else {
+            await agregarTrabajo(data)
+            sincronizarClienteVehiculo()
             notify('Trabajo creado', 'success')
           }
           setVista('lista')
@@ -462,7 +475,7 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
   }
 
   const statesTabs = [
-    ['todos', 'Todas'],
+    ['activos', 'Activos'],
     [ESTADOS.PENDIENTE, 'Pendientes'],
     [ESTADOS.EN_DIAGNOSTICO, 'Diagnostico'],
     [ESTADOS.EN_PROGRESO, 'En Progreso'],
@@ -470,6 +483,7 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
     [ESTADOS.EN_PRUEBA, 'En Prueba'],
     [ESTADOS.COMPLETADO, 'Completados'],
     [ESTADOS.CANCELADO, 'Cancelados'],
+    ['todos', 'Todas'],
   ]
 
   return (

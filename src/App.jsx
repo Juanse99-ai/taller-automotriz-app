@@ -79,27 +79,47 @@ export default function App() {
   const inspeccionesHook = useInspecciones()
   const liquidacionHook = useLiquidacion()
 
-  // Sync retroactivo: registrar vehiculos de trabajos existentes que no esten en vehiculosHook
+  // Sync retroactivo: registrar vehiculos Y CLIENTES de trabajos existentes
   const syncDone = useRef(false)
   useEffect(() => {
     if (syncDone.current || trabajosHook.loading || !trabajosHook.trabajos.length) return
     syncDone.current = true
     const vehiculosExistentes = new Set(vehiculosHook.vehiculos.map(v => v.placa))
+    const clientesExistentes = new Set(
+      (clientesHook.clientesTable || clientesHook.listarClientes?.() || []).map(c => c.cedula)
+    )
+
     trabajosHook.trabajos.forEach(t => {
       const placa = (t.placa || '').trim().toUpperCase()
+      const cedula = (t.cedula || '').toString().trim()
+
+      // 1. Crear vehiculo si no existe
       if (placa && !vehiculosExistentes.has(placa)) {
         vehiculosHook.agregarVehiculo({
           placa,
           marca: t.marca || '',
           modelo: t.modelo || '',
           ano: parseInt(t.ano) || 0,
-          cedulaPropietario: t.cedula || '',
+          cedulaPropietario: cedula,
         })
         vehiculosExistentes.add(placa)
       }
-      // Vincular vehiculo al cliente
-      if (t.cedula && placa) {
-        clientesHook.vincularVehiculo(t.cedula, placa)
+
+      // 2. Crear CLIENTE si no existe (NUEVO: antes solo se vinculaba)
+      if (cedula && t.cliente && !clientesExistentes.has(cedula)) {
+        clientesHook.guardarCliente({
+          cedula,
+          nombre: t.cliente,
+          telefono: t.telefonoCliente || '',
+          email: t.emailCliente || '',
+          vehiculos: placa ? [placa] : [],
+        })
+        clientesExistentes.add(cedula)
+      }
+
+      // 3. Vincular vehiculo al cliente
+      if (cedula && placa) {
+        clientesHook.vincularVehiculo(cedula, placa)
       }
     })
   }, [trabajosHook.loading, trabajosHook.trabajos])
