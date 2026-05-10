@@ -34,10 +34,14 @@ export default function Clientes({ clientes, vehiculos, notify }) {
   const [buscandoCuentti, setBuscandoCuentti] = useState(false)
   const [resultadoCuentti, setResultadoCuentti] = useState(null)
 
+  // Estado del sync masivo de telefonos desde Cuentti
+  const [syncTel, setSyncTel] = useState({ activo: false, total: 0, procesados: 0, actualizados: 0, errores: 0 })
+
   // Metricas
   const totalClientes = clientesTable.length
   const conCuenttiId = useMemo(() => clientesTable.filter(c => c.cuenttiId).length, [clientesTable])
   const conVehiculos = useMemo(() => clientesTable.filter(c => c.vehiculos && c.vehiculos.length > 0).length, [clientesTable])
+  const sinTelefono = useMemo(() => clientesTable.filter(c => !c.telefono || !c.telefono.toString().trim()).length, [clientesTable])
 
   // Ordenamiento de columnas (clickeable). null = orden natural por scoring de busqueda.
   const [sortBy, setSortBy] = useState(null)
@@ -54,8 +58,9 @@ export default function Clientes({ clientes, vehiculos, notify }) {
       : <span style={{ color: 'var(--blue-600)', fontSize: 10, marginLeft: 4 }}>▼</span>
   }
 
-  // FILTRO SIMPLE Y DIRECTO: substring match en nombre y cedula, sin acentos.
-  // Sin librerías, sin scoring fuzzy, sin nada raro — predecible 100%.
+  // FILTRO + DEDUPE + SCORING DE RELEVANCIA
+  // - Dedupe por cedula (evita duplicados que vienen de merge defectuoso)
+  // - Scoring: palabra completa al inicio > prefijo de palabra > substring > coincidencia en cedula
   const clientesFiltrados = useMemo(() => {
     const termRaw = busqueda.trim()
 
@@ -77,26 +82,69 @@ export default function Clientes({ clientes, vehiculos, notify }) {
       return 0
     }
 
-    // Sin búsqueda → lista completa (con sort opcional)
+    // Dedupe global por cedula (mantiene el primero que aparece, que generalmente
+    // es el de Supabase y tiene mas datos que el cache local)
+    const seen = new Set()
+    const dedup = []
+    for (const c of clientesTable) {
+      const ced = _normCedula(c.cedula || '')
+      if (!ced) continue
+      if (seen.has(ced)) continue
+      seen.add(ced)
+      dedup.push(c)
+    }
+
+    // Sin búsqueda → lista completa deduplicada (con sort opcional)
     if (!termRaw) {
-      return sortBy ? [...clientesTable].sort(cmp) : clientesTable
+      return sortBy ? [...dedup].sort(cmp) : dedup
     }
 
     // Normalizar termino: sin acentos, lowercase
     const termNom = _normNombre(termRaw)
     const termCed = _normCedula(termRaw)
 
-    // Substring match: incluye solo si el termino aparece en nombre O cedula
-    const filtered = []
-    for (const c of clientesTable) {
+    // Score helpers
+    // 100: nombre empieza con el termino (ej "PRIETO" en "PRIETO PEREZ")
+    // 80: termino es palabra completa en el nombre (ej "PRIETO" en "JOSE PRIETO PEREZ")
+    // 60: termino es prefijo de alguna palabra (ej "PRI" en "PRIMERO LOPEZ")
+    // 40: termino aparece como substring (ej "RIET" en "PRIETO")
+    // 30: match en cedula
+    const scored = []
+    for (const c of dedup) {
       const nomC = _normNombre(c.nombre || '')
       const cedC = _normCedula(c.cedula || '')
-      if (nomC.includes(termNom) || (termCed.length >= 2 && cedC.includes(termCed))) {
-        filtered.push(c)
+      let score = 0
+
+      if (termNom && nomC) {
+        if (nomC.startsWith(termNom + ' ') || nomC === termNom) score = 100
+        else if (nomC.includes(' ' + termNom + ' ') || nomC.endsWith(' ' + termNom)) score = 80
+        else {
+          // Prefijo de palabra: alguna palabra del nombre empieza con el termino
+          const palabras = nomC.split(/\s+/)
+          if (palabras.some(w => w.startsWith(termNom))) score = 60
+          else if (nomC.includes(termNom)) score = 40
+        }
       }
+
+      // Cedula match (solo si parece cedula — al menos 2 chars)
+      if (score === 0 && termCed.length >= 2 && cedC.includes(termCed)) {
+        score = 30
+      }
+
+      if (score > 0) scored.push({ c, score })
     }
 
-    return sortBy ? filtered.sort(cmp) : filtered
+    // Ordenar por score desc; tie-break por nombre alfabetico
+    scored.sort((a, b) => {
+      if (b.score !== a.score) return b.score - a.score
+      const an = _normNombre(a.c.nombre)
+      const bn = _normNombre(b.c.nombre)
+      return an < bn ? -1 : an > bn ? 1 : 0
+    })
+
+    let list = scored.map(x => x.c)
+    if (sortBy) list = [...list].sort(cmp)
+    return list
   }, [clientesTable, busqueda, sortBy, sortDir])
 
   // Auto-buscar en Cuentti cuando no hay resultados locales y el termino parece cedula
@@ -122,6 +170,64 @@ export default function Clientes({ clientes, vehiculos, notify }) {
 
     return () => { cancelled = true; clearTimeout(timer) }
   }, [busqueda, clientesFiltrados.length])
+
+  // SYNC MASIVO de telefonos desde Cuentti
+  // Recorre clientes sin telefono, los consulta uno por uno (con concurrencia 3)
+  // y actualiza el registro local + Supabase via guardarCliente.
+  const sincronizarTelefonosCuentti = async () => {
+    const objetivo = clientesTable.filter(c => !c.telefono || !c.telefono.toString().trim())
+    if (!objetivo.length) {
+      notify('Todos los clientes ya tienen telefono', 'info')
+      return
+    }
+    const confirmar = window.confirm(
+      `Vas a consultar ${objetivo.length} clientes en Cuentti para traer sus telefonos.\n` +
+      `Esto puede tardar ${Math.ceil(objetivo.length / 3 * 0.4)}s aprox.\n\n¿Continuar?`
+    )
+    if (!confirmar) return
+
+    setSyncTel({ activo: true, total: objetivo.length, procesados: 0, actualizados: 0, errores: 0 })
+
+    const concurrencia = 3
+    let idx = 0
+    let actualizados = 0
+    let errores = 0
+
+    const procesarUno = async (cliente) => {
+      try {
+        const data = await buscarClientePorCedula(cliente.cedula)
+        const tel = data?.telefono || ''
+        if (tel) {
+          guardarCliente({
+            cedula: cliente.cedula,
+            nombre: cliente.nombre,
+            telefono: tel,
+            email: cliente.email || data?.email || '',
+            direccion: cliente.direccion || data?.direccion || '',
+            cuenttiId: cliente.cuenttiId || data?.id || null,
+          })
+          actualizados++
+        }
+      } catch {
+        errores++
+      } finally {
+        setSyncTel(s => ({ ...s, procesados: s.procesados + 1, actualizados, errores }))
+      }
+    }
+
+    // Worker pool simple: 3 workers que toman del array
+    const worker = async () => {
+      while (idx < objetivo.length) {
+        const i = idx++
+        if (i >= objetivo.length) break
+        await procesarUno(objetivo[i])
+      }
+    }
+    await Promise.all(Array.from({ length: concurrencia }, () => worker()))
+
+    setSyncTel(s => ({ ...s, activo: false }))
+    notify(`Sync completado: ${actualizados} actualizados, ${errores} errores`, actualizados > 0 ? 'success' : 'warning')
+  }
 
   // Importar el cliente de Cuentti a la BD local
   const importarDeCuentti = (apiResult) => {
@@ -459,11 +565,45 @@ export default function Clientes({ clientes, vehiculos, notify }) {
   return (
     <div>
       <div className="pagehd">
-        <div><h2>Clientes</h2><p className="sub">{totalClientes} clientes en la base · {conCuenttiId} sincronizados con Cuentti</p></div>
-        <div className="actions">
+        <div><h2>Clientes</h2><p className="sub">{totalClientes} clientes en la base · {conCuenttiId} sincronizados con Cuentti · {sinTelefono} sin telefono</p></div>
+        <div className="actions" style={{display:'flex',gap:8,alignItems:'center'}}>
+          {sinTelefono > 0 && (
+            <button
+              className="btn btn-outline btn-sm"
+              onClick={sincronizarTelefonosCuentti}
+              disabled={syncTel.activo}
+              title="Consulta uno por uno los clientes sin telefono en Cuentti"
+            >
+              {syncTel.activo
+                ? `📡 Sincronizando ${syncTel.procesados}/${syncTel.total}…`
+                : `📡 Sincronizar ${sinTelefono} telefonos de Cuentti`}
+            </button>
+          )}
           <button className="btn btn-primary" onClick={() => setCreando(true)}>+ Nuevo cliente</button>
         </div>
       </div>
+
+      {/* Barra de progreso del sync masivo de telefonos */}
+      {syncTel.activo && (
+        <div style={{marginBottom:14,padding:'10px 14px',background:'var(--blue-50,#eff6ff)',border:'1px solid var(--blue-300,#93c5fd)',borderRadius:8}}>
+          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',fontSize:12.5,marginBottom:6}}>
+            <span style={{fontWeight:700,color:'var(--blue-700,#1e40af)'}}>
+              📡 Sincronizando telefonos desde Cuentti
+            </span>
+            <span style={{color:'var(--text-3)',fontSize:11.5}}>
+              {syncTel.procesados} de {syncTel.total} · {syncTel.actualizados} actualizados · {syncTel.errores} errores
+            </span>
+          </div>
+          <div style={{height:6,background:'rgba(0,0,0,0.08)',borderRadius:3,overflow:'hidden'}}>
+            <div style={{
+              height:'100%',
+              width:`${syncTel.total > 0 ? (syncTel.procesados / syncTel.total * 100) : 0}%`,
+              background:'var(--blue-600,#2563eb)',
+              transition:'width 0.3s'
+            }}/>
+          </div>
+        </div>
+      )}
 
       <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:16,marginBottom:18}}>
         <div className="kpi"><div className="kpi__head"><div className="kpi__ic blue"><svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg></div><div className="kpi__lbl">Total clientes</div></div><div className="kpi__v">{totalClientes}</div></div>
