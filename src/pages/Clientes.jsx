@@ -1,6 +1,12 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { fmtDate } from '../utils/helpers'
-import { TIPOS_IDENTIFICACION, TIPOS_PERSONA, REGIMENES } from '../services/cuentti'
+import { TIPOS_IDENTIFICACION, TIPOS_PERSONA, REGIMENES, buscarClientePorCedula } from '../services/cuentti'
+
+// Normaliza un termino de busqueda quitando puntos, guiones, espacios.
+// Asi "30.897.042", "30 897 042" y "30897042" matchean al mismo cliente.
+const normalizarBusqueda = (s) => (s || '').toString().replace(/[\s.\-_]/g, '').toLowerCase()
+// Solo digitos (para detectar si se busca por cedula)
+const soloDigitos = (s) => (s || '').toString().replace(/\D/g, '')
 
 export default function Clientes({ clientes, vehiculos, notify }) {
   const {
@@ -20,21 +26,75 @@ export default function Clientes({ clientes, vehiculos, notify }) {
     cedula: '', nombre: '', telefono: '', email: '', direccion: '',
     tipoIdentificacion: '3', tipoPersona: '1', regimen: 2,
   })
+  // Estado de busqueda en Cuentti (auto-fallback cuando no hay match local)
+  const [buscandoCuentti, setBuscandoCuentti] = useState(false)
+  const [resultadoCuentti, setResultadoCuentti] = useState(null)
 
   // Metricas
   const totalClientes = clientesTable.length
   const conCuenttiId = useMemo(() => clientesTable.filter(c => c.cuenttiId).length, [clientesTable])
   const conVehiculos = useMemo(() => clientesTable.filter(c => c.vehiculos && c.vehiculos.length > 0).length, [clientesTable])
 
-  // Filtrado por busqueda
+  // Filtrado por busqueda — robusto: normaliza puntos/espacios en cedula y nombre
   const clientesFiltrados = useMemo(() => {
-    const term = busqueda.trim().toLowerCase()
-    if (!term) return clientesTable
-    return clientesTable.filter(c =>
-      (c.cedula || '').toLowerCase().includes(term) ||
-      (c.nombre || '').toLowerCase().includes(term)
-    )
+    const termRaw = busqueda.trim()
+    if (!termRaw) return clientesTable
+    const termNorm = normalizarBusqueda(termRaw)
+    const termLower = termRaw.toLowerCase()
+    return clientesTable.filter(c => {
+      const ced = normalizarBusqueda(c.cedula || '')
+      const nom = (c.nombre || '').toLowerCase()
+      return ced.includes(termNorm) || nom.includes(termLower)
+    })
   }, [clientesTable, busqueda])
+
+  // Auto-buscar en Cuentti cuando no hay resultados locales y el termino parece cedula
+  useEffect(() => {
+    setResultadoCuentti(null)
+    const termRaw = busqueda.trim()
+    if (!termRaw || clientesFiltrados.length > 0) return
+    const ced = soloDigitos(termRaw)
+    // Solo buscar en Cuentti si parece cedula (>=5 digitos)
+    if (ced.length < 5) return
+
+    let cancelled = false
+    const timer = setTimeout(async () => {
+      setBuscandoCuentti(true)
+      try {
+        const apiResult = await buscarClientePorCedula(ced)
+        if (!cancelled && apiResult) {
+          setResultadoCuentti(apiResult)
+        }
+      } catch { /* ignorar */ }
+      finally { if (!cancelled) setBuscandoCuentti(false) }
+    }, 600) // debounce 600ms
+
+    return () => { cancelled = true; clearTimeout(timer) }
+  }, [busqueda, clientesFiltrados.length])
+
+  // Importar el cliente de Cuentti a la BD local
+  const importarDeCuentti = (apiResult) => {
+    if (!apiResult) return
+    const ced = (apiResult.identificacion || apiResult.cedula || '').toString().trim()
+    const nom = (apiResult.nombre || apiResult.nombre_cliente || '').toString().trim()
+    if (!ced || !nom) {
+      notify('El resultado de Cuentti no tiene cedula o nombre validos', 'error')
+      return
+    }
+    const importado = guardarCliente({
+      cedula: ced,
+      nombre: nom,
+      telefono: apiResult.telefono1 || apiResult.telefono || '',
+      email: apiResult.email || '',
+      direccion: apiResult.direccion || '',
+      cuenttiId: apiResult.id_cliente || apiResult.id || null,
+    })
+    if (importado) {
+      notify(`Cliente "${nom}" importado de Cuentti`, 'success')
+      setResultadoCuentti(null)
+      setBusqueda(ced) // re-filtrar para que aparezca en la lista
+    }
+  }
 
   // Seleccionar cliente para ver detalle
   const seleccionar = (cliente) => {
@@ -366,12 +426,52 @@ export default function Clientes({ clientes, vehiculos, notify }) {
           <div style={{flex:1,maxWidth:480,display:'flex',alignItems:'center',gap:8,background:'var(--bg-subtle)',border:'1px solid var(--border)',borderRadius:8,padding:'6px 11px'}}>
             <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" style={{opacity:.5}}><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
             <input placeholder="CC/NIT o nombre del cliente..." value={busqueda} onChange={e => setBusqueda(e.target.value)} style={{border:'none',outline:'none',background:'none',flex:1,fontSize:12.5}}/>
+            {busqueda && <button onClick={() => setBusqueda('')} style={{background:'none',border:'none',color:'var(--text-3)',cursor:'pointer',fontSize:14,padding:0}}>✕</button>}
           </div>
           <span className="count">{clientesFiltrados.length} resultados</span>
         </div>
+
+        {/* Banner: encontrado en Cuentti pero NO en local */}
+        {busqueda.trim() && clientesFiltrados.length === 0 && resultadoCuentti && (
+          <div style={{padding:'12px 16px',margin:'0 16px 16px',background:'var(--blue-50,#eff6ff)',border:'1px solid var(--blue-300,#93c5fd)',borderRadius:8,display:'flex',alignItems:'center',gap:12,flexWrap:'wrap'}}>
+            <div style={{flex:1,minWidth:200}}>
+              <div style={{fontSize:12.5,fontWeight:700,color:'var(--blue-700,#1e40af)',marginBottom:2}}>
+                ✓ Encontrado en Cuentti (no en BD local)
+              </div>
+              <div style={{fontSize:13,fontWeight:600}}>
+                {(resultadoCuentti.nombre || resultadoCuentti.nombre_cliente || '').toString()}
+              </div>
+              <div style={{fontSize:11.5,color:'var(--text-3)',marginTop:2}}>
+                CC <span className="mono">{resultadoCuentti.identificacion || resultadoCuentti.cedula}</span>
+                {(resultadoCuentti.telefono1 || resultadoCuentti.telefono) && <> · Tel <span className="mono">{resultadoCuentti.telefono1 || resultadoCuentti.telefono}</span></>}
+                {resultadoCuentti.email && <> · {resultadoCuentti.email}</>}
+              </div>
+            </div>
+            <button className="btn btn-primary btn-sm" onClick={() => importarDeCuentti(resultadoCuentti)}>
+              ⬇ Importar a la app
+            </button>
+          </div>
+        )}
+
+        {/* Banner: buscando en Cuentti */}
+        {busqueda.trim() && clientesFiltrados.length === 0 && buscandoCuentti && !resultadoCuentti && (
+          <div style={{padding:'10px 16px',margin:'0 16px 16px',background:'var(--bg-subtle)',border:'1px solid var(--border)',borderRadius:8,fontSize:12.5,color:'var(--text-3)'}}>
+            🔍 Buscando "{busqueda}" en Cuentti...
+          </div>
+        )}
+
         <div className="card__b card__b--flush">
           {clientesFiltrados.length === 0 ? (
-            <div className="empty"><h4>Sin resultados</h4><p>No se encontraron clientes.</p></div>
+            <div className="empty">
+              <h4>Sin resultados en la BD local</h4>
+              <p>
+                {soloDigitos(busqueda).length >= 5
+                  ? (resultadoCuentti
+                      ? 'Hay un cliente en Cuentti con esa cedula. Click en "Importar" arriba.'
+                      : (buscandoCuentti ? 'Consultando Cuentti...' : 'Tampoco se encontro en Cuentti.'))
+                  : 'No se encontro ningun cliente. Prueba con la cedula completa.'}
+              </p>
+            </div>
           ) : (
             <table className="tbl">
               <thead>
