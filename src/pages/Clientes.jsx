@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from 'react'
+import Fuse from 'fuse.js'
 import { fmtDate } from '../utils/helpers'
 import { TIPOS_IDENTIFICACION, TIPOS_PERSONA, REGIMENES, buscarClientePorCedula } from '../services/cuentti'
 
@@ -54,12 +55,33 @@ export default function Clientes({ clientes, vehiculos, notify }) {
       : <span style={{ color: 'var(--blue-600)', fontSize: 10, marginLeft: 4 }}>▼</span>
   }
 
-  // FILTRADO ROBUSTO: solo retorna clientes que matcheen en cedula o nombre.
-  // Si NO hay match, NO aparece. Ordenado por relevancia (score).
+  // FUSE.JS: búsqueda fuzzy con scoring automático, soporta acentos y typos
+  // El indice se reconstruye cuando cambia la lista de clientes
+  const fuse = useMemo(() => new Fuse(clientesTable, {
+    keys: [
+      { name: 'nombre', weight: 0.7 },
+      { name: 'cedula', weight: 0.3 },
+    ],
+    threshold: 0.3,        // 0 = match exacto, 1 = match laxo. 0.3 es buen balance
+    ignoreLocation: true,  // permite match en cualquier posición del string
+    minMatchCharLength: 2, // mínimo 2 caracteres para empezar a matchear
+    includeScore: true,
+    findAllMatches: true,
+    // Normaliza acentos (Fuse 7+)
+    getFn: (obj, path) => {
+      const value = Fuse.config.getFn(obj, path)
+      if (Array.isArray(value)) {
+        return value.map(v => (v || '').toString().normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase())
+      }
+      return (value || '').toString().normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase()
+    },
+  }), [clientesTable])
+
+  // FILTRO PRINCIPAL: usa Fuse.js cuando hay búsqueda, sino lista completa
   const clientesFiltrados = useMemo(() => {
     const termRaw = busqueda.trim()
 
-    // Comparador inline para ordenamiento de columnas
+    // Comparador para ordenamiento de columnas
     const cmp = (a, b) => {
       let av, bv
       switch (sortBy) {
@@ -77,39 +99,20 @@ export default function Clientes({ clientes, vehiculos, notify }) {
       return 0
     }
 
-    // Sin búsqueda → todos los clientes (con sort opcional)
+    // Sin búsqueda → lista completa (con sort opcional)
     if (!termRaw) {
       return sortBy ? [...clientesTable].sort(cmp) : clientesTable
     }
 
-    // Normalizar el término una sola vez
-    const termCed = _normCedula(termRaw)
-    const termNom = _normNombre(termRaw)
+    // Búsqueda con Fuse.js — devuelve resultados ordenados por score (mejor primero)
+    const results = fuse.search(termRaw)
+    let list = results.map(r => r.item)
 
-    // Filtro estricto: SOLO entra al array si matchea
-    const scored = []
-    for (const c of clientesTable) {
-      const cedC = _normCedula(c.cedula || '')
-      const nomC = _normNombre(c.nombre || '')
-
-      let score = 0
-      if (cedC === termCed) score = 1000
-      else if (cedC.startsWith(termCed) && termCed.length > 0) score = 800
-      else if (cedC.includes(termCed) && termCed.length > 0) score = 600
-      else if (nomC === termNom) score = 700
-      else if (nomC.startsWith(termNom)) score = 500
-      else if (nomC.includes(' ' + termNom)) score = 400
-      else if (nomC.includes(termNom)) score = 300
-      else continue // NO INCLUIR
-
-      scored.push({ c, score })
-    }
-
-    scored.sort((a, b) => b.score - a.score)
-    let list = scored.map(x => x.c)
+    // Si hay sortBy explicito, sobrescribe el orden de Fuse
     if (sortBy) list = [...list].sort(cmp)
+
     return list
-  }, [clientesTable, busqueda, sortBy, sortDir])
+  }, [clientesTable, busqueda, sortBy, sortDir, fuse])
 
   // Auto-buscar en Cuentti cuando no hay resultados locales y el termino parece cedula
   useEffect(() => {
