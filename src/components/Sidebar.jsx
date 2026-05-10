@@ -91,6 +91,12 @@ const ICONS = {
       <path d="M12 11v0"/>
     </svg>
   ),
+  crm: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+      <path d="M9 11h.01"/><path d="M13 11h.01"/><path d="M17 11h.01"/>
+    </svg>
+  ),
   logout: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
@@ -114,6 +120,7 @@ const NAV = [
   { group: 'Gestion', items: [
     { key: 'clientes',  label: 'Clientes' },
     { key: 'vehiculos', label: 'Vehiculos' },
+    { key: 'crm',       label: 'CRM' },
   ]},
   { group: 'Facturacion', items: [
     { key: 'cotizaciones', label: 'Cotizaciones' },

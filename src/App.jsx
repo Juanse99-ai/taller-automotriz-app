@@ -17,6 +17,7 @@ import CuenttiPanel from './pages/CuenttiPanel'
 import Clientes from './pages/Clientes'
 import Vehiculos from './pages/Vehiculos'
 import Usuarios from './pages/Usuarios'
+import CRM from './pages/CRM'
 import { useTrabajos } from './hooks/useTrabajos'
 import { useClientes } from './hooks/useClientes'
 import { useVehiculos } from './hooks/useVehiculos'
@@ -59,6 +60,7 @@ const SECTIONS = {
   inspecciones: { title: 'Inspecciones', subtitle: 'Inspecciones digitales DVI' },
   clientes: { title: 'Clientes', subtitle: 'Gestion de clientes' },
   vehiculos: { title: 'Vehiculos', subtitle: 'Historial y seguimiento vehicular' },
+  crm: { title: 'CRM', subtitle: 'Recordatorios y campañas de retención' },
   cuentti: { title: 'Cuentti', subtitle: 'Integracion de facturacion' },
   usuarios: { title: 'Usuarios', subtitle: 'Gestion de accesos al sistema' },
 }
@@ -248,6 +250,8 @@ export default function App() {
         return <Vehiculos vehiculos={vehiculosHook} clientes={clientesHook} notify={notify} />
       case 'cuentti':
         return <CuenttiPanel trabajos={trabajosHook.trabajos} actualizarTrabajo={trabajosHook.actualizarTrabajo} notify={notify} />
+      case 'crm':
+        return <CRM trabajos={trabajosHook.trabajos} clientes={clientesHook} vehiculos={vehiculosHook} notify={notify} />
       case 'usuarios':
         return <Usuarios notify={notify} currentUser={user} />
       default:
