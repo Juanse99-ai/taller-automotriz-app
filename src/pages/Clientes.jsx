@@ -1,5 +1,4 @@
 import { useState, useMemo, useEffect } from 'react'
-import Fuse from 'fuse.js'
 import { fmtDate } from '../utils/helpers'
 import { TIPOS_IDENTIFICACION, TIPOS_PERSONA, REGIMENES, buscarClientePorCedula } from '../services/cuentti'
 
@@ -55,29 +54,8 @@ export default function Clientes({ clientes, vehiculos, notify }) {
       : <span style={{ color: 'var(--blue-600)', fontSize: 10, marginLeft: 4 }}>▼</span>
   }
 
-  // FUSE.JS: búsqueda fuzzy con scoring automático, soporta acentos y typos
-  // El indice se reconstruye cuando cambia la lista de clientes
-  const fuse = useMemo(() => new Fuse(clientesTable, {
-    keys: [
-      { name: 'nombre', weight: 0.7 },
-      { name: 'cedula', weight: 0.3 },
-    ],
-    threshold: 0.3,        // 0 = match exacto, 1 = match laxo. 0.3 es buen balance
-    ignoreLocation: true,  // permite match en cualquier posición del string
-    minMatchCharLength: 2, // mínimo 2 caracteres para empezar a matchear
-    includeScore: true,
-    findAllMatches: true,
-    // Normaliza acentos (Fuse 7+)
-    getFn: (obj, path) => {
-      const value = Fuse.config.getFn(obj, path)
-      if (Array.isArray(value)) {
-        return value.map(v => (v || '').toString().normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase())
-      }
-      return (value || '').toString().normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase()
-    },
-  }), [clientesTable])
-
-  // FILTRO PRINCIPAL: usa Fuse.js cuando hay búsqueda, sino lista completa
+  // FILTRO SIMPLE Y DIRECTO: substring match en nombre y cedula, sin acentos.
+  // Sin librerías, sin scoring fuzzy, sin nada raro — predecible 100%.
   const clientesFiltrados = useMemo(() => {
     const termRaw = busqueda.trim()
 
@@ -104,15 +82,22 @@ export default function Clientes({ clientes, vehiculos, notify }) {
       return sortBy ? [...clientesTable].sort(cmp) : clientesTable
     }
 
-    // Búsqueda con Fuse.js — devuelve resultados ordenados por score (mejor primero)
-    const results = fuse.search(termRaw)
-    let list = results.map(r => r.item)
+    // Normalizar termino: sin acentos, lowercase
+    const termNom = _normNombre(termRaw)
+    const termCed = _normCedula(termRaw)
 
-    // Si hay sortBy explicito, sobrescribe el orden de Fuse
-    if (sortBy) list = [...list].sort(cmp)
+    // Substring match: incluye solo si el termino aparece en nombre O cedula
+    const filtered = []
+    for (const c of clientesTable) {
+      const nomC = _normNombre(c.nombre || '')
+      const cedC = _normCedula(c.cedula || '')
+      if (nomC.includes(termNom) || (termCed.length >= 2 && cedC.includes(termCed))) {
+        filtered.push(c)
+      }
+    }
 
-    return list
-  }, [clientesTable, busqueda, sortBy, sortDir, fuse])
+    return sortBy ? filtered.sort(cmp) : filtered
+  }, [clientesTable, busqueda, sortBy, sortDir])
 
   // Auto-buscar en Cuentti cuando no hay resultados locales y el termino parece cedula
   useEffect(() => {
@@ -491,7 +476,7 @@ export default function Clientes({ clientes, vehiculos, notify }) {
           <h3 style={{flex:'none'}}>Buscar</h3>
           <div style={{flex:1,maxWidth:480,display:'flex',alignItems:'center',gap:8,background:'var(--bg-subtle)',border:'1px solid var(--border)',borderRadius:8,padding:'6px 11px'}}>
             <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" style={{opacity:.5}}><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-            <input placeholder="🔍 Buscar (v4 fuse) — CC/NIT o nombre…" value={busqueda} onChange={e => setBusqueda(e.target.value)} style={{border:'none',outline:'none',background:'none',flex:1,fontSize:12.5}}/>
+            <input placeholder="🔍 Buscar (v5) — CC/NIT o nombre…" value={busqueda} onChange={e => setBusqueda(e.target.value)} style={{border:'none',outline:'none',background:'none',flex:1,fontSize:12.5}}/>
             {busqueda && <button onClick={() => setBusqueda('')} style={{background:'none',border:'none',color:'var(--text-3)',cursor:'pointer',fontSize:14,padding:0}}>✕</button>}
           </div>
           <span className="count" style={{ background: clientesFiltrados.length === 0 && busqueda.trim() ? 'var(--red-100)' : undefined, color: clientesFiltrados.length === 0 && busqueda.trim() ? 'var(--red-700)' : undefined }}>
@@ -529,6 +514,10 @@ export default function Clientes({ clientes, vehiculos, notify }) {
         )}
 
         <div className="card__b card__b--flush">
+          {/* DEBUG temporal: confirma que la tabla renderiza N filas filtradas */}
+          <div style={{padding:'6px 16px',fontSize:11,color:'#fff',background:busqueda.trim()?'#dc2626':'#0ea5e9',fontWeight:700,letterSpacing:.3}}>
+            DEBUG · termino="{busqueda}" · clientesFiltrados.length={clientesFiltrados.length} · clientesTable.length={clientesTable.length}
+          </div>
           {clientesFiltrados.length === 0 ? (
             <div className="empty">
               <h4>Sin resultados en la BD local</h4>
