@@ -476,7 +476,7 @@ export default function Clientes({ clientes, vehiculos, notify }) {
           <h3 style={{flex:'none'}}>Buscar</h3>
           <div style={{flex:1,maxWidth:480,display:'flex',alignItems:'center',gap:8,background:'var(--bg-subtle)',border:'1px solid var(--border)',borderRadius:8,padding:'6px 11px'}}>
             <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" style={{opacity:.5}}><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-            <input placeholder="🔍 Buscar (v5) — CC/NIT o nombre…" value={busqueda} onChange={e => setBusqueda(e.target.value)} style={{border:'none',outline:'none',background:'none',flex:1,fontSize:12.5}}/>
+            <input placeholder="🔍 CC/NIT o nombre del cliente..." value={busqueda} onChange={e => setBusqueda(e.target.value)} style={{border:'none',outline:'none',background:'none',flex:1,fontSize:12.5}}/>
             {busqueda && <button onClick={() => setBusqueda('')} style={{background:'none',border:'none',color:'var(--text-3)',cursor:'pointer',fontSize:14,padding:0}}>✕</button>}
           </div>
           <span className="count" style={{ background: clientesFiltrados.length === 0 && busqueda.trim() ? 'var(--red-100)' : undefined, color: clientesFiltrados.length === 0 && busqueda.trim() ? 'var(--red-700)' : undefined }}>
@@ -514,10 +514,6 @@ export default function Clientes({ clientes, vehiculos, notify }) {
         )}
 
         <div className="card__b card__b--flush">
-          {/* DEBUG temporal: confirma que la tabla renderiza N filas filtradas */}
-          <div style={{padding:'6px 16px',fontSize:11,color:'#fff',background:busqueda.trim()?'#dc2626':'#0ea5e9',fontWeight:700,letterSpacing:.3}}>
-            DEBUG · termino="{busqueda}" · clientesFiltrados.length={clientesFiltrados.length} · clientesTable.length={clientesTable.length}
-          </div>
           {clientesFiltrados.length === 0 ? (
             <div className="empty">
               <h4>Sin resultados en la BD local</h4>
