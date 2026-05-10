@@ -95,7 +95,7 @@ function emailLink(email, asunto, cuerpo) {
 // ────────────────────────────────────────────────────────────────────────────
 // COMPONENTE
 // ────────────────────────────────────────────────────────────────────────────
-export default function CRM({ trabajos = [], clientes, vehiculos, notify }) {
+export default function CRM({ trabajos = [], clientes, vehiculos, notify, actualizarTrabajo }) {
   const clientesTable = clientes?.clientesTable || []
 
   // Config persistente: intervalos personalizables
@@ -125,6 +125,11 @@ export default function CRM({ trabajos = [], clientes, vehiculos, notify }) {
   const [showTemplate, setShowTemplate] = useState(null) // null o key del servicio
   const [contactoActivo, setContactoActivo] = useState(null) // {cliente, vehiculo, servicio}
   const [mensajeCustom, setMensajeCustom] = useState('')
+  // Edición rápida de tipo de aceite desde CRM
+  const [editandoAceite, setEditandoAceite] = useState(null) // item de recordatorio
+  const [aceiteEditTipo, setAceiteEditTipo] = useState('')
+  // Importar contactos sin OT (clientes inactivos)
+  const [showImportar, setShowImportar] = useState(false)
 
   // ── Calcular recordatorios pendientes ─────────────────────────────────────
   const recordatorios = useMemo(() => {
@@ -157,15 +162,20 @@ export default function CRM({ trabajos = [], clientes, vehiculos, notify }) {
         if (isNaN(fechaUltima)) continue
         const diasDesde = diasEntre(fechaUltima, HOY())
 
-        // PRIORIDAD 1: campo manual `tipoAceite` en la OT (puesto por el técnico)
+        // PRIORIDAD 1: campo manual `tipoAceite` en la OT
         // PRIORIDAD 2: detección automática leyendo items facturados
+        // PRIORIDAD 3: default mineral (5,000 km)
         let tipoAceiteUsado = null
-        if (ultima.tipoAceite === 'mineral') tipoAceiteUsado = 'aceite_mineral'
-        else if (ultima.tipoAceite === 'sintetico') tipoAceiteUsado = 'aceite_sintetico'
-        else if (ultima.tipoAceite === 'no_aplica') tipoAceiteUsado = 'no_aplica' // explícitamente no se cambió
-        else tipoAceiteUsado = detectarTipoAceite(ultima.items || []) // fallback automático
+        let origenAceite = ''
+        if (ultima.tipoAceite === 'mineral') { tipoAceiteUsado = 'aceite_mineral'; origenAceite = 'manual' }
+        else if (ultima.tipoAceite === 'sintetico') { tipoAceiteUsado = 'aceite_sintetico'; origenAceite = 'manual' }
+        else if (ultima.tipoAceite === 'no_aplica') { tipoAceiteUsado = 'no_aplica'; origenAceite = 'manual' }
+        else {
+          tipoAceiteUsado = detectarTipoAceite(ultima.items || [])
+          origenAceite = tipoAceiteUsado ? 'detectado_items' : 'default'
+        }
 
-        // Si la OT tiene proximaVisita manual y/o proximoKm, los usamos para sobrescribir el cálculo
+        // Si la OT tiene proximaVisita manual y/o proximoKm
         const proximaVisitaManual = ultima.proximaVisita ? new Date(ultima.proximaVisita) : null
 
         // Para cada servicio, evaluar si está pendiente
@@ -222,6 +232,7 @@ export default function CRM({ trabajos = [], clientes, vehiculos, notify }) {
                     : 'proximos_30',
             historial,
             trackKey,
+            origenAceite, // 'manual' | 'detectado_items' | 'default'
           })
         }
       }
@@ -325,6 +336,71 @@ export default function CRM({ trabajos = [], clientes, vehiculos, notify }) {
     notify('Marcado como contactado', 'info')
   }
 
+  // Marcar resultado de un contacto previo (respondió, vino al taller, etc.)
+  const marcarResultado = (trackKey, resultado) => {
+    setContactos(prev => {
+      const lista = prev[trackKey] || []
+      if (lista.length === 0) return prev
+      const ultimo = lista[lista.length - 1]
+      const actualizado = { ...ultimo, resultado, resultadoFecha: new Date().toISOString() }
+      return { ...prev, [trackKey]: [...lista.slice(0, -1), actualizado] }
+    })
+    notify(`Resultado registrado: ${resultado}`, 'success')
+  }
+
+  // Edición rápida del tipo de aceite (actualiza la última OT del vehículo)
+  const guardarTipoAceite = async () => {
+    if (!editandoAceite || !actualizarTrabajo) return
+    const trabajoId = editandoAceite.ultima?.id
+    if (!trabajoId) { notify('No se encontró la OT a actualizar', 'error'); return }
+    try {
+      // Auto-calcular próximo km/visita si se eligió mineral o sintético
+      const km = parseInt(editandoAceite.ultima.kilometraje) || 0
+      let proximoKm = editandoAceite.ultima.proximoKm
+      let proximaVisita = editandoAceite.ultima.proximaVisita
+      if (aceiteEditTipo === 'mineral') {
+        proximoKm = km + 5000
+        const d = new Date(); d.setMonth(d.getMonth() + 4)
+        proximaVisita = d.toISOString()
+      } else if (aceiteEditTipo === 'sintetico') {
+        proximoKm = km + 10000
+        const d = new Date(); d.setMonth(d.getMonth() + 6)
+        proximaVisita = d.toISOString()
+      } else if (aceiteEditTipo === 'no_aplica') {
+        proximoKm = null
+        proximaVisita = null
+      }
+      await actualizarTrabajo(trabajoId, {
+        tipoAceite: aceiteEditTipo || null,
+        proximoKm,
+        proximaVisita,
+      })
+      notify('Tipo de aceite actualizado en la OT', 'success')
+      setEditandoAceite(null)
+    } catch (e) {
+      notify('Error: ' + e.message, 'error')
+    }
+  }
+
+  // Importar clientes sin OT al CRM (los que están en clientesTable sin trabajos)
+  const recordatoriosImportar = useMemo(() => {
+    // Clientes con teléfono que NO han venido NUNCA o llevan >1 año sin venir
+    const trabajosCedulas = new Set(trabajos.filter(t => t.cedula).map(t => (t.cedula || '').toString().trim()))
+    return clientesTable.filter(c => {
+      if (!c.telefono && !c.email) return false // sin medio de contacto
+      const cedula = (c.cedula || '').toString().trim()
+      const tieneOT = trabajosCedulas.has(cedula)
+      if (!tieneOT) return true // nunca ha venido
+      // Tiene OT pero hace mucho — buscar última y comparar
+      const susTrabajos = trabajos.filter(t => (t.cedula || '').toString().trim() === cedula)
+      const fechas = susTrabajos.map(t => new Date(t.fecha).getTime()).filter(t => !isNaN(t))
+      if (fechas.length === 0) return true
+      const ultimaFecha = Math.max(...fechas)
+      const diasDesde = diasEntre(new Date(ultimaFecha), HOY())
+      return diasDesde > 365 // >1 año sin venir
+    })
+  }, [clientesTable, trabajos])
+
   // ── Render ─────────────────────────────────────────────────────────────
   return (
     <div>
@@ -334,6 +410,11 @@ export default function CRM({ trabajos = [], clientes, vehiculos, notify }) {
           <p className="sub">{stats.total} recordatorios · {stats.vencidos} vencidos · {stats.contactadosHoy} contactados hoy</p>
         </div>
         <div className="actions" style={{ flexWrap: 'wrap', gap: 8 }}>
+          {recordatoriosImportar.length > 0 && (
+            <button className="btn btn-outline btn-sm" onClick={() => setShowImportar(true)}>
+              👥 Inactivos ({recordatoriosImportar.length})
+            </button>
+          )}
           <button className="btn btn-outline btn-sm" onClick={() => setShowTemplate('aceite_mineral')}>📝 Plantillas</button>
           <button className="btn btn-outline btn-sm" onClick={() => setShowConfig(true)}>⚙️ Servicios</button>
         </div>
@@ -430,6 +511,14 @@ export default function CRM({ trabajos = [], clientes, vehiculos, notify }) {
                 {filtrados.slice(0, 100).map((r, i) => {
                   const urgenteCls = r.diasPendientes > 60 ? 'badge-d' : r.diasPendientes > 0 ? 'badge-w' : r.diasPendientes >= -7 ? 'badge-i' : 'badge-s'
                   const urgenteLbl = r.diasPendientes > 60 ? `${r.diasPendientes}d vencido` : r.diasPendientes > 0 ? `${r.diasPendientes}d vencido` : r.diasPendientes >= -7 ? 'Esta semana' : `Faltan ${-r.diasPendientes}d`
+                  // Origen visual
+                  const origenInfo = r.origenAceite === 'manual' ? { txt: 'manual', color: 'var(--green-600)', tip: 'Tipo de aceite definido por el técnico en la OT' }
+                    : r.origenAceite === 'detectado_items' ? { txt: 'auto', color: 'var(--blue-600)', tip: 'Tipo detectado automáticamente leyendo los items facturados' }
+                    : r.origenAceite === 'default' ? { txt: 'default', color: 'var(--text-3)', tip: 'Sin información, asume aceite mineral (5,000 km)' }
+                    : null
+                  // Resultado del último contacto
+                  const ultContacto = r.historial[r.historial.length - 1]
+                  const resultadoBadge = ultContacto?.resultado
                   return (
                     <tr key={`${r.trackKey}-${i}`}>
                       <td>
@@ -441,16 +530,46 @@ export default function CRM({ trabajos = [], clientes, vehiculos, notify }) {
                         <div style={{ fontSize: 11, color: 'var(--text-3)' }}>{r.vehiculo.marca} {r.vehiculo.modelo}</div>
                       </td>
                       <td>
-                        <div style={{ fontSize: 13 }}>{r.servicio.nombre}</div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <span style={{ fontSize: 13 }}>{r.servicio.nombre}</span>
+                          {r.servicio.key.startsWith('aceite_') && origenInfo && (
+                            <span title={origenInfo.tip}
+                              style={{
+                                fontSize: 9.5, fontWeight: 700, padding: '1px 6px', borderRadius: 4,
+                                color: origenInfo.color, background: 'var(--bg-subtle)',
+                                border: '1px solid var(--border)', textTransform: 'uppercase', letterSpacing: '.4px',
+                                cursor: actualizarTrabajo ? 'pointer' : 'default',
+                              }}
+                              onClick={() => {
+                                if (!actualizarTrabajo) return
+                                setEditandoAceite(r)
+                                setAceiteEditTipo(r.ultima?.tipoAceite || '')
+                              }}
+                            >
+                              {origenInfo.txt}
+                            </span>
+                          )}
+                        </div>
                         <div style={{ fontSize: 10.5, color: 'var(--text-3)' }}>cada {r.servicio.km.toLocaleString()} km / {r.servicio.meses} meses</div>
                       </td>
                       <td className="c-muted">{fmtDate(r.fechaUltima.toISOString())}<br/><span style={{ fontSize: 11 }}>hace {r.diasDesde}d</span></td>
                       <td><span className={`badge ${urgenteCls}`}>{urgenteLbl}</span></td>
                       <td>
-                        <div style={{ display: 'flex', gap: 4, fontSize: 11.5 }}>
-                          {r.cliente.telefono ? <span style={{ color: 'var(--green-600)' }}>📱</span> : <span style={{ opacity: 0.3 }}>📱</span>}
-                          {r.cliente.email ? <span style={{ color: 'var(--blue-600)' }}>✉</span> : <span style={{ opacity: 0.3 }}>✉</span>}
-                          {r.historial.length > 0 && <span title={`${r.historial.length} contactos previos`} style={{ color: 'var(--text-3)' }}>·{r.historial.length}</span>}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 2, fontSize: 11.5 }}>
+                          <div style={{ display: 'flex', gap: 4 }}>
+                            {r.cliente.telefono ? <span style={{ color: 'var(--green-600)' }}>📱</span> : <span style={{ opacity: 0.3 }}>📱</span>}
+                            {r.cliente.email ? <span style={{ color: 'var(--blue-600)' }}>✉</span> : <span style={{ opacity: 0.3 }}>✉</span>}
+                            {r.historial.length > 0 && <span title={`${r.historial.length} contactos previos`} style={{ color: 'var(--text-3)' }}>·{r.historial.length}</span>}
+                          </div>
+                          {resultadoBadge && (
+                            <span style={{
+                              fontSize: 9.5, padding: '1px 6px', borderRadius: 4, fontWeight: 700,
+                              color: resultadoBadge === 'vino_taller' ? 'var(--green-700)' : resultadoBadge === 'respondio' ? 'var(--blue-700)' : 'var(--text-3)',
+                              background: 'var(--bg-subtle)', textTransform: 'uppercase', letterSpacing: '.4px',
+                            }}>
+                              {resultadoBadge === 'vino_taller' ? '✓ vino' : resultadoBadge === 'respondio' ? '✓ respondió' : resultadoBadge === 'no_respondio' ? '✗ no resp.' : resultadoBadge}
+                            </span>
+                          )}
                         </div>
                       </td>
                       <td style={{ textAlign: 'right' }}>
@@ -519,12 +638,161 @@ export default function CRM({ trabajos = [], clientes, vehiculos, notify }) {
                   <a href={`tel:${contactoActivo.cliente.telefono}`} className="btn btn-outline" style={{ flex: '1 1 auto', textAlign: 'center' }}>📞 Llamar</a>
                 )}
               </div>
+              {/* Resultado del último contacto (si existe) */}
+              {contactoActivo.historial.length > 0 && (
+                <div style={{ paddingTop: 10, borderTop: '1px solid var(--border)' }}>
+                  <div style={{ fontSize: 11.5, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '.5px', marginBottom: 6 }}>
+                    Resultado del último contacto
+                  </div>
+                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                    {[
+                      ['vino_taller', '🚗 Vino al taller', 'var(--green-600)'],
+                      ['respondio', '💬 Respondió', 'var(--blue-600)'],
+                      ['no_respondio', '✗ No respondió', 'var(--text-3)'],
+                      ['no_quiere', '❌ No quiere', 'var(--red-600)'],
+                    ].map(([k, l, c]) => {
+                      const ult = contactoActivo.historial[contactoActivo.historial.length - 1]
+                      const activo = ult?.resultado === k
+                      return (
+                        <button key={k} className="btn btn-outline btn-sm"
+                          onClick={() => marcarResultado(contactoActivo.trackKey, k)}
+                          style={{
+                            fontSize: 11.5,
+                            background: activo ? c : undefined,
+                            color: activo ? '#fff' : c,
+                            borderColor: c,
+                          }}>
+                          {l}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
+
               <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 8, borderTop: '1px solid var(--border)' }}>
                 <button className="btn btn-ghost btn-sm" onClick={() => marcarContactado(contactoActivo)}>
                   ✓ Marcar contactado (sin enviar)
                 </button>
                 <button className="btn btn-ghost btn-sm" onClick={() => setContactoActivo(null)}>Cerrar</button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Edición rápida del tipo de aceite */}
+      {editandoAceite && (
+        <div className="modal-overlay" onClick={() => setEditandoAceite(null)}>
+          <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 480 }}>
+            <div className="modal__h">
+              <h3 style={{ margin: 0 }}>Tipo de aceite</h3>
+              <button className="btn btn-ghost btn-sm" onClick={() => setEditandoAceite(null)}>✕</button>
+            </div>
+            <div className="modal__b" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <div style={{ fontSize: 12.5, color: 'var(--text-2)' }}>
+                Actualiza el tipo de aceite usado en la última OT de <strong>{editandoAceite.vehiculo.placa}</strong> ({editandoAceite.vehiculo.marca} {editandoAceite.vehiculo.modelo}). Esto recalcula la próxima visita.
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {[
+                  ['', 'Sin especificar (deja al CRM detectar)'],
+                  ['mineral', 'Mineral / Semisintético — próximo en 5,000 km · 4 meses'],
+                  ['sintetico', 'Full sintético — próximo en 10,000 km · 6 meses'],
+                  ['no_aplica', 'No se cambió aceite (no generar recordatorio)'],
+                ].map(([val, lbl]) => (
+                  <label key={val || 'none'} style={{
+                    display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px',
+                    border: `1.5px solid ${aceiteEditTipo === val ? 'var(--blue-600)' : 'var(--border)'}`,
+                    background: aceiteEditTipo === val ? 'var(--blue-50,#eff6ff)' : 'var(--bg-raised)',
+                    borderRadius: 8, cursor: 'pointer', fontSize: 12.5, fontWeight: 600,
+                  }}>
+                    <input type="radio" name="aceiteTipo" value={val} checked={aceiteEditTipo === val}
+                      onChange={() => setAceiteEditTipo(val)} />
+                    {lbl}
+                  </label>
+                ))}
+              </div>
+            </div>
+            <div className="modal__f">
+              <button className="btn btn-outline" onClick={() => setEditandoAceite(null)}>Cancelar</button>
+              <button className="btn btn-primary" onClick={guardarTipoAceite}>Guardar en la OT</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Clientes inactivos (sin OT o >1 año) */}
+      {showImportar && (
+        <div className="modal-overlay" onClick={() => setShowImportar(false)}>
+          <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 720 }}>
+            <div className="modal__h">
+              <h3 style={{ margin: 0 }}>👥 Clientes inactivos ({recordatoriosImportar.length})</h3>
+              <button className="btn btn-ghost btn-sm" onClick={() => setShowImportar(false)}>✕</button>
+            </div>
+            <div className="modal__b" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <p style={{ margin: 0, fontSize: 12.5, color: 'var(--text-3)' }}>
+                Clientes con teléfono o email registrado que <strong>nunca han venido</strong> o <strong>llevan más de 1 año</strong> sin venir. Buena oportunidad para reactivarlos con una campaña.
+              </p>
+              {recordatoriosImportar.length === 0 ? (
+                <div className="empty-state" style={{ padding: '24px 0' }}>
+                  <div className="empty-state-icon">✅</div>
+                  <p>No hay clientes inactivos.</p>
+                </div>
+              ) : (
+                <div style={{ maxHeight: '50vh', overflowY: 'auto', border: '1px solid var(--border)', borderRadius: 8 }}>
+                  <table className="tbl" style={{ margin: 0 }}>
+                    <thead>
+                      <tr>
+                        <th>Cliente</th>
+                        <th>Contacto</th>
+                        <th></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {recordatoriosImportar.slice(0, 50).map(c => {
+                        const tel = c.telefono ? c.telefono.toString().replace(/\D/g, '') : ''
+                        const num = tel.length === 10 ? `57${tel}` : tel
+                        const mensaje = aplicarTemplate(templates.generico || TEMPLATES_DEFAULT.generico, {
+                          nombre: (c.nombre || '').split(' ')[0] || 'cliente',
+                          placa: (c.vehiculos || [])[0] || '—',
+                          marca: 'tu vehículo',
+                          modelo: '',
+                          ano: '',
+                          dias_desde: '?',
+                          ultima_visita: 'hace tiempo',
+                          taller: TALLER.nombre,
+                          telefono_taller: TALLER.celular,
+                          direccion: TALLER.direccion,
+                        })
+                        const wa = tel ? `https://wa.me/${num}?text=${encodeURIComponent(mensaje)}` : null
+                        return (
+                          <tr key={c.cedula}>
+                            <td>
+                              <div style={{ fontWeight: 700, fontSize: 12.5 }}>{c.nombre}</div>
+                              <div className="c-mono" style={{ fontSize: 10.5, color: 'var(--text-3)' }}>{c.cedula}</div>
+                            </td>
+                            <td style={{ fontSize: 11.5 }}>
+                              {c.telefono && <div className="c-mono">{c.telefono}</div>}
+                              {c.email && <div style={{ color: 'var(--text-3)' }}>{c.email}</div>}
+                            </td>
+                            <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
+                              {wa && <a href={wa} target="_blank" rel="noreferrer" className="btn btn-primary btn-sm" style={{ background: '#25D366', fontSize: 11 }}>📱 WhatsApp</a>}
+                            </td>
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+                  {recordatoriosImportar.length > 50 && (
+                    <div style={{ padding: 10, textAlign: 'center', fontSize: 11, color: 'var(--text-3)' }}>
+                      Mostrando 50 de {recordatoriosImportar.length}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+            <div className="modal__f">
+              <button className="btn btn-primary" onClick={() => setShowImportar(false)}>Cerrar</button>
             </div>
           </div>
         </div>

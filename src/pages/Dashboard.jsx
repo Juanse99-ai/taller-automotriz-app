@@ -182,6 +182,63 @@ export default function Dashboard({ trabajos = [], onNavigate }) {
         </div>
       </div>
 
+      {/* ── Alerta CRM: clientes vencidos para contactar ──────────────────── */}
+      {(() => {
+        // Mismo cálculo que el CRM pero rápido: solo contar vencidos
+        const HOY = new Date()
+        const dias = (a, b) => Math.floor((b.getTime() - a.getTime()) / (1000 * 60 * 60 * 24))
+        const completados = trabajos.filter(t => t.estado === ESTADOS.COMPLETADO)
+        const trabajosPorPlaca = {}
+        for (const t of completados) {
+          const placa = (t.placa || '').toUpperCase().trim()
+          if (!placa) continue
+          if (!trabajosPorPlaca[placa]) trabajosPorPlaca[placa] = []
+          trabajosPorPlaca[placa].push(t)
+        }
+        // Cliente con teléfono y vehículo que ya pasó >5 meses (intervalo medio aceite)
+        const vencidos = new Set()
+        for (const t of completados) {
+          const placa = (t.placa || '').toUpperCase().trim()
+          if (!placa || !t.telefonoCliente) continue
+          const lista = trabajosPorPlaca[placa] || []
+          const ultima = lista.sort((a, b) => new Date(b.fecha) - new Date(a.fecha))[0]
+          if (!ultima) continue
+          const d = dias(new Date(ultima.fecha), HOY)
+          // 5 meses ~ 150 días = más allá del intervalo de aceite mineral (4 meses)
+          if (d > 150) vencidos.add(placa)
+        }
+        const total = vencidos.size
+        if (total === 0) return null
+        return (
+          <div style={{
+            padding: '14px 18px',
+            background: 'linear-gradient(90deg, rgba(34,197,94,.10), rgba(59,130,246,.08))',
+            border: '1px solid rgba(34,197,94,.35)',
+            borderLeft: '4px solid #25D366',
+            borderRadius: 10,
+            display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap',
+          }}>
+            <div style={{
+              width: 38, height: 38, borderRadius: 10, background: '#25D366',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', flexShrink: 0, fontSize: 18,
+            }}>💬</div>
+            <div style={{ flex: 1, minWidth: 200 }}>
+              <div style={{ fontWeight: 800, fontSize: 14.5, color: '#15803d' }}>
+                {total} {total === 1 ? 'cliente para contactar' : 'clientes para contactar'} (CRM)
+              </div>
+              <div style={{ fontSize: 12.5, color: 'var(--text-2)', marginTop: 2 }}>
+                Vehículos que pasaron su intervalo de mantenimiento. Envíales un WhatsApp para reactivarlos.
+              </div>
+            </div>
+            {onNavigate && (
+              <button className="btn btn-primary btn-sm" onClick={() => onNavigate('crm')} style={{ background: '#25D366' }}>
+                Abrir CRM <IcArrow />
+              </button>
+            )}
+          </div>
+        )
+      })()}
+
       {/* ── Alerta de trabajos estancados (>3 dias sin moverse) ───────────── */}
       {estancados.length > 0 && (
         <div style={{
