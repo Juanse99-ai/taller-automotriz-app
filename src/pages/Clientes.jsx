@@ -2,9 +2,13 @@ import { useState, useMemo, useEffect } from 'react'
 import { fmtDate } from '../utils/helpers'
 import { TIPOS_IDENTIFICACION, TIPOS_PERSONA, REGIMENES, buscarClientePorCedula } from '../services/cuentti'
 
-// Normaliza un termino de busqueda quitando puntos, guiones, espacios.
-// Asi "30.897.042", "30 897 042" y "30897042" matchean al mismo cliente.
-const normalizarBusqueda = (s) => (s || '').toString().replace(/[\s.\-_]/g, '').toLowerCase()
+// Quita acentos: "FERNÁNDEZ" → "fernandez"
+const _sinAcentos = (s) => (s || '').toString().toLowerCase()
+  .normalize('NFD').replace(/\p{Diacritic}/gu, '')
+// Para cedulas: quita puntos, guiones, espacios, lowercase. "30.897.042" → "30897042"
+const _normCedula = (s) => (s || '').toString().replace(/[\s.\-_]/g, '').toLowerCase()
+// Para nombres: lowercase + sin acentos (mantiene espacios)
+const _normNombre = (s) => _sinAcentos(s)
 // Solo digitos (para detectar si se busca por cedula)
 const soloDigitos = (s) => (s || '').toString().replace(/\D/g, '')
 
@@ -50,76 +54,60 @@ export default function Clientes({ clientes, vehiculos, notify }) {
       : <span style={{ color: 'var(--blue-600)', fontSize: 10, marginLeft: 4 }}>▼</span>
   }
 
-  // Filtrado + scoring: matches mejores van primero
+  // FILTRADO ROBUSTO: solo retorna clientes que matcheen en cedula o nombre.
+  // Si NO hay match, NO aparece. Ordenado por relevancia (score).
   const clientesFiltrados = useMemo(() => {
     const termRaw = busqueda.trim()
-    if (!termRaw) {
-      // Sin busqueda: aplicar orden de columna si hay
-      if (!sortBy) return clientesTable
-      return [...clientesTable].sort((a, b) => {
-        let av, bv
-        switch (sortBy) {
-          case 'cedula': av = (a.cedula || ''); bv = (b.cedula || ''); break
-          case 'nombre': av = (a.nombre || '').toLowerCase(); bv = (b.nombre || '').toLowerCase(); break
-          case 'telefono': av = (a.telefono || ''); bv = (b.telefono || ''); break
-          case 'email': av = (a.email || '').toLowerCase(); bv = (b.email || '').toLowerCase(); break
-          case 'veh': av = (a.vehiculos || []).length; bv = (b.vehiculos || []).length; break
-          case 'visita': av = a.fechaUltimaVisita ? new Date(a.fechaUltimaVisita).getTime() : 0; bv = b.fechaUltimaVisita ? new Date(b.fechaUltimaVisita).getTime() : 0; break
-          case 'cuentti': av = a.cuenttiId ? 1 : 0; bv = b.cuenttiId ? 1 : 0; break
-          default: return 0
-        }
-        if (av < bv) return sortDir === 'asc' ? -1 : 1
-        if (av > bv) return sortDir === 'asc' ? 1 : -1
-        return 0
-      })
+
+    // Comparador inline para ordenamiento de columnas
+    const cmp = (a, b) => {
+      let av, bv
+      switch (sortBy) {
+        case 'cedula': av = (a.cedula || ''); bv = (b.cedula || ''); break
+        case 'nombre': av = _normNombre(a.nombre); bv = _normNombre(b.nombre); break
+        case 'telefono': av = (a.telefono || ''); bv = (b.telefono || ''); break
+        case 'email': av = (a.email || '').toLowerCase(); bv = (b.email || '').toLowerCase(); break
+        case 'veh': av = (a.vehiculos || []).length; bv = (b.vehiculos || []).length; break
+        case 'visita': av = a.fechaUltimaVisita ? new Date(a.fechaUltimaVisita).getTime() : 0; bv = b.fechaUltimaVisita ? new Date(b.fechaUltimaVisita).getTime() : 0; break
+        case 'cuentti': av = a.cuenttiId ? 1 : 0; bv = b.cuenttiId ? 1 : 0; break
+        default: return 0
+      }
+      if (av < bv) return sortDir === 'asc' ? -1 : 1
+      if (av > bv) return sortDir === 'asc' ? 1 : -1
+      return 0
     }
 
-    const termNorm = normalizarBusqueda(termRaw)
-    const termLower = termRaw.toLowerCase()
+    // Sin búsqueda → todos los clientes (con sort opcional)
+    if (!termRaw) {
+      return sortBy ? [...clientesTable].sort(cmp) : clientesTable
+    }
 
-    // Scoring para priorizar matches
+    // Normalizar el término una sola vez
+    const termCed = _normCedula(termRaw)
+    const termNom = _normNombre(termRaw)
+
+    // Filtro estricto: SOLO entra al array si matchea
     const scored = []
     for (const c of clientesTable) {
-      const ced = normalizarBusqueda(c.cedula || '')
-      const nom = (c.nombre || '').toLowerCase()
+      const cedC = _normCedula(c.cedula || '')
+      const nomC = _normNombre(c.nombre || '')
 
       let score = 0
-      // Cedula: exact > starts > contains
-      if (ced && ced === termNorm) score = 1000
-      else if (ced && ced.startsWith(termNorm)) score = 800
-      else if (ced && ced.includes(termNorm)) score = 600
-      // Nombre: exact > starts > word-boundary > contains
-      else if (nom === termLower) score = 700
-      else if (nom.startsWith(termLower)) score = 500
-      else if (nom.includes(' ' + termLower)) score = 400
-      else if (nom.includes(termLower)) score = 300
-      else continue
+      if (cedC === termCed) score = 1000
+      else if (cedC.startsWith(termCed) && termCed.length > 0) score = 800
+      else if (cedC.includes(termCed) && termCed.length > 0) score = 600
+      else if (nomC === termNom) score = 700
+      else if (nomC.startsWith(termNom)) score = 500
+      else if (nomC.includes(' ' + termNom)) score = 400
+      else if (nomC.includes(termNom)) score = 300
+      else continue // NO INCLUIR
 
       scored.push({ c, score })
     }
+
     scored.sort((a, b) => b.score - a.score)
     let list = scored.map(x => x.c)
-
-    // Si hay sortBy explicito, sobrescribe el scoring
-    if (sortBy) {
-      list = [...list].sort((a, b) => {
-        let av, bv
-        switch (sortBy) {
-          case 'cedula': av = (a.cedula || ''); bv = (b.cedula || ''); break
-          case 'nombre': av = (a.nombre || '').toLowerCase(); bv = (b.nombre || '').toLowerCase(); break
-          case 'telefono': av = (a.telefono || ''); bv = (b.telefono || ''); break
-          case 'email': av = (a.email || '').toLowerCase(); bv = (b.email || '').toLowerCase(); break
-          case 'veh': av = (a.vehiculos || []).length; bv = (b.vehiculos || []).length; break
-          case 'visita': av = a.fechaUltimaVisita ? new Date(a.fechaUltimaVisita).getTime() : 0; bv = b.fechaUltimaVisita ? new Date(b.fechaUltimaVisita).getTime() : 0; break
-          case 'cuentti': av = a.cuenttiId ? 1 : 0; bv = b.cuenttiId ? 1 : 0; break
-          default: return 0
-        }
-        if (av < bv) return sortDir === 'asc' ? -1 : 1
-        if (av > bv) return sortDir === 'asc' ? 1 : -1
-        return 0
-      })
-    }
-
+    if (sortBy) list = [...list].sort(cmp)
     return list
   }, [clientesTable, busqueda, sortBy, sortDir])
 
@@ -503,7 +491,9 @@ export default function Clientes({ clientes, vehiculos, notify }) {
             <input placeholder="CC/NIT o nombre del cliente..." value={busqueda} onChange={e => setBusqueda(e.target.value)} style={{border:'none',outline:'none',background:'none',flex:1,fontSize:12.5}}/>
             {busqueda && <button onClick={() => setBusqueda('')} style={{background:'none',border:'none',color:'var(--text-3)',cursor:'pointer',fontSize:14,padding:0}}>✕</button>}
           </div>
-          <span className="count">{clientesFiltrados.length} resultados</span>
+          <span className="count" style={{ background: clientesFiltrados.length === 0 && busqueda.trim() ? 'var(--red-100)' : undefined, color: clientesFiltrados.length === 0 && busqueda.trim() ? 'var(--red-700)' : undefined }}>
+            {busqueda.trim() ? `${clientesFiltrados.length} de ${totalClientes}` : `${clientesFiltrados.length} clientes`}
+          </span>
         </div>
 
         {/* Banner: encontrado en Cuentti pero NO en local */}
