@@ -35,18 +35,93 @@ export default function Clientes({ clientes, vehiculos, notify }) {
   const conCuenttiId = useMemo(() => clientesTable.filter(c => c.cuenttiId).length, [clientesTable])
   const conVehiculos = useMemo(() => clientesTable.filter(c => c.vehiculos && c.vehiculos.length > 0).length, [clientesTable])
 
-  // Filtrado por busqueda — robusto: normaliza puntos/espacios en cedula y nombre
+  // Ordenamiento de columnas (clickeable). null = orden natural por scoring de busqueda.
+  const [sortBy, setSortBy] = useState(null)
+  const [sortDir, setSortDir] = useState('asc')
+  const toggleSort = (col) => {
+    if (sortBy !== col) { setSortBy(col); setSortDir('asc') }
+    else if (sortDir === 'asc') setSortDir('desc')
+    else { setSortBy(null); setSortDir('asc') }
+  }
+  const sortIcon = (col) => {
+    if (sortBy !== col) return <span style={{ opacity: 0.25, fontSize: 9, marginLeft: 4 }}>↕</span>
+    return sortDir === 'asc'
+      ? <span style={{ color: 'var(--blue-600)', fontSize: 10, marginLeft: 4 }}>▲</span>
+      : <span style={{ color: 'var(--blue-600)', fontSize: 10, marginLeft: 4 }}>▼</span>
+  }
+
+  // Filtrado + scoring: matches mejores van primero
   const clientesFiltrados = useMemo(() => {
     const termRaw = busqueda.trim()
-    if (!termRaw) return clientesTable
+    if (!termRaw) {
+      // Sin busqueda: aplicar orden de columna si hay
+      if (!sortBy) return clientesTable
+      return [...clientesTable].sort((a, b) => {
+        let av, bv
+        switch (sortBy) {
+          case 'cedula': av = (a.cedula || ''); bv = (b.cedula || ''); break
+          case 'nombre': av = (a.nombre || '').toLowerCase(); bv = (b.nombre || '').toLowerCase(); break
+          case 'telefono': av = (a.telefono || ''); bv = (b.telefono || ''); break
+          case 'email': av = (a.email || '').toLowerCase(); bv = (b.email || '').toLowerCase(); break
+          case 'veh': av = (a.vehiculos || []).length; bv = (b.vehiculos || []).length; break
+          case 'visita': av = a.fechaUltimaVisita ? new Date(a.fechaUltimaVisita).getTime() : 0; bv = b.fechaUltimaVisita ? new Date(b.fechaUltimaVisita).getTime() : 0; break
+          case 'cuentti': av = a.cuenttiId ? 1 : 0; bv = b.cuenttiId ? 1 : 0; break
+          default: return 0
+        }
+        if (av < bv) return sortDir === 'asc' ? -1 : 1
+        if (av > bv) return sortDir === 'asc' ? 1 : -1
+        return 0
+      })
+    }
+
     const termNorm = normalizarBusqueda(termRaw)
     const termLower = termRaw.toLowerCase()
-    return clientesTable.filter(c => {
+
+    // Scoring para priorizar matches
+    const scored = []
+    for (const c of clientesTable) {
       const ced = normalizarBusqueda(c.cedula || '')
       const nom = (c.nombre || '').toLowerCase()
-      return ced.includes(termNorm) || nom.includes(termLower)
-    })
-  }, [clientesTable, busqueda])
+
+      let score = 0
+      // Cedula: exact > starts > contains
+      if (ced && ced === termNorm) score = 1000
+      else if (ced && ced.startsWith(termNorm)) score = 800
+      else if (ced && ced.includes(termNorm)) score = 600
+      // Nombre: exact > starts > word-boundary > contains
+      else if (nom === termLower) score = 700
+      else if (nom.startsWith(termLower)) score = 500
+      else if (nom.includes(' ' + termLower)) score = 400
+      else if (nom.includes(termLower)) score = 300
+      else continue
+
+      scored.push({ c, score })
+    }
+    scored.sort((a, b) => b.score - a.score)
+    let list = scored.map(x => x.c)
+
+    // Si hay sortBy explicito, sobrescribe el scoring
+    if (sortBy) {
+      list = [...list].sort((a, b) => {
+        let av, bv
+        switch (sortBy) {
+          case 'cedula': av = (a.cedula || ''); bv = (b.cedula || ''); break
+          case 'nombre': av = (a.nombre || '').toLowerCase(); bv = (b.nombre || '').toLowerCase(); break
+          case 'telefono': av = (a.telefono || ''); bv = (b.telefono || ''); break
+          case 'email': av = (a.email || '').toLowerCase(); bv = (b.email || '').toLowerCase(); break
+          case 'veh': av = (a.vehiculos || []).length; bv = (b.vehiculos || []).length; break
+          case 'visita': av = a.fechaUltimaVisita ? new Date(a.fechaUltimaVisita).getTime() : 0; bv = b.fechaUltimaVisita ? new Date(b.fechaUltimaVisita).getTime() : 0; break
+          case 'cuentti': av = a.cuenttiId ? 1 : 0; bv = b.cuenttiId ? 1 : 0; break
+          default: return 0
+        }
+        if (av < bv) return sortDir === 'asc' ? -1 : 1
+        if (av > bv) return sortDir === 'asc' ? 1 : -1
+        return 0
+      })
+    }
+
+    return list
+  }, [clientesTable, busqueda, sortBy, sortDir])
 
   // Auto-buscar en Cuentti cuando no hay resultados locales y el termino parece cedula
   useEffect(() => {
@@ -476,13 +551,13 @@ export default function Clientes({ clientes, vehiculos, notify }) {
             <table className="tbl">
               <thead>
                 <tr>
-                  <th>CC/NIT</th>
-                  <th>Nombre</th>
-                  <th>Teléfono</th>
-                  <th>Email</th>
-                  <th style={{textAlign:'center'}}>Veh.</th>
-                  <th>Última Visita</th>
-                  <th>Cuentti</th>
+                  <th onClick={() => toggleSort('cedula')} style={{ cursor: 'pointer', userSelect: 'none' }}>CC/NIT{sortIcon('cedula')}</th>
+                  <th onClick={() => toggleSort('nombre')} style={{ cursor: 'pointer', userSelect: 'none' }}>Nombre{sortIcon('nombre')}</th>
+                  <th onClick={() => toggleSort('telefono')} style={{ cursor: 'pointer', userSelect: 'none' }}>Teléfono{sortIcon('telefono')}</th>
+                  <th onClick={() => toggleSort('email')} style={{ cursor: 'pointer', userSelect: 'none' }}>Email{sortIcon('email')}</th>
+                  <th onClick={() => toggleSort('veh')} style={{ cursor: 'pointer', userSelect: 'none', textAlign: 'center' }}>Veh.{sortIcon('veh')}</th>
+                  <th onClick={() => toggleSort('visita')} style={{ cursor: 'pointer', userSelect: 'none' }}>Última Visita{sortIcon('visita')}</th>
+                  <th onClick={() => toggleSort('cuentti')} style={{ cursor: 'pointer', userSelect: 'none' }}>Cuentti{sortIcon('cuentti')}</th>
                   <th></th>
                 </tr>
               </thead>

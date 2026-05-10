@@ -31,6 +31,40 @@ export default function Inventario({ notify }) {
     return ['todas', ...Array.from(cats).sort()]
   }, [productos])
 
+  // Estado para ordenamiento de columnas
+  // sortBy: 'codigo' | 'nombre' | 'categoria' | 'stock' | 'precio' | 'iva' | 'estado'
+  // sortDir: 'asc' | 'desc' | null (null = sin orden, default por nombre)
+  const [sortBy, setSortBy] = useState(null)
+  const [sortDir, setSortDir] = useState('asc')
+
+  const toggleSort = (col) => {
+    if (sortBy !== col) {
+      setSortBy(col)
+      setSortDir('asc')
+    } else if (sortDir === 'asc') {
+      setSortDir('desc')
+    } else {
+      // Tercer click: limpiar orden
+      setSortBy(null)
+      setSortDir('asc')
+    }
+  }
+
+  const sortIcon = (col) => {
+    if (sortBy !== col) return <span style={{ opacity: 0.25, fontSize: 9 }}>↕</span>
+    return sortDir === 'asc'
+      ? <span style={{ color: 'var(--blue-600)', fontSize: 10 }}>▲</span>
+      : <span style={{ color: 'var(--blue-600)', fontSize: 10 }}>▼</span>
+  }
+
+  // Para ordenamiento por estado: priorizar Sin stock > Bajo > OK
+  const estadoRank = (p) => {
+    if (p.esServicio) return 3
+    if (p.stock <= 0) return 0
+    if (p.stock <= STOCK_BAJO_UMBRAL) return 1
+    return 2
+  }
+
   const filtrados = useMemo(() => {
     let list = productos
     if (categoriaFiltro !== 'todas') {
@@ -43,8 +77,26 @@ export default function Inventario({ notify }) {
         (p.codigo || '').toLowerCase().includes(q)
       )
     }
+    if (sortBy) {
+      list = [...list].sort((a, b) => {
+        let av, bv
+        switch (sortBy) {
+          case 'codigo': av = (a.codigo || '').toString(); bv = (b.codigo || '').toString(); break
+          case 'nombre': av = (a.nombre || '').toLowerCase(); bv = (b.nombre || '').toLowerCase(); break
+          case 'categoria': av = (a.categoria || '').toLowerCase(); bv = (b.categoria || '').toLowerCase(); break
+          case 'stock': av = parseFloat(a.stock) || 0; bv = parseFloat(b.stock) || 0; break
+          case 'precio': av = parseFloat(a.precio) || 0; bv = parseFloat(b.precio) || 0; break
+          case 'iva': av = parseFloat(a.iva) || 0; bv = parseFloat(b.iva) || 0; break
+          case 'estado': av = estadoRank(a); bv = estadoRank(b); break
+          default: return 0
+        }
+        if (av < bv) return sortDir === 'asc' ? -1 : 1
+        if (av > bv) return sortDir === 'asc' ? 1 : -1
+        return 0
+      })
+    }
     return list
-  }, [productos, busqueda, categoriaFiltro])
+  }, [productos, busqueda, categoriaFiltro, sortBy, sortDir])
 
   const stats = useMemo(() => ({
     total: productos.length,
@@ -52,11 +104,6 @@ export default function Inventario({ notify }) {
     stockBajo: productos.filter(p => !p.esServicio && p.stock > 0 && p.stock <= STOCK_BAJO_UMBRAL).length,
     valorTotal: productos.reduce((s, p) => s + (p.precio * p.stock), 0),
   }), [productos])
-
-  const alertasStock = useMemo(() =>
-    productos.filter(p => !p.esServicio && p.stock > 0 && p.stock <= STOCK_BAJO_UMBRAL)
-      .sort((a, b) => a.stock - b.stock).slice(0, 10),
-  [productos])
 
   const stockState = (p) => {
     if (p.stock <= 0) return { cls: 'badge-d', lbl: 'Sin stock' }
@@ -117,24 +164,6 @@ export default function Inventario({ notify }) {
         </div>
       </div>
 
-      {/* Alertas de stock bajo */}
-      {alertasStock.length > 0 && (
-        <div className="card" style={{ marginBottom: 16, borderLeft: '4px solid var(--amber-500)' }}>
-          <div className="card__h">
-            <h3 style={{ color: 'var(--amber-600)' }}>⚠️ Stock bajo ({alertasStock.length} productos)</h3>
-          </div>
-          <div className="card__b" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {alertasStock.map(p => (
-              <div key={p.id || p.codigo} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <span className="badge badge-w">{p.stock} uds</span>
-                <span style={{ fontWeight: 600, fontSize: 13 }}>{p.nombre}</span>
-                <span style={{ fontSize: 11, color: 'var(--text-3)' }}>Cód: {p.codigo}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
       {/* Tabla de productos */}
       <div className="card">
         <div className="card__h" style={{ gap: 12 }}>
@@ -179,13 +208,27 @@ export default function Inventario({ notify }) {
             <table className="tbl">
               <thead>
                 <tr>
-                  <th>Código</th>
-                  <th>Producto</th>
-                  <th>Categoría</th>
-                  <th className="c-right">Stock</th>
-                  <th className="c-right">Precio</th>
-                  <th className="c-right">IVA</th>
-                  <th>Estado</th>
+                  <th onClick={() => toggleSort('codigo')} style={{ cursor: 'pointer', userSelect: 'none' }}>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>Código {sortIcon('codigo')}</span>
+                  </th>
+                  <th onClick={() => toggleSort('nombre')} style={{ cursor: 'pointer', userSelect: 'none' }}>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>Producto {sortIcon('nombre')}</span>
+                  </th>
+                  <th onClick={() => toggleSort('categoria')} style={{ cursor: 'pointer', userSelect: 'none' }}>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>Categoría {sortIcon('categoria')}</span>
+                  </th>
+                  <th onClick={() => toggleSort('stock')} className="c-right" style={{ cursor: 'pointer', userSelect: 'none' }}>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, justifyContent: 'flex-end' }}>Stock {sortIcon('stock')}</span>
+                  </th>
+                  <th onClick={() => toggleSort('precio')} className="c-right" style={{ cursor: 'pointer', userSelect: 'none' }}>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, justifyContent: 'flex-end' }}>Precio {sortIcon('precio')}</span>
+                  </th>
+                  <th onClick={() => toggleSort('iva')} className="c-right" style={{ cursor: 'pointer', userSelect: 'none' }}>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, justifyContent: 'flex-end' }}>IVA {sortIcon('iva')}</span>
+                  </th>
+                  <th onClick={() => toggleSort('estado')} style={{ cursor: 'pointer', userSelect: 'none' }}>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>Estado {sortIcon('estado')}</span>
+                  </th>
                 </tr>
               </thead>
               <tbody>
