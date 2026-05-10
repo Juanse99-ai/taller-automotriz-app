@@ -174,10 +174,18 @@ export async function fetchClientesLocal() {
 
 export async function upsertClienteLocal(c) {
   try {
+    // identificacion es NOT NULL en la tabla — siempre debe llevar valor
+    // (mismo valor que cedula, son sinonimos). Si no hay cedula, se omite el upsert.
+    const ced = (c.cedula || c.identificacion || '').toString().trim()
+    if (!ced) {
+      console.warn('Supabase upsertCliente: cliente sin cedula, omitido')
+      return null
+    }
     const row = {
       id: c.id,
       cuentti_id: c.cuenttiId || null,
-      cedula: c.cedula || '',
+      identificacion: ced, // ← columna NOT NULL en Supabase, antes faltaba
+      cedula: ced,
       nombre: c.nombre || '',
       telefono1: c.telefono || '',
       email: c.email || '',
