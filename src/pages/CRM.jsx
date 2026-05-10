@@ -130,6 +130,8 @@ export default function CRM({ trabajos = [], clientes, vehiculos, notify, actual
   const [aceiteEditTipo, setAceiteEditTipo] = useState('')
   // Importar contactos sin OT (clientes inactivos)
   const [showImportar, setShowImportar] = useState(false)
+  const [busquedaInactivos, setBusquedaInactivos] = useState('')
+  const [filtroInactivos, setFiltroInactivos] = useState('todos') // 'todos' | 'wa' | 'email'
 
   // ── Calcular recordatorios pendientes ─────────────────────────────────────
   const recordatorios = useMemo(() => {
@@ -722,81 +724,145 @@ export default function CRM({ trabajos = [], clientes, vehiculos, notify, actual
       )}
 
       {/* Modal: Clientes inactivos (sin OT o >1 año) */}
-      {showImportar && (
+      {showImportar && (() => {
+        const norm = (s) => (s || '').toString().toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu, '')
+        const filtrados = recordatoriosImportar.filter(c => {
+          if (filtroInactivos === 'wa' && !c.telefono) return false
+          if (filtroInactivos === 'email' && !c.email) return false
+          if (busquedaInactivos.trim()) {
+            const t = norm(busquedaInactivos.trim())
+            return norm(c.nombre).includes(t) || (c.cedula || '').includes(t.replace(/\D/g, ''))
+          }
+          return true
+        })
+        return (
         <div className="modal-overlay" onClick={() => setShowImportar(false)}>
-          <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 720 }}>
-            <div className="modal__h">
-              <h3 style={{ margin: 0 }}>👥 Clientes inactivos ({recordatoriosImportar.length})</h3>
+          <div className="modal" onClick={e => e.stopPropagation()} style={{
+            maxWidth: '95vw', width: 1100, maxHeight: '92vh', display: 'flex', flexDirection: 'column'
+          }}>
+            <div className="modal__h" style={{ flexShrink: 0 }}>
+              <h3 style={{ margin: 0 }}>
+                👥 Clientes inactivos · <strong>{filtrados.length}</strong> de {recordatoriosImportar.length}
+              </h3>
               <button className="btn btn-ghost btn-sm" onClick={() => setShowImportar(false)}>✕</button>
             </div>
-            <div className="modal__b" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              <p style={{ margin: 0, fontSize: 12.5, color: 'var(--text-3)' }}>
-                Clientes con teléfono o email registrado que <strong>nunca han venido</strong> o <strong>llevan más de 1 año</strong> sin venir. Buena oportunidad para reactivarlos con una campaña.
+
+            {/* Filtros y búsqueda — siempre visibles */}
+            <div style={{ flexShrink: 0, padding: '12px 22px', borderBottom: '1px solid var(--border)', background: 'var(--bg-subtle)', display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
+              <div style={{ flex: '1 1 240px', display: 'flex', alignItems: 'center', gap: 8, background: 'var(--bg-raised)', border: '1px solid var(--border)', borderRadius: 8, padding: '6px 11px' }}>
+                <span style={{ opacity: 0.5 }}>🔍</span>
+                <input
+                  value={busquedaInactivos}
+                  onChange={e => setBusquedaInactivos(e.target.value)}
+                  placeholder="Buscar nombre o cédula..."
+                  style={{ border: 'none', outline: 'none', background: 'none', flex: 1, fontSize: 13 }}
+                />
+                {busquedaInactivos && (
+                  <button onClick={() => setBusquedaInactivos('')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-3)' }}>✕</button>
+                )}
+              </div>
+              <div style={{ display: 'flex', gap: 4, background: 'var(--bg-raised)', padding: 3, borderRadius: 8, border: '1px solid var(--border)' }}>
+                {[['todos', 'Todos'], ['wa', '📱 Con WhatsApp'], ['email', '✉ Con Email']].map(([k, l]) => (
+                  <button key={k} onClick={() => setFiltroInactivos(k)} style={{
+                    padding: '5px 12px', fontSize: 12, fontWeight: 600, borderRadius: 6,
+                    background: filtroInactivos === k ? 'var(--blue-600)' : 'transparent',
+                    color: filtroInactivos === k ? '#fff' : 'var(--text-3)',
+                    border: 'none', cursor: 'pointer',
+                  }}>{l}</button>
+                ))}
+              </div>
+            </div>
+
+            <div style={{ padding: '10px 22px 0', flexShrink: 0 }}>
+              <p style={{ margin: 0, fontSize: 12, color: 'var(--text-3)' }}>
+                Clientes con teléfono o email que <strong>nunca han venido</strong> o <strong>llevan +1 año</strong> sin venir. Buena oportunidad para reactivarlos.
               </p>
-              {recordatoriosImportar.length === 0 ? (
+            </div>
+
+            {/* Lista con scroll vertical (muestra TODOS, no slice) */}
+            <div style={{ flex: 1, overflow: 'auto', padding: '10px 22px 0', minHeight: 200 }}>
+              {filtrados.length === 0 ? (
                 <div className="empty-state" style={{ padding: '24px 0' }}>
-                  <div className="empty-state-icon">✅</div>
-                  <p>No hay clientes inactivos.</p>
+                  <div className="empty-state-icon">{recordatoriosImportar.length === 0 ? '✅' : '🔍'}</div>
+                  <p>{recordatoriosImportar.length === 0 ? 'No hay clientes inactivos.' : 'Sin resultados con esos filtros.'}</p>
                 </div>
               ) : (
-                <div style={{ maxHeight: '50vh', overflowY: 'auto', border: '1px solid var(--border)', borderRadius: 8 }}>
-                  <table className="tbl" style={{ margin: 0 }}>
-                    <thead>
-                      <tr>
-                        <th>Cliente</th>
-                        <th>Contacto</th>
-                        <th></th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {recordatoriosImportar.slice(0, 50).map(c => {
-                        const tel = c.telefono ? c.telefono.toString().replace(/\D/g, '') : ''
-                        const num = tel.length === 10 ? `57${tel}` : tel
-                        const mensaje = aplicarTemplate(templates.generico || TEMPLATES_DEFAULT.generico, {
-                          nombre: (c.nombre || '').split(' ')[0] || 'cliente',
-                          placa: (c.vehiculos || [])[0] || '—',
-                          marca: 'tu vehículo',
-                          modelo: '',
-                          ano: '',
-                          dias_desde: '?',
-                          ultima_visita: 'hace tiempo',
-                          taller: TALLER.nombre,
-                          telefono_taller: TALLER.celular,
-                          direccion: TALLER.direccion,
-                        })
-                        const wa = tel ? `https://wa.me/${num}?text=${encodeURIComponent(mensaje)}` : null
-                        return (
-                          <tr key={c.cedula}>
-                            <td>
-                              <div style={{ fontWeight: 700, fontSize: 12.5 }}>{c.nombre}</div>
-                              <div className="c-mono" style={{ fontSize: 10.5, color: 'var(--text-3)' }}>{c.cedula}</div>
-                            </td>
-                            <td style={{ fontSize: 11.5 }}>
-                              {c.telefono && <div className="c-mono">{c.telefono}</div>}
-                              {c.email && <div style={{ color: 'var(--text-3)' }}>{c.email}</div>}
-                            </td>
-                            <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
-                              {wa && <a href={wa} target="_blank" rel="noreferrer" className="btn btn-primary btn-sm" style={{ background: '#25D366', fontSize: 11 }}>📱 WhatsApp</a>}
-                            </td>
-                          </tr>
-                        )
-                      })}
-                    </tbody>
-                  </table>
-                  {recordatoriosImportar.length > 50 && (
-                    <div style={{ padding: 10, textAlign: 'center', fontSize: 11, color: 'var(--text-3)' }}>
-                      Mostrando 50 de {recordatoriosImportar.length}
-                    </div>
-                  )}
-                </div>
+                <table className="tbl" style={{ margin: 0, fontSize: 12.5 }}>
+                  <thead style={{ position: 'sticky', top: 0, background: 'var(--bg-raised)', zIndex: 1 }}>
+                    <tr>
+                      <th style={{ width: '40%' }}>Cliente</th>
+                      <th style={{ width: '20%' }}>Teléfono</th>
+                      <th>Email</th>
+                      <th style={{ width: 220, textAlign: 'right' }}>Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filtrados.map(c => {
+                      const tel = c.telefono ? c.telefono.toString().replace(/\D/g, '') : ''
+                      const num = tel.length === 10 ? `57${tel}` : tel
+                      const mensaje = aplicarTemplate(templates.generico || TEMPLATES_DEFAULT.generico, {
+                        nombre: (c.nombre || '').split(' ')[0] || 'cliente',
+                        placa: (c.vehiculos || [])[0] || '—',
+                        marca: 'tu vehículo',
+                        modelo: '',
+                        ano: '',
+                        dias_desde: '?',
+                        ultima_visita: 'hace tiempo',
+                        taller: TALLER.nombre,
+                        telefono_taller: TALLER.celular,
+                        direccion: TALLER.direccion,
+                      })
+                      const wa = tel ? `https://wa.me/${num}?text=${encodeURIComponent(mensaje)}` : null
+                      const mailto = c.email ? `mailto:${c.email}?subject=${encodeURIComponent(TALLER.nombre + ' - Te extrañamos')}&body=${encodeURIComponent(mensaje)}` : null
+                      return (
+                        <tr key={c.cedula}>
+                          <td>
+                            <div style={{ fontWeight: 700, fontSize: 13 }}>{c.nombre || '—'}</div>
+                            <div className="c-mono" style={{ fontSize: 11, color: 'var(--text-3)' }}>{c.cedula}</div>
+                          </td>
+                          <td className="c-mono" style={{ fontSize: 12 }}>
+                            {c.telefono || <span style={{ color: 'var(--text-4)' }}>—</span>}
+                          </td>
+                          <td style={{ fontSize: 11.5, color: 'var(--text-2)', wordBreak: 'break-all' }}>
+                            {c.email || <span style={{ color: 'var(--text-4)' }}>—</span>}
+                          </td>
+                          <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
+                            <div style={{ display: 'inline-flex', gap: 6 }}>
+                              {wa && (
+                                <a href={wa} target="_blank" rel="noreferrer" className="btn btn-sm" style={{ background: '#25D366', color: '#fff', fontSize: 11, padding: '4px 10px', textDecoration: 'none', whiteSpace: 'nowrap' }}>
+                                  📱 WhatsApp
+                                </a>
+                              )}
+                              {mailto && (
+                                <a href={mailto} className="btn btn-outline btn-sm" style={{ fontSize: 11, padding: '4px 10px', textDecoration: 'none', whiteSpace: 'nowrap' }}>
+                                  ✉ Email
+                                </a>
+                              )}
+                              {c.telefono && (
+                                <a href={`tel:${c.telefono}`} className="btn btn-outline btn-sm" style={{ fontSize: 11, padding: '4px 10px', textDecoration: 'none' }} title="Llamar">
+                                  📞
+                                </a>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
               )}
             </div>
-            <div className="modal__f">
+
+            <div className="modal__f" style={{ flexShrink: 0 }}>
+              <span style={{ fontSize: 11.5, color: 'var(--text-3)', marginRight: 'auto' }}>
+                Mostrando <strong>{filtrados.length}</strong> de {recordatoriosImportar.length} inactivos
+              </span>
               <button className="btn btn-primary" onClick={() => setShowImportar(false)}>Cerrar</button>
             </div>
           </div>
         </div>
-      )}
+        )
+      })()}
 
       {/* Modal: configurar servicios */}
       {showConfig && (
