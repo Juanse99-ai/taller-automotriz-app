@@ -120,6 +120,7 @@ input,select,textarea{font-family:inherit;font-size:14px;color:inherit}
 .modal__b{padding:20px 22px 22px}
 .modal__f{display:flex;gap:10px;justify-content:flex-end;padding:14px 22px;border-top:1px solid var(--border)}
 @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
 @keyframes slideUp{from{transform:translateY(12px);opacity:0}to{transform:translateY(0);opacity:1}}
 
 /* Command Palette — Product Search */

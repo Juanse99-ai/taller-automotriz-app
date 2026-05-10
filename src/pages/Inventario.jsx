@@ -1,52 +1,30 @@
-import { useState, useEffect, useMemo, useCallback } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { fmt, fmtCompact } from '../utils/helpers'
-import { cargarInventarioCompleto } from '../services/cuentti'
-import { lsGet, lsSet, LS_KEYS } from '../services/storage'
+import { useInventario, formatCacheAge } from '../hooks/useInventario'
 
 const STOCK_BAJO_UMBRAL = 3
 
 export default function Inventario({ notify }) {
-  const [productos, setProductos] = useState([])
-  const [loading, setLoading] = useState(true)
+  const {
+    inventario: productos,
+    loading,
+    refreshing,
+    cacheAge,
+    isStale,
+    refresh,
+  } = useInventario()
   const [busqueda, setBusqueda] = useState('')
   const [categoriaFiltro, setCategoriaFiltro] = useState('todas')
+  const [, setNowTick] = useState(0)
+  useEffect(() => {
+    const id = setInterval(() => setNowTick(t => t + 1), 10000)
+    return () => clearInterval(id)
+  }, [])
 
-  const cargar = useCallback(async (forzar = false) => {
-    setLoading(true)
-    try {
-      if (!forzar) {
-        const cached = lsGet(LS_KEYS.INVENTARIO_CACHE, [])
-        if (cached.length > 0) {
-          setProductos(cached)
-          setLoading(false)
-          cargarInventarioCompleto().then(data => {
-            if (data.length > 0) {
-              setProductos(data)
-              lsSet(LS_KEYS.INVENTARIO_CACHE, data)
-            }
-          }).catch(() => {})
-          return
-        }
-      }
-      const data = await cargarInventarioCompleto()
-      if (data.length > 0) {
-        setProductos(data)
-        lsSet(LS_KEYS.INVENTARIO_CACHE, data)
-        if (forzar) notify('Inventario actualizado desde Cuentti', 'success')
-      } else {
-        const cached = lsGet(LS_KEYS.INVENTARIO_CACHE, [])
-        setProductos(cached)
-        if (forzar) notify('No se pudo conectar con Cuentti, mostrando cache', 'error')
-      }
-    } catch {
-      setProductos(lsGet(LS_KEYS.INVENTARIO_CACHE, []))
-      if (forzar) notify('Error conectando con Cuentti', 'error')
-    } finally {
-      setLoading(false)
-    }
-  }, [notify])
-
-  useEffect(() => { cargar() }, [cargar])
+  const cargar = async (forzar = false) => {
+    await refresh()
+    if (forzar) notify('Inventario actualizado desde Cuentti', 'success')
+  }
 
   const categorias = useMemo(() => {
     const cats = new Set(productos.map(p => p.categoria || 'General'))
@@ -100,11 +78,19 @@ export default function Inventario({ notify }) {
       <div className="pagehd">
         <div>
           <h2>Inventario</h2>
-          <p className="sub">{stats.total} referencias · {stats.stockBajo} bajo mínimo · {stats.sinStock} sin stock</p>
+          <p className="sub">
+            {stats.total} referencias · {stats.stockBajo} bajo mínimo · {stats.sinStock} sin stock
+            {!loading && <>
+              {' · '}
+              <span style={{ color: isStale ? 'var(--amber-600)' : 'var(--green-600)', fontWeight: 600 }}>
+                {refreshing ? 'sincronizando…' : `Cuentti ${formatCacheAge(cacheAge)}`}
+              </span>
+            </>}
+          </p>
         </div>
         <div className="actions">
-          <button className="btn btn-outline btn-sm" onClick={() => cargar(true)} disabled={loading}>
-            {loading ? 'Sincronizando...' : '🔄 Sincronizar Cuentti'}
+          <button className="btn btn-outline btn-sm" onClick={() => cargar(true)} disabled={loading || refreshing}>
+            {loading || refreshing ? 'Sincronizando...' : '🔄 Sincronizar Cuentti'}
           </button>
         </div>
       </div>

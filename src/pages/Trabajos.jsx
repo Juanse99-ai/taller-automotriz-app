@@ -5,8 +5,8 @@ import { fmt, fmtDate, uid, hoyISO, normalizarDoc, normalizarNombre } from '../u
 import { TECNICOS, ESTADOS, IVA_DEFAULT, DIAS_ESTANCADO, TALLER } from '../utils/constants'
 import { MARCAS, getModelos } from '../utils/vehiculos'
 import { useClientes } from '../hooks/useClientes'
+import { useInventario, formatCacheAge } from '../hooks/useInventario'
 import { lsGet, lsSet, LS_KEYS } from '../services/storage'
-import { cargarInventarioCompleto } from '../services/cuentti'
 
 export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, onAutoFacturar }) {
   const { trabajos, agregarTrabajo, actualizarTrabajo, eliminarTrabajo } = hook
@@ -764,26 +764,21 @@ function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [] }) {
     setForm(f => ({ ...f, [campo]: f[campo].filter(x => x.id !== id) }))
   }
 
-  // Inventario para busqueda de productos
-  const [inventario, setInventario] = useState([])
-  const [invLoading, setInvLoading] = useState(true)
+  // Inventario centralizado desde Cuentti (con cache + auto-refresh + estado)
+  const {
+    inventario,
+    loading: invLoading,
+    refreshing: invRefreshing,
+    cacheAge: invCacheAge,
+    isStale: invIsStale,
+    refresh: refrescarInventario,
+  } = useInventario()
   const [itemSearch, setItemSearch] = useState({}) // { [itemId]: { query, results, show } }
-
+  // Tick para que el "hace Xs" se actualice cada 10s sin re-fetch
+  const [, setNowTick] = useState(0)
   useEffect(() => {
-    const cached = lsGet(LS_KEYS.INVENTARIO_CACHE, [])
-    if (cached.length > 0) {
-      setInventario(cached)
-      setInvLoading(false)
-    }
-    // Siempre cargar desde Cuentti para tener datos frescos
-    cargarInventarioCompleto().then(data => {
-      if (data.length > 0) {
-        setInventario(data)
-        // Guardar en cache para proxima vez
-        lsSet(LS_KEYS.INVENTARIO_CACHE, data)
-      }
-      setInvLoading(false)
-    }).catch(() => { setInvLoading(false) })
+    const id = setInterval(() => setNowTick(t => t + 1), 10000)
+    return () => clearInterval(id)
   }, [])
 
   // Debounce timers ref
@@ -1108,12 +1103,37 @@ function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [] }) {
 
         {/* ITEMS */}
         <div className="card">
-          <div className="card__h">
-            <h3>Repuestos y Servicios {invLoading
+          <div className="card__h" style={{ flexWrap: 'wrap', gap: 8 }}>
+            <h3 style={{ flex: '0 0 auto' }}>Repuestos y Servicios {invLoading
               ? <span className="count">Cargando...</span>
               : <span className="count">{inventario.length} productos</span>
             }</h3>
-            <button type="button" className="btn btn-outline btn-sm" onClick={addItem}>+ Agregar linea</button>
+            {/* Indicador del estado del inventario Cuentti */}
+            {!invLoading && (
+              <div style={{
+                display: 'flex', alignItems: 'center', gap: 8,
+                fontSize: 11.5, color: 'var(--text-3)',
+                padding: '4px 10px', borderRadius: 999,
+                background: invIsStale ? 'rgba(245,158,11,.12)' : 'rgba(34,197,94,.10)',
+                border: `1px solid ${invIsStale ? 'rgba(245,158,11,.4)' : 'rgba(34,197,94,.3)'}`,
+              }} title={`Inventario sincronizado con Cuentti ${formatCacheAge(invCacheAge)}${invIsStale ? ' (recomendado refrescar)' : ''}`}>
+                <span style={{
+                  display: 'inline-block', width: 7, height: 7, borderRadius: '50%',
+                  background: invRefreshing ? 'var(--blue-500)' : (invIsStale ? 'var(--amber-500)' : 'var(--green-500)'),
+                  animation: invRefreshing ? 'pulse 1s infinite' : 'none',
+                }} />
+                <span style={{ fontWeight: 600 }}>
+                  {invRefreshing ? 'Sincronizando…' : `Cuentti ${formatCacheAge(invCacheAge)}`}
+                </span>
+                <button type="button"
+                  onClick={refrescarInventario}
+                  disabled={invRefreshing}
+                  style={{ background: 'none', border: 'none', color: 'var(--blue-600)', cursor: 'pointer', fontWeight: 700, padding: 0, fontSize: 11.5 }}>
+                  ↻ Refrescar
+                </button>
+              </div>
+            )}
+            <button type="button" className="btn btn-outline btn-sm" onClick={addItem} style={{ marginLeft: 'auto' }}>+ Agregar linea</button>
           </div>
           {items.length === 0 ? (
             <div style={{ padding: '36px 20px', textAlign: 'center', color: 'var(--text-3)', fontSize: 13.5 }}>

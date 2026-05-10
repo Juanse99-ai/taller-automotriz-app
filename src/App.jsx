@@ -134,7 +134,7 @@ export default function App() {
   }, [])
 
   // Pre-cargar inventario de Cuentti en background al iniciar la app y luego
-  // cada 5 minutos. Asi cuando se abre Trabajos/Cotizaciones ya esta fresco.
+  // cada 2 minutos. Asi cuando se abre Trabajos/Cotizaciones ya esta fresco.
   useEffect(() => {
     if (!user) return
     let active = true
@@ -143,12 +143,13 @@ export default function App() {
         .then(data => {
           if (active && data && data.length > 0) {
             lsSet(LS_KEYS.INVENTARIO_CACHE, data)
+            lsSet(LS_KEYS.INVENTARIO_TIMESTAMP, Date.now())
           }
         })
         .catch(() => { /* ignorar errores de red, seguimos con cache */ })
     }
     sync()
-    const interval = setInterval(sync, 5 * 60 * 1000) // cada 5 min
+    const interval = setInterval(sync, 2 * 60 * 1000) // cada 2 min (antes 5)
     return () => { active = false; clearInterval(interval) }
   }, [user])
 

@@ -27,6 +27,7 @@ export const LS_KEYS = {
   OT_CONSECUTIVO: 'ot_consecutivo',
   CLIENTES_CACHE: 'clientes_cache',
   INVENTARIO_CACHE: 'inventario_cache',
+  INVENTARIO_TIMESTAMP: 'inventario_ts',
   COTIZACIONES: 'cotizaciones',
   FACTURAS: 'facturas',
   VEHICULOS: 'vehiculos',

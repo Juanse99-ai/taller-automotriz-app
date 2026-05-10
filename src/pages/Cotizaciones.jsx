@@ -5,7 +5,7 @@ import { fmt, fmtDate, uid, hoyISO, normalizarDoc, normalizarNombre } from '../u
 import { TECNICOS, IVA_DEFAULT, TALLER } from '../utils/constants'
 import { MARCAS, getModelos } from '../utils/vehiculos'
 import { useClientes } from '../hooks/useClientes'
-import { cargarInventarioCompleto } from '../services/cuentti'
+import { useInventario, formatCacheAge } from '../hooks/useInventario'
 import { lsGet, lsSet, LS_KEYS } from '../services/storage'
 
 const ESTADO_COT = { PENDIENTE: 'Pendiente', APROBADA: 'Aprobada', RECHAZADA: 'Rechazada' }
@@ -526,19 +526,21 @@ function CotizacionForm({ cotizacion, trabajos = [], onSave, onCancel }) {
     setResultados([])
   }
 
-  // Inventario Cuentti
-  const [inventario, setInventario] = useState([])
-  const [invLoading, setInvLoading] = useState(true)
+  // Inventario centralizado desde Cuentti
+  const {
+    inventario,
+    loading: invLoading,
+    refreshing: invRefreshing,
+    cacheAge: invCacheAge,
+    isStale: invIsStale,
+    refresh: refrescarInventario,
+  } = useInventario()
   const [itemSearch, setItemSearch] = useState({})
   const searchTimers = useRef({})
-
+  const [, setNowTick] = useState(0)
   useEffect(() => {
-    const cached = lsGet(LS_KEYS.INVENTARIO_CACHE, [])
-    if (cached.length > 0) { setInventario(cached); setInvLoading(false) }
-    cargarInventarioCompleto().then(data => {
-      if (data.length > 0) { setInventario(data); lsSet(LS_KEYS.INVENTARIO_CACHE, data) }
-      setInvLoading(false)
-    }).catch(() => setInvLoading(false))
+    const id = setInterval(() => setNowTick(t => t + 1), 10000)
+    return () => clearInterval(id)
   }, [])
 
   const buscarEnInventario = useCallback((itemId, query) => {
