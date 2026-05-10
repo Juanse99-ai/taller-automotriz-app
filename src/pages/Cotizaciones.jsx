@@ -1,7 +1,7 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react'
 import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
-import { fmt, fmtDate, uid, hoyISO, normalizarDoc, normalizarNombre } from '../utils/helpers'
+import { fmt, fmtDate, uid, hoyISO, normalizarDoc, normalizarNombre, fmtTelefono } from '../utils/helpers'
 import { TECNICOS, IVA_DEFAULT, TALLER } from '../utils/constants'
 import { MARCAS, getModelos } from '../utils/vehiculos'
 import { useClientes } from '../hooks/useClientes'
@@ -522,7 +522,7 @@ function CotizacionForm({ cotizacion, trabajos = [], onSave, onCancel }) {
   const seleccionarCliente = (c) => {
     set('cedula', normalizarDoc(c))
     set('cliente', normalizarNombre(c))
-    set('telefonoCliente', c.telefono || c.phone || '')
+    set('telefonoCliente', fmtTelefono(c.telefono || c.phone || ''))
     setResultados([])
   }
 

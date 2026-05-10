@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
-import { fmt, fmtDate, uid, hoyISO, normalizarDoc, normalizarNombre } from '../utils/helpers'
+import { fmt, fmtDate, uid, hoyISO, normalizarDoc, normalizarNombre, fmtTelefono } from '../utils/helpers'
 import { TECNICOS, ESTADOS, IVA_DEFAULT, DIAS_ESTANCADO, TALLER } from '../utils/constants'
 import { MARCAS, getModelos } from '../utils/vehiculos'
 import { useClientes } from '../hooks/useClientes'
@@ -868,7 +868,7 @@ function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [] }) {
   const seleccionarCliente = (c) => {
     set('cedula', normalizarDoc(c))
     set('cliente', normalizarNombre(c))
-    set('telefonoCliente', c.telefono || c.phone || '')
+    set('telefonoCliente', fmtTelefono(c.telefono || c.phone || ''))
     set('emailCliente', c.email || c.correo || '')
     set('clienteId', c.id || '')
     setResultados([])
@@ -1003,7 +1003,7 @@ function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [] }) {
                     <div key={i} onClick={() => seleccionarCliente(c)}
                       style={{ padding: '10px 14px', cursor: 'pointer', borderBottom: '1px solid var(--border)', fontSize: 13 }}>
                       <strong>{normalizarDoc(c)}</strong> — {normalizarNombre(c)}
-                      {c.telefono && <span style={{ marginLeft: 8, color: 'var(--text-3)' }}>{c.telefono}</span>}
+                      {c.telefono && <span style={{ marginLeft: 8, color: 'var(--text-3)' }}>{fmtTelefono(c.telefono)}</span>}
                     </div>
                   ))}
                 </div>

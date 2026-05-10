@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react'
-import { fmtDate } from '../utils/helpers'
+import { fmtDate, fmtTelefono } from '../utils/helpers'
 import { TIPOS_IDENTIFICACION, TIPOS_PERSONA, REGIMENES, buscarClientePorCedula } from '../services/cuentti'
 
 // Quita acentos: "FERNÁNDEZ" → "fernandez"
@@ -684,7 +684,7 @@ export default function Clientes({ clientes, vehiculos, notify }) {
                   <tr key={c.id || c.cedula} style={{cursor:'pointer'}} onClick={() => seleccionar(c)}>
                     <td className="c-mono" style={{fontSize:12.5}}>{c.cedula || '--'}</td>
                     <td className="c-name">{c.nombre || '--'}</td>
-                    <td className="c-mono">{c.telefono || '--'}</td>
+                    <td className="c-mono">{fmtTelefono(c.telefono) || '--'}</td>
                     <td className="c-muted">{c.email || '--'}</td>
                     <td style={{textAlign:'center'}}>
                       <span className={`badge ${(c.vehiculos || []).length > 0 ? 'badge-i' : 'badge-w'}`}>

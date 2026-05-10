@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { buscarClientePorCedula, grabarCliente } from '../services/cuentti'
 import { fetchClientesLocal, upsertClienteLocal } from '../services/supabase'
 import { lsGet, lsSet, LS_KEYS } from '../services/storage'
-import { normalizarDoc, normalizarNombre } from '../utils/helpers'
+import { normalizarDoc, normalizarNombre, fmtTelefono } from '../utils/helpers'
 
 // Build a richer local client record from any client-like object
 function buildRecord(data, existing) {
@@ -14,7 +14,7 @@ function buildRecord(data, existing) {
     cuenttiId: data.cuenttiId ?? data.id ?? existing?.cuenttiId ?? null,
     cedula,
     nombre: data.nombre || data.nombre_cliente || existing?.nombre || '',
-    telefono: data.telefono || existing?.telefono || '',
+    telefono: fmtTelefono(data.telefono || existing?.telefono || ''),
     email: data.email || existing?.email || '',
     direccion: data.direccion || existing?.direccion || '',
     ciudad: data.ciudad || existing?.ciudad || '',
@@ -36,7 +36,12 @@ export function useClientes() {
   const timerRef = useRef(null)
 
   // ---- CLIENTES table (richer local records) ----
-  const [clientesTable, setClientesTable] = useState(() => lsGet(LS_KEYS.CLIENTES, []))
+  // Normaliza el telefono al cargar de localStorage para limpiar valores
+  // legacy con ".0" (cuando se guardo como float desde Supabase).
+  const [clientesTable, setClientesTable] = useState(() => {
+    const raw = lsGet(LS_KEYS.CLIENTES, [])
+    return raw.map(c => ({ ...c, telefono: fmtTelefono(c.telefono || '') }))
+  })
   const clientesRef = useRef(clientesTable)
 
   // Load from Supabase on mount (merge with local, Supabase wins by cedula)
@@ -47,7 +52,7 @@ export function useClientes() {
         if (sbData.length > 0) {
           const norm = sbData.map(r => buildRecord({
             id: r.id, cuenttiId: r.cuentti_id, cedula: r.cedula, nombre: r.nombre,
-            telefono: r.telefono1 || r.telefono || '', email: r.email, direccion: r.direccion, ciudad: r.ciudad,
+            telefono: fmtTelefono(r.telefono1 || r.telefono || ''), email: r.email, direccion: r.direccion, ciudad: r.ciudad,
             vehiculos: typeof r.vehiculos === 'string' ? JSON.parse(r.vehiculos) : (r.vehiculos || []),
             fechaCreacion: r.fecha_creacion, fechaUltimaVisita: r.fecha_ultima_visita,
             totalVisitas: r.total_visitas, totalGastado: r.total_gastado,
@@ -77,7 +82,7 @@ export function useClientes() {
         if (sbData.length > 0) {
           const norm = sbData.map(r => buildRecord({
             id: r.id, cuenttiId: r.cuentti_id, cedula: r.cedula, nombre: r.nombre,
-            telefono: r.telefono1 || r.telefono || '', email: r.email, direccion: r.direccion, ciudad: r.ciudad,
+            telefono: fmtTelefono(r.telefono1 || r.telefono || ''), email: r.email, direccion: r.direccion, ciudad: r.ciudad,
             vehiculos: typeof r.vehiculos === 'string' ? JSON.parse(r.vehiculos) : (r.vehiculos || []),
             fechaCreacion: r.fecha_creacion, fechaUltimaVisita: r.fecha_ultima_visita,
             totalVisitas: r.total_visitas, totalGastado: r.total_gastado,

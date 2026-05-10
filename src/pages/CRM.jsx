@@ -81,7 +81,10 @@ function aplicarTemplate(template, vars) {
 // Formatear número de teléfono colombiano para wa.me
 function whatsappLink(tel, mensaje) {
   if (!tel) return null
-  const limpio = tel.toString().replace(/\D/g, '')
+  // Primero quita ".0" final (cuando el numero vino como float desde Supabase),
+  // luego strip de cualquier no-digito.
+  const sinDecimal = tel.toString().replace(/[.,]\d+$/, '')
+  const limpio = sinDecimal.replace(/\D/g, '')
   // Si no empieza con 57 (Colombia) y tiene 10 dígitos, prepender 57
   const num = limpio.length === 10 ? `57${limpio}` : limpio
   return `https://wa.me/${num}?text=${encodeURIComponent(mensaje)}`
@@ -798,7 +801,8 @@ export default function CRM({ trabajos = [], clientes, vehiculos, notify, actual
                   </thead>
                   <tbody>
                     {filtrados.map(c => {
-                      const tel = c.telefono ? c.telefono.toString().replace(/\D/g, '') : ''
+                      const telSinDecimal = c.telefono ? c.telefono.toString().replace(/[.,]\d+$/, '') : ''
+                      const tel = telSinDecimal.replace(/\D/g, '')
                       const num = tel.length === 10 ? `57${tel}` : tel
                       const mensaje = aplicarTemplate(templates.generico || TEMPLATES_DEFAULT.generico, {
                         nombre: (c.nombre || '').split(' ')[0] || 'cliente',

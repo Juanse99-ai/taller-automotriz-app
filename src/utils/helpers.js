@@ -16,6 +16,22 @@ export function fmtCompact(n) {
   return fmt(n)
 }
 
+// Normaliza un telefono (quita ".0" final, espacios, decimales accidentales).
+// Casos reales en BD: "3135067577.0" cuando se guardo como number; "  315 ...  ";
+// "315.0" o "315,0". Devuelve solo los digitos del numero, preservando el "+" inicial si existe.
+export function fmtTelefono(t) {
+  if (t === null || t === undefined) return ''
+  let s = t.toString().trim()
+  if (!s) return ''
+  // Si vino como float "3135067577.0" o "3135067577.00" → recorta el .000…
+  s = s.replace(/[.,]\d+$/, '')
+  // Si quedan mas decimales raros (ej "3,135,067,577") los quitamos pero
+  // preservamos un + inicial para internacionales.
+  const plus = s.startsWith('+') ? '+' : ''
+  s = plus + s.replace(/[^\d]/g, '')
+  return s
+}
+
 // Formato fecha corta
 export function fmtDate(iso) {
   if (!iso) return '—'

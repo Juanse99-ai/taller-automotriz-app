@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { fmtDate, uid, hoyISO, normalizarDoc, normalizarNombre } from '../utils/helpers'
+import { fmtDate, uid, hoyISO, normalizarDoc, normalizarNombre, fmtTelefono } from '../utils/helpers'
 import { TECNICOS, ESTADOS } from '../utils/constants'
 import { MARCAS, getModelos } from '../utils/vehiculos'
 import { useClientes } from '../hooks/useClientes'
@@ -28,7 +28,7 @@ export default function Recepcion({ hook, vehiculosHook, clientesHook, notify })
   const seleccionarCliente = (c) => {
     set('cedula', normalizarDoc(c))
     set('cliente', normalizarNombre(c))
-    set('telefonoCliente', c.telefono || c.phone || '')
+    set('telefonoCliente', fmtTelefono(c.telefono || c.phone || ''))
     set('emailCliente', c.email || c.correo || '')
     set('clienteId', c.id || '')
     setResultados([])
