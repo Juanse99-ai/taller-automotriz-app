@@ -157,20 +157,36 @@ export default function CRM({ trabajos = [], clientes, vehiculos, notify }) {
         if (isNaN(fechaUltima)) continue
         const diasDesde = diasEntre(fechaUltima, HOY())
 
-        // Detectar tipo de aceite usado en la última visita
-        const tipoAceiteUsado = detectarTipoAceite(ultima.items || [])
+        // PRIORIDAD 1: campo manual `tipoAceite` en la OT (puesto por el técnico)
+        // PRIORIDAD 2: detección automática leyendo items facturados
+        let tipoAceiteUsado = null
+        if (ultima.tipoAceite === 'mineral') tipoAceiteUsado = 'aceite_mineral'
+        else if (ultima.tipoAceite === 'sintetico') tipoAceiteUsado = 'aceite_sintetico'
+        else if (ultima.tipoAceite === 'no_aplica') tipoAceiteUsado = 'no_aplica' // explícitamente no se cambió
+        else tipoAceiteUsado = detectarTipoAceite(ultima.items || []) // fallback automático
+
+        // Si la OT tiene proximaVisita manual y/o proximoKm, los usamos para sobrescribir el cálculo
+        const proximaVisitaManual = ultima.proximaVisita ? new Date(ultima.proximaVisita) : null
 
         // Para cada servicio, evaluar si está pendiente
         for (const srv of config.servicios) {
           // Lógica especial para aceites: solo aplica el que coincida con el último usado
           if (srv.key.startsWith('aceite_')) {
-            // Si en la última visita NO se cambió aceite, asumir mineral por defecto
+            // Si "no_aplica" → no mostrar recordatorio de aceite (no se cambió, no toca aún)
+            if (tipoAceiteUsado === 'no_aplica') continue
+            // Si no se sabe, asumir mineral por defecto
             const tipoEsperado = tipoAceiteUsado || 'aceite_mineral'
             if (srv.key !== tipoEsperado) continue
           }
 
-          const limiteDias = srv.meses * 30
-          const diasPendientes = diasDesde - limiteDias // si > 0, está vencido
+          // Si hay fecha manual de próxima visita Y este servicio es de aceite, usar esa fecha
+          let diasPendientes
+          if (srv.key.startsWith('aceite_') && proximaVisitaManual && !isNaN(proximaVisitaManual)) {
+            diasPendientes = diasEntre(proximaVisitaManual, HOY())
+          } else {
+            const limiteDias = srv.meses * 30
+            diasPendientes = diasDesde - limiteDias // si > 0, está vencido
+          }
           // Mostrar si está vencido O si faltan menos de 30 días para vencer
           if (diasPendientes < -30) continue
 

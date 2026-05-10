@@ -736,6 +736,11 @@ function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [] }) {
     fecha: trabajo?.fecha ? trabajo.fecha.slice(0, 10) : hoyISO(),
     evidenciasIngreso: trabajo?.evidenciasIngreso || [],
     evidenciasEntrega: trabajo?.evidenciasEntrega || [],
+    // Próximo mantenimiento (opcional, para CRM)
+    tipoAceite: trabajo?.tipoAceite || '',  // '' | 'mineral' | 'sintetico' | 'no_aplica'
+    proximoKm: trabajo?.proximoKm || '',
+    proximaVisita: trabajo?.proximaVisita ? trabajo.proximaVisita.slice(0, 10) : '',
+    notasProximoMant: trabajo?.notasProximoMant || '',
   })
 
   const [items, setItems] = useState(trabajo?.items || [])
@@ -929,6 +934,36 @@ function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [] }) {
       fecha: new Date(form.fecha + 'T12:00:00').toISOString(),
       evidenciasIngreso: form.evidenciasIngreso,
       evidenciasEntrega: form.evidenciasEntrega,
+      // Próximo mantenimiento (CRM)
+      tipoAceite: form.tipoAceite || null,
+      proximoKm: form.proximoKm ? parseInt(form.proximoKm) : null,
+      proximaVisita: form.proximaVisita ? new Date(form.proximaVisita + 'T12:00:00').toISOString() : null,
+      notasProximoMant: form.notasProximoMant || '',
+    })
+  }
+
+  // Auto-calcular próximo km y fecha cuando cambia el tipo de aceite
+  const setTipoAceite = (tipo) => {
+    setForm(f => {
+      const kmActual = parseInt(f.kilometraje) || 0
+      let proximoKm = f.proximoKm
+      let proximaVisita = f.proximaVisita
+      if (tipo === 'mineral' && kmActual > 0) {
+        proximoKm = kmActual + 5000
+      } else if (tipo === 'sintetico' && kmActual > 0) {
+        proximoKm = kmActual + 10000
+      }
+      // Calcular fecha estimada
+      if (tipo === 'mineral') {
+        const d = new Date()
+        d.setMonth(d.getMonth() + 4)
+        proximaVisita = d.toISOString().slice(0, 10)
+      } else if (tipo === 'sintetico') {
+        const d = new Date()
+        d.setMonth(d.getMonth() + 6)
+        proximaVisita = d.toISOString().slice(0, 10)
+      }
+      return { ...f, tipoAceite: tipo, proximoKm: String(proximoKm || ''), proximaVisita }
     })
   }
 
@@ -1302,6 +1337,57 @@ function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [] }) {
               <span className="ot-stat"><span className="ot-stat__lbl">Subtotal</span><span className="ot-stat__val">{fmt(totales.subtotal)}</span></span>
               <span className="ot-stat"><span className="ot-stat__lbl">IVA</span><span className="ot-stat__val">{fmt(totales.iva)}</span></span>
               <span className="ot-stat ot-stat--big"><span className="ot-stat__lbl">Total</span><span className="ot-stat__val">{fmt(totales.total)}</span></span>
+            </div>
+          </div>
+        </div>
+
+        {/* PROXIMO MANTENIMIENTO (opcional, alimenta CRM) */}
+        <div className="card">
+          <div className="card__h">
+            <h3>Próximo mantenimiento <span style={{ fontSize: 11, color: 'var(--text-3)', fontWeight: 500, marginLeft: 6 }}>(opcional · alimenta CRM)</span></h3>
+          </div>
+          <div className="card__b" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(200px,1fr))', gap: 14 }}>
+            <div className="field" style={{ gridColumn: '1 / -1' }}>
+              <label>Tipo de aceite usado en este servicio</label>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                {[
+                  ['', 'Sin especificar'],
+                  ['mineral', 'Mineral / Semisintético (5,000 km)'],
+                  ['sintetico', 'Full sintético (10,000 km)'],
+                  ['no_aplica', 'No se cambió aceite'],
+                ].map(([val, lbl]) => (
+                  <label key={val || 'none'} style={{
+                    flex: '1 1 200px',
+                    display: 'flex', alignItems: 'center', gap: 8, padding: '9px 12px',
+                    border: `1.5px solid ${form.tipoAceite === val ? 'var(--blue-600)' : 'var(--border)'}`,
+                    background: form.tipoAceite === val ? 'var(--blue-50,#eff6ff)' : 'var(--bg-raised)',
+                    borderRadius: 8, cursor: 'pointer', fontSize: 12.5, fontWeight: 600,
+                  }}>
+                    <input type="radio" name="tipoAceite" value={val} checked={form.tipoAceite === val}
+                      onChange={() => setTipoAceite(val)} style={{ margin: 0 }} />
+                    {lbl}
+                  </label>
+                ))}
+              </div>
+              <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 6 }}>
+                Si no eliges nada, el CRM detecta el tipo automáticamente leyendo los items facturados.
+              </div>
+            </div>
+            <div className="field">
+              <label>Próximo cambio (km)</label>
+              <input className="input" type="number" value={form.proximoKm}
+                onChange={e => set('proximoKm', e.target.value)}
+                placeholder={form.kilometraje ? `Sugerido: ${(parseInt(form.kilometraje) || 0) + 5000}` : 'Ej: 95000'} />
+            </div>
+            <div className="field">
+              <label>Próxima visita estimada</label>
+              <input className="input" type="date" value={form.proximaVisita} onChange={e => set('proximaVisita', e.target.value)} />
+            </div>
+            <div className="field" style={{ gridColumn: '1 / -1' }}>
+              <label>Notas para el próximo servicio (opcional)</label>
+              <input className="input" value={form.notasProximoMant}
+                onChange={e => set('notasProximoMant', e.target.value)}
+                placeholder="Ej: revisar pastillas, alineación pendiente..." />
             </div>
           </div>
         </div>
