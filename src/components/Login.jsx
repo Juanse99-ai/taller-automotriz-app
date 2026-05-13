@@ -47,19 +47,23 @@ export default function Login({ onLogin }) {
       overflow: 'hidden',
       backgroundColor: '#0a1326',
     }}>
-      {/* Fondo: imagen del taller a pantalla completa */}
+      {/* Fondo: imagen del taller a pantalla completa con blur cinematografico */}
       <div aria-hidden="true" style={{
-        position: 'absolute', inset: 0,
+        position: 'absolute',
+        // se extiende un poco fuera del viewport para que el blur no muestre bordes
+        top: -40, right: -40, bottom: -40, left: -40,
         backgroundImage: 'url(/taller-fachada.jpg)',
         backgroundSize: 'cover',
         backgroundPosition: 'center',
-        filter: 'saturate(1.05)',
+        filter: 'blur(14px) saturate(1.15) brightness(0.85)',
+        WebkitFilter: 'blur(14px) saturate(1.15) brightness(0.85)',
+        transform: 'scale(1.08)',
         zIndex: 0,
       }} />
       {/* Overlay oscuro con gradiente */}
       <div aria-hidden="true" style={{
         position: 'absolute', inset: 0,
-        background: 'linear-gradient(135deg, rgba(10,19,38,.78) 0%, rgba(15,26,52,.55) 50%, rgba(10,19,38,.78) 100%)',
+        background: 'linear-gradient(135deg, rgba(10,19,38,.72) 0%, rgba(15,26,52,.48) 50%, rgba(10,19,38,.72) 100%)',
         zIndex: 1,
       }} />
       {/* Patron de puntos */}
