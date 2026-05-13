@@ -4,6 +4,11 @@
       "command": "node",
       "args": ["/Users/juansecp12/Documents/Proyecto App gestion taller GitHub/mcp-taller/index.js"],
       "env": {}
+    },
+    "cuentti-multias": {
+      "command": "node",
+      "args": ["/Users/juansecp12/Documents/Proyecto App gestion taller GitHub/mcp-cuentti/index.js"],
+      "env": {}
     }
   }
 }
