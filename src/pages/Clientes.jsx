@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from 'react'
+import Fuse from 'fuse.js'
 import { fmtDate, fmtTelefono } from '../utils/helpers'
 import { TIPOS_IDENTIFICACION, TIPOS_PERSONA, REGIMENES, buscarClientePorCedula } from '../services/cuentti'
 
@@ -58,9 +59,48 @@ export default function Clientes({ clientes, vehiculos, notify }) {
       : <span style={{ color: 'var(--blue-600)', fontSize: 10, marginLeft: 4 }}>▼</span>
   }
 
-  // FILTRO + DEDUPE + SCORING DE RELEVANCIA
-  // - Dedupe por cedula (evita duplicados que vienen de merge defectuoso)
-  // - Scoring: palabra completa al inicio > prefijo de palabra > substring > coincidencia en cedula
+  // Lista deduplicada (por cedula) con campos pre-normalizados — base para busqueda
+  const dedup = useMemo(() => {
+    const seen = new Set()
+    const out = []
+    for (const c of clientesTable) {
+      const ced = _normCedula(c.cedula || '')
+      if (!ced) continue
+      if (seen.has(ced)) continue
+      seen.add(ced)
+      out.push({
+        ...c,
+        _nombreNorm: _normNombre(c.nombre || ''),
+        _cedulaNorm: ced,
+      })
+    }
+    return out
+  }, [clientesTable])
+
+  // Indice Fuse.js para busqueda fuzzy (tolera errores de tipeo, transposiciones, etc.)
+  // Best practices:
+  // - useExtendedSearch: permite operadores ('exact, !not, ^prefix, AND con espacio)
+  // - keys con pesos (nombre vale mas que cedula)
+  // - ignoreLocation: la posicion del match en el string no importa
+  // - threshold bajo (0.3) para evitar falsos positivos
+  const fuse = useMemo(() => new Fuse(dedup, {
+    keys: [
+      { name: '_nombreNorm', weight: 0.7 },
+      { name: '_cedulaNorm', weight: 0.3 },
+    ],
+    threshold: 0.3,
+    distance: 100,
+    ignoreLocation: true,
+    minMatchCharLength: 2,
+    includeScore: true,
+    useExtendedSearch: true,
+  }), [dedup])
+
+  // FILTRO PRINCIPAL — estrategia robusta:
+  // 1. AND-tokens: cada palabra de la busqueda debe aparecer como substring en
+  //    nombre+cedula combinados. Garantiza coincidencias predecibles 100% correctas
+  //    para busquedas tipo "juan sebastian cervantes".
+  // 2. Si AND-tokens no devuelve resultados, fallback a Fuse.js fuzzy (tolera typos).
   const clientesFiltrados = useMemo(() => {
     const termRaw = busqueda.trim()
 
@@ -82,70 +122,62 @@ export default function Clientes({ clientes, vehiculos, notify }) {
       return 0
     }
 
-    // Dedupe global por cedula (mantiene el primero que aparece, que generalmente
-    // es el de Supabase y tiene mas datos que el cache local)
-    const seen = new Set()
-    const dedup = []
-    for (const c of clientesTable) {
-      const ced = _normCedula(c.cedula || '')
-      if (!ced) continue
-      if (seen.has(ced)) continue
-      seen.add(ced)
-      dedup.push(c)
-    }
-
-    // Sin búsqueda → lista completa deduplicada (con sort opcional)
+    // Sin búsqueda → lista completa (con sort opcional por columna)
     if (!termRaw) {
       return sortBy ? [...dedup].sort(cmp) : dedup
     }
 
-    // Normalizar termino: sin acentos, lowercase
     const termNom = _normNombre(termRaw)
+    const tokens = termNom.split(/\s+/).filter(Boolean)
     const termCed = _normCedula(termRaw)
 
-    // Score helpers
-    // 100: nombre empieza con el termino (ej "PRIETO" en "PRIETO PEREZ")
-    // 80: termino es palabra completa en el nombre (ej "PRIETO" en "JOSE PRIETO PEREZ")
-    // 60: termino es prefijo de alguna palabra (ej "PRI" en "PRIMERO LOPEZ")
-    // 40: termino aparece como substring (ej "RIET" en "PRIETO")
-    // 30: match en cedula
+    // PASO 1: AND-tokens determinista
+    // Cada token debe aparecer en nombre O cedula. Multi-palabra siempre funciona.
     const scored = []
     for (const c of dedup) {
-      const nomC = _normNombre(c.nombre || '')
-      const cedC = _normCedula(c.cedula || '')
-      let score = 0
+      const nomC = c._nombreNorm
+      const cedC = c._cedulaNorm
 
+      const allMatch = tokens.every(tok => nomC.includes(tok) || cedC.includes(tok))
+      if (!allMatch) continue
+
+      // Score para ordenar relevancia:
+      // 100: nombre empieza con el termino completo
+      //  80: termino aparece como palabra completa
+      //  60: alguna palabra del nombre empieza con primer token
+      //  40: solo substring
+      //  30: match solo por cedula
+      let score = 40
       if (termNom && nomC) {
         if (nomC.startsWith(termNom + ' ') || nomC === termNom) score = 100
         else if (nomC.includes(' ' + termNom + ' ') || nomC.endsWith(' ' + termNom)) score = 80
         else {
-          // Prefijo de palabra: alguna palabra del nombre empieza con el termino
           const palabras = nomC.split(/\s+/)
-          if (palabras.some(w => w.startsWith(termNom))) score = 60
-          else if (nomC.includes(termNom)) score = 40
+          if (tokens[0] && palabras.some(w => w.startsWith(tokens[0]))) score = 60
         }
       }
+      if (!nomC && termCed.length >= 2 && cedC.includes(termCed)) score = 30
 
-      // Cedula match (solo si parece cedula — al menos 2 chars)
-      if (score === 0 && termCed.length >= 2 && cedC.includes(termCed)) {
-        score = 30
-      }
-
-      if (score > 0) scored.push({ c, score })
+      scored.push({ c, score })
     }
 
-    // Ordenar por score desc; tie-break por nombre alfabetico
-    scored.sort((a, b) => {
-      if (b.score !== a.score) return b.score - a.score
-      const an = _normNombre(a.c.nombre)
-      const bn = _normNombre(b.c.nombre)
-      return an < bn ? -1 : an > bn ? 1 : 0
-    })
+    // PASO 2: si no hay matches exactos, usar Fuse.js fuzzy como fallback
+    // (tolera "perez" cuando el cliente es "péréz", "jaun" cuando es "juan", etc.)
+    let list
+    if (scored.length === 0) {
+      const fuseResults = fuse.search(termNom).slice(0, 50)
+      list = fuseResults.map(r => r.item)
+    } else {
+      scored.sort((a, b) => {
+        if (b.score !== a.score) return b.score - a.score
+        return a.c._nombreNorm < b.c._nombreNorm ? -1 : a.c._nombreNorm > b.c._nombreNorm ? 1 : 0
+      })
+      list = scored.map(x => x.c)
+    }
 
-    let list = scored.map(x => x.c)
     if (sortBy) list = [...list].sort(cmp)
     return list
-  }, [clientesTable, busqueda, sortBy, sortDir])
+  }, [dedup, fuse, busqueda, sortBy, sortDir])
 
   // Auto-buscar en Cuentti cuando no hay resultados locales y el termino parece cedula
   useEffect(() => {
