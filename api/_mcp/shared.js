@@ -47,20 +47,25 @@ export async function handleMcp(req, res, server) {
 
   if (req.method === 'OPTIONS') { res.status(204).end(); return }
 
-  // GET = sin SSE en este servidor stateless. Responde 405.
+  // Probe sin auth: respondemos 401 con WWW-Authenticate apuntando a OAuth,
+  // para que claude.ai inicie el flujo de descubrimiento.
+  if (!authOk(req)) {
+    // Header de descubrimiento OAuth 2.0 Protected Resource (RFC 9728).
+    // claude.ai lo lee y arranca el flujo OAuth contra /.well-known/oauth-protected-resource.
+    const proto = (req.headers['x-forwarded-proto'] || 'https').toString().split(',')[0]
+    const host = (req.headers['x-forwarded-host'] || req.headers['host'] || '').toString().split(',')[0]
+    const resourceMeta = `${proto}://${host}/.well-known/oauth-protected-resource`
+    res.setHeader('WWW-Authenticate', `Bearer realm="mcp", resource_metadata="${resourceMeta}"`)
+    res.status(401).json({ error: 'Unauthorized. Use OAuth or send Authorization: Bearer <MCP_TOKEN>' })
+    return
+  }
+
   if (req.method === 'GET') {
     res.status(405).json({ error: 'Method not allowed. Use POST with JSON-RPC payload.' })
     return
   }
-
   if (req.method !== 'POST') {
     res.status(405).json({ error: 'Method not allowed' })
-    return
-  }
-
-  if (!authOk(req)) {
-    res.setHeader('WWW-Authenticate', 'Bearer realm="mcp"')
-    res.status(401).json({ error: 'Unauthorized. Send Authorization: Bearer <MCP_TOKEN>' })
     return
   }
 
