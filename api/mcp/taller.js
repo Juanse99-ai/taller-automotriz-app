@@ -3,12 +3,13 @@
 //
 // Variables de entorno requeridas en Vercel:
 //   MCP_TOKEN          - Bearer token para autenticar a claude.ai
-//   SUPABASE_URL       - URL del proyecto Supabase
-//   SUPABASE_KEY       - Anon key (o service role) del proyecto
+//   MCP_SUPABASE_URL   - URL del proyecto Supabase del taller (con prefijo MCP_
+//                        para evitar conflicto con la integracion de Supabase en Vercel)
+//   SUPABASE_KEY       - Anon key del proyecto Supabase del taller
 
 import { handleMcp } from '../_mcp/shared.js'
 
-const SUPABASE_URL = process.env.SUPABASE_URL || ''
+const SUPABASE_URL = process.env.MCP_SUPABASE_URL || ''
 const SUPABASE_KEY = process.env.SUPABASE_KEY || ''
 
 const TABLES = [
