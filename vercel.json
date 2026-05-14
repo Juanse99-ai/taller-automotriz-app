@@ -1,7 +1,9 @@
 {
   "rewrites": [
     { "source": "/api/cuentti", "destination": "/api/cuentti.js" },
-    { "source": "/((?!api|assets|fonts|.*\\..*).*)", "destination": "/index.html" }
+    { "source": "/mcp/cuentti", "destination": "/api/mcp/cuentti" },
+    { "source": "/mcp/taller", "destination": "/api/mcp/taller" },
+    { "source": "/((?!api|mcp|assets|fonts|.*\\..*).*)", "destination": "/index.html" }
   ],
   "headers": [
     {
