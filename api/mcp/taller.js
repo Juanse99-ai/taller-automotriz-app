@@ -43,6 +43,40 @@ function fmtFecha(iso) {
   return new Date(iso).toLocaleDateString('es-CO', { day: 'numeric', month: 'short', year: 'numeric' })
 }
 
+// ID unico — mismo formato que la app (src/utils/helpers.js)
+function uid() {
+  return Date.now().toString(36) + Math.random().toString(36).slice(2, 7)
+}
+
+// Calcula subtotal/IVA/total de una lista de items. El precio de cada item
+// INCLUYE IVA (misma convencion que Cotizaciones.jsx y buildFacturaPayload).
+function calcularTotales(items) {
+  let subtotal = 0, iva = 0, total = 0
+  const norm = (items || []).map(i => {
+    const precio = parseFloat(i.precio) || 0
+    const cant = parseInt(i.cantidad, 10) || 1
+    const ivaPct = parseFloat(i.iva ?? 19) || 0
+    const lineaTotal = precio * cant
+    if (ivaPct > 0) { const base = lineaTotal / (1 + ivaPct / 100); subtotal += base; iva += lineaTotal - base }
+    else { subtotal += lineaTotal }
+    total += lineaTotal
+    return { id: i.id || uid(), nombre: i.nombre || '', precio, cantidad: cant, iva: ivaPct, sku: i.sku || i.codigo || '', esServicio: !!i.esServicio }
+  })
+  return { items: norm, subtotal: Math.round(subtotal), iva: Math.round(iva), total: Math.round(total) }
+}
+
+// Siguiente codigo OT segun el maximo existente en Supabase (fuente de verdad
+// multi-dispositivo). La app usa un contador local; aqui derivamos del max real.
+async function nextOtCodigo() {
+  const rows = await supabase('trabajos', { query: 'select=ot_codigo&limit=2000' })
+  let max = 0
+  for (const r of rows) {
+    const m = String(r.ot_codigo || '').match(/OT-(\d+)/i)
+    if (m) { const n = parseInt(m[1], 10); if (n > max) max = n }
+  }
+  return `OT-${String(max + 1).padStart(4, '0')}`
+}
+
 const tools = [
   {
     name: 'dashboard',
@@ -262,6 +296,185 @@ const tools = [
       if (filtro) query += `&${filtro}`
       const data = await supabase(tabla, { query })
       return `## ${tabla} (${data.length} registros)\n\n\`\`\`json\n${JSON.stringify(data, null, 2).slice(0, 8000)}\n\`\`\``
+    },
+  },
+  {
+    name: 'crear_cotizacion',
+    description: 'Crea una cotizacion nueva en el taller (Supabase). El precio de cada item INCLUYE IVA; el subtotal/IVA/total se calculan automaticamente. Por defecto hace dry-run (no guarda); pasa confirm:true para guardar de verdad.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        cliente: { type: 'string', description: 'Nombre del cliente' },
+        cedula: { type: 'string', default: '' },
+        telefono: { type: 'string', default: '' },
+        placa: { type: 'string', default: '' },
+        marca: { type: 'string', default: '' },
+        modelo: { type: 'string', default: '' },
+        ano: { type: 'integer' },
+        cilindraje: { type: 'string', default: '' },
+        items: {
+          type: 'array',
+          description: 'Items a cotizar. precio INCLUYE IVA; iva en porcentaje (ej 19).',
+          items: {
+            type: 'object',
+            properties: {
+              nombre: { type: 'string' },
+              precio: { type: 'number', description: 'Precio unitario con IVA incluido' },
+              cantidad: { type: 'number', default: 1 },
+              iva: { type: 'number', default: 19 },
+            },
+            required: ['nombre', 'precio'],
+          },
+        },
+        observaciones: { type: 'string', default: '' },
+        validezDias: { type: 'integer', default: 15 },
+        confirm: { type: 'boolean', description: 'true = guardar; false (default) = dry-run' },
+      },
+      required: ['cliente', 'items'],
+    },
+    handler: async ({ cliente, cedula = '', telefono = '', placa = '', marca = '', modelo = '',
+                     ano, cilindraje = '', items = [], observaciones = '', validezDias = 15, confirm = false }) => {
+      if (!cliente || !Array.isArray(items) || items.length === 0) return '❌ Se requiere cliente e items (al menos uno).'
+      const t = calcularTotales(items)
+      const id = `COT-${uid()}`
+      const fecha = new Date().toISOString()
+      const resumen = t.items.map((i, idx) => `  ${idx + 1}. ${i.nombre} x${i.cantidad} — ${fmtCOP(i.precio * i.cantidad)} (IVA ${i.iva}%)`).join('\n')
+
+      if (!confirm) {
+        return [
+          `## Dry-run: cotizacion (NO guardada)`,
+          `Pasa **confirm:true** para guardar.`, ``,
+          `**ID:** ${id}`,
+          `**Cliente:** ${cliente}${cedula ? ` (CC ${cedula})` : ''}`,
+          `**Vehiculo:** ${[placa, marca, modelo, ano].filter(Boolean).join(' ') || '—'}`,
+          ``, `### Items`, resumen, ``,
+          `Subtotal: ${fmtCOP(t.subtotal)} · IVA: ${fmtCOP(t.iva)} · **Total: ${fmtCOP(t.total)}**`,
+          `Validez: ${validezDias} dias`,
+        ].join('\n')
+      }
+
+      const row = {
+        id, fecha, cedula, cliente, telefono_cliente: telefono,
+        placa, marca, modelo, ano: ano || null, cilindraje,
+        items: JSON.stringify(t.items),
+        subtotal: t.subtotal, iva: t.iva, total: t.total,
+        observaciones, validez_dias: validezDias, estado: 'Pendiente',
+      }
+      await supabase('cotizaciones', { method: 'POST', body: row, upsert: true })
+      return [`## ✅ Cotizacion creada`, ``, `**${id}** — ${cliente}`, `**Total:** ${fmtCOP(t.total)}`, `Estado: Pendiente · Validez ${validezDias} dias`].join('\n')
+    },
+  },
+  {
+    name: 'actualizar_cotizacion',
+    description: 'Cambia el estado de una cotizacion (Pendiente, Aprobada, Rechazada, Facturada) y/o sus observaciones. Pasa confirm:true para aplicar.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: { type: 'string', description: 'ID de la cotizacion (COT-...)' },
+        estado: { type: 'string', enum: ['Pendiente', 'Aprobada', 'Rechazada', 'Facturada'] },
+        observaciones: { type: 'string' },
+        confirm: { type: 'boolean', description: 'true = aplicar; false (default) = dry-run' },
+      },
+      required: ['id'],
+    },
+    handler: async ({ id, estado, observaciones, confirm = false }) => {
+      const found = await supabase('cotizaciones', { query: `select=*&id=eq.${encodeURIComponent(id)}` })
+      const cot = found[0]
+      if (!cot) return `❌ No existe la cotizacion "${id}".`
+      const cambios = {}
+      if (estado) cambios.estado = estado
+      if (observaciones !== undefined) cambios.observaciones = observaciones
+      if (Object.keys(cambios).length === 0) return '❌ Nada que actualizar (pasa estado u observaciones).'
+      if (!confirm) {
+        return [
+          `## Dry-run: actualizar ${id}`,
+          estado ? `Estado: **${cot.estado}** → **${estado}**` : `Estado: ${cot.estado} (sin cambio)`,
+          observaciones !== undefined ? `Observaciones → ${observaciones}` : '',
+          ``, `Pasa **confirm:true** para aplicar.`,
+        ].filter(Boolean).join('\n')
+      }
+      await supabase('cotizaciones', { method: 'PATCH', query: `id=eq.${encodeURIComponent(id)}`, body: cambios })
+      return `## ✅ Cotizacion ${id} actualizada\n${estado ? `Estado: ${estado}` : ''}`.trim()
+    },
+  },
+  {
+    name: 'crear_trabajo',
+    description: 'Crea una orden de trabajo (OT) en el taller. Puede crearse desde cero o a partir de una cotizacion existente (pasa desdeCotizacion con su ID COT-...). Genera el codigo OT automaticamente. El precio de cada item INCLUYE IVA. Por defecto dry-run; confirm:true para guardar. Si viene de una cotizacion, la marca como Aprobada.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        desdeCotizacion: { type: 'string', description: 'ID de cotizacion (COT-...) para copiar cliente, vehiculo e items.' },
+        cliente: { type: 'string' },
+        cedula: { type: 'string', default: '' },
+        telefono: { type: 'string', default: '' },
+        placa: { type: 'string', default: '' },
+        marca: { type: 'string', default: '' },
+        modelo: { type: 'string', default: '' },
+        ano: { type: 'integer' },
+        kilometraje: { type: 'string', default: '' },
+        items: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: { nombre: { type: 'string' }, precio: { type: 'number' }, cantidad: { type: 'number' }, iva: { type: 'number' } },
+            required: ['nombre', 'precio'],
+          },
+        },
+        estado: { type: 'string', default: 'Pendiente' },
+        observaciones: { type: 'string', default: '' },
+        confirm: { type: 'boolean', description: 'true = guardar; false (default) = dry-run' },
+      },
+    },
+    handler: async (a) => {
+      let { desdeCotizacion, cliente, cedula = '', telefono = '', placa = '', marca = '', modelo = '',
+            ano, kilometraje = '', items = [], estado = 'Pendiente', observaciones = '', confirm = false } = a
+      let origenCot = null
+      if (desdeCotizacion) {
+        const found = await supabase('cotizaciones', { query: `select=*&id=eq.${encodeURIComponent(desdeCotizacion)}` })
+        const cot = found[0]
+        if (!cot) return `❌ No existe la cotizacion "${desdeCotizacion}".`
+        const cotItems = typeof cot.items === 'string' ? JSON.parse(cot.items) : (cot.items || [])
+        cliente = cliente || cot.cliente; cedula = cedula || cot.cedula; telefono = telefono || cot.telefono_cliente
+        placa = placa || cot.placa; marca = marca || cot.marca; modelo = modelo || cot.modelo; ano = ano || cot.ano
+        if (!items || items.length === 0) items = cotItems
+        origenCot = desdeCotizacion
+      }
+      if (!cliente) return '❌ Se requiere cliente (o desdeCotizacion).'
+      const t = calcularTotales(items)
+      const otCodigo = await nextOtCodigo()
+      const id = uid()
+      const fecha = new Date().toISOString()
+
+      if (!confirm) {
+        return [
+          `## Dry-run: OT ${otCodigo} (NO guardada)`,
+          `Pasa **confirm:true** para guardar.`, ``,
+          `**Cliente:** ${cliente}${cedula ? ` (CC ${cedula})` : ''}`,
+          `**Vehiculo:** ${[placa, marca, modelo, ano].filter(Boolean).join(' ') || '—'}`,
+          `**Items:** ${t.items.length} · **Total:** ${fmtCOP(t.total)}`,
+          `**Estado:** ${estado}`,
+          origenCot ? `**Origen:** cotizacion ${origenCot} (se marcara Aprobada)` : '',
+        ].filter(Boolean).join('\n')
+      }
+
+      const row = {
+        id, plate: placa || null, fecha,
+        cedula_cliente: cedula, cliente, telefono_cliente: telefono,
+        placa, marca, modelo, ano: ano || null, kilometraje: kilometraje || null,
+        estado, observaciones,
+        items: JSON.stringify(t.items),
+        subtotal_sin_iva: t.subtotal, total_iva: t.iva, total: t.total,
+        pagado: false, ot_codigo: otCodigo,
+      }
+      await supabase('trabajos', { method: 'POST', body: row, upsert: true })
+      if (origenCot) {
+        try { await supabase('cotizaciones', { method: 'PATCH', query: `id=eq.${encodeURIComponent(origenCot)}`, body: { estado: 'Aprobada' } }) } catch { /* no-fatal */ }
+      }
+      return [
+        `## ✅ OT creada: ${otCodigo}`, ``,
+        `**Cliente:** ${cliente}`, `**Total:** ${fmtCOP(t.total)}`, `**Estado:** ${estado}`,
+        origenCot ? `Cotizacion ${origenCot} marcada como Aprobada.` : '',
+      ].filter(Boolean).join('\n')
     },
   },
 ]
