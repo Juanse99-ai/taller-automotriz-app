@@ -87,8 +87,10 @@ Disparador: el usuario dice en Cowork *"ingresa las compras nuevas"*.
       ➕ nuevo.
 3. **Resumen y confirmación (dry-run)** — Claude muestra: qué entra automático, qué es dudoso,
    qué se crearía nuevo, cambios de costo y el total. El usuario confirma.
-4. **Registrar (confirm)** — crea productos nuevos aprobados, registra la compra en Cuentti
-   (endpoint del Milestone 0), suma inventario, actualiza costo.
+4. **Verificar duplicado + Registrar (confirm)** — antes de registrar, verifica que no exista ya
+   una compra con ese Nº de factura en Cuentti (si el endpoint lo permite — ver Milestone 0).
+   Luego crea los productos nuevos aprobados, registra la compra en Cuentti (endpoint del
+   Milestone 0), suma inventario y actualiza costo.
 5. **Writeback Notion** — marca la fila `Estado = Aceptado` y deja en `Observación` el id de
    transacción de Cuentti (anti-reproceso).
 
@@ -139,7 +141,8 @@ Tabla nueva `compras_equivalencias`:
 | fecha_creacion | timestamptz | |
 
 Índice por `(proveedor_nit, codigo_proveedor)`. RLS desactivado (igual que el resto del esquema
-del taller). Se expone vía el MCP del taller o el de Cuentti (a decidir en el plan).
+del taller). Se expone vía el **MCP de Cuentti** — los helpers de Supabase ya viven ahí
+(`api/mcp/cuentti.js`, `supabaseTaller()`), así que es el hogar de menor fricción.
 
 ## 9. Manejo de errores y casos borde
 
@@ -173,7 +176,11 @@ del taller). Se expone vía el MCP del taller o el de Cuentti (a decidir en el p
    UI de Cuentti al registrar una compra. Método: el usuario registra UNA compra manual con la
    pestaña Red del navegador abierta y copia la URL + el JSON del payload (igual que se hizo con
    ventas). Alternativa: capturar con el MCP de Chrome. Sin esto, `registrar_compra` no puede
-   completarse.
+   completarse. Al capturar, responder además: (a) ¿el endpoint afecta inventario **y** costo en
+   una sola llamada o requiere pasos separados (documento + ajuste de costo)?, y (b) ¿se puede
+   consultar una compra existente por Nº de factura, para el anti-duplicado del paso §5.4? **La
+   interfaz de `registrar_compra` no se congela hasta tener esta captura** — por eso esa
+   herramienta se construye DESPUÉS del Milestone 0, no en paralelo.
 
 ## 12. Fuera de alcance (YAGNI por ahora)
 
@@ -192,7 +199,8 @@ del taller). Se expone vía el MCP del taller o el de Cuentti (a decidir en el p
 
 ## 14. Preguntas abiertas
 
-- ¿La tabla de equivalencias se expone desde el MCP del taller o el de Cuentti? (decisión de plan)
-- ¿El endpoint de compra de Cuentti afecta inventario y costo en una sola llamada, o requiere
-  pasos separados (registrar documento + ajustar costo)? Se sabrá al capturar la red (Milestone 0).
-- ¿Categoría/impuesto por defecto al crear productos nuevos?
+- ¿Categoría e impuesto (IVA) por defecto al crear productos nuevos en Cuentti? (decisión menor de plan)
+
+> Resueltas tras la revisión de spec: la tabla de equivalencias va en el MCP de Cuentti (§8); la
+> atomicidad inventario+costo del endpoint y la consulta por Nº de factura se responden en el
+> Milestone 0 (§11.2).
