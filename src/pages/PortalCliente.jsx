@@ -4,6 +4,7 @@ import autoTable from 'jspdf-autotable'
 import { InspeccionDetalle } from './Inspecciones'
 import { ESTADOS, TECNICOS, TALLER } from '../utils/constants'
 import { fmtDate, fmt } from '../utils/helpers'
+import { drawHeader, drawSectionHeader, drawDataBlock, drawFooter, tableStylesItems, PDF_LAYOUT, PDF_COLORS, SEVERITY_HEAD } from '../utils/pdfTheme'
 
 const ESTADO_TRABAJO_DISPLAY = {
   [ESTADOS.PENDIENTE]: { label: 'Recibido', color: '#64748b', icon: '1', pct: 15 },
@@ -118,24 +119,7 @@ export default function PortalCliente() {
 
   const descargarPDF = (insp) => {
     const doc = new jsPDF()
-    doc.setFontSize(16)
-    doc.setFont(undefined, 'bold')
-    doc.text('Reporte de Inspeccion Vehicular', 14, 14)
-    doc.setFontSize(9)
-    doc.setFont(undefined, 'bold')
-    doc.text(TALLER.razonSocial || TALLER.nombre, 14, 20)
-    doc.setFont(undefined, 'normal')
-    doc.text(`NIT: ${TALLER.nit} · ${TALLER.direccion}`, 14, 24)
-    doc.text(`Cel: ${TALLER.celular} · ${TALLER.email}`, 14, 28)
-    doc.setFontSize(10)
-    doc.text(`Generado: ${new Date().toLocaleDateString('es-CO')}`, 14, 33)
-
-    doc.setFontSize(11)
-    doc.text(`Vehiculo: ${insp.vehiculo || insp.placa}`, 14, 42)
-    doc.text(`Placa: ${insp.placa}`, 14, 48)
-    doc.text(`Cliente: ${insp.cliente || '—'}`, 14, 54)
-    doc.text(`Tecnico: ${insp.tecnico || '—'}`, 120, 42)
-    doc.text(`Fecha: ${new Date(insp.fecha).toLocaleDateString('es-CO')}`, 120, 48)
+    const { MARGIN, CONTENT_W } = PDF_LAYOUT
 
     const items = insp.items || []
     const urgentes = items.filter(i => i.estado === 'urgente')
@@ -144,39 +128,111 @@ export default function PortalCliente() {
     const total = items.filter(i => i.estado !== 'no_aplica').length
     const pct = total > 0 ? Math.round((buenos.length / total) * 100) : 0
 
-    doc.setFontSize(14)
-    doc.text(`Estado general: ${pct}%`, 14, 64)
+    // Estado general → badge
+    let estado = 'good', estadoLbl = 'BUEN ESTADO'
+    if (urgentes.length > 0) { estado = 'red'; estadoLbl = 'REQUIERE ATENCIÓN' }
+    else if (sugeridos.length > 0) { estado = 'amber'; estadoLbl = 'CON OBSERVACIONES' }
+    else { estado = 'green'; estadoLbl = 'EN BUEN ESTADO' }
 
+    drawHeader(doc, {
+      docType: 'INSPECCIÓN VEHICULAR',
+      docNumber: (insp.placa || '').toUpperCase(),
+      badge: { label: estadoLbl, color: estado === 'red' ? 'red' : estado === 'amber' ? 'amber' : 'green' },
+      dateRows: [{ lbl: 'FECHA', val: fmtDate(insp.fecha) }],
+    })
+
+    let y = 47
+    y = drawSectionHeader(doc, 'Datos de la inspección', y)
+    y = drawDataBlock(doc, [
+      { label: 'Cliente', value: insp.cliente, bold: true },
+      { label: 'Vehículo', value: insp.vehiculo },
+      { label: 'Placa', value: (insp.placa || '').toUpperCase(), bold: true },
+      { label: 'Técnico', value: insp.tecnico },
+    ], y)
+    y += 4
+
+    // Card de "Estado general" — barra de salud visual
+    doc.setDrawColor(...PDF_COLORS.SLATE_300)
+    doc.setLineWidth(0.2)
+    doc.rect(MARGIN, y, CONTENT_W, 22)
+    doc.setFontSize(7)
+    doc.setFont(undefined, 'bold')
+    doc.setTextColor(...PDF_COLORS.SLATE_500)
+    doc.text('ESTADO GENERAL', MARGIN + 4, y + 5)
+    doc.setFontSize(24)
+    doc.setTextColor(pct >= 80 ? PDF_COLORS.GREEN_600[0] : pct >= 50 ? PDF_COLORS.AMBER_500[0] : PDF_COLORS.RED_600[0],
+                     pct >= 80 ? PDF_COLORS.GREEN_600[1] : pct >= 50 ? PDF_COLORS.AMBER_500[1] : PDF_COLORS.RED_600[1],
+                     pct >= 80 ? PDF_COLORS.GREEN_600[2] : pct >= 50 ? PDF_COLORS.AMBER_500[2] : PDF_COLORS.RED_600[2])
+    doc.text(`${pct}%`, MARGIN + 4, y + 17)
+
+    // Barra de progreso
+    const barX = MARGIN + 38
+    const barW = CONTENT_W - 42 - 60
+    const barY = y + 10
+    doc.setFillColor(...PDF_COLORS.SLATE_100)
+    doc.roundedRect(barX, barY, barW, 5, 1, 1, 'F')
+    doc.setFillColor(...(pct >= 80 ? PDF_COLORS.GREEN_600 : pct >= 50 ? PDF_COLORS.AMBER_500 : PDF_COLORS.RED_600))
+    doc.roundedRect(barX, barY, barW * (pct / 100), 5, 1, 1, 'F')
+
+    // Stats al lado derecho
+    const statsX = MARGIN + CONTENT_W - 56
+    doc.setFontSize(7)
+    doc.setTextColor(...PDF_COLORS.SLATE_500)
+    doc.setFont(undefined, 'bold')
+    doc.text('URGENTES', statsX, y + 5)
+    doc.text('SUGERIDOS', statsX, y + 11)
+    doc.text('BUENOS', statsX, y + 17)
+    doc.setFont(undefined, 'bold')
+    doc.setFontSize(9)
+    doc.setTextColor(...PDF_COLORS.RED_600);   doc.text(String(urgentes.length), statsX + 52, y + 5, { align: 'right' })
+    doc.setTextColor(...PDF_COLORS.AMBER_500); doc.text(String(sugeridos.length), statsX + 52, y + 11, { align: 'right' })
+    doc.setTextColor(...PDF_COLORS.GREEN_600); doc.text(String(buenos.length), statsX + 52, y + 17, { align: 'right' })
+
+    y += 28
+
+    // Tablas por categoría
     if (urgentes.length > 0) {
+      y = drawSectionHeader(doc, 'Atención urgente · reparar pronto', y)
       autoTable(doc, {
-        startY: 70,
-        head: [['REPARACION URGENTE', 'Observaciones']],
+        startY: y,
+        head: [['ITEM', 'OBSERVACIONES']],
         body: urgentes.map(i => [i.nombre, i.comentario || '—']),
-        headStyles: { fillColor: [220, 38, 38] },
-        styles: { fontSize: 9 },
+        ...tableStylesItems,
+        headStyles: { ...SEVERITY_HEAD.urgent, fontSize: 7.2, fontStyle: 'bold' },
+        columnStyles: { 0: { fontStyle: 'bold', cellWidth: 70 }, 1: { cellWidth: 'auto' } },
+        margin: { left: MARGIN, right: MARGIN },
       })
+      y = doc.lastAutoTable.finalY + 6
     }
 
     if (sugeridos.length > 0) {
+      y = drawSectionHeader(doc, 'Reparación sugerida · próximo servicio', y)
       autoTable(doc, {
-        startY: (doc.lastAutoTable?.finalY || 70) + 6,
-        head: [['REPARACION SUGERIDA', 'Observaciones']],
+        startY: y,
+        head: [['ITEM', 'OBSERVACIONES']],
         body: sugeridos.map(i => [i.nombre, i.comentario || '—']),
-        headStyles: { fillColor: [217, 119, 6] },
-        styles: { fontSize: 9 },
+        ...tableStylesItems,
+        headStyles: { ...SEVERITY_HEAD.warn, fontSize: 7.2, fontStyle: 'bold' },
+        columnStyles: { 0: { fontStyle: 'bold', cellWidth: 70 }, 1: { cellWidth: 'auto' } },
+        margin: { left: MARGIN, right: MARGIN },
       })
+      y = doc.lastAutoTable.finalY + 6
     }
 
     if (buenos.length > 0) {
+      y = drawSectionHeader(doc, 'En buen estado', y)
       autoTable(doc, {
-        startY: (doc.lastAutoTable?.finalY || 70) + 6,
-        head: [['BUEN ESTADO', 'Observaciones']],
+        startY: y,
+        head: [['ITEM', 'OBSERVACIONES']],
         body: buenos.map(i => [i.nombre, i.comentario || '—']),
-        headStyles: { fillColor: [22, 163, 74] },
-        styles: { fontSize: 9 },
+        ...tableStylesItems,
+        headStyles: { ...SEVERITY_HEAD.good, fontSize: 7.2, fontStyle: 'bold' },
+        columnStyles: { 0: { fontStyle: 'bold', cellWidth: 70 }, 1: { cellWidth: 'auto' } },
+        margin: { left: MARGIN, right: MARGIN },
       })
     }
 
+    drawFooter(doc, { page: 1, total: 1 })
     doc.save(`inspeccion_${insp.placa}_${insp.fecha?.slice(0, 10) || 'reporte'}.pdf`)
   }
 

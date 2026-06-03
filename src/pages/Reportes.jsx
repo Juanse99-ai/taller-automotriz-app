@@ -3,6 +3,7 @@ import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import { fmt, fmtDate } from '../utils/helpers'
 import { TECNICOS, COMISION, ESTADOS, TALLER } from '../utils/constants'
+import { drawHeader, drawSectionHeader, drawFooter, drawTotalsBox, tableStylesItems, tableStylesMuted, PDF_LAYOUT, PDF_COLORS } from '../utils/pdfTheme'
 
 export default function Reportes({ trabajos }) {
   const [rango, setRango] = useState(() => {
@@ -86,46 +87,105 @@ export default function Reportes({ trabajos }) {
 
   const exportarResumen = () => {
     const doc = new jsPDF()
-    doc.setFontSize(16)
-    doc.setFont(undefined, 'bold')
-    doc.text('Reporte de Taller', 14, 14)
-    doc.setFontSize(9)
-    doc.setFont(undefined, 'bold')
-    doc.text(TALLER.razonSocial || TALLER.nombre, 14, 20)
-    doc.setFont(undefined, 'normal')
-    doc.text(`NIT: ${TALLER.nit} · ${TALLER.direccion}`, 14, 24)
-    doc.text(`Cel: ${TALLER.celular} · ${TALLER.email}`, 14, 28)
-    doc.setFontSize(10)
-    doc.setFont(undefined, 'bold')
-    doc.text(`Periodo: ${rango.desde} a ${rango.hasta}`, 14, 35)
+    const { MARGIN, CONTENT_W } = PDF_LAYOUT
 
-    autoTable(doc, {
-      startY: 40,
-      head: [['Metrica', 'Valor']],
-      body: [
-        ['Total Trabajos', String(stats.total)],
-        ['Completados', String(stats.completados)],
-        ['Ingresos', fmt(stats.ingresos)],
-        ['Comisiones', fmt(stats.comisiones)],
-        ['Neto Taller', fmt(stats.ingresos - stats.comisiones)],
+    drawHeader(doc, {
+      docType: 'REPORTE DE OPERACIÓN',
+      docNumber: `${stats.total} OT`,
+      dateRows: [
+        { lbl: 'DESDE', val: fmtDate(rango.desde) },
+        { lbl: 'HASTA', val: fmtDate(rango.hasta) },
       ],
-      headStyles: { fillColor: [30, 41, 59] },
     })
 
+    // Resumen ejecutivo (totales en caja navy estilo factura)
+    let y = drawSectionHeader(doc, 'Resumen ejecutivo', 47)
+    y += 2
+
+    // Métricas como grid 2x2 + caja TOTAL al lado
+    const ingresos = stats.ingresos || 0
+    const comisiones = stats.comisiones || 0
+    const neto = ingresos - comisiones
+
+    // 2 columnas: izquierda métricas grid, derecha totals box
+    const leftW = 104
+    const rightX = MARGIN + leftW + 4
+    const rightW = CONTENT_W - leftW - 4
+
+    // ----- LEFT: 2x2 grid de métricas -----
+    const cellH = 18
+    const cellW = leftW / 2
+    const cells = [
+      { lbl: 'TOTAL TRABAJOS', val: String(stats.total), color: PDF_COLORS.NAVY },
+      { lbl: 'COMPLETADOS',    val: String(stats.completados), color: PDF_COLORS.GREEN_600 },
+      { lbl: 'INGRESOS',       val: fmt(ingresos), color: PDF_COLORS.NAVY },
+      { lbl: 'COMISIONES',     val: fmt(comisiones), color: PDF_COLORS.AMBER_500 },
+    ]
+    doc.setDrawColor(...PDF_COLORS.SLATE_300)
+    cells.forEach((c, i) => {
+      const cx = MARGIN + (i % 2) * cellW
+      const cy = y + Math.floor(i / 2) * cellH
+      doc.rect(cx, cy, cellW, cellH)
+      doc.setFontSize(7)
+      doc.setFont(undefined, 'bold')
+      doc.setTextColor(...PDF_COLORS.SLATE_500)
+      doc.text(c.lbl, cx + 4, cy + 5)
+      doc.setFontSize(14)
+      doc.setTextColor(...c.color)
+      doc.text(c.val, cx + 4, cy + 13)
+    })
+
+    // ----- RIGHT: caja con NETO TALLER (lo que importa)
+    doc.setFillColor(...PDF_COLORS.NAVY)
+    doc.rect(rightX, y, rightW, cellH * 2, 'F')
+    doc.setTextColor(...PDF_COLORS.AMBER)
+    doc.setFontSize(8)
+    doc.setFont(undefined, 'bold')
+    doc.text('NETO TALLER', rightX + 5, y + 8)
+    doc.setTextColor(...PDF_COLORS.WHITE)
+    doc.setFontSize(20)
+    doc.text(fmt(neto), rightX + rightW - 5, y + 22, { align: 'right' })
+    doc.setFontSize(7.5)
+    doc.setTextColor(255, 255, 255)
+    doc.setFont(undefined, 'normal')
+    doc.text(`del ${fmtDate(rango.desde)} al ${fmtDate(rango.hasta)}`, rightX + 5, y + cellH * 2 - 5)
+
+    y += cellH * 2 + 8
+
+    // ----- Productividad por técnico -----
+    y = drawSectionHeader(doc, 'Productividad por técnico', y) + 1
     autoTable(doc, {
-      head: [['Tecnico', 'Trabajos', 'Facturado']],
+      startY: y,
+      head: [['TÉCNICO', 'TRABAJOS', 'FACTURADO']],
       body: stats.porTecnico.map(t => [t.nombre, String(t.cantidad), fmt(t.facturado)]),
-      headStyles: { fillColor: [30, 41, 59] },
-      startY: doc.lastAutoTable.finalY + 8,
+      ...tableStylesItems,
+      columnStyles: {
+        0: { fontStyle: 'bold' },
+        1: { halign: 'center', cellWidth: 30 },
+        2: { halign: 'right', cellWidth: 40, fontStyle: 'bold' },
+      },
+      margin: { left: MARGIN, right: MARGIN },
     })
+    y = doc.lastAutoTable.finalY + 8
 
+    // ----- Distribución por estado -----
+    y = drawSectionHeader(doc, 'Distribución por estado', y) + 1
     autoTable(doc, {
-      head: [['Estado', 'Cantidad']],
-      body: stats.porEstado.filter(e => e.cantidad > 0).map(e => [e.estado, String(e.cantidad)]),
-      headStyles: { fillColor: [30, 41, 59] },
-      startY: doc.lastAutoTable.finalY + 8,
+      startY: y,
+      head: [['ESTADO', 'CANTIDAD', '%']],
+      body: stats.porEstado.filter(e => e.cantidad > 0).map(e => {
+        const pct = stats.total > 0 ? Math.round((e.cantidad / stats.total) * 100) : 0
+        return [e.estado, String(e.cantidad), `${pct}%`]
+      }),
+      ...tableStylesMuted,
+      columnStyles: {
+        1: { halign: 'center', cellWidth: 30 },
+        2: { halign: 'right', cellWidth: 24, fontStyle: 'bold' },
+      },
+      margin: { left: MARGIN, right: MARGIN },
     })
 
+    drawFooter(doc, { page: 1, total: 1 })
     doc.save(`reporte_${rango.desde}_${rango.hasta}.pdf`)
   }
 

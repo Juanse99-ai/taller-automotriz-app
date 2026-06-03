@@ -4,6 +4,7 @@ import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import { fmt, fmtDate, uid } from '../utils/helpers'
 import { TECNICOS, COMISION, ESTADOS, TALLER } from '../utils/constants'
+import { drawHeader, drawSectionHeader, drawDataBlock, drawTotalsBox, drawSignatures, drawFooter, tableStylesItems, tableStylesMuted, PDF_LAYOUT, PDF_COLORS } from '../utils/pdfTheme'
 
 // Obtener base de mano de obra SIN IVA (solo servicios)
 const getManoObra = (t) => {
@@ -200,23 +201,25 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
   const exportPdfPago = async () => {
     if (cantSeleccionados === 0) { notify('Selecciona trabajos primero', 'error'); return }
     const doc = new jsPDF()
-    const logoData = await loadLogo()
-    if (logoData && typeof logoData === 'string' && logoData.startsWith('data:image')) {
-      try { doc.addImage(logoData, 'PNG', 14, 10, 28, 18) } catch {}
-    }
-    const titleX = logoData ? 44 : 14
-    doc.setFontSize(14)
-    doc.setFont(undefined, 'bold')
-    doc.text(`Estado de Cuenta — ${tecData.tecnico.nombre}`, titleX, 14)
-    doc.setFontSize(9)
-    doc.text(TALLER.razonSocial || TALLER.nombre, titleX, 20)
-    doc.setFont(undefined, 'normal')
-    doc.text(`NIT: ${TALLER.nit} · ${TALLER.direccion}`, titleX, 24)
-    doc.text(`Cel: ${TALLER.celular} · ${TALLER.email}`, titleX, 28)
-    doc.setFontSize(10)
-    doc.setFont(undefined, 'bold')
-    doc.text(`Fecha: ${fmtDate(new Date().toISOString())}`, titleX, 34)
-    doc.setFont(undefined, 'normal')
+    const { MARGIN } = PDF_LAYOUT
+
+    drawHeader(doc, {
+      docType: 'LIQUIDACIÓN DE PAGO',
+      docNumber: tecData.tecnico.nombre.split(' ').slice(0, 2).join(' '),
+      badge: { label: cantSeleccionados === 1 ? '1 trabajo' : `${cantSeleccionados} trabajos`, color: 'neutral' },
+      dateRows: [{ lbl: 'FECHA', val: fmtDate(new Date().toISOString()) }],
+    })
+
+    let y = 47
+
+    // Datos del técnico
+    y = drawSectionHeader(doc, 'Técnico', y)
+    y = drawDataBlock(doc, [
+      { label: 'Nombre completo', value: tecData.tecnico.nombre, bold: true },
+      { label: 'Teléfono', value: tecData.tecnico.telefono || '—' },
+      { label: 'Trabajos', value: String(cantSeleccionados), bold: true },
+    ], y)
+    y += 4
 
     // Trabajos seleccionados
     const rows = []
@@ -226,130 +229,160 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
       const mo = getManoObra(t)
       const esComp = compartidos[t.id] === true
       const com = esComp ? (mo * COMISION.TOTAL) / 2 : mo * COMISION.TOTAL
-      rows.push([fmtDate(t.fecha), t.placa, t.cliente || '—', esComp ? 'Si' : 'No', fmt(mo), fmt(Math.round(com))])
+      rows.push([fmtDate(t.fecha), (t.placa || '').toUpperCase(), t.cliente || '—', esComp ? 'Sí (50%)' : 'No', fmt(mo), fmt(Math.round(com))])
     })
 
+    y = drawSectionHeader(doc, 'Trabajos liquidados', y)
     autoTable(doc, {
-      startY: 40,
-      head: [['Fecha', 'Placa', 'Cliente', 'Compartido', 'M.O. (sin IVA)', 'Comision']],
+      startY: y,
+      head: [['FECHA', 'PLACA', 'CLIENTE', 'COMP.', 'M.O.', 'COMISIÓN']],
       body: rows,
-      styles: { fontSize: 8 },
+      ...tableStylesItems,
+      columnStyles: {
+        0: { cellWidth: 22 },
+        1: { cellWidth: 22, fontStyle: 'bold' },
+        2: { cellWidth: 'auto' },
+        3: { halign: 'center', cellWidth: 18 },
+        4: { halign: 'right', cellWidth: 28 },
+        5: { halign: 'right', cellWidth: 30, fontStyle: 'bold' },
+      },
+      margin: { left: MARGIN, right: MARGIN },
     })
+    y = doc.lastAutoTable.finalY + 6
 
-    // Movimientos
+    // Movimientos (adelantos / cargos)
     if (tecMovs.length > 0) {
+      y = drawSectionHeader(doc, 'Adelantos · cargos · descuentos', y)
       autoTable(doc, {
-        head: [['Fecha', 'Tipo', 'Nota', 'Monto']],
+        startY: y,
+        head: [['FECHA', 'TIPO', 'NOTA', 'MONTO']],
         body: tecMovs.map(m => [fmtDate(m.fecha), m.tipo, m.nota || '—', fmt(m.monto)]),
-        styles: { fontSize: 8 },
-        startY: doc.lastAutoTable.finalY + 6,
+        ...tableStylesMuted,
+        columnStyles: {
+          0: { cellWidth: 22 },
+          1: { cellWidth: 28, fontStyle: 'bold' },
+          2: { cellWidth: 'auto' },
+          3: { halign: 'right', cellWidth: 30, fontStyle: 'bold' },
+        },
+        margin: { left: MARGIN, right: MARGIN },
       })
+      y = doc.lastAutoTable.finalY + 6
     }
 
-    // Totales
-    autoTable(doc, {
-      body: [
-        ['', '', '', '', 'Comision bruta:', fmt(totalSeleccion.comision)],
-        ['', '', '', '', 'Cargos/Adelantos:', fmt(totalSeleccion.cargos)],
-        ['', '', '', '', 'NETO A PAGAR:', fmt(totalSeleccion.neto)],
+    // Caja de totales (manoObra, comisión, cargos, NETO A PAGAR)
+    y = drawTotalsBox(doc, {
+      y, x: 122, w: 74,
+      rows: [
+        { lbl: 'Comisión bruta', val: fmt(totalSeleccion.comision) },
+        { lbl: `(${COMISION.TOTAL * 100}% del M.O.)`, val: '' },
+        { lbl: 'Cargos / adelantos', val: `− ${fmt(totalSeleccion.cargos)}` },
       ],
-      styles: { fontSize: 10, cellPadding: 2 },
-      columnStyles: { 4: { fontStyle: 'bold', halign: 'right' }, 5: { fontStyle: 'bold', halign: 'right' } },
-      startY: doc.lastAutoTable.finalY + 4,
+      finalLabel: 'NETO A PAGAR',
+      finalValue: fmt(totalSeleccion.neto),
     })
+    y += 18
 
     // Firmas
-    const firmaY = doc.lastAutoTable.finalY + 25
-    doc.setDrawColor(100)
-    doc.line(20, firmaY, 85, firmaY)
-    doc.line(120, firmaY, 185, firmaY)
-    doc.setFontSize(9)
-    doc.text('Firma del Tecnico', 38, firmaY + 6)
-    doc.text('Autorizado por', 140, firmaY + 6)
+    const firmaY = Math.max(y, 252)
+    drawSignatures(doc, {
+      y: firmaY,
+      blocks: [
+        { label: 'Firma del técnico', sub: 'Nombre, documento, fecha' },
+        { label: 'Autorizado por', sub: 'Nombre, cargo, fecha' },
+      ],
+    })
 
-    doc.save(`pago_${tecData.tecnico.nombre}_${new Date().toISOString().slice(0, 10)}.pdf`)
+    drawFooter(doc, { page: 1, total: 1 })
+    doc.save(`liquidacion_${tecData.tecnico.nombre.replace(/\s+/g, '_')}_${new Date().toISOString().slice(0, 10)}.pdf`)
     notify('PDF de pago exportado', 'success')
   }
 
   const exportPdfHistorial = async (reg) => {
     const doc = new jsPDF()
-    const logoData = await loadLogo()
-    if (logoData && typeof logoData === 'string' && logoData.startsWith('data:image')) {
-      try { doc.addImage(logoData, 'PNG', 14, 10, 28, 18) } catch {}
-    }
-    const titleX = logoData ? 44 : 14
-    doc.setFontSize(14)
-    doc.setFont(undefined, 'bold')
-    doc.text('ESTADO DE CUENTA', titleX, 13)
-    doc.setFontSize(9)
-    doc.text(TALLER.razonSocial || TALLER.nombre, titleX, 18)
-    doc.setFont(undefined, 'normal')
-    doc.text(`NIT: ${TALLER.nit} · ${TALLER.direccion}`, titleX, 22)
-    doc.text(`Cel: ${TALLER.celular} · ${TALLER.email}`, titleX, 26)
-    doc.setFontSize(11)
-    doc.setFont(undefined, 'bold')
-    doc.text(`Tecnico: ${reg.tecnico}`, titleX, 32)
-    doc.setFontSize(9)
-    doc.setFont(undefined, 'normal')
-    doc.text(`Ref: ${reg.id}`, titleX, 36)
-    doc.text(`Fecha: ${fmtDate(reg.fecha)}`, 160, 13)
+    const { MARGIN } = PDF_LAYOUT
+
+    drawHeader(doc, {
+      docType: 'ESTADO DE CUENTA',
+      docNumber: `#${(reg.id || '').toString().slice(-6).toUpperCase()}`,
+      badge: { label: 'HISTÓRICO', color: 'navy' },
+      dateRows: [{ lbl: 'FECHA', val: fmtDate(reg.fecha) }],
+    })
+
+    let y = 47
+
+    y = drawSectionHeader(doc, 'Técnico', y)
+    y = drawDataBlock(doc, [
+      { label: 'Nombre completo', value: reg.tecnico, bold: true },
+      { label: 'Referencia', value: (reg.id || '').toString().slice(-6).toUpperCase() },
+      { label: 'Trabajos liquidados', value: String((reg.detalleTrabajo || []).length) },
+    ], y)
+    y += 4
 
     // Detalle de trabajos
     const detRows = (reg.detalleTrabajo || []).map(d => {
       const com = d.compartido ? (d.manoObra * COMISION.TOTAL) / 2 : d.manoObra * COMISION.TOTAL
-      return [fmtDate(d.fecha), d.placa, d.cliente || '—', d.compartido ? 'Si (50%)' : 'No', fmt(d.manoObra), fmt(Math.round(com))]
+      return [fmtDate(d.fecha), (d.placa || '').toUpperCase(), d.cliente || '—', d.compartido ? 'Sí (50%)' : 'No', fmt(d.manoObra), fmt(Math.round(com))]
     })
+    y = drawSectionHeader(doc, 'Trabajos liquidados', y)
     autoTable(doc, {
-      startY: 42,
-      head: [['Fecha', 'Placa', 'Cliente', 'Compartido', 'M.O. (sin IVA)', 'Comision']],
+      startY: y,
+      head: [['FECHA', 'PLACA', 'CLIENTE', 'COMP.', 'M.O.', 'COMISIÓN']],
       body: detRows,
-      styles: { fontSize: 8 },
-      headStyles: { fillColor: [41, 128, 185] },
+      ...tableStylesItems,
+      columnStyles: {
+        0: { cellWidth: 22 },
+        1: { cellWidth: 22, fontStyle: 'bold' },
+        2: { cellWidth: 'auto' },
+        3: { halign: 'center', cellWidth: 18 },
+        4: { halign: 'right', cellWidth: 28 },
+        5: { halign: 'right', cellWidth: 30, fontStyle: 'bold' },
+      },
+      margin: { left: MARGIN, right: MARGIN },
     })
+    y = doc.lastAutoTable.finalY + 6
 
-    // Movimientos / descuentos
     if (reg.movimientos && reg.movimientos.length > 0) {
-      doc.setFontSize(10)
-      doc.text('Adelantos / Cargos / Descuentos:', 14, doc.lastAutoTable.finalY + 10)
+      y = drawSectionHeader(doc, 'Adelantos · cargos · descuentos', y)
       autoTable(doc, {
-        startY: doc.lastAutoTable.finalY + 14,
-        head: [['Fecha', 'Tipo', 'Nota', 'Monto']],
+        startY: y,
+        head: [['FECHA', 'TIPO', 'NOTA', 'MONTO']],
         body: reg.movimientos.map(m => [fmtDate(m.fecha), m.tipo, m.nota || '—', fmt(m.monto)]),
-        styles: { fontSize: 8 },
-        headStyles: { fillColor: [230, 126, 34] },
+        ...tableStylesMuted,
+        columnStyles: {
+          0: { cellWidth: 22 },
+          1: { cellWidth: 28, fontStyle: 'bold' },
+          2: { cellWidth: 'auto' },
+          3: { halign: 'right', cellWidth: 30, fontStyle: 'bold' },
+        },
+        margin: { left: MARGIN, right: MARGIN },
       })
+      y = doc.lastAutoTable.finalY + 6
     }
 
-    // Resumen final
-    const resY = doc.lastAutoTable.finalY + 8
-    autoTable(doc, {
-      startY: resY,
-      body: [
-        [{ content: 'RESUMEN DEL PAGO', colSpan: 2, styles: { fontStyle: 'bold', fillColor: [236, 240, 241], halign: 'center', fontSize: 10 } }],
-        ['Mano de Obra (sin IVA):', fmt(reg.manoObra || 0)],
-        [`Comision (${COMISION.TOTAL * 100}%):`, fmt(reg.comision || 0)],
-        ['Adelantos / Cargos:', `- ${fmt(reg.cargos || 0)}`],
-        [{ content: 'NETO A PAGAR:', styles: { fontStyle: 'bold', fontSize: 11 } },
-         { content: fmt(reg.neto || 0), styles: { fontStyle: 'bold', fontSize: 11, textColor: reg.neto >= 0 ? [39, 174, 96] : [231, 76, 60] } }],
+    // Caja de totales
+    y = drawTotalsBox(doc, {
+      y, x: 122, w: 74,
+      rows: [
+        { lbl: 'Mano de obra (sin IVA)', val: fmt(reg.manoObra || 0) },
+        { lbl: `Comisión (${COMISION.TOTAL * 100}%)`, val: fmt(reg.comision || 0) },
+        { lbl: 'Cargos / adelantos', val: `− ${fmt(reg.cargos || 0)}` },
       ],
-      columnStyles: { 0: { halign: 'right', cellWidth: 100 }, 1: { halign: 'right', fontStyle: 'bold', cellWidth: 60 } },
-      styles: { fontSize: 9, cellPadding: 3 },
-      theme: 'plain',
+      finalLabel: 'NETO PAGADO',
+      finalValue: fmt(reg.neto || 0),
     })
+    y += 18
 
     // Firmas
-    const firmaY = doc.lastAutoTable.finalY + 30
-    doc.setDrawColor(100)
-    doc.line(20, firmaY, 85, firmaY)
-    doc.line(120, firmaY, 185, firmaY)
-    doc.setFontSize(9)
-    doc.text('Firma del Tecnico', 38, firmaY + 6)
-    doc.text('Autorizado por', 140, firmaY + 6)
+    const firmaY = Math.max(y, 252)
+    drawSignatures(doc, {
+      y: firmaY,
+      blocks: [
+        { label: 'Firma del técnico', sub: 'Nombre, documento, fecha' },
+        { label: 'Autorizado por', sub: 'Nombre, cargo, fecha' },
+      ],
+    })
 
-    // Nota al pie
-    doc.setFontSize(7)
-    doc.setTextColor(150)
-    doc.text('Este documento es un comprobante interno de liquidacion de mano de obra.', 14, firmaY + 20)
+    drawFooter(doc, { page: 1, total: 1, leftText: 'Comprobante interno de liquidación de mano de obra · MDA' })
 
     doc.save(`pago_${reg.tecnico}_${reg.id}.pdf`)
     notify('PDF de pago exportado', 'success')
