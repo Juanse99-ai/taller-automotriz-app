@@ -486,8 +486,8 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
           </div>
 
           {cantSeleccionados > 0 && (
-            <div className="card" style={{borderLeft:'3px solid var(--green-500)'}}>
-              <div className="card__h"><h3 style={{color:'var(--green-600)'}}>Resumen del pago — {tecData.tecnico.nombre}</h3></div>
+            <div className="card" style={{borderColor:'rgba(22,163,74,.32)',background:'rgba(22,163,74,.04)'}}>
+              <div className="card__h" style={{borderBottomColor:'rgba(22,163,74,.18)'}}><h3 style={{color:'var(--green-700)'}}>Resumen del pago — {tecData.tecnico.nombre}</h3></div>
               <div className="card__b">
                 <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(140px,1fr))',gap:12,marginBottom:16}}>
                   {[[cantSeleccionados,'Trabajos'],[fmt(totalSeleccion.manoObra),'M.O. (sin IVA)'],[fmt(totalSeleccion.comision),'Comision','var(--green-600)'],[fmt(totalSeleccion.cargos),'Cargos','var(--amber-500)'],[fmt(totalSeleccion.neto),'NETO A PAGAR',totalSeleccion.neto>=0?'var(--green-600)':'var(--red-500)']].map(([v,l,c],i)=>(

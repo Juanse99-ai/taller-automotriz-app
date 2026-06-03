@@ -35,11 +35,18 @@ class ErrorBoundary extends Component {
     if (this.state.error) {
       return (
         <div style={{ padding: 24 }}>
-          <div className="card" style={{ borderLeft: '4px solid #dc2626' }}>
-            <h3 style={{ color: '#dc2626', marginBottom: 8 }}>Error en esta seccion</h3>
-            <p style={{ fontSize: 14, color: '#64748b' }}>{this.state.error?.message || 'Error desconocido'}</p>
-            <button className="btn btn-primary btn-sm" style={{ marginTop: 12 }}
-              onClick={() => this.setState({ error: null })}>Reintentar</button>
+          <div className="card" style={{ background: 'var(--red-100)', border: '1px solid rgba(220,38,38,.32)' }}>
+            <div className="card__b">
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--red-600)" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/>
+                </svg>
+                <h3 style={{ color: 'var(--red-700)', margin: 0, fontSize: 16, fontWeight: 800 }}>Error en esta sección</h3>
+              </div>
+              <p style={{ fontSize: 14.5, color: 'var(--text-2)', marginBottom: 14 }}>{this.state.error?.message || 'Error desconocido'}</p>
+              <button className="btn btn-primary btn-sm"
+                onClick={() => this.setState({ error: null })}>Reintentar</button>
+            </div>
           </div>
         </div>
       )
@@ -216,8 +223,11 @@ export default function App() {
     if (!seccionesPermitidas.includes(section)) {
       return (
         <div className="empty-state">
-          <div className="empty-state-icon">🔒</div>
-          <p>No tienes acceso a este modulo.</p>
+          <svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="var(--text-3)" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" style={{ marginBottom: 12, opacity: .8 }}>
+            <rect x="3" y="11" width="18" height="11" rx="2"/>
+            <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+          </svg>
+          <p>No tienes acceso a este módulo.</p>
         </div>
       )
     }
@@ -257,8 +267,10 @@ export default function App() {
       default:
         return (
           <div className="empty-state">
-            <div className="empty-state-icon">🔧</div>
-            <p>Modulo <strong>{sec.title}</strong> en desarrollo.</p>
+            <svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="var(--text-3)" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" style={{ marginBottom: 12, opacity: .8 }}>
+              <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
+            </svg>
+            <p>Módulo <strong>{sec.title}</strong> en desarrollo.</p>
           </div>
         )
     }

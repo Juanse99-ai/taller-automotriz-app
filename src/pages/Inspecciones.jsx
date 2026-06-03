@@ -316,9 +316,9 @@ export function InspeccionDetalle({ inspeccion, onVolver }) {
       </div>
 
       {urgentes.length > 0 && (
-        <div className="card" style={{borderLeft:'3px solid var(--red-500)'}}>
-          <div className="card__h" style={{cursor:'pointer'}} onClick={() => setExpandido(e => ({...e, urgente: !e.urgente}))}>
-            <h3 style={{color:'var(--red-600)'}}>Atencion urgente</h3><span className="count">{urgentes.length} items {expandido.urgente ? '▾' : '▸'}</span>
+        <div className="card" style={{borderColor:'rgba(220,38,38,.32)',background:'rgba(220,38,38,.04)'}}>
+          <div className="card__h" style={{cursor:'pointer',borderBottomColor:'rgba(220,38,38,.18)'}} onClick={() => setExpandido(e => ({...e, urgente: !e.urgente}))}>
+            <h3 style={{color:'var(--red-700)'}}>Atención urgente</h3><span className="count">{urgentes.length} items {expandido.urgente ? '▾' : '▸'}</span>
           </div>
           {expandido.urgente && <div className="card__b" style={{display:'flex',flexDirection:'column',gap:0}}>
             {urgentes.map(item => <InspeccionItemView key={item.id} item={item} />)}
@@ -327,9 +327,9 @@ export function InspeccionDetalle({ inspeccion, onVolver }) {
       )}
 
       {sugeridos.length > 0 && (
-        <div className="card" style={{borderLeft:'3px solid var(--amber-500)'}}>
-          <div className="card__h" style={{cursor:'pointer'}} onClick={() => setExpandido(e => ({...e, sugerido: !e.sugerido}))}>
-            <h3 style={{color:'var(--amber-700)'}}>Reparacion sugerida</h3><span className="count">{sugeridos.length} items {expandido.sugerido ? '▾' : '▸'}</span>
+        <div className="card" style={{borderColor:'rgba(245,158,11,.32)',background:'rgba(245,158,11,.04)'}}>
+          <div className="card__h" style={{cursor:'pointer',borderBottomColor:'rgba(245,158,11,.18)'}} onClick={() => setExpandido(e => ({...e, sugerido: !e.sugerido}))}>
+            <h3 style={{color:'var(--amber-600)'}}>Reparación sugerida</h3><span className="count">{sugeridos.length} items {expandido.sugerido ? '▾' : '▸'}</span>
           </div>
           {expandido.sugerido && <div className="card__b" style={{display:'flex',flexDirection:'column',gap:0}}>
             {sugeridos.map(item => <InspeccionItemView key={item.id} item={item} />)}
@@ -338,8 +338,8 @@ export function InspeccionDetalle({ inspeccion, onVolver }) {
       )}
 
       {buenos.length > 0 && (
-        <div className="card" style={{borderLeft:'3px solid var(--green-500)'}}>
-          <div className="card__h" style={{cursor:'pointer'}} onClick={() => setExpandido(e => ({...e, bueno: !e.bueno}))}>
+        <div className="card" style={{borderColor:'rgba(22,163,74,.28)',background:'rgba(22,163,74,.04)'}}>
+          <div className="card__h" style={{cursor:'pointer',borderBottomColor:'rgba(22,163,74,.16)'}} onClick={() => setExpandido(e => ({...e, bueno: !e.bueno}))}>
             <h3 style={{color:'var(--green-700)'}}>En buen estado</h3><span className="count">{buenos.length} items {expandido.bueno ? '▾' : '▸'}</span>
           </div>
           {expandido.bueno && <div className="card__b" style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:6}}>

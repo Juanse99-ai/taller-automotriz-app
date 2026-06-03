@@ -142,25 +142,73 @@ export default function Inventario({ notify }) {
         </div>
       </div>
 
-      {/* KPIs */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(180px,1fr))', gap: 14, marginBottom: 18 }}>
-        <div className="kpi">
-          <div className="kpi__head"><span>Total referencias</span><span className="kpi__ic blue">📦</span></div>
-          <div className="kpi__v">{stats.total.toLocaleString('es-CO')}</div>
+      {/* KPIs — hero "Atención" + 3 mini (rompe simetría 4x igual) */}
+      <div className="kpi-grid" style={{ marginBottom: 18 }}>
+        {/* Hero: lo accionable, lo que el dueño debe ver primero */}
+        <div className="kpi-hero" style={{
+          background: stats.sinStock > 0 ? 'rgba(220,38,38,.05)' : (stats.stockBajo > 0 ? 'rgba(245,158,11,.05)' : 'var(--bg-raised)'),
+          border: '1px solid',
+          borderColor: stats.sinStock > 0 ? 'rgba(220,38,38,.32)' : (stats.stockBajo > 0 ? 'rgba(245,158,11,.32)' : 'var(--border)'),
+          borderRadius: 14, padding: '22px 26px',
+          display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: 180,
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+            <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '.5px' }}>
+              Atención del inventario
+            </span>
+            {stats.sinStock > 0 && (
+              <span style={{ fontFamily: 'var(--mono)', fontSize: 12, fontWeight: 700, color: 'var(--red-700)', background: 'var(--red-100)', padding: '4px 10px', borderRadius: 999 }}>
+                {stats.sinStock} agotados
+              </span>
+            )}
+          </div>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 14, flexWrap: 'wrap' }}>
+              <div style={{ fontFamily: 'var(--mono)', fontWeight: 700, fontSize: 'clamp(36px, 5.5vw, 56px)', letterSpacing: '-1.2px', lineHeight: 1, color: stats.sinStock + stats.stockBajo > 0 ? 'var(--red-700)' : 'var(--text)' }}>
+                {(stats.sinStock + stats.stockBajo).toLocaleString('es-CO')}
+              </div>
+              <div style={{ fontSize: 14.5, color: 'var(--text-2)', fontWeight: 500 }}>
+                referencias para reponer
+              </div>
+            </div>
+            <div style={{ fontSize: 13.5, color: 'var(--text-3)', marginTop: 8, fontWeight: 500 }}>
+              {stats.sinStock} agotados · {stats.stockBajo} bajo mínimo
+            </div>
+          </div>
         </div>
-        <div className="kpi">
-          <div className="kpi__head"><span>Stock bajo</span><span className="kpi__ic amber">⚠️</span></div>
-          <div className="kpi__v">{stats.stockBajo}</div>
-          <div className="kpi__delta">Requiere reposición</div>
-        </div>
-        <div className="kpi">
-          <div className="kpi__head"><span>Sin stock</span><span className="kpi__ic red">🚫</span></div>
-          <div className="kpi__v">{stats.sinStock}</div>
-          {stats.sinStock > 0 && <div className="kpi__delta" style={{ color: 'var(--red-600)' }}>Agotado</div>}
-        </div>
-        <div className="kpi">
-          <div className="kpi__head"><span>Valor inventario</span><span className="kpi__ic green">💰</span></div>
-          <div className="kpi__v" style={{ fontSize: 20 }}>{fmtCompact(stats.valorTotal)}</div>
+
+        {/* 3 mini-KPIs apilados */}
+        <div style={{ display: 'grid', gridTemplateRows: '1fr 1fr 1fr', gap: 10 }}>
+          <div className="kpi-mini" style={{ background: 'var(--bg-raised)', border: '1px solid var(--border)', borderRadius: 12, padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 14 }}>
+            <div className="kpi__ic blue" style={{ width: 38, height: 38, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '.4px' }}>Total referencias</div>
+              <div style={{ fontFamily: 'var(--mono)', fontWeight: 700, fontSize: 22, color: 'var(--text)', lineHeight: 1.1, marginTop: 2 }}>{stats.total.toLocaleString('es-CO')}</div>
+            </div>
+          </div>
+
+          <div className="kpi-mini" style={{ background: 'var(--bg-raised)', border: '1px solid var(--border)', borderRadius: 12, padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 14 }}>
+            <div className="kpi__ic green" style={{ width: 38, height: 38, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '.4px' }}>Valor inventario</div>
+              <div style={{ fontFamily: 'var(--mono)', fontWeight: 700, fontSize: 22, color: 'var(--text)', lineHeight: 1.1, marginTop: 2 }}>{fmtCompact(stats.valorTotal)}</div>
+            </div>
+          </div>
+
+          <div className="kpi-mini" style={{ background: 'var(--bg-raised)', border: '1px solid var(--border)', borderRadius: 12, padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 14 }}>
+            <div className="kpi__ic amber" style={{ width: 38, height: 38, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '.4px' }}>Stock bajo</div>
+              <div style={{ fontFamily: 'var(--mono)', fontWeight: 700, fontSize: 22, color: 'var(--text)', lineHeight: 1.1, marginTop: 2 }}>{stats.stockBajo}</div>
+            </div>
+            <span style={{ fontSize: 11.5, color: 'var(--text-3)', whiteSpace: 'nowrap' }}>reponer</span>
+          </div>
         </div>
       </div>
 
@@ -170,13 +218,15 @@ export default function Inventario({ notify }) {
           <h3>Productos ({filtrados.length})</h3>
           <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-end', flexWrap: 'wrap', gap: 8 }}>
             {/* Búsqueda */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--bg-subtle)', border: '1px solid var(--border)', borderRadius: 8, padding: '6px 11px', minWidth: 200 }}>
-              <span style={{ opacity: 0.5, fontSize: 13 }}>🔍</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 9, background: 'var(--bg-subtle)', border: '1px solid var(--border)', borderRadius: 9, padding: '7px 12px', minWidth: 220 }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-4)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+              </svg>
               <input
                 value={busqueda}
                 onChange={e => setBusqueda(e.target.value)}
                 placeholder="Buscar código o nombre..."
-                style={{ border: 'none', outline: 'none', background: 'none', flex: 1, fontSize: 12.5 }}
+                style={{ border: 'none', outline: 'none', background: 'none', flex: 1, fontSize: 13.5 }}
               />
             </div>
             {/* Filtro categorías */}
@@ -199,7 +249,11 @@ export default function Inventario({ notify }) {
         {filtrados.length === 0 ? (
           <div className="card__b">
             <div className="empty-state">
-              <div className="empty-state-icon">📦</div>
+              <svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="var(--text-3)" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" style={{ marginBottom: 12, opacity: .8 }}>
+                <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+                <polyline points="3.27 6.96 12 12.01 20.73 6.96"/>
+                <line x1="12" y1="22.08" x2="12" y2="12"/>
+              </svg>
               <p>No se encontraron productos.</p>
             </div>
           </div>

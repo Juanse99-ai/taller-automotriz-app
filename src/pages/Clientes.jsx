@@ -646,10 +646,10 @@ export default function Clientes({ clientes, vehiculos, notify }) {
       <div className="card">
         <div className="card__h" style={{display:'flex',alignItems:'center',gap:12}}>
           <h3 style={{flex:'none'}}>Buscar</h3>
-          <div style={{flex:1,maxWidth:480,display:'flex',alignItems:'center',gap:8,background:'var(--bg-subtle)',border:'1px solid var(--border)',borderRadius:8,padding:'6px 11px'}}>
-            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" style={{opacity:.5}}><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-            <input placeholder="🔍 CC/NIT o nombre del cliente..." value={busqueda} onChange={e => setBusqueda(e.target.value)} style={{border:'none',outline:'none',background:'none',flex:1,fontSize:12.5}}/>
-            {busqueda && <button onClick={() => setBusqueda('')} style={{background:'none',border:'none',color:'var(--text-3)',cursor:'pointer',fontSize:14,padding:0}}>✕</button>}
+          <div style={{flex:1,maxWidth:480,display:'flex',alignItems:'center',gap:9,background:'var(--bg-subtle)',border:'1px solid var(--border)',borderRadius:9,padding:'7px 12px'}}>
+            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="var(--text-4)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{flexShrink:0}}><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input placeholder="CC/NIT o nombre del cliente…" value={busqueda} onChange={e => setBusqueda(e.target.value)} style={{border:'none',outline:'none',background:'none',flex:1,fontSize:13.5}}/>
+            {busqueda && <button onClick={() => setBusqueda('')} aria-label="Limpiar búsqueda" style={{background:'none',border:'none',color:'var(--text-3)',cursor:'pointer',fontSize:15,padding:0,display:'flex'}}>✕</button>}
           </div>
           <span className="count" style={{ background: clientesFiltrados.length === 0 && busqueda.trim() ? 'var(--red-100)' : undefined, color: clientesFiltrados.length === 0 && busqueda.trim() ? 'var(--red-700)' : undefined }}>
             {busqueda.trim() ? `${clientesFiltrados.length} de ${totalClientes}` : `${clientesFiltrados.length} clientes`}
@@ -673,15 +673,17 @@ export default function Clientes({ clientes, vehiculos, notify }) {
               </div>
             </div>
             <button className="btn btn-primary btn-sm" onClick={() => importarDeCuentti(resultadoCuentti)}>
-              ⬇ Importar a la app
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              Importar a la app
             </button>
           </div>
         )}
 
         {/* Banner: buscando en Cuentti */}
         {busqueda.trim() && clientesFiltrados.length === 0 && buscandoCuentti && !resultadoCuentti && (
-          <div style={{padding:'10px 16px',margin:'0 16px 16px',background:'var(--bg-subtle)',border:'1px solid var(--border)',borderRadius:8,fontSize:12.5,color:'var(--text-3)'}}>
-            🔍 Buscando "{busqueda}" en Cuentti...
+          <div style={{padding:'11px 16px',margin:'0 16px 16px',background:'var(--bg-subtle)',border:'1px solid var(--border)',borderRadius:9,fontSize:13.5,color:'var(--text-3)',display:'flex',alignItems:'center',gap:9}}>
+            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{flexShrink:0,animation:'spin 1.4s linear infinite'}}><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            Buscando "{busqueda}" en Cuentti…
           </div>
         )}
 

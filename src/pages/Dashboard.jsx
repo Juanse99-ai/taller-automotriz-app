@@ -211,27 +211,30 @@ export default function Dashboard({ trabajos = [], onNavigate }) {
         if (total === 0) return null
         return (
           <div style={{
-            padding: '14px 18px',
-            background: 'linear-gradient(90deg, rgba(34,197,94,.10), rgba(59,130,246,.08))',
-            border: '1px solid rgba(34,197,94,.35)',
-            borderLeft: '4px solid #25D366',
-            borderRadius: 10,
+            padding: '16px 20px',
+            background: 'rgba(22,163,74,.08)',
+            border: '1px solid rgba(22,163,74,.32)',
+            borderRadius: 12,
             display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap',
           }}>
             <div style={{
-              width: 38, height: 38, borderRadius: 10, background: '#25D366',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', flexShrink: 0, fontSize: 18,
-            }}>💬</div>
+              width: 42, height: 42, borderRadius: 11, background: '#25D366',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', flexShrink: 0,
+            }}>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>
+              </svg>
+            </div>
             <div style={{ flex: 1, minWidth: 200 }}>
-              <div style={{ fontWeight: 800, fontSize: 14.5, color: '#15803d' }}>
+              <div style={{ fontWeight: 800, fontSize: 15.5, color: 'var(--green-700)' }}>
                 {total} {total === 1 ? 'cliente para contactar' : 'clientes para contactar'} (CRM)
               </div>
-              <div style={{ fontSize: 12.5, color: 'var(--text-2)', marginTop: 2 }}>
+              <div style={{ fontSize: 13.5, color: 'var(--text-2)', marginTop: 3 }}>
                 Vehículos que pasaron su intervalo de mantenimiento. Envíales un WhatsApp para reactivarlos.
               </div>
             </div>
             {onNavigate && (
-              <button className="btn btn-primary btn-sm" onClick={() => onNavigate('crm')} style={{ background: '#25D366' }}>
+              <button className="btn btn-primary btn-sm" onClick={() => onNavigate('crm')} style={{ background: '#16a34a' }}>
                 Abrir CRM <IcArrow />
               </button>
             )}
@@ -242,25 +245,24 @@ export default function Dashboard({ trabajos = [], onNavigate }) {
       {/* ── Alerta de trabajos estancados (>3 dias sin moverse) ───────────── */}
       {estancados.length > 0 && (
         <div style={{
-          padding: '14px 18px',
-          background: 'linear-gradient(90deg, rgba(220,38,38,.10), rgba(245,158,11,.08))',
-          border: '1px solid rgba(220,38,38,.35)',
-          borderLeft: '4px solid var(--red-500)',
-          borderRadius: 10,
+          padding: '16px 20px',
+          background: 'rgba(220,38,38,.08)',
+          border: '1px solid rgba(220,38,38,.32)',
+          borderRadius: 12,
           display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap',
         }}>
           <div style={{
-            width: 38, height: 38, borderRadius: 10, background: 'var(--red-500)',
+            width: 42, height: 42, borderRadius: 11, background: 'var(--red-600)',
             display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', flexShrink: 0,
           }}>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
           </div>
           <div style={{ flex: 1, minWidth: 200 }}>
-            <div style={{ fontWeight: 800, fontSize: 14.5, color: 'var(--red-700, #b91c1c)' }}>
+            <div style={{ fontWeight: 800, fontSize: 15.5, color: 'var(--red-700)' }}>
               {estancados.length} {estancados.length === 1 ? 'trabajo estancado' : 'trabajos estancados'}
             </div>
-            <div style={{ fontSize: 12.5, color: 'var(--text-2)', marginTop: 2 }}>
-              {estancados.length === 1 ? 'Lleva' : 'Llevan'} más de {DIAS_ESTANCADO} días sin actualizarse — revísalos para mover el avance o cambiar estado.
+            <div style={{ fontSize: 13.5, color: 'var(--text-2)', marginTop: 3 }}>
+              {estancados.length === 1 ? 'Lleva' : 'Llevan'} más de {DIAS_ESTANCADO} días sin actualizarse. Revísalos para mover el avance o cambiar estado.
             </div>
           </div>
           {onNavigate && (
@@ -271,50 +273,83 @@ export default function Dashboard({ trabajos = [], onNavigate }) {
         </div>
       )}
 
-      {/* ── KPIs ────────────────────────────────────────────────────────── */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 14 }}>
-        <div className="kpi">
-          <div className="kpi__head">
-            <div className="kpi__ic red"><IcAlert /></div>
-            <div className="kpi__lbl">Activos hoy</div>
+      {/* ── KPIs ─ hero + 3 secundarios (rompe simetría 4x igual) ───────── */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: 16 }} className="kpi-grid">
+        {/* Hero: Ingresos del mes — el número que importa */}
+        <div className="kpi-hero" style={{
+          background: 'var(--bg-raised)', border: '1px solid var(--border)', borderRadius: 14,
+          padding: '22px 26px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between',
+          minHeight: 180,
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+            <span style={{
+              fontSize: 13, fontWeight: 700, color: 'var(--text-3)',
+              textTransform: 'uppercase', letterSpacing: '.5px',
+            }}>Ingresos del mes</span>
+            <span style={{
+              fontFamily: 'var(--mono)', fontSize: 12, fontWeight: 700,
+              color: stats.ingresosHoy > 0 ? 'var(--green-700)' : 'var(--text-3)',
+              background: stats.ingresosHoy > 0 ? 'var(--green-100)' : 'var(--bg-subtle)',
+              padding: '4px 10px', borderRadius: 999,
+            }}>
+              {stats.ingresosHoy > 0 ? `+${fmt(stats.ingresosHoy)} hoy` : 'Sin ingresos hoy'}
+            </span>
           </div>
-          <div className="kpi__v">{stats.activos}</div>
-          <div className="kpi__delta">
-            {estancados.length > 0
-              ? <><b className="down">{estancados.length}</b> estancados</>
-              : 'Sin retrasos'}
+          <div>
+            <div style={{
+              fontFamily: 'var(--mono)', fontWeight: 700,
+              fontSize: 'clamp(36px, 5.5vw, 56px)', letterSpacing: '-1.2px', lineHeight: 1,
+              color: 'var(--text)',
+            }}>{fmt(stats.ingresosMes)}</div>
+            <div style={{ fontSize: 13.5, color: 'var(--text-3)', marginTop: 8, fontWeight: 500 }}>
+              {(() => {
+                const d = new Date(); const dia = d.getDate()
+                return `Acumulado del 1 al ${dia} de ${d.toLocaleString('es-CO', { month: 'long' })}`
+              })()}
+            </div>
           </div>
         </div>
 
-        <div className="kpi">
-          <div className="kpi__head">
-            <div className="kpi__ic green"><IcDollar /></div>
-            <div className="kpi__lbl">Ingresos del mes</div>
+        {/* 3 mini-KPIs apilados */}
+        <div style={{ display: 'grid', gridTemplateRows: '1fr 1fr 1fr', gap: 10 }}>
+          <div className="kpi-mini" style={{
+            background: 'var(--bg-raised)', border: '1px solid var(--border)', borderRadius: 12,
+            padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 14,
+          }}>
+            <div className="kpi__ic red" style={{ width: 38, height: 38, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><IcAlert /></div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '.4px' }}>Activos hoy</div>
+              <div style={{ fontFamily: 'var(--mono)', fontWeight: 700, fontSize: 22, color: 'var(--text)', lineHeight: 1.1, marginTop: 2 }}>{stats.activos}</div>
+            </div>
+            {estancados.length > 0 && (
+              <span style={{ fontSize: 11.5, fontWeight: 700, color: 'var(--red-700)', background: 'var(--red-100)', padding: '3px 8px', borderRadius: 5, whiteSpace: 'nowrap' }}>
+                {estancados.length} estancados
+              </span>
+            )}
           </div>
-          <div className="kpi__v">{fmt(stats.ingresosMes)}</div>
-          <div className="kpi__delta">
-            {stats.ingresosHoy > 0
-              ? <><b className="up">{fmt(stats.ingresosHoy)}</b> hoy</>
-              : 'Sin ingresos hoy'}
-          </div>
-        </div>
 
-        <div className="kpi">
-          <div className="kpi__head">
-            <div className="kpi__ic blue"><IcCar /></div>
-            <div className="kpi__lbl">Listos para entregar</div>
+          <div className="kpi-mini" style={{
+            background: 'var(--bg-raised)', border: '1px solid var(--border)', borderRadius: 12,
+            padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 14,
+          }}>
+            <div className="kpi__ic blue" style={{ width: 38, height: 38, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><IcCar /></div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '.4px' }}>Listos para entregar</div>
+              <div style={{ fontFamily: 'var(--mono)', fontWeight: 700, fontSize: 22, color: 'var(--text)', lineHeight: 1.1, marginTop: 2 }}>{stats.listoCount}</div>
+            </div>
           </div>
-          <div className="kpi__v">{stats.listoCount}</div>
-          <div className="kpi__delta">Avisar al cliente</div>
-        </div>
 
-        <div className="kpi">
-          <div className="kpi__head">
-            <div className="kpi__ic amber"><IcCal /></div>
-            <div className="kpi__lbl">Total OTs</div>
+          <div className="kpi-mini" style={{
+            background: 'var(--bg-raised)', border: '1px solid var(--border)', borderRadius: 12,
+            padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 14,
+          }}>
+            <div className="kpi__ic amber" style={{ width: 38, height: 38, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><IcCal /></div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '.4px' }}>Total OTs</div>
+              <div style={{ fontFamily: 'var(--mono)', fontWeight: 700, fontSize: 22, color: 'var(--text)', lineHeight: 1.1, marginTop: 2 }}>{trabajos.length}</div>
+            </div>
+            <span style={{ fontSize: 11.5, color: 'var(--text-3)', whiteSpace: 'nowrap' }}>histórico</span>
           </div>
-          <div className="kpi__v">{trabajos.length}</div>
-          <div className="kpi__delta">Acumulado histórico</div>
         </div>
       </div>
 
@@ -337,8 +372,12 @@ export default function Dashboard({ trabajos = [], onNavigate }) {
           {urgentes.length === 0 ? (
             <div className="card__b">
               <div className="empty-state">
-                <div className="empty-state-icon">✅</div>
-                <p>No hay trabajos pendientes. ¡Todo al día!</p>
+                <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="var(--green-600)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ marginBottom: 10, opacity: .85 }}>
+                  <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                  <polyline points="22 4 12 14.01 9 11.01"/>
+                </svg>
+                <h4>Todo al día</h4>
+                <p>No hay trabajos pendientes en este momento.</p>
               </div>
             </div>
           ) : (
@@ -405,29 +444,27 @@ export default function Dashboard({ trabajos = [], onNavigate }) {
           </div>
           {agenda.length === 0 ? (
             <div className="card__b">
-              <div className="empty-state" style={{ padding: '20px 14px' }}>
-                <div className="empty-state-icon" style={{ fontSize: 28 }}>📋</div>
-                <p style={{ fontSize: 12.5 }}>Ningún vehículo ingresado hoy.</p>
+              <div className="empty-state" style={{ padding: '24px 14px' }}>
+                <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="var(--text-3)" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" style={{ marginBottom: 10, opacity: .8 }}>
+                  <rect x="9" y="2" width="6" height="4" rx="1"/>
+                  <path d="M8 4H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-2"/>
+                </svg>
+                <p style={{ fontSize: 13.5 }}>Ningún vehículo ingresado hoy.</p>
               </div>
             </div>
           ) : (
             <div className="card__b" style={{ display: 'flex', flexDirection: 'column', gap: 10, padding: 14 }}>
               {agenda.map((t, i) => (
                 <div key={t.id} style={{
-                  display: 'flex', gap: 12, padding: '10px 12px',
+                  display: 'flex', gap: 12, padding: '11px 13px', alignItems: 'center',
                   background: 'var(--bg-subtle)', borderRadius: 10, border: '1px solid var(--border)'
                 }}>
-                  <div style={{
-                    display: 'flex', flexDirection: 'column', alignItems: 'center',
-                    justifyContent: 'center', minWidth: 40
-                  }}>
-                    <span className={`av av-${(i % 5) + 1}`} style={{ fontSize: 10, width: 36, height: 36 }}>
-                      {initials(t.cliente)}
-                    </span>
-                  </div>
-                  <div style={{ borderLeft: '2px solid var(--border-strong)', paddingLeft: 11, flex: 1, minWidth: 0 }}>
-                    <div style={{ fontWeight: 600, fontSize: 13 }}>{t.cliente || '—'}</div>
-                    <div style={{ fontSize: 11.5, color: 'var(--text-3)', marginTop: 2 }}>
+                  <span className={`av av-${(i % 5) + 1}`} style={{ fontSize: 11, width: 38, height: 38, flexShrink: 0 }}>
+                    {initials(t.cliente)}
+                  </span>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontWeight: 600, fontSize: 14 }}>{t.cliente || '—'}</div>
+                    <div style={{ fontSize: 12.5, color: 'var(--text-3)', marginTop: 2 }}>
                       <span className="mono">{t.placa || '—'}</span> · {t.marca || ''} {t.modelo || ''}
                     </div>
                   </div>
@@ -476,9 +513,12 @@ export default function Dashboard({ trabajos = [], onNavigate }) {
           </div>
           {listos.length === 0 ? (
             <div className="card__b">
-              <div className="empty-state" style={{ padding: '20px 14px' }}>
-                <div className="empty-state-icon" style={{ fontSize: 28 }}>🚗</div>
-                <p style={{ fontSize: 12.5 }}>No hay vehículos listos.</p>
+              <div className="empty-state" style={{ padding: '24px 14px' }}>
+                <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="var(--text-3)" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" style={{ marginBottom: 10, opacity: .8 }}>
+                  <path d="M14 16H9m10 0h3v-3.15a1 1 0 0 0-.84-.99L16 11l-2.7-3.6a1 1 0 0 0-.8-.4H5.24a2 2 0 0 0-1.8 1.1l-.8 1.63A6 6 0 0 0 2 12.42V16h2"/>
+                  <circle cx="6.5" cy="16.5" r="2.5"/><circle cx="16.5" cy="16.5" r="2.5"/>
+                </svg>
+                <p style={{ fontSize: 13.5 }}>No hay vehículos listos por ahora.</p>
               </div>
             </div>
           ) : (
@@ -515,13 +555,13 @@ export default function Dashboard({ trabajos = [], onNavigate }) {
 
       {/* ── Estancados alert (si existen) ────────────────────────────────── */}
       {estancados.length > 0 && (
-        <div className="card" style={{ borderLeft: '4px solid var(--red-600)' }}>
+        <div className="card" style={{ borderColor: 'rgba(220,38,38,.32)' }}>
           <div className="card__h">
-            <h3 style={{ color: 'var(--red-600)' }}>Trabajos estancados</h3>
+            <h3 style={{ color: 'var(--red-700)' }}>Trabajos estancados</h3>
             <span style={{
-              fontFamily: 'var(--mono)', fontSize: 11, fontWeight: 700,
-              color: '#991b1b', background: 'var(--red-100)',
-              padding: '2px 8px', borderRadius: 999
+              fontFamily: 'var(--mono)', fontSize: 12, fontWeight: 700,
+              color: 'var(--red-700)', background: 'var(--red-100)',
+              padding: '3px 10px', borderRadius: 999
             }}>{estancados.length}</span>
           </div>
           <div className="card__b card__b--flush">
@@ -558,20 +598,20 @@ export default function Dashboard({ trabajos = [], onNavigate }) {
           {porTecnico.map((t, i) => {
             const max = Math.max(...porTecnico.map(x => x.completados), 1)
             const pct = (t.completados / max) * 100
-            const colors = ['var(--blue-500)', 'var(--green-500)', 'var(--amber-400)']
+            const colors = ['var(--blue-600)', 'var(--green-600)', 'var(--amber-500)']
             return (
               <div key={i}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 5 }}>
-                  <span style={{ fontWeight: 600, fontSize: 13 }}>{t.nombre}</span>
-                  <span style={{ fontSize: 12, color: 'var(--text-3)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6 }}>
+                  <span style={{ fontWeight: 600, fontSize: 14 }}>{t.nombre}</span>
+                  <span style={{ fontSize: 13, color: 'var(--text-3)' }}>
                     <span className="mono" style={{ fontWeight: 700, color: 'var(--text)' }}>{t.completados}</span> completados · {fmt(t.ingresos)}
                   </span>
                 </div>
-                <div style={{ height: 6, background: 'var(--bg-subtle)', borderRadius: 3, overflow: 'hidden', border: '1px solid var(--border)' }}>
+                <div style={{ height: 8, background: 'var(--bg-subtle)', borderRadius: 4, overflow: 'hidden', border: '1px solid var(--border)' }}>
                   <div style={{
                     width: `${pct}%`, height: '100%',
-                    background: `linear-gradient(90deg, ${colors[i % colors.length]}, ${colors[i % colors.length]}dd)`,
-                    borderRadius: 3
+                    background: colors[i % colors.length],
+                    borderRadius: 4
                   }} />
                 </div>
               </div>

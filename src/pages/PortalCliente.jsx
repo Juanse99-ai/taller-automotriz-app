@@ -204,7 +204,7 @@ export default function PortalCliente() {
       <div style={{minHeight:'100vh',display:'flex',alignItems:'center',justifyContent:'center',background:'var(--bg)',padding:20}}>
         <div style={{width:'100%',maxWidth:420}}>
           <div className="card" style={{padding:0,overflow:'hidden'}}>
-            <div style={{padding:'28px 32px 20px',background:'linear-gradient(135deg,#0d1b35,#152544)',color:'#fff',textAlign:'center'}}>
+            <div style={{padding:'28px 32px 22px',background:'var(--navy-900)',color:'#fff',textAlign:'center'}}>
               <img src="/logo.png" alt="MDA" style={{width:50,height:50,objectFit:'contain',borderRadius:12,background:'#fff',padding:4,marginBottom:12}}/>
               <h1 style={{fontSize:20,fontWeight:800,margin:'0 0 4px',letterSpacing:'.02em'}}>Multidiagnosticos AS</h1>
               <p style={{fontSize:13,opacity:.65,margin:0}}>Seguimiento en linea de su vehiculo</p>
@@ -258,7 +258,7 @@ export default function PortalCliente() {
     <div style={{maxWidth:780,margin:'0 auto',display:'flex',flexDirection:'column',gap:20,padding:'20px 16px'}}>
       {/* Hero card */}
       <div className="card" style={{padding:0,overflow:'hidden'}}>
-        <div style={{padding:'22px 26px',background:'linear-gradient(135deg,#0d1b35,#152544)',color:'#fff',position:'relative'}}>
+        <div style={{padding:'22px 26px',background:'var(--navy-900)',color:'#fff',position:'relative'}}>
           <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start'}}>
             <div style={{display:'flex',alignItems:'center',gap:10,fontSize:11,fontWeight:700,letterSpacing:'.08em',textTransform:'uppercase',opacity:.7,marginBottom:8}}>
               <img src="/logo.png" alt="MDA" style={{width:20,height:20,objectFit:'contain',borderRadius:4}}/> Multidiagnosticos AS
@@ -301,7 +301,7 @@ export default function PortalCliente() {
               </div>
             </div>
             <div style={{height:8,background:'var(--bg-subtle)',borderRadius:99,overflow:'hidden',marginTop:14}}>
-              <div style={{width:`${ESTADO_TRABAJO_DISPLAY[trabajoActivo.estado]?.pct||0}%`,height:'100%',background:`linear-gradient(90deg,var(--amber-500),var(--amber-400))`,borderRadius:99,transition:'width .4s'}}/>
+              <div style={{width:`${ESTADO_TRABAJO_DISPLAY[trabajoActivo.estado]?.pct||0}%`,height:'100%',background:'var(--amber-500)',borderRadius:99,transition:'width .4s ease-out'}}/>
             </div>
             <div style={{fontSize:11,color:'var(--text-3)',marginTop:6,fontWeight:600}}>{ESTADO_TRABAJO_DISPLAY[trabajoActivo.estado]?.pct||0}% completado</div>
           </div>
@@ -313,7 +313,7 @@ export default function PortalCliente() {
         <div className="card">
           <div className="card__h"><h3>Tecnico asignado</h3></div>
           <div className="card__b" style={{display:'flex',gap:14,alignItems:'center'}}>
-            <div style={{width:54,height:54,borderRadius:'50%',background:'linear-gradient(135deg,var(--amber-500),var(--amber-400))',display:'flex',alignItems:'center',justifyContent:'center',color:'#fff',fontWeight:800,fontSize:18,flexShrink:0}}>
+            <div style={{width:54,height:54,borderRadius:'50%',background:'var(--amber-500)',display:'flex',alignItems:'center',justifyContent:'center',color:'var(--navy-900)',fontWeight:800,fontSize:18,flexShrink:0}}>
               {tecNombre(trabajoActivo.tecnicoId).split(' ').map(x=>x[0]).slice(0,2).join('')}
             </div>
             <div style={{flex:1}}>

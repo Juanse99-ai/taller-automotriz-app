@@ -101,7 +101,10 @@ export default function Vehiculos({ vehiculos, clientes, notify }) {
           <div className="card__b">
             {historialOrdenado.length === 0 ? (
               <div style={{ textAlign: 'center', padding: 32, color: 'var(--text-3)' }}>
-                <div style={{ fontSize: 32, marginBottom: 8 }}>📋</div>
+                <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" style={{ marginBottom: 10, opacity: .8 }}>
+                  <rect x="9" y="2" width="6" height="4" rx="1"/>
+                  <path d="M8 4H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-2"/>
+                </svg>
                 <p>Sin historial de servicio</p>
               </div>
             ) : (
@@ -111,7 +114,7 @@ export default function Vehiculos({ vehiculos, clientes, notify }) {
                     border: '1px solid var(--border)',
                     borderRadius: 10,
                     padding: 16,
-                    borderLeft: '3px solid var(--accent)',
+                    background: 'var(--bg-subtle)',
                   }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
                       <span style={{ fontWeight: 700, fontSize: 14 }}>{fmtDate(h.fecha)}</span>
@@ -147,19 +150,52 @@ export default function Vehiculos({ vehiculos, clientes, notify }) {
         </div>
       </div>
 
-      {/* KPI row */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(160px,1fr))', gap: 14, marginBottom: 24 }}>
-        <div className="kpi">
-          <div className="kpi__head"><span>Total Vehiculos</span><span className="kpi__ic blue">🚗</span></div>
-          <div className="kpi__v">{totalVehiculos}</div>
+      {/* KPI hero + 2 mini */}
+      <div className="kpi-grid" style={{ marginBottom: 24 }}>
+        <div className="kpi-hero" style={{ background: 'var(--bg-raised)', border: '1px solid var(--border)', borderRadius: 14, padding: '22px 26px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: 180 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+            <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '.5px' }}>Total vehículos en BD</span>
+            <span style={{ fontFamily: 'var(--mono)', fontSize: 12, fontWeight: 700, color: 'var(--text-3)', background: 'var(--bg-subtle)', padding: '4px 10px', borderRadius: 999 }}>
+              {marcasUnicas} marcas
+            </span>
+          </div>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 14, flexWrap: 'wrap' }}>
+              <div style={{ fontFamily: 'var(--mono)', fontWeight: 700, fontSize: 'clamp(36px, 5.5vw, 56px)', letterSpacing: '-1.2px', lineHeight: 1, color: 'var(--text)' }}>
+                {totalVehiculos.toLocaleString('es-CO')}
+              </div>
+              <div style={{ fontSize: 14.5, color: 'var(--text-2)', fontWeight: 500 }}>
+                placas registradas
+              </div>
+            </div>
+            {totalVehiculos > 0 && (
+              <div style={{ fontSize: 13.5, color: 'var(--text-3)', marginTop: 8, fontWeight: 500 }}>
+                {conHistorial} con al menos un servicio registrado ({Math.round((conHistorial/totalVehiculos)*100)}%)
+              </div>
+            )}
+          </div>
         </div>
-        <div className="kpi">
-          <div className="kpi__head"><span>Con Historial</span><span className="kpi__ic green">📋</span></div>
-          <div className="kpi__v">{conHistorial}</div>
-        </div>
-        <div className="kpi">
-          <div className="kpi__head"><span>Marcas Unicas</span><span className="kpi__ic purple">🏷</span></div>
-          <div className="kpi__v">{marcasUnicas}</div>
+
+        <div style={{ display: 'grid', gridTemplateRows: '1fr 1fr', gap: 10 }}>
+          <div className="kpi-mini" style={{ background: 'var(--bg-raised)', border: '1px solid var(--border)', borderRadius: 12, padding: '14px 18px', display: 'flex', alignItems: 'center', gap: 14 }}>
+            <div className="kpi__ic green" style={{ width: 40, height: 40, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="2" width="6" height="4" rx="1"/><path d="M8 4H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-2"/></svg>
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '.4px' }}>Con historial</div>
+              <div style={{ fontFamily: 'var(--mono)', fontWeight: 700, fontSize: 26, color: 'var(--text)', lineHeight: 1.1, marginTop: 2 }}>{conHistorial}</div>
+            </div>
+          </div>
+
+          <div className="kpi-mini" style={{ background: 'var(--bg-raised)', border: '1px solid var(--border)', borderRadius: 12, padding: '14px 18px', display: 'flex', alignItems: 'center', gap: 14 }}>
+            <div className="kpi__ic amber" style={{ width: 40, height: 40, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M20.59 13.41 13.42 20.58a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '.4px' }}>Marcas únicas</div>
+              <div style={{ fontFamily: 'var(--mono)', fontWeight: 700, fontSize: 26, color: 'var(--text)', lineHeight: 1.1, marginTop: 2 }}>{marcasUnicas}</div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -183,8 +219,11 @@ export default function Vehiculos({ vehiculos, clientes, notify }) {
         <div className="card__b" style={{ padding: 0 }}>
           {vehiculosFiltrados.length === 0 ? (
             <div style={{ textAlign: 'center', padding: 40, color: 'var(--text-3)' }}>
-              <div style={{ fontSize: 32, marginBottom: 8 }}>🚗</div>
-              <p>No se encontraron vehiculos</p>
+              <svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" style={{ marginBottom: 12, opacity: .8 }}>
+                <path d="M14 16H9m10 0h3v-3.15a1 1 0 0 0-.84-.99L16 11l-2.7-3.6a1 1 0 0 0-.8-.4H5.24a2 2 0 0 0-1.8 1.1l-.8 1.63A6 6 0 0 0 2 12.42V16h2"/>
+                <circle cx="6.5" cy="16.5" r="2.5"/><circle cx="16.5" cy="16.5" r="2.5"/>
+              </svg>
+              <p>No se encontraron vehículos</p>
             </div>
           ) : (
             <div className="tbl">

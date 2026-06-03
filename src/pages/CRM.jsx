@@ -416,36 +416,81 @@ export default function CRM({ trabajos = [], clientes, vehiculos, notify, actual
         </div>
         <div className="actions" style={{ flexWrap: 'wrap', gap: 8 }}>
           {recordatoriosImportar.length > 0 && (
-            <button className="btn btn-outline btn-sm" onClick={() => setShowImportar(true)}>
-              👥 Inactivos ({recordatoriosImportar.length})
+            <button className="btn btn-outline btn-sm" onClick={() => setShowImportar(true)} style={{ display: 'inline-flex', alignItems: 'center', gap: 7 }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+              Inactivos ({recordatoriosImportar.length})
             </button>
           )}
-          <button className="btn btn-outline btn-sm" onClick={() => setShowTemplate('aceite_mineral')}>📝 Plantillas</button>
+          <button className="btn btn-outline btn-sm" onClick={() => setShowTemplate('aceite_mineral')} style={{ display: 'inline-flex', alignItems: 'center', gap: 7 }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+            Plantillas
+          </button>
           <button className="btn btn-outline btn-sm" onClick={() => setShowConfig(true)}>⚙️ Servicios</button>
         </div>
       </div>
 
-      {/* KPIs */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(200px,1fr))', gap: 14, marginBottom: 18 }}>
-        <div className="kpi">
-          <div className="kpi__head"><div className="kpi__ic red">🚨</div><div className="kpi__lbl">Vencidos</div></div>
-          <div className="kpi__v" style={{ color: 'var(--red-600)' }}>{stats.vencidos}</div>
-          <div className="kpi__delta">Necesitan contacto urgente</div>
+      {/* KPIs — hero "Vencidos" (lo urgente) + 3 mini */}
+      <div className="kpi-grid" style={{ marginBottom: 18 }}>
+        <div className="kpi-hero" style={{
+          background: stats.vencidos > 0 ? 'rgba(220,38,38,.05)' : 'var(--bg-raised)',
+          border: '1px solid',
+          borderColor: stats.vencidos > 0 ? 'rgba(220,38,38,.32)' : 'var(--border)',
+          borderRadius: 14, padding: '22px 26px',
+          display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: 180,
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+            <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '.5px' }}>Vencidos</span>
+            {stats.contactadosHoy > 0 && (
+              <span style={{ fontFamily: 'var(--mono)', fontSize: 12, fontWeight: 700, color: 'var(--green-700)', background: 'var(--green-100)', padding: '4px 10px', borderRadius: 999 }}>
+                +{stats.contactadosHoy} hoy
+              </span>
+            )}
+          </div>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 14, flexWrap: 'wrap' }}>
+              <div style={{ fontFamily: 'var(--mono)', fontWeight: 700, fontSize: 'clamp(36px, 5.5vw, 56px)', letterSpacing: '-1.2px', lineHeight: 1, color: stats.vencidos > 0 ? 'var(--red-700)' : 'var(--text)' }}>
+                {stats.vencidos}
+              </div>
+              <div style={{ fontSize: 14.5, color: 'var(--text-2)', fontWeight: 500 }}>
+                clientes para contactar ahora
+              </div>
+            </div>
+            <div style={{ fontSize: 13.5, color: 'var(--text-3)', marginTop: 8, fontWeight: 500 }}>
+              {stats.estaSemana} más esta semana · {stats.total} en total
+            </div>
+          </div>
         </div>
-        <div className="kpi">
-          <div className="kpi__head"><div className="kpi__ic amber">📅</div><div className="kpi__lbl">Esta semana</div></div>
-          <div className="kpi__v" style={{ color: 'var(--amber-600)' }}>{stats.estaSemana}</div>
-          <div className="kpi__delta">±7 días del vencimiento</div>
-        </div>
-        <div className="kpi">
-          <div className="kpi__head"><div className="kpi__ic blue">📊</div><div className="kpi__lbl">Total recordatorios</div></div>
-          <div className="kpi__v">{stats.total}</div>
-          <div className="kpi__delta">Vencidos + próximos 30 días</div>
-        </div>
-        <div className="kpi">
-          <div className="kpi__head"><div className="kpi__ic green">✓</div><div className="kpi__lbl">Contactados hoy</div></div>
-          <div className="kpi__v" style={{ color: 'var(--green-600)' }}>{stats.contactadosHoy}</div>
-          <div className="kpi__delta">Mensajes enviados</div>
+
+        <div style={{ display: 'grid', gridTemplateRows: '1fr 1fr 1fr', gap: 10 }}>
+          <div className="kpi-mini" style={{ background: 'var(--bg-raised)', border: '1px solid var(--border)', borderRadius: 12, padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 14 }}>
+            <div className="kpi__ic amber" style={{ width: 38, height: 38, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '.4px' }}>Esta semana</div>
+              <div style={{ fontFamily: 'var(--mono)', fontWeight: 700, fontSize: 22, color: 'var(--text)', lineHeight: 1.1, marginTop: 2 }}>{stats.estaSemana}</div>
+            </div>
+          </div>
+
+          <div className="kpi-mini" style={{ background: 'var(--bg-raised)', border: '1px solid var(--border)', borderRadius: 12, padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 14 }}>
+            <div className="kpi__ic blue" style={{ width: 38, height: 38, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '.4px' }}>Total recordatorios</div>
+              <div style={{ fontFamily: 'var(--mono)', fontWeight: 700, fontSize: 22, color: 'var(--text)', lineHeight: 1.1, marginTop: 2 }}>{stats.total}</div>
+            </div>
+          </div>
+
+          <div className="kpi-mini" style={{ background: 'var(--bg-raised)', border: '1px solid var(--border)', borderRadius: 12, padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 14 }}>
+            <div className="kpi__ic green" style={{ width: 38, height: 38, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '.4px' }}>Contactados hoy</div>
+              <div style={{ fontFamily: 'var(--mono)', fontWeight: 700, fontSize: 22, color: stats.contactadosHoy > 0 ? 'var(--green-700)' : 'var(--text)', lineHeight: 1.1, marginTop: 2 }}>{stats.contactadosHoy}</div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -453,9 +498,11 @@ export default function CRM({ trabajos = [], clientes, vehiculos, notify, actual
       <div className="card" style={{ marginBottom: 16 }}>
         <div className="card__b" style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
           {/* Búsqueda */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--bg-subtle)', border: '1px solid var(--border)', borderRadius: 8, padding: '6px 11px', flex: '1 1 200px', minWidth: 200 }}>
-            <span style={{ opacity: 0.5 }}>🔍</span>
-            <input value={filtroBusqueda} onChange={e => setFiltroBusqueda(e.target.value)} placeholder="Buscar cliente o placa..." style={{ border: 'none', outline: 'none', background: 'none', flex: 1, fontSize: 13 }} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: 9, background: 'var(--bg-subtle)', border: '1px solid var(--border)', borderRadius: 9, padding: '7px 12px', flex: '1 1 200px', minWidth: 220 }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-4)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+              <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+            </svg>
+            <input value={filtroBusqueda} onChange={e => setFiltroBusqueda(e.target.value)} placeholder="Buscar cliente o placa..." style={{ border: 'none', outline: 'none', background: 'none', flex: 1, fontSize: 13.5 }} />
           </div>
 
           {/* Filtro por tipo de servicio */}
@@ -494,7 +541,10 @@ export default function CRM({ trabajos = [], clientes, vehiculos, notify, actual
         {filtrados.length === 0 ? (
           <div className="card__b">
             <div className="empty-state">
-              <div className="empty-state-icon">✅</div>
+              <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="var(--green-600)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ marginBottom: 10, opacity: .85 }}>
+                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                <polyline points="22 4 12 14.01 9 11.01"/>
+              </svg>
               <p>No hay recordatorios pendientes con estos filtros.</p>
             </div>
           </div>
@@ -561,10 +611,14 @@ export default function CRM({ trabajos = [], clientes, vehiculos, notify, actual
                       <td><span className={`badge ${urgenteCls}`}>{urgenteLbl}</span></td>
                       <td>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 2, fontSize: 11.5 }}>
-                          <div style={{ display: 'flex', gap: 4 }}>
-                            {r.cliente.telefono ? <span style={{ color: 'var(--green-600)' }}>📱</span> : <span style={{ opacity: 0.3 }}>📱</span>}
-                            {r.cliente.email ? <span style={{ color: 'var(--blue-600)' }}>✉</span> : <span style={{ opacity: 0.3 }}>✉</span>}
-                            {r.historial.length > 0 && <span title={`${r.historial.length} contactos previos`} style={{ color: 'var(--text-3)' }}>·{r.historial.length}</span>}
+                          <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={r.cliente.telefono ? 'var(--green-600)' : 'var(--text-4)'} strokeOpacity={r.cliente.telefono ? 1 : 0.4} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-label={r.cliente.telefono ? 'Con teléfono' : 'Sin teléfono'}>
+                              <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.41 2 2 0 0 1 3.6 1.23h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.82a16 16 0 0 0 6.29 6.29l.95-.95a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/>
+                            </svg>
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={r.cliente.email ? 'var(--blue-600)' : 'var(--text-4)'} strokeOpacity={r.cliente.email ? 1 : 0.4} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-label={r.cliente.email ? 'Con email' : 'Sin email'}>
+                              <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/>
+                            </svg>
+                            {r.historial.length > 0 && <span title={`${r.historial.length} contactos previos`} style={{ color: 'var(--text-3)', fontSize: 11 }}>·{r.historial.length}</span>}
                           </div>
                           {resultadoBadge && (
                             <span style={{
@@ -612,8 +666,11 @@ export default function CRM({ trabajos = [], clientes, vehiculos, notify, actual
                   {' · '}última visita: {fmtDate(contactoActivo.fechaUltima.toISOString())}
                 </div>
                 {contactoActivo.historial.length > 0 && (
-                  <div style={{ marginTop: 6, fontSize: 11, color: 'var(--amber-600)' }}>
-                    ⚠️ Ya contactado {contactoActivo.historial.length} {contactoActivo.historial.length === 1 ? 'vez' : 'veces'} antes (último: {fmtDate(contactoActivo.historial[contactoActivo.historial.length - 1].fecha)})
+                  <div style={{ marginTop: 8, fontSize: 12.5, color: 'var(--amber-700)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                      <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+                    </svg>
+                    Ya contactado {contactoActivo.historial.length} {contactoActivo.historial.length === 1 ? 'vez' : 'veces'} antes (último: {fmtDate(contactoActivo.historial[contactoActivo.historial.length - 1].fecha)})
                   </div>
                 )}
               </div>
@@ -629,18 +686,23 @@ export default function CRM({ trabajos = [], clientes, vehiculos, notify, actual
                   className="btn btn-primary"
                   onClick={() => enviarPorCanal('whatsapp')}
                   disabled={!contactoActivo.cliente.telefono}
-                  style={{ background: '#25D366', flex: '1 1 auto' }}>
-                  📱 WhatsApp{!contactoActivo.cliente.telefono && ' (sin tel)'}
+                  style={{ background: '#16a34a', flex: '1 1 auto' }}>
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+                  WhatsApp{!contactoActivo.cliente.telefono && ' (sin tel)'}
                 </button>
                 <button
                   className="btn btn-outline"
                   onClick={() => enviarPorCanal('email')}
                   disabled={!contactoActivo.cliente.email}
                   style={{ flex: '1 1 auto' }}>
-                  ✉️ Email{!contactoActivo.cliente.email && ' (sin email)'}
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                  Email{!contactoActivo.cliente.email && ' (sin email)'}
                 </button>
                 {contactoActivo.cliente.telefono && (
-                  <a href={`tel:${contactoActivo.cliente.telefono}`} className="btn btn-outline" style={{ flex: '1 1 auto', textAlign: 'center' }}>📞 Llamar</a>
+                  <a href={`tel:${contactoActivo.cliente.telefono}`} className="btn btn-outline" style={{ flex: '1 1 auto', textAlign: 'center', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 7 }}>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.41 2 2 0 0 1 3.6 1.23h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.82a16 16 0 0 0 6.29 6.29l.95-.95a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                    Llamar
+                  </a>
                 )}
               </div>
               {/* Resultado del último contacto (si existe) */}
@@ -651,10 +713,10 @@ export default function CRM({ trabajos = [], clientes, vehiculos, notify, actual
                   </div>
                   <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                     {[
-                      ['vino_taller', '🚗 Vino al taller', 'var(--green-600)'],
-                      ['respondio', '💬 Respondió', 'var(--blue-600)'],
-                      ['no_respondio', '✗ No respondió', 'var(--text-3)'],
-                      ['no_quiere', '❌ No quiere', 'var(--red-600)'],
+                      ['vino_taller', 'Vino al taller', 'var(--green-700)'],
+                      ['respondio', 'Respondió', 'var(--blue-700)'],
+                      ['no_respondio', 'No respondió', 'var(--text-3)'],
+                      ['no_quiere', 'No quiere', 'var(--red-700)'],
                     ].map(([k, l, c]) => {
                       const ult = contactoActivo.historial[contactoActivo.historial.length - 1]
                       const activo = ult?.resultado === k
@@ -744,28 +806,36 @@ export default function CRM({ trabajos = [], clientes, vehiculos, notify, actual
             maxWidth: '95vw', width: 1100, maxHeight: '92vh', display: 'flex', flexDirection: 'column'
           }}>
             <div className="modal__h" style={{ flexShrink: 0 }}>
-              <h3 style={{ margin: 0 }}>
-                👥 Clientes inactivos · <strong>{filtrados.length}</strong> de {recordatoriosImportar.length}
+              <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: 9 }}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                  <circle cx="9" cy="7" r="4"/>
+                  <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                  <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                </svg>
+                Clientes inactivos · <strong>{filtrados.length}</strong> de {recordatoriosImportar.length}
               </h3>
-              <button className="btn btn-ghost btn-sm" onClick={() => setShowImportar(false)}>✕</button>
+              <button className="btn btn-ghost btn-sm" onClick={() => setShowImportar(false)} aria-label="Cerrar">✕</button>
             </div>
 
             {/* Filtros y búsqueda — siempre visibles */}
             <div style={{ flexShrink: 0, padding: '12px 22px', borderBottom: '1px solid var(--border)', background: 'var(--bg-subtle)', display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
-              <div style={{ flex: '1 1 240px', display: 'flex', alignItems: 'center', gap: 8, background: 'var(--bg-raised)', border: '1px solid var(--border)', borderRadius: 8, padding: '6px 11px' }}>
-                <span style={{ opacity: 0.5 }}>🔍</span>
+              <div style={{ flex: '1 1 240px', display: 'flex', alignItems: 'center', gap: 9, background: 'var(--bg-raised)', border: '1px solid var(--border)', borderRadius: 9, padding: '7px 12px' }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-4)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                  <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                </svg>
                 <input
                   value={busquedaInactivos}
                   onChange={e => setBusquedaInactivos(e.target.value)}
                   placeholder="Buscar nombre o cédula..."
-                  style={{ border: 'none', outline: 'none', background: 'none', flex: 1, fontSize: 13 }}
+                  style={{ border: 'none', outline: 'none', background: 'none', flex: 1, fontSize: 13.5 }}
                 />
                 {busquedaInactivos && (
                   <button onClick={() => setBusquedaInactivos('')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-3)' }}>✕</button>
                 )}
               </div>
               <div style={{ display: 'flex', gap: 4, background: 'var(--bg-raised)', padding: 3, borderRadius: 8, border: '1px solid var(--border)' }}>
-                {[['todos', 'Todos'], ['wa', '📱 Con WhatsApp'], ['email', '✉ Con Email']].map(([k, l]) => (
+                {[['todos', 'Todos'], ['wa', 'Con WhatsApp'], ['email', 'Con Email']].map(([k, l]) => (
                   <button key={k} onClick={() => setFiltroInactivos(k)} style={{
                     padding: '5px 12px', fontSize: 12, fontWeight: 600, borderRadius: 6,
                     background: filtroInactivos === k ? 'var(--blue-600)' : 'transparent',
@@ -786,7 +856,15 @@ export default function CRM({ trabajos = [], clientes, vehiculos, notify, actual
             <div style={{ flex: 1, overflow: 'auto', padding: '10px 22px 0', minHeight: 200 }}>
               {filtrados.length === 0 ? (
                 <div className="empty-state" style={{ padding: '24px 0' }}>
-                  <div className="empty-state-icon">{recordatoriosImportar.length === 0 ? '✅' : '🔍'}</div>
+                  {recordatoriosImportar.length === 0 ? (
+                    <svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="var(--green-600)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ marginBottom: 10, opacity: .85 }}>
+                      <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>
+                    </svg>
+                  ) : (
+                    <svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="var(--text-3)" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" style={{ marginBottom: 10, opacity: .8 }}>
+                      <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                    </svg>
+                  )}
                   <p>{recordatoriosImportar.length === 0 ? 'No hay clientes inactivos.' : 'Sin resultados con esos filtros.'}</p>
                 </div>
               ) : (

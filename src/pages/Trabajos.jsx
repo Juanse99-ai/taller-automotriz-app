@@ -576,7 +576,7 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
                     const diasSinMover = t.fecha ? Math.floor((Date.now() - new Date(t.fecha).getTime()) / 86400000) : 0
                     const estancado = t.estado !== ESTADOS.COMPLETADO && t.estado !== ESTADOS.CANCELADO && diasSinMover >= DIAS_ESTANCADO
                     return (
-                      <div key={t.id} className="card" style={{ padding: '12px 14px', marginBottom: 8, cursor: 'pointer', borderLeft: estancado ? '3px solid var(--red-500)' : 'none' }} onClick={() => handleEditar(t.id)}>
+                      <div key={t.id} className="card" style={{ padding: '12px 14px', marginBottom: 8, cursor: 'pointer', ...(estancado ? { borderColor: 'rgba(220,38,38,.32)', background: 'rgba(220,38,38,.04)' } : {}) }} onClick={() => handleEditar(t.id)}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
                           <span style={{ color: 'var(--blue-600)', fontWeight: 700, fontFamily: 'var(--mono)', fontSize: 13 }}>{t.otCodigo || '—'}</span>
                           <span className="text-mono" style={{ fontWeight: 700, fontSize: 13, letterSpacing: '.5px' }}>{t.placa}</span>
@@ -636,7 +636,7 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
                   const diasSinMover = t.fecha ? Math.floor((Date.now() - new Date(t.fecha).getTime()) / 86400000) : 0
                   const estancado = t.estado !== ESTADOS.COMPLETADO && t.estado !== ESTADOS.CANCELADO && diasSinMover >= DIAS_ESTANCADO
                   return (
-                    <tr key={t.id} style={estancado ? { borderLeft: '3px solid var(--red-500)', background: 'rgba(239,68,68,.04)' } : {}}>
+                    <tr key={t.id} style={estancado ? { background: 'rgba(220,38,38,.06)', boxShadow: 'inset 0 0 0 1px rgba(220,38,38,.18)' } : {}}>
                       <td className="c-mono" style={{ color: 'var(--blue-600)', fontWeight: 700 }}>{t.otCodigo || '—'}</td>
                       <td className="c-mono" style={{ fontWeight: 700 }}>{t.placa}</td>
                       <td className="c-name">{t.cliente || '—'}</td>
@@ -1087,8 +1087,8 @@ function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [] }) {
           ).sort((a, b) => new Date(b.fecha) - new Date(a.fecha))
           if (!historial.length) return null
           return (
-            <div className="card" style={{ borderLeft: '4px solid var(--blue-500)' }}>
-              <div className="card-title">Historial de {form.placa.toUpperCase()} ({historial.length} trabajos anteriores)</div>
+            <div className="card" style={{ borderColor: 'rgba(37,99,235,.28)', background: 'rgba(37,99,235,.04)' }}>
+              <div className="card-title" style={{ color: 'var(--blue-700)' }}>Historial de {form.placa.toUpperCase()} ({historial.length} trabajos anteriores)</div>
               <div className="table-wrap">
                 <table>
                   <thead>
@@ -1172,9 +1172,13 @@ function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [] }) {
           </div>
           {items.length === 0 ? (
             <div style={{ padding: '36px 20px', textAlign: 'center', color: 'var(--text-3)', fontSize: 13.5 }}>
-              <div style={{ fontSize: 28, opacity: .3, marginBottom: 8 }}>📦</div>
-              <div style={{ fontWeight: 600, color: 'var(--text-2)' }}>Sin repuestos ni servicios</div>
-              <div style={{ marginTop: 4, fontSize: 12.5 }}>Usa el boton <strong>+ Agregar linea</strong> para anadir items.</div>
+              <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" style={{ marginBottom: 10, opacity: .55 }}>
+                <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+                <polyline points="3.27 6.96 12 12.01 20.73 6.96"/>
+                <line x1="12" y1="22.08" x2="12" y2="12"/>
+              </svg>
+              <div style={{ fontWeight: 700, color: 'var(--text-2)', fontSize: 14 }}>Sin repuestos ni servicios</div>
+              <div style={{ marginTop: 5, fontSize: 13 }}>Usa el botón <strong>+ Agregar línea</strong> para añadir ítems.</div>
             </div>
           ) : (
             <div className="table-wrap">
