@@ -3,6 +3,7 @@ import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import { fmt, fmtDate, uid, hoyISO, normalizarDoc, normalizarNombre, fmtTelefono } from '../utils/helpers'
 import { TECNICOS, IVA_DEFAULT, TALLER } from '../utils/constants'
+import { loadLogo as loadPdfLogo, drawHeader, drawSectionHeader, drawDataBlock, drawTotalsBox, drawSignatures, drawFooter, tableStylesItems, PDF_LAYOUT, PDF_COLORS } from '../utils/pdfTheme'
 import { MARCAS, getModelos } from '../utils/vehiculos'
 import { useClientes } from '../hooks/useClientes'
 import { useInventario, formatCacheAge } from '../hooks/useInventario'
@@ -32,155 +33,59 @@ export default function Cotizaciones({ notify, trabajos = [], onCrearTrabajo, co
 
   const imprimirCotizacion = async (c) => {
     const doc = new jsPDF()
-    const NAVY = [13, 27, 53]
-    const SLATE_50 = [248, 250, 252]
-    const SLATE_100 = [241, 245, 249]
-    const SLATE_300 = [203, 213, 225]
-    const SLATE_400 = [148, 163, 184]
-    const SLATE_500 = [100, 116, 139]
-    const SLATE_600 = [71, 85, 105]
-    const SLATE_700 = [51, 65, 85]
-    const AMBER = [245, 158, 11]
+    const { MARGIN, CONTENT_W } = PDF_LAYOUT
+    const { NAVY, SLATE_300, SLATE_400, SLATE_500, SLATE_600 } = PDF_COLORS
+    const logoData = await loadPdfLogo()
 
-    // ============= HEADER =============
-    // Logo: chip amber MDA (replicating handoff design)
-    doc.setFillColor(...AMBER)
-    doc.roundedRect(14, 12, 16, 16, 1.5, 1.5, 'F')
-    doc.setTextColor(...NAVY)
-    doc.setFontSize(11)
-    doc.setFont(undefined, 'bold')
-    doc.text('MDA', 22, 22, { align: 'center' })
-
-    // Company info (next to logo)
-    doc.setTextColor(...NAVY)
-    doc.setFontSize(13)
-    doc.setFont(undefined, 'bold')
-    doc.text(TALLER.razonSocial || TALLER.nombre, 35, 17)
-    doc.setFontSize(7)
-    doc.setTextColor(...SLATE_500)
-    doc.setFont(undefined, 'bold')
-    doc.text('TALLER AUTOMOTRIZ', 35, 21)
-    doc.setFont(undefined, 'normal')
-    doc.text(`NIT ${TALLER.nit} · No responsable de IVA — Regimen Simple`, 35, 24.5)
-    doc.text(TALLER.direccion, 35, 28)
-    doc.text(`Cel. ${TALLER.celular} · ${TALLER.email}`, 35, 31.5)
-
-    // Right side: doc type
-    doc.setFontSize(8)
-    doc.setTextColor(...SLATE_500)
-    doc.setFont(undefined, 'bold')
-    doc.text('COTIZACION', 196, 14, { align: 'right' })
-    doc.setFontSize(15)
-    doc.setTextColor(...NAVY)
-    doc.text(c.id || '—', 196, 21, { align: 'right' })
-
-    // Status badge
+    // ============= HEADER (logo real + tildes) =============
     const estado = c.estado || 'Pendiente'
-    const badgeColors = {
-      'Aprobada': { bg: [220, 252, 231], fg: [22, 101, 52], bd: [134, 239, 172], lbl: 'APROBADA' },
-      'Rechazada': { bg: [254, 226, 226], fg: [153, 27, 27], bd: [252, 165, 165], lbl: 'RECHAZADA' },
-      'Pendiente': { bg: [254, 243, 199], fg: [146, 64, 14], bd: [253, 230, 138], lbl: `VIGENTE · ${c.validezDias || 15} DIAS` },
-    }[estado] || { bg: [241, 245, 249], fg: [51, 65, 85], bd: [203, 213, 225], lbl: estado.toUpperCase() }
-    doc.setFontSize(7)
-    doc.setFont(undefined, 'bold')
-    const badgeW = doc.getTextWidth(badgeColors.lbl) + 6
-    doc.setFillColor(...badgeColors.bg)
-    doc.setDrawColor(...badgeColors.bd)
-    doc.roundedRect(196 - badgeW, 23.5, badgeW, 4.5, 0.7, 0.7, 'FD')
-    doc.setTextColor(...badgeColors.fg)
-    doc.text(badgeColors.lbl, 196 - 3, 26.5, { align: 'right' })
+    const badge = estado === 'Aprobada'
+      ? { label: 'Aprobada', color: 'green' }
+      : estado === 'Rechazada'
+        ? { label: 'Rechazada', color: 'red' }
+        : { label: `Vigente · ${c.validezDias || 15} días`, color: 'amber' }
 
-    // Fechas (right column, label left, value right — properly spaced)
-    const dateRows = [
-      { lbl: 'FECHA EMISION', val: fmtDate(c.fecha) },
-      { lbl: 'VENCE', val: c.validezDias ? fmtDate(new Date(new Date(c.fecha).getTime() + (c.validezDias || 15) * 24 * 60 * 60 * 1000).toISOString()) : '—' },
-    ]
-    doc.setFontSize(7)
-    let dateY = 32
-    dateRows.forEach(r => {
-      doc.setTextColor(...SLATE_500)
-      doc.setFont(undefined, 'bold')
-      doc.text(r.lbl, 152, dateY)
-      doc.setTextColor(...NAVY)
-      doc.setFont(undefined, 'normal')
-      doc.text(r.val, 196, dateY, { align: 'right' })
-      dateY += 4
+    const venceVal = c.validezDias
+      ? fmtDate(new Date(new Date(c.fecha).getTime() + (c.validezDias || 15) * 24 * 60 * 60 * 1000).toISOString())
+      : '—'
+
+    drawHeader(doc, {
+      logoData,
+      docType: 'COTIZACIÓN',
+      docNumber: c.id || '—',
+      badge,
+      dateRows: [
+        { lbl: 'Fecha emisión', val: fmtDate(c.fecha) },
+        { lbl: 'Vence', val: venceVal },
+      ],
     })
 
-    // Top divider
-    doc.setDrawColor(...NAVY)
-    doc.setLineWidth(0.6)
-    doc.line(14, 42, 196, 42)
-    doc.setLineWidth(0.2)
-
-    // ============= HELPERS =============
-    let cursorY = 47
-    const sectionHeader = (title, y) => {
-      doc.setFillColor(...NAVY)
-      doc.rect(14, y, 182, 5.2, 'F')
-      doc.setTextColor(255, 255, 255)
-      doc.setFontSize(7)
-      doc.setFont(undefined, 'bold')
-      doc.text(title, 17, y + 3.5)
-      doc.setTextColor(...NAVY)
-    }
-    const dataBlock = (items, y, height = 11) => {
-      doc.setDrawColor(...SLATE_300)
-      doc.setLineWidth(0.2)
-      doc.rect(14, y, 182, height)
-      const colW = 182 / items.length
-      items.forEach((it, i) => {
-        const x = 14 + i * colW
-        const maxW = colW - 8
-        doc.setFontSize(6.5)
-        doc.setFont(undefined, 'bold')
-        doc.setTextColor(...SLATE_500)
-        doc.text((it.label || '').toUpperCase(), x + 4, y + 3.5)
-        doc.setFont(undefined, it.bold ? 'bold' : 'normal')
-        doc.setTextColor(...NAVY)
-        const valStr = (it.value || '—').toString()
-        const baseSize = it.size || 9
-        let fontSize = baseSize
-        let val = valStr
-        doc.setFontSize(fontSize)
-        while (doc.getTextWidth(val) > maxW && fontSize > 7) {
-          fontSize -= 0.5
-          doc.setFontSize(fontSize)
-        }
-        while (doc.getTextWidth(val) > maxW && val.length > 4) {
-          val = val.slice(0, -2) + '..'
-        }
-        doc.text(val, x + 4, y + 8)
-      })
-    }
-
     // ============= CLIENTE =============
-    sectionHeader('CLIENTE', cursorY)
-    cursorY += 5.2
-    dataBlock([
+    let cursorY = 47
+    cursorY = drawSectionHeader(doc, 'Cliente', cursorY)
+    cursorY = drawDataBlock(doc, [
       { label: 'Nombre', value: c.cliente, bold: true },
-      { label: 'Cedula / NIT', value: c.cedula },
-      { label: 'Telefono', value: c.telefonoCliente },
+      { label: 'Cédula / NIT', value: c.cedula },
+      { label: 'Teléfono', value: c.telefonoCliente },
     ], cursorY)
-    cursorY += 14
+    cursorY += 3
 
-    // ============= VEHICULO =============
-    sectionHeader('VEHICULO', cursorY)
-    cursorY += 5.2
-    dataBlock([
+    // ============= VEHÍCULO =============
+    cursorY = drawSectionHeader(doc, 'Vehículo', cursorY)
+    cursorY = drawDataBlock(doc, [
       { label: 'Placa', value: (c.placa || '').toUpperCase(), bold: true },
       { label: 'Marca / Modelo', value: `${c.marca || '—'} ${c.modelo || ''}`.trim() },
-      { label: 'Ano', value: String(c.ano || '—') },
+      { label: 'Año', value: String(c.ano || '—') },
       { label: 'Cilindraje', value: c.cilindraje || '—' },
     ], cursorY)
-    cursorY += 14
+    cursorY += 3
 
     // ============= ITEMS =============
     if (c.items?.length) {
-      sectionHeader('ITEMS COTIZADOS', cursorY)
-      cursorY += 5.2
+      cursorY = drawSectionHeader(doc, 'Ítems cotizados', cursorY)
 
       const itemSkus = c.items.map(i => i.sku || i.codigo || '')
+      const hasSkus = itemSkus.some(s => s)
       const itemRows = c.items.map((i, idx) => [
         String(idx + 1),
         i.nombre || '—',
@@ -192,18 +97,10 @@ export default function Cotizaciones({ notify, trabajos = [], onCrearTrabajo, co
 
       autoTable(doc, {
         startY: cursorY,
-        head: [['#', 'DESCRIPCION', 'CANT.', 'V. UNIT.', 'IVA', 'TOTAL']],
+        head: [['#', 'DESCRIPCIÓN', 'CANT.', 'V. UNIT.', 'IVA', 'TOTAL']],
         body: itemRows,
-        styles: { fontSize: 8.5, cellPadding: { top: 3, right: 3, bottom: itemSkus.some(s => s) ? 7 : 3, left: 3 }, lineColor: SLATE_100, lineWidth: 0.1 },
-        headStyles: {
-          fillColor: SLATE_50,
-          textColor: SLATE_600,
-          fontSize: 7,
-          fontStyle: 'bold',
-          lineColor: NAVY,
-          lineWidth: { bottom: 0.6 },
-          cellPadding: { top: 3, right: 3, bottom: 3, left: 3 },
-        },
+        ...tableStylesItems,
+        styles: { ...tableStylesItems.styles, cellPadding: { top: 3, right: 3, bottom: hasSkus ? 7 : 3, left: 3 } },
         columnStyles: {
           0: { halign: 'center', cellWidth: 8, textColor: SLATE_400 },
           1: { cellWidth: 'auto', fontStyle: 'bold' },
@@ -212,7 +109,7 @@ export default function Cotizaciones({ notify, trabajos = [], onCrearTrabajo, co
           4: { halign: 'center', cellWidth: 14 },
           5: { halign: 'right', cellWidth: 28, fontStyle: 'bold' },
         },
-        margin: { left: 14, right: 14 },
+        margin: { left: MARGIN, right: MARGIN },
         didDrawCell: (data) => {
           if (data.row.section === 'body' && data.column.index === 1) {
             const sku = itemSkus[data.row.index]
@@ -227,111 +124,71 @@ export default function Cotizaciones({ notify, trabajos = [], onCrearTrabajo, co
         },
       })
 
-      cursorY = doc.lastAutoTable.finalY + 8
+      cursorY = doc.lastAutoTable.finalY + 6
 
-      // ============= OBSERVACIONES (left) + TOTALS BOX (right) =============
       const subtotal = c.subtotal || 0
       const iva = c.iva || 0
       const total = c.total || 0
-      const boxX = 122
-      const boxW = 74
 
-      // OBSERVACIONES (left side)
-      const obsText = c.observaciones || 'Precios sujetos a disponibilidad de inventario al momento de la aprobacion. Tiempo estimado de entrega: 1 dia habil. Incluye garantia de 90 dias en repuestos originales y mano de obra. Esta cotizacion no genera obligacion de compra ni reserva de inventario.'
-      // Section header (left side only)
+      // OBSERVACIONES (izquierda)
+      const obsText = c.observaciones || 'Precios sujetos a disponibilidad de inventario al momento de la aprobación. Tiempo estimado de entrega: 1 día hábil. Incluye garantía de 90 días en repuestos originales y mano de obra. Esta cotización no genera obligación de compra ni reserva de inventario.'
       doc.setFillColor(...NAVY)
-      doc.rect(14, cursorY, 104, 5.2, 'F')
+      doc.rect(MARGIN, cursorY, 104, 5.4, 'F')
       doc.setTextColor(255, 255, 255)
-      doc.setFontSize(7)
+      doc.setFontSize(7.2)
       doc.setFont(undefined, 'bold')
-      doc.text('OBSERVACIONES', 17, cursorY + 3.5)
+      doc.text('OBSERVACIONES', MARGIN + 3, cursorY + 3.6)
 
       const obsLines = doc.splitTextToSize(obsText, 96)
       const obsHeight = Math.max(40, obsLines.length * 3.8 + 6)
       doc.setDrawColor(...SLATE_300)
-      doc.rect(14, cursorY + 5.2, 104, obsHeight)
+      doc.setLineWidth(0.2)
+      doc.rect(MARGIN, cursorY + 5.4, 104, obsHeight)
       doc.setFontSize(8)
       doc.setTextColor(...NAVY)
       doc.setFont(undefined, 'normal')
-      doc.text(obsLines, 17, cursorY + 9)
+      doc.text(obsLines, MARGIN + 3, cursorY + 9.5)
 
-      // TOTALS BOX (right side)
-      doc.setFontSize(8.5)
-      let tY = cursorY + 4
-      const totalsRows = [
-        { lbl: 'Subtotal', val: fmt(subtotal) },
-        { lbl: 'Descuento', val: '$ 0' },
-        { lbl: 'IVA (19%)', val: fmt(iva) },
-      ]
-      totalsRows.forEach(r => {
-        doc.setTextColor(...SLATE_500)
-        doc.setFont(undefined, 'normal')
-        doc.text(r.lbl, boxX + 4, tY)
-        doc.setTextColor(...NAVY)
-        doc.text(r.val, boxX + boxW - 4, tY, { align: 'right' })
-        // dotted separator
-        doc.setDrawColor(...SLATE_300)
-        doc.setLineDashPattern([0.5, 0.5], 0)
-        doc.line(boxX + 4, tY + 2, boxX + boxW - 4, tY + 2)
-        doc.setLineDashPattern([], 0)
-        tY += 6
+      // Caja de totales (derecha, helper unificado)
+      const rows = [{ lbl: 'Subtotal', val: fmt(subtotal) }]
+      if (iva > 0) rows.push({ lbl: 'IVA (19%)', val: fmt(iva) })
+      const boxX = 122, boxW = 74
+      let tY = drawTotalsBox(doc, {
+        y: cursorY, x: boxX, w: boxW,
+        rows,
+        finalLabel: 'Total cotizado',
+        finalValue: fmt(total),
       })
 
-      // TOTAL navy box
-      doc.setFillColor(...NAVY)
-      doc.rect(boxX, tY, boxW, 11, 'F')
-      doc.setTextColor(...AMBER)
-      doc.setFontSize(7)
-      doc.setFont(undefined, 'bold')
-      doc.text('TOTAL COTIZADO', boxX + 4, tY + 6.5)
-      doc.setTextColor(255, 255, 255)
-      doc.setFontSize(12.5)
-      doc.text(fmt(total), boxX + boxW - 4, tY + 7, { align: 'right' })
-
-      // Card aprobacion (below totals box)
-      tY += 15
+      // Card aprobación (debajo de la caja de totales)
+      tY += 4
       doc.setDrawColor(...SLATE_300)
       doc.setLineDashPattern([1, 1], 0)
-      doc.roundedRect(boxX, tY, boxW, 14, 1, 1, 'D')
+      doc.roundedRect(boxX, tY, boxW, 15, 1, 1, 'D')
       doc.setLineDashPattern([], 0)
       doc.setFontSize(7)
       doc.setTextColor(...SLATE_600)
       doc.setFont(undefined, 'normal')
-      doc.text('Para aprobar esta cotizacion', boxX + boxW / 2, tY + 5, { align: 'center' })
-      doc.text(`responda este correo o llame al`, boxX + boxW / 2, tY + 8.5, { align: 'center' })
+      doc.text('Para aprobar esta cotización', boxX + boxW / 2, tY + 5, { align: 'center' })
+      doc.text('responda este correo o llame al', boxX + boxW / 2, tY + 8.5, { align: 'center' })
       doc.setFont(undefined, 'bold')
       doc.setTextColor(...NAVY)
-      doc.text(TALLER.celular, boxX + boxW / 2, tY + 12, { align: 'center' })
+      doc.text(TALLER.celular, boxX + boxW / 2, tY + 12.5, { align: 'center' })
 
       cursorY += obsHeight + 12
     }
 
     // ============= FIRMAS =============
-    const firmaY = Math.max(cursorY + 16, 252)
-    doc.setDrawColor(...SLATE_400)
-    doc.setLineWidth(0.3)
-    doc.line(14, firmaY, 90, firmaY)
-    doc.line(110, firmaY, 196, firmaY)
-    doc.setFontSize(7.5)
-    doc.setTextColor(...NAVY)
-    doc.setFont(undefined, 'bold')
-    doc.text('FIRMA CLIENTE · APROBACION', 14, firmaY + 4)
-    doc.text('ASESOR DE SERVICIO', 110, firmaY + 4)
-    doc.setFontSize(7)
-    doc.setTextColor(...SLATE_400)
-    doc.setFont(undefined, 'normal')
-    doc.text('Nombre, documento, fecha', 14, firmaY + 8)
-    doc.text('Nombre, documento, fecha', 110, firmaY + 8)
+    const firmaY = Math.max(cursorY + 16, 250)
+    drawSignatures(doc, {
+      y: firmaY,
+      blocks: [
+        { label: 'Firma cliente · aprobación', sub: 'Nombre, documento, fecha' },
+        { label: 'Asesor de servicio', sub: 'Nombre, documento, fecha' },
+      ],
+    })
 
-    // Footer
-    doc.setDrawColor(...SLATE_300)
-    doc.setLineWidth(0.2)
-    doc.line(14, 285, 196, 285)
-    doc.setFontSize(6.5)
-    doc.setTextColor(...SLATE_400)
-    doc.text(`Generado por taller-automotriz-app.vercel.app · ${TALLER.razonSocial || TALLER.nombre}`, 14, 290)
-    doc.text('Pagina 1 de 1', 196, 290, { align: 'right' })
-
+    drawFooter(doc, { page: 1, total: 1, leftText: `${TALLER.razonSocial || TALLER.nombre} · NIT ${TALLER.nit}` })
     doc.save(`${c.id || 'Cotizacion'}.pdf`)
   }
 

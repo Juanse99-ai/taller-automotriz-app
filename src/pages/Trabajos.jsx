@@ -3,6 +3,7 @@ import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import { fmt, fmtDate, uid, hoyISO, normalizarDoc, normalizarNombre, fmtTelefono } from '../utils/helpers'
 import { TECNICOS, ESTADOS, IVA_DEFAULT, DIAS_ESTANCADO, TALLER } from '../utils/constants'
+import { loadLogo as loadPdfLogo, drawHeader, drawSectionHeader, drawDataBlock, drawTotalsBox, drawSignatures, drawFooter, tableStylesItems, PDF_LAYOUT, PDF_COLORS } from '../utils/pdfTheme'
 import { MARCAS, getModelos } from '../utils/vehiculos'
 import { useClientes } from '../hooks/useClientes'
 import { useInventario, formatCacheAge } from '../hooks/useInventario'
@@ -84,177 +85,63 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
 
   const imprimirOT = async (t) => {
     const doc = new jsPDF()
-    const NAVY = [13, 27, 53]
-    const SLATE_50 = [248, 250, 252]
-    const SLATE_100 = [241, 245, 249]
-    const SLATE_300 = [203, 213, 225]
-    const SLATE_400 = [148, 163, 184]
-    const SLATE_500 = [100, 116, 139]
-    const SLATE_600 = [71, 85, 105]
-    const SLATE_700 = [51, 65, 85]
-    const AMBER = [245, 158, 11]
+    const { MARGIN, CONTENT_W } = PDF_LAYOUT
+    const { NAVY, SLATE_300, SLATE_400, SLATE_500, AMBER } = PDF_COLORS
+    const logoData = await loadPdfLogo()
 
-    // ============= HEADER =============
-    // Logo: chip amber MDA
-    doc.setFillColor(...AMBER)
-    doc.roundedRect(14, 12, 16, 16, 1.5, 1.5, 'F')
-    doc.setTextColor(...NAVY)
-    doc.setFontSize(11)
-    doc.setFont(undefined, 'bold')
-    doc.text('MDA', 22, 22, { align: 'center' })
+    // ============= HEADER (logo real + tildes) =============
+    const dateRows = [{ lbl: 'Fecha emisión', val: fmtDate(t.fecha) }]
+    if (t.fechaEntrega) dateRows.push({ lbl: 'Entrega', val: fmtDate(t.fechaEntrega) })
 
-    // Company info
-    doc.setTextColor(...NAVY)
-    doc.setFontSize(13)
-    doc.setFont(undefined, 'bold')
-    doc.text(TALLER.razonSocial || TALLER.nombre, 35, 17)
-    doc.setFontSize(7)
-    doc.setTextColor(...SLATE_500)
-    doc.setFont(undefined, 'bold')
-    doc.text('TALLER AUTOMOTRIZ', 35, 21)
-    doc.setFont(undefined, 'normal')
-    doc.text(`NIT ${TALLER.nit} · No responsable de IVA — Regimen Simple`, 35, 24.5)
-    doc.text(TALLER.direccion, 35, 28)
-    doc.text(`Cel. ${TALLER.celular} · ${TALLER.email}`, 35, 31.5)
-
-    // Right side: doc type
-    doc.setFontSize(8)
-    doc.setTextColor(...SLATE_500)
-    doc.setFont(undefined, 'bold')
-    doc.text('ORDEN DE TRABAJO', 196, 14, { align: 'right' })
-    doc.setFontSize(15)
-    doc.setTextColor(...NAVY)
-    doc.text(t.otCodigo || '—', 196, 21, { align: 'right' })
-
-    // Status badge
-    const estado = t.estado || 'Pendiente'
-    const badgeColors = {
-      'Completado': { bg: [220, 252, 231], fg: [22, 101, 52], bd: [134, 239, 172] },
-      'En Progreso': { bg: [219, 234, 254], fg: [30, 64, 175], bd: [147, 197, 253] },
-      'Pendiente': { bg: [254, 243, 199], fg: [146, 64, 14], bd: [253, 230, 138] },
-      'En Diagnostico': { bg: [254, 243, 199], fg: [146, 64, 14], bd: [253, 230, 138] },
-      'Esperando Repuestos': { bg: [254, 243, 199], fg: [146, 64, 14], bd: [253, 230, 138] },
-      'En Prueba': { bg: [219, 234, 254], fg: [30, 64, 175], bd: [147, 197, 253] },
-      'Cancelado': { bg: [254, 226, 226], fg: [153, 27, 27], bd: [252, 165, 165] },
-    }[estado] || { bg: [241, 245, 249], fg: [51, 65, 85], bd: [203, 213, 225] }
-    const estadoUpper = estado.toUpperCase()
-    doc.setFontSize(7)
-    doc.setFont(undefined, 'bold')
-    const badgeW = doc.getTextWidth(estadoUpper) + 6
-    doc.setFillColor(...badgeColors.bg)
-    doc.setDrawColor(...badgeColors.bd)
-    doc.roundedRect(196 - badgeW, 23.5, badgeW, 4.5, 0.7, 0.7, 'FD')
-    doc.setTextColor(...badgeColors.fg)
-    doc.text(estadoUpper, 196 - 3, 26.5, { align: 'right' })
-
-    // Fechas (right, with proper spacing)
-    const dateRows = [
-      { lbl: 'FECHA EMISION', val: fmtDate(t.fecha) },
-    ]
-    if (t.fechaEntrega) dateRows.push({ lbl: 'ENTREGA', val: fmtDate(t.fechaEntrega) })
-    doc.setFontSize(7)
-    let dateY = 32
-    dateRows.forEach(r => {
-      doc.setTextColor(...SLATE_500)
-      doc.setFont(undefined, 'bold')
-      doc.text(r.lbl, 152, dateY)
-      doc.setTextColor(...NAVY)
-      doc.setFont(undefined, 'normal')
-      doc.text(r.val, 196, dateY, { align: 'right' })
-      dateY += 4
+    drawHeader(doc, {
+      logoData,
+      docType: 'ORDEN DE TRABAJO',
+      docNumber: t.otCodigo || '—',
+      badge: { label: t.estado || 'Pendiente', estado: t.estado || 'Pendiente' },
+      dateRows,
     })
 
-    doc.setDrawColor(...NAVY)
-    doc.setLineWidth(0.6)
-    doc.line(14, 42, 196, 42)
-    doc.setLineWidth(0.2)
-
-    // ============= HELPERS =============
-    let cursorY = 47
-    const sectionHeader = (title, y, w = 182) => {
-      doc.setFillColor(...NAVY)
-      doc.rect(14, y, w, 5.2, 'F')
-      doc.setTextColor(255, 255, 255)
-      doc.setFontSize(7)
-      doc.setFont(undefined, 'bold')
-      doc.text(title, 17, y + 3.5)
-      doc.setTextColor(...NAVY)
-    }
-    const dataBlock = (items, y, height = 11) => {
-      doc.setDrawColor(...SLATE_300)
-      doc.setLineWidth(0.2)
-      doc.rect(14, y, 182, height)
-      const colW = 182 / items.length
-      items.forEach((it, i) => {
-        const x = 14 + i * colW
-        const maxW = colW - 8 // leave 4mm padding on each side
-        doc.setFontSize(6.5)
-        doc.setFont(undefined, 'bold')
-        doc.setTextColor(...SLATE_500)
-        doc.text((it.label || '').toUpperCase(), x + 4, y + 3.5)
-        doc.setFont(undefined, it.bold ? 'bold' : 'normal')
-        doc.setTextColor(...NAVY)
-        // Use smaller font when value is long, and truncate to fit column width
-        const valStr = (it.value || '—').toString()
-        const baseSize = it.size || 9
-        let fontSize = baseSize
-        let val = valStr
-        doc.setFontSize(fontSize)
-        // If text width exceeds column, try smaller font, then truncate
-        while (doc.getTextWidth(val) > maxW && fontSize > 7) {
-          fontSize -= 0.5
-          doc.setFontSize(fontSize)
-        }
-        while (doc.getTextWidth(val) > maxW && val.length > 4) {
-          val = val.slice(0, -2) + '..'
-        }
-        doc.text(val, x + 4, y + 8)
-      })
-    }
-
     // ============= CLIENTE =============
-    sectionHeader('CLIENTE', cursorY)
-    cursorY += 5.2
-    dataBlock([
+    let cursorY = 47
+    cursorY = drawSectionHeader(doc, 'Cliente', cursorY)
+    cursorY = drawDataBlock(doc, [
       { label: 'Nombre', value: t.cliente, bold: true },
-      { label: 'Cedula / NIT', value: t.cedula },
-      { label: 'Telefono', value: t.telefonoCliente },
+      { label: 'Cédula / NIT', value: t.cedula },
+      { label: 'Teléfono', value: t.telefonoCliente },
       { label: 'Email', value: t.emailCliente },
     ], cursorY)
-    cursorY += 14
+    cursorY += 3
 
-    // ============= VEHICULO =============
-    sectionHeader('VEHICULO', cursorY)
-    cursorY += 5.2
-    dataBlock([
+    // ============= VEHÍCULO =============
+    cursorY = drawSectionHeader(doc, 'Vehículo', cursorY)
+    cursorY = drawDataBlock(doc, [
       { label: 'Placa', value: (t.placa || '').toUpperCase(), bold: true },
       { label: 'Marca', value: t.marca },
       { label: 'Modelo', value: t.modelo },
-      { label: 'Ano', value: String(t.ano || '—') },
+      { label: 'Año', value: String(t.ano || '—') },
       { label: 'Kilometraje', value: t.kilometraje ? `${t.kilometraje} km` : '—' },
-      { label: 'Tecnico', value: tecNombre(t.tecnicoId) },
+      { label: 'Técnico', value: tecNombre(t.tecnicoId) },
     ], cursorY)
-    cursorY += 14
+    cursorY += 3
 
-    // ============= DIAGNOSTICO =============
+    // ============= DIAGNÓSTICO =============
     if (t.observaciones) {
-      sectionHeader('DIAGNOSTICO INICIAL · MOTIVO DE INGRESO', cursorY)
-      cursorY += 5.2
-      const obsLines = doc.splitTextToSize(t.observaciones, 176)
+      cursorY = drawSectionHeader(doc, 'Diagnóstico inicial · motivo de ingreso', cursorY)
+      const obsLines = doc.splitTextToSize(t.observaciones, CONTENT_W - 6)
       const obsHeight = Math.max(11, obsLines.length * 3.8 + 6)
       doc.setDrawColor(...SLATE_300)
-      doc.rect(14, cursorY, 182, obsHeight)
+      doc.setLineWidth(0.2)
+      doc.rect(MARGIN, cursorY, CONTENT_W, obsHeight)
       doc.setFontSize(8)
       doc.setTextColor(...NAVY)
       doc.setFont(undefined, 'normal')
-      doc.text(obsLines, 17, cursorY + 4.5)
-      cursorY += obsHeight + 4
+      doc.text(obsLines, MARGIN + 3, cursorY + 4.5)
+      cursorY += obsHeight + 3
     }
 
-    // ============= TRABAJOS AUTORIZADOS (items table) =============
+    // ============= TRABAJOS AUTORIZADOS =============
     if (t.items?.length) {
-      sectionHeader('TRABAJOS AUTORIZADOS', cursorY)
-      cursorY += 5.2
+      cursorY = drawSectionHeader(doc, 'Trabajos autorizados', cursorY)
 
       const itemSkus = t.items.map(i => i.sku || i.codigo || '')
       const itemRows = t.items.map((i, idx) => [
@@ -269,18 +156,10 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
 
       autoTable(doc, {
         startY: cursorY,
-        head: [['#', 'DESCRIPCION', 'CANT.', 'V. UNIT.', 'IVA', 'TOTAL']],
+        head: [['#', 'DESCRIPCIÓN', 'CANT.', 'V. UNIT.', 'IVA', 'TOTAL']],
         body: itemRows,
-        styles: { fontSize: 8.5, cellPadding: { top: 3, right: 3, bottom: hasSkus ? 7 : 3, left: 3 }, lineColor: SLATE_100, lineWidth: 0.1 },
-        headStyles: {
-          fillColor: SLATE_50,
-          textColor: SLATE_600,
-          fontSize: 7,
-          fontStyle: 'bold',
-          lineColor: NAVY,
-          lineWidth: { bottom: 0.6 },
-          cellPadding: { top: 3, right: 3, bottom: 3, left: 3 },
-        },
+        ...tableStylesItems,
+        styles: { ...tableStylesItems.styles, cellPadding: { top: 3, right: 3, bottom: hasSkus ? 7 : 3, left: 3 } },
         columnStyles: {
           0: { halign: 'center', cellWidth: 8, textColor: SLATE_400 },
           1: { cellWidth: 'auto', fontStyle: 'bold' },
@@ -289,7 +168,7 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
           4: { halign: 'center', cellWidth: 14 },
           5: { halign: 'right', cellWidth: 28, fontStyle: 'bold' },
         },
-        margin: { left: 14, right: 14 },
+        margin: { left: MARGIN, right: MARGIN },
         didDrawCell: (data) => {
           if (data.row.section === 'body' && data.column.index === 1) {
             const sku = itemSkus[data.row.index]
@@ -305,103 +184,65 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
       })
 
       cursorY = doc.lastAutoTable.finalY + 3
-      // Nota debajo de la tabla
       doc.setFontSize(7)
       doc.setTextColor(...SLATE_500)
       doc.setFont(undefined, 'italic')
-      doc.text('Cualquier trabajo adicional sera autorizado por el cliente antes de su ejecucion.', 14, cursorY + 3)
+      doc.text('Cualquier trabajo adicional será autorizado por el cliente antes de su ejecución.', MARGIN, cursorY + 3)
       doc.setFont(undefined, 'normal')
       cursorY += 9
 
-      // ============= OBSERVACIONES INGRESO (left, only if real data) + TOTALS BOX (right) =============
+      // ===== Observaciones ingreso (izq, opcional) + Totales (der) =====
       const subtotal = t.subtotalSinIva || 0
       const iva = t.totalIva || 0
       const total = t.total || 0
       const manoObra = t.manoObra || 0
       const repuestos = t.repuestos || 0
-      const boxX = 122
-      const boxW = 74
 
-      // Observaciones de ingreso (left card) — SOLO si hay datos reales del usuario
       const obsIngresoReal = t.observacionesIngreso || t.estadoIngreso || ''
       let leftBlockH = 0
       if (obsIngresoReal && obsIngresoReal.trim().length > 0) {
         const lines = doc.splitTextToSize(obsIngresoReal, 100)
         leftBlockH = Math.max(40, lines.length * 4 + 10)
         doc.setDrawColor(...SLATE_300)
-        doc.rect(14, cursorY, 104, leftBlockH)
+        doc.rect(MARGIN, cursorY, 104, leftBlockH)
         doc.setFontSize(7)
         doc.setTextColor(...SLATE_500)
         doc.setFont(undefined, 'bold')
-        doc.text('OBSERVACIONES DE INGRESO', 17, cursorY + 4)
+        doc.text('OBSERVACIONES DE INGRESO', MARGIN + 3, cursorY + 4)
         doc.setFontSize(8)
         doc.setTextColor(...NAVY)
         doc.setFont(undefined, 'normal')
-        doc.text(lines, 17, cursorY + 9)
+        doc.text(lines, MARGIN + 3, cursorY + 9)
       }
 
-      // TOTALS BOX (right) — siempre se muestra
-      doc.setFontSize(8.5)
-      let tY = cursorY + 4
-      const totalsRows = [
+      // Caja de totales (usa helper unificado)
+      const rows = [
         { lbl: 'Mano de obra', val: fmt(manoObra) },
         { lbl: 'Repuestos', val: fmt(repuestos) },
         { lbl: 'Subtotal', val: fmt(subtotal) },
-        { lbl: 'IVA (19%)', val: fmt(iva) },
       ]
-      totalsRows.forEach(r => {
-        doc.setTextColor(...SLATE_500)
-        doc.setFont(undefined, 'normal')
-        doc.text(r.lbl, boxX + 4, tY)
-        doc.setTextColor(...NAVY)
-        doc.text(r.val, boxX + boxW - 4, tY, { align: 'right' })
-        doc.setDrawColor(...SLATE_300)
-        doc.setLineDashPattern([0.5, 0.5], 0)
-        doc.line(boxX + 4, tY + 2, boxX + boxW - 4, tY + 2)
-        doc.setLineDashPattern([], 0)
-        tY += 6
+      if (iva > 0) rows.push({ lbl: 'IVA (19%)', val: fmt(iva) })
+      const boxEndY = drawTotalsBox(doc, {
+        y: cursorY, x: 122, w: 74,
+        rows,
+        finalLabel: 'Total a pagar',
+        finalValue: fmt(total),
       })
 
-      // TOTAL navy box
-      doc.setFillColor(...NAVY)
-      doc.rect(boxX, tY, boxW, 11, 'F')
-      doc.setTextColor(...AMBER)
-      doc.setFontSize(7)
-      doc.setFont(undefined, 'bold')
-      doc.text('TOTAL A PAGAR', boxX + 4, tY + 6.5)
-      doc.setTextColor(255, 255, 255)
-      doc.setFontSize(12.5)
-      doc.text(fmt(total), boxX + boxW - 4, tY + 7, { align: 'right' })
-
-      cursorY += Math.max(leftBlockH, tY + 11 - cursorY) + 8
+      cursorY = Math.max(cursorY + leftBlockH, boxEndY) + 8
     }
 
-    // ============= FIRMAS =============
-    const firmaY = Math.max(cursorY + 16, 252)
-    doc.setDrawColor(...SLATE_400)
-    doc.setLineWidth(0.3)
-    doc.line(14, firmaY, 90, firmaY)
-    doc.line(110, firmaY, 196, firmaY)
-    doc.setFontSize(7.5)
-    doc.setTextColor(...NAVY)
-    doc.setFont(undefined, 'bold')
-    doc.text('RECIBIDO POR (CLIENTE)', 14, firmaY + 4)
-    doc.text('TECNICO RESPONSABLE', 110, firmaY + 4)
-    doc.setFontSize(7)
-    doc.setTextColor(...SLATE_400)
-    doc.setFont(undefined, 'normal')
-    doc.text('Nombre, documento, fecha', 14, firmaY + 8)
-    doc.text('Nombre, documento, fecha', 110, firmaY + 8)
+    // ============= FIRMAS (altura fija para no flotar) =============
+    const firmaY = Math.max(cursorY + 16, 250)
+    drawSignatures(doc, {
+      y: firmaY,
+      blocks: [
+        { label: 'Recibido por (cliente)', sub: 'Nombre, documento, fecha' },
+        { label: 'Técnico responsable', sub: 'Nombre, documento, fecha' },
+      ],
+    })
 
-    // Footer
-    doc.setDrawColor(...SLATE_300)
-    doc.setLineWidth(0.2)
-    doc.line(14, 285, 196, 285)
-    doc.setFontSize(6.5)
-    doc.setTextColor(...SLATE_400)
-    doc.text(`Generado por taller-automotriz-app.vercel.app · ${TALLER.razonSocial || TALLER.nombre}`, 14, 290)
-    doc.text('Pagina 1 de 1', 196, 290, { align: 'right' })
-
+    drawFooter(doc, { page: 1, total: 1, leftText: `${TALLER.razonSocial || TALLER.nombre} · NIT ${TALLER.nit}` })
     doc.save(`${t.otCodigo || 'OT'}.pdf`)
   }
 

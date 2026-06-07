@@ -16,6 +16,26 @@
 
 import { TALLER } from './constants'
 
+// Carga /logo.png como dataURL para embeber en el PDF.
+// Devuelve null si falla (el header cae al chip "MDA").
+export async function loadLogo(path = '/logo.png') {
+  try {
+    const res = await fetch(path)
+    if (!res.ok) return null
+    const type = res.headers.get('content-type') || ''
+    if (!type.includes('image')) return null
+    const blob = await res.blob()
+    return await new Promise((resolve) => {
+      const reader = new FileReader()
+      reader.onloadend = () => resolve(reader.result)
+      reader.onerror = () => resolve(null)
+      reader.readAsDataURL(blob)
+    })
+  } catch {
+    return null
+  }
+}
+
 // Paleta (alineada con index.css)
 export const PDF_COLORS = {
   NAVY: [13, 27, 53],
@@ -74,32 +94,46 @@ const DEFAULT_BADGE = { bg: PDF_COLORS.SLATE_100, fg: PDF_COLORS.SLATE_700, bd: 
 //                o bien {label, estado} (estado mapea a BADGE_COLOR_MAP)
 //  - dateRows:  [{lbl, val}]  (FECHA EMISION, ENTREGA…)
 export function drawHeader(doc, opts = {}) {
-  const { docType = '', docNumber = '', badge = null, dateRows = [] } = opts
-  const { NAVY, AMBER, SLATE_500 } = PDF_COLORS
+  const { docType = '', docNumber = '', badge = null, dateRows = [], logoData = null } = opts
+  const { NAVY, AMBER, SLATE_200, SLATE_500 } = PDF_COLORS
   const { MARGIN, CONTENT_W } = PDF_LAYOUT
 
-  // Chip MDA amber
-  doc.setFillColor(...AMBER)
-  doc.roundedRect(MARGIN, 12, 16, 16, 1.5, 1.5, 'F')
-  doc.setTextColor(...NAVY)
-  doc.setFontSize(11)
-  doc.setFont(undefined, 'bold')
-  doc.text('MDA', MARGIN + 8, 22, { align: 'center' })
+  // Logo: imagen real si está disponible, sino chip "MDA" amber
+  const logoSize = 20
+  const logoY = 11
+  if (logoData && typeof logoData === 'string' && logoData.startsWith('data:image')) {
+    // Marco blanco sutil para que el logo respire sobre el papel
+    doc.setFillColor(255, 255, 255)
+    doc.setDrawColor(...SLATE_200)
+    doc.setLineWidth(0.3)
+    doc.roundedRect(MARGIN, logoY, logoSize, logoSize, 2, 2, 'FD')
+    try {
+      const fmtImg = logoData.includes('image/png') ? 'PNG' : 'JPEG'
+      doc.addImage(logoData, fmtImg, MARGIN + 1.5, logoY + 1.5, logoSize - 3, logoSize - 3, undefined, 'FAST')
+    } catch { /* si falla, queda el marco blanco */ }
+  } else {
+    doc.setFillColor(...AMBER)
+    doc.roundedRect(MARGIN, logoY, logoSize, logoSize, 2, 2, 'F')
+    doc.setTextColor(...NAVY)
+    doc.setFontSize(11)
+    doc.setFont(undefined, 'bold')
+    doc.text('MDA', MARGIN + logoSize / 2, logoY + logoSize / 2 + 1.5, { align: 'center' })
+  }
 
   // Razón social + datos taller
-  const infoX = MARGIN + 21
+  const infoX = MARGIN + logoSize + 5
   doc.setTextColor(...NAVY)
   doc.setFontSize(13)
   doc.setFont(undefined, 'bold')
-  doc.text(TALLER.razonSocial || TALLER.nombre, infoX, 17)
+  doc.text(TALLER.razonSocial || TALLER.nombre, infoX, 16.5)
   doc.setFontSize(7)
   doc.setTextColor(...SLATE_500)
   doc.setFont(undefined, 'bold')
-  doc.text('TALLER AUTOMOTRIZ', infoX, 21)
+  doc.text('TALLER AUTOMOTRIZ', infoX, 20.5)
   doc.setFont(undefined, 'normal')
-  doc.text(`NIT ${TALLER.nit} · No responsable de IVA — Régimen Simple`, infoX, 24.5)
-  doc.text(TALLER.direccion, infoX, 28)
-  doc.text(`Cel. ${TALLER.celular} · ${TALLER.email}`, infoX, 31.5)
+  doc.text(`NIT ${TALLER.nit} · No responsable de IVA — Régimen Simple`, infoX, 24)
+  doc.text(TALLER.direccion, infoX, 27.5)
+  doc.text(`Cel. ${TALLER.celular} · ${TALLER.email}`, infoX, 31)
 
   // Tipo de documento (derecha, esquina superior)
   const rightX = MARGIN + CONTENT_W
