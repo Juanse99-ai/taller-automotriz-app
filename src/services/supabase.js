@@ -357,6 +357,17 @@ export async function upsertLiquidacionHistorial(reg) {
   }
 }
 
+export async function deleteAllLiquidacionHistorial() {
+  try {
+    const res = await fetchWithTimeout(`${proxy('liquidacion_historial')}&id=neq.`, { method: 'DELETE' })
+    if (!res.ok) throw new Error(await res.text())
+    return true
+  } catch (e) {
+    console.warn('Supabase deleteAllLiquidacionHistorial:', e.message)
+    return false
+  }
+}
+
 // ---------- LIQUIDADOS ----------
 
 export async function fetchLiquidados() {

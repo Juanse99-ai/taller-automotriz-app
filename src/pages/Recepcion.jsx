@@ -266,10 +266,12 @@ export default function Recepcion({ hook, vehiculosHook, clientesHook, notify })
                         onChange={e => set('observaciones', e.target.value)} />
                     </div>
                     <div className="field">
-                      <label>Tecnico asignado</label>
+                      <label>Técnico asignado</label>
                       <select className="input" value={form.tecnicoId} onChange={e => set('tecnicoId', e.target.value)}>
                         <option value="">Sin asignar</option>
-                        {TECNICOS.map(t => <option key={t.id} value={t.id}>{t.nombre}</option>)}
+                        {TECNICOS.filter(t => t.activo !== false || t.id === parseInt(form.tecnicoId)).map(t => (
+                          <option key={t.id} value={t.id}>{t.nombre}{t.activo === false ? ' (inactivo)' : ''}</option>
+                        ))}
                       </select>
                     </div>
                     <div className="field">

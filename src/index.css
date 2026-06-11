@@ -77,7 +77,13 @@
   --shadow-md:0 6px 18px rgba(15,23,42,.10),0 2px 6px rgba(15,23,42,.05);
   --shadow-lg:0 18px 40px rgba(15,23,42,.16),0 4px 12px rgba(15,23,42,.06);
 
-  --ease:cubic-bezier(.4,0,.2,1);
+  /* Easing curves (animations.dev): los built-in de CSS son débiles.
+     ease-out fuerte para enter/feedback; in-out para movimiento en pantalla;
+     drawer = curva iOS para el sidebar deslizante. */
+  --ease:cubic-bezier(.4,0,.2,1);             /* legacy */
+  --ease-out:cubic-bezier(0.23,1,0.32,1);
+  --ease-in-out:cubic-bezier(0.77,0,0.175,1);
+  --ease-drawer:cubic-bezier(0.32,0.72,0,1);
   --sidebar-w:240px;
   --sidebar-w-collapsed:72px;
   --sidebar-width:240px; /* legacy alias */
@@ -112,12 +118,14 @@ input,select,textarea{font-family:inherit;font-size:14px;color:inherit}
 /* === COMPONENTS (prototipo/components.css) === */
 /* Modal */
 .modal-overlay{position:fixed;inset:0;background:rgba(13,27,53,.72);z-index:100;display:flex;align-items:center;justify-content:center;padding:20px;animation:fadeIn .15s ease-out}
-.modal{background:var(--bg-raised);border-radius:16px;width:100%;max-width:520px;max-height:90vh;overflow-y:auto;box-shadow:0 30px 80px -20px rgba(0,0,0,.4);animation:slideUp .2s ease-out}
+.modal{background:var(--bg-raised);border-radius:16px;width:100%;max-width:520px;max-height:90vh;overflow-y:auto;box-shadow:0 30px 80px -20px rgba(0,0,0,.4);animation:modalIn 220ms var(--ease-out)}
 .modal__h{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;padding:18px 22px;border-bottom:1px solid var(--border)}
 .modal__b{padding:20px 22px 22px}
 .modal__f{display:flex;gap:10px;justify-content:flex-end;padding:14px 22px;border-top:1px solid var(--border)}
 @keyframes fadeIn{from{opacity:0}to{opacity:1}}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+/* Nada aparece desde scale(0): entra desde .97 + leve translateY (animations.dev) */
+@keyframes modalIn{from{transform:translateY(10px) scale(.97);opacity:0}to{transform:translateY(0) scale(1);opacity:1}}
 @keyframes slideUp{from{transform:translateY(12px);opacity:0}to{transform:translateY(0);opacity:1}}
 
 /* Command Palette — Product Search */
@@ -168,7 +176,7 @@ input,select,textarea{font-family:inherit;font-size:14px;color:inherit}
 
 /* Shell (prototipo) */
 .app{display:flex;min-height:100vh;background:var(--bg)}
-.sidebar{position:fixed;top:0;left:0;bottom:0;width:var(--sidebar-w);background:var(--bg-side);color:#fff;display:flex;flex-direction:column;z-index:40;transition:transform .28s var(--ease)}
+.sidebar{position:fixed;top:0;left:0;bottom:0;width:var(--sidebar-w);background:var(--bg-side);color:#fff;display:flex;flex-direction:column;z-index:40;transition:transform .32s var(--ease-drawer)}
 .sidebar__brand{display:flex;align-items:center;gap:10px;padding:16px 14px 18px;border-bottom:1px solid rgba(255,255,255,.07)}
 .sidebar__brand .logo{width:40px;height:40px;border-radius:10px;background:#fff;display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0;box-shadow:0 1px 0 rgba(255,255,255,.15) inset}
 .sidebar__brand .logo img{width:100%;height:100%;object-fit:cover;object-position:center}
@@ -238,7 +246,7 @@ input,select,textarea{font-family:inherit;font-size:14px;color:inherit}
 .pagehd .actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 
 /* button */
-.btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;height:40px;padding:0 16px;border-radius:10px;font-size:13.5px;font-weight:600;transition:background .12s,transform .06s,box-shadow .12s;white-space:nowrap}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;height:40px;padding:0 16px;border-radius:10px;font-size:13.5px;font-weight:600;transition:background .12s,transform 140ms var(--ease-out),box-shadow .12s;white-space:nowrap}
 .btn:active{transform:scale(.97)}
 .btn svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:2}
 .btn-primary{background:var(--primary);color:#fff;box-shadow:0 1px 2px rgba(30,58,138,.3),0 4px 10px rgba(30,58,138,.15)}
@@ -279,8 +287,11 @@ input,select,textarea{font-family:inherit;font-size:14px;color:inherit}
 [data-theme="dark"] .badge-n{background:rgba(100,116,139,.2);color:#cbd5e1}
 
 /* KPI card */
-.kpi{background:var(--bg-raised);border:1px solid var(--border);border-radius:14px;padding:18px 20px;display:flex;flex-direction:column;gap:14px;transition:border-color .12s,box-shadow .12s,transform .12s}
-.kpi:hover{border-color:var(--border-strong);box-shadow:var(--shadow);transform:translateY(-1px)}
+.kpi{background:var(--bg-raised);border:1px solid var(--border);border-radius:14px;padding:18px 20px;display:flex;flex-direction:column;gap:14px;transition:border-color .12s,box-shadow .12s,transform 140ms var(--ease-out)}
+/* hover gated: en tablet (uso real de la app) el hover por tap queda pegado */
+@media (hover:hover) and (pointer:fine){
+  .kpi:hover{border-color:var(--border-strong);box-shadow:var(--shadow);transform:translateY(-1px)}
+}
 .kpi__head{display:flex;align-items:center;gap:10px}
 .kpi__ic{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
 .kpi__ic svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.8}
@@ -366,8 +377,11 @@ textarea.input{min-height:88px;resize:vertical;padding-top:11px}
 [data-theme="dark"] .calendar-task{background:rgba(37,99,235,.18);color:#93c5fd}
 [data-theme="dark"] .calendar-day.today{background:rgba(245,158,11,.08)}
 
-/* scrim (mobile sidebar overlay) */
-.scrim{display:none;position:fixed;inset:0;background:rgba(6,11,26,.72);z-index:35}
+/* scrim (mobile sidebar overlay) — fade real, sincronizado con el drawer.
+   display:none no es animable: el fondo aparecía de golpe y el menú se
+   sentía brusco aunque el deslizamiento sí animara. */
+.scrim{position:fixed;inset:0;background:rgba(6,11,26,.72);z-index:35;opacity:0;visibility:hidden;pointer-events:none;transition:opacity .32s ease,visibility .32s}
+.scrim.on{opacity:1;visibility:visible;pointer-events:auto;transition:opacity .46s ease,visibility .46s}
 
 /* ============================================
    LEGACY COMPAT — clases que el codigo actual usa.
@@ -495,10 +509,12 @@ tbody tr:hover{background:var(--bg-subtle)}
    Combina prototipo + legacy
    ============================ */
 @media (max-width:960px){
-  .sidebar{transform:translateX(-100%);width:280px}
-  .sidebar.open{transform:translateX(0);box-shadow:var(--shadow-lg)}
+  /* Drawer asimetrico: abrir 460ms (deliberado, se siente fluido),
+     cerrar 320ms (el sistema responde rapido). La transicion activa es
+     la del estado DESTINO: .sidebar.open al abrir, .sidebar al cerrar. */
+  .sidebar{transform:translateX(-100%);width:280px;transition:transform .32s var(--ease-drawer)}
+  .sidebar.open{transform:translateX(0);box-shadow:var(--shadow-lg);transition:transform .46s var(--ease-drawer)}
   .sidebar.collapsed{width:280px}
-  .scrim.on{display:block}
   .main{margin-left:0}
   .app.has-collapsed .main{margin-left:0}
   .topbar{padding:0 16px;gap:8px;height:56px}
@@ -597,9 +613,11 @@ tbody tr:hover{background:var(--bg-subtle)}
 /* === Dashboard KPI hero + mini layout === */
 .kpi-grid{display:grid;grid-template-columns:1.4fr 1fr;gap:16px}
 .kpi-hero{transition:border-color .15s,box-shadow .15s}
-.kpi-hero:hover{border-color:var(--border-strong);box-shadow:var(--shadow-sm)}
 .kpi-mini{transition:border-color .15s,box-shadow .15s}
-.kpi-mini:hover{border-color:var(--border-strong);box-shadow:var(--shadow-sm)}
+@media (hover:hover) and (pointer:fine){
+  .kpi-hero:hover{border-color:var(--border-strong);box-shadow:var(--shadow-sm)}
+  .kpi-mini:hover{border-color:var(--border-strong);box-shadow:var(--shadow-sm)}
+}
 @media(max-width:960px){
   .kpi-grid{grid-template-columns:1fr !important;gap:12px}
   .kpi-hero{min-height:auto !important;padding:18px 20px !important}
@@ -640,4 +658,18 @@ tbody tr:hover{background:var(--bg-subtle)}
   .login-art{min-height:220px !important}
   .login-art h1{font-size:24px !important}
   .login-art > div > div:last-child{display:none}
+}
+
+/* === Accesibilidad: menos movimiento, no cero movimiento ===
+   Se conservan los fades de opacidad (ayudan a comprender el cambio de
+   estado) y se eliminan los desplazamientos/escala que marean. */
+@media (prefers-reduced-motion: reduce){
+  .modal{animation:fadeIn 150ms ease}
+  .cmd-palette{animation:fadeIn 120ms ease}
+  .page-enter{animation:fadeIn 150ms ease}
+  .sidebar{transition:none}
+  .main{transition:none}
+  .btn:active{transform:none}
+  .kpi,.kpi:hover{transform:none}
+  .toast{animation:fadeIn 200ms ease}
 }

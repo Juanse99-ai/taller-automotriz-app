@@ -57,19 +57,19 @@ class ErrorBoundary extends Component {
 
 const SECTIONS = {
   dashboard: { title: 'Dashboard', subtitle: 'Resumen general del taller' },
-  trabajos: { title: 'Trabajos', subtitle: 'Gestion de ordenes de trabajo' },
-  recepcion: { title: 'Recepcion', subtitle: 'Recepcion de vehiculos' },
-  mecanicos: { title: 'Mecanicos', subtitle: 'Equipo de tecnicos' },
+  trabajos: { title: 'Trabajos', subtitle: 'Gestión de órdenes de trabajo' },
+  recepcion: { title: 'Recepción', subtitle: 'Recepción de vehículos' },
+  mecanicos: { title: 'Mecánicos', subtitle: 'Equipo de técnicos' },
   cotizaciones: { title: 'Cotizaciones', subtitle: 'Gestionar cotizaciones' },
   inventario: { title: 'Inventario', subtitle: 'Productos y repuestos' },
-  liquidacion: { title: 'Liquidacion', subtitle: 'Pagos a tecnicos' },
-  reportes: { title: 'Reportes', subtitle: 'Estadisticas y exportacion' },
+  liquidacion: { title: 'Liquidación', subtitle: 'Pagos a técnicos' },
+  reportes: { title: 'Reportes', subtitle: 'Estadísticas y exportación' },
   inspecciones: { title: 'Inspecciones', subtitle: 'Inspecciones digitales DVI' },
-  clientes: { title: 'Clientes', subtitle: 'Gestion de clientes' },
-  vehiculos: { title: 'Vehiculos', subtitle: 'Historial y seguimiento vehicular' },
+  clientes: { title: 'Clientes', subtitle: 'Gestión de clientes' },
+  vehiculos: { title: 'Vehículos', subtitle: 'Historial y seguimiento vehicular' },
   crm: { title: 'CRM', subtitle: 'Recordatorios y campañas de retención' },
-  cuentti: { title: 'Cuentti', subtitle: 'Integracion de facturacion' },
-  usuarios: { title: 'Usuarios', subtitle: 'Gestion de accesos al sistema' },
+  cuentti: { title: 'Cuentti', subtitle: 'Integración de facturación' },
+  usuarios: { title: 'Usuarios', subtitle: 'Gestión de accesos al sistema' },
 }
 
 export default function App() {
@@ -239,7 +239,7 @@ export default function App() {
       case 'recepcion':
         return <Recepcion hook={trabajosHook} vehiculosHook={vehiculosHook} clientesHook={clientesHook} notify={notify} />
       case 'mecanicos':
-        return <Mecanicos trabajos={trabajosHook.trabajos} onNavigate={navigate} />
+        return <Mecanicos trabajos={trabajosHook.trabajos} onNavigate={navigate} notify={notify} />
       case 'cotizaciones':
         return <Cotizaciones notify={notify} trabajos={trabajosHook.trabajos} onCrearTrabajo={handleCrearTrabajoDesdeCotizacion} cotizacionesHook={cotizacionesHook} />
       case 'inventario':

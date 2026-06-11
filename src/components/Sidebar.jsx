@@ -111,23 +111,23 @@ const NAV = [
   { group: 'Principal', items: [
     { key: 'dashboard',   label: 'Dashboard' },
   ]},
-  { group: 'Operacion', items: [
-    { key: 'recepcion',    label: 'Recepcion' },
+  { group: 'Operación', items: [
+    { key: 'recepcion',    label: 'Recepción' },
     { key: 'trabajos',     label: 'Trabajos' },
     { key: 'inspecciones', label: 'Inspecciones' },
-    { key: 'mecanicos',    label: 'Mecanicos' },
+    { key: 'mecanicos',    label: 'Mecánicos' },
   ]},
-  { group: 'Gestion', items: [
+  { group: 'Gestión', items: [
     { key: 'clientes',  label: 'Clientes' },
-    { key: 'vehiculos', label: 'Vehiculos' },
+    { key: 'vehiculos', label: 'Vehículos' },
     { key: 'crm',       label: 'CRM' },
   ]},
-  { group: 'Facturacion', items: [
+  { group: 'Facturación', items: [
     { key: 'cotizaciones', label: 'Cotizaciones' },
     { key: 'inventario',   label: 'Inventario' },
-    { key: 'liquidacion',  label: 'Liquidacion' },
+    { key: 'liquidacion',  label: 'Liquidación' },
   ]},
-  { group: 'Analisis', items: [
+  { group: 'Análisis', items: [
     { key: 'reportes', label: 'Reportes' },
     { key: 'cuentti',  label: 'Cuentti' },
   ]},

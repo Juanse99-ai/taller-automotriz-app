@@ -10,11 +10,10 @@ export const TALLER = {
   email: 'multidiagnosticosas@gmail.com',
 }
 
-export const TECNICOS = [
-  { id: 1, nombre: 'Pedro Barraza', especialidad: 'Frenos', telefono: '3002345678', tarifa: 20000 },
-  { id: 2, nombre: 'Victor Padilla', especialidad: 'General', telefono: '3001234567', tarifa: 20000 },
-  { id: 3, nombre: 'Ismael Cervantes', especialidad: 'Motor', telefono: '3003456789', tarifa: 20000 },
-]
+// Equipo de técnicos: ahora es DINÁMICO (agregar/desactivar/eliminar desde
+// la página Mecánicos). Vive en services/tecnicos.js respaldado por
+// localStorage; se re-exporta aquí para no romper los imports existentes.
+export { TECNICOS } from '../services/tecnicos'
 
 // Comisiones: 40% total, 20% cada tecnico si trabajan juntos
 export const COMISION = {

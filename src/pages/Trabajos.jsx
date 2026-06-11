@@ -389,8 +389,8 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
           </div>
           <div className="form-group" style={{ marginBottom: 0 }}>
             <select className="form-select" value={filtroTecnico} onChange={e => setFiltroTecnico(e.target.value)} style={{ fontSize: 13 }}>
-              <option value="todos">Todos los tecnicos</option>
-              {TECNICOS.map(t => <option key={t.id} value={t.id}>{t.nombre}</option>)}
+              <option value="todos">Todos los técnicos</option>
+              {TECNICOS.map(t => <option key={t.id} value={t.id}>{t.nombre}{t.activo === false ? ' (inactivo)' : ''}</option>)}
             </select>
           </div>
         </div>
@@ -912,10 +912,12 @@ function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [] }) {
               <input className="input" type="number" value={form.kilometraje} min="0" placeholder="45000" onChange={e => set('kilometraje', e.target.value)} />
             </div>
             <div className="field">
-              <label>Tecnico</label>
+              <label>Técnico</label>
               <select className="input" value={form.tecnicoId} onChange={e => set('tecnicoId', e.target.value)}>
                 <option value="">Seleccionar</option>
-                {TECNICOS.map(t => <option key={t.id} value={t.id}>{t.nombre}</option>)}
+                {TECNICOS.filter(t => t.activo !== false || t.id === parseInt(form.tecnicoId)).map(t => (
+                  <option key={t.id} value={t.id}>{t.nombre}{t.activo === false ? ' (inactivo)' : ''}</option>
+                ))}
               </select>
             </div>
           </div>

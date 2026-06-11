@@ -222,7 +222,7 @@ function InspeccionForm({ inspeccion, trabajos, onSave, onCancel }) {
             <div className="field"><label>Cliente</label><input className="input" value={cliente} placeholder="Nombre" onChange={e => setCliente(e.target.value)}/></div>
             <div className="field"><label>Cedula</label><input className="input" value={cedula} placeholder="Cedula cliente" onChange={e => setCedula(e.target.value)}/></div>
             <div className="field"><label>Vehiculo</label><input className="input" value={vehiculo} placeholder="Marca Modelo Ano" onChange={e => setVehiculo(e.target.value)}/></div>
-            <div className="field"><label>Tecnico</label><select className="input" value={tecnico} onChange={e => setTecnico(e.target.value)}><option value="">Seleccionar...</option>{TECNICOS.map(t => <option key={t.id} value={t.nombre}>{t.nombre}</option>)}</select></div>
+            <div className="field"><label>Técnico</label><select className="input" value={tecnico} onChange={e => setTecnico(e.target.value)}><option value="">Seleccionar...</option>{TECNICOS.filter(t => t.activo !== false || t.nombre === tecnico).map(t => <option key={t.id} value={t.nombre}>{t.nombre}</option>)}</select></div>
             <div className="field"><label>Kilometraje</label><input className="input" type="number" value={km} placeholder="45000" onChange={e => setKm(e.target.value)}/></div>
           </div>
         </div>

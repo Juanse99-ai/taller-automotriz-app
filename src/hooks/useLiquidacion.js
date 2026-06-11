@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import {
   fetchMovimientos, upsertMovimiento, deleteMovimiento as sbDeleteMov,
-  fetchLiquidacionHistorial, upsertLiquidacionHistorial,
+  fetchLiquidacionHistorial, upsertLiquidacionHistorial, deleteAllLiquidacionHistorial,
   fetchLiquidados, upsertLiquidados, deleteAllLiquidados,
   fetchCompartidos, upsertCompartido, deleteCompartido,
 } from '../services/supabase'
@@ -24,6 +24,19 @@ export function useLiquidacion() {
     nota: r.nota || '',
     fecha: r.fecha,
   })
+
+  // Supabase solo guarda la EXISTENCIA del compartido (trabajo_id).
+  // El partner (con quién se comparte) vive en este objeto local:
+  //   compartidos[id] = true                  → compartido, partner sin elegir (legacy)
+  //   compartidos[id] = { partner: <tecId> }  → compartido con compañero elegido
+  // Al sincronizar preservamos el partner local para no perderlo.
+  const mergeCompartidos = (prev, sbComp) => {
+    const merged = {}
+    Object.keys(sbComp).forEach(id => {
+      merged[id] = (prev[id] && typeof prev[id] === 'object') ? prev[id] : true
+    })
+    return merged
+  }
 
   const normalizarHistorial = (r) => ({
     id: r.id,
@@ -73,8 +86,11 @@ export function useLiquidacion() {
       }
 
       if (sbComp && Object.keys(sbComp).length > 0) {
-        setCompartidos(sbComp)
-        lsSet(LS_KEYS.TRABAJOS_COMPARTIDOS, sbComp)
+        setCompartidos(prev => {
+          const merged = mergeCompartidos(prev, sbComp)
+          lsSet(LS_KEYS.TRABAJOS_COMPARTIDOS, merged)
+          return merged
+        })
         anyOk = true
       }
 
@@ -131,8 +147,11 @@ export function useLiquidacion() {
 
       // Compartidos
       if (sbComp && Object.keys(sbComp).length > 0) {
-        setCompartidos(sbComp)
-        lsSet(LS_KEYS.TRABAJOS_COMPARTIDOS, sbComp)
+        setCompartidos(prev => {
+          const merged = mergeCompartidos(prev, sbComp)
+          lsSet(LS_KEYS.TRABAJOS_COMPARTIDOS, merged)
+          return merged
+        })
       } else {
         const cached = lsGet(LS_KEYS.TRABAJOS_COMPARTIDOS, {})
         if (Object.keys(cached).length > 0 && sbComp !== null) {
@@ -213,9 +232,21 @@ export function useLiquidacion() {
     })
   }, [])
 
+  // Asigna el compañero de un trabajo compartido (la otra mitad del 40%)
+  const setCompartidoPartner = useCallback((trabajoId, partnerId) => {
+    setCompartidos(prev => {
+      if (!prev[trabajoId]) return prev
+      const pid = parseInt(partnerId)
+      return { ...prev, [trabajoId]: pid ? { partner: pid } : true }
+    })
+  }, [])
+
   const guardarHistorial = useCallback((next) => {
     setHistorial(next)
-    next.forEach(h => upsertLiquidacionHistorial(h))
+    // Lista vacia = limpiar todo: borrar tambien en Supabase para que el
+    // proximo sync no resucite los registros.
+    if (next.length === 0) deleteAllLiquidacionHistorial()
+    else next.forEach(h => upsertLiquidacionHistorial(h))
   }, [])
 
   const agregarHistorial = useCallback((reg) => {
@@ -228,7 +259,7 @@ export function useLiquidacion() {
     loading, connectionError,
     guardarMovs, agregarMovimiento, eliminarMovimiento,
     guardarLiquidados, desliquidarTodos,
-    guardarCompartidos, toggleCompartido,
+    guardarCompartidos, toggleCompartido, setCompartidoPartner,
     guardarHistorial, agregarHistorial,
     recargar: cargarDatos,
   }

@@ -1,13 +1,17 @@
 import { useMemo, useState } from 'react'
 import { fmt } from '../utils/helpers'
-import { TECNICOS, COMISION, ESTADOS } from '../utils/constants'
+import { COMISION, ESTADOS } from '../utils/constants'
+import { useTecnicos, tecnicosActivos, agregarTecnico, actualizarTecnico, setTecnicoActivo, eliminarTecnico } from '../services/tecnicos'
 
 const ACTIVOS = [ESTADOS.PENDIENTE, ESTADOS.EN_DIAGNOSTICO, ESTADOS.ESPERANDO_REPUESTOS, ESTADOS.EN_PROGRESO]
 
-export default function Mecanicos({ trabajos, onNavigate }) {
+export default function Mecanicos({ trabajos, onNavigate, notify }) {
+  const TECNICOS = useTecnicos()
   const [vistaAgenda, setVistaAgenda] = useState(false)
   const [editando, setEditando] = useState(null)
   const [editForm, setEditForm] = useState({})
+  const [agregando, setAgregando] = useState(false)
+  const [nuevoForm, setNuevoForm] = useState({ nombre: '', especialidad: '', telefono: '' })
 
   const tecnicosData = useMemo(() => {
     return TECNICOS.map((tec, idx) => {
@@ -42,26 +46,72 @@ export default function Mecanicos({ trabajos, onNavigate }) {
         libre: activos.length === 0,
       }
     })
-  }, [trabajos])
+  }, [trabajos, TECNICOS])
 
-  const totalActivos = tecnicosData.reduce((s, t) => s + t.activosCount, 0)
-  const totalComisionesMes = tecnicosData.reduce((s, t) => s + t.comisionMes, 0)
+  const equipoActivo = tecnicosData.filter(t => !t.eliminado && t.activo !== false)
+  const equipoInactivo = tecnicosData.filter(t => !t.eliminado && t.activo === false)
+  const totalActivos = equipoActivo.reduce((s, t) => s + t.activosCount, 0)
+  const totalComisionesMes = equipoActivo.reduce((s, t) => s + t.comisionMes, 0)
 
   const initials = (nombre) => nombre.split(' ').map(x => x[0]).slice(0, 2).join('')
+
+  const handleAgregar = (e) => {
+    e?.preventDefault?.()
+    if (!nuevoForm.nombre.trim()) { notify?.('Escribe el nombre del técnico', 'error'); return }
+    agregarTecnico(nuevoForm)
+    setNuevoForm({ nombre: '', especialidad: '', telefono: '' })
+    setAgregando(false)
+    notify?.('Técnico agregado al equipo', 'success')
+  }
+
+  const handleGuardarEdicion = () => {
+    if (!editando) return
+    if (!editForm.nombre?.trim()) { notify?.('El nombre no puede quedar vacío', 'error'); return }
+    actualizarTecnico(editando.id, {
+      nombre: editForm.nombre.trim(),
+      especialidad: (editForm.especialidad || '').trim() || 'General',
+      telefono: (editForm.telefono || '').trim(),
+    })
+    setEditando(null)
+    notify?.('Técnico actualizado', 'success')
+  }
+
+  const handleDesactivar = () => {
+    if (!editando) return
+    setTecnicoActivo(editando.id, false)
+    setEditando(null)
+    notify?.(`${editando.nombre} marcado como inactivo`, 'info')
+  }
+
+  const handleEliminar = () => {
+    if (!editando) return
+    const otsHistoria = trabajos.filter(t => parseInt(t.tecnicoId) === editando.id).length
+    const msg = otsHistoria > 0
+      ? `¿Eliminar a ${editando.nombre} del equipo?\n\nTiene ${otsHistoria} OT${otsHistoria !== 1 ? 's' : ''} en el historial: su nombre se conservará en los registros y reportes viejos, pero desaparecerá del equipo, los selects y la liquidación.`
+      : `¿Eliminar a ${editando.nombre} del equipo? No tiene OTs registradas, se borrará por completo.`
+    if (!confirm(msg)) return
+    eliminarTecnico(editando.id, trabajos)
+    setEditando(null)
+    notify?.(`${editando.nombre} eliminado del equipo`, 'info')
+  }
 
   return (
     <div>
       <div className="pagehd">
         <div>
           <h2>Equipo técnico</h2>
-          <p className="sub">{TECNICOS.length} mecánicos · comisión {COMISION.TOTAL * 100}% c/u</p>
+          <p className="sub">{equipoActivo.length} mecánico{equipoActivo.length !== 1 ? 's' : ''} activo{equipoActivo.length !== 1 ? 's' : ''} · comisión {COMISION.TOTAL * 100}%</p>
         </div>
         <div className="actions">
           <button
             className={`btn btn-sm ${vistaAgenda ? 'btn-primary' : 'btn-outline'}`}
             onClick={() => setVistaAgenda(v => !v)}
           >
-            {vistaAgenda ? 'Ver Tarjetas' : 'Ver Agenda Semanal'}
+            {vistaAgenda ? 'Ver tarjetas' : 'Agenda semanal'}
+          </button>
+          <button className="btn btn-primary btn-sm" onClick={() => setAgregando(true)}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Agregar técnico
           </button>
         </div>
       </div>
@@ -73,7 +123,7 @@ export default function Mecanicos({ trabajos, onNavigate }) {
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
             <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '.5px' }}>Comisiones del mes</span>
             <span style={{ fontFamily: 'var(--mono)', fontSize: 12, fontWeight: 700, color: 'var(--green-700)', background: 'var(--green-100)', padding: '4px 10px', borderRadius: 999 }}>
-              {TECNICOS.length} técnicos
+              {equipoActivo.length} técnico{equipoActivo.length !== 1 ? 's' : ''}
             </span>
           </div>
           <div>
@@ -93,7 +143,7 @@ export default function Mecanicos({ trabajos, onNavigate }) {
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '.4px' }}>Técnicos activos</div>
-              <div style={{ fontFamily: 'var(--mono)', fontWeight: 700, fontSize: 26, color: 'var(--text)', lineHeight: 1.1, marginTop: 2 }}>{TECNICOS.length}</div>
+              <div style={{ fontFamily: 'var(--mono)', fontWeight: 700, fontSize: 26, color: 'var(--text)', lineHeight: 1.1, marginTop: 2 }}>{equipoActivo.length}</div>
             </div>
           </div>
 
@@ -110,10 +160,11 @@ export default function Mecanicos({ trabajos, onNavigate }) {
       </div>
 
       {vistaAgenda ? (
-        <AgendaSemanal trabajos={trabajos} onNavigate={onNavigate} />
+        <AgendaSemanal trabajos={trabajos} onNavigate={onNavigate} tecnicos={TECNICOS} />
       ) : (
+        <>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(300px,1fr))', gap: 16 }}>
-          {tecnicosData.map((tec) => (
+          {equipoActivo.map((tec) => (
             <div key={tec.id} className="card">
               <div className="card__b" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                 {/* Avatar + nombre + badge */}
@@ -169,43 +220,131 @@ export default function Mecanicos({ trabajos, onNavigate }) {
 
                 {/* Actions */}
                 <div style={{ display: 'flex', gap: 8 }}>
-                  <button className="btn btn-outline btn-sm" style={{ flex: 1 }} onClick={() => onNavigate && onNavigate('trabajos')}>👁 Ver trabajos</button>
-                  <button className="btn btn-outline btn-sm" style={{ flex: 1 }} onClick={() => { setEditando(tec); setEditForm({ nombre: tec.nombre, especialidad: tec.especialidad, telefono: tec.telefono }) }}>✏️ Editar</button>
+                  <button className="btn btn-outline btn-sm" style={{ flex: 1 }} onClick={() => onNavigate && onNavigate('trabajos')}>Ver trabajos</button>
+                  <button className="btn btn-outline btn-sm" style={{ flex: 1 }} onClick={() => { setEditando(tec); setEditForm({ nombre: tec.nombre, especialidad: tec.especialidad, telefono: tec.telefono }) }}>Editar</button>
                 </div>
               </div>
             </div>
           ))}
         </div>
+
+        {/* Inactivos: visibles pero apagados, con reactivación a un clic */}
+        {equipoInactivo.length > 0 && (
+          <div style={{ marginTop: 22 }}>
+            <div style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '.5px', marginBottom: 10 }}>
+              Inactivos ({equipoInactivo.length})
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {equipoInactivo.map(tec => (
+                <div key={tec.id} style={{
+                  display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px',
+                  background: 'var(--bg-raised)', border: '1px dashed var(--border-strong)',
+                  borderRadius: 12, opacity: .75,
+                }}>
+                  <span className={`av av-${(tec.idx % 5) + 1}`} style={{ width: 36, height: 36, fontSize: 12, flexShrink: 0, filter: 'grayscale(1)' }}>{initials(tec.nombre)}</span>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontWeight: 600, fontSize: 14 }}>{tec.nombre}</div>
+                    <div style={{ fontSize: 12, color: 'var(--text-3)' }}>{tec.especialidad} · {tec.totalTrabajos} OT{tec.totalTrabajos !== 1 ? 's' : ''} en historial</div>
+                  </div>
+                  <span className="badge badge-n">Inactivo</span>
+                  <button className="btn btn-outline btn-sm" onClick={() => { setTecnicoActivo(tec.id, true); notify?.(`${tec.nombre} reactivado`, 'success') }}>Reactivar</button>
+                  <button
+                    className="btn btn-outline btn-sm"
+                    style={{ color: 'var(--red-600)', borderColor: 'rgba(220,38,38,.35)' }}
+                    onClick={() => {
+                      const msg = tec.totalTrabajos > 0
+                        ? `¿Eliminar a ${tec.nombre} del equipo?\n\nSu nombre se conservará en las ${tec.totalTrabajos} OT${tec.totalTrabajos !== 1 ? 's' : ''} del historial, pero desaparecerá del equipo.`
+                        : `¿Eliminar a ${tec.nombre} del equipo? No tiene OTs, se borrará por completo.`
+                      if (!confirm(msg)) return
+                      eliminarTecnico(tec.id, trabajos)
+                      notify?.(`${tec.nombre} eliminado del equipo`, 'info')
+                    }}
+                  >Eliminar</button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+        </>
       )}
 
-      {/* Modal Editar Tecnico */}
+      {/* Modal Editar Técnico */}
       {editando && (
         <div className="modal-overlay" onClick={() => setEditando(null)}>
           <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 440 }}>
             <div className="modal__h">
-              <h3>Editar Tecnico</h3>
-              <button className="icobtn" onClick={() => setEditando(null)}>✕</button>
+              <h3>Editar técnico</h3>
+              <button className="icobtn" onClick={() => setEditando(null)} aria-label="Cerrar">✕</button>
             </div>
-            <div className="modal__b">
+            <div className="modal__b" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
               <div className="field">
                 <label>Nombre</label>
                 <input className="input" value={editForm.nombre || ''} onChange={e => setEditForm(f => ({ ...f, nombre: e.target.value }))} />
               </div>
               <div className="field">
                 <label>Especialidad</label>
-                <input className="input" value={editForm.especialidad || ''} onChange={e => setEditForm(f => ({ ...f, especialidad: e.target.value }))} />
+                <input className="input" value={editForm.especialidad || ''} onChange={e => setEditForm(f => ({ ...f, especialidad: e.target.value }))} placeholder="Frenos, Motor, General..." />
               </div>
               <div className="field">
-                <label>Telefono</label>
-                <input className="input" value={editForm.telefono || ''} onChange={e => setEditForm(f => ({ ...f, telefono: e.target.value }))} />
+                <label>Teléfono</label>
+                <input className="input" value={editForm.telefono || ''} onChange={e => setEditForm(f => ({ ...f, telefono: e.target.value }))} placeholder="300 000 0000" />
               </div>
-              <p style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 8 }}>
-                Los tecnicos se gestionan en <code>src/utils/constants.js</code>. Esta vista es de solo lectura por ahora.
-              </p>
+
+              <div style={{ borderTop: '1px solid var(--border)', paddingTop: 14, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '.4px' }}>Zona de salida</div>
+                <p style={{ fontSize: 12.5, color: 'var(--text-3)', margin: 0 }}>
+                  Si el técnico ya no trabaja en el taller, márcalo inactivo: deja de aparecer
+                  para asignar trabajos y liquidar, pero sus OTs del historial conservan su nombre.
+                </p>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button className="btn btn-outline btn-sm" style={{ flex: 1, color: 'var(--amber-600)', borderColor: 'rgba(245,158,11,.4)' }} onClick={handleDesactivar}>
+                    Marcar inactivo
+                  </button>
+                  <button className="btn btn-outline btn-sm" style={{ flex: 1, color: 'var(--red-600)', borderColor: 'rgba(220,38,38,.35)' }} onClick={handleEliminar}>
+                    Eliminar
+                  </button>
+                </div>
+              </div>
             </div>
             <div className="modal__f">
-              <button className="btn btn-outline btn-sm" onClick={() => setEditando(null)}>Cerrar</button>
+              <button className="btn btn-outline btn-sm" onClick={() => setEditando(null)}>Cancelar</button>
+              <button className="btn btn-primary btn-sm" onClick={handleGuardarEdicion}>Guardar cambios</button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Agregar Técnico */}
+      {agregando && (
+        <div className="modal-overlay" onClick={() => setAgregando(false)}>
+          <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 440 }}>
+            <div className="modal__h">
+              <h3>Agregar técnico</h3>
+              <button className="icobtn" onClick={() => setAgregando(false)} aria-label="Cerrar">✕</button>
+            </div>
+            <form onSubmit={handleAgregar}>
+              <div className="modal__b" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                <div className="field">
+                  <label>Nombre completo <span className="req">*</span></label>
+                  <input className="input" value={nuevoForm.nombre} onChange={e => setNuevoForm(f => ({ ...f, nombre: e.target.value }))} placeholder="Nombre y apellido" autoFocus />
+                </div>
+                <div className="field">
+                  <label>Especialidad</label>
+                  <input className="input" value={nuevoForm.especialidad} onChange={e => setNuevoForm(f => ({ ...f, especialidad: e.target.value }))} placeholder="Frenos, Motor, General..." />
+                </div>
+                <div className="field">
+                  <label>Teléfono</label>
+                  <input className="input" value={nuevoForm.telefono} onChange={e => setNuevoForm(f => ({ ...f, telefono: e.target.value }))} placeholder="300 000 0000" />
+                </div>
+                <p style={{ fontSize: 12.5, color: 'var(--text-3)', margin: 0 }}>
+                  Quedará disponible de inmediato para asignar trabajos y liquidar comisiones ({COMISION.TOTAL * 100}%).
+                </p>
+              </div>
+              <div className="modal__f">
+                <button type="button" className="btn btn-outline btn-sm" onClick={() => setAgregando(false)}>Cancelar</button>
+                <button type="submit" className="btn btn-primary btn-sm">Agregar al equipo</button>
+              </div>
+            </form>
           </div>
         </div>
       )}
@@ -213,7 +352,7 @@ export default function Mecanicos({ trabajos, onNavigate }) {
   )
 }
 
-function AgendaSemanal({ trabajos, onNavigate }) {
+function AgendaSemanal({ trabajos, onNavigate, tecnicos = [] }) {
   const dias = useMemo(() => {
     const hoy = new Date()
     const lunes = new Date(hoy)
@@ -251,7 +390,7 @@ function AgendaSemanal({ trabajos, onNavigate }) {
               <div className="calendar-day-header">{dia.nombre}</div>
               <div className="calendar-day-num">{dia.num}</div>
               {dia.trabajos.map(t => {
-                const tec = TECNICOS.find(tc => tc.id === parseInt(t.tecnicoId))
+                const tec = tecnicos.find(tc => tc.id === parseInt(t.tecnicoId))
                 return (
                   <div key={t.id} className="calendar-task"
                     style={{ cursor: 'pointer' }}
