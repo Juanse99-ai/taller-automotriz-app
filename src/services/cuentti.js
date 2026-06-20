@@ -15,7 +15,7 @@ const CONFIG = {
       grabar: '/jServerj4ErpPro/com/j4ErpPro/server/adm/cliente/grabarCliente',
     },
     productos: {
-      paginadaMovil: '/jServerj4ErpPro/com/j4ErpPro/server/vent/factura/consultaProductoPaginadaMovil/{id_sucursal}/{pagina}',
+      paginadaMovil: '/jServerj4ErpPro/com/j4ErpPro/server/vent/factura/consultaProductoPaginadaMovil/{id_sucursal}/{pagina}?tomar_precio_online=0',
     },
     facturas: {
       grabarSimple: '/jServerj4ErpPro/api/token/grabarFacturaSimple',

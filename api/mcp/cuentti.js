@@ -304,7 +304,7 @@ const tools = [
       },
     },
     handler: async ({ pagina = 0, limit = 50, filtro }) => {
-      const path = `/jServerj4ErpPro/com/j4ErpPro/server/vent/factura/consultaProductoPaginadaMovil/${CONFIG.branchId}/${pagina}`
+      const path = `/jServerj4ErpPro/com/j4ErpPro/server/vent/factura/consultaProductoPaginadaMovil/${CONFIG.branchId}/${pagina}?tomar_precio_online=0`
       const data = await cuenttiRequest(path)
       const items = Array.isArray(data) ? data : (data?.data || [])
       if (!items.length) return `Pagina ${pagina}: sin productos.`
