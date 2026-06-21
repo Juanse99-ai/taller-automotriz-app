@@ -228,6 +228,129 @@ async function buscarProductoSkuRaw(sku) {
   } catch { return null }
 }
 
+// Construye el payload de una COMPRA (egreso) para Cuentti.
+// VERIFICADO con el ingeniero de Cuentti (prueba real OK, tx 5430 creada y anulada):
+// usa el mismo grabarFacturaSimple que ventas con tipoDocumento=7 (egreso), id_consecutivo=1,
+// el proveedor en objClienteMini con id_cliente=-1 (Cuentti lo busca/crea por NIT), el costo
+// del item va en precio_venta (base sin IVA) y el total del item CON IVA.
+function buildCompraPayload(c) {
+  const to2 = (n) => parseFloat((parseFloat(n || 0)).toFixed(2))
+  const upper = (v) => (v ?? '').toString().trim().toUpperCase()
+  const items = (c.items || []).map(it => {
+    const cantidad = parseFloat(it.cantidad) || 1
+    const costoBase = parseFloat(it.costo ?? it.precio) || 0 // sin IVA
+    const impuesto = parseFloat(it.iva) || 0
+    return {
+      sku: it.sku || it.codigo || '',
+      descripcion: it.descripcion || it.nombre || 'Producto',
+      precio_venta: to2(costoBase),
+      cantidad,
+      impuesto: parseInt(impuesto, 10),
+      total: to2(costoBase * cantidad * (1 + impuesto / 100)), // total CON IVA (confirmado por Cuentti)
+      descuentoPor: 0,
+      descuento_valor: 0,
+      id_producto: it.id_producto ?? it.idProducto ?? undefined,
+    }
+  })
+  const totalSinImp = to2(items.reduce((s, i) => s + (i.precio_venta * i.cantidad), 0))
+  const totalImp = to2(items.reduce((s, i) => s + (i.precio_venta * i.cantidad * (i.impuesto / 100)), 0))
+  const totalNeto = to2(totalSinImp + totalImp)
+  const empId = parseInt(CONFIG.employeeId, 10) || 1
+  const branchId = parseInt(CONFIG.branchId, 10) || 1
+  return {
+    tipoDocumento: c.tipoDocumento ?? 7,
+    id_sucursal: branchId,
+    id_bodega: branchId,
+    id_consecutivo: c.idConsecutivo ?? 1, // resolucion del egreso (confirmado por Cuentti: 1)
+    id_documento: null,
+    id_vendedor: empId,
+    id_empleado: empId,
+    nota: c.observaciones || (c.numeroFactura ? `Compra ${c.numeroFactura}` : ''),
+    total_neto: totalNeto,
+    total_impuestos: totalImp,
+    total_sin_impuestos: totalSinImp,
+    observacion: '',
+    objClienteMini: {
+      id_cliente: parseInt(c.proveedorId ?? -1, 10),
+      nombre_cliente: upper(c.proveedorNombre || 'PROVEEDOR'),
+      identificacion: (c.proveedorNit || '222222222222').toString(),
+    },
+    objDetalle: items,
+    lstPagos: c.aCredito === false
+      ? [{ id_medio_pago: c.idMedioPago ?? 1, id_banco: c.idBanco ?? 2, valor: totalNeto, boucher: '', digitos: '', devuelta: 0, dinero_entregado: 0, nota: c.numeroFactura ? `Compra ${c.numeroFactura}` : '', fecha_registro: Date.now() }]
+      : [],
+  }
+}
+
+// Construye el payload de una COTIZACION para Cuentti.
+// Cuentti no tiene tipo "cotizacion" nativo, se usa REMISION (tipoDocumento=9, lstPagos=[]).
+// El precio_venta de cada item es SIN IVA (a diferencia de buildFacturaPayload, que recibe con IVA).
+function buildCotizacionPayload(c) {
+  const to2 = (n) => parseFloat((parseFloat(n || 0)).toFixed(2))
+  const upper = (v) => (v ?? '').toString().trim().toUpperCase()
+
+  const items = (c.items || []).map(it => {
+    const cantidad = parseFloat(it.cantidad) || 1
+    const precioBase = parseFloat(it.precio_venta) || 0 // sin IVA
+    const impuesto = parseFloat(it.impuesto ?? 19)
+    const total = to2(precioBase * cantidad * (1 + impuesto / 100))
+    return {
+      sku: it.sku || '',
+      descripcion: it.descripcion || '',
+      precio_venta: to2(precioBase),
+      cantidad,
+      impuesto: parseInt(impuesto, 10),
+      total,
+      descuentoPor: 0,
+      descuento_valor: 0,
+    }
+  })
+
+  const totalSinImp = to2(items.reduce((s, i) => s + (i.precio_venta * i.cantidad), 0))
+  const totalNeto = to2(items.reduce((s, i) => s + (parseFloat(i.total) || 0), 0))
+  const totalImp = to2(totalNeto - totalSinImp)
+
+  const empId = parseInt(CONFIG.employeeId, 10) || 1
+  const branchId = parseInt(CONFIG.branchId, 10) || 1
+  // tipoDocumento=5 verificado experimentalmente como COTIZACION en Cuentti
+  // (PDF muestra "Documento de Cotizacion #N" con botones Aprobar/Rechazar).
+  // 1=Factura, 2=PlanSepare, 4=Pedido, 5=Cotizacion, 7=Egreso/Compra, 9=Remision.
+  const tipoDoc = parseInt(c.tipoDocumento ?? 5, 10) || 5
+  const idCons = parseInt(c.idConsecutivo ?? 1, 10) || 1
+
+  return {
+    tipoDocumento: tipoDoc,
+    id_sucursal: branchId,
+    id_bodega: branchId,
+    id_consecutivo: idCons,
+    id_documento: null,
+    id_vendedor: empId,
+    id_empleado: empId,
+    nota: c.nota || '',
+    total_neto: totalNeto,
+    total_impuestos: totalImp,
+    total_sin_impuestos: totalSinImp,
+    observacion: c.observacion || '',
+    objClienteMini: {
+      id_cliente: -1,
+      nombre_cliente: upper(c.cliente_nombre || ''),
+      identificacion: (c.cliente_identificacion || '').toString(),
+      telefono1: c.cliente_telefono || '',
+      email1: c.cliente_email || '',
+      direccion: 'N/A',
+      id_tipo_persona: 1,
+      es_cliente: 1,
+      es_proveedor: 0,
+      departamento: c.cliente_departamento || '',
+      pais: 'Colombia',
+      ciudad: c.cliente_ciudad || '',
+      zona: '',
+    },
+    objDetalle: items,
+    lstPagos: [],
+  }
+}
+
 const tools = [
   {
     name: 'estado_cuentti',
@@ -593,7 +716,8 @@ const tools = [
       if (txId) {
         try {
           const doc = await cuenttiRequest(FACTURA_PATHS.urlDoc.replace('{id}', encodeURIComponent(txId)))
-          urlDoc = typeof doc === 'string' ? doc : (doc?.url_externa || doc?.url || doc?.qr || '')
+          const docItem = Array.isArray(doc) ? doc[0] : doc
+          urlDoc = typeof doc === 'string' ? doc : (docItem?.url_externa || docItem?.url || docItem?.qr || '')
         } catch { /* opcional */ }
       }
 
@@ -606,6 +730,92 @@ const tools = [
         `**Total:** ${fmtCOP(payload.total_neto)}`,
         `**Resolucion:** ${resolucion}${feMsg}`,
         urlDoc ? `**Documento:** ${urlDoc}` : '',
+        !txId ? `\n\`\`\`json\n${JSON.stringify(result, null, 2).slice(0, 1500)}\n\`\`\`` : '',
+      ].filter(Boolean).join('\n')
+    },
+  },
+  {
+    name: 'crear_cotizacion_cuentti',
+    description: 'Crea una COTIZACION real en Cuentti (tipoDocumento=5, verificado: PDF muestra "Documento de Cotizacion #N" con botones Aprobar/Rechazar). Recibe el cliente y los items directamente (no lee de Supabase). El precio_venta de cada item es SIN IVA. Dry-run por defecto; pasa confirm:true para emitir de verdad y obtener el PDF.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        cliente_nombre: { type: 'string', description: 'Nombre del cliente' },
+        cliente_identificacion: { type: 'string', description: 'Cedula o NIT del cliente' },
+        cliente_telefono: { type: 'string', default: '', description: 'Telefono (opcional)' },
+        cliente_email: { type: 'string', default: '', description: 'Email (opcional)' },
+        cliente_ciudad: { type: 'string', description: 'Ciudad del cliente' },
+        cliente_departamento: { type: 'string', description: 'Departamento del cliente' },
+        items: {
+          type: 'array',
+          description: 'Items de la cotizacion. precio_venta debe ir SIN IVA.',
+          items: {
+            type: 'object',
+            properties: {
+              sku: { type: 'string' },
+              descripcion: { type: 'string' },
+              precio_venta: { type: 'number', description: 'Precio unitario SIN IVA' },
+              cantidad: { type: 'number', default: 1 },
+              impuesto: { type: 'number', default: 19, description: 'Porcentaje de IVA (default 19)' },
+            },
+            required: ['sku', 'descripcion', 'precio_venta', 'cantidad'],
+          },
+        },
+        nota: { type: 'string', default: '' },
+        observacion: { type: 'string', default: '' },
+        tipoDocumento: { type: 'integer', default: 5, description: 'Tipo de documento Cuentti. Default 5=Cotizacion (verificado). Otros: 1=Factura, 2=PlanSepare, 4=Pedido, 7=Egreso, 9=Remision.' },
+        idConsecutivo: { type: 'integer', default: 1, description: 'Override del id_consecutivo (default 1).' },
+        confirm: { type: 'boolean', default: false, description: 'true = enviar a Cuentti; false (default) = dry-run' },
+      },
+      required: ['cliente_nombre', 'cliente_identificacion', 'cliente_ciudad', 'cliente_departamento', 'items'],
+    },
+    handler: async (a) => {
+      if (!a.cliente_nombre || !a.cliente_identificacion) return '❌ cliente_nombre y cliente_identificacion son obligatorios.'
+      if (!a.cliente_ciudad || !a.cliente_departamento) return '❌ cliente_ciudad y cliente_departamento son obligatorios.'
+      if (!Array.isArray(a.items) || a.items.length === 0) return '❌ Se requiere al menos un item.'
+
+      const payload = buildCotizacionPayload(a)
+      const totalFmt = fmtCOP(payload.total_neto)
+
+      if (!a.confirm) {
+        return [
+          `## Dry-run: cotizacion (NO enviada a Cuentti)`,
+          `Pasa **confirm:true** para emitir de verdad.`,
+          ``,
+          `**Cliente:** ${a.cliente_nombre} (${a.cliente_identificacion})`,
+          `**Ubicacion:** ${a.cliente_ciudad}, ${a.cliente_departamento}`,
+          `**Items:** ${payload.objDetalle.length}`,
+          `**Subtotal (sin IVA):** ${fmtCOP(payload.total_sin_impuestos)} · **IVA:** ${fmtCOP(payload.total_impuestos)} · **Total:** ${totalFmt}`,
+          ``,
+          '<details><summary>Payload Cuentti</summary>',
+          '',
+          '```json',
+          JSON.stringify(payload, null, 2).slice(0, 4000),
+          '```',
+          '</details>',
+        ].join('\n')
+      }
+
+      const result = await cuenttiRequest(FACTURA_PATHS.grabarSimple, 'POST', payload)
+      const txId = extractIdTransacion(result)
+
+      // URL del documento (PDF/QR)
+      let urlDoc = ''
+      if (txId) {
+        try {
+          const doc = await cuenttiRequest(FACTURA_PATHS.urlDoc.replace('{id}', encodeURIComponent(txId)))
+          const docItem = Array.isArray(doc) ? doc[0] : doc
+          urlDoc = typeof doc === 'string' ? doc : (docItem?.url_externa || docItem?.url || docItem?.qr || '')
+        } catch { /* opcional */ }
+      }
+
+      return [
+        `## ${txId ? '✅ Cotizacion creada en Cuentti' : '⚠️ Respuesta sin id_transacion — revisa'}`,
+        ``,
+        `**id_transacion:** ${txId || '(no devuelto)'}`,
+        `**Cliente:** ${a.cliente_nombre}`,
+        `**Total:** ${totalFmt}`,
+        urlDoc ? `**Documento (PDF):** ${urlDoc}` : '',
         !txId ? `\n\`\`\`json\n${JSON.stringify(result, null, 2).slice(0, 1500)}\n\`\`\`` : '',
       ].filter(Boolean).join('\n')
     },
@@ -735,6 +945,89 @@ const tools = [
           ? 'Para los nuevos: busca por nombre con buscar_producto_sku_cuentti / listar_inventario_cuentti, o créalos con crear_producto; luego guarda la equivalencia con guardar_equivalencia.'
           : 'Todo emparejado.',
       ].join('\n')
+    },
+  },
+  {
+    name: 'registrar_compra',
+    description: 'Registra una factura de COMPRA (egreso) en Cuentti vía grabarFacturaSimple. Verificado con Cuentti: tipoDocumento=7, id_consecutivo=1, proveedor con id_cliente=-1 (Cuentti lo busca/crea por NIT), el costo de cada item va en precio_venta (base sin IVA). Suma inventario y actualiza costo. dry-run por defecto; pasa confirm:true para registrar de verdad.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        proveedorNit: { type: 'string' },
+        proveedorNombre: { type: 'string', default: '' },
+        proveedorId: { type: 'integer', description: 'id_cliente del proveedor en Cuentti (si lo tienes). Si no, se usa -1.' },
+        numeroFactura: { type: 'string', default: '' },
+        fecha: { type: 'string', default: '' },
+        items: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              sku: { type: 'string' }, codigo: { type: 'string' }, id_producto: { type: 'string' },
+              descripcion: { type: 'string' }, cantidad: { type: 'number' },
+              costo: { type: 'number', description: 'Costo unitario SIN IVA' }, iva: { type: 'number' },
+            },
+          },
+        },
+        tipoDocumento: { type: 'integer', default: 7, description: '7 = egreso/compra (hipotesis)' },
+        idConsecutivo: { type: 'integer', description: 'Resolucion/consecutivo del egreso. PENDIENTE de confirmar con Cuentti.' },
+        aCredito: { type: 'boolean', default: true, description: 'true = cuenta por pagar (sin pago inmediato)' },
+        idMedioPago: { type: 'integer' },
+        idBanco: { type: 'integer' },
+        confirm: { type: 'boolean', description: 'true = enviar a Cuentti; false (default) = dry-run' },
+      },
+      required: ['proveedorNit', 'items'],
+    },
+    handler: async (c) => {
+      if (!c.proveedorNit || !Array.isArray(c.items) || c.items.length === 0) return '❌ Se requiere proveedorNit e items.'
+      const payload = buildCompraPayload(c)
+      const totalFmt = fmtCOP(payload.total_neto)
+      if (!c.confirm) {
+        return [
+          `## Dry-run: COMPRA (NO enviada a Cuentti)`,
+          `Pasa **confirm:true** para registrar de verdad.`,
+          ``,
+          `**Proveedor:** ${c.proveedorNombre || '—'} (NIT ${c.proveedorNit})`,
+          `**Factura:** ${c.numeroFactura || '—'} · **Items:** ${payload.objDetalle.length} · **Total:** ${totalFmt}`,
+          ``, '<details><summary>Payload Cuentti</summary>', '', '```json', JSON.stringify(payload, null, 2).slice(0, 4000), '```', '</details>',
+        ].join('\n')
+      }
+      const result = await cuenttiRequest(FACTURA_PATHS.grabarSimple, 'POST', payload)
+      const txId = extractIdTransacion(result)
+      return [
+        `## ${txId ? '✅ Compra registrada en Cuentti' : '⚠️ Respuesta sin id_transacion — revisa'}`,
+        ``,
+        `**id_transacion:** ${txId || '(no devuelto)'}`,
+        `**Proveedor:** ${c.proveedorNombre || c.proveedorNit}`,
+        `**Total:** ${totalFmt}`,
+        !txId ? `\n\`\`\`json\n${JSON.stringify(result, null, 2).slice(0, 1500)}\n\`\`\`` : '',
+      ].filter(Boolean).join('\n')
+    },
+  },
+  {
+    name: 'anular_transaccion',
+    description: 'Anula una transaccion en Cuentti por id_transacion (sirve para deshacer una compra/venta/prueba). dry-run por defecto; confirm:true para anular.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        idTransacion: { type: ['string', 'number'] },
+        observacion: { type: 'string', default: '' },
+        confirm: { type: 'boolean' },
+      },
+      required: ['idTransacion'],
+    },
+    handler: async ({ idTransacion, observacion = '', confirm = false }) => {
+      const tx = String(idTransacion || '').trim()
+      if (!tx) return '❌ Debes pasar un id_transacion'
+      if (!confirm) return `## Dry-run: anular transaccion ${tx}\nPasa **confirm:true** para anular de verdad.`
+      const body = {
+        id_encabezado_anulada: 0, id_transacion: tx, id_cliente: 1,
+        id_empleado: parseInt(CONFIG.employeeId, 10) || 1,
+        observacion, nota: 'Anulacion', esEliminar: true,
+        fecha_registro: Date.now(), id_transacion_remplazo: null,
+      }
+      const resp = await cuenttiRequest('/jServerj4ErpPro/com/j4ErpPro/server/transacion/anularTransacion', 'POST', body)
+      return [`## ✅ Solicitud de anulación enviada`, `**id_transacion:** ${tx}`, '', '```json', JSON.stringify(resp, null, 2).slice(0, 800), '```'].join('\n')
     },
   },
 ]
