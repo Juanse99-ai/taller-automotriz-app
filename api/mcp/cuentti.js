@@ -270,23 +270,30 @@ function fechaDocumento(fecha) {
   return m ? m[1] : null
 }
 
-// Nombre del campo de fecha del ENCABEZADO que acepta grabarFacturaSimple.
-// IMPORTANTE: el endpoint VALIDA el esquema y responde HTTP 400 ante campos
-// desconocidos (NO los ignora). Mandar varios nombres a la vez rompe el
-// registro. Por eso se manda UN solo campo.
-// '' (vacio) = NO mandar fecha (Cuentti usa hoy) = comportamiento que siempre
-// funciono. Se cambia al nombre correcto cuando se confirme empiricamente.
-const FECHA_CAMPO = ''
+// IMPORTANTE: grabarFacturaSimple NO acepta fecha del documento (VALIDA el
+// esquema y responde HTTP 400 ante cualquier campo desconocido, confirmado
+// empiricamente y por el Postman oficial). Por eso el documento nace con la
+// fecha de hoy y, si hace falta, se corrige en un 2do paso con
+// cambiarFechaTransacion (el endpoint del boton "Editar fecha transaccion").
 
-// Devuelve { [campo]: "YYYY-MM-DD" } con UN solo campo de fecha, o {} si no hay
-// fecha o no hay campo configurado. `campoOverride` permite probar un nombre
-// puntual (diagnostico) sin redesplegar.
-function buildFechaFields(fecha, campoOverride) {
+// Convierte "YYYY-MM-DD" a epoch en milisegundos al MEDIODIA hora Colombia
+// (12:00 GMT-0500 = 17:00 UTC). Usar mediodia evita que un corrimiento de zona
+// horaria mueva el dia. Devuelve null si la fecha es invalida.
+function fechaEpochMs(fecha) {
   const f = fechaDocumento(fecha)
-  if (!f) return {}
-  const campo = (campoOverride || FECHA_CAMPO || '').trim()
-  if (!campo) return {}
-  return { [campo]: f }
+  if (!f) return null
+  const [y, m, d] = f.split('-').map(Number)
+  return Date.UTC(y, m - 1, d, 17, 0, 0) // 17:00 UTC = 12:00 Colombia (GMT-5)
+}
+
+// Cambia la fecha de un documento YA creado en Cuentti (boton "Editar fecha
+// transaccion"). Endpoint dado por el ingeniero de Cuentti (Juan David Davila):
+//   GET .../transacion/cambiarFechaTransacion/{fecha_registro}/{fecha_anterior}/{id_empleado}/{id_transacion}
+// Las fechas van en epoch ms (new Date().getTime()).
+async function cambiarFechaTransacion(idTransacion, fechaNuevaMs, fechaAnteriorMs) {
+  const empId = parseInt(CONFIG.employeeId, 10) || 1
+  const ep = `/jServerj4ErpPro/com/j4ErpPro/server/transacion/cambiarFechaTransacion/${fechaNuevaMs}/${fechaAnteriorMs}/${empId}/${idTransacion}`
+  return cuenttiRequest(ep, 'GET')
 }
 
 // Construye el payload de una COMPRA (egreso) para Cuentti.
@@ -324,7 +331,6 @@ function buildCompraPayload(c) {
     id_bodega: branchId,
     id_consecutivo: c.idConsecutivo ?? 1, // resolucion del egreso (confirmado por Cuentti: 1)
     id_documento: null,
-    ...buildFechaFields(c.fecha, c.fechaCampo), // 1 solo campo de fecha (o ninguno)
     id_vendedor: empId,
     id_empleado: empId,
     nota: c.observaciones || (c.numeroFactura ? `Compra ${c.numeroFactura}` : ''),
@@ -1019,7 +1025,7 @@ const tools = [
         proveedorNombre: { type: 'string', default: '' },
         proveedorId: { type: 'integer', description: 'id_cliente del proveedor en Cuentti (si lo tienes). Si no, se usa -1.' },
         numeroFactura: { type: 'string', default: '' },
-        fecha: { type: 'string', default: '', description: 'Fecha de la factura del proveedor en formato YYYY-MM-DD. Solo se envía a Cuentti si hay un campo de fecha confirmado (FECHA_CAMPO) o si se pasa fechaCampo. Si no, Cuentti usa la fecha de hoy.' },
+        fecha: { type: 'string', default: '', description: 'Fecha de la factura del proveedor (YYYY-MM-DD). Se aplica al documento DESPUÉS de crearlo, vía el endpoint "Editar fecha transacción" (grabarFacturaSimple no acepta fecha). Si se omite, queda con la fecha de hoy.' },
         items: {
           type: 'array',
           items: {
@@ -1038,7 +1044,6 @@ const tools = [
         idBanco: { type: 'integer' },
         confirm: { type: 'boolean', description: 'true = enviar a Cuentti; false (default) = dry-run' },
         permitirDuplicado: { type: 'boolean', default: false, description: 'true = registrar aunque ya exista una compra con ese proveedor+numeroFactura. Default false (bloquea duplicados).' },
-        fechaCampo: { type: 'string', description: 'DIAGNÓSTICO: nombre EXACTO del campo de fecha a probar (ej. "fecha"). Manda solo ese campo. Usar para encontrar cuál acepta grabarFacturaSimple sin dar 400.' },
       },
       required: ['proveedorNit', 'items'],
     },
@@ -1046,8 +1051,6 @@ const tools = [
       if (!c.proveedorNit || !Array.isArray(c.items) || c.items.length === 0) return '❌ Se requiere proveedorNit e items.'
       const payload = buildCompraPayload(c)
       const totalFmt = fmtCOP(payload.total_neto)
-      const fechaFields = buildFechaFields(c.fecha, c.fechaCampo) // {} o { campo: 'YYYY-MM-DD' }
-      const fechaCampoUsado = Object.keys(fechaFields)[0] || null
 
       // Anti-duplicado: ¿ya se registro esta factura de este proveedor?
       const yaRegistrada = await buscarCompraRegistrada(c.proveedorNit, c.numeroFactura)
@@ -1063,7 +1066,7 @@ const tools = [
           ``,
           `**Proveedor:** ${c.proveedorNombre || '—'} (NIT ${c.proveedorNit})`,
           `**Factura:** ${c.numeroFactura || '—'} · **Items:** ${payload.objDetalle.length} · **Total:** ${totalFmt}`,
-          `**Fecha documento:** ${fechaCampoUsado ? `${fechaFields[fechaCampoUsado]} (campo \`${fechaCampoUsado}\`)` : (c.fecha ? `${fechaDocumento(c.fecha)} NO se enviará (sin campo confirmado; Cuentti usará hoy). Pasa fechaCampo para probar.` : 'hoy (no especificada — Cuentti usa la fecha actual)')}`,
+          `**Fecha documento:** ${c.fecha ? `${fechaDocumento(c.fecha)} (se aplicará tras crear, vía "Editar fecha transacción")` : 'hoy (no especificada — Cuentti usa la fecha actual)'}`,
           ``, '<details><summary>Payload Cuentti</summary>', '', '```json', JSON.stringify(payload, null, 2).slice(0, 4000), '```', '</details>',
         ].filter(Boolean).join('\n')
       }
@@ -1081,6 +1084,19 @@ const tools = [
 
       const result = await cuenttiRequest(FACTURA_PATHS.grabarSimple, 'POST', payload)
       const txId = extractIdTransacion(result)
+
+      // 2do paso: poner la fecha real de la factura (boton "Editar fecha transaccion").
+      // grabarFacturaSimple no acepta fecha, asi que el doc nace con la de hoy y aqui la corregimos.
+      let fechaAviso = ''
+      const fechaMs = fechaEpochMs(c.fecha)
+      if (txId && fechaMs) {
+        try {
+          await cambiarFechaTransacion(txId, fechaMs, Date.now())
+          fechaAviso = `**Fecha de la factura aplicada:** ${fechaDocumento(c.fecha)} ✅`
+        } catch (e) {
+          fechaAviso = `⚠️ **La compra se creó pero NO se pudo cambiar la fecha** (quedó con hoy). ${e.message}. Corrígela con cambiar_fecha_transaccion(idTransacion:"${txId}", fecha:"${fechaDocumento(c.fecha)}").`
+        }
+      }
 
       // Guardar el registro para el anti-duplicado de la proxima vez.
       if (txId) {
@@ -1102,9 +1118,32 @@ const tools = [
         `**Proveedor:** ${c.proveedorNombre || c.proveedorNit}`,
         `**Factura:** ${c.numeroFactura || '—'}`,
         `**Total:** ${totalFmt}`,
+        fechaAviso,
         yaRegistrada ? `**Nota:** se registró como DUPLICADO (permitirDuplicado:true).` : '',
         !txId ? `\n\`\`\`json\n${JSON.stringify(result, null, 2).slice(0, 1500)}\n\`\`\`` : '',
       ].filter(Boolean).join('\n')
+    },
+  },
+  {
+    name: 'cambiar_fecha_transaccion',
+    description: 'Cambia la fecha de un documento YA creado en Cuentti (compra/venta), equivalente al boton "Editar fecha transaccion". Recibe id_transacion y la fecha (YYYY-MM-DD). dry-run por defecto; confirm:true para aplicar.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        idTransacion: { type: ['string', 'number'] },
+        fecha: { type: 'string', description: 'Nueva fecha del documento en YYYY-MM-DD' },
+        confirm: { type: 'boolean', description: 'true = aplicar; false (default) = dry-run' },
+      },
+      required: ['idTransacion', 'fecha'],
+    },
+    handler: async ({ idTransacion, fecha, confirm = false }) => {
+      const tx = String(idTransacion || '').trim()
+      if (!tx) return '❌ Debes pasar un id_transacion'
+      const fechaMs = fechaEpochMs(fecha)
+      if (!fechaMs) return '❌ Fecha invalida. Usa formato YYYY-MM-DD.'
+      if (!confirm) return `## Dry-run: cambiar fecha de tx ${tx} → ${fechaDocumento(fecha)}\nEpoch ms: ${fechaMs}. Pasa **confirm:true** para aplicar.`
+      const resp = await cambiarFechaTransacion(tx, fechaMs, Date.now())
+      return [`## ✅ Fecha cambiada`, `**id_transacion:** ${tx}`, `**Nueva fecha:** ${fechaDocumento(fecha)}`, '', '```json', JSON.stringify(resp, null, 2).slice(0, 800), '```'].join('\n')
     },
   },
   {
