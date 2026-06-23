@@ -228,6 +228,67 @@ async function buscarProductoSkuRaw(sku) {
   } catch { return null }
 }
 
+// Busca si ya se registro una compra de ese proveedor con ese numero de factura
+// (anti-duplicado). Devuelve la fila o null. No-fatal: si Supabase falla, null.
+async function buscarCompraRegistrada(proveedorNit, numeroFactura) {
+  const nf = String(numeroFactura || '').trim()
+  const nit = String(proveedorNit || '').trim()
+  if (!nf || !nit) return null
+  try {
+    const q = `select=*&proveedor_nit=eq.${encodeURIComponent(nit)}&numero_factura=eq.${encodeURIComponent(nf)}&limit=1`
+    const rows = await supabaseTaller('compras_registradas', { query: q })
+    return Array.isArray(rows) && rows[0] ? rows[0] : null
+  } catch { return null }
+}
+
+// Guarda el registro de una compra ya enviada a Cuentti (para anti-duplicado).
+async function guardarCompraRegistrada({ proveedorNit, proveedorNombre, numeroFactura, fecha, total, itemsCount, idTransacion }) {
+  try {
+    await supabaseTaller('compras_registradas', {
+      method: 'POST',
+      body: {
+        id: uidc(),
+        proveedor_nit: String(proveedorNit || '').trim(),
+        proveedor_nombre: proveedorNombre || '',
+        numero_factura: String(numeroFactura || '').trim(),
+        fecha: fechaDocumento(fecha) || '',
+        total: parseFloat(total) || 0,
+        items_count: itemsCount || 0,
+        id_transacion: String(idTransacion || ''),
+      },
+    })
+  } catch { /* no-fatal: la compra ya se creo en Cuentti */ }
+}
+
+// Normaliza la fecha del documento a "YYYY-MM-DD". Acepta "YYYY-MM-DD" o
+// "YYYY-MM-DDTHH:..." (toma solo la parte de fecha). Devuelve null si viene
+// vacia o invalida -> en ese caso NO se manda fecha y Cuentti usa la de hoy
+// (= comportamiento actual, no se rompe nada).
+function fechaDocumento(fecha) {
+  const s = String(fecha || '').trim()
+  const m = /^(\d{4}-\d{2}-\d{2})/.exec(s)
+  return m ? m[1] : null
+}
+
+// Campos candidatos de fecha del ENCABEZADO para grabarFacturaSimple.
+// Cuentti (j4ErpPro) no tiene doc publica del nombre exacto y ningun endpoint
+// del repo manda la fecha del documento (por eso todo sale con la fecha de hoy).
+// Se envia bajo varios nombres plausibles a la vez: el backend Java ignora los
+// campos que no usa, asi que el que sea correcto toma efecto y el resto no
+// estorban. Cuando el ingeniero de Cuentti confirme el nombre real, se reduce a
+// ese unico campo. Si la fecha viene vacia, devuelve {} (no se manda nada).
+function buildFechaFields(fecha) {
+  const f = fechaDocumento(fecha)
+  if (!f) return {}
+  return {
+    fecha: f,
+    fecha_documento: f,
+    fecha_elaboracion: f,
+    fecha_factura: f,
+    fecha_transacion: f,
+  }
+}
+
 // Construye el payload de una COMPRA (egreso) para Cuentti.
 // VERIFICADO con el ingeniero de Cuentti (prueba real OK, tx 5430 creada y anulada):
 // usa el mismo grabarFacturaSimple que ventas con tipoDocumento=7 (egreso), id_consecutivo=1,
@@ -263,6 +324,7 @@ function buildCompraPayload(c) {
     id_bodega: branchId,
     id_consecutivo: c.idConsecutivo ?? 1, // resolucion del egreso (confirmado por Cuentti: 1)
     id_documento: null,
+    ...buildFechaFields(c.fecha), // fecha del documento (si viene vacia => Cuentti usa hoy)
     id_vendedor: empId,
     id_empleado: empId,
     nota: c.observaciones || (c.numeroFactura ? `Compra ${c.numeroFactura}` : ''),
@@ -957,7 +1019,7 @@ const tools = [
         proveedorNombre: { type: 'string', default: '' },
         proveedorId: { type: 'integer', description: 'id_cliente del proveedor en Cuentti (si lo tienes). Si no, se usa -1.' },
         numeroFactura: { type: 'string', default: '' },
-        fecha: { type: 'string', default: '' },
+        fecha: { type: 'string', default: '', description: 'Fecha de la factura del proveedor en formato YYYY-MM-DD. Si se omite, Cuentti usa la fecha de hoy.' },
         items: {
           type: 'array',
           items: {
@@ -975,6 +1037,7 @@ const tools = [
         idMedioPago: { type: 'integer' },
         idBanco: { type: 'integer' },
         confirm: { type: 'boolean', description: 'true = enviar a Cuentti; false (default) = dry-run' },
+        permitirDuplicado: { type: 'boolean', default: false, description: 'true = registrar aunque ya exista una compra con ese proveedor+numeroFactura. Default false (bloquea duplicados).' },
       },
       required: ['proveedorNit', 'items'],
     },
@@ -982,24 +1045,61 @@ const tools = [
       if (!c.proveedorNit || !Array.isArray(c.items) || c.items.length === 0) return '❌ Se requiere proveedorNit e items.'
       const payload = buildCompraPayload(c)
       const totalFmt = fmtCOP(payload.total_neto)
+
+      // Anti-duplicado: ¿ya se registro esta factura de este proveedor?
+      const yaRegistrada = await buscarCompraRegistrada(c.proveedorNit, c.numeroFactura)
+      const avisoDup = yaRegistrada
+        ? `> ⚠️ **OJO: esta factura YA fue registrada antes.** id_transacion **${yaRegistrada.id_transacion || '—'}**, el ${fmtFecha(yaRegistrada.registrado_en)} (total ${fmtCOP(yaRegistrada.total)}).`
+        : ''
+
       if (!c.confirm) {
         return [
           `## Dry-run: COMPRA (NO enviada a Cuentti)`,
-          `Pasa **confirm:true** para registrar de verdad.`,
+          avisoDup,
+          avisoDup ? `> Si de verdad quieres registrarla otra vez, pasa **confirm:true** y **permitirDuplicado:true**.` : `Pasa **confirm:true** para registrar de verdad.`,
           ``,
           `**Proveedor:** ${c.proveedorNombre || '—'} (NIT ${c.proveedorNit})`,
           `**Factura:** ${c.numeroFactura || '—'} · **Items:** ${payload.objDetalle.length} · **Total:** ${totalFmt}`,
+          `**Fecha documento:** ${payload.fecha ? `${payload.fecha} (enviada bajo: fecha, fecha_documento, fecha_elaboracion, fecha_factura, fecha_transacion)` : 'hoy (no especificada — Cuentti usa la fecha actual)'}`,
           ``, '<details><summary>Payload Cuentti</summary>', '', '```json', JSON.stringify(payload, null, 2).slice(0, 4000), '```', '</details>',
+        ].filter(Boolean).join('\n')
+      }
+
+      // confirm:true pero ya existe y NO se forzo el duplicado => bloquear.
+      if (yaRegistrada && !c.permitirDuplicado) {
+        return [
+          `## 🛑 Compra NO registrada (duplicado evitado)`,
+          ``,
+          avisoDup,
+          ``,
+          `Para registrarla de todas formas (crear un duplicado a propósito), vuelve a llamar con **permitirDuplicado:true**.`,
         ].join('\n')
       }
+
       const result = await cuenttiRequest(FACTURA_PATHS.grabarSimple, 'POST', payload)
       const txId = extractIdTransacion(result)
+
+      // Guardar el registro para el anti-duplicado de la proxima vez.
+      if (txId) {
+        await guardarCompraRegistrada({
+          proveedorNit: c.proveedorNit,
+          proveedorNombre: c.proveedorNombre,
+          numeroFactura: c.numeroFactura,
+          fecha: c.fecha,
+          total: payload.total_neto,
+          itemsCount: payload.objDetalle.length,
+          idTransacion: txId,
+        })
+      }
+
       return [
         `## ${txId ? '✅ Compra registrada en Cuentti' : '⚠️ Respuesta sin id_transacion — revisa'}`,
         ``,
         `**id_transacion:** ${txId || '(no devuelto)'}`,
         `**Proveedor:** ${c.proveedorNombre || c.proveedorNit}`,
+        `**Factura:** ${c.numeroFactura || '—'}`,
         `**Total:** ${totalFmt}`,
+        yaRegistrada ? `**Nota:** se registró como DUPLICADO (permitirDuplicado:true).` : '',
         !txId ? `\n\`\`\`json\n${JSON.stringify(result, null, 2).slice(0, 1500)}\n\`\`\`` : '',
       ].filter(Boolean).join('\n')
     },
