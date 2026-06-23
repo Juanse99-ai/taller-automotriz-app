@@ -270,23 +270,23 @@ function fechaDocumento(fecha) {
   return m ? m[1] : null
 }
 
-// Campos candidatos de fecha del ENCABEZADO para grabarFacturaSimple.
-// Cuentti (j4ErpPro) no tiene doc publica del nombre exacto y ningun endpoint
-// del repo manda la fecha del documento (por eso todo sale con la fecha de hoy).
-// Se envia bajo varios nombres plausibles a la vez: el backend Java ignora los
-// campos que no usa, asi que el que sea correcto toma efecto y el resto no
-// estorban. Cuando el ingeniero de Cuentti confirme el nombre real, se reduce a
-// ese unico campo. Si la fecha viene vacia, devuelve {} (no se manda nada).
-function buildFechaFields(fecha) {
+// Nombre del campo de fecha del ENCABEZADO que acepta grabarFacturaSimple.
+// IMPORTANTE: el endpoint VALIDA el esquema y responde HTTP 400 ante campos
+// desconocidos (NO los ignora). Mandar varios nombres a la vez rompe el
+// registro. Por eso se manda UN solo campo.
+// '' (vacio) = NO mandar fecha (Cuentti usa hoy) = comportamiento que siempre
+// funciono. Se cambia al nombre correcto cuando se confirme empiricamente.
+const FECHA_CAMPO = ''
+
+// Devuelve { [campo]: "YYYY-MM-DD" } con UN solo campo de fecha, o {} si no hay
+// fecha o no hay campo configurado. `campoOverride` permite probar un nombre
+// puntual (diagnostico) sin redesplegar.
+function buildFechaFields(fecha, campoOverride) {
   const f = fechaDocumento(fecha)
   if (!f) return {}
-  return {
-    fecha: f,
-    fecha_documento: f,
-    fecha_elaboracion: f,
-    fecha_factura: f,
-    fecha_transacion: f,
-  }
+  const campo = (campoOverride || FECHA_CAMPO || '').trim()
+  if (!campo) return {}
+  return { [campo]: f }
 }
 
 // Construye el payload de una COMPRA (egreso) para Cuentti.
@@ -324,7 +324,7 @@ function buildCompraPayload(c) {
     id_bodega: branchId,
     id_consecutivo: c.idConsecutivo ?? 1, // resolucion del egreso (confirmado por Cuentti: 1)
     id_documento: null,
-    ...buildFechaFields(c.fecha), // fecha del documento (si viene vacia => Cuentti usa hoy)
+    ...buildFechaFields(c.fecha, c.fechaCampo), // 1 solo campo de fecha (o ninguno)
     id_vendedor: empId,
     id_empleado: empId,
     nota: c.observaciones || (c.numeroFactura ? `Compra ${c.numeroFactura}` : ''),
@@ -1019,7 +1019,7 @@ const tools = [
         proveedorNombre: { type: 'string', default: '' },
         proveedorId: { type: 'integer', description: 'id_cliente del proveedor en Cuentti (si lo tienes). Si no, se usa -1.' },
         numeroFactura: { type: 'string', default: '' },
-        fecha: { type: 'string', default: '', description: 'Fecha de la factura del proveedor en formato YYYY-MM-DD. Si se omite, Cuentti usa la fecha de hoy.' },
+        fecha: { type: 'string', default: '', description: 'Fecha de la factura del proveedor en formato YYYY-MM-DD. Solo se envía a Cuentti si hay un campo de fecha confirmado (FECHA_CAMPO) o si se pasa fechaCampo. Si no, Cuentti usa la fecha de hoy.' },
         items: {
           type: 'array',
           items: {
@@ -1038,6 +1038,7 @@ const tools = [
         idBanco: { type: 'integer' },
         confirm: { type: 'boolean', description: 'true = enviar a Cuentti; false (default) = dry-run' },
         permitirDuplicado: { type: 'boolean', default: false, description: 'true = registrar aunque ya exista una compra con ese proveedor+numeroFactura. Default false (bloquea duplicados).' },
+        fechaCampo: { type: 'string', description: 'DIAGNÓSTICO: nombre EXACTO del campo de fecha a probar (ej. "fecha"). Manda solo ese campo. Usar para encontrar cuál acepta grabarFacturaSimple sin dar 400.' },
       },
       required: ['proveedorNit', 'items'],
     },
@@ -1045,6 +1046,8 @@ const tools = [
       if (!c.proveedorNit || !Array.isArray(c.items) || c.items.length === 0) return '❌ Se requiere proveedorNit e items.'
       const payload = buildCompraPayload(c)
       const totalFmt = fmtCOP(payload.total_neto)
+      const fechaFields = buildFechaFields(c.fecha, c.fechaCampo) // {} o { campo: 'YYYY-MM-DD' }
+      const fechaCampoUsado = Object.keys(fechaFields)[0] || null
 
       // Anti-duplicado: ¿ya se registro esta factura de este proveedor?
       const yaRegistrada = await buscarCompraRegistrada(c.proveedorNit, c.numeroFactura)
@@ -1060,7 +1063,7 @@ const tools = [
           ``,
           `**Proveedor:** ${c.proveedorNombre || '—'} (NIT ${c.proveedorNit})`,
           `**Factura:** ${c.numeroFactura || '—'} · **Items:** ${payload.objDetalle.length} · **Total:** ${totalFmt}`,
-          `**Fecha documento:** ${payload.fecha ? `${payload.fecha} (enviada bajo: fecha, fecha_documento, fecha_elaboracion, fecha_factura, fecha_transacion)` : 'hoy (no especificada — Cuentti usa la fecha actual)'}`,
+          `**Fecha documento:** ${fechaCampoUsado ? `${fechaFields[fechaCampoUsado]} (campo \`${fechaCampoUsado}\`)` : (c.fecha ? `${fechaDocumento(c.fecha)} NO se enviará (sin campo confirmado; Cuentti usará hoy). Pasa fechaCampo para probar.` : 'hoy (no especificada — Cuentti usa la fecha actual)')}`,
           ``, '<details><summary>Payload Cuentti</summary>', '', '```json', JSON.stringify(payload, null, 2).slice(0, 4000), '```', '</details>',
         ].filter(Boolean).join('\n')
       }
