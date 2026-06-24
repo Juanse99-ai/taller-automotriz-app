@@ -390,6 +390,11 @@ export default function CuenttiPanel({ trabajos, actualizarTrabajo, notify }) {
               cuenttiTransacionId: txId.toString(),
               facturadoEn: new Date().toISOString(),
               cuenttiResolucion: prefijo,
+              // Si se facturó con método de pago (no a crédito), la factura ya quedó
+              // PAGADA en Cuentti (el pago va inline en grabarFacturaSimple). Se marca
+              // 'pagado' para que "Últimas facturas" no la muestre como pendiente.
+              pagado: !facturaData.aCredito,
+              metodoPago: metodoPagoKey,
             })
           } catch (err) {
             console.warn('No se pudo persistir el id_transacion en el trabajo:', err.message)
@@ -920,7 +925,7 @@ export default function CuenttiPanel({ trabajos, actualizarTrabajo, notify }) {
                   {ultimas.map((f, i) => {
                     const tipo = f.cuenttiPrefijo || (f.cuenttiTransacionId?.toString().startsWith('FE') ? 'FEIC' : 'MAS')
                     const num = f.cuenttiTransacionId
-                    const estadoBadge = f.cuenttiPagado ? { c: 'badge-success', l: 'pagada' } : f.cuenttiAprobado ? { c: 'badge-success', l: 'aprobada' } : { c: 'badge-warning', l: 'pendiente' }
+                    const estadoBadge = (f.pagado || f.cuenttiPagado) ? { c: 'badge-success', l: 'pagada' } : f.cuenttiAprobado ? { c: 'badge-success', l: 'aprobada' } : { c: 'badge-warning', l: 'pendiente' }
                     return (
                       <div key={i} style={{
                         padding: '12px 16px',
