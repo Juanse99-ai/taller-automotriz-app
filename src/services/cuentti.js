@@ -8,14 +8,17 @@ const CONFIG = {
   branchId: '1',
   employeeId: '1',
   gtm: 'GMT-0500',
-  timeout: 10000,
+  timeout: 20000,
   paths: {
     clientes: {
       consultarPorId: '/jServerj4ErpPro/api/token/consultarClienteIdentificacion/{identificacion}',
       grabar: '/jServerj4ErpPro/com/j4ErpPro/server/adm/cliente/grabarCliente',
     },
     productos: {
+      // "Movil" trae todo (incl. existencias/es_servicio) pero pesa ~1.1MB/pagina.
+      // "Mini" es ~5x mas liviano (~215KB, ~0.4s) — suficiente para el buscador.
       paginadaMovil: '/jServerj4ErpPro/com/j4ErpPro/server/vent/factura/consultaProductoPaginadaMovil/{id_sucursal}/{pagina}?tomar_precio_online=0',
+      paginadaMini: '/jServerj4ErpPro/com/j4ErpPro/server/vent/factura/consultaProductoPaginadaMini/{id_sucursal}/{pagina}?tomar_precio_online=0',
     },
     facturas: {
       grabarSimple: '/jServerj4ErpPro/api/token/grabarFacturaSimple',
@@ -261,7 +264,10 @@ export async function grabarCliente(clienteData) {
 
 export async function cargarInventario(pagina = 0) {
   try {
-    const path = CONFIG.paths.productos.paginadaMovil
+    // Endpoint "Mini" (liviano y rapido): el "Movil" devolvia ~1.1MB por pagina
+    // y con conexiones lentas el inventario no terminaba de cargar (quedaba en
+    // "0 productos"). Mini trae nombre/sku/precio/iva (lo que usa el buscador).
+    const path = CONFIG.paths.productos.paginadaMini
       .replace('{id_sucursal}', CONFIG.branchId)
       .replace('{pagina}', pagina.toString())
     const data = await cuenttiRequest(path)

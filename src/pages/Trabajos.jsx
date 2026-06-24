@@ -1092,8 +1092,8 @@ function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [], vehiculosHoo
                       <tr key={item.id}>
                         <td style={{ position: 'relative' }}>
                           <div style={{ position: 'relative' }}>
-                            <input className="form-input" value={item.nombre} placeholder={item._bloqueado ? 'Edita la descripcion libremente...' : 'Nombre, codigo o referencia...'}
-                              autoComplete="off"
+                            <input className="form-input" value={item.nombre} placeholder={item._bloqueado ? 'Edita la descripcion libremente...' : 'Producto, código o referencia...'}
+                              autoComplete="off" autoCorrect="off" autoCapitalize="off" spellCheck={false} name={`it-desc-${item.id}`}
                               onChange={e => {
                                 updateItem(item.id, 'nombre', e.target.value)
                                 // Solo dispara busqueda si el item NO ha sido bloqueado por una seleccion previa
