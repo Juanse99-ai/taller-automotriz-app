@@ -568,6 +568,7 @@ function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [], vehiculosHoo
     telefonoCliente: trabajo?.telefonoCliente || '',
     emailCliente: trabajo?.emailCliente || '',
     clienteId: trabajo?.clienteId || '',
+    sinVehiculo: trabajo?.sinVehiculo || false,
     placa: trabajo?.placa || '',
     marca: trabajo?.marca || '',
     modelo: trabajo?.modelo || '',
@@ -792,10 +793,10 @@ function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [], vehiculosHoo
 
   const handleSubmit = (e) => {
     e.preventDefault()
-    if (!form.placa || !form.cliente) return
+    if ((!form.placa && !form.sinVehiculo) || !form.cliente) return
     onSave({
       ...form,
-      placa: form.placa.toUpperCase(),
+      placa: (form.placa || (form.sinVehiculo ? 'SERVICIO' : '')).toUpperCase(),
       ano: parseInt(form.ano) || new Date().getFullYear(),
       kilometraje: parseInt(form.kilometraje) || 0,
       tecnicoId: parseInt(form.tecnicoId) || null,
@@ -916,11 +917,22 @@ function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [], vehiculosHoo
 
         {/* VEHICULO */}
         <div className="card">
-          <div className="card__h"><h3>Vehiculo</h3></div>
+          <div className="card__h" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+            <h3>Vehiculo</h3>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 500, cursor: 'pointer', color: 'var(--text-2)' }}>
+              <input type="checkbox" checked={form.sinVehiculo} onChange={e => set('sinVehiculo', e.target.checked)} style={{ width: 16, height: 16 }} />
+              Servicio sin vehículo (no entra carro)
+            </label>
+          </div>
           <div className="card__b" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 14 }}>
+            {form.sinVehiculo && (
+              <div style={{ gridColumn: '1 / -1', fontSize: 13, color: 'var(--text-3)', padding: '4px 0' }}>
+                Servicio sin vehículo: no se piden placa ni datos del carro. Elige el técnico que lo hizo y agrega los ítems abajo.
+              </div>
+            )}
             <div className="field">
-              <label>Placa <span className="req">*</span></label>
-              <input className="input" value={form.placa} required placeholder="ABC123" style={{ textTransform: 'uppercase' }}
+              <label>Placa {!form.sinVehiculo && <span className="req">*</span>}</label>
+              <input className="input" value={form.placa} required={!form.sinVehiculo} disabled={form.sinVehiculo} placeholder={form.sinVehiculo ? 'No aplica' : 'ABC123'} style={{ textTransform: 'uppercase' }}
                 onChange={e => {
                   const placa = e.target.value.toUpperCase()
                   set('placa', placa)
@@ -937,26 +949,26 @@ function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [], vehiculosHoo
                 }} />
             </div>
             <div className="field">
-              <label>Marca <span className="req">*</span></label>
-              <select className="input" value={form.marca} required onChange={e => { set('marca', e.target.value); set('modelo', '') }}>
+              <label>Marca {!form.sinVehiculo && <span className="req">*</span>}</label>
+              <select className="input" value={form.marca} required={!form.sinVehiculo} disabled={form.sinVehiculo} onChange={e => { set('marca', e.target.value); set('modelo', '') }}>
                 <option value="">Seleccionar...</option>
                 {MARCAS.map(m => <option key={m} value={m}>{m}</option>)}
               </select>
             </div>
             <div className="field">
               <label>Modelo</label>
-              <select className="input" value={form.modelo} onChange={e => set('modelo', e.target.value)} disabled={!form.marca}>
+              <select className="input" value={form.modelo} onChange={e => set('modelo', e.target.value)} disabled={form.sinVehiculo || !form.marca}>
                 <option value="">Seleccionar...</option>
                 {modelosTrabajo.map(m => <option key={m} value={m}>{m}</option>)}
               </select>
             </div>
             <div className="field">
               <label>Año</label>
-              <input className="input" type="number" value={form.ano} min="1980" max="2030" onChange={e => set('ano', e.target.value)} />
+              <input className="input" type="number" value={form.ano} min="1980" max="2030" disabled={form.sinVehiculo} onChange={e => set('ano', e.target.value)} />
             </div>
             <div className="field">
               <label>Kilometraje</label>
-              <input className="input" type="number" value={form.kilometraje} min="0" placeholder="45000" onChange={e => set('kilometraje', e.target.value)} />
+              <input className="input" type="number" value={form.kilometraje} min="0" placeholder="45000" disabled={form.sinVehiculo} onChange={e => set('kilometraje', e.target.value)} />
             </div>
             <div className="field">
               <label>Técnico</label>

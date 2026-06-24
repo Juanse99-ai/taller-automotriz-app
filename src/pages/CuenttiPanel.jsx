@@ -612,14 +612,14 @@ export default function CuenttiPanel({ trabajos, actualizarTrabajo, notify }) {
             {!verFacturados && yaFacturadosCount > 0 && ` Los ${yaFacturadosCount} trabajos ya facturados estan ocultos.`}
           </p>
           {trabajoFacturaSel?.cuenttiTransacionId && (
-            <div style={{padding:'10px 14px',background:'rgba(245,158,11,.1)',border:'1px solid #f59e0b',borderRadius:10,marginBottom:14,display:'flex',alignItems:'center',gap:10}}>
-              <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="#d97706" strokeWidth="2"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            <div style={{padding:'10px 14px',background:'rgba(22,163,74,.08)',border:'1px solid rgba(22,163,74,.4)',borderRadius:10,marginBottom:14,display:'flex',alignItems:'center',gap:10}}>
+              <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="#16a34a" strokeWidth="2"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
               <div style={{flex:1,fontSize:13}}>
-                <div style={{fontWeight:700,color:'#b45309'}}>Este trabajo ya está facturado en Cuentti</div>
+                <div style={{fontWeight:700,color:'var(--green-700,#15803d)'}}>Listo · esta orden ya tiene su factura</div>
                 <div style={{color:'var(--text-3)',fontSize:12,marginTop:2}}>
-                  id_transacion <span className="mono" style={{color:'var(--text)'}}>{trabajoFacturaSel.cuenttiTransacionId}</span>
+                  Factura <span className="mono" style={{color:'var(--text)'}}>{trabajoFacturaSel.cuenttiTransacionId}</span>
                   {trabajoFacturaSel.facturadoEn && ` · ${new Date(trabajoFacturaSel.facturadoEn).toLocaleDateString('es-CO')}`}
-                  . Está bien — la factura quedó una sola vez. Solo reenvíalo si quieres crear OTRA factura aparte.
+                  . Todo en orden, no tienes que hacer nada. Solo vuelve a enviarla si a propósito quieres generar OTRA factura aparte.
                 </div>
               </div>
             </div>
