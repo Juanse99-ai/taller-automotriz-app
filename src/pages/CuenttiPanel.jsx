@@ -607,14 +607,14 @@ export default function CuenttiPanel({ trabajos, actualizarTrabajo, notify }) {
             {!verFacturados && yaFacturadosCount > 0 && ` Los ${yaFacturadosCount} trabajos ya facturados estan ocultos.`}
           </p>
           {trabajoFacturaSel?.cuenttiTransacionId && (
-            <div style={{padding:'10px 14px',background:'rgba(220,38,38,.08)',border:'1px solid var(--red-500)',borderRadius:10,marginBottom:14,display:'flex',alignItems:'center',gap:10}}>
-              <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="var(--red-600)" strokeWidth="2"><path d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            <div style={{padding:'10px 14px',background:'rgba(245,158,11,.1)',border:'1px solid #f59e0b',borderRadius:10,marginBottom:14,display:'flex',alignItems:'center',gap:10}}>
+              <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="#d97706" strokeWidth="2"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
               <div style={{flex:1,fontSize:13}}>
-                <div style={{fontWeight:700,color:'var(--red-700)'}}>Este trabajo ya fue facturado</div>
+                <div style={{fontWeight:700,color:'#b45309'}}>Este trabajo ya está facturado en Cuentti</div>
                 <div style={{color:'var(--text-3)',fontSize:12,marginTop:2}}>
                   id_transacion <span className="mono" style={{color:'var(--text)'}}>{trabajoFacturaSel.cuenttiTransacionId}</span>
                   {trabajoFacturaSel.facturadoEn && ` · ${new Date(trabajoFacturaSel.facturadoEn).toLocaleDateString('es-CO')}`}
-                  . Volver a enviar duplicara la factura en Cuentti.
+                  . Está bien — la factura quedó una sola vez. Solo reenvíalo si quieres crear OTRA factura aparte.
                 </div>
               </div>
             </div>
