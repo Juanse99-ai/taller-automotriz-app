@@ -3,6 +3,7 @@ import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import { fmt, fmtDate, uid } from '../utils/helpers'
 import { COMISION, ESTADOS } from '../utils/constants'
+import { lsGet, lsSet } from '../services/storage'
 import { useTecnicos } from '../services/tecnicos'
 import { loadLogo, drawHeader, drawSectionHeader, drawDataBlock, drawTotalsBox, drawSignatures, drawFooter, tableStylesItems, tableStylesMuted, PDF_LAYOUT } from '../utils/pdfTheme'
 
@@ -49,6 +50,12 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
     nota: '',
     fecha: new Date().toISOString().slice(0, 10),
   })
+  // "Diario": cargo fijo por día (mismo valor para todo el equipo, editable y
+  // persistido). Tú escribes los días; se agrega como cargo y se descuenta del neto.
+  const VALOR_DIARIO_KEY = 'valor_diario_taller'
+  const [valorDiario, setValorDiario] = useState(() => Number(lsGet(VALOR_DIARIO_KEY, 30000)) || 0)
+  const [diarioDias, setDiarioDias] = useState('')
+  const cambiarValorDiario = (v) => { const n = Number(v) || 0; setValorDiario(n); lsSet(VALOR_DIARIO_KEY, n) }
 
   // compartidos[id] puede ser true (legacy, sin partner) o { partner: tecId }
   const compInfo = (id) => {
@@ -199,6 +206,23 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
     })
     setMovForm(f => ({ ...f, monto: '', nota: '' }))
     notify('Movimiento registrado', 'success')
+  }
+
+  // Agrega el "diario" como un cargo: monto = valor diario × días (que tú escribes).
+  const agregarDiario = () => {
+    const tid = parseInt(tecnicoSel)
+    const dias = Math.floor(parseFloat(diarioDias) || 0)
+    const monto = Math.round((Number(valorDiario) || 0) * dias)
+    if (!tid) { notify('Selecciona un técnico primero', 'error'); return }
+    if (dias <= 0) { notify('Escribe cuántos días', 'error'); return }
+    if (monto <= 0) { notify('El valor diario debe ser mayor a 0', 'error'); return }
+    hookAgregarMov({
+      id: `MV-${uid()}`, tecnicoId: tid,
+      tipo: 'diario', monto, nota: `Diario: ${dias} día(s) × ${fmt(valorDiario)}`,
+      fecha: new Date().toISOString().slice(0, 10),
+    })
+    setDiarioDias('')
+    notify(`Diario agregado: ${dias} día(s) = ${fmt(monto)}`, 'success')
   }
 
   const generarPago = () => {
@@ -649,6 +673,15 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
             </div>
             {!colapso.movs && (
             <div className="card__b">
+              {/* DIARIO: cargo fijo por día (mismo valor para todos, editable y guardado). Tú escribes los días. */}
+              <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-end', gap: 12, marginBottom: 14, padding: 12, background: 'rgba(245,158,11,.06)', border: '1px solid rgba(245,158,11,.25)', borderRadius: 10 }}>
+                <div className="field" style={{ flex: '0 0 150px' }}><label>Valor diario</label><input className="input" type="number" min="0" step="1000" value={valorDiario} onChange={e => cambiarValorDiario(e.target.value)} /></div>
+                <div className="field" style={{ flex: '0 0 110px' }}><label>Días</label><input className="input" type="number" min="0" value={diarioDias} onChange={e => setDiarioDias(e.target.value)} placeholder="Ej. 6" /></div>
+                <div style={{ flex: 1, minWidth: 130, fontSize: 13.5, color: 'var(--text-3)' }}>
+                  Descuento del diario: <strong style={{ color: 'var(--amber-700)', fontFamily: 'var(--mono)' }}>{fmt((Number(valorDiario) || 0) * (parseInt(diarioDias) || 0))}</strong>
+                </div>
+                <button type="button" className="btn btn-outline" onClick={agregarDiario}>Agregar diario</button>
+              </div>
               <form onSubmit={agregarMovimiento} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 2fr auto', gap: 12, marginBottom: 12 }}>
                 <div className="field"><label>Tipo</label><select className="input" value={movForm.tipo} onChange={e => setMovForm(f => ({ ...f, tipo: e.target.value }))}><option value="adelanto">Adelanto</option><option value="prestamo">Préstamo</option><option value="consumo">Consumo</option><option value="descuento">Descuento</option></select></div>
                 <div className="field"><label>Monto</label><input className="input" type="number" min="0" value={movForm.monto} onChange={e => setMovForm(f => ({ ...f, monto: e.target.value }))} placeholder="0"/></div>
