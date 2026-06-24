@@ -257,6 +257,7 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
       <TrabajoForm
         trabajo={trabajo}
         allTrabajos={trabajos}
+        vehiculosHook={vehiculosHook}
         onSave={async (data) => {
           // Helper: registrar/actualizar cliente y vehiculo en BD local
           // (se ejecuta tanto al crear como al editar)
@@ -556,9 +557,10 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
 // ========================
 // FORMULARIO DE TRABAJO
 // ========================
-function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [] }) {
+function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [], vehiculosHook }) {
   const isEdit = !!trabajo
   const { resultados, buscando, buscarDebounced, setResultados } = useClientes()
+  const [campoActivo, setCampoActivo] = useState('cedula') // cuál campo de búsqueda de cliente está enfocado
 
   const [form, setForm] = useState({
     cedula: trabajo?.cedula || '',
@@ -707,12 +709,44 @@ function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [] }) {
 
   // Seleccionar cliente de resultados
   const seleccionarCliente = (c) => {
-    set('cedula', normalizarDoc(c))
+    const ced = normalizarDoc(c)
+    set('cedula', ced)
     set('cliente', normalizarNombre(c))
     set('telefonoCliente', fmtTelefono(c.telefono || c.phone || ''))
     set('emailCliente', c.email || c.correo || '')
     set('clienteId', c.id || '')
     setResultados([])
+    cargarVehiculoDeCliente(ced)
+  }
+
+  // Trae el vehiculo mas reciente del cliente y precarga placa/marca/modelo/año/km
+  // SOLO si esos campos estan vacios. Asi, al elegir un cliente que ya tiene carro
+  // registrado, no toca volver a digitarlo. Fuentes: tabla de vehiculos (por cedula
+  // del propietario) + trabajos anteriores del mismo cliente.
+  const cargarVehiculoDeCliente = (cedula) => {
+    if (!cedula) return
+    const candidatos = []
+    if (vehiculosHook?.buscarPorCedula) {
+      for (const v of vehiculosHook.buscarPorCedula(cedula)) {
+        if (v.placa) candidatos.push({ placa: v.placa, marca: v.marca, modelo: v.modelo, ano: v.ano, kilometraje: v.kilometraje, _t: v.actualizadoEn || v.creadoEn || 0 })
+      }
+    }
+    for (const t of allTrabajos) {
+      if ((t.cedula || '') === cedula && t.placa) {
+        candidatos.push({ placa: t.placa, marca: t.marca, modelo: t.modelo, ano: t.ano, kilometraje: t.kilometraje, _t: t.fecha || t.creadoEn || 0 })
+      }
+    }
+    if (!candidatos.length) return
+    candidatos.sort((a, b) => (new Date(b._t).getTime() || 0) - (new Date(a._t).getTime() || 0))
+    const v = candidatos[0]
+    setForm(prev => ({
+      ...prev,
+      placa: prev.placa || (v.placa || '').toUpperCase(),
+      marca: prev.marca || v.marca || '',
+      modelo: prev.modelo || v.modelo || '',
+      ano: prev.ano || v.ano || prev.ano,
+      kilometraje: prev.kilometraje || v.kilometraje || '',
+    }))
   }
 
   // Items
@@ -837,8 +871,9 @@ function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [] }) {
             <div className="field" style={{ position: 'relative' }}>
               <label>Cedula / NIT <span className="req">*</span></label>
               <input className="input" value={form.cedula} placeholder="Buscar por documento..."
+                onFocus={() => setCampoActivo('cedula')}
                 onChange={e => { set('cedula', e.target.value); buscarDebounced(e.target.value) }} />
-              {resultados.length > 0 && (
+              {resultados.length > 0 && campoActivo === 'cedula' && (
                 <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 20, background: 'var(--bg-raised)', border: '1px solid var(--border)', borderRadius: 8, maxHeight: 200, overflowY: 'auto', boxShadow: 'var(--shadow-md)' }}>
                   {resultados.map((c, i) => (
                     <div key={i} onClick={() => seleccionarCliente(c)}
@@ -851,10 +886,22 @@ function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [] }) {
               )}
               {buscando && <span className="help">Buscando en Cuentti...</span>}
             </div>
-            <div className="field">
+            <div className="field" style={{ position: 'relative' }}>
               <label>Nombre del Cliente</label>
-              <input className="input" value={form.cliente} required placeholder="Nombre completo"
+              <input className="input" value={form.cliente} required placeholder="Nombre o documento..."
+                onFocus={() => setCampoActivo('nombre')}
                 onChange={e => { set('cliente', e.target.value); buscarDebounced(e.target.value) }} />
+              {resultados.length > 0 && campoActivo === 'nombre' && (
+                <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 20, background: 'var(--bg-raised)', border: '1px solid var(--border)', borderRadius: 8, maxHeight: 220, overflowY: 'auto', boxShadow: 'var(--shadow-md)' }}>
+                  {resultados.map((c, i) => (
+                    <div key={i} onMouseDown={() => seleccionarCliente(c)}
+                      style={{ padding: '10px 14px', cursor: 'pointer', borderBottom: '1px solid var(--border)', fontSize: 13 }}>
+                      <strong>{normalizarNombre(c)}</strong> <span style={{ color: 'var(--text-3)' }}>· {normalizarDoc(c)}</span>
+                      {c.telefono && <span style={{ marginLeft: 8, color: 'var(--text-3)' }}>{fmtTelefono(c.telefono)}</span>}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
             <div className="field">
               <label>Telefono</label>

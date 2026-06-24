@@ -176,16 +176,22 @@ export function useClientes() {
         }
       } catch { /* silencio */ }
 
-      // 2. Buscar en cache local (por cedula o nombre)
-      const locales = cacheRef.current.filter(c => {
-        const doc = normalizarDoc(c).toLowerCase()
-        const nom = normalizarNombre(c).toLowerCase()
-        return doc.includes(t) || nom.includes(t)
-      })
+      // 2. Buscar en datos locales: la tabla COMPLETA de clientes (Supabase, ~800)
+      //    + el cache liviano. Antes solo se miraba el cache chico (cacheRef), por
+      //    eso "buscar por nombre" no devolvia nada para un cliente que no se hubiera
+      //    consultado antes. Se ignoran acentos para tolerar "nino" vs "niño".
+      const sinAcentos = (s) => (s || '').toString().toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu, '')
+      const q = sinAcentos(t)
+      const matchLocal = (c) => {
+        const doc = sinAcentos(normalizarDoc(c) || c.cedula || '')
+        const nom = sinAcentos(normalizarNombre(c) || c.nombre || '')
+        return doc.includes(q) || nom.includes(q)
+      }
+      const locales = [...clientesRef.current, ...cacheRef.current].filter(matchLocal)
 
       locales.forEach(c => {
-        const doc = normalizarDoc(c).toLowerCase()
-        if (!seen.has(doc)) {
+        const doc = (normalizarDoc(c) || c.cedula || '').toLowerCase()
+        if (doc && !seen.has(doc)) {
           results.push(c)
           seen.add(doc)
         }
