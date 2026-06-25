@@ -188,8 +188,19 @@ export async function grabarCliente(clienteData) {
   const primer_apellido = partes.length > 1 ? partes[partes.length - 1] : ''
   const segundo_nombre = partes.length > 2 ? partes.slice(1, -1).join(' ') : ''
 
-  // id_cliente: usar cuenttiId o _raw?.id_cliente para editar, 0 para crear
-  const id_cliente = cuenttiId || _raw?.id_cliente || 0
+  // id_cliente: usar cuenttiId o _raw?.id_cliente para editar, 0 para crear. Si NO
+  // lo tenemos pero el cliente ya existe en Cuentti, mandar 0 hace que Cuentti
+  // intente CREARLO con una cedula duplicada y responde 400. Por eso, cuando falta
+  // el id, lo buscamos por cedula para hacer ACTUALIZAR (upsert) en vez de crear.
+  let id_cliente = cuenttiId || _raw?.id_cliente || 0
+  if (!id_cliente && cedula) {
+    try {
+      const existente = await buscarClientePorCedula(cedula)
+      if (existente?.id) id_cliente = existente.id
+    } catch (e) {
+      console.warn('grabarCliente: búsqueda por cédula falló:', e.message)
+    }
+  }
 
   const body = {
     id_cliente,
@@ -262,7 +273,13 @@ export async function grabarCliente(clienteData) {
     id_empleado: parseInt(CONFIG.employeeId),
   }
 
-  return cuenttiRequest(CONFIG.paths.clientes.grabar, 'POST', body)
+  const resp = await cuenttiRequest(CONFIG.paths.clientes.grabar, 'POST', body)
+  // Dejar id_cliente disponible para el writeback local (guardar cuenttiId). En
+  // actualizar ya lo conocemos; en crear, Cuentti lo devuelve dentro de `retorno`.
+  let idFinal = id_cliente
+  if (!idFinal && resp?.retorno) { try { idFinal = JSON.parse(resp.retorno)?.id_cliente } catch {} }
+  if (resp && typeof resp === 'object' && idFinal && !resp.id_cliente) resp.id_cliente = idFinal
+  return resp
 }
 
 // ---------- INVENTARIO ----------
