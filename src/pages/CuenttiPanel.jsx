@@ -365,12 +365,17 @@ export default function CuenttiPanel({ trabajos, actualizarTrabajo, notify }) {
       const idBanco = metodoPagoKey === 'transferencia' ? idBancoConfig
                     : metodoPagoKey === 'credito' ? 0
                     : 1
+      // El pago (efectivo/transferencia) NO se manda inline: se crea la factura a
+      // crédito y luego se registra el pago con agregarPagoTransacion, que SÍ crea el
+      // recibo de caja (es_ingreso/n_caja) y entra al cierre de caja. El lstPagos
+      // inline solo marcaba la factura pagada pero no alimentaba el cierre de caja.
+      const esPagoInmediato = metodoPagoKey !== 'credito'
       const facturaData = {
         ...trabajo,
         resolucion: prefijo,
         idMedioPago: metodoPago,
         idBanco,
-        aCredito: metodoPagoKey === 'credito',
+        aCredito: true,
         observaciones: `OT: ${trabajo.otCodigo || trabajo.id} — ${trabajo.observaciones || ''}`.trim(),
       }
       const payload = buildFacturaPayload(facturaData)
@@ -381,10 +386,29 @@ export default function CuenttiPanel({ trabajos, actualizarTrabajo, notify }) {
       const result = await enviarFactura(facturaData)
       setFacturaResp(result)
       const txId = extractIdTransacion(result)
+      let pagoOk = false
       if (txId) {
         setEmitId(txId.toString())
         setPagoForm(p => ({ ...p, idTransacion: txId.toString(), valor: trabajo.total || p.valor }))
         setDocId(txId.toString())
+        // Registrar el pago como recibo de caja (esto es lo que entra al cierre de
+        // caja). Se paga el total EXACTO de la factura (payload.total_neto) para que
+        // quede pagada sin saldo por redondeo.
+        if (esPagoInmediato) {
+          try {
+            await agregarPagoTransacion({
+              idTransacion: txId.toString(),
+              valor: payload.total_neto,
+              idMedioPago: metodoPago,
+              idBanco,
+              idCliente: trabajo.clienteId || trabajo.cuenttiId || 1,
+              nota: `OT ${trabajo.otCodigo || trabajo.id}`,
+            })
+            pagoOk = true
+          } catch (err) {
+            notify('Factura creada, pero el pago no entró a caja. Regístralo en "Pago / Abono".', 'error')
+          }
+        }
         // Marcar trabajo como facturado (anti-duplicado entre dispositivos)
         if (actualizarTrabajo) {
           try {
@@ -392,10 +416,8 @@ export default function CuenttiPanel({ trabajos, actualizarTrabajo, notify }) {
               cuenttiTransacionId: txId.toString(),
               facturadoEn: new Date().toISOString(),
               cuenttiResolucion: prefijo,
-              // Si se facturó con método de pago (no a crédito), la factura ya quedó
-              // PAGADA en Cuentti (el pago va inline en grabarFacturaSimple). Se marca
-              // 'pagado' para que "Últimas facturas" no la muestre como pendiente.
-              pagado: !facturaData.aCredito,
+              // Pagado solo si el recibo de caja se registró OK.
+              pagado: esPagoInmediato && pagoOk,
               metodoPago: metodoPagoKey,
             })
           } catch (err) {
