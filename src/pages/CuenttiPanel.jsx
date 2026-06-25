@@ -41,7 +41,7 @@ export default function CuenttiPanel({ trabajos, actualizarTrabajo, notify }) {
     idTransacion: '',
     valor: '',
     idMedioPago: 1,
-    idBanco: 2,
+    idBanco: 1, // Caja General (efectivo). 2=Bancolombia, 3=Nequi
     nota: '',
     devuelta: 0,
   })
@@ -356,13 +356,15 @@ export default function CuenttiPanel({ trabajos, actualizarTrabajo, notify }) {
 
     setFacturando(true)
     try {
-      // Mapear id_banco segun el metodo de pago:
-      // - efectivo: id_banco = 2 (caja en Cuentti)
-      // - transferencia: id_banco = idBancoConfig (banco real configurado, ej Nequi=3)
+      // Mapear id_banco segun el metodo de pago (VERIFICADO en Cuentti:
+      // 1=Caja General, 2=Bancolombia, 3=Nequi):
+      // - efectivo: id_banco = 1 (Caja General). Antes estaba en 2 => los pagos en
+      //   efectivo caian en Bancolombia y NO aparecian en el cierre de caja.
+      // - transferencia: id_banco = idBancoConfig (banco real configurado)
       // - credito: lstPagos vacio (no aplica)
       const idBanco = metodoPagoKey === 'transferencia' ? idBancoConfig
                     : metodoPagoKey === 'credito' ? 0
-                    : 2
+                    : 1
       const facturaData = {
         ...trabajo,
         resolucion: prefijo,

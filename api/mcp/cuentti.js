@@ -160,7 +160,7 @@ function buildFacturaPayload(factura) {
     objDetalle: items,
     lstPagos: factura.aCredito ? [] : [{
       id_medio_pago: factura.idMedioPago ?? 1,
-      id_banco: factura.idBanco ?? 2,
+      id_banco: factura.idBanco ?? 1, // 1=Caja General (efectivo). 2=Bancolombia, 3=Nequi
       valor: to2(totalNeto),
       boucher: '',
       digitos: '',
@@ -345,7 +345,7 @@ function buildCompraPayload(c) {
     },
     objDetalle: items,
     lstPagos: c.aCredito === false
-      ? [{ id_medio_pago: c.idMedioPago ?? 1, id_banco: c.idBanco ?? 2, valor: totalNeto, boucher: '', digitos: '', devuelta: 0, dinero_entregado: 0, nota: c.numeroFactura ? `Compra ${c.numeroFactura}` : '', fecha_registro: Date.now() }]
+      ? [{ id_medio_pago: c.idMedioPago ?? 1, id_banco: c.idBanco ?? 1, valor: totalNeto, boucher: '', digitos: '', devuelta: 0, dinero_entregado: 0, nota: c.numeroFactura ? `Compra ${c.numeroFactura}` : '', fecha_registro: Date.now() }]
       : [],
   }
 }
@@ -678,7 +678,7 @@ const tools = [
         resolucion: { type: 'string', enum: ['MAS', 'FEIC'], default: 'MAS', description: 'MAS = factura interna; FEIC = factura electronica DIAN.' },
         metodoPago: { type: 'string', enum: ['efectivo', 'transferencia', 'credito'], default: 'efectivo' },
         idMedioPago: { type: 'integer', description: 'Override del id_medio_pago de Cuentti. Default: efectivo=1, transferencia=7.' },
-        idBanco: { type: 'integer', description: 'Override del id_banco. Default: efectivo=2, transferencia=1.' },
+        idBanco: { type: 'integer', description: 'Override del id_banco (1=Caja General, 2=Bancolombia, 3=Nequi). Default: efectivo=1 (Caja General), transferencia=2.' },
         emitirFE: { type: 'boolean', description: 'Si resolucion=FEIC, emite ante la DIAN tras crear la factura.' },
         confirm: { type: 'boolean', description: 'true = emitir de verdad; false (default) = dry-run.' },
       },
@@ -719,7 +719,8 @@ const tools = [
       // Mapeo de medio de pago
       const aCredito = metodoPago === 'credito'
       const medio = idMedioPago ?? (metodoPago === 'transferencia' ? 7 : 1)
-      const banco = idBanco ?? (metodoPago === 'transferencia' ? 1 : metodoPago === 'credito' ? 0 : 2)
+      // 1=Caja General, 2=Bancolombia, 3=Nequi (verificado). Efectivo => Caja General.
+      const banco = idBanco ?? (metodoPago === 'transferencia' ? 2 : metodoPago === 'credito' ? 0 : 1)
 
       const factura = {
         items,

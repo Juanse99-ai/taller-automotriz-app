@@ -567,7 +567,7 @@ export async function agregarPagoTransacion(pago) {
     id_empleado: parseInt(CONFIG.employeeId),
     nota: pago.nota || '',
     id_sucursal: parseInt(CONFIG.branchId),
-    id_banco: pago.idBanco || 2,
+    id_banco: pago.idBanco || 1, // 1=Caja General (efectivo). 2=Bancolombia, 3=Nequi
     id_medio_pago: pago.idMedioPago || 1,
     boucher: pago.boucher || '',
     digitos: pago.digitos || '',
