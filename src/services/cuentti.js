@@ -60,7 +60,7 @@ function buildHeaders({ maskToken = false } = {}) {
 }
 
 // Request generico al proxy de Cuentti
-async function cuenttiRequest(endpoint, method = 'GET', body = null) {
+async function cuenttiRequest(endpoint, method = 'GET', body = null, timeout = CONFIG.timeout) {
   const url = `${CONFIG.baseUrl}?path=${encodeURIComponent(endpoint)}`
   const headers = buildHeaders()
 
@@ -68,7 +68,7 @@ async function cuenttiRequest(endpoint, method = 'GET', body = null) {
   if (body) opts.body = JSON.stringify(body)
 
   const controller = new AbortController()
-  const timer = setTimeout(() => controller.abort(), CONFIG.timeout)
+  const timer = setTimeout(() => controller.abort(), timeout)
 
   try {
     const res = await fetch(url, { ...opts, signal: controller.signal })
@@ -294,38 +294,44 @@ export function extraerCostoBase(obj) {
 }
 
 export async function cargarInventario(pagina = 0) {
-  try {
-    // Endpoint "Mini" (liviano y rapido): el "Movil" devolvia ~1.1MB por pagina
-    // y con conexiones lentas el inventario no terminaba de cargar (quedaba en
-    // "0 productos"). Mini trae nombre/sku/precio/iva (lo que usa el buscador).
-    const path = CONFIG.paths.productos.paginadaMini
-      .replace('{id_sucursal}', CONFIG.branchId)
-      .replace('{pagina}', pagina.toString())
-    const data = await cuenttiRequest(path)
-    const items = Array.isArray(data) ? data : (data?.data || [])
-    return items.map(p => {
-      const precioSinIva = parseFloat(p.precio_venta || 0)
-      const iva = parseFloat(p.valor_impuesto || 0)
-      return {
-        id: p.id_producto || p.idProductoSucursal,
-        codigo: p.codigo_barras || p.sku || `PROD-${p.id_producto}`,
-        sku: p.sku || '',
-        codigoBarras: p.codigo_barras || '',
-        nombre: p.nombre || 'Sin nombre',
-        categoria: p.id_categoria ? `Cat-${p.id_categoria}` : 'General',
-        precio: precioSinIva * (1 + iva / 100),
-        precioBase: precioSinIva,
-        stock: parseFloat(p.existencias || 0),
-        iva,
-        costoBase: extraerCostoBase(p), // Tier 1: costo si el Mini lo trae (sin IVA)
-        esServicio: p.es_servicio === 1,
-        vendeSinExistencia: p.vende_sin_existencia === 1,
-      }
-    })
-  } catch (e) {
-    console.warn('Cuentti cargarInventario:', e.message)
-    return []
+  // Endpoint "Movil": trae el dato REAL y completo de cada producto, incluido el
+  // costo de compra (campos precio_compra / costo, sin IVA) — necesario para mostrar
+  // costo y utilidad de TODO el inventario. Pesa ~1.1MB/pagina, asi que se usa un
+  // timeout amplio + 1 reintento; la UI muestra la cache mientras refresca atras.
+  const path = CONFIG.paths.productos.paginadaMovil
+    .replace('{id_sucursal}', CONFIG.branchId)
+    .replace('{pagina}', pagina.toString())
+  let ultimoError = null
+  for (let intento = 0; intento < 2; intento++) {
+    try {
+      const data = await cuenttiRequest(path, 'GET', null, 45000)
+      const items = Array.isArray(data) ? data : (data?.data || [])
+      return items.map(p => {
+        const precioSinIva = parseFloat(p.precio_venta || 0)
+        const iva = parseFloat(p.valor_impuesto || 0)
+        return {
+          id: p.id_producto || p.idProductoSucursal,
+          codigo: p.codigo_barras || p.sku || `PROD-${p.id_producto}`,
+          sku: p.sku || '',
+          codigoBarras: p.codigo_barras || '',
+          nombre: p.nombre || 'Sin nombre',
+          categoria: p.id_categoria ? `Cat-${p.id_categoria}` : 'General',
+          precio: precioSinIva * (1 + iva / 100),
+          precioBase: precioSinIva,
+          stock: parseFloat(p.existencias || 0),
+          iva,
+          costoBase: extraerCostoBase(p), // precio_compra / costo (sin IVA)
+          esServicio: p.es_servicio === 1,
+          vendeSinExistencia: p.vende_sin_existencia === 1,
+        }
+      })
+    } catch (e) {
+      ultimoError = e
+      console.warn(`Cuentti cargarInventario p${pagina} intento ${intento + 1}:`, e.message)
+    }
   }
+  console.warn('Cuentti cargarInventario fallo definitivo:', ultimoError?.message)
+  return null // null = fallo (distinto de [] = página vacía/fin). El caller aborta.
 }
 
 // Buscar producto por SKU o codigo de barras
@@ -386,6 +392,12 @@ export async function cargarInventarioCompleto() {
   let seguir = true
   while (seguir) {
     const items = await cargarInventario(pagina)
+    // Una página que FALLA (null) aborta la carga: mejor conservar el último
+    // inventario completo en caché que guardar uno parcial (totales errados).
+    if (items === null) {
+      console.warn('[Inventario] carga abortada por fallo en página', pagina, '— se conserva la caché')
+      return []
+    }
     if (!items.length) { seguir = false; break }
     todos.push(...items)
     if (items.length < 1000) seguir = false

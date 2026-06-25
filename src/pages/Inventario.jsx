@@ -1,7 +1,6 @@
-import { useState, useEffect, useMemo, useRef } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { fmt, fmtCompact } from '../utils/helpers'
 import { useInventario, formatCacheAge } from '../hooks/useInventario'
-import { cargarCostoProducto } from '../services/cuentti'
 
 const STOCK_BAJO_UMBRAL = 3
 
@@ -17,10 +16,6 @@ export default function Inventario({ notify }) {
   } = useInventario()
   const [busqueda, setBusqueda] = useState('')
   const [categoriaFiltro, setCategoriaFiltro] = useState('todas')
-  // Costo bajo demanda (Tier 3): id -> número (base sin IVA) | 'loading' | 'na'.
-  // Solo para productos cuyo costo no vino en el listado/existencias.
-  const [costosExtra, setCostosExtra] = useState({})
-  const pedidosRef = useRef(new Set())
   const [, setNowTick] = useState(0)
   useEffect(() => {
     const id = setInterval(() => setNowTick(t => t + 1), 10000)
@@ -104,42 +99,19 @@ export default function Inventario({ notify }) {
     return list
   }, [productos, busqueda, categoriaFiltro, sortBy, sortDir])
 
-  // Enriquecimiento de costo bajo demanda: para las filas visibles (máx 100) que
-  // no traen costo, lo pide a Cuentti (obtenerProductoSku) con tope de concurrencia.
-  // Cachea por id (pedidosRef) para no repetir pedidos al filtrar/ordenar.
-  useEffect(() => {
-    const vista = filtrados.slice(0, 100)
-    const pendientes = vista.filter(p => !(p.costoBase > 0) && !pedidosRef.current.has(p.id))
-    if (!pendientes.length) return
-    pendientes.forEach(p => pedidosRef.current.add(p.id))
-    setCostosExtra(prev => {
-      const next = { ...prev }
-      pendientes.forEach(p => { next[p.id] = 'loading' })
-      return next
-    })
-    let cancel = false
-    ;(async () => {
-      const LIMIT = 5
-      let i = 0
-      const worker = async () => {
-        while (!cancel && i < pendientes.length) {
-          const p = pendientes[i++]
-          const base = await cargarCostoProducto(p.sku || p.codigoBarras || p.codigo)
-          if (cancel) return
-          setCostosExtra(prev => ({ ...prev, [p.id]: (typeof base === 'number' && base > 0) ? base : 'na' }))
-        }
-      }
-      await Promise.all(Array.from({ length: Math.min(LIMIT, pendientes.length) }, worker))
-    })()
-    return () => { cancel = true }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filtrados])
-
   const stats = useMemo(() => ({
     total: productos.length,
     sinStock: productos.filter(p => p.stock <= 0).length,
     stockBajo: productos.filter(p => !p.esServicio && p.stock > 0 && p.stock <= STOCK_BAJO_UMBRAL).length,
     valorTotal: productos.reduce((s, p) => s + (p.precio * p.stock), 0),
+    // Valor a costo CON IVA = Σ costo×(1+IVA)×stock, SOLO stock > 0 (inventario en
+    // mano). Se excluye el stock negativo de servicios/mano de obra (que quedan en
+    // negativo por venderse sin control de existencias) para no falsear el total.
+    valorCosto: productos.reduce((s, p) => {
+      const base = parseFloat(p.costoBase) || 0
+      const stock = parseFloat(p.stock) || 0
+      return s + (base > 0 && stock > 0 ? base * (1 + (parseFloat(p.iva) || 0) / 100) * stock : 0)
+    }, 0),
   }), [productos])
 
   const stockState = (p) => {
@@ -240,6 +212,11 @@ export default function Inventario({ notify }) {
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '.4px' }}>Valor inventario</div>
               <div style={{ fontFamily: 'var(--mono)', fontWeight: 700, fontSize: 22, color: 'var(--text)', lineHeight: 1.1, marginTop: 2 }}>{fmtCompact(stats.valorTotal)}</div>
+              {stats.valorCosto > 0 && (
+                <div style={{ fontSize: 11.5, color: 'var(--text-3)', marginTop: 2, fontWeight: 500 }}>
+                  a costo c/IVA <span style={{ fontFamily: 'var(--mono)', color: 'var(--text-2)', fontWeight: 700 }}>{fmtCompact(stats.valorCosto)}</span>
+                </div>
+              )}
             </div>
           </div>
 
@@ -338,11 +315,9 @@ export default function Inventario({ notify }) {
               <tbody>
                 {filtrados.slice(0, 100).map(p => {
                   const s = stockState(p)
-                  const cx = costosExtra[p.id]
-                  const baseCosto = p.costoBase > 0 ? p.costoBase : (typeof cx === 'number' ? cx : 0)
+                  const baseCosto = parseFloat(p.costoBase) || 0
                   const costoIva = baseCosto > 0 ? baseCosto * (1 + (p.iva || 0) / 100) : 0
                   const util = (baseCosto > 0 && p.precioBase > 0) ? ((p.precioBase - baseCosto) / baseCosto) * 100 : null
-                  const cargandoCosto = cx === 'loading'
                   return (
                     <tr key={p.id || p.codigo}>
                       <td className="c-mono" style={{ color: 'var(--text-3)', fontSize: 11.5 }}>{p.codigo}</td>
@@ -353,14 +328,14 @@ export default function Inventario({ notify }) {
                         color: p.stock <= 0 ? 'var(--red-600)' : p.stock <= STOCK_BAJO_UMBRAL ? 'var(--amber-500)' : 'var(--text)',
                       }}>{p.stock}</td>
                       <td className="c-mono c-right" style={{ fontWeight: 600, color: 'var(--text-2)' }}>
-                        {costoIva > 0 ? fmt(costoIva) : (cargandoCosto ? '…' : '—')}
+                        {costoIva > 0 ? fmt(costoIva) : '—'}
                       </td>
                       <td className="c-mono c-right" style={{ fontWeight: 700 }}>{fmt(p.precio)}</td>
                       <td className="c-mono c-right" style={{
                         fontWeight: 700,
                         color: util == null ? 'var(--text-4)' : util < 0 ? 'var(--red-600)' : util < 15 ? 'var(--amber-600)' : 'var(--green-600)',
                       }}>
-                        {util == null ? (cargandoCosto ? '…' : '—') : `${util.toFixed(0)}%`}
+                        {util == null ? '—' : `${util.toFixed(0)}%`}
                       </td>
                       <td className="c-mono c-right c-muted">{p.iva}%</td>
                       <td><span className={`badge ${s.cls}`}>{s.lbl}</span></td>
