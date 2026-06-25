@@ -24,6 +24,7 @@ export function useInventario({ autoSyncMs = 0 } = {}) {
     return cached.length === 0 || (Date.now() - ts) > STALE_MS
   })
   const [refreshing, setRefreshing] = useState(false)
+  const [error, setError] = useState(null)
   const [lastSyncAt, setLastSyncAt] = useState(() => lsGet(LS_KEYS.INVENTARIO_TIMESTAMP, 0))
   const fetchingRef = useRef(false)
 
@@ -39,9 +40,13 @@ export function useInventario({ autoSyncMs = 0 } = {}) {
         const now = Date.now()
         lsSet(LS_KEYS.INVENTARIO_TIMESTAMP, now)
         setLastSyncAt(now)
+        setError(null)
+      } else {
+        setError('Cuentti no devolvió productos. Reintenta en un momento.')
       }
     } catch (e) {
       console.warn('Error refreshing inventario:', e.message)
+      setError('No se pudo cargar el inventario desde Cuentti.')
     } finally {
       fetchingRef.current = false
       setRefreshing(false)
@@ -67,13 +72,15 @@ export function useInventario({ autoSyncMs = 0 } = {}) {
     return () => clearInterval(id)
   }, [autoSyncMs, refresh])
 
-  const cacheAge = Date.now() - lastSyncAt
-  const isStale = cacheAge > STALE_MS
+  // null = nunca sincronizado (evita mostrar edades absurdas tipo "495093h")
+  const cacheAge = lastSyncAt ? Date.now() - lastSyncAt : null
+  const isStale = cacheAge == null || cacheAge > STALE_MS
 
   return {
     inventario,
     loading,
     refreshing,
+    error,
     lastSyncAt,
     cacheAge,
     isStale,
@@ -83,11 +90,15 @@ export function useInventario({ autoSyncMs = 0 } = {}) {
 
 // Helper para formatear edad del cache
 export function formatCacheAge(ms) {
-  if (!ms || ms < 0) return 'recien'
+  if (ms == null) return 'sin sincronizar'
+  if (ms < 0) return 'recien'
   const seg = Math.floor(ms / 1000)
   if (seg < 60) return `hace ${seg}s`
   const min = Math.floor(seg / 60)
   if (min < 60) return `hace ${min}m`
   const horas = Math.floor(min / 60)
-  return `hace ${horas}h`
+  if (horas < 48) return `hace ${horas}h`
+  const dias = Math.floor(horas / 24)
+  if (dias < 60) return `hace ${dias}d`
+  return 'sin sincronizar' // edades absurdas = cache nunca seteado/roto
 }

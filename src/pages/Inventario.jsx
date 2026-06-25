@@ -9,6 +9,7 @@ export default function Inventario({ notify }) {
     inventario: productos,
     loading,
     refreshing,
+    error,
     cacheAge,
     isStale,
     refresh,
@@ -141,6 +142,13 @@ export default function Inventario({ notify }) {
           </button>
         </div>
       </div>
+
+      {error && productos.length === 0 && (
+        <div style={{ padding: '12px 16px', marginBottom: 16, background: 'rgba(220,38,38,.06)', border: '1px solid rgba(220,38,38,.35)', borderRadius: 10, display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+          <span style={{ fontSize: 13.5, color: 'var(--red-700,#b91c1c)', flex: 1, minWidth: 200 }}>⚠ {error}</span>
+          <button className="btn btn-outline btn-sm" onClick={() => cargar(true)} disabled={loading || refreshing}>Reintentar</button>
+        </div>
+      )}
 
       {/* KPIs — hero "Atención" + 3 mini (rompe simetría 4x igual) */}
       <div className="kpi-grid" style={{ marginBottom: 18 }}>

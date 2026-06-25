@@ -618,6 +618,7 @@ function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [], vehiculosHoo
     inventario,
     loading: invLoading,
     refreshing: invRefreshing,
+    error: invError,
     cacheAge: invCacheAge,
     isStale: invIsStale,
     refresh: refrescarInventario,
@@ -1043,7 +1044,9 @@ function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [], vehiculosHoo
           <div className="card__h" style={{ flexWrap: 'wrap', gap: 8 }}>
             <h3 style={{ flex: '0 0 auto' }}>Repuestos y Servicios {invLoading
               ? <span className="count">Cargando...</span>
-              : <span className="count">{inventario.length} productos</span>
+              : (invError && inventario.length === 0)
+                ? <button type="button" className="count" onClick={refrescarInventario} style={{ cursor: 'pointer', background: 'rgba(220,38,38,.1)', color: 'var(--red-700,#b91c1c)', border: '1px solid rgba(220,38,38,.3)' }}>⚠ No cargó · Reintentar</button>
+                : <span className="count">{inventario.length} productos</span>
             }</h3>
             {/* Indicador del estado del inventario Cuentti */}
             {!invLoading && (
