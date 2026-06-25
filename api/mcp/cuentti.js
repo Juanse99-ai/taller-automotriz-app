@@ -16,7 +16,7 @@ const CONFIG = {
   token: process.env.CUENTTI_TOKEN || '',
   companyId: process.env.CUENTTI_COMPANY_ID || '11464',
   branchId: process.env.CUENTTI_BRANCH_ID || '1',
-  employeeId: process.env.CUENTTI_EMPLOYEE_ID || '1',
+  employeeId: process.env.CUENTTI_EMPLOYEE_ID || '2', // 2 = cajero real con la caja abierta (ver memoria cuentti-ids-caja)
   gtm: process.env.CUENTTI_GTM || 'GMT-0500',
   timeout: parseInt(process.env.CUENTTI_TIMEOUT || '15000', 10),
 }
