@@ -310,6 +310,8 @@ export default function App() {
           title={sec.title}
           subtitle={sec.subtitle}
           onToggleSidebar={onToggleSidebar}
+          sidebarOpen={sidebarOpen}
+          sidebarCollapsed={sidebarCollapsed}
           user={user}
           onLogout={handleLogout}
           trabajos={trabajosHook.trabajos}

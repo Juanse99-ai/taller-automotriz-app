@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
+import { motion, useReducedMotion } from 'motion/react'
 import CompartirPortalModal from './CompartirPortalModal'
 import Switch from './Switch'
 
@@ -32,13 +33,38 @@ const PortalIcon = () => (
     <line x1="12" y1="18" x2="12.01" y2="18"/>
   </svg>
 )
-const HamburgerIcon = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-    <line x1="3" y1="6"  x2="21" y2="6"/>
-    <line x1="3" y1="12" x2="21" y2="12"/>
-    <line x1="3" y1="18" x2="21" y2="18"/>
-  </svg>
-)
+// Hamburguesa animada: las 3 rayas se transforman en una X con resorte (morph del
+// AnimatedMenu, adaptado a este stack con motion). `open` controla el estado.
+function MenuToggleIcon({ open, reduce }) {
+  const common = { fill: 'transparent', strokeWidth: 2.4, stroke: 'currentColor', strokeLinecap: 'round' }
+  const t = reduce ? { duration: 0 } : { duration: 0.34, ease: [0.4, 0, 0.2, 1] }
+  return (
+    <motion.svg width="20" height="20" viewBox="0 0 23 23" initial={false} animate={open ? 'open' : 'closed'} aria-hidden="true">
+      <motion.path {...common}
+        variants={{ closed: { d: 'M 2 2.5 L 20 2.5' }, open: { d: 'M 3 16.5 L 17 2.5' } }}
+        transition={t} />
+      <motion.path {...common} d="M 2 9.423 L 20 9.423"
+        variants={{ closed: { opacity: 1 }, open: { opacity: 0 } }}
+        transition={reduce ? { duration: 0 } : { duration: 0.12 }} />
+      <motion.path {...common}
+        variants={{ closed: { d: 'M 2 16.346 L 20 16.346' }, open: { d: 'M 3 2.5 L 17 16.346' } }}
+        transition={t} />
+    </motion.svg>
+  )
+}
+
+function useIsMobile() {
+  const [m, setM] = useState(() =>
+    typeof window !== 'undefined' && window.matchMedia('(max-width:960px)').matches
+  )
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width:960px)')
+    const fn = (e) => setM(e.matches)
+    mq.addEventListener('change', fn)
+    return () => mq.removeEventListener('change', fn)
+  }, [])
+  return m
+}
 const LogoutIcon = () => (
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
@@ -60,7 +86,12 @@ function timeAgo(dateStr) {
   return `Hace ${days}d`
 }
 
-export default function TopBar({ title, subtitle, onToggleSidebar, user, onLogout, trabajos, onNavigate }) {
+export default function TopBar({ title, subtitle, onToggleSidebar, sidebarOpen, sidebarCollapsed, user, onLogout, trabajos, onNavigate }) {
+  const isMobile = useIsMobile()
+  const reduceMotion = useReducedMotion()
+  // En mobile el boton abre/cierra el drawer; en desktop colapsa/expande el rail.
+  // La X aparece cuando el menu esta "abierto/expandido".
+  const menuAbierto = isMobile ? !!sidebarOpen : !sidebarCollapsed
   const [query, setQuery] = useState('')
   const [results, setResults] = useState([])
   const [showResults, setShowResults] = useState(false)
@@ -126,8 +157,8 @@ export default function TopBar({ title, subtitle, onToggleSidebar, user, onLogou
   return (
     <>
       <header className="topbar">
-        <button className="topbar__menu" onClick={onToggleSidebar} aria-label="Abrir menu">
-          <HamburgerIcon />
+        <button className="topbar__menu" onClick={onToggleSidebar} aria-label={menuAbierto ? 'Cerrar menú' : 'Abrir menú'} aria-expanded={menuAbierto}>
+          <MenuToggleIcon open={menuAbierto} reduce={reduceMotion} />
         </button>
         <div className="title">
           <h1>{title}</h1>
