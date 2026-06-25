@@ -19,6 +19,8 @@ const CONFIG = {
       // "Mini" es ~5x mas liviano (~215KB, ~0.4s) — suficiente para el buscador.
       paginadaMovil: '/jServerj4ErpPro/com/j4ErpPro/server/vent/factura/consultaProductoPaginadaMovil/{id_sucursal}/{pagina}?tomar_precio_online=0',
       paginadaMini: '/jServerj4ErpPro/com/j4ErpPro/server/vent/factura/consultaProductoPaginadaMini/{id_sucursal}/{pagina}?tomar_precio_online=0',
+      // Existencias (stock) por separado: el Mini de productos no las trae. Liviano (~150KB).
+      existenciasMini: '/jServerj4ErpPro/com/j4ErpPro/server/inv/producto/consultaExistenciasActivosMini/{id_sucursal}',
     },
     facturas: {
       grabarSimple: '/jServerj4ErpPro/api/token/grabarFacturaSimple',
@@ -324,6 +326,25 @@ export async function buscarProductoPorSku(sku) {
   }
 }
 
+// Trae las existencias (stock) por id_producto. El endpoint Mini de productos no
+// las incluye, así que se piden aparte (consultaExistenciasActivosMini es liviano).
+async function cargarExistencias() {
+  try {
+    const path = CONFIG.paths.productos.existenciasMini.replace('{id_sucursal}', CONFIG.branchId)
+    const data = await cuenttiRequest(path)
+    const arr = Array.isArray(data) ? data : (data?.data || [])
+    const map = new Map()
+    for (const e of arr) {
+      const id = e.id_producto ?? e.id
+      if (id != null) map.set(String(id), parseFloat(e.exis ?? e.existencias ?? 0) || 0)
+    }
+    return map
+  } catch (e) {
+    console.warn('Cuentti cargarExistencias:', e.message)
+    return null
+  }
+}
+
 export async function cargarInventarioCompleto() {
   const todos = []
   let pagina = 0
@@ -334,6 +355,14 @@ export async function cargarInventarioCompleto() {
     todos.push(...items)
     if (items.length < 1000) seguir = false
     else pagina++
+  }
+  // Mezclar el stock real (el Mini de productos viene sin existencias).
+  const exMap = await cargarExistencias()
+  if (exMap) {
+    for (const p of todos) {
+      const ex = exMap.get(String(p.id))
+      if (ex != null) p.stock = ex
+    }
   }
   return todos
 }
