@@ -1,6 +1,7 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { fmt, fmtCompact } from '../utils/helpers'
 import { useInventario, formatCacheAge } from '../hooks/useInventario'
+import { cargarCostoProducto } from '../services/cuentti'
 
 const STOCK_BAJO_UMBRAL = 3
 
@@ -16,6 +17,10 @@ export default function Inventario({ notify }) {
   } = useInventario()
   const [busqueda, setBusqueda] = useState('')
   const [categoriaFiltro, setCategoriaFiltro] = useState('todas')
+  // Costo bajo demanda (Tier 3): id -> número (base sin IVA) | 'loading' | 'na'.
+  // Solo para productos cuyo costo no vino en el listado/existencias.
+  const [costosExtra, setCostosExtra] = useState({})
+  const pedidosRef = useRef(new Set())
   const [, setNowTick] = useState(0)
   useEffect(() => {
     const id = setInterval(() => setNowTick(t => t + 1), 10000)
@@ -98,6 +103,37 @@ export default function Inventario({ notify }) {
     }
     return list
   }, [productos, busqueda, categoriaFiltro, sortBy, sortDir])
+
+  // Enriquecimiento de costo bajo demanda: para las filas visibles (máx 100) que
+  // no traen costo, lo pide a Cuentti (obtenerProductoSku) con tope de concurrencia.
+  // Cachea por id (pedidosRef) para no repetir pedidos al filtrar/ordenar.
+  useEffect(() => {
+    const vista = filtrados.slice(0, 100)
+    const pendientes = vista.filter(p => !(p.costoBase > 0) && !pedidosRef.current.has(p.id))
+    if (!pendientes.length) return
+    pendientes.forEach(p => pedidosRef.current.add(p.id))
+    setCostosExtra(prev => {
+      const next = { ...prev }
+      pendientes.forEach(p => { next[p.id] = 'loading' })
+      return next
+    })
+    let cancel = false
+    ;(async () => {
+      const LIMIT = 5
+      let i = 0
+      const worker = async () => {
+        while (!cancel && i < pendientes.length) {
+          const p = pendientes[i++]
+          const base = await cargarCostoProducto(p.sku || p.codigoBarras || p.codigo)
+          if (cancel) return
+          setCostosExtra(prev => ({ ...prev, [p.id]: (typeof base === 'number' && base > 0) ? base : 'na' }))
+        }
+      }
+      await Promise.all(Array.from({ length: Math.min(LIMIT, pendientes.length) }, worker))
+    })()
+    return () => { cancel = true }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filtrados])
 
   const stats = useMemo(() => ({
     total: productos.length,
@@ -282,8 +318,14 @@ export default function Inventario({ notify }) {
                   <th onClick={() => toggleSort('stock')} className="c-right" style={{ cursor: 'pointer', userSelect: 'none' }}>
                     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, justifyContent: 'flex-end' }}>Stock {sortIcon('stock')}</span>
                   </th>
+                  <th className="c-right" title="Costo de compra con IVA (traído de Cuentti)">
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, justifyContent: 'flex-end' }}>Costo c/IVA</span>
+                  </th>
                   <th onClick={() => toggleSort('precio')} className="c-right" style={{ cursor: 'pointer', userSelect: 'none' }}>
                     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, justifyContent: 'flex-end' }}>Precio {sortIcon('precio')}</span>
+                  </th>
+                  <th className="c-right" title="Utilidad = (precio venta − costo) / costo, sobre valores sin IVA">
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, justifyContent: 'flex-end' }}>Utilidad</span>
                   </th>
                   <th onClick={() => toggleSort('iva')} className="c-right" style={{ cursor: 'pointer', userSelect: 'none' }}>
                     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, justifyContent: 'flex-end' }}>IVA {sortIcon('iva')}</span>
@@ -296,6 +338,11 @@ export default function Inventario({ notify }) {
               <tbody>
                 {filtrados.slice(0, 100).map(p => {
                   const s = stockState(p)
+                  const cx = costosExtra[p.id]
+                  const baseCosto = p.costoBase > 0 ? p.costoBase : (typeof cx === 'number' ? cx : 0)
+                  const costoIva = baseCosto > 0 ? baseCosto * (1 + (p.iva || 0) / 100) : 0
+                  const util = (baseCosto > 0 && p.precioBase > 0) ? ((p.precioBase - baseCosto) / baseCosto) * 100 : null
+                  const cargandoCosto = cx === 'loading'
                   return (
                     <tr key={p.id || p.codigo}>
                       <td className="c-mono" style={{ color: 'var(--text-3)', fontSize: 11.5 }}>{p.codigo}</td>
@@ -305,7 +352,16 @@ export default function Inventario({ notify }) {
                         fontWeight: 700,
                         color: p.stock <= 0 ? 'var(--red-600)' : p.stock <= STOCK_BAJO_UMBRAL ? 'var(--amber-500)' : 'var(--text)',
                       }}>{p.stock}</td>
+                      <td className="c-mono c-right" style={{ fontWeight: 600, color: 'var(--text-2)' }}>
+                        {costoIva > 0 ? fmt(costoIva) : (cargandoCosto ? '…' : '—')}
+                      </td>
                       <td className="c-mono c-right" style={{ fontWeight: 700 }}>{fmt(p.precio)}</td>
+                      <td className="c-mono c-right" style={{
+                        fontWeight: 700,
+                        color: util == null ? 'var(--text-4)' : util < 0 ? 'var(--red-600)' : util < 15 ? 'var(--amber-600)' : 'var(--green-600)',
+                      }}>
+                        {util == null ? (cargandoCosto ? '…' : '—') : `${util.toFixed(0)}%`}
+                      </td>
                       <td className="c-mono c-right c-muted">{p.iva}%</td>
                       <td><span className={`badge ${s.cls}`}>{s.lbl}</span></td>
                     </tr>

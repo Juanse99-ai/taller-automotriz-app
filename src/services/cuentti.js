@@ -267,6 +267,32 @@ export async function grabarCliente(clienteData) {
 
 // ---------- INVENTARIO ----------
 
+// Cuentti no documenta el nombre exacto del campo de costo de compra, y varía
+// entre endpoints. En vez de adivinar, escaneamos el objeto del producto por
+// cualquier campo plausible de costo (sin IVA). Devuelve 0 si no lo encuentra.
+const COSTO_KEYS = [
+  'precio_compra', 'costo', 'costo_promedio', 'costo_promedio_ponderado',
+  'ultimo_costo', 'costo_ultimo', 'valor_costo', 'costo_unitario',
+  'precio_costo', 'costo_base', 'costoPromedio', 'precioCompra',
+]
+export function extraerCostoBase(obj) {
+  if (!obj || typeof obj !== 'object') return 0
+  for (const k of COSTO_KEYS) {
+    if (obj[k] != null) {
+      const v = parseFloat(obj[k])
+      if (!isNaN(v) && v > 0) return v
+    }
+  }
+  // Fallback: cualquier campo que mencione costo/compra (excluye id_centro_costo, etc.)
+  for (const k of Object.keys(obj)) {
+    if (/costo|compra/i.test(k) && !/centro|id_|_id/i.test(k)) {
+      const v = parseFloat(obj[k])
+      if (!isNaN(v) && v > 0) return v
+    }
+  }
+  return 0
+}
+
 export async function cargarInventario(pagina = 0) {
   try {
     // Endpoint "Mini" (liviano y rapido): el "Movil" devolvia ~1.1MB por pagina
@@ -291,6 +317,7 @@ export async function cargarInventario(pagina = 0) {
         precioBase: precioSinIva,
         stock: parseFloat(p.existencias || 0),
         iva,
+        costoBase: extraerCostoBase(p), // Tier 1: costo si el Mini lo trae (sin IVA)
         esServicio: p.es_servicio === 1,
         vendeSinExistencia: p.vende_sin_existencia === 1,
       }
@@ -339,7 +366,12 @@ async function cargarExistencias() {
     const map = new Map()
     for (const e of arr) {
       const id = e.id_producto ?? e.id
-      if (id != null) map.set(String(id), parseFloat(e.exis ?? e.existencias ?? 0) || 0)
+      if (id != null) {
+        map.set(String(id), {
+          stock: parseFloat(e.exis ?? e.existencias ?? 0) || 0,
+          costoBase: extraerCostoBase(e), // Tier 2: costo si el endpoint de existencias lo trae
+        })
+      }
     }
     return map
   } catch (e) {
@@ -359,15 +391,55 @@ export async function cargarInventarioCompleto() {
     if (items.length < 1000) seguir = false
     else pagina++
   }
-  // Mezclar el stock real (el Mini de productos viene sin existencias).
+  // Mezclar el stock real (el Mini de productos viene sin existencias) y el costo
+  // si el endpoint de existencias lo trae (Tier 2).
   const exMap = await cargarExistencias()
   if (exMap) {
     for (const p of todos) {
       const ex = exMap.get(String(p.id))
-      if (ex != null) p.stock = ex
+      if (ex != null) {
+        if (ex.stock != null) p.stock = ex.stock
+        if (!p.costoBase && ex.costoBase) p.costoBase = ex.costoBase
+      }
     }
   }
+  // Derivar costo CON impuestos y % de utilidad (markup sobre costo) por producto.
+  for (const p of todos) derivarCosto(p)
   return todos
+}
+
+// Calcula costoConIva y utilidadPct a partir de costoBase (sin IVA) y precioBase.
+// utilidadPct = markup sobre costo = (precioVenta - costo) / costo * 100.
+// Muta el producto. Si no hay costo, deja costoConIva=0 y utilidadPct=null.
+export function derivarCosto(p) {
+  const costoBase = parseFloat(p.costoBase) || 0
+  const iva = parseFloat(p.iva) || 0
+  const precioBase = parseFloat(p.precioBase) || 0
+  p.costoBase = costoBase
+  p.costoConIva = costoBase > 0 ? costoBase * (1 + iva / 100) : 0
+  p.utilidadPct = (costoBase > 0 && precioBase > 0)
+    ? ((precioBase - costoBase) / costoBase) * 100
+    : null
+  return p
+}
+
+// Tier 3 (bajo demanda): trae el costo de UN producto via obtenerProductoSku, que
+// devuelve el producto completo (ahí sí está el costo). Devuelve el costo SIN IVA,
+// 0 si no se encuentra, null si falla la petición.
+export async function cargarCostoProducto(skuOrCodigo) {
+  const s = String(skuOrCodigo || '').trim()
+  if (!s) return null
+  try {
+    const path = `/jServerj4ErpPro/com/j4ErpPro/server/inv/producto/obtenerProductoSku/${CONFIG.branchId}/${encodeURIComponent(s)}`
+    const data = await cuenttiRequest(path)
+    if (!data || data.message) return null
+    const p = Array.isArray(data) ? data[0] : data
+    if (!p || !p.id_producto) return null
+    return extraerCostoBase(p)
+  } catch (e) {
+    console.warn('Cuentti cargarCostoProducto:', e.message)
+    return null
+  }
 }
 
 // ---------- FACTURACION ----------
