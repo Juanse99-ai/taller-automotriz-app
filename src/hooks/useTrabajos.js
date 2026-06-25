@@ -226,24 +226,19 @@ export function useTrabajos() {
   }, [nextOtCodigo])
 
   const actualizarTrabajo = useCallback(async (id, changes) => {
-    let trabajoActualizado = null
-    setTrabajos(prev => prev.map(t => {
-      if (t.id === id) {
-        trabajoActualizado = { ...t, ...changes }
-        return trabajoActualizado
-      }
-      return t
-    }))
-    if (trabajoActualizado) {
-      // Asegurar otCodigo para sync
-      if (!trabajoActualizado.otCodigo) {
-        trabajoActualizado.otCodigo = nextOtCodigo()
-        setTrabajos(prev => prev.map(t => t.id === id ? trabajoActualizado : t))
-      }
-      const result = await upsertTrabajo(trabajoActualizado)
-      if (!result) {
-        console.warn('Cambio guardado solo en local — Supabase fallo:', id)
-      }
+    // Calcular el trabajo actualizado desde la ref (estado ACTUAL), NO dentro del
+    // updater de setState. El updater corre DESPUES, asi que antes el `if` se
+    // evaluaba con trabajoActualizado=null y el upsert se SALTABA: el cambio (ej.
+    // estado COMPLETADO) quedaba solo en local y la sincronizacion lo revertia a
+    // pendiente. Ahora el upsert siempre corre y el cambio se guarda en Supabase.
+    const actual = trabajosRef.current.find(t => t.id === id)
+    if (!actual) return
+    const trabajoActualizado = { ...actual, ...changes }
+    if (!trabajoActualizado.otCodigo) trabajoActualizado.otCodigo = nextOtCodigo()
+    setTrabajos(prev => prev.map(t => t.id === id ? trabajoActualizado : t))
+    const result = await upsertTrabajo(trabajoActualizado)
+    if (!result) {
+      console.warn('Cambio guardado solo en local — Supabase fallo:', id)
     }
   }, [nextOtCodigo])
 
