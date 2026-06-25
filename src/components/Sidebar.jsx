@@ -1,3 +1,6 @@
+import { motion, useReducedMotion } from 'motion/react'
+import { useState, useEffect } from 'react'
+
 const ICONS = {
   dashboard: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -136,6 +139,30 @@ const NAV = [
   ]},
 ]
 
+// Animacion del menu: entrada con resorte (spring) escalonada, SOLO en mobile (drawer).
+// En desktop el sidebar es fijo => render directo en 'open' sin animar.
+const navContainer = {
+  open: { transition: { staggerChildren: 0.06, delayChildren: 0.08 } },
+  closed: { transition: { staggerChildren: 0.03, staggerDirection: -1 } },
+}
+const itemSpring = {
+  open: { x: 0, opacity: 1, transition: { type: 'spring', stiffness: 500, damping: 24 } },
+  closed: { x: -28, opacity: 0, transition: { type: 'spring', stiffness: 600, damping: 30 } },
+}
+
+function useIsMobile() {
+  const [mobile, setMobile] = useState(() =>
+    typeof window !== 'undefined' && window.matchMedia('(max-width:960px)').matches
+  )
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width:960px)')
+    const fn = (e) => setMobile(e.matches)
+    mq.addEventListener('change', fn)
+    return () => mq.removeEventListener('change', fn)
+  }, [])
+  return mobile
+}
+
 export default function Sidebar({ active, onNavigate, isOpen, collapsed, onCollapse, seccionesPermitidas, user, onLogout, trabajos = [] }) {
   const allowed = seccionesPermitidas || []
 
@@ -146,6 +173,11 @@ export default function Sidebar({ active, onNavigate, isOpen, collapsed, onColla
 
   const inicial = (user?.nombre || user?.usuario || '?')[0].toUpperCase()
   const rolLabel = user?.rol === 'admin' ? 'Administrador' : 'Jefe de taller'
+
+  // Solo animar el stagger en mobile (drawer); en desktop el sidebar es fijo.
+  const isMobile = useIsMobile()
+  const reduce = useReducedMotion()
+  const animateState = (!isMobile || reduce) ? 'open' : (isOpen ? 'open' : 'closed')
 
   return (
     <aside className={`sidebar ${isOpen ? 'open' : ''}${collapsed ? ' collapsed' : ''}`}>
@@ -159,12 +191,12 @@ export default function Sidebar({ active, onNavigate, isOpen, collapsed, onColla
         </div>
       </div>
 
-      <nav className="sidebar__nav">
+      <motion.nav className="sidebar__nav" variants={navContainer} initial={false} animate={animateState}>
         {NAV.map(g => {
           const visible = g.items.filter(item => allowed.includes(item.key))
           if (!visible.length) return null
           return (
-            <div key={g.group}>
+            <motion.div key={g.group} variants={itemSpring}>
               <div className="sidebar__group">{g.group}</div>
               {visible.map(item => (
                 <a
@@ -177,10 +209,10 @@ export default function Sidebar({ active, onNavigate, isOpen, collapsed, onColla
                   {pillCounts[item.key] > 0 && <span className="pill">{pillCounts[item.key]}</span>}
                 </a>
               ))}
-            </div>
+            </motion.div>
           )
         })}
-      </nav>
+      </motion.nav>
 
       {user && (
         <div className="sidebar__foot">

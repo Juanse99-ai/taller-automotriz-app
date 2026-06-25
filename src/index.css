@@ -126,7 +126,7 @@ input,select,textarea{font-family:inherit;font-size:14px;color:inherit}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
 /* Nada aparece desde scale(0): entra desde .97 + leve translateY (animations.dev) */
 @keyframes modalIn{from{transform:translateY(10px) scale(.97);opacity:0}to{transform:translateY(0) scale(1);opacity:1}}
-@keyframes navSectionIn{from{opacity:0;transform:translateX(-16px)}}
+/* navSectionIn removido: el stagger del menu ahora lo hace motion (Sidebar.jsx) */
 @keyframes slideUp{from{transform:translateY(12px);opacity:0}to{transform:translateY(0);opacity:1}}
 
 /* Command Palette — Product Search */
@@ -519,17 +519,7 @@ tbody tr:hover{background:var(--bg-subtle)}
   .sidebar{transform:translateX(-100%);width:280px;transition:transform .34s var(--ease-drawer)}
   .sidebar.open{transform:translateX(0);box-shadow:var(--shadow-lg);transition:transform .5s var(--ease-drawer)}
   .sidebar.collapsed{width:280px}
-  /* Stagger de entrada de cada sección del menú al abrir el drawer.
-     CSS puro (off-main-thread, robusto): si algo falla, los items quedan
-     VISIBLES, nunca invisibles. 'backwards' aplica el estado inicial solo
-     durante el delay; al terminar vuelve al estado natural. */
-  .sidebar.open .sidebar__nav > div{animation:navSectionIn .44s var(--ease-drawer) backwards}
-  .sidebar.open .sidebar__nav > div:nth-child(1){animation-delay:.06s}
-  .sidebar.open .sidebar__nav > div:nth-child(2){animation-delay:.11s}
-  .sidebar.open .sidebar__nav > div:nth-child(3){animation-delay:.16s}
-  .sidebar.open .sidebar__nav > div:nth-child(4){animation-delay:.21s}
-  .sidebar.open .sidebar__nav > div:nth-child(5){animation-delay:.26s}
-  .sidebar.open .sidebar__nav > div:nth-child(n+6){animation-delay:.3s}
+  /* El stagger de entrada del menu ahora lo hace motion (spring) en Sidebar.jsx. */
   .main{margin-left:0}
   .app.has-collapsed .main{margin-left:0}
   .topbar{padding:0 16px;gap:8px;height:56px}
