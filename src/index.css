@@ -249,6 +249,9 @@ input,select,textarea{font-family:inherit;font-size:14px;color:inherit}
 /* button */
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;height:40px;padding:0 16px;border-radius:10px;font-size:13.5px;font-weight:600;transition:background .12s,transform 140ms var(--ease-out),box-shadow .12s;white-space:nowrap}
 .btn:active{transform:scale(.97)}
+.btn:hover:not(:active){transform:translateY(-1px)}
+.btn:focus-visible{outline:2px solid var(--primary);outline-offset:2px}
+.icobtn:focus-visible,.tabs button:focus-visible{outline:2px solid var(--primary);outline-offset:2px;border-radius:8px}
 .btn svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:2}
 .btn-primary{background:var(--primary);color:#fff;box-shadow:0 1px 2px rgba(30,58,138,.3),0 4px 10px rgba(30,58,138,.15)}
 .btn-primary:hover{background:var(--primary-hover)}
