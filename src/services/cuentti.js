@@ -6,7 +6,10 @@ const CONFIG = {
   token: 'MTE0NjR8MTE0NjR8OTAxNTcyMjI1fDB8ZXlKMGVYQWlPaUpLVjFRaUxDSmhiR2NpT2lKSVV6STFOaUo5LmV5SnpkV0lpT2lJeE1UUTJOQzB5TURJek1EQTVOREF3TUROak5Ea3laRGMwWlMwMU4yRmpMVFJrTVRrdE9HUm1OeTAxTkdSaU9EYzVaVGxtWlRGOE9UQXhOVGN5TWpJMUlpd2lhV0YwSWpveE56YzJNemd5T0RZMExDSmxlSEFpT201MWJHeDkuNnZueUpKZmFaZWh5ZmxGdUhlLTFMSHE5R2V3TVlBZk5CR3FCR2h4TzA0OA==',
   companyId: '11464',
   branchId: '1',
-  employeeId: '1',
+  // Empleado 2 = el usuario/cajero real con la CAJA abierta. Antes era 1, por eso los
+  // pagos en efectivo caian en la caja del empleado 1 y NO salian en el cierre de caja
+  // (verificado: el recibo manual que SÍ entra usa id_empleado=2; lo demas idéntico).
+  employeeId: '2',
   gtm: 'GMT-0500',
   timeout: 20000,
   paths: {
