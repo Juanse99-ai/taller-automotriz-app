@@ -1,5 +1,5 @@
 import { motion, useReducedMotion } from 'motion/react'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 
 const ICONS = {
   dashboard: (
@@ -174,10 +174,28 @@ export default function Sidebar({ active, onNavigate, isOpen, collapsed, onColla
   const inicial = (user?.nombre || user?.usuario || '?')[0].toUpperCase()
   const rolLabel = user?.rol === 'admin' ? 'Administrador' : 'Jefe de taller'
 
-  // Solo animar el stagger en mobile (drawer); en desktop el sidebar es fijo.
+  // Reproduce la animacion de entrada (stagger con resorte) cuando el menu "aparece":
+  //  - mobile: al abrir el drawer (isOpen false -> true)
+  //  - desktop: al expandir el rail colapsado (collapsed true -> false)
+  // En la carga inicial NO anima (initial=false). Cada "aparicion" remonta el nav
+  // (key) con initial='closed' -> animate='open', asi el resorte se vuelve a correr.
   const isMobile = useIsMobile()
   const reduce = useReducedMotion()
-  const animateState = (!isMobile || reduce) ? 'open' : (isOpen ? 'open' : 'closed')
+  const [animKey, setAnimKey] = useState(0)
+  const prevState = useRef({ isOpen, collapsed, isMobile })
+  const firstRender = useRef(true)
+  useEffect(() => {
+    if (firstRender.current) {
+      firstRender.current = false
+      prevState.current = { isOpen, collapsed, isMobile }
+      return
+    }
+    const p = prevState.current
+    prevState.current = { isOpen, collapsed, isMobile }
+    if (reduce) return
+    const aparecio = isMobile ? (isOpen && !p.isOpen) : (p.collapsed && !collapsed)
+    if (aparecio) setAnimKey(k => k + 1)
+  }, [isOpen, collapsed, isMobile, reduce])
 
   return (
     <aside className={`sidebar ${isOpen ? 'open' : ''}${collapsed ? ' collapsed' : ''}`}>
@@ -191,7 +209,7 @@ export default function Sidebar({ active, onNavigate, isOpen, collapsed, onColla
         </div>
       </div>
 
-      <motion.nav className="sidebar__nav" variants={navContainer} initial={false} animate={animateState}>
+      <motion.nav key={animKey} className="sidebar__nav" variants={navContainer} initial={animKey === 0 ? false : 'closed'} animate="open">
         {NAV.map(g => {
           const visible = g.items.filter(item => allowed.includes(item.key))
           if (!visible.length) return null
