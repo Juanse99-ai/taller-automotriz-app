@@ -8,6 +8,7 @@ import { MARCAS, getModelos } from '../utils/vehiculos'
 import { useClientes } from '../hooks/useClientes'
 import { useInventario, formatCacheAge } from '../hooks/useInventario'
 import { lsGet, lsSet, LS_KEYS } from '../services/storage'
+import Switch from '../components/Switch'
 
 export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, onAutoFacturar }) {
   const { trabajos, agregarTrabajo, actualizarTrabajo, eliminarTrabajo } = hook
@@ -920,10 +921,10 @@ function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [], vehiculosHoo
         <div className="card">
           <div className="card__h" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
             <h3>Vehiculo</h3>
-            <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 500, cursor: 'pointer', color: 'var(--text-2)' }}>
-              <input type="checkbox" checked={form.sinVehiculo} onChange={e => set('sinVehiculo', e.target.checked)} style={{ width: 16, height: 16 }} />
-              Servicio sin vehículo (no entra carro)
-            </label>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 13, fontWeight: 500, color: 'var(--text-2)' }}>
+              <Switch checked={!!form.sinVehiculo} onChange={v => set('sinVehiculo', v)} ariaLabel="Servicio sin vehículo" />
+              <span style={{ cursor: 'pointer' }} onClick={() => set('sinVehiculo', !form.sinVehiculo)}>Servicio sin vehículo (no entra carro)</span>
+            </div>
           </div>
           <div className="card__b" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 14 }}>
             {form.sinVehiculo && (

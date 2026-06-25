@@ -3,6 +3,7 @@ import { fmtDate, uid, hoyISO, normalizarDoc, normalizarNombre, fmtTelefono } fr
 import { TECNICOS, ESTADOS } from '../utils/constants'
 import { MARCAS, getModelos } from '../utils/vehiculos'
 import { useClientes } from '../hooks/useClientes'
+import Switch from '../components/Switch'
 
 export default function Recepcion({ hook, vehiculosHook, clientesHook, notify }) {
   const { trabajos, agregarTrabajo } = hook
@@ -344,9 +345,9 @@ export default function Recepcion({ hook, vehiculosHook, clientesHook, notify })
                   {form.observaciones && <div style={{ gridColumn: '1/3' }}><span style={{ fontSize: 13, color: 'var(--text-3)' }}>Obs:</span> {form.observaciones}</div>}
                 </div>
                 <div style={{ padding: '0 16px 16px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-                    <input type="checkbox" checked={form.programar} onChange={e => set('programar', e.target.checked)} id="chk-programar" />
-                    <label htmlFor="chk-programar" style={{ fontSize: 13, marginBottom: 0 }}>Programar (genera OT)</label>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+                    <Switch checked={!!form.programar} onChange={v => set('programar', v)} ariaLabel="Programar (genera OT)" />
+                    <span style={{ fontSize: 13, cursor: 'pointer' }} onClick={() => set('programar', !form.programar)}>Programar (genera OT)</span>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                     <button type="button" className="btn btn-outline" onClick={() => setPaso(3)}>Atras</button>

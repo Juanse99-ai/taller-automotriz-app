@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import CompartirPortalModal from './CompartirPortalModal'
+import Switch from './Switch'
 
 const SunIcon = () => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -217,13 +218,14 @@ export default function TopBar({ title, subtitle, onToggleSidebar, user, onLogou
           )}
         </div>
 
-        <button
-          className="icobtn"
-          onClick={() => setDark(d => !d)}
-          title={dark ? 'Modo claro' : 'Modo oscuro'}
-        >
-          {dark ? <SunIcon /> : <MoonIcon />}
-        </button>
+        <Switch
+          checked={dark}
+          onChange={setDark}
+          title={dark ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
+          ariaLabel="Modo oscuro"
+          checkedIcon={<MoonIcon />}
+          uncheckedIcon={<SunIcon />}
+        />
 
         {onLogout && (
           <button
