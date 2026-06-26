@@ -192,14 +192,26 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
 
   // Resumen general por tecnico.
   // Inactivos solo aparecen si aun tienen pendientes por liquidar (cierre de cuentas).
-  const resumenTecnicos = useMemo(() =>
-    TECNICOS.map(t => ({
-      ...t,
-      pendientes: (porTecnico[t.id]?.trabajos || []).length,
-      moTotal: Math.round(porTecnico[t.id]?.totalMO || 0),
-      comisionTotal: Math.round(porTecnico[t.id]?.comision || 0),
-    })).filter(t => !t.eliminado && (t.activo !== false || t.pendientes > 0)),
-  [porTecnico, TECNICOS])
+  const resumenTecnicos = useMemo(() => {
+    // Cargos por técnico (para el neto = comisión − cargos × comisión%)
+    const cargosBy = {}
+    for (const m of movimientos) {
+      cargosBy[m.tecnicoId] = (cargosBy[m.tecnicoId] || 0) + (parseFloat(m.monto) || 0)
+    }
+    return TECNICOS.map(t => {
+      const pendientes = (porTecnico[t.id]?.trabajos || []).length
+      const moTotal = Math.round(porTecnico[t.id]?.totalMO || 0)
+      const comisionTotal = Math.round(porTecnico[t.id]?.comision || 0)
+      const cargos = Math.round(cargosBy[t.id] || 0)
+      const cargosEf = Math.round(cargos * COMISION.TOTAL)
+      return { ...t, pendientes, moTotal, comisionTotal, cargos, cargosEf, neto: comisionTotal - cargosEf }
+    }).filter(t => !t.eliminado && (t.activo !== false || t.pendientes > 0))
+  }, [porTecnico, TECNICOS, movimientos])
+
+  // Total de la nómina (lo que se debe pagar a los técnicos con trabajos pendientes)
+  const totalNomina = useMemo(
+    () => resumenTecnicos.filter(t => t.pendientes > 0).reduce((s, t) => s + Math.max(0, t.neto), 0),
+    [resumenTecnicos])
 
   const historialOrdenado = useMemo(() =>
     [...historial].sort((a, b) => new Date(b.fecha) - new Date(a.fecha)),
@@ -557,7 +569,13 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
         </div>
       </div>
 
-      {/* Tarjetas por tecnico — toda la fila es clicable */}
+      {/* Nómina: total a pagar + lista por técnico (cada fila es clicable) */}
+      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12, marginBottom: 12, flexWrap: 'wrap' }}>
+        <h3 style={{ margin: 0 }}>Nómina · {resumenTecnicos.filter(t => t.pendientes > 0).length} por liquidar</h3>
+        <div style={{ fontSize: 13, color: 'var(--text-3)' }}>
+          Total a pagar <strong className="mono" style={{ color: 'var(--green-700)', fontSize: 16, marginLeft: 4 }}>{fmt(totalNomina)}</strong>
+        </div>
+      </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
         {resumenTecnicos.map((t, i) => {
           const activo = tecnicoSel === String(t.id)
@@ -587,8 +605,11 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
                 <div style={{ fontSize: 12.5, color: 'var(--text-3)', marginTop: 1 }}>{t.especialidad} · {t.pendientes} OT{t.pendientes !== 1 ? 's' : ''} pendiente{t.pendientes !== 1 ? 's' : ''}{t.activo === false ? ' · cierre de cuentas' : ''}</div>
               </div>
               <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '.4px' }}>Comisión</div>
-                <div className="mono" style={{ fontSize: 18, fontWeight: 800, color: t.comisionTotal > 0 ? 'var(--green-600)' : 'var(--text-3)' }}>{fmt(t.comisionTotal)}</div>
+                <div style={{ fontSize: 10.5, fontWeight: 600, color: 'var(--text-4)', textTransform: 'uppercase', letterSpacing: '.4px' }}>Neto a pagar</div>
+                <div className="mono" style={{ fontSize: 19, fontWeight: 700, color: t.neto > 0 ? 'var(--green-700)' : 'var(--text-3)' }}>{fmt(t.neto)}</div>
+                <div style={{ fontSize: 10.5, color: 'var(--text-4)', marginTop: 1 }}>
+                  Com. {fmt(t.comisionTotal)}{t.cargosEf > 0 ? ` − ${fmt(t.cargosEf)}` : ''}
+                </div>
               </div>
               {activo && (
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--blue-600)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
