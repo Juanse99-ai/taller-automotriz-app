@@ -25,12 +25,21 @@ export async function loadLogo(path = '/logo.png') {
     const type = res.headers.get('content-type') || ''
     if (!type.includes('image')) return null
     const blob = await res.blob()
-    return await new Promise((resolve) => {
+    const dataUrl = await new Promise((resolve) => {
       const reader = new FileReader()
       reader.onloadend = () => resolve(reader.result)
       reader.onerror = () => resolve(null)
       reader.readAsDataURL(blob)
     })
+    if (!dataUrl) return null
+    // Dimensiones naturales para preservar proporción en el PDF (no aplastar el logo)
+    const dims = await new Promise((resolve) => {
+      const img = new Image()
+      img.onload = () => resolve({ w: img.naturalWidth, h: img.naturalHeight })
+      img.onerror = () => resolve({ w: 0, h: 0 })
+      img.src = dataUrl
+    })
+    return { dataUrl, w: dims.w, h: dims.h }
   } catch {
     return null
   }
@@ -98,30 +107,34 @@ export function drawHeader(doc, opts = {}) {
   const { NAVY, AMBER, SLATE_200, SLATE_500 } = PDF_COLORS
   const { MARGIN, CONTENT_W } = PDF_LAYOUT
 
-  // Logo: imagen real si está disponible, sino chip "MDA" amber
-  const logoSize = 20
-  const logoY = 11
-  if (logoData && typeof logoData === 'string' && logoData.startsWith('data:image')) {
-    // Marco blanco sutil para que el logo respire sobre el papel
-    doc.setFillColor(255, 255, 255)
-    doc.setDrawColor(...SLATE_200)
-    doc.setLineWidth(0.3)
-    doc.roundedRect(MARGIN, logoY, logoSize, logoSize, 2, 2, 'FD')
+  // Logo: imagen real con proporción preservada (no se aplasta ni recorta).
+  // Acepta string (compat) u objeto {dataUrl, w, h} devuelto por loadLogo.
+  const logo = typeof logoData === 'string' ? { dataUrl: logoData } : (logoData || {})
+  const logoUrl = logo.dataUrl
+  const logoY = 10
+  let logoBoxW = 20 // ancho real ocupado por el logo (para posicionar el texto)
+  if (logoUrl && typeof logoUrl === 'string' && logoUrl.startsWith('data:image')) {
+    const aspect = (logo.w && logo.h) ? (logo.w / logo.h) : 1
+    const maxH = 20, maxW = 34
+    let h = maxH, w = h * aspect
+    if (w > maxW) { w = maxW; h = w / aspect }
     try {
-      const fmtImg = logoData.includes('image/png') ? 'PNG' : 'JPEG'
-      doc.addImage(logoData, fmtImg, MARGIN + 1.5, logoY + 1.5, logoSize - 3, logoSize - 3, undefined, 'FAST')
-    } catch { /* si falla, queda el marco blanco */ }
+      const fmtImg = logoUrl.includes('image/png') ? 'PNG' : 'JPEG'
+      doc.addImage(logoUrl, fmtImg, MARGIN, logoY, w, h, undefined, 'FAST')
+      logoBoxW = w
+    } catch { /* si falla, sin logo */ }
   } else {
     doc.setFillColor(...AMBER)
-    doc.roundedRect(MARGIN, logoY, logoSize, logoSize, 2, 2, 'F')
+    doc.roundedRect(MARGIN, logoY, 20, 20, 2, 2, 'F')
     doc.setTextColor(...NAVY)
     doc.setFontSize(11)
     doc.setFont(undefined, 'bold')
-    doc.text('MDA', MARGIN + logoSize / 2, logoY + logoSize / 2 + 1.5, { align: 'center' })
+    doc.text('MDA', MARGIN + 10, logoY + 11.5, { align: 'center' })
+    logoBoxW = 20
   }
 
   // Razón social + datos taller
-  const infoX = MARGIN + logoSize + 5
+  const infoX = MARGIN + logoBoxW + 5
   doc.setTextColor(...NAVY)
   doc.setFontSize(13)
   doc.setFont(undefined, 'bold')

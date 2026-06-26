@@ -10,6 +10,24 @@ import { useInventario, formatCacheAge } from '../hooks/useInventario'
 import { lsGet, lsSet, LS_KEYS } from '../services/storage'
 import Switch from '../components/Switch'
 
+// ¿La fecha cae dentro del rango elegido? (hoy / semana = últimos 7 días / mes = mes actual)
+function dentroDeFecha(fecha, modo, now) {
+  if (!fecha) return false
+  const d = new Date(fecha)
+  if (Number.isNaN(d.getTime())) return false
+  if (modo === 'hoy') {
+    return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate()
+  }
+  if (modo === 'semana') {
+    const ini = new Date(now); ini.setDate(now.getDate() - 6); ini.setHours(0, 0, 0, 0)
+    return d >= ini
+  }
+  if (modo === 'mes') {
+    return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth()
+  }
+  return true
+}
+
 export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, onAutoFacturar }) {
   const { trabajos, agregarTrabajo, actualizarTrabajo, eliminarTrabajo } = hook
   const [vista, setVista] = useState('lista') // lista | nuevo | editar | kanban
@@ -47,6 +65,9 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
   const [filtroEstado, setFiltroEstado] = useState('activos')
   const [filtroTecnico, setFiltroTecnico] = useState('todos')
   const [filtroBusqueda, setFiltroBusqueda] = useState('')
+  // Filtro de fecha de la LISTA (el kanban siempre muestra todo el trabajo activo).
+  // Por defecto 'hoy' → al abrir Trabajos solo se ven las OT del día.
+  const [filtroFecha, setFiltroFecha] = useState('hoy')
 
   const stats = useMemo(() => {
     const total = trabajos.length
@@ -73,8 +94,14 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
         (t.otCodigo || '').toLowerCase().includes(q)
       )
     }
+    // Filtro por fecha — solo aplica en la vista lista. El kanban muestra todo el
+    // trabajo activo sin importar el día (si no, se esconderían carros en proceso).
+    if (vista !== 'kanban' && filtroFecha !== 'todas') {
+      const now = new Date()
+      list = list.filter(t => dentroDeFecha(t.fecha, filtroFecha, now))
+    }
     return list.sort((a, b) => new Date(b.fecha) - new Date(a.fecha))
-  }, [trabajos, filtroEstado, filtroTecnico, filtroBusqueda])
+  }, [trabajos, filtroEstado, filtroTecnico, filtroBusqueda, filtroFecha, vista])
 
   const tecNombre = (id) => TECNICOS.find(t => t.id === parseInt(id))?.nombre || '—'
 
@@ -145,7 +172,7 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
       { label: 'Marca', value: t.marca },
       { label: 'Modelo', value: t.modelo },
       { label: 'Año', value: String(t.ano || '—') },
-      { label: 'Kilometraje', value: t.kilometraje ? `${t.kilometraje} km` : '—' },
+      { label: 'Kilometraje', value: t.kilometraje ? `${Number(t.kilometraje).toLocaleString('es-CO')} km` : '—' },
       { label: 'Técnico', value: tecNombre(t.tecnicoId) },
     ], cursorY)
     cursorY += 3
@@ -221,8 +248,17 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
       const subtotal = t.subtotalSinIva || 0
       const iva = t.totalIva || 0
       const total = t.total || 0
-      const manoObra = t.manoObra || 0
-      const repuestos = t.repuestos || 0
+      // M.O. y repuestos del desglose: calculados desde los items para que SIEMPRE
+      // cuadren con el total (OTs viejas no guardaban "repuestos"). La mano de obra
+      // mostrada al cliente = solo líneas marcadas Servicio (no la comisión interna).
+      let manoObra = 0, repuestos = 0
+      ;(t.items || []).forEach(i => {
+        const linea = (parseFloat(i.precio) || 0) * (parseInt(i.cantidad) || 1)
+        if (i.esServicio) manoObra += linea
+        else repuestos += linea
+      })
+      manoObra = Math.round(manoObra)
+      repuestos = Math.round(repuestos)
 
       const obsIngresoReal = t.observacionesIngreso || t.estadoIngreso || ''
       let leftBlockH = 0
@@ -239,6 +275,41 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
         doc.setTextColor(...NAVY)
         doc.setFont(undefined, 'normal')
         doc.text(lines, MARGIN + 3, cursorY + 9)
+      }
+
+      // Próximo cambio de aceite / mantenimiento — recuadro amber a la izquierda.
+      // Si no se registró el km manualmente pero ES un cambio de aceite, se sugiere
+      // automáticamente: km actual + intervalo (sintético 10.000 · resto 5.000).
+      let proxKm = parseInt(t.proximoKm) || 0
+      const proxFecha = t.proximaVisita ? fmtDate(t.proximaVisita) : ''
+      if (!proxKm && t.kilometraje) {
+        const nombres = (t.items || []).map(i => (i.nombre || '').toLowerCase()).join(' ')
+        const esCambioAceite = (t.tipoAceite && t.tipoAceite !== 'no_aplica') || nombres.includes('aceite')
+        if (esCambioAceite) {
+          const intervalo = t.tipoAceite === 'sintetico' ? 10000 : 5000
+          proxKm = (parseInt(t.kilometraje) || 0) + intervalo
+        }
+      }
+      if (proxKm > 0 || proxFecha) {
+        const py = cursorY + (leftBlockH ? leftBlockH + 4 : 0)
+        const ph = 17
+        doc.setFillColor(254, 243, 199) // amber-100
+        doc.setDrawColor(...AMBER)
+        doc.setLineWidth(0.4)
+        doc.roundedRect(MARGIN, py, 104, ph, 1.5, 1.5, 'FD')
+        doc.setFontSize(7)
+        doc.setTextColor(180, 83, 9) // amber-800
+        doc.setFont(undefined, 'bold')
+        doc.text('PRÓXIMO CAMBIO DE ACEITE', MARGIN + 4, py + 6)
+        const partes = []
+        if (proxKm > 0) partes.push(`${proxKm.toLocaleString('es-CO')} km`)
+        if (proxFecha) partes.push(proxFecha)
+        doc.setFontSize(11)
+        doc.setTextColor(...NAVY)
+        doc.text(partes.join('   ·   '), MARGIN + 4, py + 13)
+        doc.setFont(undefined, 'normal')
+        doc.setLineWidth(0.2)
+        leftBlockH = (leftBlockH ? leftBlockH + 4 : 0) + ph
       }
 
       // Caja de totales (usa helper unificado)
@@ -411,6 +482,13 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
       </div>
 
       <div className="card" style={{ padding: '12px 16px', marginBottom: 14 }}>
+        {vista !== 'kanban' && (
+          <div className="segctl" style={{ marginBottom: 10 }}>
+            {[['hoy', 'Hoy'], ['semana', 'Semana'], ['mes', 'Mes'], ['todas', 'Todas']].map(([k, l]) => (
+              <button key={k} type="button" className={filtroFecha === k ? 'on' : ''} onClick={() => setFiltroFecha(k)}>{l}</button>
+            ))}
+          </div>
+        )}
         <div className="form-row" style={{ marginBottom: 0 }}>
           <div className="form-group" style={{ marginBottom: 0, flex: 2 }}>
             <input className="form-input" placeholder="Buscar placa, cliente, OT..." value={filtroBusqueda}
@@ -486,8 +564,8 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
       ) : filtered.length === 0 ? (
         <div className="empty" style={{ padding: '48px 24px', textAlign: 'center' }}>
           <svg width="40" height="40" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5" style={{ opacity: .35, marginBottom: 12 }}><path d="M11.42 15.17l-5.71-5.71a8 8 0 1111.31 0l-5.6 5.71z"/><circle cx="12" cy="10" r="3"/></svg>
-          <p style={{ fontSize: 15, fontWeight: 600, marginBottom: 4 }}>No hay trabajos registrados</p>
-          <p className="text-sm text-muted">Crea una nueva OT para comenzar.</p>
+          <p style={{ fontSize: 15, fontWeight: 600, marginBottom: 4 }}>{trabajos.length === 0 ? 'No hay trabajos registrados' : 'No hay trabajos con estos filtros'}</p>
+          <p className="text-sm text-muted">{trabajos.length === 0 ? 'Crea una nueva OT para comenzar.' : 'Prueba cambiar el filtro de fecha (Hoy / Semana / Todas) o el estado.'}</p>
         </div>
       ) : isWide ? (
         <div className="trab-cockpit">
@@ -792,8 +870,10 @@ function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [], vehiculosHoo
     manoObra: trabajo?.manoObra ? String(trabajo.manoObra) : '',
     estado: trabajo?.estado || ESTADOS.PENDIENTE,
     fecha: trabajo?.fecha ? trabajo.fecha.slice(0, 10) : hoyISO(),
-    evidenciasIngreso: trabajo?.evidenciasIngreso || [],
-    evidenciasEntrega: trabajo?.evidenciasEntrega || [],
+    // Evidencias unificadas: TODAS las fotos del trabajo (antes/durante/después).
+    // Migra datos viejos que estaban separados en ingreso/entrega a una sola lista.
+    evidenciasIngreso: [...(trabajo?.evidenciasIngreso || []), ...(trabajo?.evidenciasEntrega || [])],
+    evidenciasEntrega: [],
     // Próximo mantenimiento (opcional, para CRM)
     tipoAceite: trabajo?.tipoAceite || '',  // '' | 'mineral' | 'sintetico' | 'no_aplica'
     proximoKm: trabajo?.proximoKm || '',
@@ -1254,26 +1334,20 @@ function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [], vehiculosHoo
         {/* EVIDENCIAS */}
         <div className="card">
           <button type="button" className="card__h card__h--toggle" onClick={() => setShowEvid(v => !v)}>
-            <h3>Evidencias (ingreso y entrega)
-              {(form.evidenciasIngreso.length + form.evidenciasEntrega.length) > 0 && (
-                <span className="sec-count">{form.evidenciasIngreso.length + form.evidenciasEntrega.length}</span>
+            <h3>Evidencias del trabajo
+              {form.evidenciasIngreso.length > 0 && (
+                <span className="sec-count">{form.evidenciasIngreso.length}</span>
               )}
             </h3>
             <Chevron open={showEvid} />
           </button>
           {showEvid && (
-          <div className="card__b" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+          <div className="card__b">
             <div className="field">
-              <label>Ingreso (como llega)</label>
-              <span className="help">Frente, lados, parte trasera.</span>
+              <label>Fotos de la orden de trabajo</label>
+              <span className="help">Todas las que necesites: cómo llega el vehículo, durante la reparación, daños, repuestos cambiados y la entrega final.</span>
               <input type="file" accept="image/*" multiple onChange={e => addFotos('evidenciasIngreso', e.target.files)} />
               <ThumbGrid fotos={form.evidenciasIngreso} onNota={(id, nota) => actualizarNotaFoto('evidenciasIngreso', id, nota)} onRemove={id => quitarFoto('evidenciasIngreso', id)} />
-            </div>
-            <div className="field">
-              <label>Entrega</label>
-              <span className="help">Despues del trabajo.</span>
-              <input type="file" accept="image/*" multiple onChange={e => addFotos('evidenciasEntrega', e.target.files)} />
-              <ThumbGrid fotos={form.evidenciasEntrega} onNota={(id, nota) => actualizarNotaFoto('evidenciasEntrega', id, nota)} onRemove={id => quitarFoto('evidenciasEntrega', id)} />
             </div>
           </div>
           )}
