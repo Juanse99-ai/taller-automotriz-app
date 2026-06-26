@@ -173,7 +173,18 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
       comision += es ? (mo * COMISION.TOTAL) / 2 : mo * COMISION.TOTAL
     })
     const cargos = tecMovs.reduce((s, m) => s + (parseFloat(m.monto) || 0), 0)
-    return { manoObra: Math.round(manoObra), comision: Math.round(comision), cargos: Math.round(cargos), neto: Math.round(comision - cargos) }
+    // El cargo se descuenta de la MANO DE OBRA (base), no de la comisión: el
+    // mecánico asume solo su parte (COMISION.TOTAL). Por eso el descuento real al
+    // pago es cargos × comisión, y el neto = comisión − ese descuento.
+    //   neto = (M.O. − cargos) × % = comisión − cargos × %
+    const cargosEfectivos = Math.round(cargos * COMISION.TOTAL)
+    return {
+      manoObra: Math.round(manoObra),
+      comision: Math.round(comision),
+      cargos: Math.round(cargos),
+      cargosEfectivos,
+      neto: Math.round(comision - cargosEfectivos),
+    }
   }, [tecTrabajos, seleccionados, compartidos, tecMovs, moMap])
 
   const cantSeleccionados = Object.keys(seleccionados).filter(id => seleccionados[id]).length
@@ -250,6 +261,7 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
       manoObra: totalSeleccion.manoObra,
       comision: totalSeleccion.comision,
       cargos: totalSeleccion.cargos,
+      cargosEfectivos: totalSeleccion.cargosEfectivos,
       neto: totalSeleccion.neto,
       movimientos: tecMovs.map(m => ({ ...m })),
       detalleTrabajo: ids.map(id => {
@@ -358,7 +370,7 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
       y, x: 122, w: 74,
       rows: [
         { lbl: `Comisión (${COMISION.TOTAL * 100}% M.O.)`, val: fmt(totalSeleccion.comision) },
-        { lbl: 'Cargos / adelantos', val: `− ${fmt(totalSeleccion.cargos)}` },
+        { lbl: `Cargos ${fmt(totalSeleccion.cargos)} · tu ${COMISION.TOTAL * 100}%`, val: `− ${fmt(totalSeleccion.cargosEfectivos)}` },
       ],
       finalLabel: 'NETO A PAGAR',
       finalValue: fmt(totalSeleccion.neto),
@@ -445,7 +457,10 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
       rows: [
         { lbl: 'Mano de obra (sin IVA)', val: fmt(reg.manoObra || 0) },
         { lbl: `Comisión (${COMISION.TOTAL * 100}%)`, val: fmt(reg.comision || 0) },
-        { lbl: 'Cargos / adelantos', val: `− ${fmt(reg.cargos || 0)}` },
+        // Pagos nuevos guardan cargosEfectivos (cargo × %); los viejos descontaban el cargo completo.
+        (reg.cargosEfectivos != null
+          ? { lbl: `Cargos ${fmt(reg.cargos || 0)} · tu ${COMISION.TOTAL * 100}%`, val: `− ${fmt(reg.cargosEfectivos)}` }
+          : { lbl: 'Cargos / adelantos', val: `− ${fmt(reg.cargos || 0)}` }),
       ],
       finalLabel: 'NETO PAGADO',
       finalValue: fmt(reg.neto || 0),
@@ -716,13 +731,18 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
               <div className="card__h" style={{ borderBottomColor: 'rgba(22,163,74,.18)' }}><h3 style={{ color: 'var(--green-700)' }}>Resumen del pago — {tecData.tecnico.nombre}</h3></div>
               <div className="card__b">
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(140px,1fr))', gap: 12, marginBottom: 16 }}>
-                  {[[cantSeleccionados, 'Trabajos'], [fmt(totalSeleccion.manoObra), 'M.O. (sin IVA)'], [fmt(totalSeleccion.comision), 'Comisión', 'var(--green-600)'], [fmt(totalSeleccion.cargos), 'Cargos', 'var(--amber-600)'], [fmt(totalSeleccion.neto), 'Neto a pagar', totalSeleccion.neto >= 0 ? 'var(--green-600)' : 'var(--red-600)']].map(([v, l, c], i) => (
+                  {[[cantSeleccionados, 'Trabajos'], [fmt(totalSeleccion.manoObra), 'M.O. (sin IVA)'], [fmt(totalSeleccion.comision), 'Comisión', 'var(--green-600)'], [`− ${fmt(totalSeleccion.cargosEfectivos)}`, `Cargos (tu ${COMISION.TOTAL * 100}%)`, 'var(--amber-600)'], [fmt(totalSeleccion.neto), 'Neto a pagar', totalSeleccion.neto >= 0 ? 'var(--green-600)' : 'var(--red-600)']].map(([v, l, c], i) => (
                     <div key={i} style={{ padding: '12px 14px', background: 'var(--bg-subtle)', borderRadius: 10, border: '1px solid var(--border)' }}>
                       <div className="mono" style={{ fontSize: i === 4 ? 22 : 18, fontWeight: 800, color: c || 'var(--text)' }}>{v}</div>
                       <div style={{ fontSize: 11, color: 'var(--text-3)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: .5, marginTop: 4 }}>{l}</div>
                     </div>
                   ))}
                 </div>
+                {totalSeleccion.cargos > 0 && (
+                  <div style={{ padding: '9px 13px', background: 'rgba(245,158,11,.07)', border: '1px solid rgba(245,158,11,.25)', borderRadius: 9, fontSize: 12.5, color: 'var(--text-2)', marginBottom: 14 }}>
+                    Cargo bruto <strong>{fmt(totalSeleccion.cargos)}</strong> — se descuenta de la mano de obra, así que el mecánico asume su parte ({COMISION.TOTAL * 100}% = <strong>{fmt(totalSeleccion.cargosEfectivos)}</strong>). Neto = comisión − {fmt(totalSeleccion.cargosEfectivos)}.
+                  </div>
+                )}
                 {totalSeleccion.neto < 0 && (
                   <div style={{ padding: '10px 14px', background: 'rgba(220,38,38,.07)', border: '1px solid rgba(220,38,38,.28)', borderRadius: 9, fontSize: 13, color: 'var(--red-700)', fontWeight: 600, marginBottom: 14 }}>
                     Los cargos superan la comisión. Al generar el pago, la deuda restante se arrastrará como "saldo anterior".
