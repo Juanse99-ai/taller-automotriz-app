@@ -34,10 +34,21 @@ function normalizar(r) {
     facturadoEn: r.facturado_en || r.facturadoEn || null,
     cuenttiResolucion: r.cuentti_resolucion || r.cuenttiResolucion || null,
     inspeccion: typeof r.inspeccion === 'string' ? JSON.parse(r.inspeccion) : (r.inspeccion || null),
-    // Guardar campos extra del localStorage si existen
-    evidenciasIngreso: r.evidenciasIngreso || [],
+    // Evidencias: ahora vienen del servidor (columna evidencias). Fallback a local.
+    evidenciasIngreso: parseEvidencias(r.evidencias) ?? (r.evidenciasIngreso || []),
     evidenciasEntrega: r.evidenciasEntrega || [],
   }
+}
+
+// Parsea la columna evidencias (JSON string). Devuelve null si no hay/está vacía
+// para poder caer al fallback local sin perder fotos aún no subidas.
+function parseEvidencias(val) {
+  if (!val) return null
+  if (Array.isArray(val)) return val.length ? val : null
+  if (typeof val === 'string') {
+    try { const arr = JSON.parse(val); return Array.isArray(arr) && arr.length ? arr : null } catch { return null }
+  }
+  return null
 }
 
 export function useTrabajos() {
@@ -64,6 +75,18 @@ export function useTrabajos() {
   // Merge inteligente: Supabase es fuente de verdad, pero preservar datos solo-locales
   const mergeConLocal = useCallback((sbNormalized) => {
     const local = trabajosRef.current
+    const locById = new Map(local.map(t => [t.id, t]))
+    const locByOt = new Map(local.filter(t => t.otCodigo).map(t => [t.otCodigo, t]))
+
+    // Preservar evidencias locales si el servidor aún no las tiene (fotos no subidas):
+    // sin esto, el sync reemplazaría el trabajo local (con fotos) por el de Supabase (sin ellas).
+    const sbConEvid = sbNormalized.map(t => {
+      if (t.evidenciasIngreso && t.evidenciasIngreso.length) return t
+      const loc = locById.get(t.id) || (t.otCodigo && locByOt.get(t.otCodigo))
+      const locFotos = loc ? [...(loc.evidenciasIngreso || []), ...(loc.evidenciasEntrega || [])] : []
+      return locFotos.length ? { ...t, evidenciasIngreso: locFotos } : t
+    })
+
     const sbById = new Set(sbNormalized.map(t => t.id).filter(Boolean))
     const sbByOt = new Set(sbNormalized.map(t => t.otCodigo).filter(Boolean))
 
@@ -75,7 +98,7 @@ export function useTrabajos() {
     })
 
     // Resultado: Supabase primero (fuente de verdad) + solo-locales al final
-    return [...sbNormalized, ...soloLocales]
+    return [...sbConEvid, ...soloLocales]
   }, [])
 
   // Sincronizacion silenciosa (no toca loading): para polling y focus

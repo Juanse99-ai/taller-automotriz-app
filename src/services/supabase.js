@@ -59,6 +59,8 @@ export async function upsertTrabajo(trabajo, opts = {}) {
     estado: trabajo.estado || 'Pendiente',
     observaciones: trabajo.observaciones || '',
     items: JSON.stringify(trabajo.items || []),
+    // Evidencias (fotos comprimidas) para que el cliente las vea en su portal
+    evidencias: JSON.stringify(trabajo.evidenciasIngreso || []),
     mano_obra: trabajo.manoObra || 0,
     subtotal_sin_iva: trabajo.subtotalSinIva || 0,
     total_iva: trabajo.totalIva || 0,

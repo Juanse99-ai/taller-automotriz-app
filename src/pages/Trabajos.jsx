@@ -874,17 +874,41 @@ function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [], vehiculosHoo
   const [showMant, setShowMant] = useState(
     !!(trabajo?.tipoAceite || trabajo?.proximoKm || trabajo?.proximaVisita || trabajo?.notasProximoMant)
   )
+  // Comprime la imagen (máx 1100px, JPEG) antes de guardarla: así pesa poco
+  // para localStorage, el PDF y el portal del cliente. Cae al original si falla.
+  const comprimirImagen = (file, maxDim = 1100, quality = 0.62) => new Promise((resolve) => {
+    const reader = new FileReader()
+    reader.onload = () => {
+      const img = new Image()
+      img.onload = () => {
+        let { width, height } = img
+        if (width > maxDim || height > maxDim) {
+          if (width >= height) { height = Math.round(height * maxDim / width); width = maxDim }
+          else { width = Math.round(width * maxDim / height); height = maxDim }
+        }
+        try {
+          const canvas = document.createElement('canvas')
+          canvas.width = width; canvas.height = height
+          canvas.getContext('2d').drawImage(img, 0, 0, width, height)
+          resolve(canvas.toDataURL('image/jpeg', quality))
+        } catch { resolve(reader.result) }
+      }
+      img.onerror = () => resolve(reader.result)
+      img.src = reader.result
+    }
+    reader.onerror = () => resolve(null)
+    reader.readAsDataURL(file)
+  })
+
   const addFotos = (campo, files) => {
     if (!files?.length) return
-    Array.from(files).forEach(file => {
-      const reader = new FileReader()
-      reader.onload = () => {
-        setForm(f => ({
-          ...f,
-          [campo]: [...(f[campo] || []), { id: uid(), nombre: file.name, dataUrl: reader.result, nota: '' }],
-        }))
-      }
-      reader.readAsDataURL(file)
+    Array.from(files).forEach(async file => {
+      const dataUrl = await comprimirImagen(file)
+      if (!dataUrl) return
+      setForm(f => ({
+        ...f,
+        [campo]: [...(f[campo] || []), { id: uid(), nombre: file.name, dataUrl, nota: '' }],
+      }))
     })
   }
 

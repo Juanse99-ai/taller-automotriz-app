@@ -41,6 +41,9 @@ async function buscarTrabajosPorCedula(cedula) {
       total: parseFloat(r.total) || 0,
       otCodigo: r.ot_codigo || '',
       inspeccion: typeof r.inspeccion === 'string' ? JSON.parse(r.inspeccion) : (r.inspeccion || null),
+      evidencias: (() => {
+        try { const v = r.evidencias; return typeof v === 'string' ? (JSON.parse(v) || []) : (Array.isArray(v) ? v : []) } catch { return [] }
+      })(),
     }))
   } catch (e) {
     console.warn('Portal: error buscando trabajos', e.message)
@@ -59,6 +62,8 @@ export default function PortalCliente() {
   const [vistaInspeccion, setVistaInspeccion] = useState(null)
   const [error, setError] = useState('')
   const [cargando, setCargando] = useState(false)
+  const [galeria, setGaleria] = useState(null) // array de fotos para el visor
+  const [galIdx, setGalIdx] = useState(0)
 
   const ejecutarBusqueda = async (cedulaInput) => {
     const cedulaLimpia = (cedulaInput || '').trim().replace(/[.\-\s]/g, '')
@@ -419,6 +424,21 @@ export default function PortalCliente() {
         </div>
       )}
 
+      {/* Fotos del trabajo activo */}
+      {trabajoActivo?.evidencias?.length > 0 && (
+        <div className="card">
+          <div className="card__h"><h3>Fotos de su servicio</h3><span className="count">{trabajoActivo.evidencias.length}</span></div>
+          <div className="card__b" style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(92px,1fr))',gap:8}}>
+            {trabajoActivo.evidencias.map((f,i)=>(
+              <button key={f.id||i} onClick={()=>{setGaleria(trabajoActivo.evidencias);setGalIdx(i)}}
+                style={{padding:0,border:'1px solid var(--border)',borderRadius:8,overflow:'hidden',cursor:'pointer',aspectRatio:'1',background:'var(--bg-subtle)'}}>
+                <img src={f.dataUrl} alt={f.nota||'Evidencia'} loading="lazy" style={{width:'100%',height:'100%',objectFit:'cover',display:'block'}}/>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Inspecciones */}
       {datos.inspecciones.length > 0 && (
         <div className="card">
@@ -464,7 +484,7 @@ export default function PortalCliente() {
           <div className="card__b card__b--flush">
             <table>
               <thead>
-                <tr><th>Fecha</th><th>Placa</th><th>Vehiculo</th><th>Estado</th></tr>
+                <tr><th>Fecha</th><th>Placa</th><th>Vehiculo</th><th>Estado</th><th>Fotos</th></tr>
               </thead>
               <tbody>
                 {datos.trabajos.map(t => (
@@ -479,6 +499,14 @@ export default function PortalCliente() {
                       }}>
                         {ESTADO_TRABAJO_DISPLAY[t.estado]?.label || t.estado}
                       </span>
+                    </td>
+                    <td>
+                      {t.evidencias?.length > 0 ? (
+                        <button className="btn btn-ghost btn-sm" onClick={()=>{setGaleria(t.evidencias);setGalIdx(0)}} style={{gap:5}}>
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+                          {t.evidencias.length}
+                        </button>
+                      ) : <span style={{color:'var(--text-4)'}}>—</span>}
                     </td>
                   </tr>
                 ))}
@@ -497,6 +525,30 @@ export default function PortalCliente() {
       <div style={{textAlign:'center',fontSize:12,color:'var(--text-4)',padding:'8px 0 18px'}}>
         Multidiagnosticos AS · Sabanalarga, Atlantico
       </div>
+
+      {/* Visor de fotos (lightbox) */}
+      {galeria && galeria.length > 0 && (
+        <div onClick={()=>setGaleria(null)}
+          style={{position:'fixed',inset:0,background:'rgba(6,11,26,.93)',zIndex:1000,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:20}}>
+          <img src={galeria[galIdx]?.dataUrl} alt={galeria[galIdx]?.nota||''} onClick={e=>e.stopPropagation()}
+            style={{maxWidth:'100%',maxHeight:'78vh',objectFit:'contain',borderRadius:8,boxShadow:'0 10px 40px rgba(0,0,0,.5)'}}/>
+          {galeria[galIdx]?.nota && (
+            <div style={{color:'#fff',marginTop:12,fontSize:14,textAlign:'center',maxWidth:600}}>{galeria[galIdx].nota}</div>
+          )}
+          <div onClick={e=>e.stopPropagation()} style={{display:'flex',gap:12,marginTop:18,alignItems:'center',flexWrap:'wrap',justifyContent:'center'}}>
+            {galeria.length > 1 && (
+              <>
+                <button className="btn btn-outline btn-sm" style={{color:'#fff',borderColor:'rgba(255,255,255,.3)'}}
+                  onClick={()=>setGalIdx(i=>(i-1+galeria.length)%galeria.length)}>‹ Anterior</button>
+                <span style={{color:'rgba(255,255,255,.7)',fontSize:13,fontWeight:600}}>{galIdx+1} / {galeria.length}</span>
+                <button className="btn btn-outline btn-sm" style={{color:'#fff',borderColor:'rgba(255,255,255,.3)'}}
+                  onClick={()=>setGalIdx(i=>(i+1)%galeria.length)}>Siguiente ›</button>
+              </>
+            )}
+            <button className="btn btn-primary btn-sm" onClick={()=>setGaleria(null)}>Cerrar</button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
