@@ -15,6 +15,15 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
   const [vista, setVista] = useState('lista') // lista | nuevo | editar | kanban
   const [editId, setEditId] = useState(null)
   const [confirmDel, setConfirmDel] = useState(null)
+  // Cockpit desktop: trabajo seleccionado para el panel de detalle (solo ≥1200px)
+  const [selId, setSelId] = useState(null)
+  const [isWide, setIsWide] = useState(() => typeof window !== 'undefined' && window.matchMedia('(min-width:1200px)').matches)
+  useEffect(() => {
+    const mq = window.matchMedia('(min-width:1200px)')
+    const fn = e => setIsWide(e.matches)
+    mq.addEventListener('change', fn)
+    return () => mq.removeEventListener('change', fn)
+  }, [])
 
   // Filtros
   // Default: 'activos' = todos los que NO estan terminados (Completado/Cancelado).
@@ -329,6 +338,8 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
     ['todos', 'Todas'],
   ]
 
+  const selTrabajo = trabajos.find(t => t.id === selId) || null
+
   return (
     <div>
       {/* Page header */}
@@ -452,6 +463,67 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
           <svg width="40" height="40" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5" style={{ opacity: .35, marginBottom: 12 }}><path d="M11.42 15.17l-5.71-5.71a8 8 0 1111.31 0l-5.6 5.71z"/><circle cx="12" cy="10" r="3"/></svg>
           <p style={{ fontSize: 15, fontWeight: 600, marginBottom: 4 }}>No hay trabajos registrados</p>
           <p className="text-sm text-muted">Crea una nueva OT para comenzar.</p>
+        </div>
+      ) : isWide ? (
+        <div className="trab-cockpit">
+          <div className="card trab-cockpit__list" style={{ padding: 0 }}>
+            <div className="card__h"><span style={{ fontWeight: 600, fontSize: 14 }}>{filtered.length} trabajo{filtered.length !== 1 ? 's' : ''}</span></div>
+            <div className="trab-cklist">
+              {filtered.map(t => (
+                <button key={t.id} type="button" className={`trab-ckrow${t.id === selId ? ' sel' : ''}`} onClick={() => setSelId(t.id)}>
+                  <span className="r1">
+                    <span className="ot">{t.otCodigo || '—'}</span>
+                    <span className={`badge ${estadoBadge(t.estado)}`}>{t.estado}</span>
+                  </span>
+                  <span className="r2"><strong>{t.placa}</strong> · {t.cliente || '—'}</span>
+                  <span className="r3">{fmt(t.total)}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+          <aside className="trab-cockpit__detail">
+            {selTrabajo ? (
+              <div className="card" style={{ position: 'sticky', top: 80 }}>
+                <div className="card__h" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: 2 }}>
+                  <span style={{ fontFamily: 'var(--mono)', fontWeight: 700, color: 'var(--blue-600)', fontSize: 14 }}>{selTrabajo.otCodigo || '—'} · {selTrabajo.placa}</span>
+                  <span style={{ fontSize: 12.5, color: 'var(--text-3)' }}>{selTrabajo.cliente || 'Sin cliente'} · {[selTrabajo.marca, selTrabajo.modelo].filter(Boolean).join(' ') || '—'}</span>
+                </div>
+                <div className="card__b" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+                    <span className={`badge ${estadoBadge(selTrabajo.estado)}`}>{selTrabajo.estado}</span>
+                    <span style={{ fontSize: 12.5, color: 'var(--text-3)' }}>{fmtDate(selTrabajo.fecha)}</span>
+                  </div>
+                  <div className="ck-d-grid">
+                    <div className="ck-d-cell"><div className="l">Técnico</div><div className="v">{tecNombre(selTrabajo.tecnicoId)}</div></div>
+                    <div className="ck-d-cell"><div className="l">Total</div><div className="v">{fmt(selTrabajo.total)}</div></div>
+                  </div>
+                  {(selTrabajo.items || []).length > 0 && (
+                    <div className="ck-d-cell">
+                      <div className="l" style={{ marginBottom: 6 }}>Ítems</div>
+                      {(selTrabajo.items || []).slice(0, 8).map((it, i) => (
+                        <div key={i} style={{ display: 'flex', justifyContent: 'space-between', gap: 10, fontSize: 12.5, padding: '3px 0' }}>
+                          <span style={{ color: 'var(--text-2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{it.nombre || 'Ítem'}</span>
+                          <span className="mono" style={{ color: 'var(--text-3)', flexShrink: 0 }}>{fmt((parseFloat(it.precio) || 0) * (parseInt(it.cantidad) || 1))}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                    <button className="btn btn-outline btn-sm" onClick={() => handleEditar(selTrabajo.id)}>Editar</button>
+                    {selTrabajo.otCodigo && <button className="btn btn-outline btn-sm" onClick={() => imprimirOT(selTrabajo)}>PDF</button>}
+                    {selTrabajo.estado !== ESTADOS.COMPLETADO && <button className="btn btn-primary btn-sm" onClick={() => handleCompletar(selTrabajo.id)}>Marcar listo</button>}
+                    <button className="btn btn-ghost btn-sm" style={{ color: 'var(--red-600)' }} onClick={() => { if (window.confirm('¿Eliminar este trabajo?')) handleEliminar(selTrabajo.id) }}>Eliminar</button>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="card" style={{ position: 'sticky', top: 80 }}>
+                <div className="card__b" style={{ textAlign: 'center', color: 'var(--text-3)', padding: 32, fontSize: 13 }}>
+                  Selecciona un trabajo de la lista para ver su detalle aquí.
+                </div>
+              </div>
+            )}
+          </aside>
         </div>
       ) : (
         <div className="card" style={{ padding: 0 }}>
