@@ -692,11 +692,9 @@ tbody tr:hover{background:var(--bg-subtle)}
   .modal-body{padding:16px}
 }
 
-/* RESPONSIVE — PHONE BOTTOM TAB BAR (<=600px) */
-@media (max-width:600px){
-  .mob-tabbar{display:flex}
-  .content{padding-bottom:80px}
-}
+/* Dock inferior móvil DESACTIVADO: en móvil se navega solo con el sidebar (drawer
+   del ☰). Se deja oculto para no duplicar la navegación. */
+.mob-tabbar{display:none !important}
 
 /* RESPONSIVE — SMALL MOBILE (<=480px) */
 @media (max-width:480px){

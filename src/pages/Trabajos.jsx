@@ -469,16 +469,23 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
           <div className="card trab-cockpit__list" style={{ padding: 0 }}>
             <div className="card__h"><span style={{ fontWeight: 600, fontSize: 14 }}>{filtered.length} trabajo{filtered.length !== 1 ? 's' : ''}</span></div>
             <div className="trab-cklist">
-              {filtered.map(t => (
-                <button key={t.id} type="button" className={`trab-ckrow${t.id === selId ? ' sel' : ''}`} onClick={() => setSelId(t.id)}>
-                  <span className="r1">
-                    <span className="ot">{t.otCodigo || '—'}</span>
-                    <span className={`badge ${estadoBadge(t.estado)}`}>{t.estado}</span>
-                  </span>
-                  <span className="r2"><strong>{t.placa}</strong> · {t.cliente || '—'}</span>
-                  <span className="r3">{fmt(t.total)}</span>
-                </button>
-              ))}
+              {filtered.map(t => {
+                const dias = t.fecha ? Math.floor((Date.now() - new Date(t.fecha).getTime()) / 86400000) : 0
+                const estancado = t.estado !== ESTADOS.COMPLETADO && t.estado !== ESTADOS.CANCELADO && dias >= DIAS_ESTANCADO
+                return (
+                  <button key={t.id} type="button" className={`trab-ckrow${t.id === selId ? ' sel' : ''}`} onClick={() => setSelId(t.id)}>
+                    <span className="r1">
+                      <span className="ot">{t.otCodigo || '—'}</span>
+                      <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        {estancado && <span className="badge badge-d" style={{ fontSize: 9, padding: '1px 6px' }}>{dias}d</span>}
+                        <span className={`badge ${estadoBadge(t.estado)}`}>{t.estado}</span>
+                      </span>
+                    </span>
+                    <span className="r2"><strong>{t.placa}</strong> · {t.cliente || '—'}</span>
+                    <span className="r3">{fmt(t.total)}</span>
+                  </button>
+                )
+              })}
             </div>
           </div>
           <aside className="trab-cockpit__detail">
@@ -493,10 +500,46 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
                     <span className={`badge ${estadoBadge(selTrabajo.estado)}`}>{selTrabajo.estado}</span>
                     <span style={{ fontSize: 12.5, color: 'var(--text-3)' }}>{fmtDate(selTrabajo.fecha)}</span>
                   </div>
+
+                  {selTrabajo.telefonoCliente && (() => {
+                    const tel = String(selTrabajo.telefonoCliente).replace(/\D/g, '')
+                    const wa = tel.length === 10 ? `57${tel}` : tel
+                    return (
+                      <div className="ck-d-cell" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+                        <div style={{ minWidth: 0 }}>
+                          <div style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{selTrabajo.cliente || 'Cliente'}</div>
+                          <div style={{ fontSize: 11.5, color: 'var(--text-3)' }}>{fmtTelefono(selTrabajo.telefonoCliente)}</div>
+                        </div>
+                        <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+                          <a href={`tel:${tel}`} className="btn btn-outline btn-sm" style={{ height: 32, padding: '0 12px' }}>Llamar</a>
+                          <a href={`https://wa.me/${wa}`} target="_blank" rel="noreferrer" className="btn btn-sm" style={{ height: 32, padding: '0 12px', background: 'var(--green-600)', color: '#fff' }}>WhatsApp</a>
+                        </div>
+                      </div>
+                    )
+                  })()}
+
                   <div className="ck-d-grid">
                     <div className="ck-d-cell"><div className="l">Técnico</div><div className="v">{tecNombre(selTrabajo.tecnicoId)}</div></div>
                     <div className="ck-d-cell"><div className="l">Total</div><div className="v">{fmt(selTrabajo.total)}</div></div>
                   </div>
+
+                  {selTrabajo.estado !== ESTADOS.COMPLETADO && selTrabajo.estado !== ESTADOS.CANCELADO && (
+                    <div>
+                      <div style={{ fontSize: 10, color: 'var(--text-4)', textTransform: 'uppercase', letterSpacing: '.4px', marginBottom: 6 }}>Cambiar estado</div>
+                      <div className="segctl">
+                        {[
+                          [ESTADOS.PENDIENTE, 'Pendiente'],
+                          [ESTADOS.EN_DIAGNOSTICO, 'Diagnóstico'],
+                          [ESTADOS.EN_PROGRESO, 'En progreso'],
+                          [ESTADOS.ESPERANDO_REPUESTOS, 'Esperando rep.'],
+                          [ESTADOS.EN_PRUEBA, 'En prueba'],
+                        ].map(([k, l]) => (
+                          <button key={k} type="button" className={selTrabajo.estado === k ? 'on' : ''}
+                            onClick={() => { if (selTrabajo.estado !== k) { actualizarTrabajo(selTrabajo.id, { estado: k }); notify?.(`OT ${selTrabajo.otCodigo || ''} → ${l}`, 'info') } }}>{l}</button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                   {(selTrabajo.items || []).length > 0 && (
                     <div className="ck-d-cell">
                       <div className="l" style={{ marginBottom: 6 }}>Ítems</div>
