@@ -201,6 +201,8 @@ input,select,textarea{font-family:inherit;font-size:14px;color:inherit}
 
 /* sidebar collapsed state (desktop only) */
 .sidebar.collapsed{width:var(--sidebar-w-collapsed)}
+/* Hover-para-expandir: el menú se abre como overlay flotante sobre el contenido */
+.sidebar.hover-expand{width:var(--sidebar-w);z-index:41;box-shadow:10px 0 32px rgba(6,11,26,.32)}
 .sidebar.collapsed .wm,
 .sidebar.collapsed .sidebar__group,
 .sidebar.collapsed .navlink span,

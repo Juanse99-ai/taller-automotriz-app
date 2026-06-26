@@ -198,8 +198,34 @@ export default function Sidebar({ active, onNavigate, isOpen, collapsed, onColla
     if (aparecio) setAnimKey(k => k + 1)
   }, [isOpen, collapsed, isMobile, reduce])
 
+  // Hover-para-expandir: en computador, si el rail está colapsado y el cursor se
+  // queda encima (~150ms), el menú se expande como overlay (sin mover el contenido)
+  // y se recoge al salir. Solo es visual: NO cambia el estado real `collapsed`, ni
+  // re-anima el stagger. En celular no aplica (ahí es drawer).
+  const [hoverExpand, setHoverExpand] = useState(false)
+  const hoverTimer = useRef(null)
+  const puedeHover = collapsed && !isMobile
+  const onHoverEnter = () => {
+    if (!puedeHover) return
+    clearTimeout(hoverTimer.current)
+    hoverTimer.current = setTimeout(() => setHoverExpand(true), 150)
+  }
+  const onHoverLeave = () => {
+    clearTimeout(hoverTimer.current)
+    setHoverExpand(false)
+  }
+  useEffect(() => () => clearTimeout(hoverTimer.current), [])
+  useEffect(() => { if (!puedeHover && hoverExpand) setHoverExpand(false) }, [puedeHover, hoverExpand])
+
+  const overlayExpand = hoverExpand && puedeHover
+  const effectiveCollapsed = collapsed && !overlayExpand
+
   return (
-    <aside className={`sidebar ${isOpen ? 'open' : ''}${collapsed ? ' collapsed' : ''}`}>
+    <aside
+      className={`sidebar ${isOpen ? 'open' : ''}${effectiveCollapsed ? ' collapsed' : ''}${overlayExpand ? ' hover-expand' : ''}`}
+      onMouseEnter={onHoverEnter}
+      onMouseLeave={onHoverLeave}
+    >
       <div className="sidebar__brand">
         <div className="logo">
           <img src="/logo.png" alt="MDA" />
