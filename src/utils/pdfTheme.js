@@ -144,7 +144,7 @@ export function drawHeader(doc, opts = {}) {
   doc.setFont(undefined, 'bold')
   doc.text('TALLER AUTOMOTRIZ', infoX, 20.5)
   doc.setFont(undefined, 'normal')
-  doc.text(`NIT ${TALLER.nit} · No responsable de IVA — Régimen Simple`, infoX, 24)
+  doc.text(`NIT ${TALLER.nit}`, infoX, 24)
   doc.text(TALLER.direccion, infoX, 27.5)
   doc.text(`Cel. ${TALLER.celular} · ${TALLER.email}`, infoX, 31)
 
