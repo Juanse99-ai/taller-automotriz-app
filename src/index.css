@@ -256,6 +256,15 @@ input,select,textarea{font-family:inherit;font-size:14px;color:inherit}
 .form-grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start}
 @media (max-width:860px){.form-grid-2{grid-template-columns:1fr}}
 
+/* Mano de obra manual (cambio de aceite y servicios sin línea de M.O.) */
+.mo-manual{padding:14px 16px;margin:4px 0 2px;background:var(--bg-subtle);border:1px solid var(--border);border-radius:12px}
+.mo-manual__row{display:flex;align-items:flex-end;gap:18px;flex-wrap:wrap}
+.mo-manual__row .field{margin:0}
+.mo-manual__com{display:flex;flex-direction:column;gap:2px;padding-bottom:2px}
+.mo-manual__com-lbl{font-size:11.5px;font-weight:600;text-transform:uppercase;letter-spacing:.4px;color:var(--text-3)}
+.mo-manual__com-val{font-size:20px;font-weight:700;font-variant-numeric:tabular-nums;color:var(--green-700)}
+.mo-manual .help{margin-top:8px}
+
 /* Cabecera de tarjeta clickable para secciones plegables */
 .card__h--toggle{width:100%;background:none;border:none;border-bottom:1px solid var(--border);cursor:pointer;text-align:left;font:inherit;color:inherit}
 .card__h--toggle:last-child{border-bottom:none}

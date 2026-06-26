@@ -21,11 +21,14 @@ const getManoObra = (t) => {
       const base = ivaPct > 0 ? totalLinea / (1 + ivaPct / 100) : totalLinea
       return s + base
     }, 0)
-    return Math.round(Math.max(0, suma))
+    // Si hay líneas marcadas "Servicio", esas mandan (comportamiento de siempre).
+    // Si NO hay (ej. cambio de aceite), se cae al valor guardado de mano de obra
+    // que se escribió a mano en la OT.
+    if (suma > 0) return Math.round(suma)
   }
-  // Fallback a campos directos (ya sin IVA si vienen asi)
-  if (typeof t?.manoObra === 'number' && !Number.isNaN(t.manoObra)) return t.manoObra
-  if (typeof t?.mano_obra === 'number' && !Number.isNaN(t.mano_obra)) return t.mano_obra
+  // Fallback a campos directos (mano de obra manual de la OT)
+  if (typeof t?.manoObra === 'number' && !Number.isNaN(t.manoObra)) return Math.round(Math.max(0, t.manoObra))
+  if (typeof t?.mano_obra === 'number' && !Number.isNaN(t.mano_obra)) return Math.round(Math.max(0, t.mano_obra))
   return 0
 }
 

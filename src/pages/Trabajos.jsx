@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import { fmt, fmtDate, uid, hoyISO, normalizarDoc, normalizarNombre, fmtTelefono } from '../utils/helpers'
-import { TECNICOS, ESTADOS, IVA_DEFAULT, DIAS_ESTANCADO, TALLER } from '../utils/constants'
+import { TECNICOS, ESTADOS, IVA_DEFAULT, DIAS_ESTANCADO, TALLER, COMISION } from '../utils/constants'
 import { loadLogo as loadPdfLogo, drawHeader, drawSectionHeader, drawDataBlock, drawTotalsBox, drawSignatures, drawFooter, tableStylesItems, PDF_LAYOUT, PDF_COLORS } from '../utils/pdfTheme'
 import { MARCAS, getModelos } from '../utils/vehiculos'
 import { useClientes } from '../hooks/useClientes'
@@ -787,6 +787,9 @@ function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [], vehiculosHoo
     kilometraje: trabajo?.kilometraje || '',
     tecnicoId: trabajo?.tecnicoId || '',
     observaciones: trabajo?.observaciones || '',
+    // Mano de obra manual: solo se usa cuando NO hay líneas marcadas "Servicio"
+    // (ej. cambio de aceite). Base para la comisión del técnico, no se cobra al cliente.
+    manoObra: trabajo?.manoObra ? String(trabajo.manoObra) : '',
     estado: trabajo?.estado || ESTADOS.PENDIENTE,
     fecha: trabajo?.fecha ? trabajo.fecha.slice(0, 10) : hoyISO(),
     evidenciasIngreso: trabajo?.evidenciasIngreso || [],
@@ -1010,6 +1013,13 @@ function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [], vehiculosHoo
     }
   }, [items])
 
+  // Mano de obra efectiva (base de la comisión del técnico):
+  //  - Si hay líneas marcadas "Servicio", manda esa suma (igual que siempre).
+  //  - Si no hay (ej. cambio de aceite), se usa la mano de obra escrita a mano.
+  const hayServicios = totales.manoObra > 0
+  const manoObraEf = hayServicios ? totales.manoObra : Math.max(0, parseFloat(form.manoObra) || 0)
+  const comisionTecnico = Math.round(manoObraEf * COMISION.TOTAL)
+
   const handleSubmit = (e) => {
     e.preventDefault()
     if ((!form.placa && !form.sinVehiculo) || !form.cliente) return
@@ -1023,7 +1033,7 @@ function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [], vehiculosHoo
       subtotalSinIva: totales.subtotal,
       totalIva: totales.iva,
       total: totales.total,
-      manoObra: totales.manoObra,
+      manoObra: manoObraEf,
       repuestos: totales.repuestos,
       estado: form.estado || trabajo?.estado || ESTADOS.PENDIENTE,
       fecha: new Date(form.fecha + 'T12:00:00').toISOString(),
@@ -1466,10 +1476,28 @@ function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [], vehiculosHoo
             </div>
           )}
 
+          {/* MANO DE OBRA MANUAL — solo cuando no hay línea marcada "Servicio" (ej. cambio de aceite) */}
+          {!hayServicios && (
+            <div className="mo-manual">
+              <div className="mo-manual__row">
+                <div className="field" style={{ flex: '1 1 220px', minWidth: 0 }}>
+                  <label htmlFor="mo-manual-input">Mano de obra del técnico <span style={{ fontWeight: 500, color: 'var(--text-3)' }}>(opcional)</span></label>
+                  <input id="mo-manual-input" className="input" type="number" min="0" inputMode="numeric"
+                    value={form.manoObra} onChange={e => set('manoObra', e.target.value)} placeholder="0" />
+                </div>
+                <div className="mo-manual__com">
+                  <span className="mo-manual__com-lbl">Comisión técnico ({COMISION.TOTAL * 100}%)</span>
+                  <span className="mo-manual__com-val">{fmt(comisionTecnico)}</span>
+                </div>
+              </div>
+              <span className="help">Para servicios sin mano de obra cobrada aparte (ej. cambio de aceite). No se le suma al total del cliente; solo define cuánto se le liquida al técnico.</span>
+            </div>
+          )}
+
           {/* Totales — totalizer redesigned (M.O./Repuestos breakdown + Total destacado) */}
           <div className="ot-totals">
             <div className="ot-totals__group">
-              <span className="ot-stat"><span className="ot-stat__lbl">M.O.</span><span className="ot-stat__val">{fmt(totales.manoObra)}</span></span>
+              <span className="ot-stat"><span className="ot-stat__lbl">M.O.</span><span className="ot-stat__val">{fmt(manoObraEf)}</span></span>
               <span className="ot-stat"><span className="ot-stat__lbl">Repuestos</span><span className="ot-stat__val">{fmt(totales.repuestos)}</span></span>
             </div>
             <div className="ot-totals__group">
