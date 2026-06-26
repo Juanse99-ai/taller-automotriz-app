@@ -275,17 +275,10 @@ export default function Dashboard({ trabajos = [], onNavigate }) {
 
       {/* ── KPIs ─ hero + 3 secundarios (rompe simetría 4x igual) ───────── */}
       <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: 16 }} className="kpi-grid">
-        {/* Hero: Ingresos del mes — el número que importa */}
-        <div className="kpi-hero" style={{
-          background: 'var(--bg-raised)', border: '1px solid var(--border)', borderRadius: 14,
-          padding: '22px 26px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between',
-          minHeight: 180,
-        }}>
+        {/* Ingresos del mes — tarjeta industrial grande (el número que importa) */}
+        <div className="kpi-ind green" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: 180, padding: '20px 24px' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-            <span style={{
-              fontSize: 13, fontWeight: 700, color: 'var(--text-3)',
-              textTransform: 'uppercase', letterSpacing: '.5px',
-            }}>Ingresos del mes</span>
+            <span className="kpi-ind__l">Ingresos del mes</span>
             <span style={{
               fontFamily: 'var(--mono)', fontSize: 12, fontWeight: 700,
               color: stats.ingresosHoy > 0 ? 'var(--green-700)' : 'var(--text-3)',
@@ -298,10 +291,10 @@ export default function Dashboard({ trabajos = [], onNavigate }) {
           <div>
             <div style={{
               fontFamily: 'var(--mono)', fontWeight: 700,
-              fontSize: 'clamp(36px, 5.5vw, 56px)', letterSpacing: '-1.2px', lineHeight: 1,
-              color: 'var(--text)',
+              fontSize: 'clamp(34px, 5vw, 52px)', letterSpacing: '-1px', lineHeight: 1,
+              color: 'var(--text)', fontVariantNumeric: 'tabular-nums',
             }}>{fmt(stats.ingresosMes)}</div>
-            <div style={{ fontSize: 13.5, color: 'var(--text-3)', marginTop: 8, fontWeight: 500 }}>
+            <div className="kpi-ind__sub" style={{ marginTop: 8, fontSize: 13 }}>
               {(() => {
                 const d = new Date(); const dia = d.getDate()
                 return `Acumulado del 1 al ${dia} de ${d.toLocaleString('es-CO', { month: 'long' })}`
@@ -310,43 +303,31 @@ export default function Dashboard({ trabajos = [], onNavigate }) {
           </div>
         </div>
 
-        {/* 3 mini-KPIs apilados */}
+        {/* 3 tarjetas industriales apiladas */}
         <div style={{ display: 'grid', gridTemplateRows: '1fr 1fr 1fr', gap: 10 }}>
-          <div className="kpi-mini" style={{
-            background: 'var(--bg-raised)', border: '1px solid var(--border)', borderRadius: 12,
-            padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 14,
-          }}>
-            <div className="kpi__ic red" style={{ width: 38, height: 38, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><IcAlert /></div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '.4px' }}>Activos hoy</div>
-              <div style={{ fontFamily: 'var(--mono)', fontWeight: 700, fontSize: 22, color: 'var(--text)', lineHeight: 1.1, marginTop: 2 }}>{stats.activos}</div>
+          <div className="kpi-ind red" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+            <div>
+              <div className="kpi-ind__l">Activos hoy</div>
+              <div className="kpi-ind__v" style={{ fontSize: 22, marginTop: 3 }}>{stats.activos}</div>
             </div>
             {estancados.length > 0 && (
-              <span style={{ fontSize: 11.5, fontWeight: 700, color: 'var(--red-700)', background: 'var(--red-100)', padding: '3px 8px', borderRadius: 5, whiteSpace: 'nowrap' }}>
+              <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--red-700)', background: 'var(--red-100)', padding: '3px 8px', borderRadius: 5, whiteSpace: 'nowrap' }}>
                 {estancados.length} estancados
               </span>
             )}
           </div>
 
-          <div className="kpi-mini" style={{
-            background: 'var(--bg-raised)', border: '1px solid var(--border)', borderRadius: 12,
-            padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 14,
-          }}>
-            <div className="kpi__ic blue" style={{ width: 38, height: 38, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><IcCar /></div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '.4px' }}>Listos para entregar</div>
-              <div style={{ fontFamily: 'var(--mono)', fontWeight: 700, fontSize: 22, color: 'var(--text)', lineHeight: 1.1, marginTop: 2 }}>{stats.listoCount}</div>
+          <div className="kpi-ind blue" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div>
+              <div className="kpi-ind__l">Listos para entregar</div>
+              <div className="kpi-ind__v" style={{ fontSize: 22, marginTop: 3 }}>{stats.listoCount}</div>
             </div>
           </div>
 
-          <div className="kpi-mini" style={{
-            background: 'var(--bg-raised)', border: '1px solid var(--border)', borderRadius: 12,
-            padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 14,
-          }}>
-            <div className="kpi__ic amber" style={{ width: 38, height: 38, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><IcCal /></div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '.4px' }}>Total OTs</div>
-              <div style={{ fontFamily: 'var(--mono)', fontWeight: 700, fontSize: 22, color: 'var(--text)', lineHeight: 1.1, marginTop: 2 }}>{trabajos.length}</div>
+          <div className="kpi-ind amber" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div>
+              <div className="kpi-ind__l">Total OTs</div>
+              <div className="kpi-ind__v" style={{ fontSize: 22, marginTop: 3 }}>{trabajos.length}</div>
             </div>
             <span style={{ fontSize: 11.5, color: 'var(--text-3)', whiteSpace: 'nowrap' }}>histórico</span>
           </div>

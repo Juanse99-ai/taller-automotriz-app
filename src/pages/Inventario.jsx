@@ -124,13 +124,10 @@ export default function Inventario({ notify }) {
     return (
       <div>
         <div className="skeleton" style={{ height: 30, width: 200, marginBottom: 18 }} />
-        <div className="kpi-grid" style={{ marginBottom: 18 }}>
-          <div className="skeleton" style={{ height: 180, borderRadius: 14 }} />
-          <div style={{ display: 'grid', gridTemplateRows: '1fr 1fr 1fr', gap: 10 }}>
-            <div className="skeleton" style={{ height: 56, borderRadius: 12 }} />
-            <div className="skeleton" style={{ height: 56, borderRadius: 12 }} />
-            <div className="skeleton" style={{ height: 56, borderRadius: 12 }} />
-          </div>
+        <div className="kpi-ind-row" style={{ marginBottom: 18 }}>
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="skeleton" style={{ height: 86, borderRadius: 11 }} />
+          ))}
         </div>
         <div className="card">
           <div className="card__b">
@@ -179,77 +176,26 @@ export default function Inventario({ notify }) {
       )}
 
       {/* KPIs — hero "Atención" + 3 mini (rompe simetría 4x igual) */}
-      <div className="kpi-grid" style={{ marginBottom: 18 }}>
-        {/* Hero: lo accionable, lo que el dueño debe ver primero */}
-        <div className="kpi-hero" style={{
-          background: stats.sinStock > 0 ? 'rgba(220,38,38,.05)' : (stats.stockBajo > 0 ? 'rgba(245,158,11,.05)' : 'var(--bg-raised)'),
-          border: '1px solid',
-          borderColor: stats.sinStock > 0 ? 'rgba(220,38,38,.32)' : (stats.stockBajo > 0 ? 'rgba(245,158,11,.32)' : 'var(--border)'),
-          borderRadius: 14, padding: '22px 26px',
-          display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: 180,
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-            <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '.5px' }}>
-              Atención del inventario
-            </span>
-            {stats.sinStock > 0 && (
-              <span style={{ fontFamily: 'var(--mono)', fontSize: 12, fontWeight: 700, color: 'var(--red-700)', background: 'var(--red-100)', padding: '4px 10px', borderRadius: 999 }}>
-                {stats.sinStock} agotados
-              </span>
-            )}
-          </div>
-          <div>
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: 14, flexWrap: 'wrap' }}>
-              <div style={{ fontFamily: 'var(--mono)', fontWeight: 700, fontSize: 'clamp(36px, 5.5vw, 56px)', letterSpacing: '-1.2px', lineHeight: 1, color: stats.sinStock + stats.stockBajo > 0 ? 'var(--red-700)' : 'var(--text)' }}>
-                {(stats.sinStock + stats.stockBajo).toLocaleString('es-CO')}
-              </div>
-              <div style={{ fontSize: 14.5, color: 'var(--text-2)', fontWeight: 500 }}>
-                referencias para reponer
-              </div>
-            </div>
-            <div style={{ fontSize: 13.5, color: 'var(--text-3)', marginTop: 8, fontWeight: 500 }}>
-              {stats.sinStock} agotados · {stats.stockBajo} bajo mínimo
-            </div>
-          </div>
+      <div className="kpi-ind-row" style={{ marginBottom: 18 }}>
+        <div className="kpi-ind red">
+          <div className="kpi-ind__l">A reponer</div>
+          <div className="kpi-ind__v red">{(stats.sinStock + stats.stockBajo).toLocaleString('es-CO')}</div>
+          <div className="kpi-ind__sub">{stats.sinStock} agotados · {stats.stockBajo} bajo mínimo</div>
         </div>
-
-        {/* 3 mini-KPIs apilados */}
-        <div style={{ display: 'grid', gridTemplateRows: '1fr 1fr 1fr', gap: 10 }}>
-          <div className="kpi-mini" style={{ background: 'var(--bg-raised)', border: '1px solid var(--border)', borderRadius: 12, padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 14 }}>
-            <div className="kpi__ic blue" style={{ width: 38, height: 38, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
-            </div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '.4px' }}>Total referencias</div>
-              <div style={{ fontFamily: 'var(--mono)', fontWeight: 700, fontSize: 22, color: 'var(--text)', lineHeight: 1.1, marginTop: 2 }}>{stats.total.toLocaleString('es-CO')}</div>
-            </div>
-          </div>
-
-          <div className="kpi-mini" style={{ background: 'var(--bg-raised)', border: '1px solid var(--border)', borderRadius: 12, padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 14 }}>
-            <div className="kpi__ic green" style={{ width: 38, height: 38, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-            </div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '.4px' }}>Valor inventario</div>
-              <div style={{ fontFamily: 'var(--mono)', fontWeight: 700, fontSize: 22, color: 'var(--text)', lineHeight: 1.1, marginTop: 2 }}>{fmtCompact(stats.valorTotal)}</div>
-              {stats.valorCosto > 0 && (
-                <div style={{ fontSize: 11.5, color: 'var(--text-3)', marginTop: 2, fontWeight: 500 }}>
-                  a costo c/IVA <span style={{ fontFamily: 'var(--mono)', color: 'var(--text-2)', fontWeight: 700 }}>{fmtCompact(stats.valorCosto)}</span>
-                </div>
-              )}
-            </div>
-          </div>
-
-          <div className="kpi-mini" style={{ background: 'var(--bg-raised)', border: '1px solid var(--border)', borderRadius: 12, padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 14 }}>
-            <div className="kpi__ic amber" style={{ width: 38, height: 38, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-            </div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '.4px' }}>Stock bajo</div>
-              <div style={{ fontFamily: 'var(--mono)', fontWeight: 700, fontSize: 22, color: 'var(--text)', lineHeight: 1.1, marginTop: 2 }}>{stats.stockBajo}</div>
-            </div>
-            <span style={{ fontSize: 11.5, color: 'var(--text-3)', whiteSpace: 'nowrap' }}>reponer</span>
-          </div>
+        <div className="kpi-ind">
+          <div className="kpi-ind__l">Referencias</div>
+          <div className="kpi-ind__v">{stats.total.toLocaleString('es-CO')}</div>
+          <div className="kpi-ind__sub">total</div>
+        </div>
+        <div className="kpi-ind green">
+          <div className="kpi-ind__l">Valor inventario</div>
+          <div className="kpi-ind__v">{fmtCompact(stats.valorTotal)}</div>
+          {stats.valorCosto > 0 && <div className="kpi-ind__sub">a costo {fmtCompact(stats.valorCosto)}</div>}
+        </div>
+        <div className="kpi-ind amber">
+          <div className="kpi-ind__l">Stock bajo</div>
+          <div className="kpi-ind__v">{stats.stockBajo.toLocaleString('es-CO')}</div>
+          <div className="kpi-ind__sub">reponer</div>
         </div>
       </div>
 
