@@ -124,11 +124,7 @@ export default function Inventario({ notify }) {
     return (
       <div>
         <div className="skeleton" style={{ height: 30, width: 200, marginBottom: 18 }} />
-        <div className="kpi-ind-row" style={{ marginBottom: 18 }}>
-          {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="skeleton" style={{ height: 86, borderRadius: 11 }} />
-          ))}
-        </div>
+        <div className="skeleton" style={{ height: 92, borderRadius: 14, marginBottom: 18 }} />
         <div className="card">
           <div className="card__b">
             {Array.from({ length: 8 }).map((_, i) => (
@@ -176,26 +172,26 @@ export default function Inventario({ notify }) {
       )}
 
       {/* KPIs — hero "Atención" + 3 mini (rompe simetría 4x igual) */}
-      <div className="kpi-ind-row" style={{ marginBottom: 18 }}>
-        <div className="kpi-ind red">
-          <div className="kpi-ind__l">A reponer</div>
-          <div className="kpi-ind__v red">{(stats.sinStock + stats.stockBajo).toLocaleString('es-CO')}</div>
-          <div className="kpi-ind__sub">{stats.sinStock} agotados · {stats.stockBajo} bajo mínimo</div>
+      <div className="kpi-bh" style={{ marginBottom: 18 }}>
+        <div className="kpi-bh__s">
+          <div className="kpi-bh__l">A reponer</div>
+          <div className="kpi-bh__row"><span className="kpi-bh__v" style={{ color: 'var(--red-700)' }}>{(stats.sinStock + stats.stockBajo).toLocaleString('es-CO')}</span></div>
+          <div className="kpi-bh__sub">{stats.sinStock} agotados · {stats.stockBajo} bajo mínimo</div>
         </div>
-        <div className="kpi-ind">
-          <div className="kpi-ind__l">Referencias</div>
-          <div className="kpi-ind__v">{stats.total.toLocaleString('es-CO')}</div>
-          <div className="kpi-ind__sub">total</div>
+        <div className="kpi-bh__s">
+          <div className="kpi-bh__l">Referencias</div>
+          <div className="kpi-bh__row"><span className="kpi-bh__v">{stats.total.toLocaleString('es-CO')}</span></div>
+          <div className="kpi-bh__sub">total</div>
         </div>
-        <div className="kpi-ind green">
-          <div className="kpi-ind__l">Valor inventario</div>
-          <div className="kpi-ind__v">{fmtCompact(stats.valorTotal)}</div>
-          {stats.valorCosto > 0 && <div className="kpi-ind__sub">a costo {fmtCompact(stats.valorCosto)}</div>}
+        <div className="kpi-bh__s">
+          <div className="kpi-bh__l">Valor inventario</div>
+          <div className="kpi-bh__row"><span className="kpi-bh__v">{fmtCompact(stats.valorTotal)}</span></div>
+          <div className="kpi-bh__sub">{stats.valorCosto > 0 ? `a costo ${fmtCompact(stats.valorCosto)}` : 'venta'}</div>
         </div>
-        <div className="kpi-ind amber">
-          <div className="kpi-ind__l">Stock bajo</div>
-          <div className="kpi-ind__v">{stats.stockBajo.toLocaleString('es-CO')}</div>
-          <div className="kpi-ind__sub">reponer</div>
+        <div className="kpi-bh__s">
+          <div className="kpi-bh__l">Stock bajo</div>
+          <div className="kpi-bh__row"><span className="kpi-bh__v">{stats.stockBajo.toLocaleString('es-CO')}</span></div>
+          <div className="kpi-bh__sub">reponer</div>
         </div>
       </div>
 

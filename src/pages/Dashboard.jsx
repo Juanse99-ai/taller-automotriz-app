@@ -274,63 +274,37 @@ export default function Dashboard({ trabajos = [], onNavigate }) {
       )}
 
       {/* ── KPIs ─ hero + 3 secundarios (rompe simetría 4x igual) ───────── */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: 16 }} className="kpi-grid">
-        {/* Ingresos del mes — tarjeta industrial grande (el número que importa) */}
-        <div className="kpi-ind green" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: 180, padding: '20px 24px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-            <span className="kpi-ind__l">Ingresos del mes</span>
-            <span style={{
-              fontFamily: 'var(--mono)', fontSize: 12, fontWeight: 700,
-              color: stats.ingresosHoy > 0 ? 'var(--green-700)' : 'var(--text-3)',
-              background: stats.ingresosHoy > 0 ? 'var(--green-100)' : 'var(--bg-subtle)',
-              padding: '4px 10px', borderRadius: 999,
-            }}>
-              {stats.ingresosHoy > 0 ? `+${fmt(stats.ingresosHoy)} hoy` : 'Sin ingresos hoy'}
-            </span>
+      <div className="kpi-bh" style={{ marginBottom: 16 }}>
+        <div className="kpi-bh__s">
+          <div className="kpi-bh__l">Ingresos del mes</div>
+          <div className="kpi-bh__row">
+            <span className="kpi-bh__v">{fmt(stats.ingresosMes)}</span>
+            {stats.ingresosHoy > 0 && <span className="kpi-bh__pill">↑ {fmt(stats.ingresosHoy)} hoy</span>}
           </div>
-          <div>
-            <div style={{
-              fontFamily: 'var(--mono)', fontWeight: 700,
-              fontSize: 'clamp(34px, 5vw, 52px)', letterSpacing: '-1px', lineHeight: 1,
-              color: 'var(--text)', fontVariantNumeric: 'tabular-nums',
-            }}>{fmt(stats.ingresosMes)}</div>
-            <div className="kpi-ind__sub" style={{ marginTop: 8, fontSize: 13 }}>
-              {(() => {
-                const d = new Date(); const dia = d.getDate()
-                return `Acumulado del 1 al ${dia} de ${d.toLocaleString('es-CO', { month: 'long' })}`
-              })()}
-            </div>
+          <div className="kpi-bh__sub">
+            {(() => {
+              const d = new Date(); const dia = d.getDate()
+              return `Acumulado del 1 al ${dia} de ${d.toLocaleString('es-CO', { month: 'long' })}`
+            })()}
           </div>
         </div>
-
-        {/* 3 tarjetas industriales apiladas */}
-        <div style={{ display: 'grid', gridTemplateRows: '1fr 1fr 1fr', gap: 10 }}>
-          <div className="kpi-ind red" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
-            <div>
-              <div className="kpi-ind__l">Activos hoy</div>
-              <div className="kpi-ind__v" style={{ fontSize: 22, marginTop: 3 }}>{stats.activos}</div>
-            </div>
-            {estancados.length > 0 && (
-              <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--red-700)', background: 'var(--red-100)', padding: '3px 8px', borderRadius: 5, whiteSpace: 'nowrap' }}>
-                {estancados.length} estancados
-              </span>
-            )}
+        <div className="kpi-bh__s">
+          <div className="kpi-bh__l">Listos para entregar</div>
+          <div className="kpi-bh__row"><span className="kpi-bh__v">{stats.listoCount}</span></div>
+          <div className="kpi-bh__sub">por entregar</div>
+        </div>
+        <div className="kpi-bh__s">
+          <div className="kpi-bh__l">Activos hoy</div>
+          <div className="kpi-bh__row">
+            <span className="kpi-bh__v">{stats.activos}</span>
+            {estancados.length > 0 && <span className="kpi-bh__pill red">{estancados.length} estancados</span>}
           </div>
-
-          <div className="kpi-ind blue" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div>
-              <div className="kpi-ind__l">Listos para entregar</div>
-              <div className="kpi-ind__v" style={{ fontSize: 22, marginTop: 3 }}>{stats.listoCount}</div>
-            </div>
-          </div>
-
-          <div className="kpi-ind amber" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div>
-              <div className="kpi-ind__l">Total OTs</div>
-              <div className="kpi-ind__v" style={{ fontSize: 22, marginTop: 3 }}>{trabajos.length}</div>
-            </div>
-            <span style={{ fontSize: 11.5, color: 'var(--text-3)', whiteSpace: 'nowrap' }}>histórico</span>
-          </div>
+          <div className="kpi-bh__sub">en taller</div>
+        </div>
+        <div className="kpi-bh__s">
+          <div className="kpi-bh__l">Total OTs</div>
+          <div className="kpi-bh__row"><span className="kpi-bh__v">{trabajos.length}</span></div>
+          <div className="kpi-bh__sub">histórico</div>
         </div>
       </div>
 

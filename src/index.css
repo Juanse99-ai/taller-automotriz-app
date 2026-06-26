@@ -3,14 +3,13 @@
    Tokens + Components (from prototipo) + LEGACY COMPAT
    ============================================ */
 
-/* UNA sola tipografía: la fuente del sistema (San Francisco en iOS/Mac → look
-   nativo "tipo iOS"; cae a Segoe UI/Roboto en Windows/Android). Sin webfonts
-   (sin descarga), por eso se quitó el @import de Geist/JetBrains Mono.
-   Para números/tablas usamos la misma fuente con cifras tabulares (alineadas). */
+/* Tipografía: Inter (estilo beehiiv), con fallback a la fuente del sistema.
+   Una sola familia; números con cifras tabulares (tabular-nums) para alinear. */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
 /* === TOKENS === */
 :root{
-  --font:-apple-system,BlinkMacSystemFont,'SF Pro Text','SF Pro Display',system-ui,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+  --font:'Inter',-apple-system,BlinkMacSystemFont,system-ui,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
   --mono:var(--font);
 
   /* navy ramp (sidebar + headers) */
@@ -178,26 +177,28 @@ input,select,textarea{font-family:inherit;font-size:14px;color:inherit}
 
 /* Shell (prototipo) */
 .app{display:flex;min-height:100vh;background:var(--bg)}
-.sidebar{position:fixed;top:0;left:0;bottom:0;width:var(--sidebar-w);background:var(--bg-side);color:#fff;display:flex;flex-direction:column;z-index:40;transition:transform .32s var(--ease-drawer),width .42s var(--ease-drawer)}
-.sidebar__brand{display:flex;align-items:center;gap:10px;padding:16px 14px 18px;border-bottom:1px solid rgba(255,255,255,.07)}
-.sidebar__brand .logo{width:40px;height:40px;border-radius:10px;background:#fff;display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0;box-shadow:0 1px 0 rgba(255,255,255,.15) inset}
+/* Sidebar CLARO (estilo beehiiv): fondo claro, texto oscuro, activo ámbar.
+   Usa variables del tema, así se adapta solo al modo oscuro. */
+.sidebar{position:fixed;top:0;left:0;bottom:0;width:var(--sidebar-w);background:var(--bg-raised);color:var(--text);border-right:1px solid var(--border);display:flex;flex-direction:column;z-index:40;transition:transform .32s var(--ease-drawer),width .42s var(--ease-drawer)}
+.sidebar__brand{display:flex;align-items:center;gap:10px;padding:16px 14px 18px;border-bottom:1px solid var(--border)}
+.sidebar__brand .logo{width:40px;height:40px;border-radius:10px;background:#fff;display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0;border:1px solid var(--border)}
 .sidebar__brand .logo img{width:100%;height:100%;object-fit:cover;object-position:center}
 .sidebar__brand .wm{min-width:0;flex:1}
-.sidebar__brand .wm .n{font-size:13px;font-weight:800;letter-spacing:.1px;color:#fff;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.sidebar__brand .wm .s{font-size:9.5px;color:rgba(255,255,255,.5);font-weight:600;margin-top:3px;letter-spacing:1px;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sidebar__brand .wm .n{font-size:13px;font-weight:700;letter-spacing:.1px;color:var(--text);line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sidebar__brand .wm .s{font-size:9.5px;color:var(--text-4);font-weight:600;margin-top:3px;letter-spacing:1px;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .sidebar__nav{flex:1;padding:10px 8px;overflow-y:auto}
-.sidebar__group{padding:14px 10px 6px;font-size:10px;font-weight:700;color:rgba(255,255,255,.3);text-transform:uppercase;letter-spacing:1.4px}
-.navlink{display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:8px;font-size:14.5px;font-weight:500;color:rgba(255,255,255,.78);margin-bottom:2px;transition:background .12s,color .12s;position:relative;cursor:pointer}
-.navlink:hover{background:rgba(255,255,255,.06);color:#fff}
+.sidebar__group{padding:14px 10px 6px;font-size:10px;font-weight:700;color:var(--text-4);text-transform:uppercase;letter-spacing:1.4px}
+.navlink{display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:8px;font-size:14.5px;font-weight:500;color:var(--text-2);margin-bottom:2px;transition:background .12s,color .12s;position:relative;cursor:pointer}
+.navlink:hover{background:var(--bg-subtle);color:var(--text)}
 .navlink svg{stroke:currentColor}
-.navlink.active{background:rgba(245,158,11,.18);color:#fbbf24;font-weight:700}
+.navlink.active{background:rgba(245,158,11,.15);color:var(--amber-600);font-weight:600}
 .navlink svg{width:17px;height:17px;flex-shrink:0;stroke:currentColor;fill:none;stroke-width:1.8}
-.navlink .pill{margin-left:auto;font-family:var(--mono);font-size:10px;background:rgba(239,68,68,.2);color:#fca5a5;padding:1px 6px;border-radius:999px;font-weight:700}
-.sidebar__foot{padding:14px 14px 18px;border-top:1px solid rgba(255,255,255,.07);display:flex;align-items:center;gap:10px}
+.navlink .pill{margin-left:auto;font-family:var(--mono);font-size:10px;background:var(--red-100);color:var(--red-700);padding:1px 6px;border-radius:999px;font-weight:700}
+.sidebar__foot{padding:14px 14px 18px;border-top:1px solid var(--border);display:flex;align-items:center;gap:10px}
 .sidebar__foot .av{width:34px;height:34px;border-radius:50%;background:var(--amber-400);color:var(--navy-900);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12px}
 .sidebar__foot .me{flex:1;min-width:0}
-.sidebar__foot .me .n{font-size:12.5px;font-weight:600;color:#fff;line-height:1.2}
-.sidebar__foot .me .r{font-size:10.5px;color:rgba(255,255,255,.45);margin-top:1px}
+.sidebar__foot .me .n{font-size:12.5px;font-weight:600;color:var(--text);line-height:1.2}
+.sidebar__foot .me .r{font-size:10.5px;color:var(--text-3);margin-top:1px}
 
 /* sidebar collapsed state (desktop only) */
 .sidebar.collapsed{width:var(--sidebar-w-collapsed)}
@@ -477,6 +478,18 @@ tbody tr:hover{background:var(--bg-subtle)}
 .kpi-ind__v.red{color:var(--red-700)}
 .kpi-ind__sub{font-size:11px;color:var(--text-3);margin-top:4px;font-weight:500}
 @media(max-width:760px){.kpi-ind-row{grid-template-columns:repeat(2,1fr)}}
+/* Tarjetas KPI estilo beehiiv: agrupadas en un contenedor, divididas por líneas,
+   número grande + pastilla verde de % + subtexto. Limpio y aireado. */
+.kpi-bh{display:flex;background:var(--bg-raised);border:1px solid var(--border);border-radius:14px;overflow:hidden}
+.kpi-bh__s{flex:1;padding:16px 20px;border-left:1px solid var(--border);min-width:0}
+.kpi-bh__s:first-child{border-left:none}
+.kpi-bh__l{font-size:12px;color:var(--text-3);font-weight:500}
+.kpi-bh__row{display:flex;align-items:center;gap:10px;margin-top:8px;flex-wrap:wrap}
+.kpi-bh__v{font-size:26px;font-weight:600;color:var(--text);font-variant-numeric:tabular-nums;letter-spacing:-.5px;line-height:1}
+.kpi-bh__pill{font-size:11px;font-weight:600;color:var(--green-700);background:var(--green-100);border-radius:999px;padding:2px 8px;white-space:nowrap}
+.kpi-bh__pill.red{color:var(--red-700);background:var(--red-100)}
+.kpi-bh__sub{font-size:11.5px;color:var(--text-4);margin-top:6px}
+@media(max-width:760px){.kpi-bh{flex-direction:column}.kpi-bh__s{border-left:none;border-top:1px solid var(--border)}.kpi-bh__s:first-child{border-top:none}}
 /* Tabla centrada (inventario): todo al centro menos las columnas .col-left */
 .tbl.tbl--center thead th,.tbl.tbl--center tbody td{text-align:center}
 .tbl.tbl--center thead th>span{justify-content:center}

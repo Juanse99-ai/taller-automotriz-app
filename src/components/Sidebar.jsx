@@ -266,7 +266,7 @@ export default function Sidebar({ active, onNavigate, isOpen, collapsed, onColla
             <div className="n">{user.nombre || user.usuario}</div>
             <div className="r">{rolLabel}</div>
           </div>
-          <button className="icobtn" onClick={onLogout} title="Cerrar sesion" style={{ color: 'rgba(255,255,255,.45)' }}>
+          <button className="icobtn" onClick={onLogout} title="Cerrar sesion" style={{ color: 'var(--text-3)' }}>
             {ICONS.logout}
           </button>
         </div>
