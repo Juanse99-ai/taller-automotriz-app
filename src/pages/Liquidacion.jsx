@@ -311,6 +311,8 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
 
     setSeleccionados({})
     notify(`Pago generado: ${fmt(totalSeleccion.neto)} para ${tecData.tecnico.nombre}`, 'success')
+    // Descargar automáticamente el comprobante del pago recién generado
+    exportPdfHistorial(registro).catch(() => {})
   }
 
   const exportPdfPago = async () => {
