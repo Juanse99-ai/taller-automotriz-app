@@ -47,13 +47,14 @@ export default function Login({ onLogin }) {
     <div style={{
       minHeight: '100vh',
       display: 'grid',
-      gridTemplateColumns: '1.05fr 1fr',
+      gridTemplateColumns: '1fr 1.12fr',
       background: 'var(--navy-900)',
       color: '#fff',
     }} className="login-shell">
 
       {/* Panel izquierdo: foto del taller (sin blur, sin gradients) */}
       <div className="login-art" style={{
+        order: 2,
         position: 'relative',
         backgroundImage: 'url(/taller-fachada.jpg)',
         backgroundSize: 'cover',
@@ -111,23 +112,26 @@ export default function Login({ onLogin }) {
         </div>
       </div>
 
-      {/* Panel derecho: form sólido (sin glass, sin gradients) */}
+      {/* Panel del formulario (izquierda, estilo Sana: limpio y aireado) */}
       <div style={{
+        order: 1,
         background: 'var(--bg-raised, #fff)',
         color: 'var(--text, #0f172a)',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
-        padding: '48px 36px',
+        padding: '48px 40px',
       }}>
         <div style={{ width: '100%', maxWidth: 400 }}>
-          <div style={{
-            fontSize: 12, fontWeight: 700, color: 'var(--text-3)',
-            textTransform: 'uppercase', letterSpacing: 1.4, marginBottom: 10,
-          }}>Bienvenido de vuelta</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 11, marginBottom: 30 }}>
+            <div style={{ width: 38, height: 38, borderRadius: 10, overflow: 'hidden', border: '1px solid var(--border)', flexShrink: 0 }}>
+              <img src="/logo.png" alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            </div>
+            <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)' }}>{TALLER.razonSocial || TALLER.nombre}</span>
+          </div>
           <h2 style={{
-            margin: '0 0 10px', fontSize: 32, fontWeight: 900,
-            letterSpacing: '-.6px', color: 'var(--text)',
+            margin: '0 0 8px', fontSize: 30, fontWeight: 700,
+            letterSpacing: '-.5px', color: 'var(--text)',
           }}>Inicia sesión</h2>
-          <p style={{ margin: '0 0 30px', color: 'var(--text-2)', fontSize: 14.5, lineHeight: 1.5 }}>
+          <p style={{ margin: '0 0 30px', color: 'var(--text-3)', fontSize: 15, lineHeight: 1.5 }}>
             Accede al panel de administración del taller.
           </p>
 
@@ -184,9 +188,9 @@ export default function Login({ onLogin }) {
             )}
 
             <button type="submit" disabled={loading || !usuario.trim() || !password}
-              className="btn btn-accent"
+              className="btn btn-primary"
               style={{
-                height: 48, fontSize: 14.5, marginTop: 6, width: '100%',
+                height: 50, fontSize: 15, marginTop: 8, width: '100%',
                 letterSpacing: .2,
               }}
             >
