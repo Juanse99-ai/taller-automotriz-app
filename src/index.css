@@ -308,13 +308,16 @@ a,button,[role=button],.navlink,.mob-tab,.icobtn,.tabs button{-webkit-tap-highli
 [data-theme="dark"] .badge-n{background:rgba(100,116,139,.2);color:#cbd5e1}
 
 /* KPI card */
-.kpi{background:var(--bg-raised);border:1px solid var(--border);border-radius:14px;padding:18px 20px;display:flex;flex-direction:column;gap:14px;transition:border-color .12s,box-shadow .12s,transform 140ms var(--ease-out)}
+.kpi{background:var(--bg-raised);border:1px solid var(--border);border-radius:12px;padding:16px 18px;display:flex;flex-direction:column;gap:8px;transition:border-color .12s,box-shadow .12s}
 /* hover gated: en tablet (uso real de la app) el hover por tap queda pegado */
 @media (hover:hover) and (pointer:fine){
   .kpi:hover{border-color:var(--border-strong);box-shadow:var(--shadow);transform:translateY(-1px)}
 }
 .kpi__head{display:flex;align-items:center;gap:10px}
-.kpi__ic{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+/* Tarjetas .kpi viejas: se ocultan los íconos-en-cuadrito (el tell "IA") para que
+   queden limpias como el resto, sin tocar el JSX de cada página. */
+.kpi__ic{display:none}
+.kpi__ic--hidden{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
 .kpi__ic svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.8}
 .kpi__ic.blue{background:rgba(30,58,138,.10);color:var(--blue-600)}
 .kpi__ic.amber{background:rgba(245,158,11,.12);color:var(--amber-500)}
@@ -324,8 +327,8 @@ a,button,[role=button],.navlink,.mob-tab,.icobtn,.tabs button{-webkit-tap-highli
 [data-theme="dark"] .kpi__ic.amber{background:rgba(245,158,11,.14);color:#fbbf24}
 [data-theme="dark"] .kpi__ic.red{background:rgba(220,38,38,.16);color:#fca5a5}
 [data-theme="dark"] .kpi__ic.green{background:rgba(22,163,74,.16);color:#4ade80}
-.kpi__lbl{font-size:13px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:.5px;flex:1}
-.kpi__v{font-family:var(--mono);font-weight:700;font-size:30px;letter-spacing:-.5px;line-height:1;color:var(--text)}
+.kpi__lbl{font-size:12.5px;font-weight:500;color:var(--text-3);text-transform:none;letter-spacing:0;flex:1}
+.kpi__v{font-family:var(--mono);font-weight:600;font-size:27px;letter-spacing:-.5px;line-height:1.05;color:var(--text);margin-top:2px}
 .kpi__delta{display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--text-3);font-weight:500}
 .kpi__delta b{font-family:var(--mono);font-weight:700;padding:1px 7px;border-radius:5px;font-size:10.5px}
 .kpi__delta .up{background:var(--green-100);color:#166534}
