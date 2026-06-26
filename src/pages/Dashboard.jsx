@@ -431,7 +431,7 @@ export default function Dashboard({ trabajos = [], onNavigate, user }) {
       </div>
 
       {/* ── 2-col: chart + listos ────────────────────────────────────────── */}
-      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 16 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 16, alignItems: 'start' }}>
 
         {/* Ingresos chart */}
         <div className="card">
