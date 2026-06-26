@@ -25,6 +25,21 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
     return () => mq.removeEventListener('change', fn)
   }, [])
 
+  // Kanban: arrastrar tarjetas entre columnas para cambiar el estado de la OT.
+  const dragIdRef = useRef(null)
+  const [dragOverCol, setDragOverCol] = useState(null)
+  const dropEnColumna = (estado) => {
+    const id = dragIdRef.current
+    dragIdRef.current = null
+    setDragOverCol(null)
+    if (!id) return
+    const t = trabajos.find(x => x.id === id)
+    if (t && t.estado !== estado) {
+      actualizarTrabajo(id, { estado })
+      notify?.(`${t.otCodigo || 'OT'} → ${estado}`, 'info')
+    }
+  }
+
   // Filtros
   // Default: 'activos' = todos los que NO estan terminados (Completado/Cancelado).
   // Asi al abrir Trabajos solo ves los que estan en proceso, no los ya cerrados.
@@ -420,7 +435,12 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
               : estado === ESTADOS.EN_DIAGNOSTICO ? 'var(--purple-500)'
               : estado === ESTADOS.EN_PRUEBA ? 'var(--blue-500)' : 'var(--amber-400)'
             return (
-              <div key={estado} className="kanban-column">
+              <div key={estado} className="kanban-column"
+                onDragOver={e => { e.preventDefault(); if (dragOverCol !== estado) setDragOverCol(estado) }}
+                onDragLeave={e => { if (!e.currentTarget.contains(e.relatedTarget)) setDragOverCol(c => (c === estado ? null : c)) }}
+                onDrop={e => { e.preventDefault(); dropEnColumna(estado) }}
+                style={dragOverCol === estado ? { outline: '2px dashed var(--blue-600)', outlineOffset: -2, background: 'rgba(30,58,138,.05)', borderRadius: 12 } : undefined}
+              >
                 <div className="kanban-column-header" style={{ borderTopColor: bc }}>
                   <span>{estado}</span>
                   <span className="kanban-count">{col.length}</span>
@@ -430,7 +450,11 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
                     const diasSinMover = t.fecha ? Math.floor((Date.now() - new Date(t.fecha).getTime()) / 86400000) : 0
                     const estancado = t.estado !== ESTADOS.COMPLETADO && t.estado !== ESTADOS.CANCELADO && diasSinMover >= DIAS_ESTANCADO
                     return (
-                      <div key={t.id} className="card" style={{ padding: '12px 14px', marginBottom: 8, cursor: 'pointer', ...(estancado ? { borderColor: 'rgba(220,38,38,.32)', background: 'rgba(220,38,38,.04)' } : {}) }} onClick={() => handleEditar(t.id)}>
+                      <div key={t.id} className="card"
+                        draggable
+                        onDragStart={() => { dragIdRef.current = t.id }}
+                        onDragEnd={() => { dragIdRef.current = null; setDragOverCol(null) }}
+                        style={{ padding: '12px 14px', marginBottom: 8, cursor: 'grab', ...(estancado ? { borderColor: 'rgba(220,38,38,.32)', background: 'rgba(220,38,38,.04)' } : {}) }} onClick={() => handleEditar(t.id)}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
                           <span style={{ color: 'var(--blue-600)', fontWeight: 700, fontFamily: 'var(--mono)', fontSize: 13 }}>{t.otCodigo || '—'}</span>
                           <span className="text-mono" style={{ fontWeight: 700, fontSize: 13, letterSpacing: '.5px' }}>{t.placa}</span>
