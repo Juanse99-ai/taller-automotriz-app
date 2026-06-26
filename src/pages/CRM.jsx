@@ -512,20 +512,14 @@ export default function CRM({ trabajos = [], clientes, vehiculos, notify, actual
           </select>
 
           {/* Filtro por urgencia */}
-          <div style={{ display: 'flex', gap: 2, background: 'var(--bg-subtle)', padding: 3, borderRadius: 8, border: '1px solid var(--border)' }}>
+          <div className="segctl">
             {[
               ['vencidos', 'Vencidos'],
               ['esta_semana', 'Esta semana'],
               ['proximos_30', '30 días'],
               ['todos', 'Todos'],
             ].map(([k, l]) => (
-              <button key={k} onClick={() => setFiltroUrgencia(k)} style={{
-                padding: '5px 12px', fontSize: 12, fontWeight: 600, borderRadius: 6,
-                background: filtroUrgencia === k ? 'var(--bg-raised)' : 'transparent',
-                color: filtroUrgencia === k ? 'var(--text)' : 'var(--text-3)',
-                boxShadow: filtroUrgencia === k ? 'var(--shadow-sm)' : 'none',
-                border: 'none', cursor: 'pointer',
-              }}>{l}</button>
+              <button key={k} className={filtroUrgencia === k ? 'on' : ''} onClick={() => setFiltroUrgencia(k)}>{l}</button>
             ))}
           </div>
 
@@ -834,14 +828,9 @@ export default function CRM({ trabajos = [], clientes, vehiculos, notify, actual
                   <button onClick={() => setBusquedaInactivos('')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-3)' }}>✕</button>
                 )}
               </div>
-              <div style={{ display: 'flex', gap: 4, background: 'var(--bg-raised)', padding: 3, borderRadius: 8, border: '1px solid var(--border)' }}>
+              <div className="segctl">
                 {[['todos', 'Todos'], ['wa', 'Con WhatsApp'], ['email', 'Con Email']].map(([k, l]) => (
-                  <button key={k} onClick={() => setFiltroInactivos(k)} style={{
-                    padding: '5px 12px', fontSize: 12, fontWeight: 600, borderRadius: 6,
-                    background: filtroInactivos === k ? 'var(--blue-600)' : 'transparent',
-                    color: filtroInactivos === k ? '#fff' : 'var(--text-3)',
-                    border: 'none', cursor: 'pointer',
-                  }}>{l}</button>
+                  <button key={k} className={filtroInactivos === k ? 'on' : ''} onClick={() => setFiltroInactivos(k)}>{l}</button>
                 ))}
               </div>
             </div>

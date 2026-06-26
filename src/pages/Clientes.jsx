@@ -637,10 +637,25 @@ export default function Clientes({ clientes, vehiculos, notify }) {
         </div>
       )}
 
-      <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:16,marginBottom:18}}>
-        <div className="kpi"><div className="kpi__head"><div className="kpi__ic blue"><svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg></div><div className="kpi__lbl">Total clientes</div></div><div className="kpi__v">{totalClientes}</div></div>
-        <div className="kpi"><div className="kpi__head"><div className="kpi__ic green"><svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path d="M5 13l4 4L19 7"/></svg></div><div className="kpi__lbl">Sincronizados Cuentti</div></div><div className="kpi__v">{conCuenttiId}</div><div className="kpi__delta">{totalClientes > 0 ? Math.round(conCuenttiId/totalClientes*100) : 0}%</div></div>
-        <div className="kpi"><div className="kpi__head"><div className="kpi__ic amber"><svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg></div><div className="kpi__lbl">Con vehiculos</div></div><div className="kpi__v">{conVehiculos}</div></div>
+      <div className="kpi-bh" style={{ marginBottom: 18 }}>
+        <div className="kpi-bh__s">
+          <div className="kpi-bh__l">Total clientes</div>
+          <div className="kpi-bh__row"><span className="kpi-bh__v">{totalClientes}</span></div>
+          <div className="kpi-bh__sub">en la base</div>
+        </div>
+        <div className="kpi-bh__s">
+          <div className="kpi-bh__l">Sincronizados Cuentti</div>
+          <div className="kpi-bh__row">
+            <span className="kpi-bh__v">{conCuenttiId}</span>
+            <span className="kpi-bh__pill">{totalClientes > 0 ? Math.round(conCuenttiId / totalClientes * 100) : 0}%</span>
+          </div>
+          <div className="kpi-bh__sub">del total</div>
+        </div>
+        <div className="kpi-bh__s">
+          <div className="kpi-bh__l">Con vehículos</div>
+          <div className="kpi-bh__row"><span className="kpi-bh__v">{conVehiculos}</span></div>
+          <div className="kpi-bh__sub">registrados</div>
+        </div>
       </div>
 
       <div className="card">

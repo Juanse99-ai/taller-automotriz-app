@@ -213,15 +213,9 @@ export default function Inventario({ notify }) {
               />
             </div>
             {/* Filtro categorías */}
-            <div style={{ display: 'flex', gap: 2, background: 'var(--bg-subtle)', padding: 3, borderRadius: 8, border: '1px solid var(--border)', flexWrap: 'wrap' }}>
+            <div className="segctl">
               {categorias.slice(0, 6).map(c => (
-                <button key={c} onClick={() => setCategoriaFiltro(c)} style={{
-                  padding: '5px 10px', fontSize: 11.5, fontWeight: 600, borderRadius: 6,
-                  background: categoriaFiltro === c ? 'var(--bg-raised)' : 'transparent',
-                  color: categoriaFiltro === c ? 'var(--text)' : 'var(--text-3)',
-                  boxShadow: categoriaFiltro === c ? 'var(--shadow-sm)' : 'none',
-                  border: 'none', cursor: 'pointer', textTransform: 'capitalize',
-                }}>
+                <button key={c} className={categoriaFiltro === c ? 'on' : ''} onClick={() => setCategoriaFiltro(c)} style={{ textTransform: 'capitalize' }}>
                   {c === 'todas' ? 'Todas' : c}
                 </button>
               ))}
