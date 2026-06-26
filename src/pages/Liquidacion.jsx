@@ -370,7 +370,7 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
       y, x: 122, w: 74,
       rows: [
         { lbl: `Comisión (${COMISION.TOTAL * 100}% M.O.)`, val: fmt(totalSeleccion.comision) },
-        { lbl: `Cargos ${fmt(totalSeleccion.cargos)} · tu ${COMISION.TOTAL * 100}%`, val: `− ${fmt(totalSeleccion.cargosEfectivos)}` },
+        { lbl: `Cargos ${fmt(totalSeleccion.cargos)} · tu ${COMISION.TOTAL * 100}%`, val: `- ${fmt(totalSeleccion.cargosEfectivos)}` },
       ],
       finalLabel: 'NETO A PAGAR',
       finalValue: fmt(totalSeleccion.neto),
@@ -459,8 +459,8 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
         { lbl: `Comisión (${COMISION.TOTAL * 100}%)`, val: fmt(reg.comision || 0) },
         // Pagos nuevos guardan cargosEfectivos (cargo × %); los viejos descontaban el cargo completo.
         (reg.cargosEfectivos != null
-          ? { lbl: `Cargos ${fmt(reg.cargos || 0)} · tu ${COMISION.TOTAL * 100}%`, val: `− ${fmt(reg.cargosEfectivos)}` }
-          : { lbl: 'Cargos / adelantos', val: `− ${fmt(reg.cargos || 0)}` }),
+          ? { lbl: `Cargos ${fmt(reg.cargos || 0)} · tu ${COMISION.TOTAL * 100}%`, val: `- ${fmt(reg.cargosEfectivos)}` }
+          : { lbl: 'Cargos / adelantos', val: `- ${fmt(reg.cargos || 0)}` }),
       ],
       finalLabel: 'NETO PAGADO',
       finalValue: fmt(reg.neto || 0),
