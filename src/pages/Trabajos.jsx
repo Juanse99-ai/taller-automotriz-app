@@ -167,14 +167,34 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
 
     // ============= VEHÍCULO =============
     cursorY = drawSectionHeader(doc, 'Vehículo', cursorY)
-    cursorY = drawDataBlock(doc, [
+    // Próximo cambio de aceite: usa lo registrado, o lo sugiere si ES cambio de
+    // aceite (km actual + intervalo: sintético 10.000 · resto 5.000). Se muestra
+    // como un dato más del vehículo (no como tarjeta resaltada).
+    let proxKm = parseInt(t.proximoKm) || 0
+    let proxFechaCorta = ''
+    if (t.proximaVisita) {
+      const dpv = new Date(t.proximaVisita)
+      if (!Number.isNaN(dpv.getTime())) proxFechaCorta = dpv.toLocaleDateString('es-CO', { month: 'short', year: 'numeric' })
+    }
+    if (!proxKm && t.kilometraje) {
+      const nombresItems = (t.items || []).map(i => (i.nombre || '').toLowerCase()).join(' ')
+      const esCambioAceite = (t.tipoAceite && t.tipoAceite !== 'no_aplica') || nombresItems.includes('aceite')
+      if (esCambioAceite) {
+        const intervalo = t.tipoAceite === 'sintetico' ? 10000 : 5000
+        proxKm = (parseInt(t.kilometraje) || 0) + intervalo
+      }
+    }
+    const proxCambioVal = [proxKm > 0 ? `${proxKm.toLocaleString('es-CO')} km` : '', proxFechaCorta].filter(Boolean).join(' · ')
+    const vehFields = [
       { label: 'Placa', value: (t.placa || '').toUpperCase(), bold: true },
       { label: 'Marca', value: t.marca },
       { label: 'Modelo', value: t.modelo },
       { label: 'Año', value: String(t.ano || '—') },
       { label: 'Kilometraje', value: t.kilometraje ? `${Number(t.kilometraje).toLocaleString('es-CO')} km` : '—' },
       { label: 'Técnico', value: tecNombre(t.tecnicoId) },
-    ], cursorY)
+    ]
+    if (proxCambioVal) vehFields.push({ label: 'Próx. cambio', value: proxCambioVal })
+    cursorY = drawDataBlock(doc, vehFields, cursorY)
     cursorY += 3
 
     // ============= DIAGNÓSTICO =============
@@ -275,41 +295,6 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
         doc.setTextColor(...NAVY)
         doc.setFont(undefined, 'normal')
         doc.text(lines, MARGIN + 3, cursorY + 9)
-      }
-
-      // Próximo cambio de aceite / mantenimiento — recuadro amber a la izquierda.
-      // Si no se registró el km manualmente pero ES un cambio de aceite, se sugiere
-      // automáticamente: km actual + intervalo (sintético 10.000 · resto 5.000).
-      let proxKm = parseInt(t.proximoKm) || 0
-      const proxFecha = t.proximaVisita ? fmtDate(t.proximaVisita) : ''
-      if (!proxKm && t.kilometraje) {
-        const nombres = (t.items || []).map(i => (i.nombre || '').toLowerCase()).join(' ')
-        const esCambioAceite = (t.tipoAceite && t.tipoAceite !== 'no_aplica') || nombres.includes('aceite')
-        if (esCambioAceite) {
-          const intervalo = t.tipoAceite === 'sintetico' ? 10000 : 5000
-          proxKm = (parseInt(t.kilometraje) || 0) + intervalo
-        }
-      }
-      if (proxKm > 0 || proxFecha) {
-        const py = cursorY + (leftBlockH ? leftBlockH + 4 : 0)
-        const ph = 17
-        doc.setFillColor(254, 243, 199) // amber-100
-        doc.setDrawColor(...AMBER)
-        doc.setLineWidth(0.4)
-        doc.roundedRect(MARGIN, py, 104, ph, 1.5, 1.5, 'FD')
-        doc.setFontSize(7)
-        doc.setTextColor(180, 83, 9) // amber-800
-        doc.setFont(undefined, 'bold')
-        doc.text('PRÓXIMO CAMBIO DE ACEITE', MARGIN + 4, py + 6)
-        const partes = []
-        if (proxKm > 0) partes.push(`${proxKm.toLocaleString('es-CO')} km`)
-        if (proxFecha) partes.push(proxFecha)
-        doc.setFontSize(11)
-        doc.setTextColor(...NAVY)
-        doc.text(partes.join('   ·   '), MARGIN + 4, py + 13)
-        doc.setFont(undefined, 'normal')
-        doc.setLineWidth(0.2)
-        leftBlockH = (leftBlockH ? leftBlockH + 4 : 0) + ph
       }
 
       // Caja de totales (usa helper unificado)
