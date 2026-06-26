@@ -200,7 +200,7 @@ export default function TopBar({ title, subtitle, onToggleSidebar, sidebarOpen, 
           title="Compartir Portal del Cliente"
           style={{ gap: 6 }}
         >
-          <PortalIcon /> Portal Cliente
+          <PortalIcon /> <span className="btn-label">Portal Cliente</span>
         </button>
 
         {/* Notifications */}
@@ -267,7 +267,7 @@ export default function TopBar({ title, subtitle, onToggleSidebar, sidebarOpen, 
             title="Cerrar sesion"
             style={{ gap: 6, color: '#dc2626', borderColor: 'rgba(220,38,38,.35)' }}
           >
-            <LogoutIcon /> Salir
+            <LogoutIcon /> <span className="btn-label">Salir</span>
           </button>
         )}
       </header>

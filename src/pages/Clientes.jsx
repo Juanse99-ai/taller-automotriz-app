@@ -700,7 +700,7 @@ export default function Clientes({ clientes, vehiculos, notify }) {
               </p>
             </div>
           ) : (
-            <table className="tbl">
+            <table className="tbl tbl-cards">
               <thead>
                 <tr>
                   <th onClick={() => toggleSort('cedula')} style={{ cursor: 'pointer', userSelect: 'none' }}>CC/NIT{sortIcon('cedula')}</th>
@@ -716,18 +716,18 @@ export default function Clientes({ clientes, vehiculos, notify }) {
               <tbody>
                 {clientesFiltrados.map(c => (
                   <tr key={c.id || c.cedula} style={{cursor:'pointer'}} onClick={() => seleccionar(c)}>
-                    <td className="c-mono" style={{fontSize:12.5}}>{c.cedula || '--'}</td>
+                    <td className="c-mono" data-label="CC/NIT" style={{fontSize:12.5}}>{c.cedula || '--'}</td>
                     <td className="c-name">{c.nombre || '--'}</td>
-                    <td className="c-mono">{fmtTelefono(c.telefono) || '--'}</td>
-                    <td className="c-muted">{c.email || '--'}</td>
-                    <td style={{textAlign:'center'}}>
+                    <td className="c-mono" data-label="Teléfono">{fmtTelefono(c.telefono) || '--'}</td>
+                    <td className="c-muted" data-label="Email">{c.email || '--'}</td>
+                    <td data-label="Vehículos" style={{textAlign:'center'}}>
                       <span className={`badge ${(c.vehiculos || []).length > 0 ? 'badge-i' : 'badge-w'}`}>
                         {(c.vehiculos || []).length}
                       </span>
                     </td>
-                    <td className="c-muted">{fmtDate(c.fechaUltimaVisita)}</td>
-                    <td>{c.cuenttiId ? <span className="badge badge-s">OK</span> : <span className="badge badge-w">Pendiente</span>}</td>
-                    <td style={{opacity:.5}}>›</td>
+                    <td className="c-muted" data-label="Última visita">{fmtDate(c.fechaUltimaVisita)}</td>
+                    <td data-label="Cuentti">{c.cuenttiId ? <span className="badge badge-s">OK</span> : <span className="badge badge-w">Pendiente</span>}</td>
+                    <td className="td-chevron" style={{opacity:.5}}>›</td>
                   </tr>
                 ))}
               </tbody>

@@ -122,9 +122,29 @@ export default function Inventario({ notify }) {
 
   if (loading && productos.length === 0) {
     return (
-      <div className="empty-state">
-        <div className="spinner" style={{ margin: '0 auto 16px' }} />
-        <p>Cargando inventario desde Cuentti...</p>
+      <div>
+        <div className="skeleton" style={{ height: 30, width: 200, marginBottom: 18 }} />
+        <div className="kpi-grid" style={{ marginBottom: 18 }}>
+          <div className="skeleton" style={{ height: 180, borderRadius: 14 }} />
+          <div style={{ display: 'grid', gridTemplateRows: '1fr 1fr 1fr', gap: 10 }}>
+            <div className="skeleton" style={{ height: 56, borderRadius: 12 }} />
+            <div className="skeleton" style={{ height: 56, borderRadius: 12 }} />
+            <div className="skeleton" style={{ height: 56, borderRadius: 12 }} />
+          </div>
+        </div>
+        <div className="card">
+          <div className="card__b">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <div key={i} className="sk-row">
+                <div className="skeleton" style={{ height: 14, width: 70 }} />
+                <div className="skeleton" style={{ height: 14, flex: 1 }} />
+                <div className="skeleton" style={{ height: 14, width: 80 }} />
+                <div className="skeleton" style={{ height: 14, width: 60 }} />
+              </div>
+            ))}
+          </div>
+        </div>
+        <p style={{ textAlign: 'center', color: 'var(--text-3)', fontSize: 13, marginTop: 14 }}>Cargando inventario desde Cuentti…</p>
       </div>
     )
   }
@@ -280,7 +300,7 @@ export default function Inventario({ notify }) {
           </div>
         ) : (
           <div className="card__b card__b--flush">
-            <table className="tbl tbl--center">
+            <table className="tbl tbl--center tbl-cards">
               <thead>
                 <tr>
                   <th onClick={() => toggleSort('codigo')} style={{ cursor: 'pointer', userSelect: 'none' }}>
@@ -320,25 +340,25 @@ export default function Inventario({ notify }) {
                   const util = (baseCosto > 0 && p.precioBase > 0) ? ((p.precioBase - baseCosto) / baseCosto) * 100 : null
                   return (
                     <tr key={p.id || p.codigo}>
-                      <td className="c-mono" style={{ color: 'var(--text-3)', fontSize: 11.5 }}>{p.codigo}</td>
+                      <td className="c-mono" data-label="Código" style={{ color: 'var(--text-3)', fontSize: 11.5 }}>{p.codigo}</td>
                       <td className="c-name col-left">{p.nombre}</td>
-                      <td className="c-muted" style={{ textTransform: 'capitalize' }}>{p.categoria}</td>
-                      <td className="c-mono c-right" style={{
+                      <td className="c-muted" data-label="Categoría" style={{ textTransform: 'capitalize' }}>{p.categoria}</td>
+                      <td className="c-mono c-right" data-label="Stock" style={{
                         fontWeight: 700,
                         color: p.stock <= 0 ? 'var(--red-600)' : p.stock <= STOCK_BAJO_UMBRAL ? 'var(--amber-500)' : 'var(--text)',
                       }}>{p.stock}</td>
-                      <td className="c-mono c-right" style={{ fontWeight: 600, color: 'var(--text-2)' }}>
+                      <td className="c-mono c-right" data-label="Costo" style={{ fontWeight: 600, color: 'var(--text-2)' }}>
                         {costoIva > 0 ? fmt(costoIva) : '—'}
                       </td>
-                      <td className="c-mono c-right" style={{ fontWeight: 700 }}>{fmt(p.precio)}</td>
-                      <td className="c-mono c-right" style={{
+                      <td className="c-mono c-right" data-label="Precio" style={{ fontWeight: 700 }}>{fmt(p.precio)}</td>
+                      <td className="c-mono c-right" data-label="Utilidad" style={{
                         fontWeight: 700,
                         color: util == null ? 'var(--text-4)' : util < 0 ? 'var(--red-600)' : util < 15 ? 'var(--amber-600)' : 'var(--green-600)',
                       }}>
                         {util == null ? '—' : `${util.toFixed(0)}%`}
                       </td>
-                      <td className="c-mono c-right c-muted">{p.iva}%</td>
-                      <td><span className={`badge ${s.cls}`}>{s.lbl}</span></td>
+                      <td className="c-mono c-right c-muted" data-label="IVA">{p.iva}%</td>
+                      <td data-label="Estado"><span className={`badge ${s.cls}`}>{s.lbl}</span></td>
                     </tr>
                   )
                 })}

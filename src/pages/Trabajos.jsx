@@ -459,7 +459,7 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
             <span style={{ fontWeight: 600, fontSize: 14 }}>{filtered.length} resultado{filtered.length !== 1 ? 's' : ''}</span>
           </div>
           <div className="card__b card__b--flush">
-            <table className="tbl">
+            <table className="tbl tbl-cards">
               <thead>
                 <tr>
                   <th>OT</th>
@@ -480,23 +480,23 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
                   const estancado = t.estado !== ESTADOS.COMPLETADO && t.estado !== ESTADOS.CANCELADO && diasSinMover >= DIAS_ESTANCADO
                   return (
                     <tr key={t.id} style={estancado ? { background: 'rgba(220,38,38,.06)', boxShadow: 'inset 0 0 0 1px rgba(220,38,38,.18)' } : {}}>
-                      <td className="c-mono" style={{ color: 'var(--blue-600)', fontWeight: 700 }}>{t.otCodigo || '—'}</td>
-                      <td className="c-mono" style={{ fontWeight: 700 }}>{t.placa}</td>
+                      <td className="c-mono" data-label="OT" style={{ color: 'var(--blue-600)', fontWeight: 700 }}>{t.otCodigo || '—'}</td>
+                      <td className="c-mono" data-label="Placa" style={{ fontWeight: 700 }}>{t.placa}</td>
                       <td className="c-name">{t.cliente || '—'}</td>
-                      <td className="c-muted">{[t.marca, t.modelo].filter(Boolean).join(' ') || '—'}</td>
-                      <td>
+                      <td className="c-muted" data-label="Vehículo">{[t.marca, t.modelo].filter(Boolean).join(' ') || '—'}</td>
+                      <td data-label="Técnico">
                         <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
                           <span className={`av av-${(parseInt(t.tecnicoId) || 1) % 5 + 1}`} style={{ width: 26, height: 26, fontSize: 10 }}>{tecIniciales(t.tecnicoId)}</span>
                           <span style={{ fontSize: 12.5 }}>{tecNombre(t.tecnicoId)}</span>
                         </div>
                       </td>
-                      <td>
+                      <td data-label="Estado">
                         <span className={`badge ${bc}`}>{t.estado}</span>
                         {estancado && <span className="badge badge-d" style={{ marginLeft: 4, fontSize: 10 }}>{diasSinMover}d</span>}
                       </td>
-                      <td className="c-mono c-right" style={{ fontWeight: 700 }}>{fmt(t.total)}</td>
-                      <td className="c-mono c-muted" style={{ fontSize: 12 }}>{fmtDate(t.fecha)}</td>
-                      <td className="c-right">
+                      <td className="c-mono c-right" data-label="Total" style={{ fontWeight: 700 }}>{fmt(t.total)}</td>
+                      <td className="c-mono c-muted" data-label="Fecha" style={{ fontSize: 12 }}>{fmtDate(t.fecha)}</td>
+                      <td className="c-right td-actions">
                         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 4 }}>
                           <button className="btn btn-ghost btn-sm" onClick={() => handleEditar(t.id)}>Editar</button>
                           {t.otCodigo && <button className="btn btn-ghost btn-sm" onClick={() => imprimirOT(t)}>PDF</button>}

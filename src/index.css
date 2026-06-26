@@ -233,6 +233,11 @@ input,select,textarea{font-family:inherit;font-size:14px;color:inherit}
 .topbar .icobtn:hover{background:var(--bg-subtle);color:var(--text)}
 .topbar .icobtn svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.8}
 .topbar .icobtn .dot{position:absolute;top:7px;right:7px;width:7px;height:7px;border-radius:50%;background:var(--red-500);box-shadow:0 0 0 2px var(--bg-raised)}
+/* Móvil: botones de la barra (Portal Cliente, Salir) quedan solo-ícono para que no se corten */
+@media(max-width:600px){
+  .topbar .btn-label{display:none}
+  .topbar .btn-sm{width:38px;padding:0;gap:0;justify-content:center}
+}
 .content{padding:26px 28px 48px;max-width:1440px;width:100%;margin:0 auto}
 
 /* form layout helpers — separación vertical entre cards y rows 2-col */
@@ -253,6 +258,9 @@ input,select,textarea{font-family:inherit;font-size:14px;color:inherit}
 .btn:hover:not(:active){transform:translateY(-1px)}
 .btn:focus-visible{outline:2px solid var(--primary);outline-offset:2px}
 .icobtn:focus-visible,.tabs button:focus-visible{outline:2px solid var(--primary);outline-offset:2px;border-radius:8px}
+.icobtn:active{transform:scale(.94)}
+/* Sin el flash gris al tocar en móvil (feel tipo iOS) en todo lo interactivo */
+a,button,[role=button],.navlink,.mob-tab,.icobtn,.tabs button{-webkit-tap-highlight-color:transparent;touch-action:manipulation}
 .m3switch{-webkit-tap-highlight-color:transparent;touch-action:manipulation}
 .m3switch:focus-visible{outline:2px solid var(--primary);outline-offset:2px}
 .m3switch svg{width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:2.2}
@@ -431,11 +439,36 @@ tbody tr:hover{background:var(--bg-subtle)}
 .c-right{text-align:right}
 .c-mono{font-family:var(--mono);font-weight:600;font-variant-numeric:tabular-nums}
 .kpi__v,.calendar-day-num{font-variant-numeric:tabular-nums}
+/* Skeleton de carga (shimmer) — más pulido que el spinner suelto */
+.skeleton{position:relative;overflow:hidden;background:var(--bg-subtle);border-radius:8px}
+.skeleton::after{content:"";position:absolute;inset:0;transform:translateX(-100%);background:linear-gradient(90deg,transparent,rgba(148,163,184,.18),transparent);animation:skShimmer 1.3s ease-in-out infinite}
+@keyframes skShimmer{100%{transform:translateX(100%)}}
+.sk-row{display:flex;gap:12px;align-items:center;padding:12px 0;border-bottom:1px solid var(--border)}
 /* Tabla centrada (inventario): todo al centro menos las columnas .col-left */
 .tbl.tbl--center thead th,.tbl.tbl--center tbody td{text-align:center}
 .tbl.tbl--center thead th>span{justify-content:center}
 .tbl.tbl--center .col-left{text-align:left}
 .tbl.tbl--center th.col-left>span{justify-content:flex-start}
+/* En celular, la tabla .tbl-cards se vuelve TARJETAS (sin scroll horizontal):
+   cada fila es una tarjeta, cada celda muestra su etiqueta (data-label). */
+@media(max-width:600px){
+  .tbl.tbl-cards{min-width:0;width:100%;display:block}
+  .tbl.tbl-cards thead{display:none}
+  .tbl.tbl-cards tbody{display:block}
+  .tbl.tbl-cards tbody tr{display:block;background:var(--bg-raised);border:1px solid var(--border);border-radius:12px;padding:8px 14px;margin:0 0 10px}
+  .tbl.tbl-cards tbody tr:hover{background:var(--bg-raised)}
+  .tbl.tbl-cards tbody td{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:6px 0;border:none;text-align:right}
+  .tbl.tbl-cards tbody td::before{content:attr(data-label);color:var(--text-3);font-weight:500;font-size:12px;text-align:left;white-space:nowrap}
+  .tbl.tbl-cards tbody td.c-name{display:block;text-align:left;font-size:15px;font-weight:600;color:var(--text);padding:2px 0 8px;border-bottom:1px solid var(--border);margin-bottom:6px}
+  .tbl.tbl-cards tbody td.c-name::before{display:none}
+  .tbl.tbl-cards tbody td.c-muted{font-size:13px}
+  .tbl.tbl-cards tbody td.td-chevron{display:none}
+  .tbl.tbl-cards tbody td:empty,.tbl.tbl-cards tbody td[data-label=""]:empty{display:none}
+  /* Columna de acciones (Trabajos): fila completa de botones que envuelven */
+  .tbl.tbl-cards tbody td.td-actions{display:block;text-align:left;padding-top:8px;margin-top:4px;border-top:1px solid var(--border)}
+  .tbl.tbl-cards tbody td.td-actions::before{display:none}
+  .tbl.tbl-cards tbody td.td-actions>div{justify-content:flex-start!important;flex-wrap:wrap}
+}
 .table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;border-radius:var(--radius);border:1px solid var(--border);margin:0 -1px}
 
 /* legacy form classes */
