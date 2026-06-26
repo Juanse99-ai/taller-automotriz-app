@@ -239,11 +239,10 @@ input,select,textarea{font-family:inherit;font-size:14px;color:inherit}
 .topbar .icobtn:hover{background:var(--bg-subtle);color:var(--text)}
 .topbar .icobtn svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.8}
 .topbar .icobtn .dot{position:absolute;top:7px;right:7px;width:7px;height:7px;border-radius:50%;background:var(--red-500);box-shadow:0 0 0 2px var(--bg-raised)}
-/* Móvil: botones de la barra (Portal Cliente, Salir) quedan solo-ícono para que no se corten */
-@media(max-width:600px){
-  .topbar .btn-label{display:none}
-  .topbar .btn-sm{width:38px;padding:0;gap:0;justify-content:center}
-}
+/* Top bar minimalista (estilo Remote): las acciones (Portal Cliente, Salir)
+   quedan solo-ícono a la derecha, en todas las pantallas. */
+.topbar .btn-label{display:none}
+.topbar .btn-sm{width:38px;padding:0;gap:0;justify-content:center}
 .content{padding:26px 28px 48px;max-width:1440px;width:100%;margin:0 auto}
 
 /* form layout helpers — separación vertical entre cards y rows 2-col */
@@ -259,7 +258,7 @@ input,select,textarea{font-family:inherit;font-size:14px;color:inherit}
 .pagehd .actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 
 /* button */
-.btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;height:40px;padding:0 16px;border-radius:10px;font-size:13.5px;font-weight:600;transition:background .12s,transform 140ms var(--ease-out),box-shadow .12s;white-space:nowrap}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;height:40px;padding:0 18px;border-radius:999px;font-size:13.5px;font-weight:600;transition:background .12s,transform 140ms var(--ease-out),box-shadow .12s;white-space:nowrap}
 .btn:active{transform:scale(.97)}
 .btn:hover:not(:active){transform:translateY(-1px)}
 .btn:focus-visible{outline:2px solid var(--primary);outline-offset:2px}

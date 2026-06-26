@@ -233,7 +233,7 @@ export default function App() {
     }
     switch (section) {
       case 'dashboard':
-        return <Dashboard trabajos={trabajosHook.trabajos} loading={trabajosHook.loading} onNavigate={navigate} />
+        return <Dashboard trabajos={trabajosHook.trabajos} loading={trabajosHook.loading} onNavigate={navigate} user={user} />
       case 'trabajos':
         return <Trabajos hook={trabajosHook} vehiculosHook={vehiculosHook} clientesHook={clientesHook} notify={notify} onAutoFacturar={() => navigate('cuentti')} />
       case 'recepcion':

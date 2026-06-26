@@ -71,7 +71,7 @@ function estadoBadge(estado) {
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
-export default function Dashboard({ trabajos = [], onNavigate }) {
+export default function Dashboard({ trabajos = [], onNavigate, user }) {
   const now = new Date()
 
   // ── KPI stats ──────────────────────────────────────────────────────────────
@@ -162,9 +162,9 @@ export default function Dashboard({ trabajos = [], onNavigate }) {
       {/* ── Welcome row ─────────────────────────────────────────────────── */}
       <div className="pagehd">
         <div>
-          <h2>Bienvenido al taller</h2>
+          <h2>Hola{user?.nombre ? `, ${user.nombre.split(' ')[0]}` : ''} 👋</h2>
           <p className="sub">
-            {fechaCap}
+            Esto es lo que pasa hoy
             {estancados.length > 0 && (
               <> · Hay <b style={{ color: 'var(--red-600)' }}>{estancados.length} trabajo{estancados.length !== 1 ? 's estancados' : ' estancado'}</b></>
             )}
