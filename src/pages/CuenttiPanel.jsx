@@ -639,11 +639,10 @@ export default function CuenttiPanel({ trabajos, actualizarTrabajo, notify }) {
             <div style={{padding:'10px 14px',background:'rgba(22,163,74,.08)',border:'1px solid rgba(22,163,74,.4)',borderRadius:10,marginBottom:14,display:'flex',alignItems:'center',gap:10}}>
               <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="#16a34a" strokeWidth="2"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
               <div style={{flex:1,fontSize:13}}>
-                <div style={{fontWeight:700,color:'var(--green-700,#15803d)'}}>Listo · esta orden ya tiene su factura</div>
+                <div style={{fontWeight:700,color:'var(--green-700,#15803d)'}}>Factura enviada</div>
                 <div style={{color:'var(--text-3)',fontSize:12,marginTop:2}}>
                   Factura <span className="mono" style={{color:'var(--text)'}}>{trabajoFacturaSel.cuenttiTransacionId}</span>
                   {trabajoFacturaSel.facturadoEn && ` · ${new Date(trabajoFacturaSel.facturadoEn).toLocaleDateString('es-CO')}`}
-                  . Todo en orden, no tienes que hacer nada. Solo vuelve a enviarla si a propósito quieres generar OTRA factura aparte.
                 </div>
               </div>
             </div>
