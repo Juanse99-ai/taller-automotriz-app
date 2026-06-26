@@ -384,13 +384,17 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
       y = doc.lastAutoTable.finalY + 6
     }
 
+    // Presentación: M.O. − cargos = base, y el neto es el 40% de esa base.
+    const baseSel = (totalSeleccion.manoObra || 0) - (totalSeleccion.cargos || 0)
+    const rowsSel = [{ lbl: 'Mano de obra (sin IVA)', val: fmt(totalSeleccion.manoObra) }]
+    if ((totalSeleccion.cargos || 0) > 0) {
+      rowsSel.push({ lbl: 'Cargos / adelantos', val: `- ${fmt(totalSeleccion.cargos)}` })
+      rowsSel.push({ lbl: 'Base para comisión', val: fmt(baseSel) })
+    }
     y = drawTotalsBox(doc, {
       y, x: 122, w: 74,
-      rows: [
-        { lbl: `Comisión (${COMISION.TOTAL * 100}% M.O.)`, val: fmt(totalSeleccion.comision) },
-        { lbl: `Cargos ${fmt(totalSeleccion.cargos)} · tu ${COMISION.TOTAL * 100}%`, val: `- ${fmt(totalSeleccion.cargosEfectivos)}` },
-      ],
-      finalLabel: 'NETO A PAGAR',
+      rows: rowsSel,
+      finalLabel: `Neto a pagar (${COMISION.TOTAL * 100}%)`,
       finalValue: fmt(totalSeleccion.neto),
     })
     y += 18
@@ -470,17 +474,28 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
       y = doc.lastAutoTable.finalY + 6
     }
 
-    y = drawTotalsBox(doc, {
-      y, x: 122, w: 74,
-      rows: [
+    // Pagos nuevos: M.O. − cargos = base, y el neto es el 40% de la base.
+    // Pagos viejos (sin cargosEfectivos) se dejan en el formato original.
+    const esNuevoPago = reg.cargosEfectivos != null
+    let rowsReg
+    if (esNuevoPago) {
+      const baseReg = (reg.manoObra || 0) - (reg.cargos || 0)
+      rowsReg = [{ lbl: 'Mano de obra (sin IVA)', val: fmt(reg.manoObra || 0) }]
+      if ((reg.cargos || 0) > 0) {
+        rowsReg.push({ lbl: 'Cargos / adelantos', val: `- ${fmt(reg.cargos || 0)}` })
+        rowsReg.push({ lbl: 'Base para comisión', val: fmt(baseReg) })
+      }
+    } else {
+      rowsReg = [
         { lbl: 'Mano de obra (sin IVA)', val: fmt(reg.manoObra || 0) },
         { lbl: `Comisión (${COMISION.TOTAL * 100}%)`, val: fmt(reg.comision || 0) },
-        // Pagos nuevos guardan cargosEfectivos (cargo × %); los viejos descontaban el cargo completo.
-        (reg.cargosEfectivos != null
-          ? { lbl: `Cargos ${fmt(reg.cargos || 0)} · tu ${COMISION.TOTAL * 100}%`, val: `- ${fmt(reg.cargosEfectivos)}` }
-          : { lbl: 'Cargos / adelantos', val: `- ${fmt(reg.cargos || 0)}` }),
-      ],
-      finalLabel: 'NETO PAGADO',
+        { lbl: 'Cargos / adelantos', val: `- ${fmt(reg.cargos || 0)}` },
+      ]
+    }
+    y = drawTotalsBox(doc, {
+      y, x: 122, w: 74,
+      rows: rowsReg,
+      finalLabel: esNuevoPago ? `Neto a pagar (${COMISION.TOTAL * 100}%)` : 'NETO PAGADO',
       finalValue: fmt(reg.neto || 0),
     })
     y += 18
