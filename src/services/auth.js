@@ -2,13 +2,23 @@ const SESSION_KEY = 'taller_session'
 const SESSION_EXPIRY_MS = 24 * 60 * 60 * 1000 // 24 horas
 
 export async function login(usuario, password) {
-  const res = await fetch('/api/auth', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ usuario, password }),
-  })
-  const data = await res.json()
-  if (!res.ok) throw new Error(data.error || 'Error de autenticacion')
+  let res
+  try {
+    res = await fetch('/api/auth', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ usuario, password }),
+    })
+  } catch {
+    throw new Error('No hay conexión con el servidor. Revisa tu internet e intenta de nuevo.')
+  }
+  // Leer como texto y parsear con cuidado: durante un re-deploy la función puede
+  // responder vacío y res.json() lanzaría "Unexpected end of JSON input".
+  const raw = await res.text().catch(() => '')
+  let data = null
+  if (raw) { try { data = JSON.parse(raw) } catch { data = null } }
+  if (!res.ok) throw new Error((data && data.error) || 'El servidor no respondió bien. Intenta de nuevo en unos segundos.')
+  if (!data || !data.user) throw new Error('El servidor no respondió. Intenta de nuevo en unos segundos.')
   const session = { ...data.user, _loginAt: Date.now() }
   localStorage.setItem(SESSION_KEY, JSON.stringify(session))
   return session
