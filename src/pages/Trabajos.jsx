@@ -17,6 +17,7 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
   const [confirmDel, setConfirmDel] = useState(null)
   // Cockpit desktop: trabajo seleccionado para el panel de detalle (solo ≥1200px)
   const [selId, setSelId] = useState(null)
+  const [previewId, setPreviewId] = useState(null) // vista previa de una OT (modal) antes de editar
   const [isWide, setIsWide] = useState(() => typeof window !== 'undefined' && window.matchMedia('(min-width:1200px)').matches)
   useEffect(() => {
     const mq = window.matchMedia('(min-width:1200px)')
@@ -454,7 +455,7 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
                         draggable
                         onDragStart={() => { dragIdRef.current = t.id }}
                         onDragEnd={() => { dragIdRef.current = null; setDragOverCol(null) }}
-                        style={{ padding: '12px 14px', marginBottom: 8, cursor: 'grab', ...(estancado ? { borderColor: 'rgba(220,38,38,.32)', background: 'rgba(220,38,38,.04)' } : {}) }} onClick={() => handleEditar(t.id)}>
+                        style={{ padding: '12px 14px', marginBottom: 8, cursor: 'grab', ...(estancado ? { borderColor: 'rgba(220,38,38,.32)', background: 'rgba(220,38,38,.04)' } : {}) }} onClick={() => setPreviewId(t.id)}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
                           <span style={{ color: 'var(--blue-600)', fontWeight: 700, fontFamily: 'var(--mono)', fontSize: 13 }}>{t.otCodigo || '—'}</span>
                           <span className="text-mono" style={{ fontWeight: 700, fontSize: 13, letterSpacing: '.5px' }}>{t.placa}</span>
@@ -662,6 +663,65 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
           </div>
         </div>
       )}
+
+      {/* Vista previa de una OT (al hacer clic) — antes de saltar a editar */}
+      {previewId && (() => {
+        const t = trabajos.find(x => x.id === previewId)
+        if (!t) return null
+        const tel = String(t.telefonoCliente || '').replace(/\D/g, '')
+        const wa = tel.length === 10 ? `57${tel}` : tel
+        return (
+          <div className="modal-overlay" onClick={() => setPreviewId(null)}>
+            <div className="modal" style={{ maxWidth: 470 }} onClick={e => e.stopPropagation()}>
+              <div className="modal-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10 }}>
+                <div style={{ minWidth: 0 }}>
+                  <div className="modal-title" style={{ fontFamily: 'var(--mono)', color: 'var(--blue-600)' }}>{t.otCodigo || '—'} · {t.placa}</div>
+                  <div style={{ fontSize: 12.5, color: 'var(--text-3)', marginTop: 2 }}>{t.cliente || 'Sin cliente'} · {[t.marca, t.modelo].filter(Boolean).join(' ') || '—'}</div>
+                </div>
+                <button className="icobtn" onClick={() => setPreviewId(null)} aria-label="Cerrar" style={{ flexShrink: 0 }}>✕</button>
+              </div>
+              <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+                  <span className={`badge ${estadoBadge(t.estado)}`}>{t.estado}</span>
+                  <span style={{ fontSize: 12.5, color: 'var(--text-3)' }}>{fmtDate(t.fecha)}</span>
+                </div>
+                {tel && (
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, border: '1px solid var(--border)', borderRadius: 10, padding: '10px 12px', background: 'var(--bg-subtle)' }}>
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ fontSize: 12.5, fontWeight: 600 }}>{t.cliente || 'Cliente'}</div>
+                      <div style={{ fontSize: 11.5, color: 'var(--text-3)' }}>{fmtTelefono(t.telefonoCliente)}</div>
+                    </div>
+                    <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+                      <a href={`tel:${tel}`} className="btn btn-outline btn-sm" style={{ height: 32, padding: '0 12px' }}>Llamar</a>
+                      <a href={`https://wa.me/${wa}`} target="_blank" rel="noreferrer" className="btn btn-sm" style={{ height: 32, padding: '0 12px', background: 'var(--green-600)', color: '#fff' }}>WhatsApp</a>
+                    </div>
+                  </div>
+                )}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                  <div style={{ border: '1px solid var(--border)', borderRadius: 10, padding: '9px 12px' }}><div style={{ fontSize: 10, color: 'var(--text-4)', textTransform: 'uppercase', letterSpacing: '.4px' }}>Técnico</div><div style={{ fontSize: 13, fontWeight: 600 }}>{tecNombre(t.tecnicoId)}</div></div>
+                  <div style={{ border: '1px solid var(--border)', borderRadius: 10, padding: '9px 12px' }}><div style={{ fontSize: 10, color: 'var(--text-4)', textTransform: 'uppercase', letterSpacing: '.4px' }}>Total</div><div style={{ fontSize: 13, fontWeight: 600 }}>{fmt(t.total)}</div></div>
+                </div>
+                {(t.items || []).length > 0 && (
+                  <div style={{ border: '1px solid var(--border)', borderRadius: 10, padding: '9px 12px' }}>
+                    <div style={{ fontSize: 10, color: 'var(--text-4)', textTransform: 'uppercase', letterSpacing: '.4px', marginBottom: 6 }}>Ítems</div>
+                    {(t.items || []).slice(0, 8).map((it, i) => (
+                      <div key={i} style={{ display: 'flex', justifyContent: 'space-between', gap: 10, fontSize: 12.5, padding: '3px 0' }}>
+                        <span style={{ color: 'var(--text-2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{it.nombre || 'Ítem'}</span>
+                        <span className="mono" style={{ color: 'var(--text-3)', flexShrink: 0 }}>{fmt((parseFloat(it.precio) || 0) * (parseInt(it.cantidad) || 1))}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <div className="modal-footer" style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                {t.otCodigo && <button className="btn btn-outline btn-sm" onClick={() => imprimirOT(t)}>PDF</button>}
+                {t.estado !== ESTADOS.COMPLETADO && <button className="btn btn-outline btn-sm" onClick={() => { handleCompletar(t.id); setPreviewId(null) }}>Marcar listo</button>}
+                <button className="btn btn-primary btn-sm" onClick={() => { setPreviewId(null); handleEditar(t.id) }}>Editar</button>
+              </div>
+            </div>
+          </div>
+        )
+      })()}
 
       {/* Modal auto-facturar */}
       {showFacturarModal && (
