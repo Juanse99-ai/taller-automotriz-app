@@ -3,14 +3,15 @@
    Tokens + Components (from prototipo) + LEGACY COMPAT
    ============================================ */
 
-/* @import must precede all other rules (CSS spec) */
-/* Geist + Geist Mono — tipografía técnica, sobria, no "Arial-Word". JetBrains Mono como fallback. */
-@import url('https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800;900&family=Geist+Mono:wght@500;600;700&family=JetBrains+Mono:wght@500;600;700&display=swap');
+/* UNA sola tipografía: la fuente del sistema (San Francisco en iOS/Mac → look
+   nativo "tipo iOS"; cae a Segoe UI/Roboto en Windows/Android). Sin webfonts
+   (sin descarga), por eso se quitó el @import de Geist/JetBrains Mono.
+   Para números/tablas usamos la misma fuente con cifras tabulares (alineadas). */
 
 /* === TOKENS === */
 :root{
-  --font:'Geist','Inter',system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
-  --mono:'Geist Mono','JetBrains Mono',ui-monospace,monospace;
+  --font:-apple-system,BlinkMacSystemFont,'SF Pro Text','SF Pro Display',system-ui,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+  --mono:var(--font);
 
   /* navy ramp (sidebar + headers) */
   --navy-950:#060f23;
@@ -328,7 +329,7 @@ input,select,textarea{font-family:inherit;font-size:14px;color:inherit}
 .tbl .c-name{font-weight:600;color:var(--text)}
 .tbl .c-muted{color:var(--text-3);font-size:12px}
 .tbl .c-right{text-align:right}
-.tbl .c-mono{font-family:var(--mono);font-weight:600}
+.tbl .c-mono{font-family:var(--mono);font-weight:600;font-variant-numeric:tabular-nums}
 
 /* avatar */
 .av{width:32px;height:32px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-weight:800;font-size:11px;letter-spacing:.3px;flex-shrink:0}
@@ -428,7 +429,13 @@ tbody tr:hover{background:var(--bg-subtle)}
 .c-name{font-weight:600;color:var(--text)}
 .c-muted{color:var(--text-3);font-size:12px}
 .c-right{text-align:right}
-.c-mono{font-family:var(--mono);font-weight:600}
+.c-mono{font-family:var(--mono);font-weight:600;font-variant-numeric:tabular-nums}
+.kpi__v,.calendar-day-num{font-variant-numeric:tabular-nums}
+/* Tabla centrada (inventario): todo al centro menos las columnas .col-left */
+.tbl.tbl--center thead th,.tbl.tbl--center tbody td{text-align:center}
+.tbl.tbl--center thead th>span{justify-content:center}
+.tbl.tbl--center .col-left{text-align:left}
+.tbl.tbl--center th.col-left>span{justify-content:flex-start}
 .table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;border-radius:var(--radius);border:1px solid var(--border);margin:0 -1px}
 
 /* legacy form classes */

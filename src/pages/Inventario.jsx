@@ -280,13 +280,13 @@ export default function Inventario({ notify }) {
           </div>
         ) : (
           <div className="card__b card__b--flush">
-            <table className="tbl">
+            <table className="tbl tbl--center">
               <thead>
                 <tr>
                   <th onClick={() => toggleSort('codigo')} style={{ cursor: 'pointer', userSelect: 'none' }}>
                     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>Código {sortIcon('codigo')}</span>
                   </th>
-                  <th onClick={() => toggleSort('nombre')} style={{ cursor: 'pointer', userSelect: 'none' }}>
+                  <th onClick={() => toggleSort('nombre')} className="col-left" style={{ cursor: 'pointer', userSelect: 'none' }}>
                     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>Producto {sortIcon('nombre')}</span>
                   </th>
                   <th onClick={() => toggleSort('categoria')} style={{ cursor: 'pointer', userSelect: 'none' }}>
@@ -296,7 +296,7 @@ export default function Inventario({ notify }) {
                     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, justifyContent: 'flex-end' }}>Stock {sortIcon('stock')}</span>
                   </th>
                   <th className="c-right" title="Costo de compra con IVA (traído de Cuentti)">
-                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, justifyContent: 'flex-end' }}>Costo c/IVA</span>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, justifyContent: 'flex-end' }}>Costo</span>
                   </th>
                   <th onClick={() => toggleSort('precio')} className="c-right" style={{ cursor: 'pointer', userSelect: 'none' }}>
                     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, justifyContent: 'flex-end' }}>Precio {sortIcon('precio')}</span>
@@ -321,7 +321,7 @@ export default function Inventario({ notify }) {
                   return (
                     <tr key={p.id || p.codigo}>
                       <td className="c-mono" style={{ color: 'var(--text-3)', fontSize: 11.5 }}>{p.codigo}</td>
-                      <td className="c-name">{p.nombre}</td>
+                      <td className="c-name col-left">{p.nombre}</td>
                       <td className="c-muted" style={{ textTransform: 'capitalize' }}>{p.categoria}</td>
                       <td className="c-mono c-right" style={{
                         fontWeight: 700,
