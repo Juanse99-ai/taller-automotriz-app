@@ -180,21 +180,21 @@ input,select,textarea{font-family:inherit;font-size:14px;color:inherit}
 /* Sidebar CLARO (estilo beehiiv): fondo claro, texto oscuro, activo ámbar.
    Usa variables del tema, así se adapta solo al modo oscuro. */
 .sidebar{position:fixed;top:0;left:0;bottom:0;width:var(--sidebar-w);background:var(--bg-raised);color:var(--text);border-right:1px solid var(--border);display:flex;flex-direction:column;z-index:40;overflow:hidden;transition:transform .32s var(--ease-drawer),width .38s var(--ease)}
-.sidebar__brand{display:flex;align-items:center;gap:10px;padding:16px 14px 18px;border-bottom:1px solid var(--border)}
+.sidebar__brand{display:flex;align-items:center;gap:10px;padding:16px 14px 18px;border-bottom:1px solid var(--border);transition:padding .28s var(--ease)}
 .sidebar__brand .logo{width:40px;height:40px;border-radius:10px;background:#fff;display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0;border:1px solid var(--border)}
 .sidebar__brand .logo img{width:100%;height:100%;object-fit:cover;object-position:center}
 .sidebar__brand .wm{min-width:0;flex:1}
 .sidebar__brand .wm .n{font-size:13px;font-weight:700;letter-spacing:.1px;color:var(--text);line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .sidebar__brand .wm .s{font-size:9.5px;color:var(--text-4);font-weight:600;margin-top:3px;letter-spacing:1px;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .sidebar__nav{flex:1;padding:10px 8px;overflow-y:auto}
-.sidebar__group{padding:14px 10px 6px;font-size:10px;font-weight:700;color:var(--text-4);text-transform:uppercase;letter-spacing:1.4px}
-.navlink{display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:8px;font-size:14.5px;font-weight:500;color:var(--text-2);margin-bottom:2px;transition:background .12s,color .12s;position:relative;cursor:pointer}
+.sidebar__group{padding:14px 10px 6px;font-size:10px;font-weight:700;color:var(--text-4);text-transform:uppercase;letter-spacing:1.4px;max-height:32px;overflow:hidden;transition:opacity .16s ease,max-height .3s var(--ease),padding .3s var(--ease)}
+.navlink{display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:8px;font-size:14.5px;font-weight:500;color:var(--text-2);margin-bottom:2px;transition:background .12s,color .12s,padding .28s var(--ease);position:relative;cursor:pointer}
 .navlink:hover{background:var(--bg-subtle);color:var(--text)}
 .navlink svg{stroke:currentColor}
 .navlink.active{background:rgba(245,158,11,.15);color:var(--amber-600);font-weight:600}
 .navlink svg{width:17px;height:17px;flex-shrink:0;stroke:currentColor;fill:none;stroke-width:1.8}
 .navlink .pill{margin-left:auto;font-family:var(--mono);font-size:10px;background:var(--red-100);color:var(--red-700);padding:1px 6px;border-radius:999px;font-weight:700}
-.sidebar__foot{padding:14px 14px 18px;border-top:1px solid var(--border);display:flex;align-items:center;gap:10px}
+.sidebar__foot{padding:14px 14px 18px;border-top:1px solid var(--border);display:flex;align-items:center;gap:10px;transition:padding .28s var(--ease)}
 .sidebar__foot .av{width:34px;height:34px;border-radius:50%;background:var(--amber-400);color:var(--navy-900);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12px}
 .sidebar__foot .me{flex:1;min-width:0}
 .sidebar__foot .me .n{font-size:12.5px;font-weight:600;color:var(--text);line-height:1.2}
@@ -205,17 +205,18 @@ input,select,textarea{font-family:inherit;font-size:14px;color:inherit}
 /* Hover-para-expandir: el menú se abre y EMPUJA el contenido a la derecha
    (no lo tapa). Ver la regla de .main más abajo. */
 .sidebar.hover-expand{width:var(--sidebar-w);z-index:41;box-shadow:4px 0 16px rgba(6,11,26,.12)}
-.sidebar.collapsed .wm,
-.sidebar.collapsed .sidebar__group,
+/* Recoger el sidebar: las etiquetas se desvanecen y colapsan suave (no
+   display:none de golpe) y el ícono NO salta — solo se reacomoda con el padding. */
+.navlink span,.sidebar__brand .wm,.sidebar__foot .me{max-width:170px;overflow:hidden;white-space:nowrap;transition:opacity .16s ease,max-width .34s var(--ease)}
 .sidebar.collapsed .navlink span,
-.sidebar.collapsed .navlink .pill,
-.sidebar.collapsed .sidebar__foot .me{display:none}
-.sidebar.collapsed .navlink{justify-content:center;padding:10px}
-.sidebar.collapsed .sidebar__brand{justify-content:center;padding:18px 8px}
-.sidebar.collapsed .sidebar__foot{justify-content:center;padding:14px 8px}
+.sidebar.collapsed .sidebar__brand .wm,
+.sidebar.collapsed .sidebar__foot .me{max-width:0;opacity:0}
+.sidebar.collapsed .navlink .pill{display:none}
+.sidebar.collapsed .sidebar__group{max-height:0;opacity:0;padding-top:0;padding-bottom:0}
+.sidebar.collapsed .navlink{padding:10px 16px}
+.sidebar.collapsed .sidebar__brand{padding:14px 15px;gap:0}
+.sidebar.collapsed .sidebar__foot{padding:14px 15px;gap:0}
 .sidebar.collapsed .sidebar__foot .icobtn{display:none}
-/* en colapsado el logo se reduce y centra para alinear con los iconos */
-.sidebar.collapsed .sidebar__brand{padding:14px 8px;gap:0}
 .sidebar.collapsed .sidebar__brand .logo{width:36px;height:36px;border-radius:9px}
 .app.has-collapsed .main{margin-left:var(--sidebar-w-collapsed)}
 /* Al expandir por hover, el contenido se corre a la derecha (no queda tapado) */
