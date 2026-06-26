@@ -174,33 +174,29 @@ export default function Sidebar({ active, onNavigate, isOpen, collapsed, onColla
   const inicial = (user?.nombre || user?.usuario || '?')[0].toUpperCase()
   const rolLabel = user?.rol === 'admin' ? 'Administrador' : 'Jefe de taller'
 
-  // Reproduce la animacion de entrada (stagger con resorte) del menu cuando:
+  // Reproduce la animacion de entrada (stagger con resorte) del menu SOLO cuando
+  // el menu "aparece" por una accion deliberada del menu:
   //  - mobile: se abre el drawer (isOpen false -> true)
   //  - desktop: se expande el rail colapsado (collapsed true -> false)
-  //  - desktop: se cambia de seccion (Dashboard -> Trabajos -> ...), para que el
-  //    efecto se vea en el uso normal sin tener que colapsar/expandir.
-  // En la carga inicial NO anima (initial=false). Cada disparo remonta el nav
-  // (key) con initial='closed' -> animate='open', asi el resorte se vuelve a correr.
+  // NO se re-anima al navegar entre secciones (molestaba ver el stagger en cada
+  // clic). En la carga inicial tampoco anima (initial=false).
   const isMobile = useIsMobile()
   const reduce = useReducedMotion()
   const [animKey, setAnimKey] = useState(0)
-  const prevState = useRef({ isOpen, collapsed, isMobile, active })
+  const prevState = useRef({ isOpen, collapsed, isMobile })
   const firstRender = useRef(true)
   useEffect(() => {
     if (firstRender.current) {
       firstRender.current = false
-      prevState.current = { isOpen, collapsed, isMobile, active }
+      prevState.current = { isOpen, collapsed, isMobile }
       return
     }
     const p = prevState.current
-    prevState.current = { isOpen, collapsed, isMobile, active }
+    prevState.current = { isOpen, collapsed, isMobile }
     if (reduce) return
     const aparecio = isMobile ? (isOpen && !p.isOpen) : (p.collapsed && !collapsed)
-    // En mobile el drawer se cierra al navegar, asi que el cambio de seccion solo
-    // dispara en desktop.
-    const cambioSeccion = !isMobile && active !== p.active
-    if (aparecio || cambioSeccion) setAnimKey(k => k + 1)
-  }, [isOpen, collapsed, isMobile, reduce, active])
+    if (aparecio) setAnimKey(k => k + 1)
+  }, [isOpen, collapsed, isMobile, reduce])
 
   return (
     <aside className={`sidebar ${isOpen ? 'open' : ''}${collapsed ? ' collapsed' : ''}`}>
