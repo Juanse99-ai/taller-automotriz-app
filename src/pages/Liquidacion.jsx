@@ -34,13 +34,14 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
   const {
     movimientos, liquidados, compartidos, historial,
     agregarMovimiento: hookAgregarMov, eliminarMovimiento: hookEliminarMov,
-    guardarLiquidados, desliquidarTodos,
+    guardarLiquidados,
     toggleCompartido, setCompartidoPartner, agregarHistorial, guardarHistorial,
   } = liquidacionHook
 
   const [tecnicoSel, setTecnicoSel] = useState('')
   const [seleccionados, setSeleccionados] = useState({})
   const [verHistorial, setVerHistorial] = useState(false)
+  const [verLiquidados, setVerLiquidados] = useState(false)
   // Ventanas del tecnico seleccionado: minimizables por header
   const [colapso, setColapso] = useState({ trabajos: false, movs: false })
   const toggleColapso = (k) => setColapso(c => ({ ...c, [k]: !c[k] }))
@@ -480,10 +481,20 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
     notify('PDF de pago exportado', 'success')
   }
 
-  const desliquidar = () => {
-    desliquidarTodos()
-    notify('Todos los trabajos desliquidados', 'info')
+  // Desliquidar UNO solo (reversible: vuelve a aparecer como pendiente). Con
+  // confirmación para no marcarlo por error. (Se quitó el "Desliquidar todos".)
+  const desliquidarUno = (id, t) => {
+    const etiqueta = t ? [t.placa, t.cliente].filter(Boolean).join(' · ') || id : id
+    if (!confirm(`¿Desliquidar este trabajo?\n${etiqueta}\n\nVolverá a aparecer como pendiente por liquidar.`)) return
+    guardarLiquidados(liquidados.filter(x => x !== id))
+    notify('Trabajo desliquidado', 'info')
   }
+
+  // Trabajos liquidados (ocultos) que aún existen en la lista, para mostrarlos uno a uno.
+  const trabajosLiquidados = useMemo(() => {
+    const set = new Set(liquidados)
+    return trabajos.filter(t => set.has(t.id))
+  }, [trabajos, liquidados])
 
   // ===== RENDER =====
   return (
@@ -590,9 +601,36 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
       </div>
 
       {liquidados.length > 0 && (
-        <div style={{ fontSize: 12.5, color: 'var(--text-3)', marginTop: 10 }}>
-          {liquidados.length} trabajos ya liquidados (ocultos).{' '}
-          <button className="btn btn-ghost btn-sm" onClick={desliquidar} style={{ fontSize: 11.5, padding: '2px 8px' }}>Desliquidar todos</button>
+        <div style={{ marginTop: 10 }}>
+          <button
+            className="btn btn-ghost btn-sm"
+            onClick={() => setVerLiquidados(v => !v)}
+            style={{ fontSize: 12, padding: '4px 10px', color: 'var(--text-3)' }}
+          >
+            {verLiquidados ? '▾' : '▸'} {liquidados.length} trabajos ya liquidados (ocultos)
+          </button>
+          {verLiquidados && (
+            <div style={{ marginTop: 8, border: '1px solid var(--border)', borderRadius: 10, overflow: 'hidden', maxWidth: 560 }}>
+              {trabajosLiquidados.length === 0 ? (
+                <div style={{ padding: '10px 12px', fontSize: 12.5, color: 'var(--text-3)' }}>
+                  Los {liquidados.length} trabajos liquidados no están en la lista actual.
+                </div>
+              ) : trabajosLiquidados.map(t => (
+                <div key={t.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '8px 12px', borderTop: '1px solid var(--border)', fontSize: 12.5 }}>
+                  <span style={{ color: 'var(--text-2)', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {fmtDate(t.fecha)} · <strong>{t.placa || '—'}</strong> · {t.cliente || '—'}
+                  </span>
+                  <button
+                    className="btn btn-ghost btn-sm"
+                    onClick={() => desliquidarUno(t.id, t)}
+                    style={{ color: 'var(--amber-600)', fontSize: 11.5, padding: '2px 8px', flexShrink: 0 }}
+                  >
+                    Desliquidar
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
@@ -789,7 +827,11 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
                   </div>
                 ))}
                 <div style={{ textAlign: 'right', marginTop: 8 }}>
-                  <button className="btn btn-ghost btn-sm" style={{ color: 'var(--red-600)' }} onClick={() => { if (confirm('¿Borrar todo el historial de pagos? Esta acción no se puede deshacer.')) guardarHistorial([]) }}>Limpiar historial</button>
+                  <button className="btn btn-ghost btn-sm" style={{ color: 'var(--red-600)' }} onClick={() => {
+                    if (!historial.length) { notify('No hay historial para borrar', 'info'); return }
+                    const r = prompt(`Esto borra los ${historial.length} pagos del historial y NO se puede deshacer.\n\nEscribe BORRAR para confirmar:`)
+                    if (r && r.trim().toUpperCase() === 'BORRAR') { guardarHistorial([]); notify('Historial de pagos borrado', 'info') }
+                  }}>Limpiar historial</button>
                 </div>
               </>
             )}
