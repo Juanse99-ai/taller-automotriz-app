@@ -768,11 +768,11 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
             <div className="card" style={{ marginTop: 16, borderColor: 'rgba(22,163,74,.32)', background: 'rgba(22,163,74,.04)' }}>
               <div className="card__h" style={{ borderBottomColor: 'rgba(22,163,74,.18)' }}><h3 style={{ color: 'var(--green-700)' }}>Resumen del pago — {tecData.tecnico.nombre}</h3></div>
               <div className="card__b">
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(140px,1fr))', gap: 12, marginBottom: 16 }}>
-                  {[[cantSeleccionados, 'Trabajos'], [fmt(totalSeleccion.manoObra), 'M.O. (sin IVA)'], [fmt(totalSeleccion.comision), 'Comisión', 'var(--green-600)'], [`− ${fmt(totalSeleccion.cargosEfectivos)}`, `Cargos (tu ${COMISION.TOTAL * 100}%)`, 'var(--amber-600)'], [fmt(totalSeleccion.neto), 'Neto a pagar', totalSeleccion.neto >= 0 ? 'var(--green-600)' : 'var(--red-600)']].map(([v, l, c], i) => (
-                    <div key={i} style={{ padding: '12px 14px', background: 'var(--bg-subtle)', borderRadius: 10, border: '1px solid var(--border)' }}>
-                      <div className="mono" style={{ fontSize: i === 4 ? 22 : 18, fontWeight: 800, color: c || 'var(--text)' }}>{v}</div>
-                      <div style={{ fontSize: 11, color: 'var(--text-3)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: .5, marginTop: 4 }}>{l}</div>
+                <div className="kpi-bh" style={{ marginBottom: 16 }}>
+                  {[[cantSeleccionados, 'Trabajos'], [fmt(totalSeleccion.manoObra), 'M.O. (sin IVA)'], [fmt(totalSeleccion.comision), 'Comisión', 'var(--green-700)'], [`− ${fmt(totalSeleccion.cargosEfectivos)}`, `Cargos (tu ${COMISION.TOTAL * 100}%)`, 'var(--amber-600)'], [fmt(totalSeleccion.neto), 'Neto a pagar', totalSeleccion.neto >= 0 ? 'var(--green-700)' : 'var(--red-700)']].map(([v, l, c], i) => (
+                    <div key={i} className="kpi-bh__s">
+                      <div className="kpi-bh__l">{l}</div>
+                      <div className="kpi-bh__row"><span className="kpi-bh__v" style={{ fontSize: 20, color: c || 'var(--text)' }}>{v}</span></div>
                     </div>
                   ))}
                 </div>
