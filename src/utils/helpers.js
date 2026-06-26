@@ -35,7 +35,11 @@ export function fmtTelefono(t) {
 // Formato fecha corta
 export function fmtDate(iso) {
   if (!iso) return '—'
-  return new Date(iso).toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' })
+  // Fecha sin hora (YYYY-MM-DD): tomarla como LOCAL, no UTC. Si no, new Date la
+  // interpreta como medianoche UTC y en Colombia (UTC-5) muestra el día anterior.
+  const m = typeof iso === 'string' && iso.match(/^(\d{4})-(\d{2})-(\d{2})$/)
+  const d = m ? new Date(+m[1], +m[2] - 1, +m[3]) : new Date(iso)
+  return d.toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' })
 }
 
 // Formato fecha completa
@@ -97,5 +101,10 @@ export function normalizarNombre(cliente) {
 
 // Hoy en formato ISO corto (YYYY-MM-DD)
 export function hoyISO() {
-  return new Date().toISOString().slice(0, 10)
+  // Fecha local de HOY (no UTC): evita que en la tarde/noche de Colombia
+  // (UTC-5) la fecha salte al día siguiente.
+  const d = new Date()
+  const mm = String(d.getMonth() + 1).padStart(2, '0')
+  const dd = String(d.getDate()).padStart(2, '0')
+  return `${d.getFullYear()}-${mm}-${dd}`
 }

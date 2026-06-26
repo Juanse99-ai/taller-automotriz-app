@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react'
 import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
-import { fmt, fmtDate, uid } from '../utils/helpers'
+import { fmt, fmtDate, uid, hoyISO } from '../utils/helpers'
 import { COMISION, ESTADOS } from '../utils/constants'
 import { lsGet, lsSet } from '../services/storage'
 import { useTecnicos } from '../services/tecnicos'
@@ -52,7 +52,7 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
     tipo: 'adelanto',
     monto: '',
     nota: '',
-    fecha: new Date().toISOString().slice(0, 10),
+    fecha: hoyISO(),
   })
   // "Diario": cargo fijo por día (mismo valor para todo el equipo, editable y
   // persistido). Tú escribes los días; se agrega como cargo y se descuenta del neto.
@@ -246,7 +246,7 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
     hookAgregarMov({
       id: `MV-${uid()}`, tecnicoId: tid,
       tipo: 'diario', monto, nota: `Diario: ${dias} día(s) × ${fmt(valorDiario)}`,
-      fecha: new Date().toISOString().slice(0, 10),
+      fecha: hoyISO(),
     })
     setDiarioDias('')
     notify(`Diario agregado: ${dias} día(s) = ${fmt(monto)}`, 'success')
@@ -305,7 +305,7 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
         tipo: 'saldo anterior',
         monto: Math.abs(totalSeleccion.neto),
         nota: `Arrastre de ${registro.id}`,
-        fecha: new Date().toISOString().slice(0, 10),
+        fecha: hoyISO(),
       })
     }
 
@@ -402,7 +402,7 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
     })
 
     drawFooter(doc, { page: 1, total: 1 })
-    doc.save(`liquidacion_${tecData.tecnico.nombre.replace(/\s+/g, '_')}_${new Date().toISOString().slice(0, 10)}.pdf`)
+    doc.save(`liquidacion_${tecData.tecnico.nombre.replace(/\s+/g, '_')}_${hoyISO()}.pdf`)
     notify('PDF de pago exportado', 'success')
   }
 
