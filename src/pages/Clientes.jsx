@@ -20,7 +20,7 @@ export default function Clientes({ clientes, vehiculos, notify }) {
     buscando, setResultados,
   } = clientes
 
-  const { buscarPorCedula } = vehiculos
+  const { buscarPorCedula, agregarVehiculo, vehiculos: vehiculosArr } = vehiculos
 
   const [busqueda, setBusqueda] = useState('')
   const [clienteSeleccionado, setClienteSeleccionado] = useState(null)
@@ -342,13 +342,32 @@ export default function Clientes({ clientes, vehiculos, notify }) {
     }
   }
 
-  // Vehiculos del cliente seleccionado
+  // Vehiculos del cliente seleccionado (vehiculosArr en deps → se refresca al agregar)
   const vehiculosCliente = useMemo(() => {
     if (!clienteSeleccionado) return []
     return buscarPorCedula(clienteSeleccionado.cedula)
-  }, [clienteSeleccionado, buscarPorCedula])
+  }, [clienteSeleccionado, buscarPorCedula, vehiculosArr])
 
   const setNuevo = (k, v) => setNuevoForm(f => ({ ...f, [k]: v }))
+
+  // Alta de vehículo desde la pantalla del cliente
+  const [agregandoVeh, setAgregandoVeh] = useState(false)
+  const [nuevoVeh, setNuevoVeh] = useState({ placa: '', marca: '', modelo: '', ano: '' })
+  const guardarVehiculoNuevo = () => {
+    const placa = (nuevoVeh.placa || '').trim().toUpperCase()
+    if (!placa) { notify('Ingresa la placa del vehículo', 'error'); return }
+    if (!clienteSeleccionado) return
+    agregarVehiculo({
+      placa,
+      marca: nuevoVeh.marca.trim(),
+      modelo: nuevoVeh.modelo.trim(),
+      ano: parseInt(nuevoVeh.ano) || 0,
+      cedulaPropietario: clienteSeleccionado.cedula,
+    })
+    notify(`Vehículo ${placa} agregado a ${clienteSeleccionado.nombre || 'cliente'}`, 'success')
+    setNuevoVeh({ placa: '', marca: '', modelo: '', ano: '' })
+    setAgregandoVeh(false)
+  }
 
   const handleCrearCliente = async () => {
     if (!nuevoForm.cedula || !nuevoForm.nombre) {
@@ -551,8 +570,43 @@ export default function Clientes({ clientes, vehiculos, notify }) {
           <div className="card">
             <div className="card__h">
               <h3>Vehiculos del cliente</h3>
-              <span className="count">{vehiculosCliente.length}</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <span className="count">{vehiculosCliente.length}</span>
+                <button type="button" className="btn btn-sm btn-outline" onClick={() => setAgregandoVeh(v => !v)}>
+                  {agregandoVeh ? 'Cancelar' : '+ Agregar'}
+                </button>
+              </div>
             </div>
+            {agregandoVeh && (
+              <div className="card__b" style={{ borderBottom: '1px solid var(--border)', background: 'var(--bg-subtle)' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                  <div className="field">
+                    <label>Placa *</label>
+                    <input className="input" value={nuevoVeh.placa} maxLength={7}
+                      onChange={e => setNuevoVeh(s => ({ ...s, placa: e.target.value.toUpperCase() }))}
+                      placeholder="ABC123" autoFocus />
+                  </div>
+                  <div className="field">
+                    <label>Año</label>
+                    <input className="input" type="number" value={nuevoVeh.ano}
+                      onChange={e => setNuevoVeh(s => ({ ...s, ano: e.target.value }))} placeholder="2020" />
+                  </div>
+                  <div className="field">
+                    <label>Marca</label>
+                    <input className="input" value={nuevoVeh.marca}
+                      onChange={e => setNuevoVeh(s => ({ ...s, marca: e.target.value }))} placeholder="Renault" />
+                  </div>
+                  <div className="field">
+                    <label>Modelo</label>
+                    <input className="input" value={nuevoVeh.modelo}
+                      onChange={e => setNuevoVeh(s => ({ ...s, modelo: e.target.value }))} placeholder="Duster" />
+                  </div>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 12 }}>
+                  <button type="button" className="btn btn-primary" onClick={guardarVehiculoNuevo}>Guardar vehículo</button>
+                </div>
+              </div>
+            )}
             {vehiculosCliente.length === 0 ? (
               <div className="card__b">
                 <div className="empty"><h4>Sin vehiculos</h4><p>Este cliente no tiene vehiculos registrados.</p></div>
