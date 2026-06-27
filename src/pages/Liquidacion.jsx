@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react'
 import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import { fmt, fmtDate, uid, hoyISO } from '../utils/helpers'
+import MoneyInput from '../components/MoneyInput'
 import { COMISION, ESTADOS } from '../utils/constants'
 import { lsGet, lsSet } from '../services/storage'
 import { useTecnicos } from '../services/tecnicos'
@@ -769,7 +770,7 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
             <div className="card__b">
               {/* DIARIO: cargo fijo por día (mismo valor para todos, editable y guardado). Tú escribes los días. */}
               <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-end', gap: 12, marginBottom: 14, padding: 12, background: 'rgba(245,158,11,.06)', border: '1px solid rgba(245,158,11,.25)', borderRadius: 10 }}>
-                <div className="field" style={{ flex: '0 0 150px' }}><label>Valor diario</label><input className="input" type="number" min="0" step="1000" value={valorDiario} onChange={e => cambiarValorDiario(e.target.value)} /></div>
+                <div className="field" style={{ flex: '0 0 150px' }}><label>Valor diario</label><MoneyInput value={valorDiario} onChange={cambiarValorDiario} /></div>
                 <div className="field" style={{ flex: '0 0 110px' }}><label>Días</label><input className="input" type="number" min="0" value={diarioDias} onChange={e => setDiarioDias(e.target.value)} placeholder="Ej. 6" /></div>
                 <div style={{ flex: 1, minWidth: 130, fontSize: 13.5, color: 'var(--text-3)' }}>
                   Descuento del diario: <strong style={{ color: 'var(--amber-700)', fontFamily: 'var(--mono)' }}>{fmt((Number(valorDiario) || 0) * (parseInt(diarioDias) || 0))}</strong>
@@ -778,7 +779,7 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
               </div>
               <form onSubmit={agregarMovimiento} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 2fr auto', gap: 12, marginBottom: 12 }}>
                 <div className="field"><label>Tipo</label><select className="input" value={movForm.tipo} onChange={e => setMovForm(f => ({ ...f, tipo: e.target.value }))}><option value="adelanto">Adelanto</option><option value="prestamo">Préstamo</option><option value="consumo">Consumo</option><option value="descuento">Descuento</option></select></div>
-                <div className="field"><label>Monto</label><input className="input" type="number" min="0" value={movForm.monto} onChange={e => setMovForm(f => ({ ...f, monto: e.target.value }))} placeholder="0"/></div>
+                <div className="field"><label>Monto</label><MoneyInput value={movForm.monto} onChange={v => setMovForm(f => ({ ...f, monto: v }))} placeholder="0" /></div>
                 <div className="field"><label>Fecha</label><input className="input" type="date" value={movForm.fecha} onChange={e => setMovForm(f => ({ ...f, fecha: e.target.value }))}/></div>
                 <div className="field"><label>Nota</label><input className="input" value={movForm.nota} onChange={e => setMovForm(f => ({ ...f, nota: e.target.value }))} placeholder="Almuerzo, anticipo..."/></div>
                 <div style={{ display: 'flex', alignItems: 'flex-end' }}><button type="submit" className="btn btn-outline">Agregar</button></div>

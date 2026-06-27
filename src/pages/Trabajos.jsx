@@ -9,6 +9,7 @@ import { useClientes } from '../hooks/useClientes'
 import { useInventario, formatCacheAge } from '../hooks/useInventario'
 import { lsGet, lsSet, LS_KEYS } from '../services/storage'
 import Switch from '../components/Switch'
+import MoneyInput from '../components/MoneyInput'
 
 // ¿La fecha cae dentro del rango elegido? (hoy / semana = últimos 7 días / mes = mes actual)
 function dentroDeFecha(fecha, modo, now) {
@@ -867,10 +868,8 @@ function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [], vehiculosHoo
   })
 
   const [items, setItems] = useState(trabajo?.items || [])
-  // Secciones opcionales plegables: cerradas al crear, abiertas si ya traen datos (edición)
-  const [showEvid, setShowEvid] = useState(
-    (trabajo?.evidenciasIngreso?.length || 0) + (trabajo?.evidenciasEntrega?.length || 0) > 0
-  )
+  // Evidencias: abierta por defecto para que el botón de subir fotos sea visible.
+  const [showEvid, setShowEvid] = useState(true)
   const [showMant, setShowMant] = useState(
     !!(trabajo?.tipoAceite || trabajo?.proximoKm || trabajo?.proximaVisita || trabajo?.notasProximoMant)
   )
@@ -1525,9 +1524,9 @@ function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [], vehiculosHoo
                           )}
                         </td>
                         <td>
-                          <input className="form-input" type="number" value={Math.round(parseFloat(item.precio) || 0)} min="0"
-                            onChange={e => updateItem(item.id, 'precio', e.target.value)}
-                            style={{ padding: '6px 10px', fontSize: 13, textAlign: 'right' }} />
+                          <MoneyInput className="form-input" value={Math.round(parseFloat(item.precio) || 0)}
+                            onChange={v => updateItem(item.id, 'precio', v)}
+                            inputStyle={{ padding: '6px 10px 6px 22px', fontSize: 13, textAlign: 'right' }} />
                         </td>
                         <td>
                           <input className="form-input" type="number" value={item.cantidad} min="1"
@@ -1565,8 +1564,7 @@ function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [], vehiculosHoo
               <div className="mo-manual__row">
                 <div className="field" style={{ flex: '1 1 220px', minWidth: 0 }}>
                   <label htmlFor="mo-manual-input">Mano de obra del técnico <span style={{ fontWeight: 500, color: 'var(--text-3)' }}>(opcional)</span></label>
-                  <input id="mo-manual-input" className="input" type="number" min="0" inputMode="numeric"
-                    value={form.manoObra} onChange={e => set('manoObra', e.target.value)} placeholder="0" />
+                  <MoneyInput id="mo-manual-input" value={form.manoObra} onChange={v => set('manoObra', v)} placeholder="0" />
                 </div>
                 <div className="mo-manual__com">
                   <span className="mo-manual__com-lbl">Comisión técnico ({COMISION.TOTAL * 100}%)</span>
