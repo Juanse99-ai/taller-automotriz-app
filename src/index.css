@@ -90,19 +90,33 @@
   --topbar-h:60px;
 }
 
-/* dark mode — same brand, darker surfaces */
+/* dark mode — "night" neutro y profundo (negro casi puro, superficies sutiles,
+   bordes finísimos). Antes era azul marino; ahora es gris neutro tipo deep-dark. */
 [data-theme="dark"]{
-  --bg:#070d1c;
-  --bg-raised:#111a30;
-  --bg-subtle:#0d1527;
-  --bg-side:#060b1a;
-  --border:#1d2a45;
-  --border-strong:#2a3b5c;
-  --text:#f1f5f9;
-  --text-2:#cbd5e1;
-  --text-3:#94a3b8;
-  --text-4:#64748b;
+  --bg:#0a0a0b;
+  --bg-raised:#141416;
+  --bg-subtle:#0f0f11;
+  --bg-side:#0b0b0d;
+  --border:#242428;
+  --border-strong:#323237;
+  --text:#ededee;
+  --text-2:#b0b0b7;
+  --text-3:#84848b;
+  --text-4:#63636a;
+  /* el navy se pierde sobre negro: primario más claro en dark */
+  --primary:var(--blue-500);
+  --primary-hover:#3b82f6;
+  /* en dark la elevación se ve por superficie + borde, no por sombra */
+  --shadow-sm:0 1px 2px rgba(0,0,0,.45);
+  --shadow:0 2px 8px rgba(0,0,0,.5);
+  --shadow-md:0 8px 24px rgba(0,0,0,.55);
+  --shadow-lg:0 24px 60px rgba(0,0,0,.65);
 }
+/* Estados del menú en dark: overlays blancos sutiles (como el referente).
+   El activo conserva un toque de marca con el ícono en ámbar. */
+[data-theme="dark"] .navlink:hover{background:rgba(255,255,255,.045);color:var(--text)}
+[data-theme="dark"] .navlink.active{background:rgba(255,255,255,.075);color:#f5f5f7}
+[data-theme="dark"] .navlink.active svg{stroke:var(--amber-400)}
 
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 html{-webkit-text-size-adjust:100%}
