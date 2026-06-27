@@ -5,6 +5,7 @@ import { fmt, fmtDate, uid, hoyISO, normalizarDoc, normalizarNombre, fmtTelefono
 import { TECNICOS, IVA_DEFAULT, TALLER } from '../utils/constants'
 import { loadLogo as loadPdfLogo, drawHeader, drawSectionHeader, drawDataBlock, drawTotalsBox, drawSignatures, drawFooter, tableStylesItems, PDF_LAYOUT, PDF_COLORS } from '../utils/pdfTheme'
 import { MARCAS, getModelos } from '../utils/vehiculos'
+import MoneyInput from '../components/MoneyInput'
 import { useClientes } from '../hooks/useClientes'
 import { useInventario, formatCacheAge } from '../hooks/useInventario'
 import { lsGet, lsSet, LS_KEYS } from '../services/storage'
@@ -687,8 +688,8 @@ function CotizacionForm({ cotizacion, trabajos = [], onSave, onCancel }) {
                             </div>
                           )}
                         </td>
-                        <td><input className="form-input" type="number" value={Math.round(parseFloat(item.precio) || 0)} min="0"
-                          onChange={e => updateItem(item.id, 'precio', e.target.value)} style={{ padding: '6px 10px', fontSize: 13, textAlign: 'right' }} /></td>
+                        <td><MoneyInput className="form-input" value={Math.round(parseFloat(item.precio) || 0)}
+                          onChange={v => updateItem(item.id, 'precio', v)} inputStyle={{ padding: '6px 10px 6px 22px', fontSize: 13, textAlign: 'right' }} /></td>
                         <td><input className="form-input" type="number" value={item.cantidad} min="1"
                           onChange={e => updateItem(item.id, 'cantidad', e.target.value)} style={{ padding: '6px 10px', fontSize: 13, textAlign: 'center', width: 60 }} /></td>
                         <td><input className="form-input" type="number" value={item.iva} min="0"
