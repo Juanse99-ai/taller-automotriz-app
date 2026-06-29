@@ -194,14 +194,22 @@ function uidc() {
 }
 
 // Body para grabraProductoMovil (portado de src/services/cuentti.js)
+// Verificado contra la API real de Cuentti (jun 2026):
+//  - es_servicio: TODOS los productos reales usan 0; los servicios usan 1.
+//    El valor 10 era un bug (creaba productos anómalos que la UI mostraba como
+//    "no maneja inventario"). Repuesto → 0, servicio → 1.
+//  - "Maneja inventario" lo determina existencias: -1 = NO, >=0 = SÍ. Para que
+//    los repuestos descuenten/sumen stock se envía existencias >= 0 (default 0).
+//  - id_impuesto: 5 = IVA 19% (lo normal acá). 1 = 16% (NO debe ser el default).
 function buildProductoPayload(p) {
+  const esServicio = !!p.esServicio
   return {
     idProductoSucursal: p.idProductoSucursal || 0,
     id_producto: p.idProducto || 0,
     id_sucursal: parseInt(CONFIG.branchId, 10),
     nombre: p.nombre || '',
     precio_venta: parseFloat(p.precioVenta) || 0,
-    es_servicio: p.esServicio ? 1 : 10,
+    es_servicio: esServicio ? 1 : 0,
     id_marca: p.idMarca || 1,
     id_categoria: p.idCategoria || 1,
     sku: p.sku || '',
@@ -209,8 +217,9 @@ function buildProductoPayload(p) {
     codigo_barras: p.codigoBarras || '',
     nota: p.nota || '',
     id_empleado: parseInt(CONFIG.employeeId, 10),
-    id_impuesto: p.idImpuesto || 1,
-    existencias: parseFloat(p.existencias) || 0,
+    id_impuesto: p.idImpuesto || 5,
+    // Repuestos: maneja inventario (existencias >= 0). Servicios: no aplica stock.
+    existencias: esServicio ? 0 : (parseFloat(p.existencias) >= 0 ? parseFloat(p.existencias) : 0),
   }
 }
 
@@ -891,7 +900,7 @@ const tools = [
   },
   {
     name: 'crear_producto',
-    description: 'Crea un producto nuevo en Cuentti (envuelve grabraProductoMovil). dry-run por defecto; pasa confirm:true para crear de verdad.',
+    description: 'Crea un producto nuevo en Cuentti (envuelve grabraProductoMovil). Por defecto: repuesto que MANEJA inventario (es_servicio=0, existencias>=0) con IVA 19% (idImpuesto=5). Para servicios pasa esServicio:true. dry-run por defecto; pasa confirm:true para crear de verdad.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -899,10 +908,10 @@ const tools = [
         sku: { type: 'string', default: '' },
         codigoBarras: { type: 'string', default: '' },
         precioVenta: { type: 'number', default: 0, description: 'Precio de venta SIN IVA' },
-        idImpuesto: { type: 'integer', default: 1 },
+        idImpuesto: { type: 'integer', default: 5, description: 'Impuesto: 5 = IVA 19% (default), 1 = IVA 16%, 4 = exento. Cámbialo solo si aplica otra tarifa.' },
         idCategoria: { type: 'integer', default: 1 },
-        esServicio: { type: 'boolean', default: false },
-        existencias: { type: 'number', default: 0 },
+        esServicio: { type: 'boolean', default: false, description: 'false (default) = repuesto/autoparte que maneja inventario; true = servicio (sin stock).' },
+        existencias: { type: 'number', default: 0, description: 'Stock inicial del repuesto (>=0). Se ignora para servicios.' },
         confirm: { type: 'boolean', description: 'true = crear; false (default) = dry-run' },
       },
       required: ['nombre', 'confirm'],
@@ -910,12 +919,21 @@ const tools = [
     handler: async (a) => {
       if (!a.nombre) return '❌ nombre es obligatorio'
       const body = buildProductoPayload(a)
+      const resumen = [
+        `- Tipo: ${body.es_servicio === 1 ? 'Servicio (sin inventario)' : 'Repuesto · **maneja inventario = SÍ**'}`,
+        `- IVA: ${body.id_impuesto === 5 ? '19%' : body.id_impuesto === 1 ? '16%' : `idImpuesto ${body.id_impuesto}`}`,
+        `- Existencias inicial: ${body.existencias}`,
+      ].join('\n')
       if (!a.confirm) {
-        return ['## Dry-run: crear producto (NO creado)', 'Pasa **confirm:true** para crear.', '', '```json', JSON.stringify(body, null, 2), '```'].join('\n')
+        return ['## Dry-run: crear producto (NO creado)', resumen, '', 'Pasa **confirm:true** para crear.', '', '```json', JSON.stringify(body, null, 2), '```'].join('\n')
       }
       const resp = await cuenttiRequest('/jServerj4ErpPro/com/j4ErpPro/server/inv/producto/grabraProductoMovil', 'POST', body)
-      const id = resp?.id_producto || resp?.id || resp?.data?.id_producto || '(no devuelto)'
-      return [`## ✅ Producto creado en Cuentti`, ``, `**id_producto:** ${id}`, `**SKU:** ${a.sku || '—'}`, `**Nombre:** ${a.nombre}`].join('\n')
+      // El id viene dentro de resp.retorno (string JSON con el producto guardado)
+      let id = resp?.id_producto || resp?.id || resp?.data?.id_producto || null
+      if (!id && resp?.retorno) {
+        try { const r = JSON.parse(resp.retorno); id = (Array.isArray(r) ? r[0] : r)?.id_producto } catch { /* ignore */ }
+      }
+      return [`## ✅ Producto creado en Cuentti`, ``, `**id_producto:** ${id || '(no devuelto)'}`, `**SKU:** ${a.sku || '—'}`, `**Nombre:** ${a.nombre}`, ``, resumen].join('\n')
     },
   },
   {

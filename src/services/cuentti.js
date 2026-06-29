@@ -751,7 +751,7 @@ export async function grabarProductoMovil(producto) {
     id_sucursal: parseInt(CONFIG.branchId),
     nombre: producto.nombre || '',
     precio_venta: parseFloat(producto.precioVenta) || 0,
-    es_servicio: producto.esServicio ? 1 : 10,
+    es_servicio: producto.esServicio ? 1 : 0,
     id_marca: producto.idMarca || 1,
     id_categoria: producto.idCategoria || 1,
     sku: producto.sku || '',
@@ -759,8 +759,8 @@ export async function grabarProductoMovil(producto) {
     codigo_barras: producto.codigoBarras || '',
     nota: producto.nota || '',
     id_empleado: parseInt(CONFIG.employeeId),
-    id_impuesto: producto.idImpuesto || 1,
-    existencias: parseFloat(producto.existencias) || 0,
+    id_impuesto: producto.idImpuesto || 5,
+    existencias: producto.esServicio ? 0 : (parseFloat(producto.existencias) >= 0 ? parseFloat(producto.existencias) : 0),
   }
   return cuenttiRequest(
     '/jServerj4ErpPro/com/j4ErpPro/server/inv/producto/grabraProductoMovil',
