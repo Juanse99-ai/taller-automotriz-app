@@ -322,6 +322,48 @@ export async function deleteMovimiento(id) {
   }
 }
 
+// ---------- PRESTAMOS (estado de cuenta por persona) ----------
+export async function fetchPrestamos() {
+  const res = await fetchWithTimeout(`${proxy('prestamos_movimientos')}&select=*&order=fecha.desc&limit=1000`)
+  if (!res.ok) throw new Error(`Supabase prestamos error (${res.status})`)
+  return await res.json()
+}
+
+export async function upsertPrestamo(p) {
+  try {
+    const row = {
+      id: p.id,
+      persona: p.persona || '',
+      tecnico_id: p.tecnicoId ?? null,
+      tipo: p.tipo || 'prestamo', // 'prestamo' (+) | 'abono' (-)
+      monto: p.monto || 0,
+      nota: p.nota || '',
+      fecha: p.fecha,
+    }
+    const res = await fetchWithTimeout(`${proxy('prestamos_movimientos')}&upsert=true`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(row),
+    })
+    if (!res.ok) throw new Error(await res.text())
+    return await res.json()
+  } catch (e) {
+    console.warn('Supabase upsertPrestamo:', e.message)
+    return null
+  }
+}
+
+export async function deletePrestamo(id) {
+  try {
+    const res = await fetchWithTimeout(`${proxy('prestamos_movimientos')}&id=eq.${encodeURIComponent(id)}`, { method: 'DELETE' })
+    if (!res.ok) throw new Error(await res.text())
+    return true
+  } catch (e) {
+    console.warn('Supabase deletePrestamo:', e.message)
+    return false
+  }
+}
+
 // ---------- LIQUIDACION HISTORIAL ----------
 
 export async function fetchLiquidacionHistorial() {

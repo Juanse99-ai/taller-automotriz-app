@@ -39,4 +39,5 @@ export const LS_KEYS = {
   LIQUIDADOS: 'liquidados',
   TRABAJOS_COMPARTIDOS: 'trabajos_compartidos',
   LIQUIDACION_HISTORIAL: 'liquidacion_historial',
+  PRESTAMOS: 'prestamos_movimientos',
 }

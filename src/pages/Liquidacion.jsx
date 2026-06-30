@@ -6,6 +6,7 @@ import MoneyInput from '../components/MoneyInput'
 import { COMISION, ESTADOS } from '../utils/constants'
 import { lsGet, lsSet } from '../services/storage'
 import { useTecnicos } from '../services/tecnicos'
+import { usePrestamos } from '../hooks/usePrestamos'
 import { loadLogo, drawHeader, drawSectionHeader, drawDataBlock, drawTotalsBox, drawSignatures, drawFooter, tableStylesItems, tableStylesMuted, PDF_LAYOUT } from '../utils/pdfTheme'
 
 // Obtener base de mano de obra SIN IVA (solo servicios)
@@ -41,6 +42,9 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
     guardarLiquidados,
     toggleCompartido, setCompartidoPartner, agregarHistorial, guardarHistorial,
   } = liquidacionHook
+
+  const prestamosHook = usePrestamos()
+  const [vistaLiq, setVistaLiq] = useState('comisiones') // 'comisiones' | 'cuentas'
 
   const [tecnicoSel, setTecnicoSel] = useState('')
   const [seleccionados, setSeleccionados] = useState({})
@@ -529,6 +533,29 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
     return trabajos.filter(t => set.has(t.id))
   }, [trabajos, liquidados])
 
+  // ===== Tabs: Comisiones | Estado de cuenta =====
+  const tabsLiq = (
+    <div className="tabs" style={{ marginBottom: 14 }}>
+      <button className={vistaLiq === 'comisiones' ? 'on' : ''} onClick={() => setVistaLiq('comisiones')}>Comisiones</button>
+      <button className={vistaLiq === 'cuentas' ? 'on' : ''} onClick={() => setVistaLiq('cuentas')}>Estado de cuenta</button>
+    </div>
+  )
+
+  if (vistaLiq === 'cuentas') {
+    return (
+      <div>
+        <div className="pagehd">
+          <div>
+            <h2>Estado de cuenta · préstamos</h2>
+            <p className="sub">Préstamos y abonos por persona — técnicos, administrador, terceros</p>
+          </div>
+        </div>
+        {tabsLiq}
+        <EstadoCuenta prestamos={prestamosHook} tecnicos={TECNICOS} notify={notify} />
+      </div>
+    )
+  }
+
   // ===== RENDER =====
   return (
     <div>
@@ -541,6 +568,7 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
           <button className="btn btn-outline" onClick={() => setVerHistorial(!verHistorial)}>{verHistorial ? 'Ocultar historial' : 'Ver historial'}</button>
         </div>
       </div>
+      {tabsLiq}
 
       {/* KPIs — hero "Comisiones a pagar" + 2 mini (sin doble conteo de compartidos) */}
       <div className="kpi-grid" style={{ marginBottom: 18 }}>
@@ -878,6 +906,181 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
               </>
             )}
           </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// ============================================================
+// ESTADO DE CUENTA — préstamos/abonos por persona (técnicos, admin, terceros)
+//   saldo = sum(préstamo +) − sum(abono −).  saldo > 0 = la persona DEBE.
+// ============================================================
+function EstadoCuenta({ prestamos, tecnicos, notify }) {
+  const { movimientos, agregarMovimiento, eliminarMovimiento } = prestamos
+  const [form, setForm] = useState({ personaSel: '', personaOtra: '', tipo: 'prestamo', monto: '', fecha: hoyISO(), nota: '' })
+  const [sel, setSel] = useState(null)
+
+  const personaFinal = form.personaSel === '__otra' ? (form.personaOtra || '').trim() : form.personaSel
+  const tecnicoIdFinal = useMemo(() => {
+    const t = tecnicos.find(x => x.nombre === personaFinal)
+    return t ? t.id : null
+  }, [personaFinal, tecnicos])
+
+  const cuentas = useMemo(() => {
+    const map = {}
+    tecnicos.filter(t => !t.eliminado).forEach(t => {
+      map[t.nombre] = { persona: t.nombre, tecnicoId: t.id, prestado: 0, abonado: 0, movs: [] }
+    })
+    movimientos.forEach(m => {
+      const k = m.persona || '—'
+      if (!map[k]) map[k] = { persona: k, tecnicoId: m.tecnicoId, prestado: 0, abonado: 0, movs: [] }
+      map[k].movs.push(m)
+      if (m.tipo === 'abono') map[k].abonado += m.monto
+      else map[k].prestado += m.monto
+    })
+    const arr = Object.values(map).map(c => ({ ...c, saldo: c.prestado - c.abonado }))
+    arr.forEach(c => c.movs.sort((a, b) => new Date(b.fecha) - new Date(a.fecha)))
+    return arr.sort((a, b) => b.saldo - a.saldo)
+  }, [movimientos, tecnicos])
+
+  const totalPorCobrar = cuentas.reduce((s, c) => s + Math.max(0, c.saldo), 0)
+  const cuentaSel = cuentas.find(c => c.persona === sel) || null
+
+  const guardar = () => {
+    if (!personaFinal) { notify('Elige o escribe la persona', 'error'); return }
+    const monto = Math.abs(parseFloat(form.monto) || 0)
+    if (!monto) { notify('Ingresa el monto', 'error'); return }
+    agregarMovimiento({ id: `PR-${uid()}`, persona: personaFinal, tecnicoId: tecnicoIdFinal, tipo: form.tipo, monto, nota: form.nota, fecha: form.fecha })
+    notify(`${form.tipo === 'abono' ? 'Abono' : 'Préstamo'} de ${fmt(monto)} · ${personaFinal}`, 'success')
+    setForm(f => ({ ...f, monto: '', nota: '' }))
+    setSel(personaFinal)
+  }
+
+  const exportarPDF = async (c) => {
+    const doc = new jsPDF()
+    const { MARGIN } = PDF_LAYOUT
+    const logoData = await loadLogo()
+    drawHeader(doc, {
+      logoData, docType: 'ESTADO DE CUENTA', docNumber: (c.persona || '').toUpperCase().slice(0, 22),
+      badge: { label: c.saldo > 0 ? 'DEBE' : c.saldo < 0 ? 'A FAVOR' : 'AL DÍA', color: c.saldo > 0 ? 'amber' : 'green' },
+      dateRows: [{ lbl: 'Fecha', val: fmtDate(hoyISO()) }],
+    })
+    let y = 47
+    y = drawSectionHeader(doc, 'Persona', y)
+    y = drawDataBlock(doc, [
+      { label: 'Nombre', value: c.persona, bold: true },
+      { label: 'Total prestado', value: fmt(c.prestado) },
+      { label: 'Total abonado', value: fmt(c.abonado) },
+      { label: 'Saldo actual', value: fmt(c.saldo), bold: true },
+    ], y)
+    y += 4
+    y = drawSectionHeader(doc, 'Movimientos', y)
+    autoTable(doc, {
+      startY: y,
+      head: [['FECHA', 'TIPO', 'NOTA', 'MONTO']],
+      body: [...c.movs].sort((a, b) => new Date(a.fecha) - new Date(b.fecha)).map(m => [
+        fmtDate(m.fecha), m.tipo === 'abono' ? 'Abono' : 'Préstamo', m.nota || '—', (m.tipo === 'abono' ? '- ' : '+ ') + fmt(m.monto),
+      ]),
+      ...tableStylesItems,
+      columnStyles: { 0: { cellWidth: 24 }, 1: { cellWidth: 26, fontStyle: 'bold' }, 2: { cellWidth: 'auto' }, 3: { halign: 'right', cellWidth: 32, fontStyle: 'bold' } },
+      margin: { left: MARGIN, right: MARGIN },
+    })
+    y = doc.lastAutoTable.finalY + 6
+    drawSignatures(doc, { y: Math.max(y, 240), blocks: [{ label: 'Firma de la persona', sub: 'Nombre, documento, fecha' }, { label: 'Autorizado por', sub: 'Nombre, cargo, fecha' }] })
+    drawFooter(doc, { page: 1, total: 1, leftText: 'Estado de cuenta de préstamos · MDA' })
+    doc.save(`estado_cuenta_${(c.persona || 'persona').replace(/\s+/g, '_')}_${hoyISO()}.pdf`)
+    notify('PDF del estado de cuenta exportado', 'success')
+  }
+
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 16, alignItems: 'start' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+        <div className="card">
+          <div className="card__h"><h3>Registrar movimiento</h3></div>
+          <div className="card__b" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <div className="field">
+              <label>Persona</label>
+              <select className="input" value={form.personaSel} onChange={e => setForm(f => ({ ...f, personaSel: e.target.value }))}>
+                <option value="">Seleccionar…</option>
+                {tecnicos.filter(t => !t.eliminado).map(t => <option key={t.id} value={t.nombre}>{t.nombre}</option>)}
+                <option value="__otra">Otra persona (admin / tercero)…</option>
+              </select>
+            </div>
+            {form.personaSel === '__otra' && (
+              <div className="field">
+                <label>Nombre de la persona</label>
+                <input className="input" value={form.personaOtra} onChange={e => setForm(f => ({ ...f, personaOtra: e.target.value }))} placeholder="Ej. Administrador, proveedor…" />
+              </div>
+            )}
+            <div className="segctl">
+              <button type="button" className={form.tipo === 'prestamo' ? 'on' : ''} onClick={() => setForm(f => ({ ...f, tipo: 'prestamo' }))}>Préstamo (+)</button>
+              <button type="button" className={form.tipo === 'abono' ? 'on' : ''} onClick={() => setForm(f => ({ ...f, tipo: 'abono' }))}>Abono / descuento (−)</button>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+              <div className="field"><label>Monto</label><MoneyInput value={form.monto} onChange={v => setForm(f => ({ ...f, monto: v }))} placeholder="0" /></div>
+              <div className="field"><label>Fecha</label><input className="input" type="date" value={form.fecha} onChange={e => setForm(f => ({ ...f, fecha: e.target.value }))} /></div>
+            </div>
+            <div className="field"><label>Nota</label><input className="input" value={form.nota} onChange={e => setForm(f => ({ ...f, nota: e.target.value }))} placeholder="Concepto, referencia…" /></div>
+            <button type="button" className="btn btn-primary" onClick={guardar}>Registrar</button>
+          </div>
+        </div>
+
+        <div className="card">
+          <div className="card__h"><h3>Cuentas</h3><span className="count">Por cobrar: {fmt(totalPorCobrar)}</span></div>
+          <div className="card__b card__b--flush">
+            <table className="tbl">
+              <thead><tr><th>Persona</th><th className="text-right">Saldo</th></tr></thead>
+              <tbody>
+                {cuentas.map(c => (
+                  <tr key={c.persona} onClick={() => setSel(c.persona)} style={{ cursor: 'pointer', background: sel === c.persona ? 'var(--bg-subtle)' : undefined }}>
+                    <td style={{ fontWeight: 600 }}>{c.persona}</td>
+                    <td className="text-right text-mono" style={{ fontWeight: 700, color: c.saldo > 0 ? 'var(--amber-700)' : c.saldo < 0 ? 'var(--green-700)' : 'var(--text-3)' }}>
+                      {c.saldo > 0 ? fmt(c.saldo) : c.saldo < 0 ? `a favor ${fmt(-c.saldo)}` : '—'}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div className="card">
+        {!cuentaSel ? (
+          <div className="card__b"><div className="empty"><h4>Selecciona una cuenta</h4><p>Elige una persona de la lista para ver su estado de cuenta.</p></div></div>
+        ) : (
+          <>
+            <div className="card__h" style={{ flexWrap: 'wrap', gap: 10 }}>
+              <div>
+                <h3 style={{ margin: 0 }}>{cuentaSel.persona}</h3>
+                <span style={{ fontSize: 12.5, fontWeight: 700, color: cuentaSel.saldo > 0 ? 'var(--amber-700)' : 'var(--green-700)' }}>
+                  {cuentaSel.saldo > 0 ? `Debe ${fmt(cuentaSel.saldo)}` : cuentaSel.saldo < 0 ? `A favor ${fmt(-cuentaSel.saldo)}` : 'Al día'}
+                </span>
+              </div>
+              <button className="btn btn-outline btn-sm" onClick={() => exportarPDF(cuentaSel)}>PDF</button>
+            </div>
+            {cuentaSel.movs.length === 0 ? (
+              <div className="card__b"><p className="text-sm text-muted">Sin movimientos. Registra un préstamo o abono.</p></div>
+            ) : (
+              <div className="card__b card__b--flush">
+                <table className="tbl">
+                  <thead><tr><th>Fecha</th><th>Tipo</th><th>Nota</th><th className="text-right">Monto</th><th></th></tr></thead>
+                  <tbody>
+                    {cuentaSel.movs.map(m => (
+                      <tr key={m.id}>
+                        <td className="text-sm text-muted">{fmtDate(m.fecha)}</td>
+                        <td><span className={`badge ${m.tipo === 'abono' ? 'badge-success' : 'badge-warning'}`}>{m.tipo === 'abono' ? 'Abono' : 'Préstamo'}</span></td>
+                        <td className="text-sm">{m.nota || '—'}</td>
+                        <td className="text-right text-mono" style={{ fontWeight: 700, color: m.tipo === 'abono' ? 'var(--green-700)' : 'var(--amber-700)' }}>{m.tipo === 'abono' ? '−' : '+'} {fmt(m.monto)}</td>
+                        <td><button className="btn btn-ghost btn-sm" style={{ color: 'var(--red-600)' }} onClick={() => { if (confirm('¿Eliminar este movimiento?')) eliminarMovimiento(m.id) }} aria-label="Eliminar">✕</button></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>
