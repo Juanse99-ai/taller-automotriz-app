@@ -1029,13 +1029,13 @@ function EstadoCuenta({ prestamos, tecnicos, notify }) {
         <div className="card">
           <div className="card__h"><h3>Cuentas</h3><span className="count">Por cobrar: {fmt(totalPorCobrar)}</span></div>
           <div className="card__b card__b--flush">
-            <table className="tbl">
+            <table className="tbl tbl-cards">
               <thead><tr><th>Persona</th><th className="text-right">Saldo</th></tr></thead>
               <tbody>
                 {cuentas.map(c => (
                   <tr key={c.persona} onClick={() => setSel(c.persona)} style={{ cursor: 'pointer', background: sel === c.persona ? 'var(--bg-subtle)' : undefined }}>
-                    <td style={{ fontWeight: 600 }}>{c.persona}</td>
-                    <td className="text-right text-mono" style={{ fontWeight: 700, color: c.saldo > 0 ? 'var(--amber-700)' : c.saldo < 0 ? 'var(--green-700)' : 'var(--text-3)' }}>
+                    <td className="c-name" style={{ fontWeight: 600 }}>{c.persona}</td>
+                    <td className="text-right text-mono" data-label="Saldo" style={{ fontWeight: 700, color: c.saldo > 0 ? 'var(--amber-700)' : c.saldo < 0 ? 'var(--green-700)' : 'var(--text-3)' }}>
                       {c.saldo > 0 ? fmt(c.saldo) : c.saldo < 0 ? `a favor ${fmt(-c.saldo)}` : '—'}
                     </td>
                   </tr>
@@ -1064,16 +1064,16 @@ function EstadoCuenta({ prestamos, tecnicos, notify }) {
               <div className="card__b"><p className="text-sm text-muted">Sin movimientos. Registra un préstamo o abono.</p></div>
             ) : (
               <div className="card__b card__b--flush">
-                <table className="tbl">
+                <table className="tbl tbl-cards">
                   <thead><tr><th>Fecha</th><th>Tipo</th><th>Nota</th><th className="text-right">Monto</th><th></th></tr></thead>
                   <tbody>
                     {cuentaSel.movs.map(m => (
                       <tr key={m.id}>
-                        <td className="text-sm text-muted">{fmtDate(m.fecha)}</td>
-                        <td><span className={`badge ${m.tipo === 'abono' ? 'badge-success' : 'badge-warning'}`}>{m.tipo === 'abono' ? 'Abono' : 'Préstamo'}</span></td>
-                        <td className="text-sm">{m.nota || '—'}</td>
-                        <td className="text-right text-mono" style={{ fontWeight: 700, color: m.tipo === 'abono' ? 'var(--green-700)' : 'var(--amber-700)' }}>{m.tipo === 'abono' ? '−' : '+'} {fmt(m.monto)}</td>
-                        <td><button className="btn btn-ghost btn-sm" style={{ color: 'var(--red-600)' }} onClick={() => { if (confirm('¿Eliminar este movimiento?')) eliminarMovimiento(m.id) }} aria-label="Eliminar">✕</button></td>
+                        <td className="text-sm text-muted" data-label="Fecha">{fmtDate(m.fecha)}</td>
+                        <td data-label="Tipo"><span className={`badge ${m.tipo === 'abono' ? 'badge-success' : 'badge-warning'}`}>{m.tipo === 'abono' ? 'Abono' : 'Préstamo'}</span></td>
+                        <td className="text-sm" data-label="Nota">{m.nota || '—'}</td>
+                        <td className="text-right text-mono" data-label="Monto" style={{ fontWeight: 700, color: m.tipo === 'abono' ? 'var(--green-700)' : 'var(--amber-700)' }}>{m.tipo === 'abono' ? '−' : '+'} {fmt(m.monto)}</td>
+                        <td className="td-actions"><button className="btn btn-ghost btn-sm" style={{ color: 'var(--red-600)' }} onClick={() => { if (confirm('¿Eliminar este movimiento?')) eliminarMovimiento(m.id) }} aria-label="Eliminar">✕ Eliminar</button></td>
                       </tr>
                     ))}
                   </tbody>
