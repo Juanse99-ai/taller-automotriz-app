@@ -6,7 +6,7 @@ export const MARCAS_MODELOS = {
   'Toyota': ['Corolla', 'Yaris', 'Hilux', 'Fortuner', 'Prado', 'Land Cruiser', 'RAV4', 'Rush', 'Camry', 'Hiace', 'Hino', '4Runner', 'Tacoma', 'Tundra', 'Supra', 'C-HR'],
   'Kia': ['Picanto', 'Rio', 'Cerato', 'Forte', 'K5', 'Sportage', 'Seltos', 'Sorento', 'Carnival', 'Soul', 'Stinger', 'EV6', 'Niro', 'Stonic'],
   'Hyundai': ['Grand i10', 'i20', 'Accent', 'Elantra', 'Sonata', 'Tucson', 'Santa Fe', 'Creta', 'Venue', 'Kona', 'Palisade', 'Ioniq', 'Porter', 'HD65', 'HD78', 'Starex'],
-  'Nissan': ['March', 'Versa', 'Sentra', 'Kicks', 'Qashqai', 'X-Trail', 'Pathfinder', 'Frontier', 'NP300', 'Navara', 'Murano', 'Juke', 'Note', 'Leaf', 'Titan'],
+  'Nissan': ['March', 'Versa', 'Sentra', 'Tiida', 'Kicks', 'Qashqai', 'X-Trail', 'Pathfinder', 'Frontier', 'NP300', 'Navara', 'Murano', 'Juke', 'Note', 'Leaf', 'Titan'],
   'Ford': ['Fiesta', 'Focus', 'Fusion', 'Escape', 'Explorer', 'Expedition', 'Ranger', 'F-150', 'Bronco', 'Maverick', 'Territory', 'Edge', 'EcoSport', 'Transit'],
   'Volkswagen': ['Gol', 'Polo', 'Virtus', 'Jetta', 'Passat', 'Golf', 'Tiguan', 'T-Cross', 'Taos', 'Touareg', 'Amarok', 'Saveiro', 'Crafter', 'Transporter'],
   'Suzuki': ['Alto', 'Celerio', 'Swift', 'Baleno', 'Ciaz', 'Vitara', 'Grand Vitara', 'Jimny', 'S-Cross', 'Ertiga', 'XL7', 'Carry'],
