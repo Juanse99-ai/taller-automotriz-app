@@ -18,6 +18,7 @@ function normalizar(r) {
     marca: r.marca || '',
     modelo: r.modelo || '',
     ano: r.ano || null,
+    cilindraje: r.cilindraje || '',
     kilometraje: r.kilometraje || null,
     tecnicoId: r.tecnico_id || r.tecnicoId || null,
     estado: r.estado || 'Pendiente',

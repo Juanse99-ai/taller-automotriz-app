@@ -13,6 +13,7 @@ export function useVehiculos() {
     marca: r.marca || '',
     modelo: r.modelo || '',
     ano: r.ano || 0,
+    cilindraje: r.cilindraje || '',
     cedulaPropietario: r.cedula_propietario || '',
     historial: typeof r.historial === 'string' ? JSON.parse(r.historial) : (r.historial || []),
     fechaCreacion: r.fecha_creacion || r.created_at,
@@ -74,6 +75,7 @@ export function useVehiculos() {
         marca: data.marca ?? existente.marca,
         modelo: data.modelo ?? existente.modelo,
         ano: data.ano ?? existente.ano,
+        cilindraje: data.cilindraje || existente.cilindraje || '',
         cedulaPropietario: data.cedulaPropietario ?? existente.cedulaPropietario,
       }
       const nuevoArr = vehiculosRef.current.map((v) =>
@@ -90,6 +92,7 @@ export function useVehiculos() {
       marca: data.marca || '',
       modelo: data.modelo || '',
       ano: data.ano || 0,
+      cilindraje: data.cilindraje || '',
       cedulaPropietario: data.cedulaPropietario || '',
       historial: [],
       fechaCreacion: new Date().toISOString(),

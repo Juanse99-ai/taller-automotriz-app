@@ -210,6 +210,7 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
       { label: 'Marca', value: t.marca },
       { label: 'Modelo', value: t.modelo },
       { label: 'Año', value: String(t.ano || '—') },
+      { label: 'Cilindraje', value: t.cilindraje || '—' },
       { label: 'Kilometraje', value: t.kilometraje ? `${Number(t.kilometraje).toLocaleString('es-CO')} km` : '—' },
       { label: 'Técnico', value: tecNombre(t.tecnicoId) },
     ]
@@ -381,6 +382,7 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
                 marca: data.marca || '',
                 modelo: data.modelo || '',
                 ano: parseInt(data.ano) || 0,
+                cilindraje: data.cilindraje || '',
                 cedulaPropietario: data.cedula || '',
               })
             }
@@ -895,6 +897,7 @@ function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [], vehiculosHoo
     marca: trabajo?.marca || '',
     modelo: trabajo?.modelo || '',
     ano: trabajo?.ano || new Date().getFullYear(),
+    cilindraje: trabajo?.cilindraje || '',
     kilometraje: trabajo?.kilometraje || '',
     tecnicoId: trabajo?.tecnicoId || '',
     observaciones: trabajo?.observaciones || '',
@@ -1092,12 +1095,12 @@ function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [], vehiculosHoo
     const candidatos = []
     if (vehiculosHook?.buscarPorCedula) {
       for (const v of vehiculosHook.buscarPorCedula(cedula)) {
-        if (v.placa) candidatos.push({ placa: v.placa, marca: v.marca, modelo: v.modelo, ano: v.ano, kilometraje: v.kilometraje, _t: v.actualizadoEn || v.creadoEn || 0 })
+        if (v.placa) candidatos.push({ placa: v.placa, marca: v.marca, modelo: v.modelo, ano: v.ano, cilindraje: v.cilindraje, kilometraje: v.kilometraje, _t: v.actualizadoEn || v.creadoEn || 0 })
       }
     }
     for (const t of allTrabajos) {
       if ((t.cedula || '') === cedula && t.placa) {
-        candidatos.push({ placa: t.placa, marca: t.marca, modelo: t.modelo, ano: t.ano, kilometraje: t.kilometraje, _t: t.fecha || t.creadoEn || 0 })
+        candidatos.push({ placa: t.placa, marca: t.marca, modelo: t.modelo, ano: t.ano, cilindraje: t.cilindraje, kilometraje: t.kilometraje, _t: t.fecha || t.creadoEn || 0 })
       }
     }
     if (!candidatos.length) return
@@ -1109,6 +1112,7 @@ function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [], vehiculosHoo
       marca: prev.marca || v.marca || '',
       modelo: prev.modelo || v.modelo || '',
       ano: prev.ano || v.ano || prev.ano,
+      cilindraje: prev.cilindraje || v.cilindraje || '',
       kilometraje: prev.kilometraje || v.kilometraje || '',
     }))
   }
@@ -1337,6 +1341,10 @@ function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [], vehiculosHoo
             <div className="field">
               <label>Año</label>
               <input className="input" type="number" value={form.ano} min="1980" max="2030" disabled={form.sinVehiculo} onChange={e => set('ano', e.target.value)} />
+            </div>
+            <div className="field">
+              <label>Cilindraje</label>
+              <input className="input" value={form.cilindraje} placeholder="Ej. 1.6L, 2000cc" disabled={form.sinVehiculo} onChange={e => set('cilindraje', e.target.value)} />
             </div>
             <div className="field">
               <label>Kilometraje</label>
