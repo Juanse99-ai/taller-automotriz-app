@@ -64,7 +64,25 @@ export default function Reportes({ trabajos }) {
     })
     const topVehiculos = Object.values(placaMap).sort((a, b) => b.visitas - a.visitas).slice(0, 10)
 
-    return { total: filtrados.length, completados: completados.length, ingresos, comisiones, porTecnico, porEstado, topVehiculos }
+    // Desglose de ingresos (repuestos vs mano de obra) + repuestos más vendidos
+    let ingresosRepuestos = 0, ingresosMO = 0
+    const repMap = {}
+    completados.forEach(t => {
+      (t.items || []).forEach(i => {
+        const linea = (parseFloat(i.precio) || 0) * (parseInt(i.cantidad) || 1)
+        const esServ = i.esServicio === true || (i.tipo || i.categoria || '').toString().toLowerCase().includes('serv')
+        if (esServ) { ingresosMO += linea; return }
+        ingresosRepuestos += linea
+        const key = (i.nombre || i.codigo || 'Sin nombre').toString().trim()
+        if (!repMap[key]) repMap[key] = { nombre: key, cantidad: 0, ingresos: 0 }
+        repMap[key].cantidad += parseInt(i.cantidad) || 1
+        repMap[key].ingresos += linea
+      })
+    })
+    const topRepuestos = Object.values(repMap).sort((a, b) => b.ingresos - a.ingresos).slice(0, 10)
+    const ticket = completados.length ? Math.round(ingresos / completados.length) : 0
+
+    return { total: filtrados.length, completados: completados.length, ingresos, comisiones, porTecnico, porEstado, topVehiculos, ingresosRepuestos, ingresosMO, topRepuestos, ticket }
   }, [filtrados])
 
   const exportarCSV = () => {
@@ -286,6 +304,7 @@ export default function Reportes({ trabajos }) {
         <div className="kpi"><div className="kpi__head"><div className="kpi__ic amber"><svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg></div><div className="kpi__lbl">Ingresos</div></div><div className="kpi__v">{fmt(stats.ingresos)}</div></div>
         <div className="kpi"><div className="kpi__head"><div className="kpi__ic red"><svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div><div className="kpi__lbl">Comisiones</div></div><div className="kpi__v">{fmt(stats.comisiones)}</div></div>
         <div className="kpi"><div className="kpi__head"><div className="kpi__ic green"><svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg></div><div className="kpi__lbl">Neto taller</div></div><div className="kpi__v" style={{color:'var(--green-600)'}}>{fmt(stats.ingresos - stats.comisiones)}</div></div>
+        <div className="kpi"><div className="kpi__head"><div className="kpi__ic blue"><svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path d="M3 3v18h18M7 14l4-4 4 4 5-5"/></svg></div><div className="kpi__lbl">Ticket promedio</div></div><div className="kpi__v">{fmt(stats.ticket)}</div></div>
       </div>
 
       {/* Distribution by state - stacked bar */}
@@ -312,6 +331,57 @@ export default function Reportes({ trabajos }) {
             })}
           </div>
         </div>
+      </div>
+
+      {/* Ingresos: repuestos vs mano de obra */}
+      <div className="card" style={{ marginBottom: 16 }}>
+        <div className="card__h"><h3>Ingresos: repuestos vs mano de obra</h3></div>
+        <div className="card__b" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          {(() => {
+            const rep = stats.ingresosRepuestos, mo = stats.ingresosMO, tot = rep + mo
+            const pRep = tot ? Math.round(rep / tot * 100) : 0
+            return (
+              <>
+                <div style={{ display: 'flex', height: 14, borderRadius: 7, overflow: 'hidden', border: '1px solid var(--border)' }}>
+                  <div style={{ width: `${pRep}%`, background: 'var(--blue-500)' }} />
+                  <div style={{ width: `${100 - pRep}%`, background: 'var(--amber-500)' }} />
+                </div>
+                <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap', fontSize: 13 }}>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}><span style={{ width: 10, height: 10, borderRadius: 3, background: 'var(--blue-500)' }} />Repuestos <strong className="mono">{fmt(rep)}</strong> <span style={{ color: 'var(--text-3)' }}>({pRep}%)</span></span>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}><span style={{ width: 10, height: 10, borderRadius: 3, background: 'var(--amber-500)' }} />Mano de obra <strong className="mono">{fmt(mo)}</strong> <span style={{ color: 'var(--text-3)' }}>({100 - pRep}%)</span></span>
+                </div>
+              </>
+            )
+          })()}
+        </div>
+      </div>
+
+      {/* Repuestos más vendidos */}
+      <div className="card" style={{ marginBottom: 16 }}>
+        <div className="card__h"><h3>Repuestos más vendidos</h3><span className="count">{stats.topRepuestos.length}</span></div>
+        {stats.topRepuestos.length === 0 ? (
+          <div className="card__b"><p className="text-sm text-muted">Sin repuestos vendidos en el periodo.</p></div>
+        ) : (
+          <div className="card__b card__b--flush">
+            <table className="tbl">
+              <thead><tr><th>Repuesto</th><th className="c-right">Cant.</th><th className="c-right">Ingresos</th><th style={{ width: '25%' }} /></tr></thead>
+              <tbody>
+                {stats.topRepuestos.map((r, i) => {
+                  const max = Math.max(...stats.topRepuestos.map(x => x.ingresos), 1)
+                  const pct = Math.round(r.ingresos / max * 100)
+                  return (
+                    <tr key={i}>
+                      <td className="col-left" style={{ fontWeight: 600 }}>{r.nombre}</td>
+                      <td className="c-mono c-right" style={{ fontWeight: 700 }}>{r.cantidad}</td>
+                      <td className="c-mono c-right" style={{ fontWeight: 700, color: 'var(--green-600)' }}>{fmt(r.ingresos)}</td>
+                      <td><div style={{ height: 6, background: 'var(--bg-subtle)', borderRadius: 3, overflow: 'hidden', border: '1px solid var(--border)' }}><div style={{ width: `${pct}%`, height: '100%', background: 'var(--blue-500)' }} /></div></td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
       {/* Technician ranking */}
