@@ -121,6 +121,19 @@ export default function Dashboard({ trabajos = [], onNavigate, user }) {
     trabajos.filter(t => t.estado === ESTADOS.COMPLETADO && !t.cuenttiTransacionId).slice(-3).reverse(),
   [trabajos])
 
+  // ── Por contactar: vehículos sin volver hace 4+ meses (nudge → CRM) ─────────
+  const porContactar = useMemo(() => {
+    const ultima = {}
+    trabajos.forEach(t => {
+      const placa = (t.placa || '').toUpperCase().trim()
+      if (!placa || placa === 'SERVICIO') return
+      const f = new Date(t.fecha); if (isNaN(f)) return
+      if (!ultima[placa] || f > ultima[placa]) ultima[placa] = f
+    })
+    const limite = Date.now() - 120 * 86400000
+    return Object.values(ultima).filter(f => f.getTime() < limite).length
+  }, [trabajos])
+
   // ── Agenda de hoy (ingresados hoy) ────────────────────────────────────────
   const agenda = useMemo(() => {
     const hoyStart = new Date(now); hoyStart.setHours(0,0,0,0)
@@ -324,6 +337,22 @@ export default function Dashboard({ trabajos = [], onNavigate, user }) {
           <div className="kpi-bh__sub">histórico</div>
         </div>
       </div>
+
+      {/* ── Nudge: vehículos por contactar (mantenimiento) → CRM ──────────── */}
+      {porContactar > 0 && (
+        <div className="card" style={{ marginBottom: 16, borderColor: 'rgba(37,99,235,.28)', background: 'rgba(37,99,235,.04)', display: 'flex', alignItems: 'center', gap: 14, padding: '14px 18px', flexWrap: 'wrap' }}>
+          <div style={{ width: 40, height: 40, borderRadius: 10, background: 'rgba(37,99,235,.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, color: 'var(--blue-600)' }}>
+            <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+          </div>
+          <div style={{ flex: 1, minWidth: 200 }}>
+            <div style={{ fontWeight: 700 }}>{porContactar} vehículo{porContactar !== 1 ? 's' : ''} sin volver hace 4+ meses</div>
+            <div style={{ fontSize: 13, color: 'var(--text-3)' }}>Envíales un recordatorio de mantenimiento (cambio de aceite) y hazlos regresar.</div>
+          </div>
+          {onNavigate && (
+            <button className="btn btn-primary btn-sm" onClick={() => onNavigate('crm')}>Ver recordatorios →</button>
+          )}
+        </div>
+      )}
 
       {/* ── 2-col: urgentes + agenda ─────────────────────────────────────── */}
       <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 16 }}>
