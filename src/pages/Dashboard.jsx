@@ -77,7 +77,8 @@ export default function Dashboard({ trabajos = [], onNavigate, user }) {
   // ── KPI stats ──────────────────────────────────────────────────────────────
   const stats = useMemo(() => {
     const activos = trabajos.filter(t => ACTIVOS.includes(t.estado)).length
-    const listoCount = trabajos.filter(t => t.estado === ESTADOS.COMPLETADO).length
+    // Listo para entregar = completado pero AÚN NO facturado (facturar = entregado/cobrado).
+    const listoCount = trabajos.filter(t => t.estado === ESTADOS.COMPLETADO && !t.cuenttiTransacionId).length
     const inicioMes = new Date(now.getFullYear(), now.getMonth(), 1)
     const ingresosMes = trabajos
       .filter(t => new Date(t.fecha) >= inicioMes)
@@ -109,7 +110,7 @@ export default function Dashboard({ trabajos = [], onNavigate, user }) {
 
   // ── Listos para entregar ───────────────────────────────────────────────────
   const listos = useMemo(() =>
-    trabajos.filter(t => t.estado === ESTADOS.COMPLETADO).slice(-3).reverse(),
+    trabajos.filter(t => t.estado === ESTADOS.COMPLETADO && !t.cuenttiTransacionId).slice(-3).reverse(),
   [trabajos])
 
   // ── Agenda de hoy (ingresados hoy) ────────────────────────────────────────
