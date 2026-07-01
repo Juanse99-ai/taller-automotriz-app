@@ -923,6 +923,7 @@ function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [], vehiculosHoo
   const [items, setItems] = useState(trabajo?.items || [])
   // Evidencias: abierta por defecto para que el botón de subir fotos sea visible.
   const [showEvid, setShowEvid] = useState(true)
+  const [showHistorial, setShowHistorial] = useState(false) // historial por placa: cerrado por defecto
   const [showMant, setShowMant] = useState(
     !!(trabajo?.tipoAceite || trabajo?.proximoKm || trabajo?.proximaVisita || trabajo?.notasProximoMant)
   )
@@ -1378,31 +1379,36 @@ function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [], vehiculosHoo
           if (!historial.length) return null
           return (
             <div className="card" style={{ borderColor: 'rgba(37,99,235,.28)', background: 'rgba(37,99,235,.04)' }}>
-              <div className="card-title" style={{ color: 'var(--blue-700)' }}>Historial de {form.placa.toUpperCase()} ({historial.length} trabajos anteriores)</div>
-              <div className="table-wrap">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>OT</th>
-                      <th>Estado</th>
-                      <th>Tecnico</th>
-                      <th className="text-right">Total</th>
-                      <th>Fecha</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {historial.slice(0, 5).map(h => (
-                      <tr key={h.id}>
-                        <td className="text-mono text-sm">{h.otCodigo || '—'}</td>
-                        <td><span className={`badge ${h.estado === 'Completado' ? 'badge-success' : 'badge-warning'}`}>{h.estado}</span></td>
-                        <td className="text-sm">{TECNICOS.find(t => t.id === parseInt(h.tecnicoId))?.nombre || '—'}</td>
-                        <td className="text-right text-mono">{fmt(h.total)}</td>
-                        <td className="text-sm text-muted">{fmtDate(h.fecha)}</td>
+              <button type="button" className="card__h card__h--toggle" onClick={() => setShowHistorial(v => !v)} style={{ background: 'none' }}>
+                <h3 style={{ color: 'var(--blue-700)' }}>Historial de {form.placa.toUpperCase()} <span style={{ fontWeight: 500, fontSize: 12.5, color: 'var(--blue-600)' }}>· {historial.length} anteriores</span></h3>
+                <Chevron open={showHistorial} />
+              </button>
+              {showHistorial && (
+                <div className="table-wrap">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>OT</th>
+                        <th>Estado</th>
+                        <th>Tecnico</th>
+                        <th className="text-right">Total</th>
+                        <th>Fecha</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody>
+                      {historial.slice(0, 5).map(h => (
+                        <tr key={h.id}>
+                          <td className="text-mono text-sm">{h.otCodigo || '—'}</td>
+                          <td><span className={`badge ${h.estado === 'Completado' ? 'badge-success' : 'badge-warning'}`}>{h.estado}</span></td>
+                          <td className="text-sm">{TECNICOS.find(t => t.id === parseInt(h.tecnicoId))?.nombre || '—'}</td>
+                          <td className="text-right text-mono">{fmt(h.total)}</td>
+                          <td className="text-sm text-muted">{fmtDate(h.fecha)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
           )
         })()}
