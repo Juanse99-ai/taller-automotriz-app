@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
-import { fmt, fmtDate } from '../utils/helpers'
-import { ESTADOS, TECNICOS, DIAS_ESTANCADO } from '../utils/constants'
+import { fmt, fmtDate, whatsappLink } from '../utils/helpers'
+import { ESTADOS, TECNICOS, DIAS_ESTANCADO, TALLER } from '../utils/constants'
 
 // ── Icons ─────────────────────────────────────────────────────────────────────
 const IcAlert = () => (
@@ -47,6 +47,11 @@ const IcDownload = () => (
 const IcPhone = () => (
   <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.41 2 2 0 0 1 3.6 1.23h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.82a16 16 0 0 0 6.29 6.29l.95-.95a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/>
+  </svg>
+)
+const IcWa = () => (
+  <svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor">
+    <path d="M12.04 2c-5.46 0-9.9 4.44-9.9 9.9 0 1.75.46 3.45 1.32 4.95L2 22l5.28-1.38a9.86 9.86 0 0 0 4.76 1.21h.01c5.46 0 9.9-4.44 9.9-9.9 0-2.64-1.03-5.13-2.9-7A9.82 9.82 0 0 0 12.04 2zm5.8 14.04c-.24.68-1.42 1.32-1.95 1.36-.5.05-.5.4-3.15-.66-2.66-1.06-4.32-3.79-4.45-3.97-.13-.18-1.06-1.4-1.06-2.67 0-1.27.67-1.9.9-2.16.24-.26.52-.32.7-.32.17 0 .35 0 .5.01.16.01.38-.06.59.45.24.58.8 2 .87 2.14.07.14.12.31.02.49-.09.18-.14.29-.28.45-.14.16-.29.36-.42.48-.14.14-.28.29-.12.57.16.28.72 1.18 1.54 1.92 1.06.94 1.95 1.24 2.23 1.38.28.14.44.12.6-.07.17-.19.7-.81.88-1.09.18-.28.36-.23.6-.14.24.09 1.55.73 1.81.86.27.13.44.2.5.31.07.12.07.65-.17 1.32z"/>
   </svg>
 )
 
@@ -494,13 +499,24 @@ export default function Dashboard({ trabajos = [], onNavigate, user }) {
                     <span className="mono" style={{ fontWeight: 700, fontSize: 13 }}>{fmt(t.total)}</span>
                   </div>
                   {t.telefonoCliente && (
-                    <a
-                      href={`tel:${t.telefonoCliente}`}
-                      className="btn btn-outline btn-sm"
-                      style={{ width: '100%', marginTop: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, textDecoration: 'none' }}
-                    >
-                      <IcPhone /> Llamar cliente
-                    </a>
+                    <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+                      <a
+                        href={whatsappLink(t.telefonoCliente, `Hola ${t.cliente || ''}, su vehículo ${t.placa || ''} ya está listo para entrega en ${TALLER.nombre}. Total ${fmt(t.total)}. ¡Lo esperamos!`)}
+                        target="_blank" rel="noreferrer"
+                        className="btn btn-sm"
+                        style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, textDecoration: 'none', background: 'var(--green-600)', color: '#fff', border: 'none' }}
+                      >
+                        <IcWa /> Avisar listo
+                      </a>
+                      <a
+                        href={`tel:${t.telefonoCliente}`}
+                        className="btn btn-outline btn-sm"
+                        style={{ flex: '0 0 auto', width: 42, padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none' }}
+                        aria-label="Llamar cliente"
+                      >
+                        <IcPhone />
+                      </a>
+                    </div>
                   )}
                 </div>
               ))}

@@ -32,6 +32,16 @@ export function fmtTelefono(t) {
   return s
 }
 
+// Enlace wa.me con mensaje pre-cargado. Normaliza el número colombiano
+// (10 dígitos → +57). Devuelve null si no hay teléfono.
+export function whatsappLink(tel, mensaje = '') {
+  if (!tel) return null
+  const limpio = tel.toString().replace(/[.,]\d+$/, '').replace(/\D/g, '')
+  if (!limpio) return null
+  const num = limpio.length === 10 ? `57${limpio}` : limpio
+  return `https://wa.me/${num}?text=${encodeURIComponent(mensaje)}`
+}
+
 // Formato fecha corta
 export function fmtDate(iso) {
   if (!iso) return '—'
