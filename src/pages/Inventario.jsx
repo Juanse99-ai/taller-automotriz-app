@@ -37,6 +37,8 @@ export default function Inventario({ notify }) {
   // sortDir: 'asc' | 'desc' | null (null = sin orden, default por nombre)
   const [sortBy, setSortBy] = useState(null)
   const [sortDir, setSortDir] = useState('asc')
+  const PAGE_SIZE = 100
+  const [pagina, setPagina] = useState(1)
 
   const toggleSort = (col) => {
     if (sortBy !== col) {
@@ -98,6 +100,12 @@ export default function Inventario({ notify }) {
     }
     return list
   }, [productos, busqueda, categoriaFiltro, sortBy, sortDir])
+
+  // Volver a la página 1 al cambiar la búsqueda/categoría
+  useEffect(() => { setPagina(1) }, [busqueda, categoriaFiltro])
+  const totalPaginas = Math.max(1, Math.ceil(filtrados.length / PAGE_SIZE))
+  const paginaActual = Math.min(pagina, totalPaginas)
+  const paginados = filtrados.slice((paginaActual - 1) * PAGE_SIZE, paginaActual * PAGE_SIZE)
 
   const stats = useMemo(() => ({
     total: productos.length,
@@ -269,7 +277,7 @@ export default function Inventario({ notify }) {
                 </tr>
               </thead>
               <tbody>
-                {filtrados.slice(0, 100).map(p => {
+                {paginados.map(p => {
                   const s = stockState(p)
                   const baseCosto = parseFloat(p.costoBase) || 0
                   const costoIva = baseCosto > 0 ? baseCosto * (1 + (p.iva || 0) / 100) : 0
@@ -300,10 +308,14 @@ export default function Inventario({ notify }) {
                 })}
               </tbody>
             </table>
-            {filtrados.length > 100 && (
-              <p style={{ fontSize: 12, color: 'var(--text-3)', textAlign: 'center', padding: 12 }}>
-                Mostrando 100 de {filtrados.length} productos. Usa el buscador para filtrar.
-              </p>
+            {totalPaginas > 1 && (
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, padding: 14, flexWrap: 'wrap' }}>
+                <button type="button" className="btn btn-outline btn-sm" disabled={paginaActual <= 1} onClick={() => setPagina(p => Math.max(1, p - 1))}>← Anterior</button>
+                <span style={{ fontSize: 13, color: 'var(--text-3)' }}>
+                  Página <strong style={{ color: 'var(--text)' }}>{paginaActual}</strong> de {totalPaginas} · {filtrados.length} productos
+                </span>
+                <button type="button" className="btn btn-outline btn-sm" disabled={paginaActual >= totalPaginas} onClick={() => setPagina(p => Math.min(totalPaginas, p + 1))}>Siguiente →</button>
+              </div>
             )}
           </div>
         )}
