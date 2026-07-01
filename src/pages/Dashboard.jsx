@@ -94,7 +94,10 @@ export default function Dashboard({ trabajos = [], onNavigate, user }) {
     const ingresosHoy = trabajos
       .filter(t => { const f = new Date(t.fecha); return f >= hoyStart && f <= hoyEnd })
       .reduce((s, t) => s + (t.total || 0), 0)
-    return { activos, listoCount, ingresosMes, ingresosHoy }
+    // Por cobrar = facturado (tiene factura en Cuentti) pero AÚN sin pagar
+    const porCobrarList = trabajos.filter(t => t.cuenttiTransacionId && !t.pagado)
+    const porCobrar = porCobrarList.reduce((s, t) => s + (t.total || 0), 0)
+    return { activos, listoCount, ingresosMes, ingresosHoy, porCobrar, porCobrarCount: porCobrarList.length }
   }, [trabajos])
 
   // ── Estancados ─────────────────────────────────────────────────────────────
@@ -306,6 +309,14 @@ export default function Dashboard({ trabajos = [], onNavigate, user }) {
             {estancados.length > 0 && <span className="kpi-bh__pill red">{estancados.length} estancados</span>}
           </div>
           <div className="kpi-bh__sub">en taller</div>
+        </div>
+        <div className="kpi-bh__s">
+          <div className="kpi-bh__l">Por cobrar</div>
+          <div className="kpi-bh__row">
+            <span className="kpi-bh__v">{fmt(stats.porCobrar)}</span>
+            {stats.porCobrarCount > 0 && <span className="kpi-bh__pill red">{stats.porCobrarCount} facturas</span>}
+          </div>
+          <div className="kpi-bh__sub">facturado sin pagar</div>
         </div>
         <div className="kpi-bh__s">
           <div className="kpi-bh__l">Total OTs</div>

@@ -409,12 +409,16 @@ function CotizacionForm({ cotizacion, trabajos = [], onSave, onCancel }) {
     }
     searchTimers.current[itemId] = setTimeout(() => {
       const q = query.toLowerCase().trim()
+      const terms = q.split(/\s+/).filter(Boolean)
       const scored = []
       for (const p of inventario) {
         const nombre = (p.nombre || '').toLowerCase()
         const codigo = (p.codigo || '').toLowerCase()
         const sku = (p.sku || '').toLowerCase()
         const barras = (p.codigoBarras || '').toLowerCase()
+        // Multi-palabra: TODAS las palabras deben aparecer (en cualquier orden)
+        const hay = `${nombre} ${codigo} ${sku} ${barras}`
+        if (!terms.every(t => hay.includes(t))) continue
         let score = 0
         if (codigo === q || sku === q || barras === q) score = 100
         else if (codigo.startsWith(q) || sku.startsWith(q) || barras.startsWith(q)) score = 80
@@ -423,7 +427,7 @@ function CotizacionForm({ cotizacion, trabajos = [], onSave, onCancel }) {
         else if (nombre.includes(' ' + q)) score = 50
         else if (nombre.includes(q)) score = 40
         else if (codigo.includes(q) || sku.includes(q) || barras.includes(q)) score = 30
-        else continue
+        else score = 35
         if (p.stock > 0) score += 5
         scored.push({ ...p, _score: score })
       }
