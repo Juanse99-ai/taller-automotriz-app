@@ -74,11 +74,13 @@ export default function Inventario({ notify }) {
       list = list.filter(p => p.categoria === categoriaFiltro)
     }
     if (busqueda.trim()) {
-      const q = busqueda.toLowerCase()
-      list = list.filter(p =>
-        (p.nombre || '').toLowerCase().includes(q) ||
-        (p.codigo || '').toLowerCase().includes(q)
-      )
+      // Multi-palabra: cada palabra debe aparecer (en cualquier orden) en
+      // nombre/código/SKU. Ej: "rodamiento duster" trae los que tengan AMBAS.
+      const terms = busqueda.toLowerCase().split(/\s+/).filter(Boolean)
+      list = list.filter(p => {
+        const hay = `${p.nombre || ''} ${p.codigo || ''} ${p.sku || ''} ${p.codigoBarras || ''}`.toLowerCase()
+        return terms.every(t => hay.includes(t))
+      })
     }
     if (sortBy) {
       list = [...list].sort((a, b) => {
