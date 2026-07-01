@@ -3,7 +3,7 @@ import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import { fmt, fmtDate, uid, hoyISO } from '../utils/helpers'
 import MoneyInput from '../components/MoneyInput'
-import { COMISION, ESTADOS } from '../utils/constants'
+import { COMISION, ESTADOS, PERSONAS_CUENTA } from '../utils/constants'
 import { lsGet, lsSet } from '../services/storage'
 import { useTecnicos } from '../services/tecnicos'
 import { usePrestamos } from '../hooks/usePrestamos'
@@ -932,6 +932,9 @@ function EstadoCuenta({ prestamos, tecnicos, notify }) {
     tecnicos.filter(t => !t.eliminado).forEach(t => {
       map[t.nombre] = { persona: t.nombre, tecnicoId: t.id, prestado: 0, abonado: 0, movs: [] }
     })
+    PERSONAS_CUENTA.forEach(p => {
+      if (!map[p.nombre]) map[p.nombre] = { persona: p.nombre, tecnicoId: null, rol: p.rol, prestado: 0, abonado: 0, movs: [] }
+    })
     movimientos.forEach(m => {
       const k = m.persona || '—'
       if (!map[k]) map[k] = { persona: k, tecnicoId: m.tecnicoId, prestado: 0, abonado: 0, movs: [] }
@@ -1004,7 +1007,8 @@ function EstadoCuenta({ prestamos, tecnicos, notify }) {
               <select className="input" value={form.personaSel} onChange={e => setForm(f => ({ ...f, personaSel: e.target.value }))}>
                 <option value="">Seleccionar…</option>
                 {tecnicos.filter(t => !t.eliminado).map(t => <option key={t.id} value={t.nombre}>{t.nombre}</option>)}
-                <option value="__otra">Otra persona (admin / tercero)…</option>
+                {PERSONAS_CUENTA.map(p => <option key={p.nombre} value={p.nombre}>{p.nombre}{p.rol ? ` (${p.rol})` : ''}</option>)}
+                <option value="__otra">Otra persona (tercero)…</option>
               </select>
             </div>
             {form.personaSel === '__otra' && (

@@ -21,6 +21,12 @@ export const COMISION = {
   SPLIT: 0.20,
 }
 
+// Personas adicionales (no técnicos) que llevan estado de cuenta de préstamos:
+// administrador, terceros, etc. Aparecen fijas en la pestaña "Estado de cuenta".
+export const PERSONAS_CUENTA = [
+  { nombre: 'Nicanor Escorcia', rol: 'Administrador' },
+]
+
 // IVA por defecto en Colombia
 export const IVA_DEFAULT = 19
 
