@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
 import { fmt, fmtCompact } from '../utils/helpers'
+import { TALLER } from '../utils/constants'
 import { useInventario, formatCacheAge } from '../hooks/useInventario'
 
 const STOCK_BAJO_UMBRAL = 3
@@ -16,6 +17,7 @@ export default function Inventario({ notify }) {
   } = useInventario()
   const [busqueda, setBusqueda] = useState('')
   const [categoriaFiltro, setCategoriaFiltro] = useState('todas')
+  const [soloReponer, setSoloReponer] = useState(false)
   const [, setNowTick] = useState(0)
   useEffect(() => {
     const id = setInterval(() => setNowTick(t => t + 1), 10000)
@@ -70,6 +72,9 @@ export default function Inventario({ notify }) {
 
   const filtrados = useMemo(() => {
     let list = productos
+    if (soloReponer) {
+      list = list.filter(p => !p.esServicio && (parseFloat(p.stock) || 0) <= STOCK_BAJO_UMBRAL)
+    }
     if (categoriaFiltro !== 'todas') {
       list = list.filter(p => p.categoria === categoriaFiltro)
     }
@@ -101,10 +106,31 @@ export default function Inventario({ notify }) {
       })
     }
     return list
-  }, [productos, busqueda, categoriaFiltro, sortBy, sortDir])
+  }, [productos, busqueda, categoriaFiltro, sortBy, sortDir, soloReponer])
 
-  // Volver a la página 1 al cambiar la búsqueda/categoría
-  useEffect(() => { setPagina(1) }, [busqueda, categoriaFiltro])
+  // Productos por reponer (bajo o sin stock, sin servicios) — para el botón y la lista
+  const porReponer = useMemo(
+    () => productos.filter(p => !p.esServicio && (parseFloat(p.stock) || 0) <= STOCK_BAJO_UMBRAL),
+    [productos])
+
+  // Texto de la lista de reposición para compartir (WhatsApp al proveedor)
+  const listaReposicion = () => {
+    const items = [...porReponer].sort((a, b) => (parseFloat(a.stock) || 0) - (parseFloat(b.stock) || 0))
+    const lineas = items.map(p => {
+      const stock = parseFloat(p.stock) || 0
+      const traer = Math.max(1, STOCK_BAJO_UMBRAL * 2 - stock)
+      return `• ${p.nombre}${p.codigo ? ` [${p.codigo}]` : ''} — stock ${stock}, traer ~${traer}`
+    })
+    return `*Lista de reposición · ${TALLER.nombre}*\n${items.length} productos por reponer:\n\n${lineas.join('\n')}`
+  }
+  const compartirReposicion = () => {
+    if (!porReponer.length) return
+    const texto = listaReposicion()
+    window.open(`https://wa.me/?text=${encodeURIComponent(texto)}`, '_blank', 'noopener')
+  }
+
+  // Volver a la página 1 al cambiar la búsqueda/categoría/reposición
+  useEffect(() => { setPagina(1) }, [busqueda, categoriaFiltro, soloReponer])
   const totalPaginas = Math.max(1, Math.ceil(filtrados.length / PAGE_SIZE))
   const paginaActual = Math.min(pagina, totalPaginas)
   const paginados = filtrados.slice((paginaActual - 1) * PAGE_SIZE, paginaActual * PAGE_SIZE)
@@ -230,6 +256,17 @@ export default function Inventario({ notify }) {
                 </button>
               ))}
             </div>
+            {/* Reposición: filtrar a bajo/sin stock + compartir lista */}
+            <button type="button" className={`btn btn-sm ${soloReponer ? 'btn-primary' : 'btn-outline'}`} onClick={() => setSoloReponer(v => !v)}>
+              {soloReponer ? '✓ ' : ''}Por reponer ({porReponer.length})
+            </button>
+            {soloReponer && porReponer.length > 0 && (
+              <button type="button" className="btn btn-sm" onClick={compartirReposicion}
+                style={{ background: 'var(--green-600)', color: '#fff', border: 'none', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+                Compartir lista
+              </button>
+            )}
           </div>
         </div>
 
