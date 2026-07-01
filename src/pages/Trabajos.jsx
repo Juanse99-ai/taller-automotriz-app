@@ -10,6 +10,7 @@ import { useInventario, formatCacheAge } from '../hooks/useInventario'
 import { lsGet, lsSet, LS_KEYS } from '../services/storage'
 import Switch from '../components/Switch'
 import MoneyInput from '../components/MoneyInput'
+import SignaturePad from '../components/SignaturePad'
 
 // ¿La fecha cae dentro del rango elegido? (hoy / semana = últimos 7 días / mes = mes actual)
 function dentroDeFecha(fecha, modo, now) {
@@ -54,6 +55,7 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
   // Cockpit desktop: trabajo seleccionado para el panel de detalle (solo ≥1200px)
   const [selId, setSelId] = useState(null)
   const [previewId, setPreviewId] = useState(null) // vista previa de una OT (modal) antes de editar
+  const [firmando, setFirmando] = useState(false) // capturando firma del cliente en la vista previa
   const [isWide, setIsWide] = useState(() => typeof window !== 'undefined' && window.matchMedia('(min-width:1200px)').matches)
   useEffect(() => {
     const mq = window.matchMedia('(min-width:1200px)')
@@ -341,6 +343,16 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
         { label: 'Técnico responsable', sub: 'Nombre, documento, fecha' },
       ],
     })
+
+    // Firma digital del cliente embebida sobre la línea de "Recibido por (cliente)"
+    if (t.firmaCliente) {
+      try {
+        const blockW = CONTENT_W / 2
+        const imgW = blockW - 12
+        const imgH = 15
+        doc.addImage(t.firmaCliente, 'PNG', MARGIN + 2, firmaY - imgH - 1, imgW, imgH, undefined, 'FAST')
+      } catch { /* firma inválida: se ignora */ }
+    }
 
     drawFooter(doc, { page: 1, total: 1, leftText: `${TALLER.razonSocial || TALLER.nombre} · NIT ${TALLER.nit}` })
     doc.save(`${t.otCodigo || 'OT'}.pdf`)
@@ -754,14 +766,14 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
         const tel = String(t.telefonoCliente || '').replace(/\D/g, '')
         const wa = tel.length === 10 ? `57${tel}` : tel
         return (
-          <div className="modal-overlay" onClick={() => setPreviewId(null)}>
+          <div className="modal-overlay" onClick={() => { setPreviewId(null); setFirmando(false) }}>
             <div className="modal" style={{ maxWidth: 470 }} onClick={e => e.stopPropagation()}>
               <div className="modal-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10 }}>
                 <div style={{ minWidth: 0 }}>
                   <div className="modal-title" style={{ fontFamily: 'var(--mono)', color: 'var(--blue-600)' }}>{t.otCodigo || '—'} · {t.placa}</div>
                   <div style={{ fontSize: 12.5, color: 'var(--text-3)', marginTop: 2 }}>{t.cliente || 'Sin cliente'} · {[t.marca, t.modelo].filter(Boolean).join(' ') || '—'}</div>
                 </div>
-                <button className="icobtn" onClick={() => setPreviewId(null)} aria-label="Cerrar" style={{ flexShrink: 0 }}>✕</button>
+                <button className="icobtn" onClick={() => { setPreviewId(null); setFirmando(false) }} aria-label="Cerrar" style={{ flexShrink: 0 }}>✕</button>
               </div>
               <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                 <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
@@ -795,6 +807,22 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
                     ))}
                   </div>
                 )}
+                {/* Firma del cliente (recibido) */}
+                <div style={{ border: '1px solid var(--border)', borderRadius: 10, padding: '10px 12px' }}>
+                  <div style={{ fontSize: 10, color: 'var(--text-4)', textTransform: 'uppercase', letterSpacing: '.4px', marginBottom: 8 }}>Firma del cliente (recibido)</div>
+                  {firmando ? (
+                    <SignaturePad initial={t.firmaCliente}
+                      onSave={async (dataUrl) => { await actualizarTrabajo(t.id, { firmaCliente: dataUrl }); setFirmando(false); notify('Firma guardada', 'success') }}
+                      onCancel={() => setFirmando(false)} />
+                  ) : t.firmaCliente ? (
+                    <div>
+                      <img src={t.firmaCliente} alt="Firma del cliente" style={{ width: '100%', maxHeight: 130, objectFit: 'contain', background: '#fff', border: '1px solid var(--border)', borderRadius: 8 }} />
+                      <button type="button" className="btn btn-outline btn-sm" style={{ marginTop: 8 }} onClick={() => setFirmando(true)}>Firmar de nuevo</button>
+                    </div>
+                  ) : (
+                    <button type="button" className="btn btn-outline btn-sm" onClick={() => setFirmando(true)}>✍ Firmar recibido</button>
+                  )}
+                </div>
               </div>
               <div className="modal-footer" style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
                 {t.otCodigo && <button className="btn btn-outline btn-sm" onClick={() => imprimirOT(t)}>PDF</button>}

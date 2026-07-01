@@ -73,6 +73,7 @@ export async function upsertTrabajo(trabajo, opts = {}) {
   // Para habilitarla: ALTER TABLE trabajos ADD COLUMN IF NOT EXISTS inspeccion jsonb;
   if (trabajo.cuenttiTransacionId) row.cuentti_id_transacion = String(trabajo.cuenttiTransacionId)
   if (trabajo.facturadoEn) row.facturado_en = trabajo.facturadoEn
+  if (trabajo.firmaCliente) row.firma_cliente = trabajo.firmaCliente
   if (trabajo.cuenttiResolucion) row.cuentti_resolucion = trabajo.cuenttiResolucion
 
   // Upsert estandar: si existe id → actualiza, si no → inserta

@@ -32,6 +32,7 @@ function normalizar(r) {
     otCodigo: r.ot_codigo || r.otCodigo || '',
     cuenttiTransacionId: r.cuentti_id_transacion || r.cuenttiTransacionId || null,
     facturadoEn: r.facturado_en || r.facturadoEn || null,
+    firmaCliente: r.firma_cliente || r.firmaCliente || null,
     cuenttiResolucion: r.cuentti_resolucion || r.cuenttiResolucion || null,
     inspeccion: typeof r.inspeccion === 'string' ? JSON.parse(r.inspeccion) : (r.inspeccion || null),
     // Evidencias: ahora vienen del servidor (columna evidencias). Fallback a local.
