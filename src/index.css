@@ -279,6 +279,18 @@ input,select,textarea{font-family:inherit;font-size:14px;color:inherit}
 .mo-manual__com-val{font-size:20px;font-weight:700;font-variant-numeric:tabular-nums;color:var(--green-700)}
 .mo-manual .help{margin-top:8px}
 
+/* Toggle claro Préstamo / Abono (estado de cuenta) — dos tarjetas con color */
+.mov-toggle{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.mov-toggle__btn{display:flex;flex-direction:column;align-items:flex-start;gap:1px;padding:9px 12px;border:1.5px solid var(--border);border-radius:10px;background:var(--bg-raised);cursor:pointer;text-align:left;transition:border-color .12s,background .12s}
+.mov-toggle__btn:hover{border-color:var(--border-strong)}
+.mov-toggle__btn strong{font-size:13.5px;font-weight:700;color:var(--text-2)}
+.mov-toggle__btn span{font-size:11px;color:var(--text-4)}
+.mov-toggle__btn.on.prestamo{border-color:var(--amber-500);background:rgba(245,158,11,.10)}
+.mov-toggle__btn.on.prestamo strong{color:var(--amber-700)}
+.mov-toggle__btn.on.abono{border-color:var(--green-500);background:rgba(22,163,74,.10)}
+.mov-toggle__btn.on.abono strong{color:var(--green-700)}
+.mov-toggle__btn.on span{color:var(--text-3)}
+
 /* Cabecera de tarjeta clickable para secciones plegables */
 .card__h--toggle{width:100%;background:none;border:none;border-bottom:1px solid var(--border);cursor:pointer;text-align:left;font:inherit;color:inherit}
 .card__h--toggle:last-child{border-bottom:none}

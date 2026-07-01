@@ -918,8 +918,17 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
 // ============================================================
 function EstadoCuenta({ prestamos, tecnicos, notify }) {
   const { movimientos, agregarMovimiento, eliminarMovimiento } = prestamos
-  const [form, setForm] = useState({ personaSel: '', personaOtra: '', tipo: 'prestamo', monto: '', fecha: hoyISO(), nota: '' })
+  const [form, setForm] = useState({ personaSel: '', personaOtra: '', tipo: 'prestamo', monto: '', fecha: hoyISO(), nota: '', valorDia: '', dias: '' })
   const [sel, setSel] = useState(null)
+
+  // Cálculo "por días": al escribir valor/día y días, llena el monto automático.
+  const setDia = (patch) => setForm(f => {
+    const nf = { ...f, ...patch }
+    const vd = parseFloat(nf.valorDia) || 0
+    const d = parseInt(nf.dias) || 0
+    if (vd > 0 && d > 0) nf.monto = vd * d
+    return nf
+  })
 
   const personaFinal = form.personaSel === '__otra' ? (form.personaOtra || '').trim() : form.personaSel
   const tecnicoIdFinal = useMemo(() => {
@@ -956,7 +965,7 @@ function EstadoCuenta({ prestamos, tecnicos, notify }) {
     if (!monto) { notify('Ingresa el monto', 'error'); return }
     agregarMovimiento({ id: `PR-${uid()}`, persona: personaFinal, tecnicoId: tecnicoIdFinal, tipo: form.tipo, monto, nota: form.nota, fecha: form.fecha })
     notify(`${form.tipo === 'abono' ? 'Abono' : 'Préstamo'} de ${fmt(monto)} · ${personaFinal}`, 'success')
-    setForm(f => ({ ...f, monto: '', nota: '' }))
+    setForm(f => ({ ...f, monto: '', nota: '', valorDia: '', dias: '' }))
     setSel(personaFinal)
   }
 
@@ -1017,13 +1026,31 @@ function EstadoCuenta({ prestamos, tecnicos, notify }) {
                 <input className="input" value={form.personaOtra} onChange={e => setForm(f => ({ ...f, personaOtra: e.target.value }))} placeholder="Ej. Administrador, proveedor…" />
               </div>
             )}
-            <div className="segctl">
-              <button type="button" className={form.tipo === 'prestamo' ? 'on' : ''} onClick={() => setForm(f => ({ ...f, tipo: 'prestamo' }))}>Préstamo (+)</button>
-              <button type="button" className={form.tipo === 'abono' ? 'on' : ''} onClick={() => setForm(f => ({ ...f, tipo: 'abono' }))}>Abono / descuento (−)</button>
+            <div className="field">
+              <label>Tipo de movimiento</label>
+              <div className="mov-toggle">
+                <button type="button" className={`mov-toggle__btn${form.tipo === 'prestamo' ? ' on prestamo' : ''}`} onClick={() => setForm(f => ({ ...f, tipo: 'prestamo' }))}>
+                  <strong>Préstamo</strong><span>sube lo que debe (+)</span>
+                </button>
+                <button type="button" className={`mov-toggle__btn${form.tipo === 'abono' ? ' on abono' : ''}`} onClick={() => setForm(f => ({ ...f, tipo: 'abono' }))}>
+                  <strong>Abono / descuento</strong><span>baja lo que debe (−)</span>
+                </button>
+              </div>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-              <div className="field"><label>Monto</label><MoneyInput value={form.monto} onChange={v => setForm(f => ({ ...f, monto: v }))} placeholder="0" /></div>
+              <div className="field"><label>Monto</label><MoneyInput value={form.monto} onChange={v => setForm(f => ({ ...f, monto: v, valorDia: '', dias: '' }))} placeholder="0" /></div>
               <div className="field"><label>Fecha</label><input className="input" type="date" value={form.fecha} onChange={e => setForm(f => ({ ...f, fecha: e.target.value }))} /></div>
+            </div>
+            <div className="field">
+              <label>O por días <span style={{ fontWeight: 500, color: 'var(--text-3)' }}>(pagos/cargos diarios · opcional)</span></label>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                <MoneyInput value={form.valorDia} onChange={v => setDia({ valorDia: v })} placeholder="Valor/día" style={{ flex: '1 1 120px', minWidth: 0 }} />
+                <span style={{ color: 'var(--text-3)', fontWeight: 700 }}>×</span>
+                <input className="input" type="number" min="0" value={form.dias} onChange={e => setDia({ dias: e.target.value })} placeholder="Días" style={{ width: 84 }} />
+                {(parseFloat(form.valorDia) || 0) > 0 && (parseInt(form.dias) || 0) > 0 && (
+                  <span style={{ fontSize: 12.5, color: 'var(--text-2)' }}>= <strong style={{ fontVariantNumeric: 'tabular-nums' }}>{fmt((parseFloat(form.valorDia) || 0) * (parseInt(form.dias) || 0))}</strong></span>
+                )}
+              </div>
             </div>
             <div className="field"><label>Nota</label><input className="input" value={form.nota} onChange={e => setForm(f => ({ ...f, nota: e.target.value }))} placeholder="Concepto, referencia…" /></div>
             <button type="button" className="btn btn-primary" onClick={guardar}>Registrar</button>
