@@ -30,6 +30,9 @@ function dentroDeFecha(fecha, modo, now) {
   return true
 }
 
+// Opciones de cilindraje del motor (litros): 0.8 a 5.0 en pasos de 0.1
+const CILINDRAJES = Array.from({ length: 43 }, (_, i) => (0.8 + i * 0.1).toFixed(1))
+
 // Etiqueta de tipo de servicio derivada de los ítems/diagnóstico de la OT (Kanban)
 const SERVICIO_TAGS = [
   { re: /aceite|filtro|lubric/i, label: 'Aceite', color: '#f59e0b' },
@@ -1344,7 +1347,11 @@ function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [], vehiculosHoo
             </div>
             <div className="field">
               <label>Cilindraje</label>
-              <input className="input" value={form.cilindraje} placeholder="Ej. 1.6L, 2000cc" disabled={form.sinVehiculo} onChange={e => set('cilindraje', e.target.value)} />
+              <select className="input" value={form.cilindraje} disabled={form.sinVehiculo} onChange={e => set('cilindraje', e.target.value)}>
+                <option value="">Seleccionar</option>
+                {form.cilindraje && !CILINDRAJES.some(c => `${c}L` === form.cilindraje) && <option value={form.cilindraje}>{form.cilindraje}</option>}
+                {CILINDRAJES.map(c => <option key={c} value={`${c}L`}>{c} L</option>)}
+              </select>
             </div>
             <div className="field">
               <label>Kilometraje</label>
