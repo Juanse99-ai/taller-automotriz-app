@@ -123,10 +123,17 @@ export default function Inventario({ notify }) {
     })
     return `*Lista de reposición · ${TALLER.nombre}*\n${items.length} productos por reponer:\n\n${lineas.join('\n')}`
   }
-  const compartirReposicion = () => {
+  const compartirReposicion = async () => {
     if (!porReponer.length) return
     const texto = listaReposicion()
-    window.open(`https://wa.me/?text=${encodeURIComponent(texto)}`, '_blank', 'noopener')
+    // Copiar al portapapeles: funciona en todos lados (pégala en WhatsApp, correo, etc.).
+    // wa.me/?text sin número da "WhatsApp Error" en desktop, por eso no se usa.
+    try {
+      await navigator.clipboard.writeText(texto)
+      notify('Lista copiada — pégala en WhatsApp, correo o donde quieras', 'success')
+    } catch {
+      window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(texto)}`, '_blank', 'noopener')
+    }
   }
 
   // Volver a la página 1 al cambiar la búsqueda/categoría/reposición
@@ -263,8 +270,8 @@ export default function Inventario({ notify }) {
             {soloReponer && porReponer.length > 0 && (
               <button type="button" className="btn btn-sm" onClick={compartirReposicion}
                 style={{ background: 'var(--green-600)', color: '#fff', border: 'none', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
-                Compartir lista
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                Copiar lista
               </button>
             )}
           </div>
