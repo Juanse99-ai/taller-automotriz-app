@@ -29,6 +29,23 @@ function dentroDeFecha(fecha, modo, now) {
   return true
 }
 
+// Etiqueta de tipo de servicio derivada de los ítems/diagnóstico de la OT (Kanban)
+const SERVICIO_TAGS = [
+  { re: /aceite|filtro|lubric/i, label: 'Aceite', color: '#f59e0b' },
+  { re: /freno|pastilla|banda|disco|zapata/i, label: 'Frenos', color: '#2563eb' },
+  { re: /aline|balance|suspensi|amortigua|r[oó]tula|terminal|barra estab/i, label: 'Suspensión', color: '#16a34a' },
+  { re: /sincron|diagn|escan|scanner|el[eé]ctric|fusible|bater|luz|luces|sensor|bobina|buj[ií]a/i, label: 'Eléctrico', color: '#7c3aed' },
+  { re: /llanta|neum|\brin\b|caucho/i, label: 'Llantas', color: '#db2777' },
+  { re: /motor|distribuci|correa|empaque|culata|inyect|clutch|embrague|caja/i, label: 'Motor', color: '#ea580c' },
+  { re: /lavado|detail|pulido|polichad/i, label: 'Lavado', color: '#0891b2' },
+]
+function tipoServicio(t) {
+  const txt = ((t?.items || []).map(i => i?.nombre || '').join(' ') + ' ' + (t?.diagnostico || t?.observaciones || '')).toLowerCase()
+  for (const s of SERVICIO_TAGS) if (s.re.test(txt)) return s
+  if (t?.tipoAceite && t.tipoAceite !== 'no_aplica') return SERVICIO_TAGS[0]
+  return null
+}
+
 export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, onAutoFacturar }) {
   const { trabajos, agregarTrabajo, actualizarTrabajo, eliminarTrabajo } = hook
   const [vista, setVista] = useState('lista') // lista | nuevo | editar | kanban
@@ -506,33 +523,35 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
                 onDrop={e => { e.preventDefault(); dropEnColumna(estado) }}
                 style={dragOverCol === estado ? { outline: '2px dashed var(--blue-600)', outlineOffset: -2, background: 'rgba(30,58,138,.05)', borderRadius: 12 } : undefined}
               >
-                <div className="kanban-column-header" style={{ borderTopColor: bc }}>
+                <div className="kanban-column-header">
+                  <span className="kdot" style={{ background: bc }}></span>
                   <span>{estado}</span>
                   <span className="kanban-count">{col.length}</span>
+                  <button type="button" className="kadd" onClick={() => setVista('nuevo')} aria-label="Nueva OT">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M12 5v14M5 12h14"/></svg>
+                  </button>
                 </div>
                 <div className="kanban-cards">
                   {col.map(t => {
                     const diasSinMover = t.fecha ? Math.floor((Date.now() - new Date(t.fecha).getTime()) / 86400000) : 0
                     const estancado = t.estado !== ESTADOS.COMPLETADO && t.estado !== ESTADOS.CANCELADO && diasSinMover >= DIAS_ESTANCADO
+                    const tipo = tipoServicio(t)
                     return (
-                      <div key={t.id} className="card"
+                      <div key={t.id} className={`kanban-card${estancado ? ' estancado' : ''}`}
                         draggable
                         onDragStart={() => { dragIdRef.current = t.id }}
                         onDragEnd={() => { dragIdRef.current = null; setDragOverCol(null) }}
-                        style={{ padding: '12px 14px', marginBottom: 8, cursor: 'grab', ...(estancado ? { borderColor: 'rgba(220,38,38,.32)', background: 'rgba(220,38,38,.04)' } : {}) }} onClick={() => setPreviewId(t.id)}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                          <span style={{ color: 'var(--blue-600)', fontWeight: 700, fontFamily: 'var(--mono)', fontSize: 13 }}>{t.otCodigo || '—'}</span>
-                          <span className="text-mono" style={{ fontWeight: 700, fontSize: 13, letterSpacing: '.5px' }}>{t.placa}</span>
+                        onClick={() => setPreviewId(t.id)}>
+                        <div className="kc-top">
+                          <span className="kc-id"><span className="kdot" style={{ background: estancado ? 'var(--red-500)' : bc }}></span>{t.otCodigo || '—'}</span>
+                          <span className={`av av-${(parseInt(t.tecnicoId) || 0) % 6}`} title={tecNombre(t.tecnicoId)}>{tecIniciales(t.tecnicoId)}</span>
                         </div>
-                        <div className="text-sm" style={{ marginBottom: 6, fontWeight: 500 }}>{t.cliente || 'Sin cliente'}</div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                            <span className={`av av-${(parseInt(t.tecnicoId) || 0) % 6}`} style={{ width: 22, height: 22, fontSize: 10 }}>{tecIniciales(t.tecnicoId)}</span>
-                            <span className="text-xs text-muted">{tecNombre(t.tecnicoId)}</span>
-                          </div>
-                          <span className="text-mono" style={{ fontWeight: 700, fontSize: 13 }}>{fmt(t.total)}</span>
+                        <div className="kc-title">{t.placa || 'Sin placa'} <span style={{ color: 'var(--text-3)', fontWeight: 500 }}>· {t.cliente || 'Sin cliente'}</span></div>
+                        <div className="kc-foot">
+                          {tipo && <span className="kc-tag"><span className="kdot" style={{ background: tipo.color }}></span>{tipo.label}</span>}
+                          {estancado && <span className="kc-tag kc-tag--warn">{diasSinMover} días</span>}
+                          <span className="kc-total">{fmt(t.total)}</span>
                         </div>
-                        {estancado && <div style={{ marginTop: 6 }}><span className="badge badge-d" style={{ fontSize: 10 }}>{diasSinMover}d sin movimiento</span></div>}
                       </div>
                     )
                   })}
