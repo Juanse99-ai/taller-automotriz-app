@@ -342,7 +342,7 @@ export function drawFooter(doc, { page = 1, total = 1, leftText = '' } = {}) {
   doc.setFontSize(6.5)
   doc.setTextColor(...SLATE_400)
   doc.setFont(undefined, 'normal')
-  const left = leftText || `Generado por taller-automotriz-app.vercel.app · ${TALLER.razonSocial || TALLER.nombre}`
+  const left = leftText || `Generado por taller-multias.vercel.app · ${TALLER.razonSocial || TALLER.nombre}`
   doc.text(left, MARGIN, PAGE_H - 7)
   doc.text(`Página ${page} de ${total}`, MARGIN + CONTENT_W, PAGE_H - 7, { align: 'right' })
 }

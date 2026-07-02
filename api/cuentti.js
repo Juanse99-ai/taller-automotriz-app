@@ -1,4 +1,5 @@
 const ALLOWED_ORIGINS = [
+  'https://taller-multias.vercel.app',
   'https://taller-automotriz-app.vercel.app',
   'http://localhost:3000',
   'http://localhost:5173',
