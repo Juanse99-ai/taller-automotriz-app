@@ -44,6 +44,12 @@ const cargoEfectivo = (m) => {
   return (m?.tipo === 'diario') ? monto * COMISION.TOTAL : monto
 }
 
+// Etiqueta visible del tipo de movimiento. El "diario" se MUESTRA como "Aporte"
+// (para que el técnico no lo sienta como un cobro), pero internamente sigue
+// siendo 'diario' para conservar la regla del 40%.
+const TIPO_LABELS = { diario: 'Aporte' }
+const tipoLabel = (t) => TIPO_LABELS[t] || (t ? t.charAt(0).toUpperCase() + t.slice(1) : '—')
+
 export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
   const TECNICOS = useTecnicos()
   const {
@@ -79,6 +85,10 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
   // los técnicos marcados. Útil cuando el gasto del admin lo comparten varios.
   const [diarioReparto, setDiarioReparto] = useState(false)
   const [diarioRepTec, setDiarioRepTec] = useState({})
+  // Nota que verá el técnico en su liquidación. Editable, con texto por defecto
+  // que enmarca el diario como aporte (no como cobro).
+  const DIARIO_NOTA_DEFAULT = 'Aporte del día · administración (Nicanor)'
+  const [diarioNota, setDiarioNota] = useState(DIARIO_NOTA_DEFAULT)
   const toggleDiarioRepTec = (id) => setDiarioRepTec(p => ({ ...p, [id]: !p[id] }))
 
   // compartidos[id] puede ser true (legacy, sin partner) o { partner: tecId }
@@ -265,7 +275,7 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
     if (monto <= 0) { notify('El valor diario debe ser mayor a 0', 'error'); return }
     hookAgregarMov({
       id: `MV-${uid()}`, tecnicoId: tid,
-      tipo: 'diario', monto, nota: `Diario: ${dias} día(s) × ${fmt(valorDiario)}`,
+      tipo: 'diario', monto, nota: (diarioNota || '').trim() || `${dias} día(s) × ${fmt(valorDiario)}`,
       fecha: hoyISO(),
     })
     setDiarioDias('')
@@ -284,7 +294,7 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
     ids.forEach(tid => hookAgregarMov({
       id: `MV-${uid()}`, tecnicoId: tid,
       tipo: 'diario', monto: parte,
-      nota: `Diario repartido: ${dias} día(s) × ${fmt(valorDiario)} ÷ ${ids.length}`,
+      nota: (diarioNota || '').trim() || `${dias} día(s) × ${fmt(valorDiario)} ÷ ${ids.length}`,
       fecha: hoyISO(),
     }))
     setDiarioDias(''); setDiarioRepTec({})
@@ -406,11 +416,11 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
     y = doc.lastAutoTable.finalY + 6
 
     if (tecMovs.length > 0) {
-      y = drawSectionHeader(doc, 'Adelantos · cargos · descuentos', y)
+      y = drawSectionHeader(doc, 'Aportes y descuentos', y)
       autoTable(doc, {
         startY: y,
         head: [['FECHA', 'TIPO', 'NOTA', 'MONTO']],
-        body: tecMovs.map(m => [fmtDate(m.fecha), m.tipo, m.nota || '—', fmt(m.monto)]),
+        body: tecMovs.map(m => [fmtDate(m.fecha), tipoLabel(m.tipo), m.nota || '—', fmt(m.monto)]),
         ...tableStylesMuted,
         columnStyles: {
           0: { cellWidth: 22 },
@@ -429,7 +439,7 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
       { lbl: `Comisión (${COMISION.TOTAL * 100}%)`, val: fmt(totalSeleccion.comision) },
     ]
     if ((totalSeleccion.cargosEfectivos || 0) > 0) {
-      rowsSel.push({ lbl: 'Cargos / adelantos', val: `- ${fmt(totalSeleccion.cargosEfectivos)}` })
+      rowsSel.push({ lbl: 'Aportes / descuentos', val: `- ${fmt(totalSeleccion.cargosEfectivos)}` })
     }
     y = drawTotalsBox(doc, {
       y, x: 122, w: 74,
@@ -497,11 +507,11 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
     y = doc.lastAutoTable.finalY + 6
 
     if (reg.movimientos && reg.movimientos.length > 0) {
-      y = drawSectionHeader(doc, 'Adelantos · cargos · descuentos', y)
+      y = drawSectionHeader(doc, 'Aportes y descuentos', y)
       autoTable(doc, {
         startY: y,
         head: [['FECHA', 'TIPO', 'NOTA', 'MONTO']],
-        body: reg.movimientos.map(m => [fmtDate(m.fecha), m.tipo, m.nota || '—', fmt(m.monto)]),
+        body: reg.movimientos.map(m => [fmtDate(m.fecha), tipoLabel(m.tipo), m.nota || '—', fmt(m.monto)]),
         ...tableStylesMuted,
         columnStyles: {
           0: { cellWidth: 22 },
@@ -524,13 +534,13 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
         { lbl: `Comisión (${COMISION.TOTAL * 100}%)`, val: fmt(reg.comision || 0) },
       ]
       if ((reg.cargosEfectivos || 0) > 0) {
-        rowsReg.push({ lbl: 'Cargos / adelantos', val: `- ${fmt(reg.cargosEfectivos || 0)}` })
+        rowsReg.push({ lbl: 'Aportes / descuentos', val: `- ${fmt(reg.cargosEfectivos || 0)}` })
       }
     } else {
       rowsReg = [
         { lbl: 'Mano de obra (sin IVA)', val: fmt(reg.manoObra || 0) },
         { lbl: `Comisión (${COMISION.TOTAL * 100}%)`, val: fmt(reg.comision || 0) },
-        { lbl: 'Cargos / adelantos', val: `- ${fmt(reg.cargos || 0)}` },
+        { lbl: 'Aportes / descuentos', val: `- ${fmt(reg.cargos || 0)}` },
       ]
     }
     y = drawTotalsBox(doc, {
@@ -805,7 +815,7 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
                   style={{ transform: colapso.movs ? 'rotate(-90deg)' : 'rotate(0deg)', transition: 'transform 200ms var(--ease-out)', flexShrink: 0, color: 'var(--text-3)' }}>
                   <polyline points="6 9 12 15 18 9"/>
                 </svg>
-                Adelantos / Cargos — {tecData.tecnico.nombre}
+                Aportes y descuentos — {tecData.tecnico.nombre}
               </h3>
               {colapso.movs && tecMovs.length > 0 && (
                 <span className="count">{tecMovs.length} mov · {fmt(totalSeleccion.cargos)}</span>
@@ -843,6 +853,10 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
                     </div>
                   )}
                 </div>
+                <div className="field" style={{ marginTop: 12 }}>
+                  <label>Nota (lo que verá el técnico en su liquidación)</label>
+                  <input className="input" value={diarioNota} onChange={e => setDiarioNota(e.target.value)} placeholder={DIARIO_NOTA_DEFAULT} />
+                </div>
                 {diarioReparto && (
                   <div style={{ marginTop: 10 }}>
                     <div style={{ fontSize: 12, color: 'var(--text-3)', marginBottom: 6 }}>¿Entre quiénes se reparte?</div>
@@ -877,7 +891,7 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
                     {tecMovs.map(m => (
                       <tr key={m.id}>
                         <td className="c-muted">{fmtDate(m.fecha)}</td>
-                        <td style={{ textTransform: 'capitalize' }}>{m.tipo}</td>
+                        <td>{tipoLabel(m.tipo)}</td>
                         <td className="c-muted">{m.nota || '—'}</td>
                         <td className="c-mono c-right" style={{ color: 'var(--amber-600)' }}>{fmt(m.monto)}</td>
                         <td><button className="btn btn-ghost btn-sm" onClick={() => hookEliminarMov(m.id)} aria-label="Eliminar movimiento">✕</button></td>
@@ -896,7 +910,7 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
               <div className="card__h" style={{ borderBottomColor: 'rgba(22,163,74,.18)' }}><h3 style={{ color: 'var(--green-700)' }}>Resumen del pago — {tecData.tecnico.nombre}</h3></div>
               <div className="card__b">
                 <div className="kpi-bh" style={{ marginBottom: 16 }}>
-                  {[[cantSeleccionados, 'Trabajos'], [fmt(totalSeleccion.manoObra), 'M.O. (sin IVA)'], [fmt(totalSeleccion.comision), 'Comisión', 'var(--green-700)'], [`− ${fmt(totalSeleccion.cargosEfectivos)}`, 'Cargos / adelantos', 'var(--amber-600)'], [fmt(totalSeleccion.neto), 'Neto a pagar', totalSeleccion.neto >= 0 ? 'var(--green-700)' : 'var(--red-700)']].map(([v, l, c], i) => (
+                  {[[cantSeleccionados, 'Trabajos'], [fmt(totalSeleccion.manoObra), 'M.O. (sin IVA)'], [fmt(totalSeleccion.comision), 'Comisión', 'var(--green-700)'], [`− ${fmt(totalSeleccion.cargosEfectivos)}`, 'Aportes / descuentos', 'var(--amber-600)'], [fmt(totalSeleccion.neto), 'Neto a pagar', totalSeleccion.neto >= 0 ? 'var(--green-700)' : 'var(--red-700)']].map(([v, l, c], i) => (
                     <div key={i} className="kpi-bh__s">
                       <div className="kpi-bh__l">{l}</div>
                       <div className="kpi-bh__row"><span className="kpi-bh__v" style={{ fontSize: 20, color: c || 'var(--text)' }}>{v}</span></div>
