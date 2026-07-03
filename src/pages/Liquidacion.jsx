@@ -58,7 +58,9 @@ const iniciales = (nombre) => (nombre || '?').split(' ').filter(Boolean).map(w =
 // de esos se muestran los últimos 6. Se le pasa el id del registro.
 const liqRef = (id) => {
   let s = (id || '').toString().replace(/^LQ-/i, '')
-  if (s.length > 9) s = s.slice(-6)
+  // Los ids nuevos son legibles y cortos (ej. PB260702, PB260702-2); los viejos
+  // eran un uid aleatorio de 13 chars → de esos mostramos los últimos 6.
+  if (s.length > 11) s = s.slice(-6)
   return s.toUpperCase()
 }
 
@@ -344,8 +346,9 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
   // y para MOSTRARLA de antemano (para copiar en Cuentti).
   const nextLiqId = (nombre) => {
     const hoy = new Date()
+    const yy = String(hoy.getFullYear()).slice(-2)
     const mmdd = String(hoy.getMonth() + 1).padStart(2, '0') + String(hoy.getDate()).padStart(2, '0')
-    const base = `LQ-${iniciales(nombre)}${mmdd}`
+    const base = `LQ-${iniciales(nombre)}${yy}${mmdd}`
     let id = base, n = 2
     while (historial.some(h => h.id === id)) id = `${base}-${n++}`
     return id
