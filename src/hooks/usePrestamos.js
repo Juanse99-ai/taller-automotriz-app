@@ -23,10 +23,15 @@ export function usePrestamos() {
     (async () => {
       try {
         const data = await fetchPrestamos()
-        if (Array.isArray(data)) {
+        if (Array.isArray(data) && data.length > 0) {
           const norm = data.map(normalizar)
           setMovimientos(norm)
           lsSet(LS_KEYS.PRESTAMOS, norm)
+        } else if (Array.isArray(data)) {
+          // Supabase vacío: NO borrar lo local (eso perdía datos). Si hay
+          // movimientos locales sin sincronizar, subirlos a la nube.
+          const cached = lsGet(LS_KEYS.PRESTAMOS, [])
+          if (cached.length > 0) cached.forEach(m => upsertPrestamo(m))
         }
       } catch (e) {
         console.warn('usePrestamos load:', e.message)
