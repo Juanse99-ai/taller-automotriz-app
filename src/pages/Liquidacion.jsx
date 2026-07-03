@@ -606,60 +606,39 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
       </div>
       {tabsLiq}
 
-      {/* KPIs — hero "Comisiones a pagar" + 2 mini (sin doble conteo de compartidos) */}
-      <div className="kpi-grid" style={{ marginBottom: 18 }}>
-        <div className="kpi-hero" style={{
-          background: 'var(--bg-raised)', border: '1px solid var(--border)', borderRadius: 14,
-          padding: '22px 26px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: 170,
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-            <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '.5px' }}>Comisiones a pagar</span>
-            {kpis.sinPartner > 0 && (
-              <span style={{ fontSize: 11.5, fontWeight: 700, color: 'var(--amber-600)', background: 'var(--amber-100)', padding: '3px 9px', borderRadius: 999 }}>
-                {kpis.sinPartner} compartido{kpis.sinPartner !== 1 ? 's' : ''} sin compañero
-              </span>
-            )}
-          </div>
-          <div>
-            <div style={{ fontFamily: 'var(--mono)', fontWeight: 700, fontSize: 'clamp(32px, 4.8vw, 48px)', letterSpacing: '-1px', lineHeight: 1, color: 'var(--amber-600)' }}>
+      {/* Resumen del periodo — banda editorial (sin tarjetas-dashboard con íconos) */}
+      <div style={{ background: 'var(--bg-raised)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: '24px 26px', marginBottom: 18 }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+          <div style={{ minWidth: 0 }}>
+            <div style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '.6px' }}>Comisiones a pagar</div>
+            <div className="mono" style={{ fontWeight: 800, fontSize: 'clamp(38px, 6vw, 56px)', letterSpacing: '-1.5px', lineHeight: 1, color: 'var(--amber-600)', marginTop: 6 }}>
               {fmt(kpis.comisiones)}
             </div>
-            <div style={{ fontSize: 13.5, color: 'var(--text-3)', marginTop: 8, fontWeight: 500 }}>
+            <div style={{ fontSize: 13.5, color: 'var(--text-3)', marginTop: 10, fontWeight: 500 }}>
               {trabajosPendientes.length} OT{trabajosPendientes.length !== 1 ? 's' : ''} pendiente{trabajosPendientes.length !== 1 ? 's' : ''} de liquidar
               {kpis.sinTecnico > 0 && <span style={{ color: 'var(--red-600)' }}> · {kpis.sinTecnico} sin técnico asignado</span>}
             </div>
           </div>
+          {kpis.sinPartner > 0 && (
+            <span style={{ fontSize: 11.5, fontWeight: 700, color: 'var(--amber-600)', background: 'var(--amber-100)', padding: '4px 11px', borderRadius: 999, flexShrink: 0 }}>
+              {kpis.sinPartner} compartido{kpis.sinPartner !== 1 ? 's' : ''} sin compañero
+            </span>
+          )}
         </div>
-
-        <div style={{ display: 'grid', gridTemplateRows: '1fr 1fr', gap: 10 }}>
-          <div className="kpi-mini" style={{ background: 'var(--bg-raised)', border: '1px solid var(--border)', borderRadius: 12, padding: '14px 18px', display: 'flex', alignItems: 'center', gap: 14 }}>
-            <div className="kpi__ic blue" style={{ width: 40, height: 40, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-              <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
+        <div style={{ display: 'flex', flexWrap: 'wrap', marginTop: 20, borderTop: '1px solid var(--border)', paddingTop: 16, rowGap: 12 }}>
+          {[['M.O. facturada', fmt(kpis.facturado), 'var(--text)'], ['Utilidad taller', fmt(kpis.utilidad), 'var(--green-600)'], ['Total a pagar', fmt(totalNomina), 'var(--green-700)']].map(([l, v, c], i) => (
+            <div key={i} style={{ flex: '1 1 140px', paddingLeft: i === 0 ? 0 : 22, paddingRight: 22, borderLeft: i === 0 ? 'none' : '1px solid var(--border)' }}>
+              <div style={{ fontSize: 11.5, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '.4px' }}>{l}</div>
+              <div className="mono" style={{ fontWeight: 700, fontSize: 22, color: c, lineHeight: 1.1, marginTop: 4 }}>{v}</div>
             </div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '.4px' }}>M.O. facturada</div>
-              <div style={{ fontFamily: 'var(--mono)', fontWeight: 700, fontSize: 24, color: 'var(--text)', lineHeight: 1.1, marginTop: 2 }}>{fmt(kpis.facturado)}</div>
-            </div>
-          </div>
-
-          <div className="kpi-mini" style={{ background: 'var(--bg-raised)', border: '1px solid var(--border)', borderRadius: 12, padding: '14px 18px', display: 'flex', alignItems: 'center', gap: 14 }}>
-            <div className="kpi__ic green" style={{ width: 40, height: 40, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-              <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M5 13l4 4L19 7"/></svg>
-            </div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '.4px' }}>Utilidad taller</div>
-              <div style={{ fontFamily: 'var(--mono)', fontWeight: 700, fontSize: 24, color: 'var(--green-600)', lineHeight: 1.1, marginTop: 2 }}>{fmt(kpis.utilidad)}</div>
-            </div>
-          </div>
+          ))}
         </div>
       </div>
 
-      {/* Nómina: total a pagar + lista por técnico (cada fila es clicable) */}
-      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12, marginBottom: 12, flexWrap: 'wrap' }}>
-        <h3 style={{ margin: 0 }}>Nómina · {resumenTecnicos.filter(t => t.pendientes > 0).length} por liquidar</h3>
-        <div style={{ fontSize: 13, color: 'var(--text-3)' }}>
-          Total a pagar <strong className="mono" style={{ color: 'var(--green-700)', fontSize: 16, marginLeft: 4 }}>{fmt(totalNomina)}</strong>
-        </div>
+      {/* Nómina: lista por técnico (cada fila es clicable) */}
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 12 }}>
+        <h3 style={{ margin: 0 }}>Nómina</h3>
+        <span style={{ fontSize: 13, color: 'var(--text-3)' }}>{resumenTecnicos.filter(t => t.pendientes > 0).length} por liquidar</span>
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
         {resumenTecnicos.map((t, i) => {
