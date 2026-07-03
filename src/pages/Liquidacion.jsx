@@ -50,6 +50,18 @@ const cargoEfectivo = (m) => {
 const TIPO_LABELS = { diario: 'Aporte' }
 const tipoLabel = (t) => TIPO_LABELS[t] || (t ? t.charAt(0).toUpperCase() + t.slice(1) : '—')
 
+// Iniciales del técnico (2 letras) para la referencia legible.
+const iniciales = (nombre) => (nombre || '?').split(' ').filter(Boolean).map(w => w[0]).slice(0, 2).join('').toUpperCase() || 'XX'
+
+// Referencia visible de una liquidación (para trazar con Cuentti). Los ids nuevos
+// son legibles (ej. LQ-PB0702 → "PB0702"); los viejos eran un uid aleatorio largo,
+// de esos se muestran los últimos 6. Se le pasa el id del registro.
+const liqRef = (id) => {
+  let s = (id || '').toString().replace(/^LQ-/i, '')
+  if (s.length > 9) s = s.slice(-6)
+  return s.toUpperCase()
+}
+
 export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
   const TECNICOS = useTecnicos()
   const {
@@ -316,8 +328,16 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
       if (!ok) return
     }
 
+    // Referencia legible: iniciales del técnico + fecha (MMDD). Si ya existe una
+    // con ese código (dos liquidaciones del mismo técnico el mismo día), agrega -2, -3…
+    const hoy = new Date()
+    const mmdd = String(hoy.getMonth() + 1).padStart(2, '0') + String(hoy.getDate()).padStart(2, '0')
+    const baseId = `LQ-${iniciales(tecData.tecnico.nombre)}${mmdd}`
+    let nuevoId = baseId, nSuf = 2
+    while (historial.some(h => h.id === nuevoId)) nuevoId = `${baseId}-${nSuf++}`
+
     const registro = {
-      id: `LQ-${uid()}`,
+      id: nuevoId,
       fecha: new Date().toISOString(),
       tecnico: tecData.tecnico.nombre,
       tecnicoId: tecData.tecnico.id,
@@ -470,7 +490,7 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
     drawHeader(doc, {
       logoData,
       docType: 'ESTADO DE CUENTA',
-      docNumber: `#${(reg.id || '').toString().slice(-6).toUpperCase()}`,
+      docNumber: `#${liqRef(reg.id)}`,
       badge: { label: 'HISTÓRICO', color: 'navy' },
       dateRows: [{ lbl: 'Fecha', val: fmtDate(reg.fecha) }],
     })
@@ -479,7 +499,7 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
     y = drawSectionHeader(doc, 'Técnico', y)
     y = drawDataBlock(doc, [
       { label: 'Nombre completo', value: reg.tecnico, bold: true },
-      { label: 'Referencia', value: (reg.id || '').toString().slice(-6).toUpperCase() },
+      { label: 'Referencia', value: liqRef(reg.id) },
       { label: 'Trabajos liquidados', value: String((reg.detalleTrabajo || []).length) },
     ], y)
     y += 4
@@ -958,7 +978,7 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
                 {historialOrdenado.map(reg => (
                   <div key={reg.id} style={{ border: '1px solid var(--border)', borderRadius: 10, padding: 14, marginBottom: 10, background: 'var(--bg-subtle)' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8, marginBottom: 8 }}>
-                      <div><span className="mono" style={{ fontSize: 12, fontWeight: 700 }}>{reg.id}</span><span className="badge badge-i" style={{ marginLeft: 8 }}>{reg.tecnico}</span></div>
+                      <div><span className="mono" style={{ fontSize: 12, fontWeight: 700, color: 'var(--blue-600)' }}>#{liqRef(reg.id)}</span><span className="badge badge-i" style={{ marginLeft: 8 }}>{reg.tecnico}</span></div>
                       <span style={{ fontSize: 13, color: 'var(--text-3)' }}>{fmtDate(reg.fecha)}</span>
                     </div>
                     <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', alignItems: 'center' }}>
