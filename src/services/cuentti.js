@@ -27,6 +27,10 @@ const CONFIG = {
     },
     facturas: {
       grabarSimple: '/jServerj4ErpPro/api/token/grabarFacturaSimple',
+      // Gasto/egreso contra una cuenta de egreso (nómina). Endpoint que usa la UI
+      // de Cuentti (capturado con DevTools). Clave: item con id_producto=0 +
+      // id_plan_cuentas=43 (cuenta "Nomina"). Ver reference_cuentti_gasto_nomina.
+      grabarGasto: '/jServerj4ErpPro/com/j4ErpPro/server/transacion/grabardocumentosTransacion_desconectado',
       emitirFE: '/jServerj4ErpPro/com/j4ErpPro/server/transacion/generarFacturaElectronica/{id_transacion}/true/true/',
       agregarPago: '/jServerj4ErpPro/com/j4ErpPro/server/transacion/agregarPagoTransacion',
       anular: '/jServerj4ErpPro/com/j4ErpPro/server/transacion/anularTransacion',
@@ -93,6 +97,111 @@ async function cuenttiRequest(endpoint, method = 'GET', body = null, timeout = C
     console.error('[Cuentti] error lanzada', e)
     throw e
   }
+}
+
+// ---------------------------------------------------------------------------
+// GASTO DE NÓMINA (egreso contra la cuenta "Nomina", id_plan_cuentas=43).
+// Reconstruido del payload capturado del frontend de Cuentti (DevTools).
+// PENDIENTE: probar en vivo (el endpoint es de "sesión"; falta confirmar que el
+// token de la app lo acepta). No está cableado al flujo aún.
+// opts: { proveedorId, proveedorCedula, proveedorNombre, monto, idMedioPago=1, nota, fecha }
+// ---------------------------------------------------------------------------
+const ID_CUENTA_NOMINA = 43
+
+export async function registrarGastoNomina(opts = {}) {
+  const {
+    proveedorId, proveedorCedula, proveedorNombre = '',
+    monto, idMedioPago = 1, nota = '', fecha,
+  } = opts
+  const valor = Math.round(parseFloat(monto) || 0)
+  if (!proveedorCedula) throw new Error('Falta la cédula del proveedor (técnico)')
+  if (valor <= 0) throw new Error('El monto del gasto debe ser mayor a 0')
+
+  const emp = (CONFIG.employeeId ?? '2').toString()
+  const company = (CONFIG.companyId ?? '11464').toString()
+  const ahora = new Date()
+  const iso = (fecha ? new Date(`${fecha}T12:00:00`) : ahora).toISOString()
+  const rand5 = Math.random().toString(36).slice(2, 7)
+  const codigoUnico = `${company}${Date.now()}${Math.floor(Math.random() * 900 + 100)}`
+
+  const payload = {
+    tipoDocumento: 7,
+    id_sucursal: parseInt(CONFIG.branchId) || 1,
+    id_bodega: 1,
+    id_canal: 1,
+    id_centro_costo: 1,
+    id_cliente: proveedorId ?? -1,
+    id_empleado: parseInt(emp) || 2,
+    id_vendedor: parseInt(emp) || 2,
+    id_consecutivo: null,
+    id_documento: null,
+    es_ingreso: 0,
+    es_factura: 0,
+    compraRemision: 0,
+    esConectado: true,
+    editar_transacion: false,
+    descuento: 0,
+    descuento_global: 0,
+    domicilio: 0,
+    propina: 0,
+    anticipos: [],
+    retenciones: [],
+    empresa: 'Multidiagnosticos AS SAS',
+    correoEnvia: 'multidiagnosticosas@gmail.com',
+    nota,
+    nFactura: '',
+    codigo_unico: codigoUnico,
+    codigo_unico_volatil: codigoUnico,
+    codeUnicoQr: `${company}-7-${emp}-${rand5}`,
+    fecha_registro: iso,
+    fecha_inicial: iso,
+    fecha_final: iso,
+    fecha_vencimiento: iso,
+    total_neto: valor,
+    total_sin_impuestos: valor,
+    total_impuestos: 0,
+    total_estampilla: 0,
+    total_impoconsumo: 0,
+    json: JSON.stringify({ lstImpuestos: [{ breve: 'G', impuestosPor: 0, base: valor, valor: 0, total: valor, tipo_impuesto: 1 }] }),
+    objClienteMini: {
+      nombre_cliente: proveedorNombre,
+      identificacion: String(proveedorCedula),
+      es_proveedor: 1,
+      es_cliente: 0,
+      id_tipo_persona: 1,
+      telefono1: '', telefono2: '', direccion: '', email1: '', medio_pago: null,
+    },
+    objTransacionDetalle: [{
+      id_producto: 0,
+      id_plan_cuentas: ID_CUENTA_NOMINA,
+      descripcion: nota || 'Nomina',
+      cantidad: 1,
+      precio_venta: valor,
+      precio_real: valor,
+      total: valor,
+      impuesto: 0,
+      tipo_impuesto: 1,
+      editoPrecioManul: true,
+      es_devolucion: 0,
+      es_promocion: 0,
+      descuentoPor: 0,
+      descuento_valor: 0,
+      id_centro_costo: 0,
+      id_lista_precio: 0,
+      total_estampilla: 0,
+      total_impoconsumo: 0,
+    }],
+    lstPagos: [{
+      id_medio_pago: idMedioPago,
+      valor,
+      nota: '',
+      boucher: '',
+      digitos: '',
+      devuelta: 0,
+    }],
+  }
+
+  return cuenttiRequest(CONFIG.paths.facturas.grabarGasto, 'POST', payload)
 }
 
 // Devuelve headers en formato depuracion (token enmascarado)
