@@ -75,6 +75,11 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
   const [valorDiario, setValorDiario] = useState(() => Number(lsGet(VALOR_DIARIO_KEY, 30000)) || 0)
   const [diarioDias, setDiarioDias] = useState('')
   const cambiarValorDiario = (v) => { const n = Number(v) || 0; setValorDiario(n); lsSet(VALOR_DIARIO_KEY, n) }
+  // Modo "repartir": el total (valor × días) se divide en partes iguales entre
+  // los técnicos marcados. Útil cuando el gasto del admin lo comparten varios.
+  const [diarioReparto, setDiarioReparto] = useState(false)
+  const [diarioRepTec, setDiarioRepTec] = useState({})
+  const toggleDiarioRepTec = (id) => setDiarioRepTec(p => ({ ...p, [id]: !p[id] }))
 
   // compartidos[id] puede ser true (legacy, sin partner) o { partner: tecId }
   const compInfo = (id) => {
@@ -265,6 +270,25 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
     })
     setDiarioDias('')
     notify(`Diario agregado: ${dias} día(s) = ${fmt(monto)}`, 'success')
+  }
+
+  // Reparte el diario (valor × días) en partes iguales entre los técnicos marcados.
+  const repartirDiario = () => {
+    const dias = Math.floor(parseFloat(diarioDias) || 0)
+    const total = Math.round((Number(valorDiario) || 0) * dias)
+    const ids = Object.keys(diarioRepTec).filter(id => diarioRepTec[id]).map(Number)
+    if (dias <= 0) { notify('Escribe cuántos días', 'error'); return }
+    if (total <= 0) { notify('El valor diario debe ser mayor a 0', 'error'); return }
+    if (ids.length < 2) { notify('Marca al menos 2 técnicos para repartir', 'error'); return }
+    const parte = Math.round(total / ids.length)
+    ids.forEach(tid => hookAgregarMov({
+      id: `MV-${uid()}`, tecnicoId: tid,
+      tipo: 'diario', monto: parte,
+      nota: `Diario repartido: ${dias} día(s) × ${fmt(valorDiario)} ÷ ${ids.length}`,
+      fecha: hoyISO(),
+    }))
+    setDiarioDias(''); setDiarioRepTec({})
+    notify(`Diario repartido: ${fmt(parte)} a cada uno (${ids.length} técnicos)`, 'success')
   }
 
   const generarPago = () => {
@@ -808,14 +832,50 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
             </div>
             {!colapso.movs && (
             <div className="card__b">
-              {/* DIARIO: cargo fijo por día (mismo valor para todos, editable y guardado). Tú escribes los días. */}
-              <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-end', gap: 12, marginBottom: 14, padding: 12, background: 'rgba(245,158,11,.06)', border: '1px solid rgba(245,158,11,.25)', borderRadius: 10 }}>
-                <div className="field" style={{ flex: '0 0 150px' }}><label>Valor diario</label><MoneyInput value={valorDiario} onChange={cambiarValorDiario} /></div>
-                <div className="field" style={{ flex: '0 0 110px' }}><label>Días</label><input className="input" type="number" min="0" value={diarioDias} onChange={e => setDiarioDias(e.target.value)} placeholder="Ej. 6" /></div>
-                <div style={{ flex: 1, minWidth: 130, fontSize: 13.5, color: 'var(--text-3)' }}>
-                  Descuento del diario: <strong style={{ color: 'var(--amber-700)', fontFamily: 'var(--mono)' }}>{fmt((Number(valorDiario) || 0) * (parseInt(diarioDias) || 0))}</strong>
+              {/* DIARIO: gasto del admin por día. Modo "solo este técnico" o "repartir" entre varios. */}
+              <div style={{ marginBottom: 14, padding: 12, background: 'rgba(245,158,11,.06)', border: '1px solid rgba(245,158,11,.25)', borderRadius: 10 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 10, flexWrap: 'wrap' }}>
+                  <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--amber-700)', textTransform: 'uppercase', letterSpacing: '.4px' }}>Diario · gasto del administrador</span>
+                  <div className="tabs" style={{ margin: 0 }}>
+                    <button type="button" className={!diarioReparto ? 'on' : ''} onClick={() => setDiarioReparto(false)} style={{ fontSize: 12 }}>Solo este técnico</button>
+                    <button type="button" className={diarioReparto ? 'on' : ''} onClick={() => setDiarioReparto(true)} style={{ fontSize: 12 }}>Repartir</button>
+                  </div>
                 </div>
-                <button type="button" className="btn btn-outline" onClick={agregarDiario}>Agregar diario</button>
+                <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-end', gap: 12 }}>
+                  <div className="field" style={{ flex: '0 0 150px' }}><label>Valor diario</label><MoneyInput value={valorDiario} onChange={cambiarValorDiario} /></div>
+                  <div className="field" style={{ flex: '0 0 110px' }}><label>Días</label><input className="input" type="number" min="0" value={diarioDias} onChange={e => setDiarioDias(e.target.value)} placeholder="Ej. 6" /></div>
+                  {!diarioReparto ? (
+                    <>
+                      <div style={{ flex: 1, minWidth: 130, fontSize: 13.5, color: 'var(--text-3)' }}>
+                        Descuento del diario: <strong style={{ color: 'var(--amber-700)', fontFamily: 'var(--mono)' }}>{fmt((Number(valorDiario) || 0) * (parseInt(diarioDias) || 0))}</strong>
+                      </div>
+                      <button type="button" className="btn btn-outline" onClick={agregarDiario}>Agregar diario</button>
+                    </>
+                  ) : (
+                    <div style={{ flex: 1, minWidth: 220, fontSize: 13.5, color: 'var(--text-3)' }}>
+                      {(() => {
+                        const nRep = Object.keys(diarioRepTec).filter(id => diarioRepTec[id]).length
+                        const totalDia = (Number(valorDiario) || 0) * (parseInt(diarioDias) || 0)
+                        const parteDia = nRep > 0 ? Math.round(totalDia / nRep) : 0
+                        return <>Total <strong style={{ color: 'var(--amber-700)', fontFamily: 'var(--mono)' }}>{fmt(totalDia)}</strong>{nRep > 0 && <> ÷ {nRep} = <strong style={{ color: 'var(--amber-700)', fontFamily: 'var(--mono)' }}>{fmt(parteDia)}</strong> c/u</>}</>
+                      })()}
+                    </div>
+                  )}
+                </div>
+                {diarioReparto && (
+                  <div style={{ marginTop: 10 }}>
+                    <div style={{ fontSize: 12, color: 'var(--text-3)', marginBottom: 6 }}>¿Entre quiénes se reparte?</div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 10 }}>
+                      {resumenTecnicos.map(t => (
+                        <label key={t.id} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '5px 10px', border: '1px solid', borderColor: diarioRepTec[t.id] ? 'var(--amber-600)' : 'var(--border)', background: diarioRepTec[t.id] ? 'rgba(245,158,11,.10)' : 'var(--bg-raised)', borderRadius: 999, cursor: 'pointer', fontSize: 13 }}>
+                          <input type="checkbox" checked={!!diarioRepTec[t.id]} onChange={() => toggleDiarioRepTec(t.id)} />
+                          {t.nombre.split(' ')[0]}
+                        </label>
+                      ))}
+                    </div>
+                    <button type="button" className="btn btn-outline" onClick={repartirDiario}>Repartir diario</button>
+                  </div>
+                )}
               </div>
               <form onSubmit={agregarMovimiento} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 2fr auto', gap: 12, marginBottom: 12 }}>
                 <div className="field"><label>Tipo</label><select className="input" value={movForm.tipo} onChange={e => setMovForm(f => ({ ...f, tipo: e.target.value }))}><option value="adelanto">Adelanto</option><option value="prestamo">Préstamo</option><option value="consumo">Consumo</option><option value="descuento">Descuento</option></select></div>
