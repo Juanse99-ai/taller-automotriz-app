@@ -606,56 +606,57 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
       </div>
       {tabsLiq}
 
-      {/* Resumen del periodo — banda editorial (sin tarjetas-dashboard con íconos) */}
-      <div style={{ background: 'var(--bg-raised)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: '24px 26px', marginBottom: 18 }}>
-        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
-          <div style={{ minWidth: 0 }}>
-            <div style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '.6px' }}>Comisiones a pagar</div>
-            <div className="mono" style={{ fontWeight: 800, fontSize: 'clamp(38px, 6vw, 56px)', letterSpacing: '-1.5px', lineHeight: 1, color: 'var(--amber-600)', marginTop: 6 }}>
-              {fmt(kpis.comisiones)}
-            </div>
-            <div style={{ fontSize: 13.5, color: 'var(--text-3)', marginTop: 10, fontWeight: 500 }}>
-              {trabajosPendientes.length} OT{trabajosPendientes.length !== 1 ? 's' : ''} pendiente{trabajosPendientes.length !== 1 ? 's' : ''} de liquidar
-              {kpis.sinTecnico > 0 && <span style={{ color: 'var(--red-600)' }}> · {kpis.sinTecnico} sin técnico asignado</span>}
-            </div>
+      {/* Resumen del cierre — encabezado denso; lo accionable (Total a pagar) manda */}
+      <div style={{ background: 'var(--bg-raised)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: '18px 22px', marginBottom: 20, display: 'flex', alignItems: 'center', gap: 28, flexWrap: 'wrap' }}>
+        <div style={{ minWidth: 0 }}>
+          <div style={{ fontSize: 11.5, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '.6px' }}>Total a pagar este cierre</div>
+          <div className="mono" style={{ fontWeight: 800, fontSize: 34, letterSpacing: '-.8px', lineHeight: 1.05, color: 'var(--green-700)', marginTop: 4 }}>
+            {fmt(totalNomina)}
           </div>
-          {kpis.sinPartner > 0 && (
-            <span style={{ fontSize: 11.5, fontWeight: 700, color: 'var(--amber-600)', background: 'var(--amber-100)', padding: '4px 11px', borderRadius: 999, flexShrink: 0 }}>
-              {kpis.sinPartner} compartido{kpis.sinPartner !== 1 ? 's' : ''} sin compañero
-            </span>
-          )}
+          <div style={{ fontSize: 12.5, color: 'var(--text-3)', marginTop: 5 }}>
+            {resumenTecnicos.filter(t => t.pendientes > 0).length} técnico{resumenTecnicos.filter(t => t.pendientes > 0).length !== 1 ? 's' : ''} · {trabajosPendientes.length} OT{trabajosPendientes.length !== 1 ? 's' : ''} pendiente{trabajosPendientes.length !== 1 ? 's' : ''}
+            {kpis.sinTecnico > 0 && <span style={{ color: 'var(--red-600)' }}> · {kpis.sinTecnico} sin técnico</span>}
+          </div>
         </div>
-        <div style={{ display: 'flex', flexWrap: 'wrap', marginTop: 20, borderTop: '1px solid var(--border)', paddingTop: 16, rowGap: 12 }}>
-          {[['M.O. facturada', fmt(kpis.facturado), 'var(--text)'], ['Utilidad taller', fmt(kpis.utilidad), 'var(--green-600)'], ['Total a pagar', fmt(totalNomina), 'var(--green-700)']].map(([l, v, c], i) => (
-            <div key={i} style={{ flex: '1 1 140px', paddingLeft: i === 0 ? 0 : 22, paddingRight: 22, borderLeft: i === 0 ? 'none' : '1px solid var(--border)' }}>
-              <div style={{ fontSize: 11.5, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '.4px' }}>{l}</div>
-              <div className="mono" style={{ fontWeight: 700, fontSize: 22, color: c, lineHeight: 1.1, marginTop: 4 }}>{v}</div>
+        <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap', marginLeft: 'auto' }}>
+          {[['Comisiones', fmt(kpis.comisiones)], ['M.O. facturada', fmt(kpis.facturado)], ['Utilidad taller', fmt(kpis.utilidad)]].map(([l, v]) => (
+            <div key={l}>
+              <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '.4px' }}>{l}</div>
+              <div className="mono" style={{ fontWeight: 700, fontSize: 16, color: 'var(--text-2)', marginTop: 3 }}>{v}</div>
             </div>
           ))}
         </div>
+        {kpis.sinPartner > 0 && (
+          <span style={{ fontSize: 11.5, fontWeight: 700, color: 'var(--amber-700)', background: 'var(--amber-100)', padding: '5px 11px', borderRadius: 8, flexShrink: 0 }}>
+            {kpis.sinPartner} compartido{kpis.sinPartner !== 1 ? 's' : ''} sin compañero
+          </span>
+        )}
       </div>
 
-      {/* Nómina: lista por técnico (cada fila es clicable) */}
+      {/* Nómina: técnicos en un solo panel, filas divididas (clic para liquidar) */}
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 12 }}>
         <h3 style={{ margin: 0 }}>Nómina</h3>
         <span style={{ fontSize: 13, color: 'var(--text-3)' }}>{resumenTecnicos.filter(t => t.pendientes > 0).length} por liquidar</span>
       </div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-        {resumenTecnicos.map((t, i) => {
+      <div style={{ border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', overflow: 'hidden', background: 'var(--bg-raised)' }}>
+        {resumenTecnicos.length === 0 ? (
+          <div style={{ padding: '22px', fontSize: 13.5, color: 'var(--text-3)' }}>No hay técnicos con trabajos pendientes de liquidar.</div>
+        ) : resumenTecnicos.map((t, i) => {
           const activo = tecnicoSel === String(t.id)
+          const disabled = t.pendientes === 0
           return (
             <button
               key={t.id}
               onClick={() => { setTecnicoSel(activo ? '' : String(t.id)); setSeleccionados({}); setColapso({ trabajos: false, movs: false }) }}
-              disabled={t.pendientes === 0}
+              disabled={disabled}
               style={{
                 display: 'flex', alignItems: 'center', gap: 14, width: '100%',
-                padding: '14px 18px', textAlign: 'left',
-                background: activo ? 'rgba(30,58,138,.05)' : 'var(--bg-raised)',
-                border: '1px solid', borderColor: activo ? 'var(--blue-600)' : 'var(--border)',
-                borderRadius: 12, cursor: t.pendientes === 0 ? 'default' : 'pointer',
-                opacity: t.pendientes === 0 ? .55 : 1,
-                transition: 'border-color .15s, background .15s',
+                padding: '15px 18px', textAlign: 'left',
+                borderTop: i === 0 ? 'none' : '1px solid var(--border)',
+                background: activo ? 'var(--bg-subtle)' : 'transparent',
+                cursor: disabled ? 'default' : 'pointer',
+                opacity: disabled ? .55 : 1,
+                transition: 'background .15s var(--ease-out)',
               }}
             >
               <span className={`av av-${(i % 5) + 1}`} style={{ width: 38, height: 38, fontSize: 13, flexShrink: 0 }}>
@@ -666,20 +667,21 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
                   {t.nombre}
                   {t.activo === false && <span className="badge badge-n">Inactivo</span>}
                 </div>
-                <div style={{ fontSize: 12.5, color: 'var(--text-3)', marginTop: 1 }}>{t.especialidad} · {t.pendientes} OT{t.pendientes !== 1 ? 's' : ''} pendiente{t.pendientes !== 1 ? 's' : ''}{t.activo === false ? ' · cierre de cuentas' : ''}</div>
-              </div>
-              <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                <div style={{ fontSize: 10.5, fontWeight: 600, color: 'var(--text-4)', textTransform: 'uppercase', letterSpacing: '.4px' }}>Neto a pagar</div>
-                <div className="mono" style={{ fontSize: 19, fontWeight: 700, color: t.neto > 0 ? 'var(--green-700)' : 'var(--text-3)' }}>{fmt(t.neto)}</div>
-                <div style={{ fontSize: 10.5, color: 'var(--text-4)', marginTop: 1 }}>
-                  Com. {fmt(t.comisionTotal)}{t.cargosEf > 0 ? ` − ${fmt(t.cargosEf)}` : ''}
+                <div style={{ fontSize: 12.5, color: 'var(--text-3)', marginTop: 2 }}>
+                  {t.pendientes} OT{t.pendientes !== 1 ? 's' : ''} pendiente{t.pendientes !== 1 ? 's' : ''}
+                  {t.especialidad ? ` · ${t.especialidad}` : ''}{t.activo === false ? ' · cierre de cuentas' : ''}
                 </div>
               </div>
-              {activo && (
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--blue-600)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
-                  <polyline points="20 6 9 17 4 12"/>
-                </svg>
-              )}
+              <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                <div className="mono" style={{ fontSize: 20, fontWeight: 700, color: t.neto > 0 ? 'var(--green-700)' : 'var(--text-3)', lineHeight: 1.1 }}>{fmt(t.neto)}</div>
+                <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 2 }}>
+                  Comisión {fmt(t.comisionTotal)}{t.cargosEf > 0 ? ` − ${fmt(t.cargosEf)}` : ''}
+                </div>
+              </div>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-3)" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"
+                style={{ flexShrink: 0, transform: activo ? 'rotate(90deg)' : 'none', transition: 'transform 200ms var(--ease-out)', opacity: disabled ? 0 : 1 }}>
+                <polyline points="9 18 15 12 9 6"/>
+              </svg>
             </button>
           )
         })}
