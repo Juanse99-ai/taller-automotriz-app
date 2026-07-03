@@ -101,6 +101,10 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
   // que enmarca el diario como aporte (no como cobro).
   const DIARIO_NOTA_DEFAULT = 'Aporte del día · administración (Nicanor)'
   const [diarioNota, setDiarioNota] = useState(DIARIO_NOTA_DEFAULT)
+  // Pago real: cuánto le entregas en efectivo (por defecto el neto). Si pagas de
+  // menos, la diferencia va al Estado de cuenta según diffDestino.
+  const [pagoReal, setPagoReal] = useState('')
+  const [diffDestino, setDiffDestino] = useState('debo') // 'debo' | 'prestamo'
   const toggleDiarioRepTec = (id) => setDiarioRepTec(p => ({ ...p, [id]: !p[id] }))
 
   // compartidos[id] puede ser true (legacy, sin partner) o { partner: tecId }
@@ -262,6 +266,28 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
     [...historial].sort((a, b) => new Date(b.fecha) - new Date(a.fecha)),
   [historial])
 
+  // Cuenta por técnico: liquidado (sum netos), pagado (sum pagos reales; los
+  // registros viejos sin "pagado" se asumen pagados completos) y el saldo del
+  // Estado de cuenta (préstamos − abonos, que ya incluye lo que quedó debiendo).
+  const cuentasTecnicos = useMemo(() => {
+    const map = {}
+    const keyOf = (tid, persona) => tid != null ? `t${tid}` : `p${(persona || '').trim().toLowerCase()}`
+    historial.forEach(h => {
+      const k = keyOf(h.tecnicoId, h.tecnico)
+      if (!map[k]) map[k] = { nombre: h.tecnico, liquidado: 0, pagado: 0, saldo: 0 }
+      map[k].liquidado += h.neto || 0
+      map[k].pagado += (h.pagado == null ? (h.neto || 0) : h.pagado)
+    })
+    ;(prestamosHook.movimientos || []).forEach(m => {
+      const k = keyOf(m.tecnicoId, m.persona)
+      if (!map[k]) map[k] = { nombre: m.persona, liquidado: 0, pagado: 0, saldo: 0 }
+      map[k].saldo += (m.tipo === 'abono' ? -m.monto : m.monto)
+    })
+    return Object.values(map)
+      .filter(c => c.liquidado > 0 || c.pagado > 0 || c.saldo !== 0)
+      .sort((a, b) => b.liquidado - a.liquidado)
+  }, [historial, prestamosHook.movimientos])
+
   // --- ACCIONES ---
   const agregarMovimiento = (e) => {
     e?.preventDefault?.()
@@ -341,6 +367,9 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
     }
 
     const nuevoId = nextLiqId(tecData.tecnico.nombre)
+    // Pago real: lo que entregas en efectivo (por defecto el neto).
+    const netoCalc = totalSeleccion.neto
+    const pagado = (pagoReal === '' || pagoReal == null) ? netoCalc : Math.round(parseFloat(pagoReal) || 0)
 
     const registro = {
       id: nuevoId,
@@ -354,6 +383,7 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
       cargos: totalSeleccion.cargos,
       cargosEfectivos: totalSeleccion.cargosEfectivos,
       neto: totalSeleccion.neto,
+      pagado,
       movimientos: tecMovs.map(m => ({ ...m })),
       detalleTrabajo: ids.map(id => {
         const t = trabajos.find(tr => tr.id === id)
@@ -384,8 +414,24 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
       })
     }
 
-    setSeleccionados({})
-    notify(`Pago #${liqRef(nuevoId)} generado: ${fmt(totalSeleccion.neto)} para ${tecData.tecnico.nombre} · copia la referencia en Cuentti`, 'success')
+    // Pago real vs neto: la diferencia va al Estado de cuenta del técnico.
+    if (netoCalc > 0 && pagado !== netoCalc) {
+      const diff = netoCalc - pagado
+      if (diff > 0) {
+        // Pagaste de menos: el taller le queda debiendo (o abona su préstamo).
+        const nota = diffDestino === 'prestamo'
+          ? `Abono a préstamo con liquidación #${liqRef(nuevoId)}`
+          : `Saldo a favor · liquidación #${liqRef(nuevoId)} (pagué ${fmt(pagado)} de ${fmt(netoCalc)})`
+        prestamosHook.agregarMovimiento({ id: `PR-${uid()}`, persona: tecData.tecnico.nombre, tecnicoId: tecData.tecnico.id, tipo: 'abono', monto: diff, nota, fecha: hoyISO() })
+      } else {
+        // Pagaste de más: el excedente queda como adelanto (el técnico lo debe).
+        prestamosHook.agregarMovimiento({ id: `PR-${uid()}`, persona: tecData.tecnico.nombre, tecnicoId: tecData.tecnico.id, tipo: 'prestamo', monto: -diff, nota: `Adelanto: pagué de más en liquidación #${liqRef(nuevoId)}`, fecha: hoyISO() })
+      }
+    }
+
+    setSeleccionados({}); setPagoReal(''); setDiffDestino('debo')
+    const difMsg = pagado !== netoCalc ? ` (pagado ${fmt(pagado)}, diferencia a Estado de cuenta)` : ''
+    notify(`Pago #${liqRef(nuevoId)} generado: ${fmt(pagado)} para ${tecData.tecnico.nombre}${difMsg} · copia la ref en Cuentti`, 'success')
     // Descargar automáticamente el comprobante del pago recién generado
     exportPdfHistorial(registro).catch(() => {})
   }
@@ -569,11 +615,18 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
         { lbl: 'Aportes / descuentos', val: `- ${fmt(reg.cargos || 0)}` },
       ]
     }
+    // Si se registró un pago real distinto al neto, mostrarlo + el saldo.
+    const tienePago = reg.pagado != null && reg.pagado !== reg.neto
+    if (tienePago) {
+      rowsReg.push({ lbl: 'Neto liquidado', val: fmt(reg.neto || 0) })
+      const dif = (reg.neto || 0) - reg.pagado
+      rowsReg.push({ lbl: dif > 0 ? 'Queda a tu favor' : 'Adelanto (debes)', val: `${dif > 0 ? '' : '- '}${fmt(Math.abs(dif))}` })
+    }
     y = drawTotalsBox(doc, {
       y, x: 122, w: 74,
       rows: rowsReg,
-      finalLabel: esNuevoPago ? 'Neto a pagar' : 'NETO PAGADO',
-      finalValue: fmt(reg.neto || 0),
+      finalLabel: tienePago ? 'Pagado en efectivo' : (esNuevoPago ? 'Neto a pagar' : 'NETO PAGADO'),
+      finalValue: fmt(tienePago ? reg.pagado : (reg.neto || 0)),
     })
     y += 18
 
@@ -962,6 +1015,36 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
                     Los cargos superan la comisión. Al generar el pago, la deuda restante se arrastrará como "saldo anterior".
                   </div>
                 )}
+                {totalSeleccion.neto > 0 && (
+                  <div style={{ marginBottom: 14, padding: '12px 14px', background: 'var(--bg-subtle)', border: '1px solid var(--border)', borderRadius: 'var(--radius)' }}>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-end', gap: 12 }}>
+                      <div className="field" style={{ flex: '0 0 190px' }}>
+                        <label>Pagado en efectivo</label>
+                        <MoneyInput value={pagoReal} onChange={setPagoReal} />
+                      </div>
+                      <div style={{ flex: 1, minWidth: 180, fontSize: 12.5, color: 'var(--text-3)' }}>
+                        Déjalo vacío para pagar el neto completo (<strong className="mono">{fmt(totalSeleccion.neto)}</strong>).
+                      </div>
+                    </div>
+                    {(() => {
+                      const pagadoNum = pagoReal === '' ? totalSeleccion.neto : Math.round(parseFloat(pagoReal) || 0)
+                      const diffNum = totalSeleccion.neto - pagadoNum
+                      if (diffNum > 0) return (
+                        <div style={{ marginTop: 12 }}>
+                          <div style={{ fontSize: 13, color: 'var(--text-2)', marginBottom: 8 }}>Diferencia de <strong className="mono" style={{ color: 'var(--amber-700)' }}>{fmt(diffNum)}</strong> — ¿qué hago con ella?</div>
+                          <div className="tabs" style={{ margin: 0 }}>
+                            <button type="button" className={diffDestino === 'debo' ? 'on' : ''} onClick={() => setDiffDestino('debo')} style={{ fontSize: 12.5 }}>Se lo quedo debiendo</button>
+                            <button type="button" className={diffDestino === 'prestamo' ? 'on' : ''} onClick={() => setDiffDestino('prestamo')} style={{ fontSize: 12.5 }}>Abona a su préstamo</button>
+                          </div>
+                        </div>
+                      )
+                      if (diffNum < 0) return (
+                        <div style={{ marginTop: 10, fontSize: 12.5, color: 'var(--text-2)' }}>Pagas <strong>{fmt(-diffNum)}</strong> de más → quedará como <strong>adelanto</strong> (el técnico lo debe).</div>
+                      )
+                      return null
+                    })()}
+                  </div>
+                )}
                 <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
                   <button className="btn btn-outline" onClick={exportPdfPago}>Exportar PDF</button>
                   <button className="btn btn-primary" onClick={generarPago}>Generar pago</button>
@@ -971,6 +1054,34 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
           )}
         </>
       )}
+
+      <div className="card" style={{ marginTop: 16 }}>
+        <div className="card__h">
+          <h3>Cuentas por técnico</h3>
+          <span style={{ fontSize: 12.5, color: 'var(--text-3)' }}>Liquidado · Pagado · Saldo</span>
+        </div>
+        <div className="card__b card__b--flush">
+          {cuentasTecnicos.length === 0 ? (
+            <div className="empty"><h4>Sin datos</h4><p>Aún no hay liquidaciones ni saldos que mostrar.</p></div>
+          ) : (
+            <table className="tbl">
+              <thead><tr><th>Técnico</th><th className="c-right">Liquidado</th><th className="c-right">Pagado</th><th className="c-right">Saldo (le debes / te debe)</th></tr></thead>
+              <tbody>
+                {cuentasTecnicos.map((c, i) => (
+                  <tr key={i}>
+                    <td className="c-name" style={{ fontWeight: 600 }}>{c.nombre}</td>
+                    <td className="c-mono c-right">{fmt(c.liquidado)}</td>
+                    <td className="c-mono c-right">{fmt(c.pagado)}</td>
+                    <td className="c-mono c-right" style={{ fontWeight: 700, color: c.saldo > 0 ? 'var(--amber-700)' : c.saldo < 0 ? 'var(--green-700)' : 'var(--text-3)' }}>
+                      {c.saldo > 0 ? `Te debe ${fmt(c.saldo)}` : c.saldo < 0 ? `Le debes ${fmt(-c.saldo)}` : 'Al día'}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      </div>
 
       <div className="card" style={{ marginTop: 16 }}>
         <div className="card__h">

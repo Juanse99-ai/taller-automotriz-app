@@ -51,6 +51,7 @@ export function useLiquidacion() {
     comision: parseFloat(r.comision) || 0,
     cargos: parseFloat(r.cargos) || 0,
     neto: parseFloat(r.neto) || 0,
+    pagado: r.pagado == null ? null : (parseFloat(r.pagado) || 0),
     movimientos: typeof r.movimientos === 'string' ? JSON.parse(r.movimientos) : (r.movimientos || []),
     detalleTrabajo: typeof r.detalle_trabajo === 'string' ? JSON.parse(r.detalle_trabajo) : (r.detalle_trabajo || []),
   })

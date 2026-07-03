@@ -388,6 +388,7 @@ export async function upsertLiquidacionHistorial(reg) {
       comision: reg.comision || 0,
       cargos: reg.cargos || 0,
       neto: reg.neto || 0,
+      pagado: reg.pagado == null ? null : reg.pagado,
       movimientos: JSON.stringify(reg.movimientos || []),
       detalle_trabajo: JSON.stringify(reg.detalleTrabajo || []),
     }
