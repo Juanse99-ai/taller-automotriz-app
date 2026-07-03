@@ -814,7 +814,7 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
             {!colapso.movs && (
             <div className="card__b">
               {/* DIARIO: gasto del admin por día. Modo "solo este técnico" o "repartir" entre varios. */}
-              <div style={{ marginBottom: 14, padding: 12, background: 'rgba(245,158,11,.06)', border: '1px solid rgba(245,158,11,.25)', borderRadius: 10 }}>
+              <div style={{ marginBottom: 16, padding: 14, background: 'var(--bg-subtle)', border: '1px solid var(--border)', borderRadius: 'var(--radius)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 10, flexWrap: 'wrap' }}>
                   <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--amber-700)', textTransform: 'uppercase', letterSpacing: '.4px' }}>Diario · gasto del administrador</span>
                   <div className="tabs" style={{ margin: 0 }}>
@@ -828,7 +828,7 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
                   {!diarioReparto ? (
                     <>
                       <div style={{ flex: 1, minWidth: 130, fontSize: 13.5, color: 'var(--text-3)' }}>
-                        Descuento del diario: <strong style={{ color: 'var(--amber-700)', fontFamily: 'var(--mono)' }}>{fmt((Number(valorDiario) || 0) * (parseInt(diarioDias) || 0))}</strong>
+                        Diario a cargar: <strong style={{ color: 'var(--amber-700)', fontFamily: 'var(--mono)' }}>{fmt((Number(valorDiario) || 0) * (parseInt(diarioDias) || 0))}</strong>
                       </div>
                       <button type="button" className="btn btn-outline" onClick={agregarDiario}>Agregar diario</button>
                     </>
@@ -858,7 +858,8 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
                   </div>
                 )}
               </div>
-              <form onSubmit={agregarMovimiento} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 2fr auto', gap: 12, marginBottom: 12 }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '.4px', marginBottom: 8 }}>Registrar adelanto o cargo</div>
+              <form onSubmit={agregarMovimiento} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 2fr auto', gap: 12, marginBottom: 16 }}>
                 <div className="field"><label>Tipo</label><select className="input" value={movForm.tipo} onChange={e => setMovForm(f => ({ ...f, tipo: e.target.value }))}><option value="adelanto">Adelanto</option><option value="prestamo">Préstamo</option><option value="consumo">Consumo</option><option value="descuento">Descuento</option></select></div>
                 <div className="field"><label>Monto</label><MoneyInput value={movForm.monto} onChange={v => setMovForm(f => ({ ...f, monto: v }))} placeholder="0" /></div>
                 <div className="field"><label>Fecha</label><input className="input" type="date" value={movForm.fecha} onChange={e => setMovForm(f => ({ ...f, fecha: e.target.value }))}/></div>
@@ -868,6 +869,8 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
               {tecMovs.length === 0 ? (
                 <p style={{ fontSize: 13.5, color: 'var(--text-3)' }}>Sin movimientos registrados.</p>
               ) : (
+                <>
+                <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '.4px', marginBottom: 8 }}>Movimientos · {tecMovs.length}</div>
                 <table className="tbl">
                   <thead><tr><th>Fecha</th><th>Tipo</th><th>Nota</th><th className="c-right">Monto</th><th></th></tr></thead>
                   <tbody>
@@ -882,6 +885,7 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
                     ))}
                   </tbody>
                 </table>
+                </>
               )}
             </div>
             )}
