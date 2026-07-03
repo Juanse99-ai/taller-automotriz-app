@@ -454,20 +454,22 @@ export async function deleteAllLiquidados() {
 // ---------- TRABAJOS COMPARTIDOS ----------
 
 export async function fetchCompartidos() {
-  const res = await fetchWithTimeout(`${proxy('trabajos_compartidos')}&select=trabajo_id&limit=2000`)
+  const res = await fetchWithTimeout(`${proxy('trabajos_compartidos')}&select=trabajo_id,partner_id&limit=2000`)
   if (!res.ok) throw new Error(`Supabase compartidos error (${res.status})`)
   const data = await res.json()
   const obj = {}
-  data.forEach(r => { obj[r.trabajo_id] = true })
+  // Valor: { partner: id } si hay compañero guardado, sino true (compartido sin elegir).
+  data.forEach(r => { obj[r.trabajo_id] = r.partner_id ? { partner: r.partner_id } : true })
   return obj
 }
 
-export async function upsertCompartido(trabajoId) {
+export async function upsertCompartido(trabajoId, partnerId = null) {
   try {
+    const pid = parseInt(partnerId)
     const res = await fetchWithTimeout(`${proxy('trabajos_compartidos')}&upsert=true`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ trabajo_id: trabajoId, compartido: true }),
+      body: JSON.stringify({ trabajo_id: trabajoId, compartido: true, partner_id: Number.isNaN(pid) ? null : pid }),
     })
     if (!res.ok) throw new Error(await res.text())
     return true

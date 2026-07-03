@@ -25,15 +25,17 @@ export function useLiquidacion() {
     fecha: r.fecha,
   })
 
-  // Supabase solo guarda la EXISTENCIA del compartido (trabajo_id).
-  // El partner (con quién se comparte) vive en este objeto local:
-  //   compartidos[id] = true                  → compartido, partner sin elegir (legacy)
+  // Supabase ahora guarda el compartido Y su partner (columna partner_id).
+  //   compartidos[id] = true                  → compartido, partner sin elegir
   //   compartidos[id] = { partner: <tecId> }  → compartido con compañero elegido
-  // Al sincronizar preservamos el partner local para no perderlo.
+  // La base manda: si trae partner, ese gana; sino conservamos el local (por si
+  // se eligió recién y aún no sincroniza).
   const mergeCompartidos = (prev, sbComp) => {
     const merged = {}
     Object.keys(sbComp).forEach(id => {
-      merged[id] = (prev[id] && typeof prev[id] === 'object') ? prev[id] : true
+      const sb = sbComp[id]
+      if (sb && typeof sb === 'object') merged[id] = sb
+      else merged[id] = (prev[id] && typeof prev[id] === 'object') ? prev[id] : true
     })
     return merged
   }
@@ -155,7 +157,10 @@ export function useLiquidacion() {
       } else {
         const cached = lsGet(LS_KEYS.TRABAJOS_COMPARTIDOS, {})
         if (Object.keys(cached).length > 0 && sbComp !== null) {
-          Object.keys(cached).forEach(id => upsertCompartido(id))
+          Object.keys(cached).forEach(id => {
+            const c = cached[id]
+            upsertCompartido(id, (c && typeof c === 'object') ? c.partner : null)
+          })
         }
       }
 
@@ -232,11 +237,13 @@ export function useLiquidacion() {
     })
   }, [])
 
-  // Asigna el compañero de un trabajo compartido (la otra mitad del 40%)
+  // Asigna el compañero de un trabajo compartido (la otra mitad del 40%).
+  // Persiste el partner en Supabase (columna partner_id) para que no se pierda.
   const setCompartidoPartner = useCallback((trabajoId, partnerId) => {
     setCompartidos(prev => {
       if (!prev[trabajoId]) return prev
       const pid = parseInt(partnerId)
+      upsertCompartido(trabajoId, pid || null)
       return { ...prev, [trabajoId]: pid ? { partner: pid } : true }
     })
   }, [])
