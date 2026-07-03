@@ -313,6 +313,18 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
     notify(`Diario repartido: ${fmt(parte)} a cada uno (${ids.length} técnicos)`, 'success')
   }
 
+  // Próxima referencia legible para un técnico HOY (iniciales + MMDD, con sufijo
+  // -2/-3 si ya hay una del mismo técnico el mismo día). Se usa al generar el pago
+  // y para MOSTRARLA de antemano (para copiar en Cuentti).
+  const nextLiqId = (nombre) => {
+    const hoy = new Date()
+    const mmdd = String(hoy.getMonth() + 1).padStart(2, '0') + String(hoy.getDate()).padStart(2, '0')
+    const base = `LQ-${iniciales(nombre)}${mmdd}`
+    let id = base, n = 2
+    while (historial.some(h => h.id === id)) id = `${base}-${n++}`
+    return id
+  }
+
   const generarPago = () => {
     const ids = Object.keys(seleccionados).filter(id => seleccionados[id])
     if (ids.length === 0) { notify('Selecciona al menos un trabajo para liquidar', 'error'); return }
@@ -328,13 +340,7 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
       if (!ok) return
     }
 
-    // Referencia legible: iniciales del técnico + fecha (MMDD). Si ya existe una
-    // con ese código (dos liquidaciones del mismo técnico el mismo día), agrega -2, -3…
-    const hoy = new Date()
-    const mmdd = String(hoy.getMonth() + 1).padStart(2, '0') + String(hoy.getDate()).padStart(2, '0')
-    const baseId = `LQ-${iniciales(tecData.tecnico.nombre)}${mmdd}`
-    let nuevoId = baseId, nSuf = 2
-    while (historial.some(h => h.id === nuevoId)) nuevoId = `${baseId}-${nSuf++}`
+    const nuevoId = nextLiqId(tecData.tecnico.nombre)
 
     const registro = {
       id: nuevoId,
@@ -379,7 +385,7 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
     }
 
     setSeleccionados({})
-    notify(`Pago generado: ${fmt(totalSeleccion.neto)} para ${tecData.tecnico.nombre}`, 'success')
+    notify(`Pago #${liqRef(nuevoId)} generado: ${fmt(totalSeleccion.neto)} para ${tecData.tecnico.nombre} · copia la referencia en Cuentti`, 'success')
     // Descargar automáticamente el comprobante del pago recién generado
     exportPdfHistorial(registro).catch(() => {})
   }
@@ -927,7 +933,12 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
 
           {cantSeleccionados > 0 && (
             <div className="card" style={{ marginTop: 16, borderColor: 'rgba(22,163,74,.32)', background: 'rgba(22,163,74,.04)' }}>
-              <div className="card__h" style={{ borderBottomColor: 'rgba(22,163,74,.18)' }}><h3 style={{ color: 'var(--green-700)' }}>Resumen del pago — {tecData.tecnico.nombre}</h3></div>
+              <div className="card__h" style={{ borderBottomColor: 'rgba(22,163,74,.18)' }}>
+                <h3 style={{ color: 'var(--green-700)' }}>Resumen del pago — {tecData.tecnico.nombre}</h3>
+                <span title="Referencia para copiar en Cuentti" className="mono" style={{ fontSize: 13, fontWeight: 700, color: 'var(--blue-600)', background: 'rgba(37,99,235,.10)', padding: '4px 10px', borderRadius: 8, whiteSpace: 'nowrap' }}>
+                  Ref. #{liqRef(nextLiqId(tecData.tecnico.nombre))}
+                </span>
+              </div>
               <div className="card__b">
                 <div className="kpi-bh" style={{ marginBottom: 16 }}>
                   {[[cantSeleccionados, 'Trabajos'], [fmt(totalSeleccion.manoObra), 'M.O. (sin IVA)'], [fmt(totalSeleccion.comision), 'Comisión', 'var(--green-700)'], [`− ${fmt(totalSeleccion.cargosEfectivos)}`, 'Aportes / descuentos', 'var(--amber-600)'], [fmt(totalSeleccion.neto), 'Neto a pagar', totalSeleccion.neto >= 0 ? 'var(--green-700)' : 'var(--red-700)']].map(([v, l, c], i) => (
@@ -978,7 +989,14 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
                 {historialOrdenado.map(reg => (
                   <div key={reg.id} style={{ border: '1px solid var(--border)', borderRadius: 10, padding: 14, marginBottom: 10, background: 'var(--bg-subtle)' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8, marginBottom: 8 }}>
-                      <div><span className="mono" style={{ fontSize: 12, fontWeight: 700, color: 'var(--blue-600)' }}>#{liqRef(reg.id)}</span><span className="badge badge-i" style={{ marginLeft: 8 }}>{reg.tecnico}</span></div>
+                      <div>
+                        <button type="button" title="Clic para copiar la referencia" className="mono"
+                          onClick={() => { const r = liqRef(reg.id); navigator.clipboard?.writeText(r); notify(`Referencia ${r} copiada`, 'success') }}
+                          style={{ fontSize: 12, fontWeight: 700, color: 'var(--blue-600)', background: 'rgba(37,99,235,.10)', border: '1px solid rgba(37,99,235,.2)', padding: '2px 8px', borderRadius: 6, cursor: 'pointer' }}>
+                          #{liqRef(reg.id)}
+                        </button>
+                        <span className="badge badge-i" style={{ marginLeft: 8 }}>{reg.tecnico}</span>
+                      </div>
                       <span style={{ fontSize: 13, color: 'var(--text-3)' }}>{fmtDate(reg.fecha)}</span>
                     </div>
                     <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', alignItems: 'center' }}>
