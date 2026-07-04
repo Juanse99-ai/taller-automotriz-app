@@ -207,11 +207,11 @@ export async function registrarGastoNomina(opts = {}) {
 // Registra el gasto de nómina vía el backend (api/cuentti-gasto.js), que hace el
 // login con las credenciales del servidor. Es la forma que SÍ funciona (el token
 // de sesión no lo puede tener el frontend). Devuelve { ok, idTransacion, numeroDoc }.
-export async function registrarGastoNominaBackend({ proveedorId, proveedorCedula, proveedorNombre, monto, idMedioPago = 1, nota = '' }) {
+export async function registrarGastoNominaBackend({ proveedorId, proveedorCedula, proveedorNombre, monto, idMedioPago = 1, idBanco = 1, nota = '' }) {
   const res = await fetch('/api/cuentti-gasto', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ proveedorId, proveedorCedula, proveedorNombre, monto, idMedioPago, nota }),
+    body: JSON.stringify({ proveedorId, proveedorCedula, proveedorNombre, monto, idMedioPago, idBanco, nota }),
   })
   const data = await res.json().catch(() => null)
   if (!res.ok || !data?.ok) {

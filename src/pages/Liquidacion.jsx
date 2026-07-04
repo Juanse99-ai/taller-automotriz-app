@@ -109,6 +109,18 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
   const [pagoReal, setPagoReal] = useState('')
   const [diffDestino, setDiffDestino] = useState('debo') // 'debo' | 'prestamo'
   const [regCuenttiId, setRegCuenttiId] = useState(null) // id del pago que se está registrando en Cuentti
+  const [metodoGasto, setMetodoGasto] = useState({}) // reg.id -> 'efectivo' | 'transferencia'
+
+  // Ids de medio de pago, reusando la MISMA config que la facturación (localStorage).
+  const medioPagoIds = (key) => {
+    let metodos = { efectivo: 1, transferencia: 7 }
+    try { metodos = { ...metodos, ...JSON.parse(localStorage.getItem('cuentti:metodos_pago') || '{}') } } catch { /* defaults */ }
+    let idBancoT = 2
+    try { idBancoT = parseInt(localStorage.getItem('cuentti:id_banco')) || 2 } catch { /* default */ }
+    return key === 'transferencia'
+      ? { idMedioPago: metodos.transferencia ?? 7, idBanco: idBancoT }
+      : { idMedioPago: metodos.efectivo ?? 1, idBanco: 1 }
+  }
 
   // Registra el gasto de nómina de un pago en Cuentti (botón del historial).
   const registrarEnCuentti = async (reg) => {
@@ -117,13 +129,15 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
     if (!cedula) { notify(`Falta la cédula de ${reg.tecnico}. Agrégala en Mecánicos.`, 'error'); return }
     const monto = reg.pagado != null ? reg.pagado : reg.neto
     if (!(monto > 0)) { notify('El neto de este pago no es positivo; no se registra gasto.', 'error'); return }
+    const { idMedioPago, idBanco } = medioPagoIds(metodoGasto[reg.id] || 'efectivo')
     setRegCuenttiId(reg.id)
     try {
       const data = await registrarGastoNominaBackend({
         proveedorCedula: cedula,
         proveedorNombre: reg.tecnico,
         monto,
-        idMedioPago: 1,
+        idMedioPago,
+        idBanco,
         nota: `Nómina ${reg.tecnico} · liq #${liqRef(reg.id)}`,
       })
       const doc = data.numeroDoc ? `G-${data.numeroDoc}` : (data.idTransacion || 'OK')
@@ -1151,9 +1165,15 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
                         {reg.cuenttiGasto ? (
                           <span className="badge" style={{ background: 'var(--green-100)', color: 'var(--green-700)', fontWeight: 700 }} title="Gasto ya registrado en Cuentti">✓ Cuentti {reg.cuenttiGasto}</span>
                         ) : (
-                          <button className="btn btn-outline btn-sm" disabled={regCuenttiId === reg.id} onClick={() => registrarEnCuentti(reg)}>
-                            {regCuenttiId === reg.id ? 'Registrando…' : 'Registrar en Cuentti'}
-                          </button>
+                          <>
+                            <select className="input" aria-label="Método de pago" value={metodoGasto[reg.id] || 'efectivo'} onChange={e => setMetodoGasto(m => ({ ...m, [reg.id]: e.target.value }))} style={{ height: 30, minHeight: 30, fontSize: 12, padding: '2px 8px', width: 'auto' }}>
+                              <option value="efectivo">Efectivo</option>
+                              <option value="transferencia">Transferencia</option>
+                            </select>
+                            <button className="btn btn-outline btn-sm" disabled={regCuenttiId === reg.id} onClick={() => registrarEnCuentti(reg)}>
+                              {regCuenttiId === reg.id ? 'Registrando…' : 'Registrar en Cuentti'}
+                            </button>
+                          </>
                         )}
                         <button className="btn btn-outline btn-sm" onClick={() => exportPdfHistorial(reg)}>PDF</button>
                       </div>

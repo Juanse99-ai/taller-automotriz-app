@@ -62,7 +62,7 @@ async function login() {
   return { token, idUsuario }
 }
 
-function buildGasto({ proveedorId, proveedorCedula, proveedorNombre, monto, idMedioPago, nota }) {
+function buildGasto({ proveedorId, proveedorCedula, proveedorNombre, monto, idMedioPago, idBanco, nota }) {
   const valor = Math.round(parseFloat(monto) || 0)
   const iso = new Date().toISOString()
   const rand5 = Math.random().toString(36).slice(2, 7)
@@ -79,7 +79,7 @@ function buildGasto({ proveedorId, proveedorCedula, proveedorNombre, monto, idMe
     json: JSON.stringify({ lstImpuestos: [{ breve: 'G', impuestosPor: 0, base: valor, valor: 0, total: valor, tipo_impuesto: 1 }] }),
     objClienteMini: { nombre_cliente: proveedorNombre || '', identificacion: String(proveedorCedula), es_proveedor: 1, es_cliente: 0, id_tipo_persona: 1, telefono1: '', telefono2: '', direccion: '', email1: '', medio_pago: null },
     objTransacionDetalle: [{ id_producto: 0, id_plan_cuentas: 43, descripcion: nota || 'Nomina', cantidad: 1, precio_venta: valor, precio_real: valor, total: valor, impuesto: 0, tipo_impuesto: 1, editoPrecioManul: true, es_devolucion: 0, es_promocion: 0, descuentoPor: 0, descuento_valor: 0, id_centro_costo: 0, id_lista_precio: 0, total_estampilla: 0, total_impoconsumo: 0 }],
-    lstPagos: [{ id_medio_pago: idMedioPago || 1, valor, nota: '', boucher: '', digitos: '', devuelta: 0 }],
+    lstPagos: [{ id_medio_pago: idMedioPago || 1, id_banco: idBanco || 1, valor, nota: '', boucher: '', digitos: '', devuelta: 0 }],
   }
 }
 
