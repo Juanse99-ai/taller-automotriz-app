@@ -8,6 +8,7 @@
 
 const BASE = 'https://app.cuenti.com/jServerj4ErpPro'
 const EMPRESA = '11464'
+// v1 — login base→erp + grabar gasto nómina (cuenta 43)
 
 const ALLOWED_ORIGINS = [
   'https://taller-multias.vercel.app',
