@@ -590,12 +590,19 @@ export function buildFacturaPayload(factura) {
   // escrito a mano (sin seleccionar de inventario) usa 'MO1' como fallback;
   // el usuario debe asegurarse de tener un producto con SKU 'MO1' en Cuentti
   // (o seleccionar siempre los productos del inventario al crear la OT).
+  // Base con precisión ALTA (6 decimales), NO 2. Redondear la base a 2 y luego
+  // re-multiplicar por (1+IVA) desviaba el total del número redondo que cobra el
+  // usuario (ej. $148.000 con IVA 19% → base 124369.75 → 124369.75×1.19 = 147.999,90).
+  // Con la base a 6 decimales, base×(1+IVA) reproduce el total redondo exacto.
+  const to6 = (n) => Math.round((parseFloat(n || 0)) * 1e6) / 1e6
   const items = (factura.items || []).map(item => {
     const cantidad = parseFloat(item.cantidad) || 1
     const precioConIva = parseFloat(item.precio) || 0
     const impuesto = parseFloat(item.iva) || 19
-    const precioBase = to2(precioConIva / (1 + impuesto / 100))
-    const total = to2(precioBase * cantidad * (1 + impuesto / 100))
+    const precioBase = to6(precioConIva / (1 + impuesto / 100))
+    // El total de la línea es EXACTAMENTE lo que cobras (precio con IVA × cantidad),
+    // no se re-deriva de la base redondeada.
+    const total = to2(precioConIva * cantidad)
     const sku = item.sku || item.codigo || 'MO1'
     return {
       sku,
