@@ -89,6 +89,17 @@ export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS')
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type')
   if (req.method === 'OPTIONS') { res.status(200).end(); return }
+
+  // Modo prueba: GET → solo hace login y confirma que consiguió el token (NO graba gasto).
+  if (req.method === 'GET') {
+    try {
+      const { token, idUsuario } = await login()
+      res.status(200).json({ ok: true, login: 'OK', hasToken: !!token, tokenPrefix: (token || '').slice(0, 10), idUsuario })
+    } catch (e) {
+      res.status(500).json({ ok: false, login: 'FALLO', error: e.message })
+    }
+    return
+  }
   if (req.method !== 'POST') { res.status(405).json({ ok: false, error: 'Solo POST' }); return }
 
   try {
