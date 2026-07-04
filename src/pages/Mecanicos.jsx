@@ -11,7 +11,7 @@ export default function Mecanicos({ trabajos, onNavigate, notify }) {
   const [editando, setEditando] = useState(null)
   const [editForm, setEditForm] = useState({})
   const [agregando, setAgregando] = useState(false)
-  const [nuevoForm, setNuevoForm] = useState({ nombre: '', especialidad: '', telefono: '' })
+  const [nuevoForm, setNuevoForm] = useState({ nombre: '', especialidad: '', telefono: '', cedula: '' })
 
   const tecnicosData = useMemo(() => {
     return TECNICOS.map((tec, idx) => {
@@ -59,7 +59,7 @@ export default function Mecanicos({ trabajos, onNavigate, notify }) {
     e?.preventDefault?.()
     if (!nuevoForm.nombre.trim()) { notify?.('Escribe el nombre del técnico', 'error'); return }
     agregarTecnico(nuevoForm)
-    setNuevoForm({ nombre: '', especialidad: '', telefono: '' })
+    setNuevoForm({ nombre: '', especialidad: '', telefono: '', cedula: '' })
     setAgregando(false)
     notify?.('Técnico agregado al equipo', 'success')
   }
@@ -71,6 +71,7 @@ export default function Mecanicos({ trabajos, onNavigate, notify }) {
       nombre: editForm.nombre.trim(),
       especialidad: (editForm.especialidad || '').trim() || 'General',
       telefono: (editForm.telefono || '').trim(),
+      cedula: (editForm.cedula || '').trim(),
     })
     setEditando(null)
     notify?.('Técnico actualizado', 'success')
@@ -221,7 +222,7 @@ export default function Mecanicos({ trabajos, onNavigate, notify }) {
                 {/* Actions */}
                 <div style={{ display: 'flex', gap: 8 }}>
                   <button className="btn btn-outline btn-sm" style={{ flex: 1 }} onClick={() => onNavigate && onNavigate('trabajos')}>Ver trabajos</button>
-                  <button className="btn btn-outline btn-sm" style={{ flex: 1 }} onClick={() => { setEditando(tec); setEditForm({ nombre: tec.nombre, especialidad: tec.especialidad, telefono: tec.telefono }) }}>Editar</button>
+                  <button className="btn btn-outline btn-sm" style={{ flex: 1 }} onClick={() => { setEditando(tec); setEditForm({ nombre: tec.nombre, especialidad: tec.especialidad, telefono: tec.telefono, cedula: tec.cedula || '' }) }}>Editar</button>
                 </div>
               </div>
             </div>
@@ -289,6 +290,10 @@ export default function Mecanicos({ trabajos, onNavigate, notify }) {
                 <label>Teléfono</label>
                 <input className="input" value={editForm.telefono || ''} onChange={e => setEditForm(f => ({ ...f, telefono: e.target.value }))} placeholder="300 000 0000" />
               </div>
+              <div className="field">
+                <label>Cédula <span style={{ fontWeight: 400, color: 'var(--text-3)' }}>(para registrar el gasto en Cuentti)</span></label>
+                <input className="input" value={editForm.cedula || ''} onChange={e => setEditForm(f => ({ ...f, cedula: e.target.value }))} placeholder="Sin puntos ni comas" />
+              </div>
 
               <div style={{ borderTop: '1px solid var(--border)', paddingTop: 14, display: 'flex', flexDirection: 'column', gap: 8 }}>
                 <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '.4px' }}>Zona de salida</div>
@@ -335,6 +340,10 @@ export default function Mecanicos({ trabajos, onNavigate, notify }) {
                 <div className="field">
                   <label>Teléfono</label>
                   <input className="input" value={nuevoForm.telefono} onChange={e => setNuevoForm(f => ({ ...f, telefono: e.target.value }))} placeholder="300 000 0000" />
+                </div>
+                <div className="field">
+                  <label>Cédula <span style={{ fontWeight: 400, color: 'var(--text-3)' }}>(para Cuentti)</span></label>
+                  <input className="input" value={nuevoForm.cedula} onChange={e => setNuevoForm(f => ({ ...f, cedula: e.target.value }))} placeholder="Sin puntos ni comas" />
                 </div>
                 <p style={{ fontSize: 12.5, color: 'var(--text-3)', margin: 0 }}>
                   Quedará disponible de inmediato para asignar trabajos y liquidar comisiones ({COMISION.TOTAL * 100}%).

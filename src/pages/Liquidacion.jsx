@@ -6,6 +6,7 @@ import MoneyInput from '../components/MoneyInput'
 import { COMISION, ESTADOS, PERSONAS_CUENTA } from '../utils/constants'
 import { lsGet, lsSet } from '../services/storage'
 import { useTecnicos } from '../services/tecnicos'
+import { registrarGastoNominaBackend } from '../services/cuentti'
 import { usePrestamos } from '../hooks/usePrestamos'
 import { loadLogo, drawHeader, drawSectionHeader, drawDataBlock, drawTotalsBox, drawSignatures, drawFooter, tableStylesItems, tableStylesMuted, PDF_LAYOUT } from '../utils/pdfTheme'
 
@@ -107,6 +108,33 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
   // menos, la diferencia va al Estado de cuenta según diffDestino.
   const [pagoReal, setPagoReal] = useState('')
   const [diffDestino, setDiffDestino] = useState('debo') // 'debo' | 'prestamo'
+  const [regCuenttiId, setRegCuenttiId] = useState(null) // id del pago que se está registrando en Cuentti
+
+  // Registra el gasto de nómina de un pago en Cuentti (botón del historial).
+  const registrarEnCuentti = async (reg) => {
+    const tec = TECNICOS.find(t => t.id === reg.tecnicoId)
+    const cedula = tec?.cedula
+    if (!cedula) { notify(`Falta la cédula de ${reg.tecnico}. Agrégala en Mecánicos.`, 'error'); return }
+    const monto = reg.pagado != null ? reg.pagado : reg.neto
+    if (!(monto > 0)) { notify('El neto de este pago no es positivo; no se registra gasto.', 'error'); return }
+    setRegCuenttiId(reg.id)
+    try {
+      const data = await registrarGastoNominaBackend({
+        proveedorCedula: cedula,
+        proveedorNombre: reg.tecnico,
+        monto,
+        idMedioPago: 1,
+        nota: `Nómina ${reg.tecnico} · liq #${liqRef(reg.id)}`,
+      })
+      const doc = data.numeroDoc ? `G-${data.numeroDoc}` : (data.idTransacion || 'OK')
+      guardarHistorial(historial.map(h => h.id === reg.id ? { ...h, cuenttiGasto: doc } : h))
+      notify(`Gasto registrado en Cuentti: ${doc}`, 'success')
+    } catch (e) {
+      notify(`Error registrando en Cuentti: ${e.message}`, 'error')
+    } finally {
+      setRegCuenttiId(null)
+    }
+  }
   const toggleDiarioRepTec = (id) => setDiarioRepTec(p => ({ ...p, [id]: !p[id] }))
 
   // compartidos[id] puede ser true (legacy, sin partner) o { partner: tecId }
@@ -1119,7 +1147,16 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
                       <span style={{ fontSize: 13.5, color: 'var(--green-600)' }}>Comisión: <strong className="mono">{fmt(reg.comision || 0)}</strong></span>
                       <span style={{ fontSize: 13.5, color: 'var(--amber-600)' }}>Cargos: <strong className="mono">{fmt(reg.cargos || 0)}</strong></span>
                       <span style={{ fontSize: 13.5, color: reg.neto >= 0 ? 'var(--green-600)' : 'var(--red-600)', fontWeight: 700 }}>Neto: <strong className="mono">{fmt(reg.neto || 0)}</strong></span>
-                      <button className="btn btn-outline btn-sm" style={{ marginLeft: 'auto' }} onClick={() => exportPdfHistorial(reg)}>PDF</button>
+                      <div style={{ marginLeft: 'auto', display: 'flex', gap: 8, alignItems: 'center' }}>
+                        {reg.cuenttiGasto ? (
+                          <span className="badge" style={{ background: 'var(--green-100)', color: 'var(--green-700)', fontWeight: 700 }} title="Gasto ya registrado en Cuentti">✓ Cuentti {reg.cuenttiGasto}</span>
+                        ) : (
+                          <button className="btn btn-outline btn-sm" disabled={regCuenttiId === reg.id} onClick={() => registrarEnCuentti(reg)}>
+                            {regCuenttiId === reg.id ? 'Registrando…' : 'Registrar en Cuentti'}
+                          </button>
+                        )}
+                        <button className="btn btn-outline btn-sm" onClick={() => exportPdfHistorial(reg)}>PDF</button>
+                      </div>
                     </div>
                   </div>
                 ))}

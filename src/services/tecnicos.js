@@ -20,17 +20,20 @@ const LS_KEY = 'mda_tecnicos'
 const EVT = 'mda:tecnicos-changed'
 
 const SEED = [
-  { id: 1, nombre: 'Pedro Barraza', especialidad: 'Frenos', telefono: '3002345678', tarifa: 20000, activo: true },
-  { id: 2, nombre: 'Victor Padilla', especialidad: 'General', telefono: '3001234567', tarifa: 20000, activo: true },
-  { id: 3, nombre: 'Ismael Cervantes', especialidad: 'Motor', telefono: '3003456789', tarifa: 20000, activo: true },
+  { id: 1, nombre: 'Pedro Barraza', especialidad: 'Frenos', telefono: '3002345678', tarifa: 20000, activo: true, cedula: '8645782' },
+  { id: 2, nombre: 'Victor Padilla', especialidad: 'General', telefono: '3001234567', tarifa: 20000, activo: true, cedula: '72022062' },
+  { id: 3, nombre: 'Ismael Cervantes', especialidad: 'Motor', telefono: '3003456789', tarifa: 20000, activo: true, cedula: '' },
 ]
+
+// Cédulas conocidas (proveedor en Cuentti) para backfill de datos ya guardados.
+const CEDULAS_CONOCIDAS = { 'Pedro Barraza': '8645782', 'Victor Padilla': '72022062' }
 
 function load() {
   try {
     const raw = JSON.parse(localStorage.getItem(LS_KEY))
     if (Array.isArray(raw) && raw.length) {
-      // activo por defecto true para datos guardados antes del flag
-      return raw.map(t => ({ activo: true, ...t }))
+      // activo por defecto true; cédula backfill por nombre si no la tiene aún.
+      return raw.map(t => ({ activo: true, ...t, cedula: t.cedula || CEDULAS_CONOCIDAS[t.nombre] || '' }))
     }
   } catch { /* seed */ }
   return SEED.map(t => ({ ...t }))
@@ -48,11 +51,11 @@ function persist() {
 export const tecnicosVisibles = () => TECNICOS.filter(t => !t.eliminado)
 export const tecnicosActivos = () => TECNICOS.filter(t => !t.eliminado && t.activo !== false)
 
-export function agregarTecnico({ nombre, especialidad = 'General', telefono = '' }) {
+export function agregarTecnico({ nombre, especialidad = 'General', telefono = '', cedula = '' }) {
   const limpio = (nombre || '').trim()
   if (!limpio) return null
   const id = Math.max(0, ...TECNICOS.map(t => t.id)) + 1
-  TECNICOS.push({ id, nombre: limpio, especialidad: especialidad.trim() || 'General', telefono: telefono.trim(), tarifa: 20000, activo: true })
+  TECNICOS.push({ id, nombre: limpio, especialidad: especialidad.trim() || 'General', telefono: telefono.trim(), cedula: (cedula || '').trim(), tarifa: 20000, activo: true })
   persist()
   return id
 }
