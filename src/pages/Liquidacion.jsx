@@ -326,7 +326,9 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
       const cargos = Math.round(cargosBy[t.id] || 0)
       const cargosEf = Math.round(cargosEfBy[t.id] || 0)
       return { ...t, pendientes, moTotal, comisionTotal, cargos, cargosEf, neto: comisionTotal - cargosEf }
-    }).filter(t => !t.eliminado && (t.activo !== false || t.pendientes > 0))
+      // Muestra técnicos activos, PLUS cualquiera (inactivo o eliminado) que aún
+      // tenga trabajos pendientes por liquidar, para no dejar comisiones huérfanas.
+    }).filter(t => (t.activo !== false && !t.eliminado) || t.pendientes > 0)
   }, [porTecnico, TECNICOS, movimientos])
 
   // Total de la nómina (lo que se debe pagar a los técnicos con trabajos pendientes)

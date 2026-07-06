@@ -427,7 +427,9 @@ export async function deleteAllLiquidacionHistorial() {
 // ---------- LIQUIDADOS ----------
 
 export async function fetchLiquidados() {
-  const res = await fetchWithTimeout(`${proxy('liquidados')}&select=trabajo_id&limit=2000`)
+  // order determinista: si algún día pasa de 2000 filas, el corte es estable
+  // (no deja trabajos liquidados fuera del set al azar → riesgo de doble pago).
+  const res = await fetchWithTimeout(`${proxy('liquidados')}&select=trabajo_id&order=trabajo_id.asc&limit=2000`)
   if (!res.ok) throw new Error(`Supabase liquidados error (${res.status})`)
   const data = await res.json()
   return data.map(r => r.trabajo_id)

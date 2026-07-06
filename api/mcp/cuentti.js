@@ -691,10 +691,11 @@ const tools = [
         idBanco: { type: 'integer', description: 'Override del id_banco (1=Caja General, 2=Bancolombia, 3=Nequi). Default: efectivo=1 (Caja General), transferencia=2.' },
         emitirFE: { type: 'boolean', description: 'Si resolucion=FEIC, emite ante la DIAN tras crear la factura.' },
         confirm: { type: 'boolean', description: 'true = emitir de verdad; false (default) = dry-run.' },
+        permitirDuplicado: { type: 'boolean', default: false, description: 'true para permitir RE-facturar una OT/cotizacion ya facturada (crea un duplicado real). Por defecto se bloquea.' },
       },
       required: ['origen'],
     },
-    handler: async ({ origen, resolucion = 'MAS', metodoPago = 'efectivo', idMedioPago, idBanco, emitirFE = false, confirm = false }) => {
+    handler: async ({ origen, resolucion = 'MAS', metodoPago = 'efectivo', idMedioPago, idBanco, emitirFE = false, confirm = false, permitirDuplicado = false }) => {
       const key = String(origen || '').trim()
       if (!key) return '❌ Debes pasar el id/codigo de la OT o cotizacion.'
       const esCotizacion = /^COT-/i.test(key)
@@ -713,17 +714,18 @@ const tools = [
       const items = typeof registro.items === 'string' ? JSON.parse(registro.items) : (registro.items || [])
       if (!items.length) return `❌ "${key}" no tiene items para facturar.`
 
-      // Anti-duplicado
-      if (!esCotizacion && registro.cuentti_id_transacion && !confirm) {
+      // Anti-duplicado: bloquea SIEMPRE si ya fue facturada (incluso con confirm:true,
+      // que es la vía normal de emisión). Solo permitirDuplicado:true explícito lo salta.
+      if (!esCotizacion && registro.cuentti_id_transacion && !permitirDuplicado) {
         return [
           `⚠️ Esta OT YA fue facturada en Cuentti.`,
           `**id_transacion:** ${registro.cuentti_id_transacion}`,
           registro.facturado_en ? `**Fecha:** ${fmtFecha(registro.facturado_en)}` : '',
-          ``, `Si de verdad quieres crear un DUPLICADO, llama de nuevo con confirm:true.`,
+          ``, `Si de verdad quieres crear un DUPLICADO, llama de nuevo con permitirDuplicado:true.`,
         ].filter(Boolean).join('\n')
       }
-      if (esCotizacion && registro.estado === 'Facturada' && !confirm) {
-        return `⚠️ La cotizacion ${key} ya esta marcada como Facturada. Para facturar de nuevo (duplicado) usa confirm:true.`
+      if (esCotizacion && registro.estado === 'Facturada' && !permitirDuplicado) {
+        return `⚠️ La cotizacion ${key} ya esta marcada como Facturada. Para facturar de nuevo (duplicado) usa permitirDuplicado:true.`
       }
 
       // Mapeo de medio de pago
