@@ -713,7 +713,9 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
       // registro: así un 'diario' viejo (40%) o nuevo (50%) siempre cuadra con el neto.
       const _sumOtros = reg.movimientos.filter(m => m.tipo !== 'diario').reduce((s, m) => s + (parseFloat(m.monto) || 0), 0)
       const _nDiarios = reg.movimientos.filter(m => m.tipo === 'diario').length
-      const _totalEf = reg.cargosEfectivos != null ? reg.cargosEfectivos : reg.movimientos.reduce((s, m) => s + cargoEfectivo(m), 0)
+      // Efectivo real del registro = comisión − neto (exacto: así el diario viejo al
+      // 40% o el nuevo al 50% siempre reconstruye lo que de verdad se descontó).
+      const _totalEf = reg.cargosEfectivos != null ? reg.cargosEfectivos : Math.max(0, (reg.comision || 0) - (reg.neto || 0))
       const _diarioEf = _nDiarios ? Math.round(Math.max(0, _totalEf - _sumOtros) / _nDiarios) : 0
       const _descEf = (m) => m.tipo === 'diario' ? _diarioEf : (parseFloat(m.monto) || 0)
       autoTable(doc, {
@@ -753,7 +755,8 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
       rowsReg = [
         { lbl: 'Mano de obra (sin IVA)', val: fmt(reg.manoObra || 0) },
         { lbl: `Comisión (${COMISION.TOTAL * 100}%)`, val: fmt(reg.comision || 0) },
-        { lbl: 'Aportes / descuentos', val: `- ${fmt(reg.cargos || 0)}` },
+        // Efectivo real = comisión − neto (no el bruto), para que cuadre con el neto.
+        { lbl: 'Aportes / descuentos', val: `- ${fmt(Math.max(0, (reg.comision || 0) - (reg.neto || 0)))}` },
       ]
     }
     // Si se registró un pago real distinto al neto, mostrarlo + el saldo.
