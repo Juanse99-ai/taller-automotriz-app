@@ -37,20 +37,21 @@ const getManoObra = (t) => {
   return 0
 }
 
+// El gasto del administrador ("diario") se reparte MITAD Y MITAD con el técnico.
+const APORTE_ADMIN_SPLIT = 0.5
 // Cargo EFECTIVO que se le descuenta al técnico:
-//  - "diario" (gasto del administrador por día): es un costo compartido, el
-//    técnico asume solo su parte (COMISION.TOTAL = 40%) y el taller el 60%.
+//  - "diario" (gasto del administrador por día): costo compartido 50/50; el
+//    técnico asume su mitad (50%) y el taller la otra mitad.
 //  - todos los demás (adelanto, préstamo, consumo, descuento): es plata que el
 //    técnico debe, se recupera al 100%.
 const cargoEfectivo = (m) => {
   const monto = parseFloat(m?.monto) || 0
-  return (m?.tipo === 'diario') ? monto * COMISION.TOTAL : monto
+  return (m?.tipo === 'diario') ? monto * APORTE_ADMIN_SPLIT : monto
 }
 
-// Etiqueta visible del tipo de movimiento. El "diario" se MUESTRA como "Aporte"
-// (para que el técnico no lo sienta como un cobro), pero internamente sigue
-// siendo 'diario' para conservar la regla del 40%.
-const TIPO_LABELS = { diario: 'Aporte' }
+// Etiqueta visible del tipo de movimiento. El "diario" (gasto del administrador)
+// se MUESTRA como "Administrador"; internamente sigue siendo 'diario'.
+const TIPO_LABELS = { diario: 'Administrador' }
 const tipoLabel = (t) => TIPO_LABELS[t] || (t ? t.charAt(0).toUpperCase() + t.slice(1) : '—')
 
 // Iniciales del técnico (2 letras) para la referencia legible.
@@ -614,14 +615,19 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
       y = drawSectionHeader(doc, 'Aportes y descuentos', y)
       autoTable(doc, {
         startY: y,
-        head: [['FECHA', 'TIPO', 'NOTA', 'MONTO']],
-        body: tecMovs.map(m => [fmtDate(m.fecha), tipoLabel(m.tipo), m.nota || '—', fmt(m.monto)]),
+        head: [['FECHA', 'CONCEPTO', 'DESCRIPCIÓN', 'MONTO', 'DESCUENTO']],
+        body: tecMovs.map(m => [fmtDate(m.fecha), tipoLabel(m.tipo), m.nota || '—', fmt(m.monto), '- ' + fmt(cargoEfectivo(m))]),
         ...tableStylesMuted,
+        theme: 'grid',
         columnStyles: {
-          0: { cellWidth: 22 },
-          1: { cellWidth: 28, fontStyle: 'bold' },
-          2: { cellWidth: 'auto' },
-          3: { halign: 'right', cellWidth: 30, fontStyle: 'bold' },
+          0: { cellWidth: 20, halign: 'center' },
+          1: { cellWidth: 28, halign: 'center', fontStyle: 'bold' },
+          2: { cellWidth: 'auto', halign: 'center' },
+          3: { cellWidth: 26, halign: 'center' },
+          4: { cellWidth: 28, halign: 'center', fontStyle: 'bold' },
+        },
+        didParseCell: (d) => {
+          if (d.section === 'body' && tecMovs[d.row.index]?.tipo === 'diario') d.cell.styles.fillColor = [252, 244, 230]
         },
         margin: { left: MARGIN, right: MARGIN },
       })
@@ -703,16 +709,28 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
 
     if (reg.movimientos && reg.movimientos.length > 0) {
       y = drawSectionHeader(doc, 'Aportes y descuentos', y)
+      // Descuento efectivo por movimiento, reconciliado con el total guardado del
+      // registro: así un 'diario' viejo (40%) o nuevo (50%) siempre cuadra con el neto.
+      const _sumOtros = reg.movimientos.filter(m => m.tipo !== 'diario').reduce((s, m) => s + (parseFloat(m.monto) || 0), 0)
+      const _nDiarios = reg.movimientos.filter(m => m.tipo === 'diario').length
+      const _totalEf = reg.cargosEfectivos != null ? reg.cargosEfectivos : reg.movimientos.reduce((s, m) => s + cargoEfectivo(m), 0)
+      const _diarioEf = _nDiarios ? Math.round(Math.max(0, _totalEf - _sumOtros) / _nDiarios) : 0
+      const _descEf = (m) => m.tipo === 'diario' ? _diarioEf : (parseFloat(m.monto) || 0)
       autoTable(doc, {
         startY: y,
-        head: [['FECHA', 'TIPO', 'NOTA', 'MONTO']],
-        body: reg.movimientos.map(m => [fmtDate(m.fecha), tipoLabel(m.tipo), m.nota || '—', fmt(m.monto)]),
+        head: [['FECHA', 'CONCEPTO', 'DESCRIPCIÓN', 'MONTO', 'DESCUENTO']],
+        body: reg.movimientos.map(m => [fmtDate(m.fecha), tipoLabel(m.tipo), m.nota || '—', fmt(m.monto), '- ' + fmt(_descEf(m))]),
         ...tableStylesMuted,
+        theme: 'grid',
         columnStyles: {
-          0: { cellWidth: 22 },
-          1: { cellWidth: 28, fontStyle: 'bold' },
-          2: { cellWidth: 'auto' },
-          3: { halign: 'right', cellWidth: 30, fontStyle: 'bold' },
+          0: { cellWidth: 20, halign: 'center' },
+          1: { cellWidth: 28, halign: 'center', fontStyle: 'bold' },
+          2: { cellWidth: 'auto', halign: 'center' },
+          3: { cellWidth: 26, halign: 'center' },
+          4: { cellWidth: 28, halign: 'center', fontStyle: 'bold' },
+        },
+        didParseCell: (d) => {
+          if (d.section === 'body' && reg.movimientos[d.row.index]?.tipo === 'diario') d.cell.styles.fillColor = [252, 244, 230]
         },
         margin: { left: MARGIN, right: MARGIN },
       })
