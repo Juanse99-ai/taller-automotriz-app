@@ -545,9 +545,9 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
     const negativo = t.neto < 0
     setDialog({
       title: 'Revisar antes de pagar',
-      lead: `Confirma el pago de ${tecData?.tecnico?.nombre || 'este técnico'}. Se marcan las OTs como liquidadas y se descuentan los adelantos.`,
       body: (
         <div style={{ border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden', marginTop: 4 }}>
+          <DlgRow label="Técnico" value={tecData?.tecnico?.nombre || '—'} />
           <DlgRow label="Trabajos a liquidar" value={`${cantSeleccionados} ${cantSeleccionados === 1 ? 'OT' : 'OTs'}`} />
           <DlgRow label={`Comisión (${COMISION.TOTAL * 100}%)`} value={fmt(t.comision)} />
           <DlgRow label="Cargos / adelantos" value={`− ${fmt(t.cargosEfectivos)}`} />
@@ -782,10 +782,17 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
   }, [trabajos, liquidados, compartidos])
 
   // ===== Tabs: Comisiones | Estado de cuenta =====
+  const segTabStyle = (active) => ({
+    fontFamily: 'inherit', fontSize: 14, fontWeight: 600, border: 0, cursor: 'pointer',
+    padding: '8px 18px', borderRadius: 7, transition: 'background .15s, color .15s',
+    background: active ? 'var(--surface, #fff)' : 'transparent',
+    color: active ? 'var(--text-1, #101725)' : 'var(--text-3, #5b6472)',
+    boxShadow: active ? '0 1px 2px rgba(16,23,37,.10)' : 'none',
+  })
   const tabsLiq = (
-    <div className="tabs" style={{ marginBottom: 14 }}>
-      <button className={vistaLiq === 'comisiones' ? 'on' : ''} onClick={() => setVistaLiq('comisiones')}>Comisiones</button>
-      <button className={vistaLiq === 'cuentas' ? 'on' : ''} onClick={() => setVistaLiq('cuentas')}>Estado de cuenta</button>
+    <div role="tablist" style={{ display: 'inline-flex', background: 'var(--bg-2, #eceef4)', padding: 4, borderRadius: 10, gap: 4, marginBottom: 22 }}>
+      <button role="tab" aria-selected={vistaLiq === 'comisiones'} style={segTabStyle(vistaLiq === 'comisiones')} onClick={() => setVistaLiq('comisiones')}>Comisiones</button>
+      <button role="tab" aria-selected={vistaLiq === 'cuentas'} style={segTabStyle(vistaLiq === 'cuentas')} onClick={() => setVistaLiq('cuentas')}>Estado de cuenta</button>
     </div>
   )
 
@@ -1107,7 +1114,7 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
                         <td className="c-mono c-right" style={{ color: 'var(--amber-600)' }}>{fmt(m.monto)}</td>
                         <td><button className="btn btn-ghost btn-sm" onClick={() => setDialog({
                           title: 'Eliminar movimiento',
-                          lead: `${tipoLabel(m.tipo)} · ${fmt(m.monto)}. Es plata: si lo borras no se puede deshacer y cambia el saldo del técnico.`,
+                          lead: `${tipoLabel(m.tipo)} · ${fmt(m.monto)} · ${fmtDate(m.fecha)}`,
                           confirmLabel: 'Sí, eliminar', tone: 'danger',
                           onConfirm: () => hookEliminarMov(m.id),
                         })} aria-label="Eliminar movimiento">✕</button></td>
