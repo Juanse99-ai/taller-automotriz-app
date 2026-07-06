@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useRef } from 'react'
 import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import { fmt, fmtDate, uid, hoyISO } from '../utils/helpers'
@@ -75,6 +75,7 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
   } = liquidacionHook
 
   const prestamosHook = usePrestamos()
+  const pagandoRef = useRef(false) // evita doble "Generar pago" (doble pago) por doble clic
   const [vistaLiq, setVistaLiq] = useState('comisiones') // 'comisiones' | 'cuentas'
 
   const [tecnicoSel, setTecnicoSel] = useState('')
@@ -423,10 +424,11 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
     return id
   }
 
-  const generarPago = () => {
+  const generarPago = async () => {
     const ids = Object.keys(seleccionados).filter(id => seleccionados[id])
     if (ids.length === 0) { notify('Selecciona al menos un trabajo para liquidar', 'error'); return }
     if (!tecData) return
+    if (pagandoRef.current) return
 
     // Neto negativo: la deuda no se borra, se arrastra como saldo anterior
     if (totalSeleccion.neto < 0) {
@@ -438,6 +440,8 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
       if (!ok) return
     }
 
+    pagandoRef.current = true
+    try {
     const nuevoId = nextLiqId(tecData.tecnico.nombre)
     // Pago real: lo que entregas en efectivo (por defecto el neto).
     const netoCalc = totalSeleccion.neto
@@ -466,15 +470,20 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
       }).filter(Boolean),
     }
 
-    agregarHistorial(registro)
+    // Guardar el pago en el servidor ANTES de descontar nada. Si falla, no se
+    // marca ni se consumen adelantos (el pago no queda "fantasma").
+    const histRes = await agregarHistorial(registro)
+    if (histRes == null) {
+      notify('No se pudo guardar el pago en el servidor (sin conexión). No se descontó nada — reintenta.', 'error')
+      return
+    }
     // Compartido: se marca `${id}#${tecnico}` (solo esta mitad). No compartido: id plano.
     const nuevasLiq = ids.map(id => compInfo(id).es ? `${id}#${tecData.tecnico.id}` : id)
     guardarLiquidados([...liquidados, ...nuevasLiq])
 
-    // Consumir movimientos del tecnico: borrado real (estado + Supabase).
-    // Antes solo se filtraba el estado local y el sync de Supabase los
-    // resucitaba: el adelanto se descontaba DOBLE en la siguiente liquidacion.
-    tecMovs.forEach(m => hookEliminarMov(m.id))
+    // Consumir movimientos del tecnico esperando cada borrado, para que un fallo
+    // no los resucite en el sync y se descuenten DOBLE.
+    await Promise.all(tecMovs.map(m => hookEliminarMov(m.id)))
 
     // Arrastre de deuda si quedo saldo en contra
     if (totalSeleccion.neto < 0) {
@@ -508,6 +517,9 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
     notify(`Pago #${liqRef(nuevoId)} generado: ${fmt(pagado)} para ${tecData.tecnico.nombre}${difMsg} · copia la ref en Cuentti`, 'success')
     // Descargar automáticamente el comprobante del pago recién generado
     exportPdfHistorial(registro).catch(() => {})
+    } finally {
+      pagandoRef.current = false
+    }
   }
 
   const exportPdfPago = async () => {
@@ -927,12 +939,20 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
                           <td className="c-mono" style={{ fontWeight: 700 }}>{t.placa}</td>
                           <td className="c-name">{t.cliente || '—'}</td>
                           <td style={{ textAlign: 'center' }} onClick={e => e.stopPropagation()}>
-                            <input type="checkbox" checked={esComp} onChange={() => toggleCompartido(t.id)} aria-label="Trabajo compartido"/>
+                            <input type="checkbox" checked={esComp} onChange={() => {
+                              const yaLiq = liquidados.some(x => x === t.id || x.startsWith(`${t.id}#`))
+                              if (yaLiq && !window.confirm('Este trabajo ya tiene un pago liquidado. Cambiar "Compartido" puede descuadrar lo pagado (pagar de más). ¿Continuar?')) return
+                              toggleCompartido(t.id)
+                            }} aria-label="Trabajo compartido"/>
                             {esComp && (
                               <select
                                 className="input"
                                 value={partner || ''}
-                                onChange={e => setCompartidoPartner(t.id, e.target.value)}
+                                onChange={e => {
+                                  const yaLiq = liquidados.some(x => x.startsWith(`${t.id}#`))
+                                  if (yaLiq && !window.confirm('Este compartido ya tiene una mitad liquidada. Cambiar el compañero puede descuadrar lo pagado. ¿Continuar?')) return
+                                  setCompartidoPartner(t.id, e.target.value)
+                                }}
                                 style={{ display: 'block', margin: '4px auto 0', width: 110, minHeight: 30, height: 30, fontSize: 12, padding: '2px 8px' }}
                                 aria-label="Compañero del trabajo compartido"
                               >

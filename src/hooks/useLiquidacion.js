@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import {
   fetchMovimientos, upsertMovimiento, deleteMovimiento as sbDeleteMov,
   fetchLiquidacionHistorial, upsertLiquidacionHistorial, deleteAllLiquidacionHistorial,
-  fetchLiquidados, upsertLiquidados, deleteAllLiquidados,
+  fetchLiquidados, upsertLiquidados, deleteAllLiquidados, deleteLiquidado as sbDeleteLiquidado,
   fetchCompartidos, upsertCompartido, deleteCompartido,
 } from '../services/supabase'
 import { lsGet, lsSet, LS_KEYS } from '../services/storage'
@@ -125,10 +125,11 @@ export function useLiquidacion() {
         const norm = sbMovs.map(normalizarMov)
         setMovimientos(norm)
         lsSet(LS_KEYS.MOVIMIENTOS_TECNICOS, norm)
-      } else {
-        const cached = lsGet(LS_KEYS.MOVIMIENTOS_TECNICOS, [])
-        if (cached.length > 0 && sbMovs !== null) cached.forEach(m => upsertMovimiento(m))
       }
+      // Nota: si el servidor responde vacío NO re-subimos el cache local. Antes
+      // sí, y eso revivía adelantos YA consumidos en otra liquidación → el
+      // técnico se los descontaba DOBLE. El cache local se conserva solo para
+      // mostrar, no se re-sincroniza a Supabase.
 
       // Historial
       if (sbHist && sbHist.length > 0) {
@@ -208,12 +209,18 @@ export function useLiquidacion() {
 
   const eliminarMovimiento = useCallback((id) => {
     setMovimientos(prev => prev.filter(m => m.id !== id))
-    sbDeleteMov(id)
+    return sbDeleteMov(id)
   }, [])
 
   const guardarLiquidados = useCallback((next) => {
-    setLiquidados(next)
-    upsertLiquidados(next)
+    // Borra en Supabase las claves que salieron del array (p.ej. al desliquidar):
+    // el upsert por sí solo no borra, y el sync las revivía.
+    setLiquidados(prev => {
+      const nextSet = new Set(next)
+      prev.filter(id => !nextSet.has(id)).forEach(id => sbDeleteLiquidado(id))
+      return next
+    })
+    return upsertLiquidados(next)
   }, [])
 
   const desliquidarTodos = useCallback(() => {
@@ -258,9 +265,12 @@ export function useLiquidacion() {
     else next.forEach(h => upsertLiquidacionHistorial(h))
   }, [])
 
-  const agregarHistorial = useCallback((reg) => {
-    setHistorial(prev => [reg, ...prev])
-    upsertLiquidacionHistorial(reg)
+  const agregarHistorial = useCallback(async (reg) => {
+    // Guardar en el servidor PRIMERO. Solo si lo acepta lo mostramos local: un
+    // pago no debe quedar "fantasma" y desaparecer en el próximo sync.
+    const res = await upsertLiquidacionHistorial(reg)
+    if (res != null) setHistorial(prev => [reg, ...prev])
+    return res
   }, [])
 
   return {
