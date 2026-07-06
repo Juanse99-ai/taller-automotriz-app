@@ -453,6 +453,19 @@ export async function deleteAllLiquidados() {
   }
 }
 
+// Borra UNA clave de liquidado (plano "TR-x" o compuesto "TR-x#tecnico"). Sin
+// esto, "desliquidar" solo quitaba la fila del estado local y el sync la revivía.
+export async function deleteLiquidado(trabajoId) {
+  try {
+    const res = await fetchWithTimeout(`${proxy('liquidados')}&trabajo_id=eq.${encodeURIComponent(trabajoId)}`, { method: 'DELETE' })
+    if (!res.ok) throw new Error(await res.text())
+    return true
+  } catch (e) {
+    console.warn('Supabase deleteLiquidado:', e.message)
+    return false
+  }
+}
+
 // ---------- TRABAJOS COMPARTIDOS ----------
 
 export async function fetchCompartidos() {

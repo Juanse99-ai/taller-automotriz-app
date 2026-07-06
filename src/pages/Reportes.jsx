@@ -5,13 +5,17 @@ import { fmt, fmtDate } from '../utils/helpers'
 import { TECNICOS, COMISION, ESTADOS, TALLER } from '../utils/constants'
 import { drawHeader, drawSectionHeader, drawFooter, drawTotalsBox, tableStylesItems, tableStylesMuted, PDF_LAYOUT, PDF_COLORS } from '../utils/pdfTheme'
 
+// Fecha LOCAL en formato YYYY-MM-DD (no UTC). Con toISOString(), en la tarde/noche
+// de Colombia (UTC-5) la fecha salta al día siguiente y el preset "Hoy" sale vacío.
+const ymdLocal = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+
 export default function Reportes({ trabajos }) {
   const [rango, setRango] = useState(() => {
     const now = new Date()
     const inicio = new Date(now.getFullYear(), now.getMonth(), 1)
     return {
-      desde: inicio.toISOString().slice(0, 10),
-      hasta: now.toISOString().slice(0, 10),
+      desde: ymdLocal(inicio),
+      hasta: ymdLocal(now),
     }
   })
 
@@ -93,7 +97,7 @@ export default function Reportes({ trabajos }) {
       TECNICOS.find(tc => tc.id === parseInt(t.tecnicoId))?.nombre || '',
       t.estado, t.total || 0,
     ])
-    const csv = [headers, ...rows].map(r => r.map(c => `"${c}"`).join(',')).join('\n')
+    const csv = [headers, ...rows].map(r => r.map(c => `"${String(c ?? '').replace(/"/g, '""')}"`).join(',')).join('\n')
     const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
@@ -210,7 +214,7 @@ export default function Reportes({ trabajos }) {
   // Presets rapidos de rango de fechas
   const aplicarPreset = (preset) => {
     const now = new Date()
-    const yyyymmdd = (d) => d.toISOString().slice(0, 10)
+    const yyyymmdd = ymdLocal
     let desde, hasta = yyyymmdd(now)
     switch (preset) {
       case 'hoy':

@@ -125,7 +125,7 @@ export default function Inspecciones({ trabajos, notify, onVincularInspeccion, i
                         <div style={{display:'flex',gap:4,justifyContent:'flex-end'}}>
                           <button className="btn btn-outline btn-sm" onClick={e => { e.stopPropagation(); setEditId(i.id); setVista('editar') }}>Editar</button>
                           <button className="btn btn-outline btn-sm" onClick={e => { e.stopPropagation(); vincularATrabajo(i) }} title="Vincular al trabajo">OT</button>
-                          <button className="btn btn-ghost btn-sm" onClick={e => { e.stopPropagation(); guardar(inspecciones.filter(x => x.id !== i.id)); notify('Inspeccion eliminada', 'info') }}>✕</button>
+                          <button className="btn btn-ghost btn-sm" onClick={e => { e.stopPropagation(); if (!window.confirm('¿Eliminar esta inspección? No se puede deshacer.')) return; guardar(inspecciones.filter(x => x.id !== i.id)); notify('Inspeccion eliminada', 'info') }}>✕</button>
                         </div>
                       </td>
                     </tr>

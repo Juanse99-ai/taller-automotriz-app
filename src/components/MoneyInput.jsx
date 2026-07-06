@@ -12,7 +12,10 @@ export default function MoneyInput({
   const num = value === '' || value === null || value === undefined ? '' : Number(value)
   const display = num === '' || Number.isNaN(num) ? '' : num.toLocaleString('es-CO')
   const handle = (e) => {
-    const digits = (e.target.value || '').replace(/[^\d]/g, '')
+    // Quita una parte decimal pegada/copiada (",50" o ".5") ANTES de tomar los dígitos,
+    // para que un monto con decimales no se concatene y se multiplique por 10/100.
+    const raw = (e.target.value || '').replace(/[.,]\d{1,2}$/, '')
+    const digits = raw.replace(/[^\d]/g, '')
     onChange(digits === '' ? '' : Number(digits))
   }
   return (

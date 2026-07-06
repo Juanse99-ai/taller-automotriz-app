@@ -1047,7 +1047,7 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
                         <td>{tipoLabel(m.tipo)}</td>
                         <td className="c-muted">{m.nota || '—'}</td>
                         <td className="c-mono c-right" style={{ color: 'var(--amber-600)' }}>{fmt(m.monto)}</td>
-                        <td><button className="btn btn-ghost btn-sm" onClick={() => hookEliminarMov(m.id)} aria-label="Eliminar movimiento">✕</button></td>
+                        <td><button className="btn btn-ghost btn-sm" onClick={() => { if (!window.confirm(`¿Eliminar este movimiento (${tipoLabel(m.tipo)} ${fmt(m.monto)})? No se puede deshacer.`)) return; hookEliminarMov(m.id) }} aria-label="Eliminar movimiento">✕</button></td>
                       </tr>
                     ))}
                   </tbody>
@@ -1190,6 +1190,17 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
                       <span style={{ fontSize: 13.5, color: 'var(--green-600)' }}>Comisión: <strong className="mono">{fmt(reg.comision || 0)}</strong></span>
                       <span style={{ fontSize: 13.5, color: 'var(--amber-600)' }}>Cargos: <strong className="mono">{fmt(reg.cargos || 0)}</strong></span>
                       <span style={{ fontSize: 13.5, color: reg.neto >= 0 ? 'var(--green-600)' : 'var(--red-600)', fontWeight: 700 }}>Neto: <strong className="mono">{fmt(reg.neto || 0)}</strong></span>
+                      {reg.pagado != null && reg.pagado !== reg.neto && (
+                        (reg.neto || 0) - reg.pagado > 0 ? (
+                          <span style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--amber-700)' }}>
+                            Pagado: <strong className="mono">{fmt(reg.pagado)}</strong> · Pendiente: <strong className="mono">{fmt((reg.neto || 0) - reg.pagado)}</strong>
+                          </span>
+                        ) : (
+                          <span style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--blue-600)' }}>
+                            Pagado: <strong className="mono">{fmt(reg.pagado)}</strong> · Adelanto: <strong className="mono">{fmt(reg.pagado - (reg.neto || 0))}</strong>
+                          </span>
+                        )
+                      )}
                       <div style={{ marginLeft: 'auto', display: 'flex', gap: 8, alignItems: 'center' }}>
                         {reg.cuenttiGasto ? (
                           <span className="badge" style={{ background: 'var(--green-100)', color: 'var(--green-700)', fontWeight: 700 }} title="Gasto ya registrado en Cuentti">✓ Cuentti {reg.cuenttiGasto}</span>

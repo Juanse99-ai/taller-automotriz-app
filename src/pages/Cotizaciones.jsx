@@ -207,6 +207,7 @@ export default function Cotizaciones({ notify, trabajos = [], onCrearTrabajo, co
   const cambiarEstado = async (id, estado) => {
     const cot = cotizaciones.find(c => c.id === id)
     if (!cot) return
+    if (String(estado).toLowerCase().includes('rechaz') && !window.confirm('¿Rechazar esta cotización?')) return
     try {
       await guardarUna({ ...cot, estado })
       notify(`Cotizacion ${estado.toLowerCase()}`, estado === ESTADO_COT.APROBADA ? 'success' : 'info')
@@ -216,6 +217,7 @@ export default function Cotizaciones({ notify, trabajos = [], onCrearTrabajo, co
   }
 
   const eliminar = async (id) => {
+    if (!window.confirm(`¿Eliminar la cotización ${id}? No se puede deshacer.`)) return
     try {
       await eliminarHook(id)
       notify('Cotizacion eliminada', 'info')

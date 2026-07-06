@@ -144,9 +144,14 @@ export default function Inventario({ notify }) {
 
   const stats = useMemo(() => ({
     total: productos.length,
-    sinStock: productos.filter(p => p.stock <= 0).length,
+    sinStock: productos.filter(p => !p.esServicio && (parseFloat(p.stock) || 0) <= 0).length,
     stockBajo: productos.filter(p => !p.esServicio && p.stock > 0 && p.stock <= STOCK_BAJO_UMBRAL).length,
-    valorTotal: productos.reduce((s, p) => s + (p.precio * p.stock), 0),
+    // Solo repuestos con stock en mano (>0). Los servicios/mano de obra quedan en
+    // negativo por venderse sin control de existencias y falseaban el total.
+    valorTotal: productos.reduce((s, p) => {
+      const stock = parseFloat(p.stock) || 0
+      return s + (!p.esServicio && stock > 0 ? (parseFloat(p.precio) || 0) * stock : 0)
+    }, 0),
     // Valor a costo CON IVA = Σ costo×(1+IVA)×stock, SOLO stock > 0 (inventario en
     // mano). Se excluye el stock negativo de servicios/mano de obra (que quedan en
     // negativo por venderse sin control de existencias) para no falsear el total.

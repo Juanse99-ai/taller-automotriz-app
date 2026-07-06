@@ -615,7 +615,8 @@ export function buildFacturaPayload(factura) {
   const items = (factura.items || []).map(item => {
     const cantidad = parseFloat(item.cantidad) || 1
     const precioConIva = parseFloat(item.precio) || 0
-    const impuesto = parseFloat(item.iva) || 19
+    const ivaRaw = parseFloat(item.iva)
+    const impuesto = Number.isFinite(ivaRaw) ? ivaRaw : 19  // 0% es válido (exento): no caer al 19 por falsy
     const precioBase = to6(precioConIva / (1 + impuesto / 100))
     // El total de la línea es EXACTAMENTE lo que cobras (precio con IVA × cantidad),
     // no se re-deriva de la base redondeada.
