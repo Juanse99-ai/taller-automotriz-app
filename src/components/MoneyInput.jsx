@@ -1,5 +1,9 @@
+import { NumericFormat } from 'react-number-format'
+
 // Input de dinero: muestra "$ 30.000" (signo peso + separador de miles colombiano),
 // pero entrega el NÚMERO crudo por onChange(v) — no el evento. Si está vacío, da ''.
+// Usa react-number-format (NumericFormat) para el formateo mientras se escribe, con
+// caret estable y parseo robusto (pegar "1.234,50" ya no multiplica el monto).
 export default function MoneyInput({
   value,
   onChange,
@@ -10,28 +14,28 @@ export default function MoneyInput({
   ...rest
 }) {
   const num = value === '' || value === null || value === undefined ? '' : Number(value)
-  const display = num === '' || Number.isNaN(num) ? '' : num.toLocaleString('es-CO')
-  const handle = (e) => {
-    // Quita una parte decimal pegada/copiada (",50" o ".5") ANTES de tomar los dígitos,
-    // para que un monto con decimales no se concatene y se multiplique por 10/100.
-    const raw = (e.target.value || '').replace(/[.,]\d{1,2}$/, '')
-    const digits = raw.replace(/[^\d]/g, '')
-    onChange(digits === '' ? '' : Number(digits))
-  }
   return (
     <div style={{ position: 'relative', ...style }}>
       <span aria-hidden="true" style={{
         position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)',
         color: 'var(--text-4)', pointerEvents: 'none', fontSize: 14, fontWeight: 600,
       }}>$</span>
-      <input
+      <NumericFormat
         className={className}
-        type="text"
+        value={num === '' || Number.isNaN(num) ? '' : num}
+        thousandSeparator="."
+        decimalSeparator=","
+        decimalScale={0}
+        allowNegative={false}
         inputMode="numeric"
-        value={display}
-        onChange={handle}
         placeholder={placeholder}
         style={{ paddingLeft: 24, ...inputStyle }}
+        onValueChange={(vals, src) => {
+          // Solo reaccionar a lo que escribe el usuario (no a cambios del prop value),
+          // para no disparar onChange en bucle.
+          if (src.source !== 'event') return
+          onChange(vals.floatValue === undefined ? '' : vals.floatValue)
+        }}
         {...rest}
       />
     </div>
