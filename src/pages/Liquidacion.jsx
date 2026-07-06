@@ -1374,6 +1374,23 @@ function EstadoCuenta({ prestamos, tecnicos, notify }) {
     setSel(personaFinal)
   }
 
+  // Saldar la cuenta: registra el movimiento que deja el saldo en $0.
+  // Debe (saldo>0) → un abono; a favor (saldo<0) → un préstamo, por el monto.
+  const saldarCuenta = (c) => {
+    if (!c || !c.saldo) return
+    const tipo = c.saldo > 0 ? 'abono' : 'prestamo'
+    const monto = Math.abs(c.saldo)
+    setDlg({
+      title: `Saldar cuenta · ${c.persona}`,
+      lead: `${c.saldo > 0 ? `Debe ${fmt(c.saldo)}` : `A favor ${fmt(monto)}`} → queda en $0`,
+      confirmLabel: 'Saldar',
+      onConfirm: () => {
+        agregarMovimiento({ id: `PR-${uid()}`, persona: c.persona, tecnicoId: c.tecnicoId ?? null, tipo, monto, nota: 'Saldado', fecha: hoyISO() })
+        notify(`Cuenta de ${c.persona} saldada`, 'success')
+      },
+    })
+  }
+
   const exportarPDF = async (c) => {
     const doc = new jsPDF()
     const { MARGIN } = PDF_LAYOUT
@@ -1411,9 +1428,9 @@ function EstadoCuenta({ prestamos, tecnicos, notify }) {
   }
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 16, alignItems: 'start' }}>
+    <div>
       <ConfirmDialog cfg={dlg} onClose={() => setDlg(null)} />
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: 16, alignItems: 'start' }}>
         <div className="card">
           <div className="card__h"><h3>Registrar movimiento</h3></div>
           <div className="card__b" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -1470,27 +1487,7 @@ function EstadoCuenta({ prestamos, tecnicos, notify }) {
           </div>
         </div>
 
-        <div className="card">
-          <div className="card__h"><h3>Cuentas</h3><span className="count">Por cobrar: {fmt(totalPorCobrar)}</span></div>
-          <div className="card__b card__b--flush">
-            <table className="tbl tbl-cards">
-              <thead><tr><th>Persona</th><th className="text-right">Saldo</th></tr></thead>
-              <tbody>
-                {cuentas.map(c => (
-                  <tr key={c.persona} onClick={() => setSel(c.persona)} style={{ cursor: 'pointer', background: sel === c.persona ? 'var(--bg-subtle)' : undefined }}>
-                    <td className="c-name" style={{ fontWeight: 600 }}>{c.persona}</td>
-                    <td className="text-right text-mono" data-label="Saldo" style={{ fontWeight: 700, color: c.saldo > 0 ? 'var(--amber-700)' : c.saldo < 0 ? 'var(--green-700)' : 'var(--text-3)' }}>
-                      {c.saldo > 0 ? fmt(c.saldo) : c.saldo < 0 ? `a favor ${fmt(-c.saldo)}` : '—'}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-
-      <div className="card" ref={detailRef} style={{ position: 'sticky', top: 12, alignSelf: 'start' }}>
+        <div className="card" ref={detailRef}>
         {!cuentaSel ? (
           <div className="card__b"><div className="empty"><h4>Selecciona una cuenta</h4><p>Elige una persona de la lista para ver su estado de cuenta.</p></div></div>
         ) : (
@@ -1502,7 +1499,10 @@ function EstadoCuenta({ prestamos, tecnicos, notify }) {
                   {cuentaSel.saldo > 0 ? `Debe ${fmt(cuentaSel.saldo)}` : cuentaSel.saldo < 0 ? `A favor ${fmt(-cuentaSel.saldo)}` : 'Al día'}
                 </span>
               </div>
-              <button className="btn btn-outline btn-sm" onClick={() => exportarPDF(cuentaSel)}>PDF</button>
+              <div style={{ display: 'flex', gap: 8, marginLeft: 'auto' }}>
+                {cuentaSel.saldo !== 0 && <button className="btn btn-primary btn-sm" onClick={() => saldarCuenta(cuentaSel)}>Saldar</button>}
+                <button className="btn btn-outline btn-sm" onClick={() => exportarPDF(cuentaSel)}>PDF</button>
+              </div>
             </div>
             {cuentaSel.movs.length === 0 ? (
               <div className="card__b"><p className="text-sm text-muted">Sin movimientos. Registra un préstamo o abono.</p></div>
@@ -1532,6 +1532,26 @@ function EstadoCuenta({ prestamos, tecnicos, notify }) {
             )}
           </>
         )}
+      </div>
+      </div>
+
+      <div className="card" style={{ marginTop: 16 }}>
+        <div className="card__h"><h3>Cuentas</h3><span className="count">Por cobrar: {fmt(totalPorCobrar)}</span></div>
+        <div className="card__b card__b--flush">
+          <table className="tbl tbl-cards">
+            <thead><tr><th>Persona</th><th className="text-right">Saldo</th></tr></thead>
+            <tbody>
+              {cuentas.map(c => (
+                <tr key={c.persona} onClick={() => setSel(c.persona)} style={{ cursor: 'pointer', background: sel === c.persona ? 'var(--bg-subtle)' : undefined }}>
+                  <td className="c-name" style={{ fontWeight: 600 }}>{c.persona}</td>
+                  <td className="text-right text-mono" data-label="Saldo" style={{ fontWeight: 700, color: c.saldo > 0 ? 'var(--amber-700)' : c.saldo < 0 ? 'var(--green-700)' : 'var(--text-3)' }}>
+                    {c.saldo > 0 ? fmt(c.saldo) : c.saldo < 0 ? `a favor ${fmt(-c.saldo)}` : '—'}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   )
