@@ -264,7 +264,7 @@ export default function Sidebar({ active, onNavigate, isOpen, collapsed, onColla
           <div className="av">{inicial}</div>
           <div className="me">
             <div className="n">{user.nombre || user.usuario}</div>
-            <div className="r">{rolLabel} · <span style={{ opacity: 0.55 }} title="Versión desplegada">v{__BUILD_ID__}</span></div>
+            <div className="r">{rolLabel}</div>
           </div>
           <button className="icobtn" onClick={onLogout} title="Cerrar sesion" style={{ color: 'var(--text-3)' }}>
             {ICONS.logout}
