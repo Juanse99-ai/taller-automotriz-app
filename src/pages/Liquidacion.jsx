@@ -1499,26 +1499,27 @@ function EstadoCuenta({ prestamos, tecnicos, notify }) {
             {cuentaSel.movs.length === 0 ? (
               <div className="card__b"><p className="text-sm text-muted">Sin movimientos. Registra un préstamo o abono.</p></div>
             ) : (
-              <div className="card__b card__b--flush">
-                <table className="tbl tbl-cards">
-                  <thead><tr><th>Fecha</th><th>Tipo</th><th>Nota</th><th className="text-right">Monto</th><th></th></tr></thead>
-                  <tbody>
-                    {cuentaSel.movs.map(m => (
-                      <tr key={m.id}>
-                        <td className="text-sm text-muted" data-label="Fecha">{fmtDate(m.fecha)}</td>
-                        <td data-label="Tipo"><span className={`badge ${m.tipo === 'abono' ? 'badge-success' : 'badge-warning'}`}>{m.tipo === 'abono' ? 'Abono' : 'Préstamo'}</span></td>
-                        <td className="text-sm" data-label="Nota">{m.nota || '—'}</td>
-                        <td className="text-right text-mono" data-label="Monto" style={{ fontWeight: 700, color: m.tipo === 'abono' ? 'var(--green-700)' : 'var(--amber-700)' }}>{m.tipo === 'abono' ? '−' : '+'} {fmt(m.monto)}</td>
-                        <td className="td-actions"><button className="btn btn-ghost btn-sm" style={{ color: 'var(--red-600)' }} onClick={() => setDlg({
-                          title: 'Eliminar movimiento',
-                          lead: `${m.tipo === 'abono' ? 'Abono' : 'Préstamo'} · ${fmt(m.monto)} · ${fmtDate(m.fecha)}`,
-                          confirmLabel: 'Sí, eliminar', tone: 'danger',
-                          onConfirm: () => eliminarMovimiento(m.id),
-                        })} aria-label="Eliminar">✕ Eliminar</button></td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+              <div className="card__b">
+                {cuentaSel.movs.map(m => (
+                  <div key={m.id} style={{ padding: '13px 2px', borderTop: '1px solid var(--border)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <span className={`badge ${m.tipo === 'abono' ? 'badge-success' : 'badge-warning'}`}>{m.tipo === 'abono' ? 'Abono' : 'Préstamo'}</span>
+                      <span className="text-mono" style={{ marginLeft: 'auto', fontWeight: 700, fontSize: 15, whiteSpace: 'nowrap', color: m.tipo === 'abono' ? 'var(--green-700)' : 'var(--amber-700)' }}>
+                        {m.tipo === 'abono' ? '− ' : '+ '}{fmt(m.monto)}
+                      </span>
+                      <button className="btn btn-ghost btn-sm" style={{ color: 'var(--red-600)', padding: '4px 7px', flex: 'none' }} onClick={() => setDlg({
+                        title: 'Eliminar movimiento',
+                        lead: `${m.tipo === 'abono' ? 'Abono' : 'Préstamo'} · ${fmt(m.monto)} · ${fmtDate(m.fecha)}`,
+                        confirmLabel: 'Sí, eliminar', tone: 'danger',
+                        onConfirm: () => eliminarMovimiento(m.id),
+                      })} aria-label="Eliminar movimiento" title="Eliminar">✕</button>
+                    </div>
+                    <div style={{ marginTop: 6, fontSize: 12.5, color: 'var(--text-3)', display: 'flex', gap: 8 }}>
+                      <span style={{ flex: 'none' }}>{fmtDate(m.fecha)}</span>
+                      <span style={{ color: 'var(--text-2)', minWidth: 0 }}>{m.nota || '—'}</span>
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
           </>
