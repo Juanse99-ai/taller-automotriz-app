@@ -1431,8 +1431,8 @@ function EstadoCuenta({ prestamos, tecnicos, notify }) {
     <div>
       <ConfirmDialog cfg={dlg} onClose={() => setDlg(null)} />
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: 16, alignItems: 'start' }}>
-        <div className="card">
-          <div className="card__h"><h3>Registrar movimiento</h3></div>
+        <div className="card" style={{ boxShadow: 'none' }}>
+          <div className="card__h"><span style={{ fontSize: 12.5, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.06em', color: 'var(--text-3)' }}>Registrar movimiento</span></div>
           <div className="card__b" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             <div className="field">
               <label>Persona</label>
@@ -1487,7 +1487,7 @@ function EstadoCuenta({ prestamos, tecnicos, notify }) {
           </div>
         </div>
 
-        <div className="card" ref={detailRef}>
+        <div className="card" ref={detailRef} style={{ boxShadow: 'none' }}>
         {!cuentaSel ? (
           <div className="card__b"><div className="empty"><h4>Selecciona una cuenta</h4><p>Elige una persona de la lista para ver su estado de cuenta.</p></div></div>
         ) : (
@@ -1535,8 +1535,8 @@ function EstadoCuenta({ prestamos, tecnicos, notify }) {
       </div>
       </div>
 
-      <div className="card" style={{ marginTop: 16 }}>
-        <div className="card__h"><h3>Cuentas</h3><span className="count">Por cobrar: {fmt(totalPorCobrar)}</span></div>
+      <div className="card" style={{ marginTop: 16, boxShadow: 'none' }}>
+        <div className="card__h"><span style={{ fontSize: 12.5, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.06em', color: 'var(--text-3)' }}>Cuentas</span><span className="count">Por cobrar: {fmt(totalPorCobrar)}</span></div>
         <div className="card__b card__b--flush">
           <table className="tbl tbl-cards">
             <thead><tr><th>Persona</th><th className="text-right">Saldo</th></tr></thead>
