@@ -3,6 +3,11 @@ import react from '@vitejs/plugin-react'
 
 export default defineConfig({
   plugins: [react()],
+  define: {
+    // Marca de versión visible en la app: hash del commit en Vercel (o 'dev' en local).
+    // Sirve para saber de un vistazo si estás en la última versión o en una cacheada.
+    __BUILD_ID__: JSON.stringify((process.env.VERCEL_GIT_COMMIT_SHA || 'dev').slice(0, 7)),
+  },
   server: {
     port: 3000,
     proxy: {
