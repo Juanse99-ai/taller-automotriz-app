@@ -865,7 +865,9 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
           <div style={{ padding: '22px', fontSize: 13.5, color: 'var(--text-3)' }}>No hay técnicos con trabajos pendientes de liquidar.</div>
         ) : resumenTecnicos.map((t, i) => {
           const activo = tecnicoSel === String(t.id)
-          const disabled = t.pendientes === 0
+          // Antes se deshabilitaba con 0 OTs pendientes; ahora se puede abrir igual
+          // para registrarle un adelanto/descuento (ej. almuerzo) aunque no tenga trabajos.
+          const disabled = false
           return (
             <button
               key={t.id}
