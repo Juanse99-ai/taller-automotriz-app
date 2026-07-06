@@ -158,6 +158,25 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
     return { es: true, partner: typeof c === 'object' ? (c.partner || null) : null }
   }
 
+  // Liquidación de COMPARTIDOS es por técnico: en `liquidados` se guarda
+  // `${id}#${tecnicoId}` (una mitad pagada), no el id plano. Así, al pagarle su
+  // mitad a un técnico, el trabajo SIGUE pendiente para el compañero.
+  const liquidadoPara = (t, tid) => {
+    const { es } = compInfo(t.id)
+    if (!es) return liquidados.includes(t.id) // no compartido: un solo flag
+    if (liquidados.includes(`${t.id}#${tid}`)) return true
+    // Compat con datos viejos: un flag PLANO de un compartido = el asignado ya cobró.
+    if (liquidados.includes(t.id) && tid === parseInt(t.tecnicoId)) return true
+    return false
+  }
+  // ¿Ya cobraron TODAS las partes? (para ocultar el trabajo de los pendientes)
+  const totalmenteLiquidado = (t) => {
+    const { es, partner } = compInfo(t.id)
+    if (!es) return liquidados.includes(t.id)
+    const tid = parseInt(t.tecnicoId)
+    return liquidadoPara(t, tid) && (!partner || liquidadoPara(t, partner))
+  }
+
   const toggleSeleccion = (trabajoId) => {
     setSeleccionados(prev => {
       const next = { ...prev }
@@ -178,10 +197,10 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
   const trabajosPendientes = useMemo(() => {
     return trabajos.filter(t => {
       if (t.estado !== ESTADOS.COMPLETADO) return false
-      if (liquidados.includes(t.id)) return false
+      if (totalmenteLiquidado(t)) return false // compartido: sigue hasta que cobren AMBOS
       return true
     }).sort((a, b) => new Date(b.fecha) - new Date(a.fecha))
-  }, [trabajos, liquidados])
+  }, [trabajos, liquidados, compartidos])
 
   // Mano de obra por trabajo, calculada una sola vez
   const moMap = useMemo(() => {
@@ -207,12 +226,12 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
 
       if (es) {
         const mitad = (manoObra * COMISION.TOTAL) / 2
-        if (map[tid]) {
+        if (map[tid] && !liquidadoPara(t, tid)) {
           map[tid].trabajos.push(t)
           map[tid].totalMO += manoObra
           map[tid].comision += mitad
         }
-        if (partner && partner !== tid && map[partner]) {
+        if (partner && partner !== tid && map[partner] && !liquidadoPara(t, partner)) {
           map[partner].trabajos.push(t)
           map[partner].totalMO += manoObra
           map[partner].comision += mitad
@@ -232,11 +251,19 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
     let facturado = 0, comisiones = 0, sinPartner = 0, sinTecnico = 0
     trabajosPendientes.forEach(t => {
       const mo = moMap[t.id] || 0
-      facturado += mo
-      comisiones += mo * COMISION.TOTAL
       const { es, partner } = compInfo(t.id)
-      if (es && !partner) sinPartner++
       const tid = parseInt(t.tecnicoId)
+      if (es) {
+        if (!partner) sinPartner++
+        // Cada mitad pendiente (asignado / compañero) aporta medio trabajo. Así un
+        // compartido a medio liquidar deja de sumar la mitad que ya se pagó.
+        const media = mo / 2
+        if (!liquidadoPara(t, tid)) { facturado += media; comisiones += media * COMISION.TOTAL }
+        if (partner && partner !== tid && !liquidadoPara(t, partner)) { facturado += media; comisiones += media * COMISION.TOTAL }
+      } else {
+        facturado += mo
+        comisiones += mo * COMISION.TOTAL
+      }
       if (!TECNICOS.some(x => x.id === tid)) sinTecnico++
     })
     return {
@@ -440,7 +467,9 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
     }
 
     agregarHistorial(registro)
-    guardarLiquidados([...liquidados, ...ids])
+    // Compartido: se marca `${id}#${tecnico}` (solo esta mitad). No compartido: id plano.
+    const nuevasLiq = ids.map(id => compInfo(id).es ? `${id}#${tecData.tecnico.id}` : id)
+    guardarLiquidados([...liquidados, ...nuevasLiq])
 
     // Consumir movimientos del tecnico: borrado real (estado + Supabase).
     // Antes solo se filtraba el estado local y el sync de Supabase los
@@ -693,15 +722,15 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
   const desliquidarUno = (id, t) => {
     const etiqueta = t ? [t.placa, t.cliente].filter(Boolean).join(' · ') || id : id
     if (!confirm(`¿Desliquidar este trabajo?\n${etiqueta}\n\nVolverá a aparecer como pendiente por liquidar.`)) return
-    guardarLiquidados(liquidados.filter(x => x !== id))
+    // Quita el id plano Y las claves por técnico (compartido) de ese trabajo.
+    guardarLiquidados(liquidados.filter(x => x !== id && !x.startsWith(`${id}#`)))
     notify('Trabajo desliquidado', 'info')
   }
 
-  // Trabajos liquidados (ocultos) que aún existen en la lista, para mostrarlos uno a uno.
+  // Trabajos totalmente liquidados (ocultos) que aún existen en la lista.
   const trabajosLiquidados = useMemo(() => {
-    const set = new Set(liquidados)
-    return trabajos.filter(t => set.has(t.id))
-  }, [trabajos, liquidados])
+    return trabajos.filter(t => totalmenteLiquidado(t))
+  }, [trabajos, liquidados, compartidos])
 
   // ===== Tabs: Comisiones | Estado de cuenta =====
   const tabsLiq = (
@@ -821,14 +850,14 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
         })}
       </div>
 
-      {liquidados.length > 0 && (
+      {trabajosLiquidados.length > 0 && (
         <div style={{ marginTop: 10 }}>
           <button
             className="btn btn-ghost btn-sm"
             onClick={() => setVerLiquidados(v => !v)}
             style={{ fontSize: 12, padding: '4px 10px', color: 'var(--text-3)' }}
           >
-            {verLiquidados ? '▾' : '▸'} {liquidados.length} trabajos ya liquidados (ocultos)
+            {verLiquidados ? '▾' : '▸'} {trabajosLiquidados.length} trabajos ya liquidados (ocultos)
           </button>
           {verLiquidados && (
             <div style={{ marginTop: 8, border: '1px solid var(--border)', borderRadius: 10, overflow: 'hidden', maxWidth: 560 }}>

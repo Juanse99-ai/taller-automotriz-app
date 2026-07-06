@@ -3,9 +3,9 @@
   "configurations": [
     {
       "name": "dev",
-      "runtimeExecutable": "/Users/juansecp12/Documents/Proyecto App gestion taller GitHub/.claude/worktrees/elegant-villani-2b2944/.claude/dev.sh",
-      "runtimeArgs": [],
-      "port": 3000
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev"],
+      "port": 5173
     }
   ]
 }
