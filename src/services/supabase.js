@@ -69,6 +69,13 @@ export async function upsertTrabajo(trabajo, opts = {}) {
     pagado: trabajo.pagado || false,
     metodo_pago: trabajo.metodoPago || null,
     ot_codigo: trabajo.otCodigo || '',
+    // Próximo mantenimiento (lo usa el CRM para recordatorios). Antes se perdía
+    // en cada recarga porque no se persistía en Supabase.
+    tipo_aceite: trabajo.tipoAceite || null,
+    proximo_km: trabajo.proximoKm != null && trabajo.proximoKm !== '' ? String(trabajo.proximoKm) : null,
+    proxima_visita: trabajo.proximaVisita || null,
+    notas_proximo_mant: trabajo.notasProximoMant || null,
+    sin_vehiculo: trabajo.sinVehiculo || false,
   }
   // inspeccion: columna no existe aun en Supabase — se preserva en localStorage
   // Para habilitarla: ALTER TABLE trabajos ADD COLUMN IF NOT EXISTS inspeccion jsonb;

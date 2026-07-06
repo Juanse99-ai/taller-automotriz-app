@@ -35,6 +35,12 @@ function normalizar(r) {
     facturadoEn: r.facturado_en || r.facturadoEn || null,
     firmaCliente: r.firma_cliente || r.firmaCliente || null,
     cuenttiResolucion: r.cuentti_resolucion || r.cuenttiResolucion || null,
+    // Próximo mantenimiento (recordatorios del CRM)
+    tipoAceite: r.tipo_aceite ?? r.tipoAceite ?? '',
+    proximoKm: r.proximo_km ?? r.proximoKm ?? '',
+    proximaVisita: r.proxima_visita ?? r.proximaVisita ?? '',
+    notasProximoMant: r.notas_proximo_mant ?? r.notasProximoMant ?? '',
+    sinVehiculo: r.sin_vehiculo ?? r.sinVehiculo ?? false,
     inspeccion: typeof r.inspeccion === 'string' ? JSON.parse(r.inspeccion) : (r.inspeccion || null),
     // Evidencias: ahora vienen del servidor (columna evidencias). Fallback a local.
     evidenciasIngreso: parseEvidencias(r.evidencias) ?? (r.evidenciasIngreso || []),
@@ -62,8 +68,15 @@ export function useTrabajos() {
   trabajosRef.current = trabajos
 
   const nextOtCodigo = useCallback(() => {
-    const current = lsGet(LS_KEYS.OT_CONSECUTIVO, 0) || 0
-    const next = current + 1
+    // Deriva el consecutivo del MÁXIMO real ya sincronizado (no solo del contador
+    // local): un dispositivo nuevo o con caché limpio ya no arranca en OT-0001 y
+    // pisa códigos existentes. El contador local es solo un piso.
+    const maxTrabajos = (trabajosRef.current || []).reduce((mx, t) => {
+      const m = /OT-(\d+)/.exec(t.otCodigo || '')
+      return m ? Math.max(mx, parseInt(m[1], 10)) : mx
+    }, 0)
+    const local = lsGet(LS_KEYS.OT_CONSECUTIVO, 0) || 0
+    const next = Math.max(local, maxTrabajos) + 1
     lsSet(LS_KEYS.OT_CONSECUTIVO, next)
     return `OT-${String(next).padStart(4, '0')}`
   }, [])
