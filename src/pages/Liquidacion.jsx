@@ -1318,6 +1318,7 @@ function EstadoCuenta({ prestamos, tecnicos, notify }) {
   const [form, setForm] = useState({ personaSel: '', personaOtra: '', tipo: 'prestamo', monto: '', fecha: hoyISO(), nota: '', valorDia: '', dias: '' })
   const [sel, setSel] = useState(null)
   const [dlg, setDlg] = useState(null)
+  const [verPorDias, setVerPorDias] = useState(false)
   const detailRef = useRef(null)
   // Al elegir una cuenta, traer el panel de detalle a la vista: en desktop está
   // arriba-derecha, lejos de la lista de abajo, y sin esto parecía que "no pasa nada".
@@ -1446,19 +1447,26 @@ function EstadoCuenta({ prestamos, tecnicos, notify }) {
               <div className="field"><label>Monto</label><MoneyInput value={form.monto} onChange={v => setForm(f => ({ ...f, monto: v, valorDia: '', dias: '' }))} placeholder="0" /></div>
               <div className="field"><label>Fecha</label><input className="input" type="date" value={form.fecha} onChange={e => setForm(f => ({ ...f, fecha: e.target.value }))} /></div>
             </div>
-            <div className="field">
-              <label>O por días <span style={{ fontWeight: 500, color: 'var(--text-3)' }}>(pagos/cargos diarios · opcional)</span></label>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                <MoneyInput value={form.valorDia} onChange={v => setDia({ valorDia: v })} placeholder="Valor/día" style={{ flex: '1 1 120px', minWidth: 0 }} />
-                <span style={{ color: 'var(--text-3)', fontWeight: 700 }}>×</span>
-                <input className="input" type="number" min="0" value={form.dias} onChange={e => setDia({ dias: e.target.value })} placeholder="Días" style={{ width: 84 }} />
-                {(parseFloat(form.valorDia) || 0) > 0 && (parseInt(form.dias) || 0) > 0 && (
-                  <span style={{ fontSize: 12.5, color: 'var(--text-2)' }}>= <strong style={{ fontVariantNumeric: 'tabular-nums' }}>{fmt((parseFloat(form.valorDia) || 0) * (parseInt(form.dias) || 0))}</strong></span>
-                )}
+            {(verPorDias || (parseFloat(form.valorDia) || 0) > 0 || (parseInt(form.dias) || 0) > 0) ? (
+              <div className="field">
+                <label>Por días <span style={{ fontWeight: 500, color: 'var(--text-3)' }}>(pagos/cargos diarios)</span></label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                  <MoneyInput value={form.valorDia} onChange={v => setDia({ valorDia: v })} placeholder="Valor/día" style={{ flex: '1 1 120px', minWidth: 0 }} />
+                  <span style={{ color: 'var(--text-3)', fontWeight: 700 }}>×</span>
+                  <input className="input" type="number" min="0" value={form.dias} onChange={e => setDia({ dias: e.target.value })} placeholder="Días" style={{ width: 84 }} />
+                  {(parseFloat(form.valorDia) || 0) > 0 && (parseInt(form.dias) || 0) > 0 && (
+                    <span style={{ fontSize: 12.5, color: 'var(--text-2)' }}>= <strong style={{ fontVariantNumeric: 'tabular-nums' }}>{fmt((parseFloat(form.valorDia) || 0) * (parseInt(form.dias) || 0))}</strong></span>
+                  )}
+                </div>
               </div>
-            </div>
+            ) : (
+              <button type="button" onClick={() => setVerPorDias(true)} style={{ background: 'transparent', border: 0, color: 'var(--primary)', fontFamily: 'inherit', fontWeight: 600, fontSize: 13.5, cursor: 'pointer', padding: '2px 0', marginBottom: 4 }}>＋ calcular por días</button>
+            )}
             <div className="field"><label>Nota</label><input className="input" value={form.nota} onChange={e => setForm(f => ({ ...f, nota: e.target.value }))} placeholder="Concepto, referencia…" /></div>
-            <button type="button" className="btn btn-primary" onClick={guardar}>Registrar</button>
+            {(() => {
+              const hayMonto = (parseFloat(form.monto) || 0) > 0 || ((parseFloat(form.valorDia) || 0) > 0 && (parseInt(form.dias) || 0) > 0)
+              return <button type="button" className="btn btn-primary" onClick={guardar} disabled={!hayMonto} style={{ opacity: hayMonto ? 1 : 0.5, cursor: hayMonto ? 'pointer' : 'not-allowed' }}>Registrar</button>
+            })()}
           </div>
         </div>
 
