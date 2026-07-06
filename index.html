@@ -32,6 +32,36 @@
         caches.keys().then(keys => keys.forEach(k => caches.delete(k)))
       }
     </script>
+    <script>
+      // Auto-actualización: si el servidor ya tiene un bundle más nuevo que el
+      // cargado, recarga UNA vez. Así, tras un deploy, no te quedas viendo la
+      // versión cacheada (Safari/pestaña fija). En dev no hace nada.
+      (function () {
+        function loadedBundle() {
+          var s = document.querySelector('script[type="module"][src*="/assets/index-"]');
+          return s ? s.getAttribute('src') : null;
+        }
+        async function check() {
+          try {
+            var res = await fetch('/?_=' + Date.now(), { cache: 'no-store' });
+            var html = await res.text();
+            var m = html.match(/\/assets\/index-[A-Za-z0-9_-]+\.js/);
+            var latest = m ? m[0] : null;
+            var cur = loadedBundle();
+            if (latest && cur && cur.indexOf(latest) === -1) {
+              if (!sessionStorage.getItem('__reloadedForUpdate')) {
+                sessionStorage.setItem('__reloadedForUpdate', '1');
+                location.reload();
+              }
+            } else if (latest && cur) {
+              sessionStorage.removeItem('__reloadedForUpdate');
+            }
+          } catch (e) {}
+        }
+        window.addEventListener('load', check);
+        window.addEventListener('focus', check);
+      })();
+    </script>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

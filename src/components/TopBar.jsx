@@ -161,7 +161,7 @@ export default function TopBar({ title, subtitle, onToggleSidebar, sidebarOpen, 
           <MenuToggleIcon open={menuAbierto} reduce={reduceMotion} />
         </button>
         <div className="title">
-          <h1>{title}</h1>
+          <h1>{title} <span style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-4)', opacity: 0.7, verticalAlign: 'middle', letterSpacing: '.02em' }} title="Versión desplegada">v{__BUILD_ID__}</span></h1>
           <p>{subtitle}</p>
         </div>
 
