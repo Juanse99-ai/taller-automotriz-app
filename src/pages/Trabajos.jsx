@@ -1176,6 +1176,11 @@ function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [], vehiculosHoo
   const handleSubmit = (e) => {
     e.preventDefault()
     if ((!form.placa && !form.sinVehiculo) || !form.cliente) return
+    // Aviso: OT con valor pero sin mano de obra (ninguna línea "Servicio" ni M.O.
+    // manual) → el técnico asignado quedaría con comisión $0, que solo se descubre
+    // al liquidar días después.
+    if (totales.total > 0 && baseComision === 0 && form.tecnicoId &&
+        !window.confirm('Esta OT no tiene mano de obra: el técnico no recibirá comisión (marca la línea como "Servicio" o escribe la M.O. a mano). ¿Continuar de todas formas?')) return
     onSave({
       ...form,
       placa: (form.placa || (form.sinVehiculo ? 'SERVICIO' : '')).toUpperCase(),
