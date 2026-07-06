@@ -42,9 +42,8 @@ export default function ConfirmDialog({ cfg, onClose }) {
           <button className="btn btn-ghost" onClick={onClose}>{cfg.cancelLabel || 'Cancelar'}</button>
           <button
             ref={confirmRef}
-            className="btn btn-primary"
+            className={`btn ${danger ? 'btn-danger' : 'btn-primary'}`}
             onClick={() => { onClose(); cfg.onConfirm && cfg.onConfirm() }}
-            style={danger ? { background: 'var(--red-600, #c22f22)', borderColor: 'transparent' } : undefined}
           >
             {cfg.confirmLabel || 'Confirmar'}
           </button>

@@ -770,10 +770,16 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
   // confirmación para no marcarlo por error. (Se quitó el "Desliquidar todos".)
   const desliquidarUno = (id, t) => {
     const etiqueta = t ? [t.placa, t.cliente].filter(Boolean).join(' · ') || id : id
-    if (!confirm(`¿Desliquidar este trabajo?\n${etiqueta}\n\nVolverá a aparecer como pendiente por liquidar.`)) return
-    // Quita el id plano Y las claves por técnico (compartido) de ese trabajo.
-    guardarLiquidados(liquidados.filter(x => x !== id && !x.startsWith(`${id}#`)))
-    notify('Trabajo desliquidado', 'info')
+    setDialog({
+      title: 'Desliquidar trabajo',
+      lead: etiqueta,
+      confirmLabel: 'Desliquidar',
+      onConfirm: () => {
+        // Quita el id plano Y las claves por técnico (compartido) de ese trabajo.
+        guardarLiquidados(liquidados.filter(x => x !== id && !x.startsWith(`${id}#`)))
+        notify('Trabajo desliquidado', 'info')
+      },
+    })
   }
 
   // Trabajos totalmente liquidados (ocultos) que aún existen en la lista.
@@ -986,7 +992,7 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
                           <td style={{ textAlign: 'center' }} onClick={e => e.stopPropagation()}>
                             <input type="checkbox" checked={esComp} onChange={() => {
                               const yaLiq = liquidados.some(x => x === t.id || x.startsWith(`${t.id}#`))
-                              if (yaLiq && !window.confirm('Este trabajo ya tiene un pago liquidado. Cambiar "Compartido" puede descuadrar lo pagado (pagar de más). ¿Continuar?')) return
+                              if (yaLiq) { setDialog({ title: 'Cambiar “Compartido”', lead: 'Este trabajo ya tiene un pago liquidado; cambiarlo puede descuadrar lo pagado.', confirmLabel: 'Cambiar igual', tone: 'danger', onConfirm: () => toggleCompartido(t.id) }); return }
                               toggleCompartido(t.id)
                             }} aria-label="Trabajo compartido"/>
                             {esComp && (
@@ -995,8 +1001,9 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
                                 value={partner || ''}
                                 onChange={e => {
                                   const yaLiq = liquidados.some(x => x.startsWith(`${t.id}#`))
-                                  if (yaLiq && !window.confirm('Este compartido ya tiene una mitad liquidada. Cambiar el compañero puede descuadrar lo pagado. ¿Continuar?')) return
-                                  setCompartidoPartner(t.id, e.target.value)
+                                  const nuevoPartner = e.target.value
+                                  if (yaLiq) { setDialog({ title: 'Cambiar compañero', lead: 'Ya hay una mitad liquidada; cambiar el compañero puede descuadrar lo pagado.', confirmLabel: 'Cambiar igual', tone: 'danger', onConfirm: () => setCompartidoPartner(t.id, nuevoPartner) }); return }
+                                  setCompartidoPartner(t.id, nuevoPartner)
                                 }}
                                 style={{ display: 'block', margin: '4px auto 0', width: 110, minHeight: 30, height: 30, fontSize: 12, padding: '2px 8px' }}
                                 aria-label="Compañero del trabajo compartido"
@@ -1314,6 +1321,7 @@ function EstadoCuenta({ prestamos, tecnicos, notify }) {
   const { movimientos, agregarMovimiento, eliminarMovimiento } = prestamos
   const [form, setForm] = useState({ personaSel: '', personaOtra: '', tipo: 'prestamo', monto: '', fecha: hoyISO(), nota: '', valorDia: '', dias: '' })
   const [sel, setSel] = useState(null)
+  const [dlg, setDlg] = useState(null)
   const detailRef = useRef(null)
   // Al elegir una cuenta, traer el panel de detalle a la vista: en desktop está
   // arriba-derecha, lejos de la lista de abajo, y sin esto parecía que "no pasa nada".
@@ -1407,6 +1415,7 @@ function EstadoCuenta({ prestamos, tecnicos, notify }) {
 
   return (
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 16, alignItems: 'start' }}>
+      <ConfirmDialog cfg={dlg} onClose={() => setDlg(null)} />
       <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
         <div className="card">
           <div className="card__h"><h3>Registrar movimiento</h3></div>
@@ -1504,7 +1513,12 @@ function EstadoCuenta({ prestamos, tecnicos, notify }) {
                         <td data-label="Tipo"><span className={`badge ${m.tipo === 'abono' ? 'badge-success' : 'badge-warning'}`}>{m.tipo === 'abono' ? 'Abono' : 'Préstamo'}</span></td>
                         <td className="text-sm" data-label="Nota">{m.nota || '—'}</td>
                         <td className="text-right text-mono" data-label="Monto" style={{ fontWeight: 700, color: m.tipo === 'abono' ? 'var(--green-700)' : 'var(--amber-700)' }}>{m.tipo === 'abono' ? '−' : '+'} {fmt(m.monto)}</td>
-                        <td className="td-actions"><button className="btn btn-ghost btn-sm" style={{ color: 'var(--red-600)' }} onClick={() => { if (confirm('¿Eliminar este movimiento?')) eliminarMovimiento(m.id) }} aria-label="Eliminar">✕ Eliminar</button></td>
+                        <td className="td-actions"><button className="btn btn-ghost btn-sm" style={{ color: 'var(--red-600)' }} onClick={() => setDlg({
+                          title: 'Eliminar movimiento',
+                          lead: `${m.tipo === 'abono' ? 'Abono' : 'Préstamo'} · ${fmt(m.monto)} · ${fmtDate(m.fecha)}`,
+                          confirmLabel: 'Sí, eliminar', tone: 'danger',
+                          onConfirm: () => eliminarMovimiento(m.id),
+                        })} aria-label="Eliminar">✕ Eliminar</button></td>
                       </tr>
                     ))}
                   </tbody>
