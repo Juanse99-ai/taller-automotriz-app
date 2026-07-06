@@ -1492,10 +1492,10 @@ function EstadoCuenta({ prestamos, tecnicos, notify }) {
           <div className="card__b"><div className="empty"><h4>Selecciona una cuenta</h4><p>Elige una persona de la lista para ver su estado de cuenta.</p></div></div>
         ) : (
           <>
-            <div className="card__h" style={{ flexWrap: 'wrap', gap: 10 }}>
+            <div className="card__h" style={{ flexWrap: 'wrap', gap: 10, alignItems: 'flex-start' }}>
               <div>
                 <h3 style={{ margin: 0 }}>{cuentaSel.persona}</h3>
-                <span style={{ fontSize: 12.5, fontWeight: 700, color: cuentaSel.saldo > 0 ? 'var(--amber-700)' : 'var(--green-700)' }}>
+                <span style={{ display: 'block', marginTop: 4, fontSize: 13, fontWeight: 700, color: cuentaSel.saldo > 0 ? 'var(--amber-700)' : cuentaSel.saldo < 0 ? 'var(--green-700)' : 'var(--text-3)' }}>
                   {cuentaSel.saldo > 0 ? `Debe ${fmt(cuentaSel.saldo)}` : cuentaSel.saldo < 0 ? `A favor ${fmt(-cuentaSel.saldo)}` : 'Al día'}
                 </span>
               </div>
@@ -1508,8 +1508,8 @@ function EstadoCuenta({ prestamos, tecnicos, notify }) {
               <div className="card__b"><p className="text-sm text-muted">Sin movimientos. Registra un préstamo o abono.</p></div>
             ) : (
               <div className="card__b">
-                {cuentaSel.movs.map(m => (
-                  <div key={m.id} style={{ padding: '13px 2px', borderTop: '1px solid var(--border)' }}>
+                {cuentaSel.movs.map((m, i) => (
+                  <div key={m.id} style={{ padding: '13px 2px', borderTop: i === 0 ? 'none' : '1px solid var(--border)' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                       <span className={`badge ${m.tipo === 'abono' ? 'badge-success' : 'badge-warning'}`}>{m.tipo === 'abono' ? 'Abono' : 'Préstamo'}</span>
                       <span className="text-mono" style={{ marginLeft: 'auto', fontWeight: 700, fontSize: 15, whiteSpace: 'nowrap', color: m.tipo === 'abono' ? 'var(--green-700)' : 'var(--amber-700)' }}>
