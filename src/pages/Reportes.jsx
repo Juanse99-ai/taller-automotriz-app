@@ -3,6 +3,7 @@ import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import { fmt, fmtDate } from '../utils/helpers'
 import { TECNICOS, COMISION, ESTADOS, TALLER } from '../utils/constants'
+import { manoObraBase } from '../utils/comision'
 import { drawHeader, drawSectionHeader, drawFooter, drawTotalsBox, tableStylesItems, tableStylesMuted, PDF_LAYOUT, PDF_COLORS } from '../utils/pdfTheme'
 
 // Fecha LOCAL en formato YYYY-MM-DD (no UTC). Con toISOString(), en la tarde/noche
@@ -31,18 +32,9 @@ export default function Reportes({ trabajos }) {
   const stats = useMemo(() => {
     const completados = filtrados.filter(t => t.estado === ESTADOS.COMPLETADO)
     const ingresos = completados.reduce((s, t) => s + (t.total || 0), 0)
-    // Mano de obra: solo servicios, no repuestos
-    const getMO = (t) => {
-      if (typeof t?.manoObra === 'number') return t.manoObra
-      if (Array.isArray(t?.items)) {
-        return t.items.reduce((s, i) => {
-          const tipo = (i?.tipo || i?.categoria || '').toString().toLowerCase()
-          const esServ = i?.esServicio === true || tipo.includes('serv')
-          return s + (esServ ? (parseFloat(i?.precio) || 0) * (parseInt(i?.cantidad) || 1) : 0)
-        }, 0)
-      }
-      return 0
-    }
+    // Mano de obra (base de comisión) SIN IVA, igual que Liquidación / Mecánicos.
+    // Antes tomaba t.manoObra (con IVA) primero y el fallback a items era código muerto.
+    const getMO = manoObraBase
     const comisiones = completados.reduce((s, t) => s + (getMO(t) * COMISION.TOTAL), 0)
 
     // Por tecnico — solo mano de obra (servicios), no repuestos

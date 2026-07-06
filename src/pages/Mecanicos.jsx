@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { fmt } from '../utils/helpers'
 import { COMISION, ESTADOS } from '../utils/constants'
+import { manoObraBase } from '../utils/comision'
 import { useTecnicos, tecnicosActivos, agregarTecnico, actualizarTecnico, setTecnicoActivo, eliminarTecnico } from '../services/tecnicos'
 
 const ACTIVOS = [ESTADOS.PENDIENTE, ESTADOS.EN_DIAGNOSTICO, ESTADOS.ESPERANDO_REPUESTOS, ESTADOS.EN_PROGRESO]
@@ -19,22 +20,11 @@ export default function Mecanicos({ trabajos, onNavigate, notify }) {
       const completados = misTrab.filter(t => t.estado === ESTADOS.COMPLETADO)
       const activos = misTrab.filter(t => ACTIVOS.includes(t.estado))
 
-      const getMO = (t) => {
-        if (typeof t?.manoObra === 'number') return t.manoObra
-        if (Array.isArray(t?.items)) {
-          return t.items.reduce((s, i) => {
-            const tipo = (i?.tipo || i?.categoria || '').toString().toLowerCase()
-            const esServ = i?.esServicio === true || tipo.includes('serv')
-            return s + (esServ ? (parseFloat(i?.precio) || 0) * (parseInt(i?.cantidad) || 1) : 0)
-          }, 0)
-        }
-        return 0
-      }
-
       const now = new Date()
       const inicioMes = new Date(now.getFullYear(), now.getMonth(), 1)
       const completadosMes = completados.filter(t => new Date(t.fecha) >= inicioMes)
-      const comisionMes = completadosMes.reduce((s, t) => s + getMO(t) * COMISION.TOTAL, 0)
+      // Base SIN IVA (igual que Liquidación) para que la tarjeta muestre lo que se paga.
+      const comisionMes = completadosMes.reduce((s, t) => s + manoObraBase(t) * COMISION.TOTAL, 0)
 
       return {
         ...tec,

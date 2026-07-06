@@ -1136,21 +1136,21 @@ function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [], vehiculosHoo
 
   // Totales
   const totales = useMemo(() => {
-    let subtotal = 0, iva = 0, total = 0, manoObra = 0, repuestos = 0
+    let subtotal = 0, iva = 0, total = 0, manoObra = 0, manoObraBase = 0, repuestos = 0
     items.forEach(i => {
       const precio = parseFloat(i.precio) || 0
       const cant = parseInt(i.cantidad) || 1
       const ivaPct = parseFloat(i.iva) || 0
       const lineaTotal = precio * cant
+      const lineaBase = ivaPct > 0 ? lineaTotal / (1 + ivaPct / 100) : lineaTotal
       if (ivaPct > 0) {
-        const base = lineaTotal / (1 + ivaPct / 100)
-        subtotal += base
-        iva += lineaTotal - base
+        subtotal += lineaBase
+        iva += lineaTotal - lineaBase
       } else {
         subtotal += lineaTotal
       }
       total += lineaTotal
-      if (i.esServicio) manoObra += lineaTotal
+      if (i.esServicio) { manoObra += lineaTotal; manoObraBase += lineaBase }
       else repuestos += lineaTotal
     })
     return {
@@ -1158,6 +1158,7 @@ function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [], vehiculosHoo
       iva: Math.round(iva),
       total: Math.round(total),
       manoObra: Math.round(manoObra),
+      manoObraBase: Math.round(manoObraBase), // M.O. de servicios SIN IVA = base de la comisión
       repuestos: Math.round(repuestos),
     }
   }, [items])
@@ -1167,7 +1168,10 @@ function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [], vehiculosHoo
   //  - Si no hay (ej. cambio de aceite), se usa la mano de obra escrita a mano.
   const hayServicios = totales.manoObra > 0
   const manoObraEf = hayServicios ? totales.manoObra : Math.max(0, parseFloat(form.manoObra) || 0)
-  const comisionTecnico = Math.round(manoObraEf * COMISION.TOTAL)
+  // La comisión se calcula sobre la base SIN IVA (igual que Liquidación, que es lo
+  // que realmente cobra el técnico). El M.O. manual ya viene sin IVA.
+  const baseComision = hayServicios ? totales.manoObraBase : Math.max(0, parseFloat(form.manoObra) || 0)
+  const comisionTecnico = Math.round(baseComision * COMISION.TOTAL)
 
   const handleSubmit = (e) => {
     e.preventDefault()

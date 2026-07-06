@@ -85,14 +85,15 @@ export default function Dashboard({ trabajos = [], onNavigate, user }) {
     // Listo para entregar = completado pero AÚN NO facturado (facturar = entregado/cobrado).
     const listoCount = trabajos.filter(t => t.estado === ESTADOS.COMPLETADO && !t.cuenttiTransacionId).length
     const inicioMes = new Date(now.getFullYear(), now.getMonth(), 1)
+    // Los ingresos NO cuentan OTs canceladas (no son plata) — así cuadra con Reportes.
     const ingresosMes = trabajos
-      .filter(t => new Date(t.fecha) >= inicioMes)
+      .filter(t => t.estado !== ESTADOS.CANCELADO && new Date(t.fecha) >= inicioMes)
       .reduce((s, t) => s + (t.total || 0), 0)
     // Hoy
     const hoyStart = new Date(now); hoyStart.setHours(0,0,0,0)
     const hoyEnd = new Date(now); hoyEnd.setHours(23,59,59,999)
     const ingresosHoy = trabajos
-      .filter(t => { const f = new Date(t.fecha); return f >= hoyStart && f <= hoyEnd })
+      .filter(t => { const f = new Date(t.fecha); return t.estado !== ESTADOS.CANCELADO && f >= hoyStart && f <= hoyEnd })
       .reduce((s, t) => s + (t.total || 0), 0)
     // Por cobrar = facturado (tiene factura en Cuentti) pero AÚN sin pagar
     const porCobrarList = trabajos.filter(t => t.cuenttiTransacionId && !t.pagado)
