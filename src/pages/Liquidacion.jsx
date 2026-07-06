@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef } from 'react'
+import { useState, useMemo, useRef, useEffect } from 'react'
 import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import { fmt, fmtDate, uid, hoyISO } from '../utils/helpers'
@@ -8,6 +8,7 @@ import { lsGet, lsSet } from '../services/storage'
 import { useTecnicos } from '../services/tecnicos'
 import { registrarGastoNominaBackend } from '../services/cuentti'
 import { usePrestamos } from '../hooks/usePrestamos'
+import { splitComision } from '../services/money'
 import { loadLogo, drawHeader, drawSectionHeader, drawDataBlock, drawTotalsBox, drawSignatures, drawFooter, tableStylesItems, tableStylesMuted, PDF_LAYOUT } from '../utils/pdfTheme'
 
 // Obtener base de mano de obra SIN IVA (solo servicios)
@@ -226,16 +227,19 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
       const { es, partner } = compInfo(t.id)
 
       if (es) {
-        const mitad = (manoObra * COMISION.TOTAL) / 2
+        // 20/20 con allocate: la comisión del trabajo (round(MO×40%)) se reparte
+        // en dos mitades ENTERAS [asignado, compañero] que suman EXACTO (antes cada
+        // mitad se redondeaba por separado y se podía ganar/perder ≤1 peso).
+        const [mitadAsig, mitadComp] = splitComision(manoObra, COMISION.TOTAL)
         if (map[tid] && !liquidadoPara(t, tid)) {
           map[tid].trabajos.push(t)
           map[tid].totalMO += manoObra
-          map[tid].comision += mitad
+          map[tid].comision += mitadAsig
         }
         if (partner && partner !== tid && map[partner] && !liquidadoPara(t, partner)) {
           map[partner].trabajos.push(t)
           map[partner].totalMO += manoObra
-          map[partner].comision += mitad
+          map[partner].comision += mitadComp
         }
       } else if (map[tid]) {
         map[tid].trabajos.push(t)
@@ -259,8 +263,9 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
         // Cada mitad pendiente (asignado / compañero) aporta medio trabajo. Así un
         // compartido a medio liquidar deja de sumar la mitad que ya se pagó.
         const media = mo / 2
-        if (!liquidadoPara(t, tid)) { facturado += media; comisiones += media * COMISION.TOTAL }
-        if (partner && partner !== tid && !liquidadoPara(t, partner)) { facturado += media; comisiones += media * COMISION.TOTAL }
+        const [comAsig, comComp] = splitComision(mo, COMISION.TOTAL)
+        if (!liquidadoPara(t, tid)) { facturado += media; comisiones += comAsig }
+        if (partner && partner !== tid && !liquidadoPara(t, partner)) { facturado += media; comisiones += comComp }
       } else {
         facturado += mo
         comisiones += mo * COMISION.TOTAL
@@ -287,12 +292,19 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
   // Totales de la seleccion actual
   const totalSeleccion = useMemo(() => {
     let manoObra = 0, comision = 0
+    const selTid = parseInt(tecnicoSel)
     tecTrabajos.forEach(t => {
       if (!seleccionados[t.id]) return
       const mo = moMap[t.id] || 0
       const { es } = compInfo(t.id)
       manoObra += mo
-      comision += es ? (mo * COMISION.TOTAL) / 2 : mo * COMISION.TOTAL
+      if (es) {
+        // La mitad del técnico que se está liquidando (asignado=[0], compañero=[1]).
+        const [mitadAsig, mitadComp] = splitComision(mo, COMISION.TOTAL)
+        comision += (selTid === parseInt(t.tecnicoId)) ? mitadAsig : mitadComp
+      } else {
+        comision += mo * COMISION.TOTAL
+      }
     })
     const cargos = tecMovs.reduce((s, m) => s + (parseFloat(m.monto) || 0), 0)
     // Descuento real al pago: el "diario" se comparte (40%), el resto se descuenta
@@ -305,7 +317,7 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
       cargosEfectivos,
       neto: Math.round(comision - cargosEfectivos),
     }
-  }, [tecTrabajos, seleccionados, compartidos, tecMovs, moMap])
+  }, [tecTrabajos, seleccionados, compartidos, tecMovs, moMap, tecnicoSel])
 
   const cantSeleccionados = Object.keys(seleccionados).filter(id => seleccionados[id]).length
 
@@ -1266,6 +1278,12 @@ function EstadoCuenta({ prestamos, tecnicos, notify }) {
   const { movimientos, agregarMovimiento, eliminarMovimiento } = prestamos
   const [form, setForm] = useState({ personaSel: '', personaOtra: '', tipo: 'prestamo', monto: '', fecha: hoyISO(), nota: '', valorDia: '', dias: '' })
   const [sel, setSel] = useState(null)
+  const detailRef = useRef(null)
+  // Al elegir una cuenta, traer el panel de detalle a la vista: en desktop está
+  // arriba-derecha, lejos de la lista de abajo, y sin esto parecía que "no pasa nada".
+  useEffect(() => {
+    if (sel && detailRef.current) detailRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+  }, [sel])
 
   // Cálculo "por días": al escribir valor/día y días, llena el monto automático.
   const setDia = (patch) => setForm(f => {
@@ -1359,7 +1377,7 @@ function EstadoCuenta({ prestamos, tecnicos, notify }) {
           <div className="card__b" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             <div className="field">
               <label>Persona</label>
-              <select className="input" value={form.personaSel} onChange={e => setForm(f => ({ ...f, personaSel: e.target.value }))}>
+              <select className="input" value={form.personaSel} onChange={e => { const v = e.target.value; setForm(f => ({ ...f, personaSel: v })); if (v && v !== '__otra') setSel(v) }}>
                 <option value="">Seleccionar…</option>
                 {tecnicos.filter(t => !t.eliminado).map(t => <option key={t.id} value={t.nombre}>{t.nombre}</option>)}
                 {PERSONAS_CUENTA.map(p => <option key={p.nombre} value={p.nombre}>{p.nombre}{p.rol ? ` (${p.rol})` : ''}</option>)}
@@ -1423,7 +1441,7 @@ function EstadoCuenta({ prestamos, tecnicos, notify }) {
         </div>
       </div>
 
-      <div className="card">
+      <div className="card" ref={detailRef} style={{ position: 'sticky', top: 12, alignSelf: 'start' }}>
         {!cuentaSel ? (
           <div className="card__b"><div className="empty"><h4>Selecciona una cuenta</h4><p>Elige una persona de la lista para ver su estado de cuenta.</p></div></div>
         ) : (
