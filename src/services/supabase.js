@@ -110,9 +110,12 @@ export async function upsertTrabajo(trabajo, opts = {}) {
 export async function deleteTrabajo(id) {
   if (!id) return false
   try {
+    // Borrado SUAVE: marca deleted=true en vez de borrar la fila. Así la OT sigue
+    // en Supabase (su id sigue existiendo) y NO se re-sube desde el cache de otro
+    // dispositivo; la app la oculta. Arregla el bug de "borro una OT y resucita".
     const res = await fetchWithTimeout(
       `${baseProxy}&id=eq.${encodeURIComponent(id)}`,
-      { method: 'DELETE' }
+      { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ deleted: true }) }
     )
     if (!res.ok) throw new Error(await res.text())
     return true

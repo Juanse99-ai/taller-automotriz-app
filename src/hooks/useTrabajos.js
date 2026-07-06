@@ -41,6 +41,7 @@ function normalizar(r) {
     proximaVisita: r.proxima_visita ?? r.proximaVisita ?? '',
     notasProximoMant: r.notas_proximo_mant ?? r.notasProximoMant ?? '',
     sinVehiculo: r.sin_vehiculo ?? r.sinVehiculo ?? false,
+    deleted: r.deleted === true, // borrado suave: la fila sigue en Supabase pero se oculta
     inspeccion: typeof r.inspeccion === 'string' ? JSON.parse(r.inspeccion) : (r.inspeccion || null),
     // Evidencias: ahora vienen del servidor (columna evidencias). Fallback a local.
     evidenciasIngreso: parseEvidencias(r.evidencias) ?? (r.evidenciasIngreso || []),
@@ -112,8 +113,10 @@ export function useTrabajos() {
       return true
     })
 
-    // Resultado: Supabase primero (fuente de verdad) + solo-locales al final
-    return [...sbConEvid, ...soloLocales]
+    // Resultado: Supabase primero (fuente de verdad) + solo-locales al final.
+    // Se ocultan las borradas (deleted=true): siguen en Supabase para no re-subirse
+    // desde el cache de otro dispositivo, pero no aparecen en la app.
+    return [...sbConEvid, ...soloLocales].filter(t => !t.deleted)
   }, [])
 
   // Sincronizacion silenciosa (no toca loading): para polling y focus
