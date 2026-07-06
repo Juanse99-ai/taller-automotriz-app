@@ -9,6 +9,7 @@ import { useTecnicos } from '../services/tecnicos'
 import { registrarGastoNominaBackend } from '../services/cuentti'
 import { usePrestamos } from '../hooks/usePrestamos'
 import { splitComision } from '../services/money'
+import ConfirmDialog, { DlgRow } from '../components/ConfirmDialog'
 import { loadLogo, drawHeader, drawSectionHeader, drawDataBlock, drawTotalsBox, drawSignatures, drawFooter, tableStylesItems, tableStylesMuted, PDF_LAYOUT } from '../utils/pdfTheme'
 
 // Obtener base de mano de obra SIN IVA (solo servicios)
@@ -77,6 +78,7 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
 
   const prestamosHook = usePrestamos()
   const pagandoRef = useRef(false) // evita doble "Generar pago" (doble pago) por doble clic
+  const [dialog, setDialog] = useState(null) // diálogo de confirmación propio (pago / borrado)
   const [vistaLiq, setVistaLiq] = useState('comisiones') // 'comisiones' | 'cuentas'
 
   const [tecnicoSel, setTecnicoSel] = useState('')
@@ -438,14 +440,14 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
     return id
   }
 
-  const generarPago = async () => {
+  const generarPago = async (skipConfirm = false) => {
     const ids = Object.keys(seleccionados).filter(id => seleccionados[id])
     if (ids.length === 0) { notify('Selecciona al menos un trabajo para liquidar', 'error'); return }
     if (!tecData) return
     if (pagandoRef.current) return
 
     // Neto negativo: la deuda no se borra, se arrastra como saldo anterior
-    if (totalSeleccion.neto < 0) {
+    if (totalSeleccion.neto < 0 && !skipConfirm) {
       const ok = confirm(
         `El neto es negativo (${fmt(totalSeleccion.neto)}): los cargos superan la comisión.\n\n` +
         `La deuda restante (${fmt(Math.abs(totalSeleccion.neto))}) quedará registrada como "saldo anterior" ` +
@@ -534,6 +536,27 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
     } finally {
       pagandoRef.current = false
     }
+  }
+
+  // Abre el diálogo "revisar antes de pagar" (resumen) antes de comprometer el pago.
+  const pedirPago = () => {
+    if (cantSeleccionados === 0) { notify('Selecciona al menos un trabajo para liquidar', 'error'); return }
+    const t = totalSeleccion
+    const negativo = t.neto < 0
+    setDialog({
+      title: 'Revisar antes de pagar',
+      lead: `Confirma el pago de ${tecData?.tecnico?.nombre || 'este técnico'}. Se marcan las OTs como liquidadas y se descuentan los adelantos.`,
+      body: (
+        <div style={{ border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden', marginTop: 4 }}>
+          <DlgRow label="Trabajos a liquidar" value={`${cantSeleccionados} ${cantSeleccionados === 1 ? 'OT' : 'OTs'}`} />
+          <DlgRow label={`Comisión (${COMISION.TOTAL * 100}%)`} value={fmt(t.comision)} />
+          <DlgRow label="Cargos / adelantos" value={`− ${fmt(t.cargosEfectivos)}`} />
+          <DlgRow label={negativo ? 'Saldo en contra (se arrastra)' : 'Neto a pagar'} value={fmt(t.neto)} total />
+        </div>
+      ),
+      confirmLabel: negativo ? 'Registrar saldo' : 'Confirmar pago',
+      onConfirm: () => generarPago(true),
+    })
   }
 
   const exportPdfPago = async () => {
@@ -784,6 +807,7 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
   // ===== RENDER =====
   return (
     <div>
+      <ConfirmDialog cfg={dialog} onClose={() => setDialog(null)} />
       <div className="pagehd">
         <div>
           <h2>Liquidación de comisiones</h2>
@@ -1081,7 +1105,12 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
                         <td>{tipoLabel(m.tipo)}</td>
                         <td className="c-muted">{m.nota || '—'}</td>
                         <td className="c-mono c-right" style={{ color: 'var(--amber-600)' }}>{fmt(m.monto)}</td>
-                        <td><button className="btn btn-ghost btn-sm" onClick={() => { if (!window.confirm(`¿Eliminar este movimiento (${tipoLabel(m.tipo)} ${fmt(m.monto)})? No se puede deshacer.`)) return; hookEliminarMov(m.id) }} aria-label="Eliminar movimiento">✕</button></td>
+                        <td><button className="btn btn-ghost btn-sm" onClick={() => setDialog({
+                          title: 'Eliminar movimiento',
+                          lead: `${tipoLabel(m.tipo)} · ${fmt(m.monto)}. Es plata: si lo borras no se puede deshacer y cambia el saldo del técnico.`,
+                          confirmLabel: 'Sí, eliminar', tone: 'danger',
+                          onConfirm: () => hookEliminarMov(m.id),
+                        })} aria-label="Eliminar movimiento">✕</button></td>
                       </tr>
                     ))}
                   </tbody>
@@ -1155,7 +1184,7 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
                 )}
                 <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
                   <button className="btn btn-outline" onClick={exportPdfPago}>Exportar PDF</button>
-                  <button className="btn btn-primary" onClick={generarPago}>Generar pago</button>
+                  <button className="btn btn-primary" onClick={pedirPago}>Generar pago</button>
                 </div>
               </div>
             </div>
