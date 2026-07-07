@@ -163,7 +163,7 @@ export default function Usuarios({ notify, currentUser }) {
               <button className="btn btn-primary btn-sm" onClick={abrirCrear} style={{ marginTop: 8 }}>+ Crear primero</button>
             </div>
           ) : (
-            <table className="tbl">
+            <table className="tbl tbl-cards">
               <thead>
                 <tr>
                   <th>Usuario</th>
@@ -180,16 +180,16 @@ export default function Usuarios({ notify, currentUser }) {
                   const badge = rolBadge(u.rol)
                   return (
                     <tr key={u.id}>
-                      <td className="c-mono" style={{ fontWeight: 700 }}>{u.usuario}{isMe && <span style={{ marginLeft: 6, fontSize: 10, color: 'var(--blue-600)', fontWeight: 600 }}>(tú)</span>}</td>
-                      <td>{u.nombre || '—'}</td>
-                      <td><span className={`badge ${badge.c}`}>{badge.l}</span></td>
-                      <td>
+                      <td className="c-name c-mono" style={{ fontWeight: 700 }}>{u.usuario}{isMe && <span style={{ marginLeft: 6, fontSize: 10, color: 'var(--blue-600)', fontWeight: 600 }}>(tú)</span>}</td>
+                      <td data-label="Nombre">{u.nombre || '—'}</td>
+                      <td data-label="Rol"><span className={`badge ${badge.c}`}>{badge.l}</span></td>
+                      <td data-label="Estado">
                         {u.activo
                           ? <span className="badge badge-success">● Activo</span>
                           : <span className="badge badge-danger">● Inactivo</span>}
                       </td>
-                      <td className="c-muted">{u.created_at ? new Date(u.created_at).toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}</td>
-                      <td style={{ textAlign: 'right' }}>
+                      <td className="c-muted" data-label="Creado">{u.created_at ? new Date(u.created_at).toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}</td>
+                      <td className="td-actions" style={{ textAlign: 'right' }}>
                         <button className="btn btn-ghost btn-sm" onClick={() => abrirEditar(u)}>Editar</button>
                         {u.activo
                           ? <button className="btn btn-ghost btn-sm" onClick={() => setConfirmDel(u)} disabled={isMe} style={{ color: isMe ? 'var(--text-3)' : 'var(--red-600)' }}>Desactivar</button>

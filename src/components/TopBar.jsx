@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { motion, useReducedMotion } from 'motion/react'
 import CompartirPortalModal from './CompartirPortalModal'
 import Switch from './Switch'
+import ConfirmDialog from './ConfirmDialog'
 
 const SunIcon = () => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -100,6 +101,7 @@ export default function TopBar({ title, subtitle, onToggleSidebar, sidebarOpen, 
   const [compartirOpen, setCompartirOpen] = useState(false)
   const [notifOpen, setNotifOpen] = useState(false)
   const notifRef = useRef(null)
+  const [confirmCfg, setConfirmCfg] = useState(null)
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light')
@@ -261,9 +263,7 @@ export default function TopBar({ title, subtitle, onToggleSidebar, sidebarOpen, 
         {onLogout && (
           <button
             className="btn btn-outline btn-sm"
-            onClick={() => {
-              if (window.confirm('Cerrar sesion?')) onLogout()
-            }}
+            onClick={() => { setConfirmCfg({ title: 'Cerrar sesion', confirmLabel: 'Cerrar sesion', tone: 'primary', onConfirm: () => onLogout() }); return }}
             title="Cerrar sesion"
             style={{ gap: 6, color: '#dc2626', borderColor: 'rgba(220,38,38,.35)' }}
           >
@@ -275,6 +275,7 @@ export default function TopBar({ title, subtitle, onToggleSidebar, sidebarOpen, 
       {compartirOpen && (
         <CompartirPortalModal onClose={() => setCompartirOpen(false)} />
       )}
+      <ConfirmDialog cfg={confirmCfg} onClose={() => setConfirmCfg(null)} />
     </>
   )
 }

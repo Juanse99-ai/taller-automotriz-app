@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect } from 'react'
 import Fuse from 'fuse.js'
 import { fmtDate, fmtTelefono } from '../utils/helpers'
 import { TIPOS_IDENTIFICACION, TIPOS_PERSONA, REGIMENES, buscarClientePorCedula } from '../services/cuentti'
+import ConfirmDialog from '../components/ConfirmDialog'
 
 // Quita acentos: "FERNÁNDEZ" → "fernandez"
 const _sinAcentos = (s) => (s || '').toString().toLowerCase()
@@ -37,6 +38,7 @@ export default function Clientes({ clientes, vehiculos, notify }) {
 
   // Estado del sync masivo de telefonos desde Cuentti
   const [syncTel, setSyncTel] = useState({ activo: false, total: 0, procesados: 0, actualizados: 0, errores: 0 })
+  const [confirmCfg, setConfirmCfg] = useState(null)
 
   // Metricas
   const totalClientes = clientesTable.length
@@ -212,53 +214,56 @@ export default function Clientes({ clientes, vehiculos, notify }) {
       notify('Todos los clientes ya tienen telefono', 'info')
       return
     }
-    const confirmar = window.confirm(
-      `Vas a consultar ${objetivo.length} clientes en Cuentti para traer sus telefonos.\n` +
-      `Esto puede tardar ${Math.ceil(objetivo.length / 3 * 0.4)}s aprox.\n\n¿Continuar?`
-    )
-    if (!confirmar) return
+    setConfirmCfg({
+      title: 'Sincronizar teléfonos',
+      lead: `${objetivo.length} clientes en Cuentti · ~${Math.ceil(objetivo.length / 3 * 0.4)}s.`,
+      confirmLabel: 'Sincronizar',
+      tone: 'primary',
+      onConfirm: async () => {
+        setSyncTel({ activo: true, total: objetivo.length, procesados: 0, actualizados: 0, errores: 0 })
 
-    setSyncTel({ activo: true, total: objetivo.length, procesados: 0, actualizados: 0, errores: 0 })
+        const concurrencia = 3
+        let idx = 0
+        let actualizados = 0
+        let errores = 0
 
-    const concurrencia = 3
-    let idx = 0
-    let actualizados = 0
-    let errores = 0
-
-    const procesarUno = async (cliente) => {
-      try {
-        const data = await buscarClientePorCedula(cliente.cedula)
-        const tel = data?.telefono || ''
-        if (tel) {
-          guardarCliente({
-            cedula: cliente.cedula,
-            nombre: cliente.nombre,
-            telefono: tel,
-            email: cliente.email || data?.email || '',
-            direccion: cliente.direccion || data?.direccion || '',
-            cuenttiId: cliente.cuenttiId || data?.id || null,
-          })
-          actualizados++
+        const procesarUno = async (cliente) => {
+          try {
+            const data = await buscarClientePorCedula(cliente.cedula)
+            const tel = data?.telefono || ''
+            if (tel) {
+              guardarCliente({
+                cedula: cliente.cedula,
+                nombre: cliente.nombre,
+                telefono: tel,
+                email: cliente.email || data?.email || '',
+                direccion: cliente.direccion || data?.direccion || '',
+                cuenttiId: cliente.cuenttiId || data?.id || null,
+              })
+              actualizados++
+            }
+          } catch {
+            errores++
+          } finally {
+            setSyncTel(s => ({ ...s, procesados: s.procesados + 1, actualizados, errores }))
+          }
         }
-      } catch {
-        errores++
-      } finally {
-        setSyncTel(s => ({ ...s, procesados: s.procesados + 1, actualizados, errores }))
-      }
-    }
 
-    // Worker pool simple: 3 workers que toman del array
-    const worker = async () => {
-      while (idx < objetivo.length) {
-        const i = idx++
-        if (i >= objetivo.length) break
-        await procesarUno(objetivo[i])
-      }
-    }
-    await Promise.all(Array.from({ length: concurrencia }, () => worker()))
+        // Worker pool simple: 3 workers que toman del array
+        const worker = async () => {
+          while (idx < objetivo.length) {
+            const i = idx++
+            if (i >= objetivo.length) break
+            await procesarUno(objetivo[i])
+          }
+        }
+        await Promise.all(Array.from({ length: concurrencia }, () => worker()))
 
-    setSyncTel(s => ({ ...s, activo: false }))
-    notify(`Sync completado: ${actualizados} actualizados, ${errores} errores`, actualizados > 0 ? 'success' : 'warning')
+        setSyncTel(s => ({ ...s, activo: false }))
+        notify(`Sync completado: ${actualizados} actualizados, ${errores} errores`, actualizados > 0 ? 'success' : 'warning')
+      },
+    })
+    return
   }
 
   // Importar el cliente de Cuentti a la BD local
@@ -649,6 +654,7 @@ export default function Clientes({ clientes, vehiculos, notify }) {
 
   // --- VISTA LISTA ---
   return (
+    <>
     <div>
       <div className="pagehd">
         <div><h2>Clientes</h2><p className="sub">{totalClientes} clientes en la base · {conCuenttiId} sincronizados con Cuentti · {sinTelefono} sin telefono</p></div>
@@ -805,5 +811,7 @@ export default function Clientes({ clientes, vehiculos, notify }) {
         </div>
       </div>
     </div>
+    <ConfirmDialog cfg={confirmCfg} onClose={() => setConfirmCfg(null)} />
+    </>
   )
 }

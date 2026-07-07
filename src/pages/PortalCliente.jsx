@@ -484,17 +484,17 @@ export default function PortalCliente() {
         <div className="card">
           <div className="card__h"><h3>Historial de servicios</h3><span className="count">{datos.trabajos.length}</span></div>
           <div className="card__b card__b--flush">
-            <table>
+            <table className="tbl tbl-cards">
               <thead>
                 <tr><th>Fecha</th><th>Placa</th><th>Vehiculo</th><th>Estado</th><th>Fotos</th></tr>
               </thead>
               <tbody>
                 {datos.trabajos.map(t => (
                   <tr key={t.id}>
-                    <td style={{color:'var(--text-3)',fontSize:13}}>{fmtDate(t.fecha)}</td>
-                    <td className="mono" style={{fontWeight:700}}>{t.placa}</td>
-                    <td style={{color:'var(--text-3)',fontSize:13}}>{[t.marca,t.modelo].filter(Boolean).join(' ')||'—'}</td>
-                    <td>
+                    <td data-label="Fecha" style={{color:'var(--text-3)',fontSize:13}}>{fmtDate(t.fecha)}</td>
+                    <td className="c-name mono" style={{fontWeight:700}}>{t.placa}</td>
+                    <td data-label="Vehiculo" style={{color:'var(--text-3)',fontSize:13}}>{[t.marca,t.modelo].filter(Boolean).join(' ')||'—'}</td>
+                    <td data-label="Estado">
                       <span className="badge" style={{
                         background:(ESTADO_TRABAJO_DISPLAY[t.estado]?.color||'#64748b')+'20',
                         color:ESTADO_TRABAJO_DISPLAY[t.estado]?.color||'#64748b'
@@ -502,7 +502,7 @@ export default function PortalCliente() {
                         {ESTADO_TRABAJO_DISPLAY[t.estado]?.label || t.estado}
                       </span>
                     </td>
-                    <td>
+                    <td data-label="Fotos">
                       {t.evidencias?.length > 0 ? (
                         <button className="btn btn-ghost btn-sm" onClick={()=>{setGaleria(t.evidencias);setGalIdx(0)}} style={{gap:5}}>
                           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>

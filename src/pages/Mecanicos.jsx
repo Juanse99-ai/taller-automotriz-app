@@ -3,6 +3,7 @@ import { fmt } from '../utils/helpers'
 import { COMISION, ESTADOS } from '../utils/constants'
 import { manoObraBase } from '../utils/comision'
 import { useTecnicos, tecnicosActivos, agregarTecnico, actualizarTecnico, setTecnicoActivo, eliminarTecnico } from '../services/tecnicos'
+import ConfirmDialog from '../components/ConfirmDialog'
 
 const ACTIVOS = [ESTADOS.PENDIENTE, ESTADOS.EN_DIAGNOSTICO, ESTADOS.ESPERANDO_REPUESTOS, ESTADOS.EN_PROGRESO]
 
@@ -13,6 +14,7 @@ export default function Mecanicos({ trabajos, onNavigate, notify }) {
   const [editForm, setEditForm] = useState({})
   const [agregando, setAgregando] = useState(false)
   const [nuevoForm, setNuevoForm] = useState({ nombre: '', especialidad: '', telefono: '', cedula: '' })
+  const [confirmCfg, setConfirmCfg] = useState(null)
 
   const tecnicosData = useMemo(() => {
     return TECNICOS.map((tec, idx) => {
@@ -76,17 +78,27 @@ export default function Mecanicos({ trabajos, onNavigate, notify }) {
 
   const handleEliminar = () => {
     if (!editando) return
-    const otsHistoria = trabajos.filter(t => parseInt(t.tecnicoId) === editando.id).length
-    const msg = otsHistoria > 0
-      ? `¿Eliminar a ${editando.nombre} del equipo?\n\nTiene ${otsHistoria} OT${otsHistoria !== 1 ? 's' : ''} en el historial: su nombre se conservará en los registros y reportes viejos, pero desaparecerá del equipo, los selects y la liquidación.`
-      : `¿Eliminar a ${editando.nombre} del equipo? No tiene OTs registradas, se borrará por completo.`
-    if (!confirm(msg)) return
-    eliminarTecnico(editando.id, trabajos)
-    setEditando(null)
-    notify?.(`${editando.nombre} eliminado del equipo`, 'info')
+    const tec = editando
+    const otsHistoria = trabajos.filter(t => parseInt(t.tecnicoId) === tec.id).length
+    const lead = otsHistoria > 0
+      ? `Tiene ${otsHistoria} OT${otsHistoria !== 1 ? 's' : ''} en el historial: su nombre se conserva ahí, pero sale del equipo, los selects y la liquidación.`
+      : 'No tiene OTs, se borra por completo.'
+    setConfirmCfg({
+      title: `Eliminar a ${tec.nombre}`,
+      lead,
+      confirmLabel: 'Eliminar',
+      tone: 'danger',
+      onConfirm: () => {
+        eliminarTecnico(tec.id, trabajos)
+        setEditando(null)
+        notify?.(`${tec.nombre} eliminado del equipo`, 'info')
+      },
+    })
+    return
   }
 
   return (
+    <>
     <div>
       <div className="pagehd">
         <div>
@@ -243,12 +255,19 @@ export default function Mecanicos({ trabajos, onNavigate, notify }) {
                     className="btn btn-outline btn-sm"
                     style={{ color: 'var(--red-600)', borderColor: 'rgba(220,38,38,.35)' }}
                     onClick={() => {
-                      const msg = tec.totalTrabajos > 0
-                        ? `¿Eliminar a ${tec.nombre} del equipo?\n\nSu nombre se conservará en las ${tec.totalTrabajos} OT${tec.totalTrabajos !== 1 ? 's' : ''} del historial, pero desaparecerá del equipo.`
-                        : `¿Eliminar a ${tec.nombre} del equipo? No tiene OTs, se borrará por completo.`
-                      if (!confirm(msg)) return
-                      eliminarTecnico(tec.id, trabajos)
-                      notify?.(`${tec.nombre} eliminado del equipo`, 'info')
+                      setConfirmCfg({
+                        title: `Eliminar a ${tec.nombre}`,
+                        lead: tec.totalTrabajos > 0
+                          ? `Su nombre se conserva en las ${tec.totalTrabajos} OT${tec.totalTrabajos !== 1 ? 's' : ''} del historial, pero sale del equipo.`
+                          : 'No tiene OTs, se borra por completo.',
+                        confirmLabel: 'Eliminar',
+                        tone: 'danger',
+                        onConfirm: () => {
+                          eliminarTecnico(tec.id, trabajos)
+                          notify?.(`${tec.nombre} eliminado del equipo`, 'info')
+                        },
+                      })
+                      return
                     }}
                   >Eliminar</button>
                 </div>
@@ -348,6 +367,8 @@ export default function Mecanicos({ trabajos, onNavigate, notify }) {
         </div>
       )}
     </div>
+    <ConfirmDialog cfg={confirmCfg} onClose={() => setConfirmCfg(null)} />
+    </>
   )
 }
 

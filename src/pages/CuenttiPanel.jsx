@@ -15,8 +15,10 @@ import {
   probarIdMedioPago,
 } from '../services/cuentti'
 import { RESOLUCIONES } from '../utils/constants'
+import ConfirmDialog from '../components/ConfirmDialog'
 
 export default function CuenttiPanel({ trabajos, actualizarTrabajo, notify }) {
+  const [confirmCfg, setConfirmCfg] = useState(null)
   const [verFacturados, setVerFacturados] = useState(false)
   const [testResult, setTestResult] = useState(null)
   const [testing, setTesting] = useState(false)
@@ -29,8 +31,8 @@ export default function CuenttiPanel({ trabajos, actualizarTrabajo, notify }) {
   const [ultimoHeaders, setUltimoHeaders] = useState(null)
   const [prefijo, setPrefijo] = useState('MAS')
   const resoluciones = [
-    { code: 'MAS', label: `MAS — ${RESOLUCIONES.MAS?.nombre || 'Interna'}` },
-    { code: 'FEIC', label: `FEIC — ${RESOLUCIONES.FEIC?.nombre || 'Electronica'}` },
+    { code: 'MAS', label: 'Interna' },
+    { code: 'FEIC', label: 'Electronica DIAN' },
   ]
 
   const [emitId, setEmitId] = useState('')
@@ -143,103 +145,111 @@ export default function CuenttiPanel({ trabajos, actualizarTrabajo, notify }) {
 
   // Probar si un ID funciona enviando una factura test de $1 que se anula
   const probarIdEspecifico = async (key, id) => {
-    if (!window.confirm(
-      `Voy a crear una factura TEST de $1 con id_medio_pago=${id} y anularla inmediatamente.\n\n` +
-      `Esto va a aparecer en los logs de tu Cuentti como una transaccion anulada.\n\n` +
-      `¿Continuar?`
-    )) return
-    setProbandoId({ key, id })
-    setResultadoPrueba(prev => ({ ...prev, [key]: { loading: true } }))
-    try {
-      const res = await probarIdMedioPago(id, idBancoConfig)
-      setResultadoPrueba(prev => ({ ...prev, [key]: res }))
-      if (res.ok) {
-        notify(`✓ ID ${id} VALIDO para ${key}`, 'success')
-      } else {
-        notify(res.mensaje, 'error')
-      }
-    } catch (e) {
-      setResultadoPrueba(prev => ({ ...prev, [key]: { ok: false, mensaje: e.message } }))
-    } finally {
-      setProbandoId(null)
-    }
+    setConfirmCfg({
+      title: 'Probar ID',
+      lead: `Crea y anula una factura test de $1 con id_medio_pago=${id}.`,
+      confirmLabel: 'Probar',
+      tone: 'primary',
+      onConfirm: async () => {
+        setProbandoId({ key, id })
+        setResultadoPrueba(prev => ({ ...prev, [key]: { loading: true } }))
+        try {
+          const res = await probarIdMedioPago(id, idBancoConfig)
+          setResultadoPrueba(prev => ({ ...prev, [key]: res }))
+          if (res.ok) {
+            notify(`✓ ID ${id} VALIDO para ${key}`, 'success')
+          } else {
+            notify(res.mensaje, 'error')
+          }
+        } catch (e) {
+          setResultadoPrueba(prev => ({ ...prev, [key]: { ok: false, mensaje: e.message } }))
+        } finally {
+          setProbandoId(null)
+        }
+      },
+    })
+    return
   }
 
   // Auto-probar IDs 1-15 hasta encontrar el primero que funcione
   const autoProbarIds = async (key) => {
-    if (!window.confirm(
-      `Voy a probar IDs 1, 2, 3... hasta 15 para "${METODOS_DEFAULT.find(m => m.key === key)?.nombre}".\n\n` +
-      `Cada prueba crea y anula una factura TEST de $1.\n` +
-      `Maximo 15 facturas test (que se anulan automaticamente).\n` +
-      `Tardara ~30 segundos.\n\n` +
-      `Cuando encuentre el ID correcto, se detiene y lo guarda.\n\n` +
-      `¿Continuar?`
-    )) return
-    setProbandoId({ key, id: 'auto' })
-    let foundId = null
-    for (let id = 1; id <= 15; id++) {
-      setResultadoPrueba(prev => ({ ...prev, [key]: { loading: true, mensaje: `Probando ID ${id}...` } }))
-      try {
-        const res = await probarIdMedioPago(id, idBancoConfig)
-        if (res.ok) {
-          foundId = id
-          guardarMetodoId(key, id)
-          setResultadoPrueba(prev => ({ ...prev, [key]: { ok: true, mensaje: `ID ${id} VALIDO` } }))
-          notify(`✓ Encontrado: ${key} = ID ${id}`, 'success')
-          break
+    setConfirmCfg({
+      title: 'Auto-probar IDs 1-15',
+      lead: `Prueba IDs 1 a 15 para "${METODOS_DEFAULT.find(m => m.key === key)?.nombre}". Crea y anula facturas test de $1. Tarda ~30 s.`,
+      confirmLabel: 'Probar',
+      tone: 'primary',
+      onConfirm: async () => {
+        setProbandoId({ key, id: 'auto' })
+        let foundId = null
+        for (let id = 1; id <= 15; id++) {
+          setResultadoPrueba(prev => ({ ...prev, [key]: { loading: true, mensaje: `Probando ID ${id}...` } }))
+          try {
+            const res = await probarIdMedioPago(id, idBancoConfig)
+            if (res.ok) {
+              foundId = id
+              guardarMetodoId(key, id)
+              setResultadoPrueba(prev => ({ ...prev, [key]: { ok: true, mensaje: `ID ${id} VALIDO` } }))
+              notify(`✓ Encontrado: ${key} = ID ${id}`, 'success')
+              break
+            }
+            // Si NO es FK violation, es otro tipo de error y debemos parar
+            if (!res.esFkViolation) {
+              setResultadoPrueba(prev => ({ ...prev, [key]: { ok: false, mensaje: `Error en ID ${id}: ${res.mensaje}` } }))
+              notify(`Error inesperado: ${res.mensaje}`, 'error')
+              break
+            }
+          } catch (e) {
+            setResultadoPrueba(prev => ({ ...prev, [key]: { ok: false, mensaje: e.message } }))
+            break
+          }
         }
-        // Si NO es FK violation, es otro tipo de error y debemos parar
-        if (!res.esFkViolation) {
-          setResultadoPrueba(prev => ({ ...prev, [key]: { ok: false, mensaje: `Error en ID ${id}: ${res.mensaje}` } }))
-          notify(`Error inesperado: ${res.mensaje}`, 'error')
-          break
+        if (!foundId) {
+          setResultadoPrueba(prev => ({ ...prev, [key]: { ok: false, mensaje: 'Ningun ID 1-15 funciono. Tu Cuentti puede usar IDs mayores.' } }))
+          notify(`No se encontro ID valido en 1-15 para ${key}`, 'error')
         }
-      } catch (e) {
-        setResultadoPrueba(prev => ({ ...prev, [key]: { ok: false, mensaje: e.message } }))
-        break
-      }
-    }
-    if (!foundId) {
-      setResultadoPrueba(prev => ({ ...prev, [key]: { ok: false, mensaje: 'Ningun ID 1-15 funciono. Tu Cuentti puede usar IDs mayores.' } }))
-      notify(`No se encontro ID valido en 1-15 para ${key}`, 'error')
-    }
-    setProbandoId(null)
+        setProbandoId(null)
+      },
+    })
+    return
   }
 
   // Auto-probar id_banco 1-15
   const autoProbarBanco = async () => {
-    if (!window.confirm(
-      `Voy a probar id_banco 1, 2, 3... hasta 15 usando un metodo que requiera banco real.\n\n` +
-      `Maximo 15 facturas test (que se anulan automaticamente).\n` +
-      `Tardara ~30 segundos.\n\n` +
-      `¿Continuar?`
-    )) return
     // Necesitamos un id_medio_pago valido que requiera banco. Usamos transferencia
     // si esta configurada y validada, sino usamos el primero que tenga ID > 0
     const transId = metodosConfig.find(m => m.key === 'transferencia')?.id
     if (!transId) { notify('Configura primero el ID de Transferencia', 'error'); return }
-    setProbandoId({ key: 'banco', id: 'auto' })
-    let foundId = null
-    for (let id = 1; id <= 15; id++) {
-      try {
-        const res = await probarIdMedioPago(transId, id)
-        if (res.ok) {
-          foundId = id
-          guardarIdBanco(id)
-          notify(`✓ Encontrado: id_banco = ${id}`, 'success')
-          break
+    setConfirmCfg({
+      title: 'Auto-probar id_banco 1-15',
+      lead: 'Prueba id_banco 1 a 15 con transferencia. Crea y anula facturas test de $1. Tarda ~30 s.',
+      confirmLabel: 'Probar',
+      tone: 'primary',
+      onConfirm: async () => {
+        setProbandoId({ key: 'banco', id: 'auto' })
+        let foundId = null
+        for (let id = 1; id <= 15; id++) {
+          try {
+            const res = await probarIdMedioPago(transId, id)
+            if (res.ok) {
+              foundId = id
+              guardarIdBanco(id)
+              notify(`✓ Encontrado: id_banco = ${id}`, 'success')
+              break
+            }
+            if (!res.esFkViolation) {
+              notify(`Error inesperado: ${res.mensaje}`, 'error')
+              break
+            }
+          } catch (e) {
+            notify('Error: ' + e.message, 'error')
+            break
+          }
         }
-        if (!res.esFkViolation) {
-          notify(`Error inesperado: ${res.mensaje}`, 'error')
-          break
-        }
-      } catch (e) {
-        notify('Error: ' + e.message, 'error')
-        break
-      }
-    }
-    if (!foundId) notify('No se encontro id_banco valido en 1-15', 'error')
-    setProbandoId(null)
+        if (!foundId) notify('No se encontro id_banco valido en 1-15', 'error')
+        setProbandoId(null)
+      },
+    })
+    return
   }
 
   const [productoForm, setProductoForm] = useState({
@@ -341,19 +351,20 @@ export default function CuenttiPanel({ trabajos, actualizarTrabajo, notify }) {
     // Anti-duplicado: si ya fue facturado, pedir confirmacion explicita
     if (trabajo.cuenttiTransacionId) {
       const fechaFmt = trabajo.facturadoEn ? new Date(trabajo.facturadoEn).toLocaleString('es-CO') : 'fecha desconocida'
-      const ok = window.confirm(
-        `Este trabajo ya fue facturado en Cuentti.\n\n` +
-        `id_transacion: ${trabajo.cuenttiTransacionId}\n` +
-        `Fecha: ${fechaFmt}\n\n` +
-        `Si continuas se creara una NUEVA factura duplicada en Cuentti.\n\n` +
-        `¿Reenviar de todas formas?`
-      )
-      if (!ok) {
-        notify('Envio cancelado para evitar duplicado', 'info')
-        return
-      }
+      setConfirmCfg({
+        title: 'Reenviar factura',
+        lead: `Ya facturado (Factura # ${trabajo.cuenttiTransacionId}, ${fechaFmt}). Reenviar crea una factura duplicada en Cuentti.`,
+        confirmLabel: 'Reenviar',
+        tone: 'danger',
+        onConfirm: () => enviarFacturaTrabajo(trabajo),
+      })
+      return
     }
 
+    return enviarFacturaTrabajo(trabajo)
+  }
+
+  const enviarFacturaTrabajo = async (trabajo) => {
     setFacturando(true)
     try {
       // Mapear id_banco segun el metodo de pago (VERIFICADO en Cuentti:
@@ -437,7 +448,7 @@ export default function CuenttiPanel({ trabajos, actualizarTrabajo, notify }) {
   }
 
   const emitirFE = async () => {
-    if (!emitId.trim()) { notify('Ingresa el id_transacion que devolvio Cuentti', 'error'); return }
+    if (!emitId.trim()) { notify('Ingresa la Factura # que devolvio Cuentti', 'error'); return }
     setEmitiendo(true)
     setEmitResp(null)
     try {
@@ -452,7 +463,7 @@ export default function CuenttiPanel({ trabajos, actualizarTrabajo, notify }) {
   }
 
   const agregarPago = async () => {
-    if (!pagoForm.idTransacion.trim()) { notify('Falta el id_transacion para aplicar el pago', 'error'); return }
+    if (!pagoForm.idTransacion.trim()) { notify('Falta la Factura # para aplicar el pago', 'error'); return }
     setPagando(true)
     setPagoResp(null)
     try {
@@ -471,7 +482,7 @@ export default function CuenttiPanel({ trabajos, actualizarTrabajo, notify }) {
   }
 
   const buscarDocumento = async () => {
-    if (!docId.trim()) { notify('Ingresa un id_transacion para consultar el documento', 'error'); return }
+    if (!docId.trim()) { notify('Ingresa una Factura # para consultar el documento', 'error'); return }
     setDocLoading(true)
     setDocResp(null)
     try {
@@ -665,7 +676,7 @@ export default function CuenttiPanel({ trabajos, actualizarTrabajo, notify }) {
                 ))}
               </select>
               <div style={{fontSize:11,color:'var(--text-3)',marginTop:4}}>
-                Resolucion (MAS = interna · FEIC = electronica DIAN)
+                Resolucion (Interna · Electronica DIAN)
               </div>
             </div>
             <div className="field">
@@ -851,7 +862,7 @@ export default function CuenttiPanel({ trabajos, actualizarTrabajo, notify }) {
           <div className="card__h"><h3>Ultima respuesta de facturacion</h3></div>
           <div className="card__b">
             <p style={{fontSize:13,color:'var(--text-3)',marginBottom:10}}>
-              id_transacion detectado: <span className="mono">{extractIdTransacion(facturaResp) || '—'}</span>
+              Factura # detectada: <span className="mono">{extractIdTransacion(facturaResp) || '—'}</span>
             </p>
             <pre style={{ background: '#0f172a', color: '#e2e8f0', padding: 12, borderRadius: 8, fontSize: 12, overflowX: 'auto' }}>
               {formatJson(facturaResp)}
@@ -865,8 +876,8 @@ export default function CuenttiPanel({ trabajos, actualizarTrabajo, notify }) {
         <div className="card__b">
           <div style={{display:'grid',gridTemplateColumns:'1fr auto',gap:14,alignItems:'end'}}>
             <div className="field">
-              <label>id_transacion</label>
-              <input className="input" value={emitId} placeholder="ID devuelto por grabarFacturaSimple"
+              <label>Factura #</label>
+              <input className="input" value={emitId} placeholder="ID devuelto al facturar"
                 onChange={e => setEmitId(e.target.value)} />
             </div>
             <div>
@@ -947,6 +958,7 @@ export default function CuenttiPanel({ trabajos, actualizarTrabajo, notify }) {
                 <div style={{ display: 'flex', flexDirection: 'column' }}>
                   {ultimas.map((f, i) => {
                     const tipo = f.cuenttiPrefijo || (f.cuenttiTransacionId?.toString().startsWith('FE') ? 'FEIC' : 'MAS')
+                    const tipoLabel = tipo === 'FEIC' ? 'Electronica DIAN' : 'Interna'
                     const num = f.cuenttiTransacionId
                     const estadoBadge = (f.pagado || f.cuenttiPagado) ? { c: 'badge-success', l: 'pagada' } : f.cuenttiAprobado ? { c: 'badge-success', l: 'aprobada' } : { c: 'badge-warning', l: 'pendiente' }
                     return (
@@ -956,7 +968,7 @@ export default function CuenttiPanel({ trabajos, actualizarTrabajo, notify }) {
                         display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10,
                       }}>
                         <div style={{ minWidth: 0 }}>
-                          <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '.4px' }}>{tipo}</div>
+                          <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '.4px' }}>{tipoLabel}</div>
                           <div className="mono" style={{ fontSize: 12, fontWeight: 700, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{num}</div>
                           <div style={{ fontSize: 11, color: 'var(--text-3)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{f.cliente || '—'}</div>
                         </div>
@@ -975,6 +987,7 @@ export default function CuenttiPanel({ trabajos, actualizarTrabajo, notify }) {
       </div>
       </div>{/* end 2-column grid */}
 
+      <ConfirmDialog cfg={confirmCfg} onClose={() => setConfirmCfg(null)} />
     </div>
   )
 }

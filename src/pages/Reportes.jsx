@@ -78,7 +78,25 @@ export default function Reportes({ trabajos }) {
     const topRepuestos = Object.values(repMap).sort((a, b) => b.ingresos - a.ingresos).slice(0, 10)
     const ticket = completados.length ? Math.round(ingresos / completados.length) : 0
 
-    return { total: filtrados.length, completados: completados.length, ingresos, comisiones, porTecnico, porEstado, topVehiculos, ingresosRepuestos, ingresosMO, topRepuestos, ticket }
+    // Top clientes — total facturado + # de OTs en el rango. Dedupe por cédula si
+    // existe, si no por nombre normalizado. Cuenta TODAS las OTs del rango (no solo
+    // completadas), pero factura solo sobre las completadas para no inflar ingresos.
+    const cliMap = {}
+    filtrados.forEach(t => {
+      const nombre = (t.cliente || '').toString().trim() || 'Sin nombre'
+      const key = (t.cedula || '').toString().trim() || nombre.toLowerCase()
+      if (!cliMap[key]) cliMap[key] = { nombre, ots: 0, total: 0 }
+      cliMap[key].ots++
+      if (t.estado === ESTADOS.COMPLETADO) cliMap[key].total += t.total || 0
+    })
+    const topClientes = Object.values(cliMap).sort((a, b) => b.total - a.total || b.ots - a.ots).slice(0, 10)
+
+    // Utilidad por mano de obra: la M.O. es margen casi puro (el técnico se lleva el
+    // 40%, el resto queda al taller). No es margen REAL de repuestos (falta el costo
+    // de Cuentti), pero sí es utilidad confiable con los datos que hay.
+    const utilidadMO = ingresosMO - comisiones
+
+    return { total: filtrados.length, completados: completados.length, ingresos, comisiones, porTecnico, porEstado, topVehiculos, ingresosRepuestos, ingresosMO, topRepuestos, ticket, topClientes, utilidadMO }
   }, [filtrados])
 
   const exportarCSV = () => {
@@ -352,6 +370,25 @@ export default function Reportes({ trabajos }) {
         </div>
       </div>
 
+      {/* Utilidad por mano de obra (margen casi puro; repuestos requieren costo Cuentti) */}
+      <div className="card" style={{ marginBottom: 16 }}>
+        <div className="card__h"><h3>Utilidad por mano de obra</h3></div>
+        <div className="card__b" style={{ display: 'flex', gap: 14, flexWrap: 'wrap' }}>
+          <div style={{ flex: '1 1 160px' }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '.5px', marginBottom: 4 }}>Mano de obra</div>
+            <div className="mono" style={{ fontSize: 22, fontWeight: 800 }}>{fmt(stats.ingresosMO)}</div>
+          </div>
+          <div style={{ flex: '1 1 160px' }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '.5px', marginBottom: 4 }}>Comisiones técnicos</div>
+            <div className="mono" style={{ fontSize: 22, fontWeight: 800, color: 'var(--amber-600)' }}>−{fmt(stats.comisiones)}</div>
+          </div>
+          <div style={{ flex: '1 1 160px' }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '.5px', marginBottom: 4 }}>Utilidad taller</div>
+            <div className="mono" style={{ fontSize: 22, fontWeight: 800, color: 'var(--green-600)' }}>{fmt(stats.utilidadMO)}</div>
+          </div>
+        </div>
+      </div>
+
       {/* Repuestos más vendidos */}
       <div className="card" style={{ marginBottom: 16 }}>
         <div className="card__h"><h3>Repuestos más vendidos</h3><span className="count">{stats.topRepuestos.length}</span></div>
@@ -379,6 +416,36 @@ export default function Reportes({ trabajos }) {
           </div>
         )}
       </div>
+
+      {/* Top clientes */}
+      {stats.topClientes.length > 0 && (
+        <div className="card" style={{marginBottom:16}}>
+          <div className="card__h"><h3>Top clientes</h3><span className="count">{stats.topClientes.length}</span></div>
+          <div className="card__b card__b--flush">
+            <table className="tbl">
+              <thead><tr><th>Cliente</th><th className="c-right">OTs</th><th className="c-right">Facturado</th><th style={{width:'25%'}}/></tr></thead>
+              <tbody>
+                {stats.topClientes.map((c,i)=>{
+                  const maxTot = Math.max(...stats.topClientes.map(x=>x.total),1)
+                  const pct = Math.round((c.total/maxTot)*100)
+                  return (
+                    <tr key={i}>
+                      <td><div style={{display:'flex',alignItems:'center',gap:10}}><span className={`av av-${(i%5)+1}`}>{c.nombre.split(' ').map(x=>x[0]).slice(0,2).join('').toUpperCase()}</span><span style={{fontWeight:600}}>{c.nombre}</span></div></td>
+                      <td className="c-mono c-right" style={{fontWeight:700}}>{c.ots}</td>
+                      <td className="c-mono c-right" style={{fontWeight:700,color:'var(--green-600)'}}>{fmt(c.total)}</td>
+                      <td>
+                        <div style={{height:6,background:'var(--bg-subtle)',borderRadius:3,overflow:'hidden',border:'1px solid var(--border)'}}>
+                          <div style={{width:`${pct}%`,height:'100%',background:'var(--blue-500)'}}/>
+                        </div>
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
       {/* Technician ranking */}
       <div className="card" style={{marginBottom:16}}>

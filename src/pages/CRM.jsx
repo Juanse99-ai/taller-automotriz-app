@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useCallback } from 'react'
 import { fmt, fmtDate } from '../utils/helpers'
 import { TALLER, ESTADOS } from '../utils/constants'
 import { lsGet, lsSet } from '../services/storage'
+import ConfirmDialog from '../components/ConfirmDialog'
 
 // ── Storage keys (locales al CRM) ───────────────────────────────────────────
 const KEY_CONFIG = 'crm:config'
@@ -135,6 +136,7 @@ export default function CRM({ trabajos = [], clientes, vehiculos, notify, actual
   const [showImportar, setShowImportar] = useState(false)
   const [busquedaInactivos, setBusquedaInactivos] = useState('')
   const [filtroInactivos, setFiltroInactivos] = useState('todos') // 'todos' | 'wa' | 'email'
+  const [confirmCfg, setConfirmCfg] = useState(null)
 
   // ── Calcular recordatorios pendientes ─────────────────────────────────────
   const recordatorios = useMemo(() => {
@@ -544,7 +546,7 @@ export default function CRM({ trabajos = [], clientes, vehiculos, notify, actual
           </div>
         ) : (
           <div className="card__b card__b--flush">
-            <table className="tbl">
+            <table className="tbl tbl-cards">
               <thead>
                 <tr>
                   <th>Cliente</th>
@@ -570,15 +572,15 @@ export default function CRM({ trabajos = [], clientes, vehiculos, notify, actual
                   const resultadoBadge = ultContacto?.resultado
                   return (
                     <tr key={`${r.trackKey}-${i}`}>
-                      <td>
+                      <td className="c-name">
                         <div style={{ fontWeight: 700 }}>{r.cliente.nombre}</div>
                         <div className="c-mono" style={{ fontSize: 11, color: 'var(--text-3)' }}>{r.cliente.cedula}</div>
                       </td>
-                      <td>
+                      <td data-label="Vehículo">
                         <div className="c-mono" style={{ fontWeight: 700 }}>{r.vehiculo.placa}</div>
                         <div style={{ fontSize: 11, color: 'var(--text-3)' }}>{r.vehiculo.marca} {r.vehiculo.modelo}</div>
                       </td>
-                      <td>
+                      <td data-label="Servicio">
                         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                           <span style={{ fontSize: 13 }}>{r.servicio.nombre}</span>
                           {r.servicio.key.startsWith('aceite_') && origenInfo && (
@@ -601,9 +603,9 @@ export default function CRM({ trabajos = [], clientes, vehiculos, notify, actual
                         </div>
                         <div style={{ fontSize: 10.5, color: 'var(--text-3)' }}>cada {r.servicio.km.toLocaleString()} km / {r.servicio.meses} meses</div>
                       </td>
-                      <td className="c-muted">{fmtDate(r.fechaUltima.toISOString())}<br/><span style={{ fontSize: 11 }}>hace {r.diasDesde}d</span></td>
-                      <td><span className={`badge ${urgenteCls}`}>{urgenteLbl}</span></td>
-                      <td>
+                      <td className="c-muted" data-label="Última visita">{fmtDate(r.fechaUltima.toISOString())}<br/><span style={{ fontSize: 11 }}>hace {r.diasDesde}d</span></td>
+                      <td data-label="Estado"><span className={`badge ${urgenteCls}`}>{urgenteLbl}</span></td>
+                      <td data-label="Contacto">
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 2, fontSize: 11.5 }}>
                           <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
                             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={r.cliente.telefono ? 'var(--green-600)' : 'var(--text-4)'} strokeOpacity={r.cliente.telefono ? 1 : 0.4} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-label={r.cliente.telefono ? 'Con teléfono' : 'Sin teléfono'}>
@@ -625,7 +627,7 @@ export default function CRM({ trabajos = [], clientes, vehiculos, notify, actual
                           )}
                         </div>
                       </td>
-                      <td style={{ textAlign: 'right' }}>
+                      <td className="td-actions" style={{ textAlign: 'right' }}>
                         <button className="btn btn-primary btn-sm" onClick={() => abrirContacto(r)}>
                           Contactar
                         </button>
@@ -857,7 +859,7 @@ export default function CRM({ trabajos = [], clientes, vehiculos, notify, actual
                   <p>{recordatoriosImportar.length === 0 ? 'No hay clientes inactivos.' : 'Sin resultados con esos filtros.'}</p>
                 </div>
               ) : (
-                <table className="tbl" style={{ margin: 0, fontSize: 12.5 }}>
+                <table className="tbl tbl-cards" style={{ margin: 0, fontSize: 12.5 }}>
                   <thead style={{ position: 'sticky', top: 0, background: 'var(--bg-raised)', zIndex: 1 }}>
                     <tr>
                       <th style={{ width: '40%' }}>Cliente</th>
@@ -887,17 +889,17 @@ export default function CRM({ trabajos = [], clientes, vehiculos, notify, actual
                       const mailto = c.email ? `mailto:${c.email}?subject=${encodeURIComponent(TALLER.nombre + ' - Te extrañamos')}&body=${encodeURIComponent(mensaje)}` : null
                       return (
                         <tr key={c.cedula}>
-                          <td>
+                          <td className="c-name">
                             <div style={{ fontWeight: 700, fontSize: 13 }}>{c.nombre || '—'}</div>
                             <div className="c-mono" style={{ fontSize: 11, color: 'var(--text-3)' }}>{c.cedula}</div>
                           </td>
-                          <td className="c-mono" style={{ fontSize: 12 }}>
+                          <td className="c-mono" data-label="Teléfono" style={{ fontSize: 12 }}>
                             {c.telefono || <span style={{ color: 'var(--text-4)' }}>—</span>}
                           </td>
-                          <td style={{ fontSize: 11.5, color: 'var(--text-2)', wordBreak: 'break-all' }}>
+                          <td data-label="Email" style={{ fontSize: 11.5, color: 'var(--text-2)', wordBreak: 'break-all' }}>
                             {c.email || <span style={{ color: 'var(--text-4)' }}>—</span>}
                           </td>
-                          <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
+                          <td className="td-actions" style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
                             <div style={{ display: 'inline-flex', gap: 6 }}>
                               {wa && (
                                 <a href={wa} target="_blank" rel="noreferrer" className="btn btn-sm" style={{ background: '#25D366', color: '#fff', fontSize: 11, padding: '4px 10px', textDecoration: 'none', whiteSpace: 'nowrap' }}>
@@ -962,7 +964,7 @@ export default function CRM({ trabajos = [], clientes, vehiculos, notify, actual
                 </div>
               ))}
               <button className="btn btn-outline btn-sm" onClick={() => setConfig(c => ({ ...c, servicios: [...c.servicios, { key: `custom_${Date.now()}`, nombre: 'Nuevo servicio', km: 10000, meses: 6 }] }))}>+ Añadir servicio</button>
-              <button className="btn btn-ghost btn-sm" style={{ color: 'var(--text-3)', fontSize: 11 }} onClick={() => { if (window.confirm('¿Restaurar servicios por defecto?')) setConfig({ servicios: SERVICIOS_DEFAULT }) }}>Restaurar valores por defecto</button>
+              <button className="btn btn-ghost btn-sm" style={{ color: 'var(--text-3)', fontSize: 11 }} onClick={() => setConfirmCfg({ title: 'Restaurar servicios', lead: 'Vuelve a los intervalos por defecto.', confirmLabel: 'Restaurar', tone: 'primary', onConfirm: () => setConfig({ servicios: SERVICIOS_DEFAULT }) })}>Restaurar valores por defecto</button>
             </div>
             <div className="modal__f">
               <button className="btn btn-primary" onClick={() => setShowConfig(false)}>Guardar y cerrar</button>
@@ -1011,7 +1013,7 @@ export default function CRM({ trabajos = [], clientes, vehiculos, notify, actual
               </div>
             </div>
             <div className="modal__f">
-              <button className="btn btn-ghost" onClick={() => { if (window.confirm('¿Restaurar esta plantilla a la default?')) setTemplates(t => ({ ...t, [showTemplate]: TEMPLATES_DEFAULT[showTemplate] || '' })) }}>
+              <button className="btn btn-ghost" onClick={() => setConfirmCfg({ title: 'Restaurar plantilla', lead: 'Vuelve al texto por defecto.', confirmLabel: 'Restaurar', tone: 'primary', onConfirm: () => setTemplates(t => ({ ...t, [showTemplate]: TEMPLATES_DEFAULT[showTemplate] || '' })) })}>
                 Restaurar default
               </button>
               <button className="btn btn-primary" onClick={() => setShowTemplate(null)}>Cerrar</button>
@@ -1019,6 +1021,8 @@ export default function CRM({ trabajos = [], clientes, vehiculos, notify, actual
           </div>
         </div>
       )}
+
+      <ConfirmDialog cfg={confirmCfg} onClose={() => setConfirmCfg(null)} />
     </div>
   )
 }

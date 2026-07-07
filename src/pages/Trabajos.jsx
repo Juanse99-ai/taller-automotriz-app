@@ -55,6 +55,7 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
   const [vista, setVista] = useState('lista') // lista | nuevo | editar | kanban
   const [editId, setEditId] = useState(null)
   const [confirmDel, setConfirmDel] = useState(null)
+  const [confirmCfg, setConfirmCfg] = useState(null) // diálogo de confirmación (cockpit)
   // Cockpit desktop: trabajo seleccionado para el panel de detalle (solo ≥1200px)
   const [selId, setSelId] = useState(null)
   const [previewId, setPreviewId] = useState(null) // vista previa de una OT (modal) antes de editar
@@ -273,7 +274,7 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
               doc.setFontSize(6.5)
               doc.setTextColor(...SLATE_400)
               doc.setFont('courier', 'normal')
-              doc.text(`SKU ${sku}`, data.cell.x + 3, data.cell.y + data.cell.height - 2)
+              doc.text(`Codigo ${sku}`, data.cell.x + 3, data.cell.y + data.cell.height - 2)
               doc.setFont(undefined, 'normal')
             }
           }
@@ -680,7 +681,7 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
                     <button className="btn btn-outline btn-sm" onClick={() => handleEditar(selTrabajo.id)}>Editar</button>
                     {selTrabajo.otCodigo && <button className="btn btn-outline btn-sm" onClick={() => imprimirOT(selTrabajo)}>PDF</button>}
                     {selTrabajo.estado !== ESTADOS.COMPLETADO && <button className="btn btn-primary btn-sm" onClick={() => handleCompletar(selTrabajo.id)}>Marcar listo</button>}
-                    <button className="btn btn-ghost btn-sm" style={{ color: 'var(--red-600)' }} onClick={() => { if (window.confirm('¿Eliminar este trabajo?')) handleEliminar(selTrabajo.id) }}>Eliminar</button>
+                    <button className="btn btn-ghost btn-sm" style={{ color: 'var(--red-600)' }} onClick={() => setConfirmCfg({ title: 'Eliminar OT', confirmLabel: 'Eliminar', tone: 'danger', onConfirm: () => handleEliminar(selTrabajo.id) })}>Eliminar</button>
                   </div>
                 </div>
               </div>
@@ -866,6 +867,8 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
           </div>
         </div>
       )}
+
+      <ConfirmDialog cfg={confirmCfg} onClose={() => setConfirmCfg(null)} />
     </div>
   )
 }
@@ -888,6 +891,7 @@ function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [], vehiculosHoo
   const isEdit = !!trabajo
   const { resultados, buscando, buscarDebounced, setResultados } = useClientes()
   const [campoActivo, setCampoActivo] = useState('cedula') // cuál campo de búsqueda de cliente está enfocado
+  const [confirmCfg, setConfirmCfg] = useState(null) // diálogo de confirmación
 
   const [form, setForm] = useState({
     cedula: trabajo?.cedula || '',
@@ -1173,14 +1177,22 @@ function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [], vehiculosHoo
   const baseComision = hayServicios ? totales.manoObraBase : Math.max(0, parseFloat(form.manoObra) || 0)
   const comisionTecnico = Math.round(baseComision * COMISION.TOTAL)
 
-  const handleSubmit = (e) => {
-    e.preventDefault()
+  // Guardado real de la OT. skipAviso salta el aviso de M.O.=0 (patrón skipConfirm).
+  const guardar = (skipAviso = false) => {
     if ((!form.placa && !form.sinVehiculo) || !form.cliente) return
     // Aviso: OT con valor pero sin mano de obra (ninguna línea "Servicio" ni M.O.
     // manual) → el técnico asignado quedaría con comisión $0, que solo se descubre
     // al liquidar días después.
-    if (totales.total > 0 && baseComision === 0 && form.tecnicoId &&
-        !window.confirm('Esta OT no tiene mano de obra: el técnico no recibirá comisión (marca la línea como "Servicio" o escribe la M.O. a mano). ¿Continuar de todas formas?')) return
+    if (!skipAviso && totales.total > 0 && baseComision === 0 && form.tecnicoId) {
+      setConfirmCfg({
+        title: 'Sin mano de obra',
+        lead: 'El técnico no recibirá comisión.',
+        confirmLabel: 'Guardar igual',
+        tone: 'danger',
+        onConfirm: () => guardar(true),
+      })
+      return
+    }
     onSave({
       ...form,
       placa: (form.placa || (form.sinVehiculo ? 'SERVICIO' : '')).toUpperCase(),
@@ -1203,6 +1215,11 @@ function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [], vehiculosHoo
       proximaVisita: form.proximaVisita ? new Date(form.proximaVisita + 'T12:00:00').toISOString() : null,
       notasProximoMant: form.notasProximoMant || '',
     })
+  }
+
+  const handleSubmit = (e) => {
+    e.preventDefault()
+    guardar()
   }
 
   // Auto-calcular próximo km y fecha cuando cambia el tipo de aceite
@@ -1762,6 +1779,7 @@ function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [], vehiculosHoo
           </div>
         </div>
       </form>
+      <ConfirmDialog cfg={confirmCfg} onClose={() => setConfirmCfg(null)} />
     </div>
   )
 }

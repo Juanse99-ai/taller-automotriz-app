@@ -3,6 +3,7 @@ import { uid, fmtDate } from '../utils/helpers'
 import { INSPECCION_CATEGORIAS } from '../utils/vehiculos'
 import { TECNICOS } from '../utils/constants'
 import { lsGet, lsSet, LS_KEYS } from '../services/storage'
+import ConfirmDialog from '../components/ConfirmDialog'
 
 const ESTADO_ITEM = { BUENO: 'bueno', SUGERIDO: 'sugerido', URGENTE: 'urgente', NO_APLICA: 'no_aplica' }
 
@@ -17,6 +18,7 @@ export default function Inspecciones({ trabajos, notify, onVincularInspeccion, i
   const { inspecciones, guardar } = inspeccionesHook || {}
   const [vista, setVista] = useState('lista')
   const [editId, setEditId] = useState(null)
+  const [confirmCfg, setConfirmCfg] = useState(null)
 
   // Vincular inspeccion al trabajo (para que el cliente la vea en el portal)
   const vincularATrabajo = (insp) => {
@@ -68,6 +70,7 @@ export default function Inspecciones({ trabajos, notify, onVincularInspeccion, i
   }
 
   return (
+    <>
     <div>
       <div className="pagehd">
         <div><h2>Inspecciones digitales</h2><p className="sub">DVI · {stats.total} inspecciones realizadas · <b style={{color:'var(--red-600)'}}>{stats.conUrgentes}</b> con items urgentes</p></div>
@@ -125,7 +128,7 @@ export default function Inspecciones({ trabajos, notify, onVincularInspeccion, i
                         <div style={{display:'flex',gap:4,justifyContent:'flex-end'}}>
                           <button className="btn btn-outline btn-sm" onClick={e => { e.stopPropagation(); setEditId(i.id); setVista('editar') }}>Editar</button>
                           <button className="btn btn-outline btn-sm" onClick={e => { e.stopPropagation(); vincularATrabajo(i) }} title="Vincular al trabajo">OT</button>
-                          <button className="btn btn-ghost btn-sm" onClick={e => { e.stopPropagation(); if (!window.confirm('¿Eliminar esta inspección? No se puede deshacer.')) return; guardar(inspecciones.filter(x => x.id !== i.id)); notify('Inspeccion eliminada', 'info') }}>✕</button>
+                          <button className="btn btn-ghost btn-sm" onClick={e => { e.stopPropagation(); setConfirmCfg({ title: 'Eliminar inspección', lead: 'No se puede deshacer.', confirmLabel: 'Eliminar', tone: 'danger', onConfirm: () => { guardar(inspecciones.filter(x => x.id !== i.id)); notify('Inspeccion eliminada', 'info') } }); return }}>✕</button>
                         </div>
                       </td>
                     </tr>
@@ -137,6 +140,8 @@ export default function Inspecciones({ trabajos, notify, onVincularInspeccion, i
         </div>
       </div>
     </div>
+    <ConfirmDialog cfg={confirmCfg} onClose={() => setConfirmCfg(null)} />
+    </>
   )
 }
 

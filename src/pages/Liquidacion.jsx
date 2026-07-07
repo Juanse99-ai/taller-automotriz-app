@@ -449,12 +449,8 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
 
     // Neto negativo: la deuda no se borra, se arrastra como saldo anterior
     if (totalSeleccion.neto < 0 && !skipConfirm) {
-      const ok = confirm(
-        `El neto es negativo (${fmt(totalSeleccion.neto)}): los cargos superan la comisión.\n\n` +
-        `La deuda restante (${fmt(Math.abs(totalSeleccion.neto))}) quedará registrada como "saldo anterior" ` +
-        `para descontar en la próxima liquidación. ¿Continuar?`
-      )
-      if (!ok) return
+      setDialog({ title: 'Neto negativo', lead: 'Los cargos superan la comisión; la deuda quedará como saldo anterior para la próxima liquidación.', confirmLabel: 'Continuar', tone: 'danger', onConfirm: () => generarPago(true) })
+      return
     }
 
     pagandoRef.current = true

@@ -6,6 +6,7 @@ import { TECNICOS, IVA_DEFAULT, TALLER } from '../utils/constants'
 import { loadLogo as loadPdfLogo, drawHeader, drawSectionHeader, drawDataBlock, drawTotalsBox, drawSignatures, drawFooter, tableStylesItems, PDF_LAYOUT, PDF_COLORS } from '../utils/pdfTheme'
 import { MARCAS, getModelos } from '../utils/vehiculos'
 import MoneyInput from '../components/MoneyInput'
+import ConfirmDialog from '../components/ConfirmDialog'
 import { useClientes } from '../hooks/useClientes'
 import { useInventario, formatCacheAge } from '../hooks/useInventario'
 import { lsGet, lsSet, LS_KEYS } from '../services/storage'
@@ -16,6 +17,7 @@ export default function Cotizaciones({ notify, trabajos = [], onCrearTrabajo, co
   const { cotizaciones, guardarUna, eliminar: eliminarHook } = cotizacionesHook || {}
   const [vista, setVista] = useState('lista')
   const [editId, setEditId] = useState(null)
+  const [confirmCfg, setConfirmCfg] = useState(null)
 
   const loadLogo = async () => {
     try {
@@ -118,7 +120,7 @@ export default function Cotizaciones({ notify, trabajos = [], onCrearTrabajo, co
               doc.setFontSize(6.5)
               doc.setTextColor(...SLATE_400)
               doc.setFont('courier', 'normal')
-              doc.text(`SKU ${sku}`, data.cell.x + 3, data.cell.y + data.cell.height - 2)
+              doc.text(`Codigo ${sku}`, data.cell.x + 3, data.cell.y + data.cell.height - 2)
               doc.setFont(undefined, 'normal')
             }
           }
@@ -204,10 +206,7 @@ export default function Cotizaciones({ notify, trabajos = [], onCrearTrabajo, co
     valorPendiente: cotizaciones.filter(c => c.estado === ESTADO_COT.PENDIENTE).reduce((s, c) => s + (c.total || 0), 0),
   }), [cotizaciones])
 
-  const cambiarEstado = async (id, estado) => {
-    const cot = cotizaciones.find(c => c.id === id)
-    if (!cot) return
-    if (String(estado).toLowerCase().includes('rechaz') && !window.confirm('¿Rechazar esta cotización?')) return
+  const aplicarEstado = async (cot, estado) => {
     try {
       await guardarUna({ ...cot, estado })
       notify(`Cotizacion ${estado.toLowerCase()}`, estado === ESTADO_COT.APROBADA ? 'success' : 'info')
@@ -216,14 +215,31 @@ export default function Cotizaciones({ notify, trabajos = [], onCrearTrabajo, co
     }
   }
 
-  const eliminar = async (id) => {
-    if (!window.confirm(`¿Eliminar la cotización ${id}? No se puede deshacer.`)) return
-    try {
-      await eliminarHook(id)
-      notify('Cotizacion eliminada', 'info')
-    } catch (e) {
-      notify(`No se pudo eliminar en la nube: ${e.message}`, 'error')
+  const cambiarEstado = async (id, estado) => {
+    const cot = cotizaciones.find(c => c.id === id)
+    if (!cot) return
+    if (String(estado).toLowerCase().includes('rechaz')) {
+      setConfirmCfg({ title: 'Rechazar cotizacion', confirmLabel: 'Rechazar', tone: 'danger', onConfirm: () => aplicarEstado(cot, estado) })
+      return
     }
+    await aplicarEstado(cot, estado)
+  }
+
+  const eliminar = (id) => {
+    setConfirmCfg({
+      title: 'Eliminar cotizacion',
+      lead: `${id} · no se puede deshacer.`,
+      confirmLabel: 'Eliminar',
+      tone: 'danger',
+      onConfirm: async () => {
+        try {
+          await eliminarHook(id)
+          notify('Cotizacion eliminada', 'info')
+        } catch (e) {
+          notify(`No se pudo eliminar en la nube: ${e.message}`, 'error')
+        }
+      },
+    })
   }
 
   if (vista === 'nueva' || vista === 'editar') {
@@ -258,6 +274,7 @@ export default function Cotizaciones({ notify, trabajos = [], onCrearTrabajo, co
   }
 
   return (
+    <>
     <div>
       <div className="pagehd">
         <div><h2>Cotizaciones</h2><p className="sub">{stats.total} cotizaciones · {stats.aprobadas} aprobadas</p></div>
@@ -305,7 +322,7 @@ export default function Cotizaciones({ notify, trabajos = [], onCrearTrabajo, co
               <p>No hay cotizaciones registradas.</p>
             </div>
           ) : (
-            <table className="tbl">
+            <table className="tbl tbl-cards">
               <thead>
                 <tr>
                   <th>ID</th>
@@ -324,14 +341,14 @@ export default function Cotizaciones({ notify, trabajos = [], onCrearTrabajo, co
                     : c.estado === ESTADO_COT.RECHAZADA ? 'badge-d' : 'badge-w'
                   return (
                     <tr key={c.id}>
-                      <td className="c-mono">{c.id}</td>
+                      <td className="c-mono" data-label="ID">{c.id}</td>
                       <td className="c-name">{c.cliente || '—'}</td>
-                      <td className="c-mono" style={{ fontWeight: 700 }}>{c.placa || '—'}</td>
-                      <td className="c-muted">{[c.marca, c.modelo, c.ano].filter(Boolean).join(' ') || '—'}</td>
-                      <td><span className={`badge ${bc}`}>{c.estado}</span></td>
-                      <td className="c-right c-mono">{fmt(c.total)}</td>
-                      <td className="c-muted">{fmtDate(c.fecha)}</td>
-                      <td>
+                      <td className="c-mono" style={{ fontWeight: 700 }} data-label="Placa">{c.placa || '—'}</td>
+                      <td className="c-muted" data-label="Vehículo">{[c.marca, c.modelo, c.ano].filter(Boolean).join(' ') || '—'}</td>
+                      <td data-label="Estado"><span className={`badge ${bc}`}>{c.estado}</span></td>
+                      <td className="c-right c-mono" data-label="Total">{fmt(c.total)}</td>
+                      <td className="c-muted" data-label="Fecha">{fmtDate(c.fecha)}</td>
+                      <td className="td-actions">
                         <div className="actions-cell">
                           <button className="btn btn-outline btn-sm" onClick={() => imprimirCotizacion(c)}>PDF</button>
                           <button className="btn btn-outline btn-sm" onClick={() => { setEditId(c.id); setVista('editar') }}>Editar</button>
@@ -356,6 +373,8 @@ export default function Cotizaciones({ notify, trabajos = [], onCrearTrabajo, co
         </div>
       </div>
     </div>
+    <ConfirmDialog cfg={confirmCfg} onClose={() => setConfirmCfg(null)} />
+    </>
   )
 }
 
@@ -667,7 +686,7 @@ function CotizacionForm({ cotizacion, trabajos = [], onSave, onCancel }) {
                                         </div>
                                         <div style={{ fontSize: 11, opacity: .7, marginTop: 2, display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                                           {p.codigoBarras && <span>Cod: {p.codigoBarras}</span>}
-                                          {p.sku && <span>Sku: {p.sku}</span>}
+                                          {p.sku && <span>Codigo: {p.sku}</span>}
                                           {(!p.codigoBarras && !p.sku && p.codigo) && <span>Ref: {p.codigo}</span>}
                                           <span>- P.Venta+imp: {fmt(p.precio)}</span>
                                           {p.precioBase > 0 && <span>- P.Base: {fmt(p.precioBase)}</span>}
