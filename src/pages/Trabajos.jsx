@@ -11,6 +11,7 @@ import { lsGet, lsSet, LS_KEYS } from '../services/storage'
 import Switch from '../components/Switch'
 import MoneyInput from '../components/MoneyInput'
 import SignaturePad from '../components/SignaturePad'
+import ConfirmDialog from '../components/ConfirmDialog'
 
 // ¿La fecha cae dentro del rango elegido? (hoy / semana = últimos 7 días / mes = mes actual)
 function dentroDeFecha(fecha, modo, now) {
