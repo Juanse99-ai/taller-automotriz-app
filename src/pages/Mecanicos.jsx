@@ -4,6 +4,7 @@ import { COMISION, ESTADOS } from '../utils/constants'
 import { manoObraBase } from '../utils/comision'
 import { useTecnicos, tecnicosActivos, agregarTecnico, actualizarTecnico, setTecnicoActivo, eliminarTecnico } from '../services/tecnicos'
 import ConfirmDialog from '../components/ConfirmDialog'
+import { Button, Badge } from '../components/ui'
 
 const ACTIVOS = [ESTADOS.PENDIENTE, ESTADOS.EN_DIAGNOSTICO, ESTADOS.ESPERANDO_REPUESTOS, ESTADOS.EN_PROGRESO]
 
@@ -112,10 +113,10 @@ export default function Mecanicos({ trabajos, onNavigate, notify }) {
           >
             {vistaAgenda ? 'Ver tarjetas' : 'Agenda semanal'}
           </button>
-          <button className="btn btn-primary btn-sm" onClick={() => setAgregando(true)}>
+          <Button variant="primary" size="sm" onClick={() => setAgregando(true)}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
             Agregar técnico
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -185,8 +186,8 @@ export default function Mecanicos({ trabajos, onNavigate, notify }) {
                     </div>
                   </div>
                   {tec.libre
-                    ? <span className="badge badge-s">Libre</span>
-                    : <span className="badge badge-i">Ocupado</span>
+                    ? <Badge tone="s">Libre</Badge>
+                    : <Badge tone="i">Ocupado</Badge>
                   }
                 </div>
 
@@ -223,8 +224,8 @@ export default function Mecanicos({ trabajos, onNavigate, notify }) {
 
                 {/* Actions */}
                 <div style={{ display: 'flex', gap: 8 }}>
-                  <button className="btn btn-outline btn-sm" style={{ flex: 1 }} onClick={() => onNavigate && onNavigate('trabajos')}>Ver trabajos</button>
-                  <button className="btn btn-outline btn-sm" style={{ flex: 1 }} onClick={() => { setEditando(tec); setEditForm({ nombre: tec.nombre, especialidad: tec.especialidad, telefono: tec.telefono, cedula: tec.cedula || '' }) }}>Editar</button>
+                  <Button variant="outline" size="sm" style={{ flex: 1 }} onClick={() => onNavigate && onNavigate('trabajos')}>Ver trabajos</Button>
+                  <Button variant="outline" size="sm" style={{ flex: 1 }} onClick={() => { setEditando(tec); setEditForm({ nombre: tec.nombre, especialidad: tec.especialidad, telefono: tec.telefono, cedula: tec.cedula || '' }) }}>Editar</Button>
                 </div>
               </div>
             </div>
@@ -249,10 +250,11 @@ export default function Mecanicos({ trabajos, onNavigate, notify }) {
                     <div style={{ fontWeight: 600, fontSize: 14 }}>{tec.nombre}</div>
                     <div style={{ fontSize: 12, color: 'var(--text-3)' }}>{tec.especialidad} · {tec.totalTrabajos} OT{tec.totalTrabajos !== 1 ? 's' : ''} en historial</div>
                   </div>
-                  <span className="badge badge-n">Inactivo</span>
-                  <button className="btn btn-outline btn-sm" onClick={() => { setTecnicoActivo(tec.id, true); notify?.(`${tec.nombre} reactivado`, 'success') }}>Reactivar</button>
-                  <button
-                    className="btn btn-outline btn-sm"
+                  <Badge tone="n">Inactivo</Badge>
+                  <Button variant="outline" size="sm" onClick={() => { setTecnicoActivo(tec.id, true); notify?.(`${tec.nombre} reactivado`, 'success') }}>Reactivar</Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
                     style={{ color: 'var(--red-600)', borderColor: 'rgba(220,38,38,.35)' }}
                     onClick={() => {
                       setConfirmCfg({
@@ -269,7 +271,7 @@ export default function Mecanicos({ trabajos, onNavigate, notify }) {
                       })
                       return
                     }}
-                  >Eliminar</button>
+                  >Eliminar</Button>
                 </div>
               ))}
             </div>
@@ -311,18 +313,18 @@ export default function Mecanicos({ trabajos, onNavigate, notify }) {
                   para asignar trabajos y liquidar, pero sus OTs del historial conservan su nombre.
                 </p>
                 <div style={{ display: 'flex', gap: 8 }}>
-                  <button className="btn btn-outline btn-sm" style={{ flex: 1, color: 'var(--amber-600)', borderColor: 'rgba(245,158,11,.4)' }} onClick={handleDesactivar}>
+                  <Button variant="outline" size="sm" style={{ flex: 1, color: 'var(--amber-600)', borderColor: 'rgba(245,158,11,.4)' }} onClick={handleDesactivar}>
                     Marcar inactivo
-                  </button>
-                  <button className="btn btn-outline btn-sm" style={{ flex: 1, color: 'var(--red-600)', borderColor: 'rgba(220,38,38,.35)' }} onClick={handleEliminar}>
+                  </Button>
+                  <Button variant="outline" size="sm" style={{ flex: 1, color: 'var(--red-600)', borderColor: 'rgba(220,38,38,.35)' }} onClick={handleEliminar}>
                     Eliminar
-                  </button>
+                  </Button>
                 </div>
               </div>
             </div>
             <div className="modal__f">
-              <button className="btn btn-outline btn-sm" onClick={() => setEditando(null)}>Cancelar</button>
-              <button className="btn btn-primary btn-sm" onClick={handleGuardarEdicion}>Guardar cambios</button>
+              <Button variant="outline" size="sm" onClick={() => setEditando(null)}>Cancelar</Button>
+              <Button variant="primary" size="sm" onClick={handleGuardarEdicion}>Guardar cambios</Button>
             </div>
           </div>
         </div>
@@ -359,8 +361,8 @@ export default function Mecanicos({ trabajos, onNavigate, notify }) {
                 </p>
               </div>
               <div className="modal__f">
-                <button type="button" className="btn btn-outline btn-sm" onClick={() => setAgregando(false)}>Cancelar</button>
-                <button type="submit" className="btn btn-primary btn-sm">Agregar al equipo</button>
+                <Button type="button" variant="outline" size="sm" onClick={() => setAgregando(false)}>Cancelar</Button>
+                <Button type="submit" variant="primary" size="sm">Agregar al equipo</Button>
               </div>
             </form>
           </div>

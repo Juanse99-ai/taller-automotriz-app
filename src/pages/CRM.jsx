@@ -3,6 +3,7 @@ import { fmt, fmtDate } from '../utils/helpers'
 import { TALLER, ESTADOS } from '../utils/constants'
 import { lsGet, lsSet } from '../services/storage'
 import ConfirmDialog from '../components/ConfirmDialog'
+import { Button } from '../components/ui'
 
 // ── Storage keys (locales al CRM) ───────────────────────────────────────────
 const KEY_CONFIG = 'crm:config'
@@ -418,16 +419,16 @@ export default function CRM({ trabajos = [], clientes, vehiculos, notify, actual
         </div>
         <div className="actions" style={{ flexWrap: 'wrap', gap: 8 }}>
           {recordatoriosImportar.length > 0 && (
-            <button className="btn btn-outline btn-sm" onClick={() => setShowImportar(true)} style={{ display: 'inline-flex', alignItems: 'center', gap: 7 }}>
+            <Button variant="outline" size="sm" onClick={() => setShowImportar(true)} style={{ display: 'inline-flex', alignItems: 'center', gap: 7 }}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
               Inactivos ({recordatoriosImportar.length})
-            </button>
+            </Button>
           )}
-          <button className="btn btn-outline btn-sm" onClick={() => setShowTemplate('aceite_mineral')} style={{ display: 'inline-flex', alignItems: 'center', gap: 7 }}>
+          <Button variant="outline" size="sm" onClick={() => setShowTemplate('aceite_mineral')} style={{ display: 'inline-flex', alignItems: 'center', gap: 7 }}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
             Plantillas
-          </button>
-          <button className="btn btn-outline btn-sm" onClick={() => setShowConfig(true)}>⚙️ Servicios</button>
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => setShowConfig(true)}>⚙️ Servicios</Button>
         </div>
       </div>
 
@@ -628,9 +629,9 @@ export default function CRM({ trabajos = [], clientes, vehiculos, notify, actual
                         </div>
                       </td>
                       <td className="td-actions" style={{ textAlign: 'right' }}>
-                        <button className="btn btn-primary btn-sm" onClick={() => abrirContacto(r)}>
+                        <Button variant="primary" size="sm" onClick={() => abrirContacto(r)}>
                           Contactar
-                        </button>
+                        </Button>
                       </td>
                     </tr>
                   )
@@ -652,7 +653,7 @@ export default function CRM({ trabajos = [], clientes, vehiculos, notify, actual
           <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 560 }}>
             <div className="modal__h">
               <h3 style={{ margin: 0, fontSize: 16, fontWeight: 800 }}>Contactar a {contactoActivo.cliente.nombre}</h3>
-              <button className="btn btn-ghost btn-sm" onClick={() => setContactoActivo(null)}>✕</button>
+              <Button variant="ghost" size="sm" onClick={() => setContactoActivo(null)}>✕</Button>
             </div>
             <div className="modal__b" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
               <div style={{ background: 'var(--bg-subtle)', borderRadius: 8, padding: '10px 14px', fontSize: 12.5 }}>
@@ -678,22 +679,22 @@ export default function CRM({ trabajos = [], clientes, vehiculos, notify, actual
                 </div>
               </div>
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                <button
-                  className="btn btn-primary"
+                <Button
+                  variant="primary"
                   onClick={() => enviarPorCanal('whatsapp')}
                   disabled={!contactoActivo.cliente.telefono}
                   style={{ background: '#16a34a', flex: '1 1 auto' }}>
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
                   WhatsApp{!contactoActivo.cliente.telefono && ' (sin tel)'}
-                </button>
-                <button
-                  className="btn btn-outline"
+                </Button>
+                <Button
+                  variant="outline"
                   onClick={() => enviarPorCanal('email')}
                   disabled={!contactoActivo.cliente.email}
                   style={{ flex: '1 1 auto' }}>
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
                   Email{!contactoActivo.cliente.email && ' (sin email)'}
-                </button>
+                </Button>
                 {contactoActivo.cliente.telefono && (
                   <a href={`tel:${contactoActivo.cliente.telefono}`} className="btn btn-outline" style={{ flex: '1 1 auto', textAlign: 'center', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 7 }}>
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.41 2 2 0 0 1 3.6 1.23h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.82a16 16 0 0 0 6.29 6.29l.95-.95a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
@@ -717,7 +718,7 @@ export default function CRM({ trabajos = [], clientes, vehiculos, notify, actual
                       const ult = contactoActivo.historial[contactoActivo.historial.length - 1]
                       const activo = ult?.resultado === k
                       return (
-                        <button key={k} className="btn btn-outline btn-sm"
+                        <Button key={k} variant="outline" size="sm"
                           onClick={() => marcarResultado(contactoActivo.trackKey, k)}
                           style={{
                             fontSize: 11.5,
@@ -726,7 +727,7 @@ export default function CRM({ trabajos = [], clientes, vehiculos, notify, actual
                             borderColor: c,
                           }}>
                           {l}
-                        </button>
+                        </Button>
                       )
                     })}
                   </div>
@@ -734,10 +735,10 @@ export default function CRM({ trabajos = [], clientes, vehiculos, notify, actual
               )}
 
               <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 8, borderTop: '1px solid var(--border)' }}>
-                <button className="btn btn-ghost btn-sm" onClick={() => marcarContactado(contactoActivo)}>
+                <Button variant="ghost" size="sm" onClick={() => marcarContactado(contactoActivo)}>
                   ✓ Marcar contactado (sin enviar)
-                </button>
-                <button className="btn btn-ghost btn-sm" onClick={() => setContactoActivo(null)}>Cerrar</button>
+                </Button>
+                <Button variant="ghost" size="sm" onClick={() => setContactoActivo(null)}>Cerrar</Button>
               </div>
             </div>
           </div>
@@ -750,7 +751,7 @@ export default function CRM({ trabajos = [], clientes, vehiculos, notify, actual
           <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 480 }}>
             <div className="modal__h">
               <h3 style={{ margin: 0 }}>Tipo de aceite</h3>
-              <button className="btn btn-ghost btn-sm" onClick={() => setEditandoAceite(null)}>✕</button>
+              <Button variant="ghost" size="sm" onClick={() => setEditandoAceite(null)}>✕</Button>
             </div>
             <div className="modal__b" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               <div style={{ fontSize: 12.5, color: 'var(--text-2)' }}>
@@ -777,8 +778,8 @@ export default function CRM({ trabajos = [], clientes, vehiculos, notify, actual
               </div>
             </div>
             <div className="modal__f">
-              <button className="btn btn-outline" onClick={() => setEditandoAceite(null)}>Cancelar</button>
-              <button className="btn btn-primary" onClick={guardarTipoAceite}>Guardar en la OT</button>
+              <Button variant="outline" onClick={() => setEditandoAceite(null)}>Cancelar</Button>
+              <Button variant="primary" onClick={guardarTipoAceite}>Guardar en la OT</Button>
             </div>
           </div>
         </div>
@@ -811,7 +812,7 @@ export default function CRM({ trabajos = [], clientes, vehiculos, notify, actual
                 </svg>
                 Clientes inactivos · <strong>{filtrados.length}</strong> de {recordatoriosImportar.length}
               </h3>
-              <button className="btn btn-ghost btn-sm" onClick={() => setShowImportar(false)} aria-label="Cerrar">✕</button>
+              <Button variant="ghost" size="sm" onClick={() => setShowImportar(false)} aria-label="Cerrar">✕</Button>
             </div>
 
             {/* Filtros y búsqueda — siempre visibles */}
@@ -930,7 +931,7 @@ export default function CRM({ trabajos = [], clientes, vehiculos, notify, actual
               <span style={{ fontSize: 11.5, color: 'var(--text-3)', marginRight: 'auto' }}>
                 Mostrando <strong>{filtrados.length}</strong> de {recordatoriosImportar.length} inactivos
               </span>
-              <button className="btn btn-primary" onClick={() => setShowImportar(false)}>Cerrar</button>
+              <Button variant="primary" onClick={() => setShowImportar(false)}>Cerrar</Button>
             </div>
           </div>
         </div>
@@ -943,7 +944,7 @@ export default function CRM({ trabajos = [], clientes, vehiculos, notify, actual
           <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 640 }}>
             <div className="modal__h">
               <h3 style={{ margin: 0 }}>⚙️ Servicios e intervalos</h3>
-              <button className="btn btn-ghost btn-sm" onClick={() => setShowConfig(false)}>✕</button>
+              <Button variant="ghost" size="sm" onClick={() => setShowConfig(false)}>✕</Button>
             </div>
             <div className="modal__b" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               <p style={{ margin: 0, fontSize: 12.5, color: 'var(--text-3)' }}>
@@ -960,14 +961,14 @@ export default function CRM({ trabajos = [], clientes, vehiculos, notify, actual
                   <input type="number" className="input" value={s.meses}
                     onChange={e => setConfig(c => ({ ...c, servicios: c.servicios.map((x, i) => i === idx ? { ...x, meses: parseInt(e.target.value) || 0 } : x) }))}
                     style={{ fontSize: 12.5 }} placeholder="meses" />
-                  <button className="btn btn-ghost btn-sm" onClick={() => setConfig(c => ({ ...c, servicios: c.servicios.filter((_, i) => i !== idx) }))} style={{ color: 'var(--red-600)' }}>✕</button>
+                  <Button variant="ghost" size="sm" onClick={() => setConfig(c => ({ ...c, servicios: c.servicios.filter((_, i) => i !== idx) }))} style={{ color: 'var(--red-600)' }}>✕</Button>
                 </div>
               ))}
-              <button className="btn btn-outline btn-sm" onClick={() => setConfig(c => ({ ...c, servicios: [...c.servicios, { key: `custom_${Date.now()}`, nombre: 'Nuevo servicio', km: 10000, meses: 6 }] }))}>+ Añadir servicio</button>
-              <button className="btn btn-ghost btn-sm" style={{ color: 'var(--text-3)', fontSize: 11 }} onClick={() => setConfirmCfg({ title: 'Restaurar servicios', lead: 'Vuelve a los intervalos por defecto.', confirmLabel: 'Restaurar', tone: 'primary', onConfirm: () => setConfig({ servicios: SERVICIOS_DEFAULT }) })}>Restaurar valores por defecto</button>
+              <Button variant="outline" size="sm" onClick={() => setConfig(c => ({ ...c, servicios: [...c.servicios, { key: `custom_${Date.now()}`, nombre: 'Nuevo servicio', km: 10000, meses: 6 }] }))}>+ Añadir servicio</Button>
+              <Button variant="ghost" size="sm" style={{ color: 'var(--text-3)', fontSize: 11 }} onClick={() => setConfirmCfg({ title: 'Restaurar servicios', lead: 'Vuelve a los intervalos por defecto.', confirmLabel: 'Restaurar', tone: 'primary', onConfirm: () => setConfig({ servicios: SERVICIOS_DEFAULT }) })}>Restaurar valores por defecto</Button>
             </div>
             <div className="modal__f">
-              <button className="btn btn-primary" onClick={() => setShowConfig(false)}>Guardar y cerrar</button>
+              <Button variant="primary" onClick={() => setShowConfig(false)}>Guardar y cerrar</Button>
             </div>
           </div>
         </div>
@@ -979,7 +980,7 @@ export default function CRM({ trabajos = [], clientes, vehiculos, notify, actual
           <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 720 }}>
             <div className="modal__h">
               <h3 style={{ margin: 0 }}>📝 Plantillas de mensajes</h3>
-              <button className="btn btn-ghost btn-sm" onClick={() => setShowTemplate(null)}>✕</button>
+              <Button variant="ghost" size="sm" onClick={() => setShowTemplate(null)}>✕</Button>
             </div>
             <div className="modal__b" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               <p style={{ margin: 0, fontSize: 12.5, color: 'var(--text-3)' }}>
@@ -992,12 +993,12 @@ export default function CRM({ trabajos = [], clientes, vehiculos, notify, actual
                 {[...config.servicios.map(s => s.key), 'generico'].map(key => {
                   const lbl = key === 'generico' ? 'Genérico' : config.servicios.find(s => s.key === key)?.nombre || key
                   return (
-                    <button key={key} onClick={() => setShowTemplate(key)} className="btn btn-outline btn-sm" style={{
+                    <Button key={key} onClick={() => setShowTemplate(key)} variant="outline" size="sm" style={{
                       fontSize: 11.5,
                       background: showTemplate === key ? 'var(--blue-600)' : undefined,
                       color: showTemplate === key ? '#fff' : undefined,
                       borderColor: showTemplate === key ? 'var(--blue-600)' : undefined,
-                    }}>{lbl}</button>
+                    }}>{lbl}</Button>
                   )
                 })}
               </div>
@@ -1013,10 +1014,10 @@ export default function CRM({ trabajos = [], clientes, vehiculos, notify, actual
               </div>
             </div>
             <div className="modal__f">
-              <button className="btn btn-ghost" onClick={() => setConfirmCfg({ title: 'Restaurar plantilla', lead: 'Vuelve al texto por defecto.', confirmLabel: 'Restaurar', tone: 'primary', onConfirm: () => setTemplates(t => ({ ...t, [showTemplate]: TEMPLATES_DEFAULT[showTemplate] || '' })) })}>
+              <Button variant="ghost" onClick={() => setConfirmCfg({ title: 'Restaurar plantilla', lead: 'Vuelve al texto por defecto.', confirmLabel: 'Restaurar', tone: 'primary', onConfirm: () => setTemplates(t => ({ ...t, [showTemplate]: TEMPLATES_DEFAULT[showTemplate] || '' })) })}>
                 Restaurar default
-              </button>
-              <button className="btn btn-primary" onClick={() => setShowTemplate(null)}>Cerrar</button>
+              </Button>
+              <Button variant="primary" onClick={() => setShowTemplate(null)}>Cerrar</Button>
             </div>
           </div>
         </div>

@@ -3,6 +3,7 @@ import Fuse from 'fuse.js'
 import { fmtDate, fmtTelefono } from '../utils/helpers'
 import { TIPOS_IDENTIFICACION, TIPOS_PERSONA, REGIMENES, buscarClientePorCedula } from '../services/cuentti'
 import ConfirmDialog from '../components/ConfirmDialog'
+import { Button, Badge } from '../components/ui'
 
 // Quita acentos: "FERNÁNDEZ" → "fernandez"
 const _sinAcentos = (s) => (s || '').toString().toLowerCase()
@@ -432,9 +433,9 @@ export default function Clientes({ clientes, vehiculos, notify }) {
       <div>
         <div className="pagehd">
           <div style={{display:'flex',alignItems:'center',gap:12}}>
-            <button className="btn btn-outline btn-sm" onClick={() => setCreando(false)}>
+            <Button variant="outline" size="sm" onClick={() => setCreando(false)}>
               <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
-            </button>
+            </Button>
             <div><h2>Nuevo Cliente</h2><p className="sub">Crear cliente y sincronizar con Cuentti</p></div>
           </div>
         </div>
@@ -496,10 +497,10 @@ export default function Clientes({ clientes, vehiculos, notify }) {
               </div>
             </div>
             <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 16 }}>
-              <button className="btn btn-outline" onClick={() => setCreando(false)}>Cancelar</button>
-              <button className="btn btn-primary" onClick={handleCrearCliente} disabled={guardandoCuentti}>
+              <Button variant="outline" onClick={() => setCreando(false)}>Cancelar</Button>
+              <Button variant="primary" onClick={handleCrearCliente} disabled={guardandoCuentti}>
                 {guardandoCuentti ? 'Guardando...' : 'Crear y Guardar en Cuentti'}
-              </button>
+              </Button>
             </div>
           </div>
         </div>
@@ -513,9 +514,9 @@ export default function Clientes({ clientes, vehiculos, notify }) {
       <div>
         <div className="pagehd">
           <div style={{display:'flex',alignItems:'center',gap:12}}>
-            <button className="btn btn-outline btn-sm" onClick={volver}>
+            <Button variant="outline" size="sm" onClick={volver}>
               <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
-            </button>
+            </Button>
             <div>
               <h2>{clienteSeleccionado.nombre || 'Cliente'}</h2>
               <p className="sub">CC/NIT {clienteSeleccionado.cedula}</p>
@@ -523,7 +524,7 @@ export default function Clientes({ clientes, vehiculos, notify }) {
           </div>
           <div className="actions" style={{display:'flex',alignItems:'center',gap:10}}>
             {clienteSeleccionado.cuenttiId && (
-              <span className="badge badge-s">Cuentti #{clienteSeleccionado.cuenttiId}</span>
+              <Badge tone="s">Cuentti #{clienteSeleccionado.cuenttiId}</Badge>
             )}
           </div>
         </div>
@@ -561,12 +562,12 @@ export default function Clientes({ clientes, vehiculos, notify }) {
                 </div>
               </div>
               <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 16 }}>
-                <button className="btn btn-primary" onClick={handleGuardarLocal}>
+                <Button variant="primary" onClick={handleGuardarLocal}>
                   Guardar Cambios
-                </button>
-                <button className="btn btn-success" onClick={handleGuardarCuentti} disabled={guardandoCuentti}>
+                </Button>
+                <Button variant="success" onClick={handleGuardarCuentti} disabled={guardandoCuentti}>
                   {guardandoCuentti ? 'Guardando...' : 'Guardar en Cuentti'}
-                </button>
+                </Button>
               </div>
             </div>
           </div>
@@ -577,9 +578,9 @@ export default function Clientes({ clientes, vehiculos, notify }) {
               <h3>Vehiculos del cliente</h3>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                 <span className="count">{vehiculosCliente.length}</span>
-                <button type="button" className="btn btn-sm btn-outline" onClick={() => setAgregandoVeh(v => !v)}>
+                <Button type="button" variant="outline" size="sm" onClick={() => setAgregandoVeh(v => !v)}>
                   {agregandoVeh ? 'Cancelar' : '+ Agregar'}
-                </button>
+                </Button>
               </div>
             </div>
             {agregandoVeh && (
@@ -608,7 +609,7 @@ export default function Clientes({ clientes, vehiculos, notify }) {
                   </div>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 12 }}>
-                  <button type="button" className="btn btn-primary" onClick={guardarVehiculoNuevo}>Guardar vehículo</button>
+                  <Button type="button" variant="primary" onClick={guardarVehiculoNuevo}>Guardar vehículo</Button>
                 </div>
               </div>
             )}
@@ -637,7 +638,7 @@ export default function Clientes({ clientes, vehiculos, notify }) {
                         <td className="c-muted">{v.modelo || '--'}</td>
                         <td className="c-mono c-muted">{v.ano || '--'}</td>
                         <td style={{textAlign:'center'}}>
-                          <span className="badge badge-i">{(v.historial || []).length}</span>
+                          <Badge tone="i">{(v.historial || []).length}</Badge>
                         </td>
                         <td className="c-muted">{fmtDate(v.fechaUltimoServicio)}</td>
                       </tr>
@@ -660,8 +661,9 @@ export default function Clientes({ clientes, vehiculos, notify }) {
         <div><h2>Clientes</h2><p className="sub">{totalClientes} clientes en la base · {conCuenttiId} sincronizados con Cuentti · {sinTelefono} sin telefono</p></div>
         <div className="actions" style={{display:'flex',gap:8,alignItems:'center'}}>
           {sinTelefono > 0 && (
-            <button
-              className="btn btn-outline btn-sm"
+            <Button
+              variant="outline"
+              size="sm"
               onClick={sincronizarTelefonosCuentti}
               disabled={syncTel.activo}
               title="Consulta uno por uno los clientes sin telefono en Cuentti"
@@ -669,9 +671,9 @@ export default function Clientes({ clientes, vehiculos, notify }) {
               {syncTel.activo
                 ? `📡 Sincronizando ${syncTel.procesados}/${syncTel.total}…`
                 : `📡 Sincronizar ${sinTelefono} telefonos de Cuentti`}
-            </button>
+            </Button>
           )}
-          <button className="btn btn-primary" onClick={() => setCreando(true)}>+ Nuevo cliente</button>
+          <Button variant="primary" onClick={() => setCreando(true)}>+ Nuevo cliente</Button>
         </div>
       </div>
 
@@ -747,10 +749,10 @@ export default function Clientes({ clientes, vehiculos, notify }) {
                 {resultadoCuentti.email && <> · {resultadoCuentti.email}</>}
               </div>
             </div>
-            <button className="btn btn-primary btn-sm" onClick={() => importarDeCuentti(resultadoCuentti)}>
+            <Button variant="primary" size="sm" onClick={() => importarDeCuentti(resultadoCuentti)}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
               Importar a la app
-            </button>
+            </Button>
           </div>
         )}
 
@@ -796,12 +798,12 @@ export default function Clientes({ clientes, vehiculos, notify }) {
                     <td className="c-mono" data-label="Teléfono">{fmtTelefono(c.telefono) || '--'}</td>
                     <td className="c-muted" data-label="Email">{c.email || '--'}</td>
                     <td data-label="Vehículos" style={{textAlign:'center'}}>
-                      <span className={`badge ${(c.vehiculos || []).length > 0 ? 'badge-i' : 'badge-w'}`}>
+                      <Badge tone={(c.vehiculos || []).length > 0 ? 'i' : 'w'}>
                         {(c.vehiculos || []).length}
-                      </span>
+                      </Badge>
                     </td>
                     <td className="c-muted" data-label="Última visita">{fmtDate(c.fechaUltimaVisita)}</td>
-                    <td data-label="Cuentti">{c.cuenttiId ? <span className="badge badge-s">OK</span> : <span className="badge badge-w">Pendiente</span>}</td>
+                    <td data-label="Cuentti">{c.cuenttiId ? <Badge tone="s">OK</Badge> : <Badge tone="w">Pendiente</Badge>}</td>
                     <td className="td-chevron" style={{opacity:.5}}>›</td>
                   </tr>
                 ))}

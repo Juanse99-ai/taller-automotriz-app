@@ -4,6 +4,7 @@ import { INSPECCION_CATEGORIAS } from '../utils/vehiculos'
 import { TECNICOS } from '../utils/constants'
 import { lsGet, lsSet, LS_KEYS } from '../services/storage'
 import ConfirmDialog from '../components/ConfirmDialog'
+import { Button, Badge } from '../components/ui'
 
 const ESTADO_ITEM = { BUENO: 'bueno', SUGERIDO: 'sugerido', URGENTE: 'urgente', NO_APLICA: 'no_aplica' }
 
@@ -75,7 +76,7 @@ export default function Inspecciones({ trabajos, notify, onVincularInspeccion, i
       <div className="pagehd">
         <div><h2>Inspecciones digitales</h2><p className="sub">DVI · {stats.total} inspecciones realizadas · <b style={{color:'var(--red-600)'}}>{stats.conUrgentes}</b> con items urgentes</p></div>
         <div className="actions">
-          <button className="btn btn-primary" onClick={() => setVista('nueva')}>+ Nueva inspeccion</button>
+          <Button variant="primary" onClick={() => setVista('nueva')}>+ Nueva inspeccion</Button>
         </div>
       </div>
 
@@ -117,18 +118,18 @@ export default function Inspecciones({ trabajos, notify, onVincularInspeccion, i
                       <td className="c-muted">{i.tecnico || '—'}</td>
                       <td>
                         <div style={{display:'flex',gap:4,justifyContent:'center',alignItems:'center'}}>
-                          {buenos > 0 && <span className="badge badge-s">{buenos}</span>}
-                          {sugeridos > 0 && <span className="badge badge-w">{sugeridos}</span>}
-                          {urgentes > 0 && <span className="badge badge-d">{urgentes}</span>}
+                          {buenos > 0 && <Badge tone="s">{buenos}</Badge>}
+                          {sugeridos > 0 && <Badge tone="w">{sugeridos}</Badge>}
+                          {urgentes > 0 && <Badge tone="d">{urgentes}</Badge>}
                           <span style={{fontSize:11,color:'var(--text-3)',marginLeft:4}}>{pct}%</span>
                         </div>
                       </td>
                       <td className="c-muted">{fmtDate(i.fecha)}</td>
                       <td>
                         <div style={{display:'flex',gap:4,justifyContent:'flex-end'}}>
-                          <button className="btn btn-outline btn-sm" onClick={e => { e.stopPropagation(); setEditId(i.id); setVista('editar') }}>Editar</button>
-                          <button className="btn btn-outline btn-sm" onClick={e => { e.stopPropagation(); vincularATrabajo(i) }} title="Vincular al trabajo">OT</button>
-                          <button className="btn btn-ghost btn-sm" onClick={e => { e.stopPropagation(); setConfirmCfg({ title: 'Eliminar inspección', lead: 'No se puede deshacer.', confirmLabel: 'Eliminar', tone: 'danger', onConfirm: () => { guardar(inspecciones.filter(x => x.id !== i.id)); notify('Inspeccion eliminada', 'info') } }); return }}>✕</button>
+                          <Button variant="outline" size="sm" onClick={e => { e.stopPropagation(); setEditId(i.id); setVista('editar') }}>Editar</Button>
+                          <Button variant="outline" size="sm" onClick={e => { e.stopPropagation(); vincularATrabajo(i) }} title="Vincular al trabajo">OT</Button>
+                          <Button variant="ghost" size="sm" onClick={e => { e.stopPropagation(); setConfirmCfg({ title: 'Eliminar inspección', lead: 'No se puede deshacer.', confirmLabel: 'Eliminar', tone: 'danger', onConfirm: () => { guardar(inspecciones.filter(x => x.id !== i.id)); notify('Inspeccion eliminada', 'info') } }); return }}>✕</Button>
                         </div>
                       </td>
                     </tr>
@@ -210,12 +211,12 @@ function InspeccionForm({ inspeccion, trabajos, onSave, onCancel }) {
     <div>
       <div className="pagehd">
         <div style={{display:'flex',alignItems:'center',gap:12}}>
-          <button className="btn btn-outline btn-sm" onClick={onCancel}><svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg> Volver</button>
+          <Button variant="outline" size="sm" onClick={onCancel}><svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg> Volver</Button>
           <div><h2>{isEdit ? 'Editar inspeccion' : 'Nueva inspeccion digital'}</h2><p className="sub">Recorre el checklist y marca cada item</p></div>
         </div>
         <div className="actions">
-          <button type="button" className="btn btn-outline" onClick={onCancel}>Cancelar</button>
-          <button type="submit" form="insp-form" className="btn btn-primary">{isEdit ? 'Actualizar' : 'Guardar inspeccion'}</button>
+          <Button type="button" variant="outline" onClick={onCancel}>Cancelar</Button>
+          <Button type="submit" form="insp-form" variant="primary">{isEdit ? 'Actualizar' : 'Guardar inspeccion'}</Button>
         </div>
       </div>
 
@@ -282,7 +283,7 @@ export function InspeccionDetalle({ inspeccion, onVolver }) {
       {onVolver && (
         <div className="pagehd">
           <div style={{display:'flex',alignItems:'center',gap:12}}>
-            <button className="btn btn-outline btn-sm" onClick={onVolver}><svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg> Volver</button>
+            <Button variant="outline" size="sm" onClick={onVolver}><svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg> Volver</Button>
             <div><h2>Inspeccion {inspeccion.id}</h2><p className="sub">{inspeccion.vehiculo || ''} · placa <span className="mono" style={{fontWeight:700}}>{inspeccion.placa}</span></p></div>
           </div>
         </div>

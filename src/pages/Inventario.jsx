@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react'
 import { fmt, fmtCompact } from '../utils/helpers'
 import { TALLER } from '../utils/constants'
 import { useInventario, formatCacheAge } from '../hooks/useInventario'
+import { Button, Badge } from '../components/ui'
 
 const STOCK_BAJO_UMBRAL = 3
 
@@ -163,9 +164,9 @@ export default function Inventario({ notify }) {
   }), [productos])
 
   const stockState = (p) => {
-    if (p.stock <= 0) return { cls: 'badge-d', lbl: 'Sin stock' }
-    if (p.stock <= STOCK_BAJO_UMBRAL) return { cls: 'badge-w', lbl: 'Bajo' }
-    return { cls: 'badge-s', lbl: 'OK' }
+    if (p.stock <= 0) return { tone: 'danger', lbl: 'Sin stock' }
+    if (p.stock <= STOCK_BAJO_UMBRAL) return { tone: 'warning', lbl: 'Bajo' }
+    return { tone: 'success', lbl: 'OK' }
   }
 
   if (loading && productos.length === 0) {
@@ -206,16 +207,16 @@ export default function Inventario({ notify }) {
           </p>
         </div>
         <div className="actions">
-          <button className="btn btn-outline btn-sm" onClick={() => cargar(true)} disabled={loading || refreshing}>
+          <Button variant="outline" size="sm" onClick={() => cargar(true)} disabled={loading || refreshing}>
             {loading || refreshing ? 'Sincronizando...' : '🔄 Sincronizar Cuentti'}
-          </button>
+          </Button>
         </div>
       </div>
 
       {error && productos.length === 0 && (
         <div style={{ padding: '12px 16px', marginBottom: 16, background: 'rgba(220,38,38,.06)', border: '1px solid rgba(220,38,38,.35)', borderRadius: 10, display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
           <span style={{ fontSize: 13.5, color: 'var(--red-700,#b91c1c)', flex: 1, minWidth: 200 }}>⚠ {error}</span>
-          <button className="btn btn-outline btn-sm" onClick={() => cargar(true)} disabled={loading || refreshing}>Reintentar</button>
+          <Button variant="outline" size="sm" onClick={() => cargar(true)} disabled={loading || refreshing}>Reintentar</Button>
         </div>
       )}
 
@@ -353,7 +354,7 @@ export default function Inventario({ notify }) {
                         {util == null ? '—' : `${util.toFixed(0)}%`}
                       </td>
                       <td className="c-mono c-right c-muted" data-label="IVA">{p.iva}%</td>
-                      <td data-label="Estado"><span className={`badge ${s.cls}`}>{s.lbl}</span></td>
+                      <td data-label="Estado"><Badge tone={s.tone}>{s.lbl}</Badge></td>
                     </tr>
                   )
                 })}
@@ -361,11 +362,11 @@ export default function Inventario({ notify }) {
             </table>
             {totalPaginas > 1 && (
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, padding: 14, flexWrap: 'wrap' }}>
-                <button type="button" className="btn btn-outline btn-sm" disabled={paginaActual <= 1} onClick={() => setPagina(p => Math.max(1, p - 1))}>← Anterior</button>
+                <Button type="button" variant="outline" size="sm" disabled={paginaActual <= 1} onClick={() => setPagina(p => Math.max(1, p - 1))}>← Anterior</Button>
                 <span style={{ fontSize: 13, color: 'var(--text-3)' }}>
                   Página <strong style={{ color: 'var(--text)' }}>{paginaActual}</strong> de {totalPaginas} · {filtrados.length} productos
                 </span>
-                <button type="button" className="btn btn-outline btn-sm" disabled={paginaActual >= totalPaginas} onClick={() => setPagina(p => Math.min(totalPaginas, p + 1))}>Siguiente →</button>
+                <Button type="button" variant="outline" size="sm" disabled={paginaActual >= totalPaginas} onClick={() => setPagina(p => Math.min(totalPaginas, p + 1))}>Siguiente →</Button>
               </div>
             )}
           </div>

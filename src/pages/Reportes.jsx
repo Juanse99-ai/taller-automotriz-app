@@ -5,6 +5,7 @@ import { fmt, fmtDate } from '../utils/helpers'
 import { TECNICOS, COMISION, ESTADOS, TALLER } from '../utils/constants'
 import { manoObraBase } from '../utils/comision'
 import { drawHeader, drawSectionHeader, drawFooter, drawTotalsBox, tableStylesItems, tableStylesMuted, PDF_LAYOUT, PDF_COLORS } from '../utils/pdfTheme'
+import { Button } from '../components/ui'
 
 // Fecha LOCAL en formato YYYY-MM-DD (no UTC). Con toISOString(), en la tarde/noche
 // de Colombia (UTC-5) la fecha salta al día siguiente y el preset "Hoy" sale vacío.
@@ -267,11 +268,11 @@ export default function Reportes({ trabajos }) {
       <div className="pagehd">
         <div><h2>Reportes</h2><p className="sub">Metricas del periodo {fmtDate(rango.desde)} al {fmtDate(rango.hasta)} · {filtrados.length} {filtrados.length === 1 ? 'OT' : 'OTs'}</p></div>
         <div className="actions" style={{ flexWrap: 'wrap', gap: 8 }}>
-          <button className="btn btn-outline btn-sm" onClick={exportarCSV}>📊 CSV</button>
-          <button className="btn btn-outline btn-sm" onClick={() => exportarResumen()}>
+          <Button variant="outline" size="sm" onClick={exportarCSV}>📊 CSV</Button>
+          <Button variant="outline" size="sm" onClick={() => exportarResumen()}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
             PDF
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -290,12 +291,12 @@ export default function Reportes({ trabajos }) {
                 ['anio', 'Este año'],
                 ['todo', 'Todo'],
               ].map(([k, l]) => (
-                <button key={k} type="button"
-                  className="btn btn-outline btn-sm"
+                <Button key={k} type="button"
+                  variant="outline" size="sm"
                   onClick={() => aplicarPreset(k)}
                   style={{ padding: '5px 12px', fontSize: 12 }}>
                   {l}
-                </button>
+                </Button>
               ))}
             </div>
           </div>

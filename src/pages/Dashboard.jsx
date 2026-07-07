@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { fmt, fmtDate, whatsappLink } from '../utils/helpers'
 import { ESTADOS, TECNICOS, DIAS_ESTANCADO, TALLER } from '../utils/constants'
+import { Button, Badge } from '../components/ui'
 
 // ── Icons ─────────────────────────────────────────────────────────────────────
 const IcAlert = () => (
@@ -69,10 +70,10 @@ function initials(nombre) {
 }
 
 function estadoBadge(estado) {
-  if (estado === ESTADOS.COMPLETADO) return 'badge-s'
-  if (estado === ESTADOS.CANCELADO) return 'badge-d'
-  if (estado === ESTADOS.EN_PROGRESO || estado === ESTADOS.EN_PRUEBA) return 'badge-n'
-  return 'badge-w'
+  if (estado === ESTADOS.COMPLETADO) return 's'
+  if (estado === ESTADOS.CANCELADO) return 'd'
+  if (estado === ESTADOS.EN_PROGRESO || estado === ESTADOS.EN_PRUEBA) return 'n'
+  return 'w'
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -198,9 +199,9 @@ export default function Dashboard({ trabajos = [], onNavigate, user }) {
         </div>
         <div className="actions">
           {onNavigate && (
-            <button className="btn btn-primary" onClick={() => onNavigate('recepcion')}>
+            <Button variant="primary" onClick={() => onNavigate('recepcion')}>
               <IcPlus /> Recibir vehículo
-            </button>
+            </Button>
           )}
         </div>
       </div>
@@ -350,7 +351,7 @@ export default function Dashboard({ trabajos = [], onNavigate, user }) {
             <div style={{ fontSize: 13, color: 'var(--text-3)' }}>Envíales un recordatorio de mantenimiento (cambio de aceite) y hazlos regresar.</div>
           </div>
           {onNavigate && (
-            <button className="btn btn-primary btn-sm" onClick={() => onNavigate('crm')}>Ver recordatorios →</button>
+            <Button variant="primary" size="sm" onClick={() => onNavigate('crm')}>Ver recordatorios →</Button>
           )}
         </div>
       )}
@@ -365,9 +366,9 @@ export default function Dashboard({ trabajos = [], onNavigate, user }) {
             <div className="act">
               <span className="count">{urgentes.length}</span>
               {onNavigate && (
-                <button className="btn btn-ghost btn-sm" onClick={() => onNavigate('trabajos')}>
+                <Button variant="ghost" size="sm" onClick={() => onNavigate('trabajos')}>
                   Ver todos <IcArrow />
-                </button>
+                </Button>
               )}
             </div>
           </div>
@@ -419,14 +420,14 @@ export default function Dashboard({ trabajos = [], onNavigate, user }) {
                         </td>
                         <td>
                           {isVencido
-                            ? <span className="badge badge-d">Estancado</span>
-                            : <span className={`badge ${estadoBadge(t.estado)}`}>{t.estado}</span>}
+                            ? <Badge tone="d">Estancado</Badge>
+                            : <Badge tone={estadoBadge(t.estado)}>{t.estado}</Badge>}
                         </td>
                         <td style={{ textAlign: 'right' }}>
                           {onNavigate && (
-                            <button className="btn btn-ghost btn-sm" onClick={() => onNavigate('trabajos')} title="Ver trabajos">
+                            <Button variant="ghost" size="sm" onClick={() => onNavigate('trabajos')} title="Ver trabajos">
                               <IcArrow />
-                            </button>
+                            </Button>
                           )}
                         </td>
                       </tr>
@@ -532,7 +533,7 @@ export default function Dashboard({ trabajos = [], onNavigate, user }) {
                 }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
                     <span className="mono" style={{ fontWeight: 700 }}>{t.placa || '—'}</span>
-                    <span className="badge badge-s">Listo</span>
+                    <Badge tone="s">Listo</Badge>
                   </div>
                   <div style={{ fontSize: 13, fontWeight: 600 }}>{t.cliente || '—'}</div>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 8 }}>
@@ -589,8 +590,8 @@ export default function Dashboard({ trabajos = [], onNavigate, user }) {
                     <tr key={t.id}>
                       <td className="c-mono">{t.placa || '—'}</td>
                       <td className="c-name">{t.cliente || '—'}</td>
-                      <td><span className="badge badge-w">{t.estado}</span></td>
-                      <td><span className="badge badge-d">{dias}d</span></td>
+                      <td><Badge tone="w">{t.estado}</Badge></td>
+                      <td><Badge tone="d">{dias}d</Badge></td>
                       <td style={{ fontSize: 12.5 }}>{tecNombre(t.tecnicoId) || '—'}</td>
                     </tr>
                   )

@@ -10,6 +10,7 @@ import ConfirmDialog from '../components/ConfirmDialog'
 import { useClientes } from '../hooks/useClientes'
 import { useInventario, formatCacheAge } from '../hooks/useInventario'
 import { lsGet, lsSet, LS_KEYS } from '../services/storage'
+import { Button, Badge } from '../components/ui'
 
 const ESTADO_COT = { PENDIENTE: 'Pendiente', APROBADA: 'Aprobada', RECHAZADA: 'Rechazada' }
 
@@ -279,7 +280,7 @@ export default function Cotizaciones({ notify, trabajos = [], onCrearTrabajo, co
       <div className="pagehd">
         <div><h2>Cotizaciones</h2><p className="sub">{stats.total} cotizaciones · {stats.aprobadas} aprobadas</p></div>
         <div className="actions">
-          <button className="btn btn-primary" onClick={() => setVista('nueva')}>+ Nueva cotizacion</button>
+          <Button variant="primary" onClick={() => setVista('nueva')}>+ Nueva cotizacion</Button>
         </div>
       </div>
 
@@ -337,31 +338,31 @@ export default function Cotizaciones({ notify, trabajos = [], onCrearTrabajo, co
               </thead>
               <tbody>
                 {sorted.map(c => {
-                  const bc = c.estado === ESTADO_COT.APROBADA ? 'badge-s'
-                    : c.estado === ESTADO_COT.RECHAZADA ? 'badge-d' : 'badge-w'
+                  const bc = c.estado === ESTADO_COT.APROBADA ? 'success'
+                    : c.estado === ESTADO_COT.RECHAZADA ? 'danger' : 'warning'
                   return (
                     <tr key={c.id}>
                       <td className="c-mono" data-label="ID">{c.id}</td>
                       <td className="c-name">{c.cliente || '—'}</td>
                       <td className="c-mono" style={{ fontWeight: 700 }} data-label="Placa">{c.placa || '—'}</td>
                       <td className="c-muted" data-label="Vehículo">{[c.marca, c.modelo, c.ano].filter(Boolean).join(' ') || '—'}</td>
-                      <td data-label="Estado"><span className={`badge ${bc}`}>{c.estado}</span></td>
+                      <td data-label="Estado"><Badge tone={bc}>{c.estado}</Badge></td>
                       <td className="c-right c-mono" data-label="Total">{fmt(c.total)}</td>
                       <td className="c-muted" data-label="Fecha">{fmtDate(c.fecha)}</td>
                       <td className="td-actions">
                         <div className="actions-cell">
-                          <button className="btn btn-outline btn-sm" onClick={() => imprimirCotizacion(c)}>PDF</button>
-                          <button className="btn btn-outline btn-sm" onClick={() => { setEditId(c.id); setVista('editar') }}>Editar</button>
+                          <Button variant="outline" size="sm" onClick={() => imprimirCotizacion(c)}>PDF</Button>
+                          <Button variant="outline" size="sm" onClick={() => { setEditId(c.id); setVista('editar') }}>Editar</Button>
                           {c.estado === ESTADO_COT.PENDIENTE && (
                             <>
-                              <button className="btn btn-success btn-sm" onClick={() => cambiarEstado(c.id, ESTADO_COT.APROBADA)}>Aprobar</button>
-                              <button className="btn btn-ghost btn-sm" onClick={() => cambiarEstado(c.id, ESTADO_COT.RECHAZADA)}>Rechazar</button>
+                              <Button variant="success" size="sm" onClick={() => cambiarEstado(c.id, ESTADO_COT.APROBADA)}>Aprobar</Button>
+                              <Button variant="ghost" size="sm" onClick={() => cambiarEstado(c.id, ESTADO_COT.RECHAZADA)}>Rechazar</Button>
                             </>
                           )}
                           {c.estado === ESTADO_COT.APROBADA && onCrearTrabajo && (
-                            <button className="btn btn-primary btn-sm" onClick={() => onCrearTrabajo(c)}>Crear Trabajo</button>
+                            <Button variant="primary" size="sm" onClick={() => onCrearTrabajo(c)}>Crear Trabajo</Button>
                           )}
-                          <button className="btn btn-ghost btn-sm" onClick={() => eliminar(c.id)} title="Eliminar">X</button>
+                          <Button variant="ghost" size="sm" onClick={() => eliminar(c.id)} title="Eliminar">X</Button>
                         </div>
                       </td>
                     </tr>
@@ -506,16 +507,16 @@ function CotizacionForm({ cotizacion, trabajos = [], onSave, onCancel }) {
               {cotizacion.id && <span className="pagehd__ot">{String(cotizacion.id).startsWith('COT-') ? cotizacion.id : `COT-${cotizacion.id}`}</span>}
               {cotizacion.fecha && <><span className="pagehd__sep">·</span><span>Creada {fmtDate(cotizacion.fecha)}</span></>}
               {cotizacion.validezDias && <><span className="pagehd__sep">·</span><span>Valida {cotizacion.validezDias} dias</span></>}
-              {cotizacion.estado && <><span className="pagehd__sep">·</span><span className={`badge ${
-                cotizacion.estado === ESTADO_COT.APROBADA ? 'badge-success' :
-                cotizacion.estado === ESTADO_COT.RECHAZADA ? 'badge-danger' :
-                'badge-warning'
-              }`}>{cotizacion.estado}</span></>}
+              {cotizacion.estado && <><span className="pagehd__sep">·</span><Badge tone={
+                cotizacion.estado === ESTADO_COT.APROBADA ? 'success' :
+                cotizacion.estado === ESTADO_COT.RECHAZADA ? 'danger' :
+                'warning'
+              }>{cotizacion.estado}</Badge></>}
             </div>
           )}
         </div>
         <div className="actions">
-          <button type="button" className="btn btn-outline" onClick={onCancel}>Volver</button>
+          <Button type="button" variant="outline" onClick={onCancel}>Volver</Button>
         </div>
       </div>
       <form onSubmit={handleSubmit} className="form-stack">
@@ -608,7 +609,7 @@ function CotizacionForm({ cotizacion, trabajos = [], onSave, onCancel }) {
         <div className="card">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
             <div className="card-title" style={{ marginBottom: 0 }}>Items</div>
-            <button type="button" className="btn btn-outline btn-sm" onClick={addItem}>+ Agregar linea</button>
+            <Button type="button" variant="outline" size="sm" onClick={addItem}>+ Agregar linea</Button>
           </div>
           {invLoading && <p className="text-xs text-muted" style={{ marginBottom: 8 }}>Cargando inventario Cuentti...</p>}
           {items.length === 0 ? (
@@ -720,7 +721,7 @@ function CotizacionForm({ cotizacion, trabajos = [], onSave, onCancel }) {
                         <td><input className="form-input" type="number" value={item.iva} min="0"
                           onChange={e => updateItem(item.id, 'iva', e.target.value)} style={{ padding: '6px 10px', fontSize: 13, textAlign: 'center', width: 60 }} /></td>
                         <td className="text-right text-mono" style={{ fontWeight: 600 }}>{fmt(lineTotal)}</td>
-                        <td><button type="button" className="btn btn-ghost btn-sm" onClick={() => removeItem(item.id)}>🗑</button></td>
+                        <td><Button type="button" variant="ghost" size="sm" onClick={() => removeItem(item.id)}>🗑</Button></td>
                       </tr>
                     )
                   })}
@@ -767,8 +768,8 @@ function CotizacionForm({ cotizacion, trabajos = [], onSave, onCancel }) {
         </div>
 
         <div className="form-actions">
-          <button type="button" className="btn btn-outline" onClick={onCancel}>Cancelar</button>
-          <button type="submit" className="btn btn-primary">{isEdit ? 'Actualizar' : 'Crear Cotizacion'}</button>
+          <Button type="button" variant="outline" onClick={onCancel}>Cancelar</Button>
+          <Button type="submit" variant="primary">{isEdit ? 'Actualizar' : 'Crear Cotizacion'}</Button>
         </div>
       </form>
     </div>
