@@ -4,8 +4,9 @@ import autoTable from 'jspdf-autotable'
 import { fmt, fmtDate } from '../utils/helpers'
 import { TECNICOS, COMISION, ESTADOS, TALLER } from '../utils/constants'
 import { manoObraBase } from '../utils/comision'
-import { drawHeader, drawSectionHeader, drawFooter, drawTotalsBox, tableStylesItems, tableStylesMuted, PDF_LAYOUT, PDF_COLORS } from '../utils/pdfTheme'
-import { Button } from '../components/ui'
+import { drawHeader, drawSectionHeader, drawFooter, tableStylesItems, tableStylesMuted, PDF_LAYOUT, PDF_COLORS } from '../utils/pdfTheme'
+import { Button, Badge } from '../components/ui'
+import { useInventario } from '../hooks/useInventario'
 
 // Fecha LOCAL en formato YYYY-MM-DD (no UTC). Con toISOString(), en la tarde/noche
 // de Colombia (UTC-5) la fecha salta al día siguiente y el preset "Hoy" sale vacío.
@@ -20,6 +21,9 @@ export default function Reportes({ trabajos }) {
       hasta: ymdLocal(now),
     }
   })
+
+  // Inventario de Cuentti (mismo cache compartido) para costo y stock de repuestos.
+  const { inventario } = useInventario()
 
   const filtrados = useMemo(() => {
     const desde = new Date(rango.desde + 'T00:00:00')
@@ -97,8 +101,62 @@ export default function Reportes({ trabajos }) {
     // de Cuentti), pero sí es utilidad confiable con los datos que hay.
     const utilidadMO = ingresosMO - comisiones
 
-    return { total: filtrados.length, completados: completados.length, ingresos, comisiones, porTecnico, porEstado, topVehiculos, ingresosRepuestos, ingresosMO, topRepuestos, ticket, topClientes, utilidadMO }
-  }, [filtrados])
+    // === Margen de repuestos + rotación (cruza venta con costo/stock de Cuentti) ===
+    // El costo es el ACTUAL de Cuentti (no el del momento de la venta): margen
+    // aproximado pero real. Solo cuenta repuestos que cruzan con inventario y con
+    // costo > 0; `coberturaMargen` dice sobre qué % de la venta se pudo calcular.
+    const norm = (s) => (s || '').toString().trim().toLowerCase()
+    const invBySku = {}, invByCod = {}, invByNom = {}
+    inventario.forEach(p => {
+      if (p.esServicio) return
+      const rec = { costoBase: parseFloat(p.costoBase) || 0, stock: parseFloat(p.stock) || 0 }
+      if (p.sku) invBySku[norm(p.sku)] = rec
+      if (p.codigo) invByCod[norm(p.codigo)] = rec
+      if (p.nombre) invByNom[norm(p.nombre)] = rec
+    })
+    const matchInv = (i) =>
+      (i.sku && invBySku[norm(i.sku)]) ||
+      (i.codigo && invByCod[norm(i.codigo)]) ||
+      (i.nombre && invByNom[norm(i.nombre)]) || null
+
+    let repVentaSinIva = 0, repVentaConCosto = 0, repCosto = 0
+    const margenMap = {}, rotMap = {}
+    completados.forEach(t => {
+      (t.items || []).forEach(i => {
+        const esServ = i.esServicio === true || (i.tipo || i.categoria || '').toString().toLowerCase().includes('serv')
+        if (esServ) return
+        const cant = parseInt(i.cantidad) || 1
+        const ivaPct = parseFloat(i.iva) || 0
+        const ventaLinea = (parseFloat(i.precio) || 0) * cant / (1 + ivaPct / 100) // sin IVA
+        if (ventaLinea <= 0) return
+        repVentaSinIva += ventaLinea
+        const inv = matchInv(i)
+        const nombre = (i.nombre || i.codigo || 'Sin nombre').toString().trim()
+        if (!rotMap[nombre]) rotMap[nombre] = { nombre, vendidas: 0, stock: inv ? inv.stock : null }
+        rotMap[nombre].vendidas += cant
+        if (inv && rotMap[nombre].stock == null) rotMap[nombre].stock = inv.stock
+        if (inv && inv.costoBase > 0) {
+          const costoLinea = inv.costoBase * cant
+          repVentaConCosto += ventaLinea
+          repCosto += costoLinea
+          if (!margenMap[nombre]) margenMap[nombre] = { nombre, vendidas: 0, venta: 0, costo: 0 }
+          margenMap[nombre].vendidas += cant
+          margenMap[nombre].venta += ventaLinea
+          margenMap[nombre].costo += costoLinea
+        }
+      })
+    })
+    const margenRep = repVentaConCosto - repCosto
+    const margenPct = repVentaConCosto > 0 ? Math.round(margenRep / repVentaConCosto * 100) : null
+    const coberturaMargen = repVentaSinIva > 0 ? Math.round(repVentaConCosto / repVentaSinIva * 100) : 0
+    const topMargen = Object.values(margenMap)
+      .map(m => ({ ...m, margen: m.venta - m.costo, pct: m.venta > 0 ? Math.round((m.venta - m.costo) / m.venta * 100) : 0 }))
+      .sort((a, b) => b.margen - a.margen).slice(0, 10)
+    const rotacion = Object.values(rotMap).sort((a, b) => b.vendidas - a.vendidas).slice(0, 12)
+    const inventarioListo = inventario.length > 0
+
+    return { total: filtrados.length, completados: completados.length, ingresos, comisiones, porTecnico, porEstado, topVehiculos, ingresosRepuestos, ingresosMO, topRepuestos, ticket, topClientes, utilidadMO, margenRep, margenPct, coberturaMargen, repVentaSinIva, repVentaConCosto, repCosto, topMargen, rotacion, inventarioListo }
+  }, [filtrados, inventario])
 
   const exportarCSV = () => {
     const headers = ['ID', 'Fecha', 'Placa', 'Cliente', 'Marca', 'Modelo', 'Tecnico', 'Estado', 'Total']
@@ -390,6 +448,58 @@ export default function Reportes({ trabajos }) {
         </div>
       </div>
 
+      {/* Margen de repuestos (cruza venta con costo de Cuentti) */}
+      {stats.repVentaSinIva > 0 && (
+        <div className="card" style={{ marginBottom: 16 }}>
+          <div className="card__h"><h3>Margen de repuestos</h3>{stats.coberturaMargen > 0 && <span className="count">{stats.margenPct}%</span>}</div>
+          {!stats.inventarioListo ? (
+            <div className="card__b"><p className="text-sm text-muted">Sincronizando inventario de Cuentti… vuelve en un momento para ver el margen.</p></div>
+          ) : stats.coberturaMargen === 0 ? (
+            <div className="card__b"><p className="text-sm text-muted">Cuentti no devolvió el costo de estos repuestos; no se puede calcular el margen.</p></div>
+          ) : (
+            <>
+              <div className="card__b" style={{ display: 'flex', gap: 14, flexWrap: 'wrap' }}>
+                <div style={{ flex: '1 1 160px' }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '.5px', marginBottom: 4 }}>Venta repuestos (sin IVA)</div>
+                  <div className="mono" style={{ fontSize: 22, fontWeight: 800 }}>{fmt(Math.round(stats.repVentaConCosto))}</div>
+                </div>
+                <div style={{ flex: '1 1 160px' }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '.5px', marginBottom: 4 }}>Costo (Cuentti)</div>
+                  <div className="mono" style={{ fontSize: 22, fontWeight: 800, color: 'var(--amber-600)' }}>−{fmt(Math.round(stats.repCosto))}</div>
+                </div>
+                <div style={{ flex: '1 1 160px' }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '.5px', marginBottom: 4 }}>Margen ({stats.margenPct}%)</div>
+                  <div className="mono" style={{ fontSize: 22, fontWeight: 800, color: 'var(--green-600)' }}>{fmt(Math.round(stats.margenRep))}</div>
+                </div>
+              </div>
+              {stats.coberturaMargen < 100 && (
+                <div className="card__b" style={{ paddingTop: 0, fontSize: 12, color: 'var(--text-3)' }}>
+                  Calculado sobre el {stats.coberturaMargen}% de las ventas de repuestos (los que cruzan con el inventario de Cuentti). El costo es el actual, no el del momento de la venta.
+                </div>
+              )}
+              {stats.topMargen.length > 0 && (
+                <div className="card__b card__b--flush">
+                  <table className="tbl">
+                    <thead><tr><th>Repuesto</th><th className="c-right">Cant.</th><th className="c-right">Venta</th><th className="c-right">Costo</th><th className="c-right">Margen</th></tr></thead>
+                    <tbody>
+                      {stats.topMargen.map((m, i) => (
+                        <tr key={i}>
+                          <td className="col-left" style={{ fontWeight: 600 }}>{m.nombre}</td>
+                          <td className="c-mono c-right">{m.vendidas}</td>
+                          <td className="c-mono c-right">{fmt(Math.round(m.venta))}</td>
+                          <td className="c-mono c-right" style={{ color: 'var(--text-3)' }}>{fmt(Math.round(m.costo))}</td>
+                          <td className="c-mono c-right" style={{ fontWeight: 700, color: m.margen >= 0 ? 'var(--green-600)' : 'var(--red-600)' }}>{fmt(Math.round(m.margen))} <span style={{ fontSize: 11, color: 'var(--text-3)' }}>{m.pct}%</span></td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      )}
+
       {/* Repuestos más vendidos */}
       <div className="card" style={{ marginBottom: 16 }}>
         <div className="card__h"><h3>Repuestos más vendidos</h3><span className="count">{stats.topRepuestos.length}</span></div>
@@ -417,6 +527,38 @@ export default function Reportes({ trabajos }) {
           </div>
         )}
       </div>
+
+      {/* Rotación de inventario (vendidas en el rango vs stock actual de Cuentti) */}
+      {stats.inventarioListo && stats.rotacion.length > 0 && (
+        <div className="card" style={{ marginBottom: 16 }}>
+          <div className="card__h"><h3>Rotación de inventario</h3><span className="count">{stats.rotacion.length}</span></div>
+          <div className="card__b card__b--flush">
+            <table className="tbl">
+              <thead><tr><th>Repuesto</th><th className="c-right">Vendidas</th><th className="c-right">Stock</th><th className="c-right">Estado</th></tr></thead>
+              <tbody>
+                {stats.rotacion.map((r, i) => {
+                  const stock = r.stock
+                  const agotado = stock != null && stock <= 0
+                  const reponer = stock != null && stock > 0 && stock <= r.vendidas
+                  return (
+                    <tr key={i}>
+                      <td className="col-left" style={{ fontWeight: 600 }}>{r.nombre}</td>
+                      <td className="c-mono c-right">{r.vendidas}</td>
+                      <td className="c-mono c-right">{stock == null ? '—' : stock}</td>
+                      <td className="c-right">
+                        {stock == null ? <Badge tone="neutral">Sin dato</Badge>
+                          : agotado ? <Badge tone="danger">Agotado</Badge>
+                          : reponer ? <Badge tone="warning">Reponer</Badge>
+                          : <Badge tone="success">OK</Badge>}
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
       {/* Top clientes */}
       {stats.topClientes.length > 0 && (
