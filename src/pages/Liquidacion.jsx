@@ -600,7 +600,8 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
       body: rows,
       ...tableStylesItems,
       theme: 'grid',
-      headStyles: { ...tableStylesItems.headStyles, halign: 'center' },
+      styles: { ...tableStylesItems.styles, lineColor: [200, 206, 217], lineWidth: 0.25 },
+      headStyles: { ...tableStylesItems.headStyles, halign: 'center', lineColor: [200, 206, 217], lineWidth: 0.25 },
       columnStyles: {
         0: { cellWidth: 22, halign: 'center' },
         1: { cellWidth: 22, halign: 'center', fontStyle: 'bold' },
@@ -621,7 +622,8 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
         body: tecMovs.map(m => [fmtDate(m.fecha), tipoLabel(m.tipo), m.nota || '—', fmt(m.monto), '- ' + fmt(cargoEfectivo(m))]),
         ...tableStylesMuted,
         theme: 'grid',
-        headStyles: { ...tableStylesMuted.headStyles, halign: 'center' },
+        styles: { ...tableStylesMuted.styles, lineColor: [200, 206, 217], lineWidth: 0.25 },
+        headStyles: { ...tableStylesMuted.headStyles, halign: 'center', lineColor: [200, 206, 217], lineWidth: 0.25 },
         columnStyles: {
           0: { cellWidth: 20, halign: 'center' },
           1: { cellWidth: 28, halign: 'center', fontStyle: 'bold' },
@@ -699,7 +701,8 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
       body: detRows,
       ...tableStylesItems,
       theme: 'grid',
-      headStyles: { ...tableStylesItems.headStyles, halign: 'center' },
+      styles: { ...tableStylesItems.styles, lineColor: [200, 206, 217], lineWidth: 0.25 },
+      headStyles: { ...tableStylesItems.headStyles, halign: 'center', lineColor: [200, 206, 217], lineWidth: 0.25 },
       columnStyles: {
         0: { cellWidth: 22, halign: 'center' },
         1: { cellWidth: 22, halign: 'center', fontStyle: 'bold' },
@@ -729,7 +732,8 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
         body: reg.movimientos.map(m => [fmtDate(m.fecha), tipoLabel(m.tipo), m.nota || '—', fmt(m.monto), '- ' + fmt(_descEf(m))]),
         ...tableStylesMuted,
         theme: 'grid',
-        headStyles: { ...tableStylesMuted.headStyles, halign: 'center' },
+        styles: { ...tableStylesMuted.styles, lineColor: [200, 206, 217], lineWidth: 0.25 },
+        headStyles: { ...tableStylesMuted.headStyles, halign: 'center', lineColor: [200, 206, 217], lineWidth: 0.25 },
         columnStyles: {
           0: { cellWidth: 20, halign: 'center' },
           1: { cellWidth: 28, halign: 'center', fontStyle: 'bold' },
