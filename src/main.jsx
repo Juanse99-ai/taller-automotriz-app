@@ -19,6 +19,16 @@ import App from './App.jsx'
   document.head.appendChild(png)
 })()
 
+// PWA: registra el service worker en produccion. Da funcionamiento offline
+// (app shell) sin arriesgar "version vieja": la navegacion es NetworkFirst.
+// updateViaCache:'none' hace que el navegador revalide sw.js en cada carga,
+// asi un SW nuevo se adopta de inmediato (con skipWaiting + clients.claim).
+if (import.meta.env.PROD && 'serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js', { updateViaCache: 'none' }).catch(() => {})
+  })
+}
+
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <App />
