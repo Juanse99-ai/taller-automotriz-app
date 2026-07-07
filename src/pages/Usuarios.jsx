@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
+import { Button, Badge } from '../components/ui'
 
 const ROLES = [
   { value: 'admin', label: 'Administrador', desc: 'Acceso completo (todas las secciones)' },
@@ -133,9 +134,9 @@ export default function Usuarios({ notify, currentUser }) {
   }), [usuarios])
 
   const rolBadge = (rol) => {
-    if (rol === 'admin') return { c: 'badge-info', l: 'Admin' }
-    if (rol === 'jefe_taller') return { c: 'badge-warning', l: 'Jefe taller' }
-    return { c: 'badge-neutral', l: rol || '—' }
+    if (rol === 'admin') return { tone: 'info', l: 'Admin' }
+    if (rol === 'jefe_taller') return { tone: 'warning', l: 'Jefe taller' }
+    return { tone: 'neutral', l: rol || '—' }
   }
 
   return (
@@ -146,8 +147,8 @@ export default function Usuarios({ notify, currentUser }) {
           <p className="sub">{stats.total} usuarios · {stats.activos} activos · {stats.admins} admin · {stats.jefes} jefe taller</p>
         </div>
         <div className="actions">
-          <button className="btn btn-outline" onClick={() => setRefreshTick(t => t + 1)}>Recargar</button>
-          <button className="btn btn-primary" onClick={abrirCrear}>+ Nuevo usuario</button>
+          <Button variant="outline" onClick={() => setRefreshTick(t => t + 1)}>Recargar</Button>
+          <Button variant="primary" onClick={abrirCrear}>+ Nuevo usuario</Button>
         </div>
       </div>
 
@@ -160,7 +161,7 @@ export default function Usuarios({ notify, currentUser }) {
             <div style={{ padding: 32, textAlign: 'center', color: 'var(--text-3)' }}>
               <div style={{ fontSize: 28, marginBottom: 8, opacity: 0.4 }}>👤</div>
               <p>No hay usuarios registrados.</p>
-              <button className="btn btn-primary btn-sm" onClick={abrirCrear} style={{ marginTop: 8 }}>+ Crear primero</button>
+              <Button variant="primary" size="sm" onClick={abrirCrear} style={{ marginTop: 8 }}>+ Crear primero</Button>
             </div>
           ) : (
             <table className="tbl tbl-cards">
@@ -182,18 +183,18 @@ export default function Usuarios({ notify, currentUser }) {
                     <tr key={u.id}>
                       <td className="c-name c-mono" style={{ fontWeight: 700 }}>{u.usuario}{isMe && <span style={{ marginLeft: 6, fontSize: 10, color: 'var(--blue-600)', fontWeight: 600 }}>(tú)</span>}</td>
                       <td data-label="Nombre">{u.nombre || '—'}</td>
-                      <td data-label="Rol"><span className={`badge ${badge.c}`}>{badge.l}</span></td>
+                      <td data-label="Rol"><Badge tone={badge.tone}>{badge.l}</Badge></td>
                       <td data-label="Estado">
                         {u.activo
-                          ? <span className="badge badge-success">● Activo</span>
-                          : <span className="badge badge-danger">● Inactivo</span>}
+                          ? <Badge tone="success">● Activo</Badge>
+                          : <Badge tone="danger">● Inactivo</Badge>}
                       </td>
                       <td className="c-muted" data-label="Creado">{u.created_at ? new Date(u.created_at).toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}</td>
                       <td className="td-actions" style={{ textAlign: 'right' }}>
-                        <button className="btn btn-ghost btn-sm" onClick={() => abrirEditar(u)}>Editar</button>
+                        <Button variant="ghost" size="sm" onClick={() => abrirEditar(u)}>Editar</Button>
                         {u.activo
-                          ? <button className="btn btn-ghost btn-sm" onClick={() => setConfirmDel(u)} disabled={isMe} style={{ color: isMe ? 'var(--text-3)' : 'var(--red-600)' }}>Desactivar</button>
-                          : <button className="btn btn-ghost btn-sm" onClick={() => reactivar(u)} style={{ color: 'var(--green-600)' }}>Reactivar</button>
+                          ? <Button variant="ghost" size="sm" onClick={() => setConfirmDel(u)} disabled={isMe} style={{ color: isMe ? 'var(--text-3)' : 'var(--red-600)' }}>Desactivar</Button>
+                          : <Button variant="ghost" size="sm" onClick={() => reactivar(u)} style={{ color: 'var(--green-600)' }}>Reactivar</Button>
                         }
                       </td>
                     </tr>
@@ -213,7 +214,7 @@ export default function Usuarios({ notify, currentUser }) {
               <h3 style={{ margin: 0, fontSize: 17, fontWeight: 800 }}>
                 {editing === 'new' ? 'Nuevo usuario' : `Editar ${editing.usuario}`}
               </h3>
-              <button className="btn btn-ghost btn-sm" onClick={cerrar}>✕</button>
+              <Button variant="ghost" size="sm" onClick={cerrar}>✕</Button>
             </div>
             <form onSubmit={guardar} className="modal__b" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
               <div className="field">
@@ -275,10 +276,10 @@ export default function Usuarios({ notify, currentUser }) {
               </div>
 
               <div className="modal__f" style={{ marginLeft: -22, marginRight: -22, marginBottom: -22, paddingLeft: 22, paddingRight: 22, paddingTop: 14, paddingBottom: 14, marginTop: 8 }}>
-                <button type="button" className="btn btn-outline" onClick={cerrar} disabled={saving}>Cancelar</button>
-                <button type="submit" className="btn btn-primary" disabled={saving}>
+                <Button variant="outline" onClick={cerrar} disabled={saving}>Cancelar</Button>
+                <Button type="submit" variant="primary" disabled={saving}>
                   {saving ? 'Guardando...' : editing === 'new' ? 'Crear usuario' : 'Guardar cambios'}
-                </button>
+                </Button>
               </div>
             </form>
           </div>
@@ -298,8 +299,8 @@ export default function Usuarios({ notify, currentUser }) {
               </p>
             </div>
             <div className="modal__f">
-              <button className="btn btn-outline" onClick={() => setConfirmDel(null)}>Cancelar</button>
-              <button className="btn btn-primary" onClick={() => desactivar(confirmDel)} style={{ background: 'var(--red-600)' }}>Desactivar</button>
+              <Button variant="outline" onClick={() => setConfirmDel(null)}>Cancelar</Button>
+              <Button variant="primary" onClick={() => desactivar(confirmDel)} style={{ background: 'var(--red-600)' }}>Desactivar</Button>
             </div>
           </div>
         </div>
