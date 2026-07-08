@@ -337,7 +337,9 @@ export async function deleteMovimiento(id) {
 
 // ---------- PRESTAMOS (estado de cuenta por persona) ----------
 export async function fetchPrestamos() {
-  const res = await fetchWithTimeout(`${proxy('prestamos_movimientos')}&select=*&order=fecha.desc&limit=1000`)
+  // limit alto: este libro ahora acumula todos los adelantos/abonos de las
+  // liquidaciones (no se compacta); truncarlo callaría deudas viejas.
+  const res = await fetchWithTimeout(`${proxy('prestamos_movimientos')}&select=*&order=fecha.desc&limit=5000`)
   if (!res.ok) throw new Error(`Supabase prestamos error (${res.status})`)
   return await res.json()
 }

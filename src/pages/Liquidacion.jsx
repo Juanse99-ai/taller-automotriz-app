@@ -8,6 +8,7 @@ import { lsGet, lsSet } from '../services/storage'
 import { useTecnicos } from '../services/tecnicos'
 import { registrarGastoNominaBackend } from '../services/cuentti'
 import { usePrestamos } from '../hooks/usePrestamos'
+import { upsertPrestamo, fetchPrestamos } from '../services/supabase'
 import { splitComision } from '../services/money'
 import ConfirmDialog, { DlgRow } from '../components/ConfirmDialog'
 import { loadLogo, drawHeader, drawSectionHeader, drawDataBlock, drawTotalsBox, drawSignatures, drawFooter, tableStylesItems, tableStylesMuted, PDF_LAYOUT } from '../utils/pdfTheme'
@@ -50,8 +51,9 @@ const cargoEfectivo = (m) => {
 }
 
 // Etiqueta visible del tipo de movimiento. El "diario" (gasto del administrador)
-// se MUESTRA como "Administrador"; internamente sigue siendo 'diario'.
-const TIPO_LABELS = { diario: 'Administrador' }
+// se MUESTRA como "Administrador"; internamente sigue siendo 'diario'. El tipo
+// 'cuenta' es el abono al Estado de cuenta descontado en la liquidación.
+const TIPO_LABELS = { diario: 'Administrador', cuenta: 'Cuenta' }
 const tipoLabel = (t) => TIPO_LABELS[t] || (t ? t.charAt(0).toUpperCase() + t.slice(1) : '—')
 
 // Iniciales del técnico (2 letras) para la referencia legible.
@@ -113,6 +115,12 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
   // menos, la diferencia va al Estado de cuenta según diffDestino.
   const [pagoReal, setPagoReal] = useState('')
   const [diffDestino, setDiffDestino] = useState('debo') // 'debo' | 'prestamo'
+  // Descuento desde el Estado de cuenta en ESTE pago: se marcan deudas o se
+  // escribe el monto. '' = no descontar nada. Al confirmar el pago se abona
+  // automático a la cuenta del técnico con la referencia de la liquidación.
+  const [cuentaMonto, setCuentaMonto] = useState('')
+  const [cuentaSelIds, setCuentaSelIds] = useState({})
+  useEffect(() => { setCuentaMonto(''); setCuentaSelIds({}) }, [tecnicoSel])
   const [regCuenttiId, setRegCuenttiId] = useState(null) // id del pago que se está registrando en Cuentti
   const [metodoGasto, setMetodoGasto] = useState({}) // reg.id -> 'efectivo' | 'transferencia'
 
@@ -292,6 +300,19 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
       .sort((a, b) => new Date(b.fecha) - new Date(a.fecha)),
   [movimientos, tecnicoSel])
 
+  // Cuenta del técnico (Estado de cuenta): préstamos/adelantos pendientes.
+  // saldo > 0 = el técnico debe. Es el MISMO libro de la pestaña Estado de
+  // cuenta: lo que se registra aquí aparece allá y viceversa.
+  const tecCuenta = useMemo(() => {
+    const tid = parseInt(tecnicoSel)
+    const nombre = (tecData?.tecnico?.nombre || '').trim().toLowerCase()
+    const movs = (prestamosHook.movimientos || []).filter(m =>
+      m.tecnicoId === tid || (m.tecnicoId == null && (m.persona || '').trim().toLowerCase() === nombre))
+    const saldo = Math.round(movs.reduce((s, m) => s + (m.tipo === 'abono' ? -m.monto : m.monto), 0))
+    const deudas = movs.filter(m => m.tipo === 'prestamo').sort((a, b) => new Date(b.fecha) - new Date(a.fecha))
+    return { movs, saldo, deudas }
+  }, [prestamosHook.movimientos, tecnicoSel, tecData])
+
   // Totales de la seleccion actual
   const totalSeleccion = useMemo(() => {
     let manoObra = 0, comision = 0
@@ -310,17 +331,34 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
       }
     })
     const cargos = tecMovs.reduce((s, m) => s + (parseFloat(m.monto) || 0), 0)
-    // Descuento real al pago: el "diario" se comparte (40%), el resto se descuenta
-    // completo. Ver cargoEfectivo(). neto = comisión − cargos efectivos.
-    const cargosEfectivos = Math.round(tecMovs.reduce((s, m) => s + cargoEfectivo(m), 0))
+    // Descuento real al pago: el "diario" se comparte (50/50), el resto se
+    // descuenta completo. Ver cargoEfectivo(). neto = comisión − cargos efectivos.
+    const cargosMovsEf = Math.round(tecMovs.reduce((s, m) => s + cargoEfectivo(m), 0))
+    // CUENTA del técnico (Estado de cuenta), según el signo del saldo:
+    //  - debe (saldo > 0): lo marcado/escrito se DESCUENTA, capado al saldo y a
+    //    lo que alcance el neto (lo que no alcance queda en su cuenta).
+    //  - a favor (saldo < 0): lo escrito se SUMA al pago, capado a lo que el
+    //    taller le debe. En ambos casos se registra en su cuenta al pagar.
+    const netoSinCuenta = Math.round(comision) - cargosMovsEf
+    const montoCuenta = Math.round(parseFloat(cuentaMonto) || 0)
+    const descuentoCuenta = tecCuenta.saldo > 0
+      ? Math.max(0, Math.min(montoCuenta, tecCuenta.saldo, Math.max(0, netoSinCuenta)))
+      : 0
+    const sumaCuenta = tecCuenta.saldo < 0
+      ? Math.max(0, Math.min(montoCuenta, -tecCuenta.saldo))
+      : 0
+    const cargosEfectivos = cargosMovsEf + descuentoCuenta - sumaCuenta
     return {
       manoObra: Math.round(manoObra),
       comision: Math.round(comision),
-      cargos: Math.round(cargos),
+      cargos: Math.round(cargos) + descuentoCuenta,
+      cargosMovsEf,
+      descuentoCuenta,
+      sumaCuenta,
       cargosEfectivos,
-      neto: Math.round(comision - cargosEfectivos),
+      neto: Math.round(comision) - cargosEfectivos,
     }
-  }, [tecTrabajos, seleccionados, compartidos, tecMovs, moMap, tecnicoSel])
+  }, [tecTrabajos, seleccionados, compartidos, tecMovs, moMap, tecnicoSel, cuentaMonto, tecCuenta])
 
   const cantSeleccionados = Object.keys(seleccionados).filter(id => seleccionados[id]).length
 
@@ -334,17 +372,27 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
       cargosBy[m.tecnicoId] = (cargosBy[m.tecnicoId] || 0) + (parseFloat(m.monto) || 0)
       cargosEfBy[m.tecnicoId] = (cargosEfBy[m.tecnicoId] || 0) + cargoEfectivo(m)
     }
+    // Saldo del Estado de cuenta por técnico (para el chip "debe $X" en la lista).
+    const byName = {}
+    TECNICOS.forEach(t => { byName[(t.nombre || '').trim().toLowerCase()] = t.id })
+    const saldoCuentaBy = {}
+    for (const m of (prestamosHook.movimientos || [])) {
+      const k = m.tecnicoId ?? byName[(m.persona || '').trim().toLowerCase()]
+      if (k == null) continue
+      saldoCuentaBy[k] = (saldoCuentaBy[k] || 0) + (m.tipo === 'abono' ? -m.monto : m.monto)
+    }
     return TECNICOS.map(t => {
       const pendientes = (porTecnico[t.id]?.trabajos || []).length
       const moTotal = Math.round(porTecnico[t.id]?.totalMO || 0)
       const comisionTotal = Math.round(porTecnico[t.id]?.comision || 0)
       const cargos = Math.round(cargosBy[t.id] || 0)
       const cargosEf = Math.round(cargosEfBy[t.id] || 0)
-      return { ...t, pendientes, moTotal, comisionTotal, cargos, cargosEf, neto: comisionTotal - cargosEf }
+      const saldoCuenta = Math.round(saldoCuentaBy[t.id] || 0)
+      return { ...t, pendientes, moTotal, comisionTotal, cargos, cargosEf, saldoCuenta, neto: comisionTotal - cargosEf }
       // Muestra técnicos activos, PLUS cualquiera (inactivo o eliminado) que aún
       // tenga trabajos pendientes por liquidar, para no dejar comisiones huérfanas.
     }).filter(t => (t.activo !== false && !t.eliminado) || t.pendientes > 0)
-  }, [porTecnico, TECNICOS, movimientos])
+  }, [porTecnico, TECNICOS, movimientos, prestamosHook.movimientos])
 
   // Total de la nómina (lo que se debe pagar a los técnicos con trabajos pendientes)
   const totalNomina = useMemo(
@@ -378,18 +426,33 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
   }, [historial, prestamosHook.movimientos])
 
   // --- ACCIONES ---
+  // Adelantos/préstamos/consumos/descuentos van al ESTADO DE CUENTA (libro
+  // único): quedan como deuda del técnico y se descuentan cuando tú lo decidas
+  // en una liquidación (o se abonan en efectivo). Ya no hay dos libros.
   const agregarMovimiento = (e) => {
     e?.preventDefault?.()
     const tid = parseInt(tecnicoSel)
     const monto = Math.abs(parseFloat(movForm.monto) || 0)
     if (!tid) { notify('Selecciona un técnico primero', 'error'); return }
     if (!monto) { notify('Ingresa el monto del movimiento', 'error'); return }
-    hookAgregarMov({
-      id: `MV-${uid()}`, tecnicoId: tid,
-      tipo: movForm.tipo, monto, nota: movForm.nota, fecha: movForm.fecha,
+    const concepto = tipoLabel(movForm.tipo)
+    prestamosHook.agregarMovimiento({
+      id: `PR-${uid()}`, persona: tecData?.tecnico?.nombre || '', tecnicoId: tid,
+      tipo: 'prestamo', monto,
+      nota: movForm.nota ? `${concepto} · ${movForm.nota}` : concepto,
+      fecha: movForm.fecha,
     })
     setMovForm(f => ({ ...f, monto: '', nota: '' }))
-    notify('Movimiento registrado', 'success')
+    notify(`${concepto} de ${fmt(monto)} registrado en su cuenta`, 'success')
+  }
+
+  // Marcar/desmarcar una deuda de la cuenta: la suma de las marcadas llena el
+  // monto a descontar (y siempre se puede escribir un valor a mano).
+  const toggleCuentaSel = (id) => {
+    const next = { ...cuentaSelIds, [id]: !cuentaSelIds[id] }
+    setCuentaSelIds(next)
+    const suma = tecCuenta.deudas.filter(m => next[m.id]).reduce((s, m) => s + (parseFloat(m.monto) || 0), 0)
+    setCuentaMonto(suma > 0 ? String(Math.round(suma)) : '')
   }
 
   // Agrega el "diario" como un cargo: monto = valor diario × días (que tú escribes).
@@ -455,6 +518,38 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
 
     pagandoRef.current = true
     try {
+    // Si se va a tocar la cuenta, revalidar el saldo contra el SERVIDOR antes
+    // de comprometer nada: otro dispositivo/pestaña pudo abonarla y este saldo
+    // local estar viejo. Nunca aplicar más de lo que realmente debe (o se le debe).
+    if (totalSeleccion.descuentoCuenta > 0 || totalSeleccion.sumaCuenta > 0) {
+      try {
+        const frescos = await fetchPrestamos()
+        if (Array.isArray(frescos) && frescos.length > 0) {
+          const tid = tecData.tecnico.id
+          const nom = (tecData.tecnico.nombre || '').trim().toLowerCase()
+          const saldoFresco = Math.round(frescos.reduce((s, r) => {
+            const rid = r.tecnico_id ?? null
+            const rp = (r.persona || '').trim().toLowerCase()
+            if (rid === tid || (rid == null && rp === nom)) s += (r.tipo === 'abono' ? -1 : 1) * (parseFloat(r.monto) || 0)
+            return s
+          }, 0))
+          const cambiado = totalSeleccion.descuentoCuenta > 0
+            ? saldoFresco < totalSeleccion.descuentoCuenta
+            : (-saldoFresco) < totalSeleccion.sumaCuenta
+          if (cambiado) {
+            prestamosHook.sync()
+            notify('El saldo de su cuenta cambió (otro dispositivo/pestaña). Revisa el panel y vuelve a generar el pago.', 'error')
+            return
+          }
+        }
+      } catch {
+        // Falla CERRADA: si no se pudo verificar el saldo, no se compromete el
+        // pago (una red intermitente podría dejar pasar el historial con un
+        // saldo viejo → doble descuento). Reintentar no cuesta nada.
+        notify('No se pudo verificar su cuenta con el servidor. Reintenta en un momento.', 'error')
+        return
+      }
+    }
     const nuevoId = nextLiqId(tecData.tecnico.nombre)
     // Pago real: lo que entregas en efectivo (por defecto el neto).
     const netoCalc = totalSeleccion.neto
@@ -473,7 +568,20 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
       cargosEfectivos: totalSeleccion.cargosEfectivos,
       neto: totalSeleccion.neto,
       pagado,
-      movimientos: tecMovs.map(m => ({ ...m })),
+      movimientos: [
+        ...tecMovs.map(m => ({ ...m })),
+        // Fila sintética para el PDF/historial: el movimiento de su cuenta.
+        // monto con signo: + descuento (debía), − suma (estaba a favor).
+        ...((totalSeleccion.descuentoCuenta > 0 || totalSeleccion.sumaCuenta > 0) ? [{
+          id: `CTA-${uid()}`, tipo: 'cuenta',
+          monto: totalSeleccion.descuentoCuenta - totalSeleccion.sumaCuenta,
+          saldoCuenta: tecCuenta.saldo,
+          nota: totalSeleccion.descuentoCuenta > 0
+            ? `Abono a su cuenta (debía ${fmt(tecCuenta.saldo)})`
+            : `Pago de su saldo a favor (${fmt(-tecCuenta.saldo)})`,
+          fecha: hoyISO(),
+        }] : []),
+      ],
       detalleTrabajo: ids.map(id => {
         const t = trabajos.find(tr => tr.id === id)
         if (!t) return null
@@ -490,6 +598,27 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
       notify('No se pudo guardar el pago en el servidor (sin conexión). No se descontó nada — reintenta.', 'error')
       return
     }
+
+    // Registro en el Estado de cuenta INMEDIATAMENTE después del historial: es
+    // la contrapartida contable del neto que se acaba de guardar (debía → abono;
+    // estaba a favor → préstamo). Si el upsert falla, queda en la cola de
+    // pendientes del hook y se reintenta solo en el próximo sync.
+    if (totalSeleccion.descuentoCuenta > 0 || totalSeleccion.sumaCuenta > 0) {
+      const esDescuento = totalSeleccion.descuentoCuenta > 0
+      const movCuenta = {
+        id: `PR-${uid()}`, persona: tecData.tecnico.nombre, tecnicoId: tecData.tecnico.id,
+        tipo: esDescuento ? 'abono' : 'prestamo',
+        monto: esDescuento ? totalSeleccion.descuentoCuenta : totalSeleccion.sumaCuenta,
+        nota: esDescuento
+          ? `Descuento en liquidación #${liqRef(nuevoId)}`
+          : `Saldo a favor pagado en liquidación #${liqRef(nuevoId)}`,
+        fecha: hoyISO(),
+      }
+      prestamosHook.agregarMovimiento(movCuenta)
+      const okCuenta = await upsertPrestamo(movCuenta)
+      if (okCuenta == null) notify('⚠ El movimiento de su cuenta no llegó al servidor; quedó en cola y se reintentará solo. Verifícalo en Estado de cuenta.', 'error')
+    }
+
     // Compartido: se marca `${id}#${tecnico}` (solo esta mitad). No compartido: id plano.
     const nuevasLiq = ids.map(id => compInfo(id).es ? `${id}#${tecData.tecnico.id}` : id)
     guardarLiquidados([...liquidados, ...nuevasLiq])
@@ -525,7 +654,7 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
       }
     }
 
-    setSeleccionados({}); setPagoReal(''); setDiffDestino('debo')
+    setSeleccionados({}); setPagoReal(''); setDiffDestino('debo'); setCuentaMonto(''); setCuentaSelIds({})
     const difMsg = pagado !== netoCalc ? ` (pagado ${fmt(pagado)}, diferencia a Estado de cuenta)` : ''
     notify(`Pago #${liqRef(nuevoId)} generado: ${fmt(pagado)} para ${tecData.tecnico.nombre}${difMsg} · copia la ref en Cuentti`, 'success')
     // Descargar automáticamente el comprobante del pago recién generado
@@ -547,7 +676,14 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
           <DlgRow label="Técnico" value={tecData?.tecnico?.nombre || '—'} />
           <DlgRow label="Trabajos a liquidar" value={`${cantSeleccionados} ${cantSeleccionados === 1 ? 'OT' : 'OTs'}`} />
           <DlgRow label={`Comisión (${COMISION.TOTAL * 100}%)`} value={fmt(t.comision)} />
-          <DlgRow label="Cargos / adelantos" value={`− ${fmt(t.cargosEfectivos)}`} />
+          <DlgRow label="Aportes / descuentos" value={`− ${fmt(t.cargosMovsEf)}`} />
+          {t.descuentoCuenta > 0 && <DlgRow label={`Cuenta del técnico (debe ${fmt(tecCuenta.saldo)})`} value={`− ${fmt(t.descuentoCuenta)}`} />}
+          {t.sumaCuenta > 0 && <DlgRow label={`Cuenta del técnico (a favor ${fmt(-tecCuenta.saldo)})`} value={`+ ${fmt(t.sumaCuenta)}`} />}
+          {tecCuenta.saldo > 0 && t.descuentoCuenta === 0 && (
+            <div style={{ padding: '9px 14px', borderTop: '1px solid var(--border)', background: 'rgba(245,158,11,.09)', fontSize: 12.5, fontWeight: 600, color: 'var(--amber-600)' }}>
+              Debe {fmt(tecCuenta.saldo)} en su cuenta y no estás descontando nada.
+            </div>
+          )}
           <DlgRow label={negativo ? 'Saldo en contra (se arrastra)' : 'Neto a pagar'} value={fmt(t.neto)} total />
         </div>
       ),
@@ -610,12 +746,19 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
     })
     y = doc.lastAutoTable.finalY + 6
 
-    if (tecMovs.length > 0) {
+    // Filas: movimientos (diario) + el abono a su cuenta si se descuenta algo.
+    const movRows = tecMovs.map(m => [fmtDate(m.fecha), tipoLabel(m.tipo), m.nota || '—', fmt(m.monto), '- ' + fmt(cargoEfectivo(m))])
+    if (totalSeleccion.descuentoCuenta > 0) {
+      movRows.push([fmtDate(hoyISO()), 'Cuenta', `Abono a su cuenta (debía ${fmt(tecCuenta.saldo)})`, fmt(tecCuenta.saldo), '- ' + fmt(totalSeleccion.descuentoCuenta)])
+    } else if (totalSeleccion.sumaCuenta > 0) {
+      movRows.push([fmtDate(hoyISO()), 'Cuenta', `Pago de su saldo a favor (${fmt(-tecCuenta.saldo)})`, fmt(-tecCuenta.saldo), '+ ' + fmt(totalSeleccion.sumaCuenta)])
+    }
+    if (movRows.length > 0) {
       y = drawSectionHeader(doc, 'Aportes y descuentos', y)
       autoTable(doc, {
         startY: y,
         head: [['FECHA', 'CONCEPTO', 'DESCRIPCIÓN', 'MONTO', 'DESCUENTO']],
-        body: tecMovs.map(m => [fmtDate(m.fecha), tipoLabel(m.tipo), m.nota || '—', fmt(m.monto), '- ' + fmt(cargoEfectivo(m))]),
+        body: movRows,
         ...tableStylesMuted,
         theme: 'grid',
         styles: { ...tableStylesMuted.styles, lineColor: [200, 206, 217], lineWidth: 0.25 },
@@ -628,7 +771,10 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
           4: { cellWidth: 28, halign: 'center', fontStyle: 'bold' },
         },
         didParseCell: (d) => {
-          if (d.section === 'body' && tecMovs[d.row.index]?.tipo === 'diario') d.cell.styles.fillColor = [252, 244, 230]
+          if (d.section !== 'body') return
+          const m = tecMovs[d.row.index]
+          if (m?.tipo === 'diario') d.cell.styles.fillColor = [252, 244, 230]
+          if (!m) d.cell.styles.fillColor = [234, 242, 253] // fila "Cuenta" (abono al Estado de cuenta)
         },
         margin: { left: MARGIN, right: MARGIN },
       })
@@ -640,8 +786,14 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
       { lbl: 'M.O. (sin IVA)', val: fmt(totalSeleccion.manoObra) },
       { lbl: `Comisión (${COMISION.TOTAL * 100}%)`, val: fmt(totalSeleccion.comision) },
     ]
-    if ((totalSeleccion.cargosEfectivos || 0) > 0) {
-      rowsSel.push({ lbl: 'Aportes / descuentos', val: `- ${fmt(totalSeleccion.cargosEfectivos)}` })
+    if ((totalSeleccion.cargosMovsEf || 0) > 0) {
+      rowsSel.push({ lbl: 'Aportes / descuentos', val: `- ${fmt(totalSeleccion.cargosMovsEf)}` })
+    }
+    if ((totalSeleccion.descuentoCuenta || 0) > 0) {
+      rowsSel.push({ lbl: 'Cuenta del técnico', val: `- ${fmt(totalSeleccion.descuentoCuenta)}` })
+    }
+    if ((totalSeleccion.sumaCuenta || 0) > 0) {
+      rowsSel.push({ lbl: 'Cuenta del técnico', val: `+ ${fmt(totalSeleccion.sumaCuenta)}` })
     }
     y = drawTotalsBox(doc, {
       y, x: 122, w: 74,
@@ -725,7 +877,11 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
       autoTable(doc, {
         startY: y,
         head: [['FECHA', 'CONCEPTO', 'DESCRIPCIÓN', 'MONTO', 'DESCUENTO']],
-        body: reg.movimientos.map(m => [fmtDate(m.fecha), tipoLabel(m.tipo), m.nota || '—', fmt(m.monto), '- ' + fmt(_descEf(m))]),
+        // La fila 'cuenta' muestra en MONTO lo que debía (o su saldo a favor) y
+        // en DESCUENTO lo aplicado: − si se le descontó, + si se le pagó a favor.
+        body: reg.movimientos.map(m => [fmtDate(m.fecha), tipoLabel(m.tipo), m.nota || '—',
+          fmt(m.tipo === 'cuenta' && m.saldoCuenta ? Math.abs(m.saldoCuenta) : m.monto),
+          (m.tipo === 'cuenta' && m.monto < 0) ? '+ ' + fmt(-m.monto) : '- ' + fmt(_descEf(m))]),
         ...tableStylesMuted,
         theme: 'grid',
         styles: { ...tableStylesMuted.styles, lineColor: [200, 206, 217], lineWidth: 0.25 },
@@ -738,7 +894,10 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
           4: { cellWidth: 28, halign: 'center', fontStyle: 'bold' },
         },
         didParseCell: (d) => {
-          if (d.section === 'body' && reg.movimientos[d.row.index]?.tipo === 'diario') d.cell.styles.fillColor = [252, 244, 230]
+          if (d.section !== 'body') return
+          const _m = reg.movimientos[d.row.index]
+          if (_m?.tipo === 'diario') d.cell.styles.fillColor = [252, 244, 230]
+          if (_m?.tipo === 'cuenta') d.cell.styles.fillColor = [234, 242, 253]
         },
         margin: { left: MARGIN, right: MARGIN },
       })
@@ -754,8 +913,9 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
         { lbl: 'M.O. (sin IVA)', val: fmt(reg.manoObra || 0) },
         { lbl: `Comisión (${COMISION.TOTAL * 100}%)`, val: fmt(reg.comision || 0) },
       ]
-      if ((reg.cargosEfectivos || 0) > 0) {
-        rowsReg.push({ lbl: 'Aportes / descuentos', val: `- ${fmt(reg.cargosEfectivos || 0)}` })
+      const _ef = reg.cargosEfectivos || 0
+      if (_ef !== 0) {
+        rowsReg.push({ lbl: 'Aportes / descuentos', val: _ef > 0 ? `- ${fmt(_ef)}` : `+ ${fmt(-_ef)}` })
       }
     } else {
       rowsReg = [
@@ -914,9 +1074,11 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
                 {t.nombre.split(' ').map(x => x[0]).slice(0, 2).join('')}
               </span>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--text)', display: 'flex', alignItems: 'center', gap: 8 }}>
+                <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--text)', display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                   {t.nombre}
                   {t.activo === false && <span className="badge badge-n">Inactivo</span>}
+                  {t.saldoCuenta > 0 && <span className="mono" style={{ fontSize: 11, fontWeight: 700, color: 'var(--red-600)', background: 'var(--red-100)', padding: '2px 8px', borderRadius: 999 }}>debe {fmt(t.saldoCuenta)}</span>}
+                  {t.saldoCuenta < 0 && <span className="mono" style={{ fontSize: 11, fontWeight: 700, color: 'var(--green-700)', background: 'var(--green-100)', padding: '2px 8px', borderRadius: 999 }}>a favor {fmt(-t.saldoCuenta)}</span>}
                 </div>
                 <div style={{ fontSize: 12.5, color: 'var(--text-3)', marginTop: 2 }}>
                   {t.pendientes} OT{t.pendientes !== 1 ? 's' : ''} pendiente{t.pendientes !== 1 ? 's' : ''}
@@ -1122,6 +1284,63 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
                   </div>
                 )}
               </div>
+              {/* CUENTA DEL TÉCNICO — mismo libro que la pestaña Estado de cuenta.
+                  Marca deudas o escribe el monto a descontar en este pago; al
+                  confirmar se abona automático con la ref. de la liquidación. */}
+              {(tecCuenta.saldo !== 0 || tecCuenta.deudas.length > 0) && (
+                <div style={{ marginBottom: 16, padding: 14, background: 'var(--bg-subtle)', border: '1px solid var(--border)', borderRadius: 'var(--radius)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap', marginBottom: 8 }}>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--blue-600)', textTransform: 'uppercase', letterSpacing: '.4px' }}>Cuenta del técnico · Estado de cuenta</span>
+                    <span className="mono" style={{ fontSize: 13.5, fontWeight: 800, color: tecCuenta.saldo > 0 ? 'var(--red-600)' : 'var(--green-600)' }}>
+                      {tecCuenta.saldo > 0 ? `Debe ${fmt(tecCuenta.saldo)}` : tecCuenta.saldo < 0 ? `A favor ${fmt(-tecCuenta.saldo)}` : 'En $ 0'}
+                    </span>
+                  </div>
+                  {tecCuenta.saldo > 0 ? (
+                    <>
+                      {tecCuenta.deudas.length > 0 && (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 12 }}>
+                          {tecCuenta.deudas.map(m => (
+                            <label key={m.id} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, cursor: 'pointer' }}>
+                              <input type="checkbox" checked={!!cuentaSelIds[m.id]} onChange={() => toggleCuentaSel(m.id)} />
+                              <span style={{ fontSize: 12, color: 'var(--text-3)', flexShrink: 0 }}>{fmtDate(m.fecha)}</span>
+                              <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.nota || 'Préstamo'}</span>
+                              <span className="mono" style={{ fontWeight: 700 }}>{fmt(m.monto)}</span>
+                            </label>
+                          ))}
+                        </div>
+                      )}
+                      <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-end', gap: 12 }}>
+                        <div className="field" style={{ flex: '0 0 190px' }}>
+                          <label>Descontar en este pago</label>
+                          {/* Escribir a mano desmarca los checkboxes (manda lo escrito) */}
+                          <MoneyInput value={cuentaMonto} onChange={(v) => { setCuentaMonto(v); setCuentaSelIds({}) }} placeholder="0" />
+                        </div>
+                        <div style={{ flex: 1, minWidth: 200, fontSize: 12.5, color: 'var(--text-3)' }}>
+                          Marca deudas o escribe el monto. Al generar el pago se abona a su Estado de cuenta.
+                          {(parseFloat(cuentaMonto) || 0) > 0 && totalSeleccion.descuentoCuenta !== Math.round(parseFloat(cuentaMonto) || 0) && (
+                            <> Se aplican <strong className="mono">{fmt(totalSeleccion.descuentoCuenta)}</strong> (hasta el saldo y lo que alcance el neto).</>
+                          )}
+                        </div>
+                      </div>
+                    </>
+                  ) : tecCuenta.saldo < 0 ? (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-end', gap: 12 }}>
+                      <div className="field" style={{ flex: '0 0 190px' }}>
+                        <label>Sumar a este pago</label>
+                        <MoneyInput value={cuentaMonto} onChange={setCuentaMonto} placeholder="0" />
+                      </div>
+                      <div style={{ flex: 1, minWidth: 200, fontSize: 12.5, color: 'var(--text-3)' }}>
+                        El taller le debe {fmt(-tecCuenta.saldo)}. Lo que sumes queda registrado en su cuenta con la referencia del pago.
+                        {(parseFloat(cuentaMonto) || 0) > 0 && totalSeleccion.sumaCuenta !== Math.round(parseFloat(cuentaMonto) || 0) && (
+                          <> Se aplican <strong className="mono">{fmt(totalSeleccion.sumaCuenta)}</strong> (hasta lo que se le debe).</>
+                        )}
+                      </div>
+                    </div>
+                  ) : (
+                    <div style={{ fontSize: 12.5, color: 'var(--text-3)' }}>Sin deuda pendiente por descontar.</div>
+                  )}
+                </div>
+              )}
               <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '.4px', marginBottom: 8 }}>Registrar adelanto o cargo</div>
               <form onSubmit={agregarMovimiento} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 2fr auto', gap: 12, marginBottom: 16 }}>
                 <div className="field"><label>Tipo</label><select className="input" value={movForm.tipo} onChange={e => setMovForm(f => ({ ...f, tipo: e.target.value }))}><option value="adelanto">Adelanto</option><option value="prestamo">Préstamo</option><option value="consumo">Consumo</option><option value="descuento">Descuento</option></select></div>
@@ -1131,7 +1350,7 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
                 <div style={{ display: 'flex', alignItems: 'flex-end' }}><button type="submit" className="btn btn-outline">Agregar</button></div>
               </form>
               {tecMovs.length === 0 ? (
-                <p style={{ fontSize: 13.5, color: 'var(--text-3)' }}>Sin movimientos registrados.</p>
+                <p style={{ fontSize: 13.5, color: 'var(--text-3)' }}>Sin aportes del administrador pendientes.</p>
               ) : (
                 <>
                 <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '.4px', marginBottom: 8 }}>Movimientos · {tecMovs.length}</div>
@@ -1170,7 +1389,7 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
               </div>
               <div className="card__b">
                 <div className="kpi-bh" style={{ marginBottom: 16 }}>
-                  {[[cantSeleccionados, 'Trabajos'], [fmt(totalSeleccion.manoObra), 'M.O. (sin IVA)'], [fmt(totalSeleccion.comision), 'Comisión', 'var(--green-700)'], [`− ${fmt(totalSeleccion.cargosEfectivos)}`, 'Aportes / descuentos', 'var(--amber-600)'], [fmt(totalSeleccion.neto), 'Neto a pagar', totalSeleccion.neto >= 0 ? 'var(--green-700)' : 'var(--red-700)']].map(([v, l, c], i) => (
+                  {[[cantSeleccionados, 'Trabajos'], [fmt(totalSeleccion.manoObra), 'M.O. (sin IVA)'], [fmt(totalSeleccion.comision), 'Comisión', 'var(--green-700)'], [`${totalSeleccion.cargosEfectivos >= 0 ? '−' : '+'} ${fmt(Math.abs(totalSeleccion.cargosEfectivos))}`, 'Aportes / descuentos', 'var(--amber-600)'], [fmt(totalSeleccion.neto), 'Neto a pagar', totalSeleccion.neto >= 0 ? 'var(--green-700)' : 'var(--red-700)']].map(([v, l, c], i) => (
                     <div key={i} className="kpi-bh__s">
                       <div className="kpi-bh__l">{l}</div>
                       <div className="kpi-bh__row"><span className="kpi-bh__v" style={{ fontSize: 20, color: c || 'var(--text)' }}>{v}</span></div>
@@ -1180,9 +1399,9 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
                 {totalSeleccion.cargos > 0 && (
                   <div style={{ padding: '9px 13px', background: 'rgba(245,158,11,.07)', border: '1px solid rgba(245,158,11,.25)', borderRadius: 9, fontSize: 12.5, color: 'var(--text-2)', marginBottom: 14 }}>
                     {totalSeleccion.cargos !== totalSeleccion.cargosEfectivos ? (
-                      <>Cargos <strong>{fmt(totalSeleccion.cargos)}</strong> — descuento real <strong>{fmt(totalSeleccion.cargosEfectivos)}</strong> (adelantos/préstamos completos; el diario solo al {COMISION.TOTAL * 100}%, el taller asume el resto). Neto = comisión − {fmt(totalSeleccion.cargosEfectivos)}.</>
+                      <>Cargos <strong>{fmt(totalSeleccion.cargos)}</strong> — descuento real <strong>{fmt(totalSeleccion.cargosEfectivos)}</strong> (el diario se comparte {APORTE_ADMIN_SPLIT * 100}/{100 - APORTE_ADMIN_SPLIT * 100}; el resto completo{totalSeleccion.descuentoCuenta > 0 ? <>, incluye <strong className="mono">{fmt(totalSeleccion.descuentoCuenta)}</strong> de su cuenta</> : null}). Neto = comisión − {fmt(totalSeleccion.cargosEfectivos)}.</>
                     ) : (
-                      <>Cargos <strong>{fmt(totalSeleccion.cargosEfectivos)}</strong> (adelantos/préstamos se descuentan completos). Neto = comisión − {fmt(totalSeleccion.cargosEfectivos)}.</>
+                      <>Cargos <strong>{fmt(totalSeleccion.cargosEfectivos)}</strong>{totalSeleccion.descuentoCuenta > 0 ? <> (incluye <strong className="mono">{fmt(totalSeleccion.descuentoCuenta)}</strong> de su cuenta)</> : null}. Neto = comisión − {fmt(totalSeleccion.cargosEfectivos)}.</>
                     )}
                   </div>
                 )}
@@ -1366,21 +1585,33 @@ function EstadoCuenta({ prestamos, tecnicos, notify }) {
 
   const personaFinal = form.personaSel === '__otra' ? (form.personaOtra || '').trim() : form.personaSel
   const tecnicoIdFinal = useMemo(() => {
-    const t = tecnicos.find(x => x.nombre === personaFinal)
+    const nom = (personaFinal || '').trim().toLowerCase()
+    const t = tecnicos.find(x => (x.nombre || '').trim().toLowerCase() === nom)
     return t ? t.id : null
   }, [personaFinal, tecnicos])
 
   const cuentas = useMemo(() => {
+    // Agrupar por técnico (id) cuando se pueda resolver — mismo criterio que el
+    // panel de la liquidación — y por nombre normalizado para terceros. Evita
+    // que "pedro " y "Pedro Barraza" partan la misma cuenta en dos.
     const map = {}
+    const idByName = {}
+    tecnicos.forEach(t => { idByName[(t.nombre || '').trim().toLowerCase()] = t.id })
+    const keyFor = (tecnicoId, persona) => {
+      const nom = (persona || '').trim().toLowerCase()
+      const tid = tecnicoId ?? idByName[nom]
+      return tid != null ? `t${tid}` : `p${nom || '—'}`
+    }
     tecnicos.filter(t => !t.eliminado).forEach(t => {
-      map[t.nombre] = { persona: t.nombre, tecnicoId: t.id, prestado: 0, abonado: 0, movs: [] }
+      map[`t${t.id}`] = { persona: t.nombre, tecnicoId: t.id, prestado: 0, abonado: 0, movs: [] }
     })
     PERSONAS_CUENTA.forEach(p => {
-      if (!map[p.nombre]) map[p.nombre] = { persona: p.nombre, tecnicoId: null, rol: p.rol, prestado: 0, abonado: 0, movs: [] }
+      const k = keyFor(null, p.nombre)
+      if (!map[k]) map[k] = { persona: p.nombre, tecnicoId: null, rol: p.rol, prestado: 0, abonado: 0, movs: [] }
     })
     movimientos.forEach(m => {
-      const k = m.persona || '—'
-      if (!map[k]) map[k] = { persona: k, tecnicoId: m.tecnicoId, prestado: 0, abonado: 0, movs: [] }
+      const k = keyFor(m.tecnicoId, m.persona)
+      if (!map[k]) map[k] = { persona: (m.persona || '').trim() || '—', tecnicoId: m.tecnicoId ?? null, prestado: 0, abonado: 0, movs: [] }
       map[k].movs.push(m)
       if (m.tipo === 'abono') map[k].abonado += m.monto
       else map[k].prestado += m.monto
@@ -1391,7 +1622,10 @@ function EstadoCuenta({ prestamos, tecnicos, notify }) {
   }, [movimientos, tecnicos])
 
   const totalPorCobrar = cuentas.reduce((s, c) => s + Math.max(0, c.saldo), 0)
-  const cuentaSel = cuentas.find(c => c.persona === sel) || null
+  // Comparación normalizada: la cuenta canónica puede llamarse "Pedro Barraza"
+  // aunque el usuario haya escrito "pedro barraza" (el merge agrupa por técnico).
+  const mismaPersona = (a, b) => (a || '').trim().toLowerCase() === (b || '').trim().toLowerCase()
+  const cuentaSel = cuentas.find(c => mismaPersona(c.persona, sel)) || null
 
   const guardar = () => {
     if (!personaFinal) { notify('Elige o escribe la persona', 'error'); return }
@@ -1571,7 +1805,7 @@ function EstadoCuenta({ prestamos, tecnicos, notify }) {
             <thead><tr><th>Persona</th><th className="text-right">Saldo</th></tr></thead>
             <tbody>
               {cuentas.map(c => (
-                <tr key={c.persona} onClick={() => setSel(c.persona)} style={{ cursor: 'pointer', background: sel === c.persona ? 'var(--bg-subtle)' : undefined }}>
+                <tr key={c.persona} onClick={() => setSel(c.persona)} style={{ cursor: 'pointer', background: mismaPersona(sel, c.persona) ? 'var(--bg-subtle)' : undefined }}>
                   <td className="c-name" style={{ fontWeight: 600 }}>{c.persona}</td>
                   <td className="text-right text-mono" data-label="Saldo" style={{ fontWeight: 700, color: c.saldo > 0 ? 'var(--amber-700)' : c.saldo < 0 ? 'var(--green-700)' : 'var(--text-3)' }}>
                     {c.saldo > 0 ? fmt(c.saldo) : c.saldo < 0 ? `a favor ${fmt(-c.saldo)}` : '—'}
