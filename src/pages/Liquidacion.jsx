@@ -1299,14 +1299,23 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
                     <>
                       {tecCuenta.deudas.length > 0 && (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 12 }}>
-                          {tecCuenta.deudas.map(m => (
-                            <label key={m.id} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, cursor: 'pointer' }}>
-                              <input type="checkbox" checked={!!cuentaSelIds[m.id]} onChange={() => toggleCuentaSel(m.id)} />
-                              <span style={{ fontSize: 12, color: 'var(--text-3)', flexShrink: 0 }}>{fmtDate(m.fecha)}</span>
-                              <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.nota || 'Préstamo'}</span>
-                              <span className="mono" style={{ fontWeight: 700 }}>{fmt(m.monto)}</span>
-                            </label>
-                          ))}
+                          {tecCuenta.deudas.map(m => {
+                            const marcada = !!cuentaSelIds[m.id]
+                            return (
+                              <label key={m.id} style={{
+                                display: 'flex', alignItems: 'center', gap: 9, fontSize: 13, cursor: 'pointer',
+                                padding: '8px 11px', borderRadius: 8,
+                                border: `1px solid ${marcada ? 'var(--blue-500)' : 'var(--border)'}`,
+                                background: marcada ? 'var(--blue-50, #eff6ff)' : 'var(--bg-raised)',
+                                transition: 'border-color .12s, background .12s',
+                              }}>
+                                <input type="checkbox" checked={marcada} onChange={() => toggleCuentaSel(m.id)} style={{ width: 15, height: 15, accentColor: 'var(--blue-500)', cursor: 'pointer', flexShrink: 0 }} />
+                                <span style={{ fontSize: 12, color: 'var(--text-3)', flexShrink: 0 }}>{fmtDate(m.fecha)}</span>
+                                <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.nota || 'Préstamo'}</span>
+                                <span className="mono" style={{ fontWeight: 700 }}>{fmt(m.monto)}</span>
+                              </label>
+                            )
+                          })}
                         </div>
                       )}
                       <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-end', gap: 12 }}>
