@@ -40,6 +40,11 @@ async function buscarTrabajosPorCedula(cedula) {
       items: typeof r.items === 'string' ? JSON.parse(r.items) : (r.items || []),
       total: parseFloat(r.total) || 0,
       otCodigo: r.ot_codigo || '',
+      // Próximo mantenimiento: se le recuerda al cliente en el detalle del servicio
+      tipoAceite: r.tipo_aceite || '',
+      proximoKm: r.proximo_km || '',
+      proximaVisita: r.proxima_visita || '',
+      notasProximoMant: r.notas_proximo_mant || '',
       inspeccion: typeof r.inspeccion === 'string' ? JSON.parse(r.inspeccion) : (r.inspeccion || null),
       evidencias: (() => {
         try { const v = r.evidencias; return typeof v === 'string' ? (JSON.parse(v) || []) : (Array.isArray(v) ? v : []) } catch { return [] }
@@ -60,6 +65,7 @@ export default function PortalCliente() {
   const [autenticado, setAutenticado] = useState(false)
   const [datos, setDatos] = useState(null)
   const [vistaInspeccion, setVistaInspeccion] = useState(null)
+  const [vistaServicio, setVistaServicio] = useState(null) // detalle (mini-factura) de un servicio del historial
   const [error, setError] = useState('')
   const [cargando, setCargando] = useState(false)
   const [galeria, setGaleria] = useState(null) // array de fotos para el visor
@@ -486,7 +492,7 @@ export default function PortalCliente() {
           <div className="card__b card__b--flush">
             <table className="tbl tbl-cards">
               <thead>
-                <tr><th>Fecha</th><th>Placa</th><th>Vehiculo</th><th>Estado</th><th>Fotos</th></tr>
+                <tr><th>Fecha</th><th>Placa</th><th>Vehiculo</th><th>Estado</th><th>Fotos</th><th /></tr>
               </thead>
               <tbody>
                 {datos.trabajos.map(t => (
@@ -510,6 +516,9 @@ export default function PortalCliente() {
                         </button>
                       ) : <span style={{color:'var(--text-4)'}}>—</span>}
                     </td>
+                    <td className="td-actions" style={{textAlign:'right'}}>
+                      <button className="btn btn-outline btn-sm" onClick={()=>setVistaServicio(t)}>Ver detalle</button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -527,6 +536,110 @@ export default function PortalCliente() {
       <div style={{textAlign:'center',fontSize:12,color:'var(--text-4)',padding:'8px 0 18px'}}>
         Multidiagnosticos AS · Sabanalarga, Atlantico
       </div>
+
+      {/* Detalle de un servicio del historial (mini-factura del cliente) */}
+      {vistaServicio && (() => {
+        const t = vistaServicio
+        const items = Array.isArray(t.items) ? t.items : []
+        const linea = (i) => Math.round((parseFloat(i.precio) || 0) * (parseInt(i.cantidad) || 1))
+        const total = t.total || items.reduce((s, i) => s + linea(i), 0)
+        const est = ESTADO_TRABAJO_DISPLAY[t.estado] || {}
+        const tieneProx = t.tipoAceite || t.proximoKm || t.proximaVisita || t.notasProximoMant
+        return (
+          <div onClick={() => setVistaServicio(null)} role="presentation"
+            style={{position:'fixed',inset:0,zIndex:900,background:'rgba(16,23,37,.45)',display:'flex',alignItems:'center',justifyContent:'center',padding:14}}>
+            <div onClick={e => e.stopPropagation()} role="dialog" aria-label="Detalle del servicio"
+              style={{width:'min(560px,100%)',maxHeight:'88vh',overflowY:'auto',background:'var(--bg-raised)',borderRadius:16,boxShadow:'0 24px 60px -12px rgba(16,23,37,.35)'}}>
+
+              <div style={{padding:'18px 20px 14px',borderBottom:'1px solid var(--border)',display:'flex',justifyContent:'space-between',gap:12,alignItems:'flex-start'}}>
+                <div style={{minWidth:0}}>
+                  <div style={{fontSize:12.5,color:'var(--text-3)'}}>{fmtDate(t.fecha)}{t.otCodigo ? ` · ${t.otCodigo}` : ''}</div>
+                  <div className="mono" style={{fontSize:19,fontWeight:800,letterSpacing:'-.01em',marginTop:2}}>{t.placa}</div>
+                  <div style={{fontSize:13,color:'var(--text-3)'}}>{[t.marca,t.modelo,t.ano].filter(Boolean).join(' ') || '—'}</div>
+                </div>
+                <span className="badge" style={{background:(est.color||'#64748b')+'20',color:est.color||'#64748b',flexShrink:0}}>{est.label || t.estado}</span>
+              </div>
+
+              <div style={{padding:'14px 20px 6px'}}>
+                <div style={{fontSize:11.5,fontWeight:700,color:'var(--text-3)',textTransform:'uppercase',letterSpacing:'.05em',marginBottom:6}}>Trabajos realizados</div>
+                {items.length === 0 ? (
+                  <div style={{fontSize:13.5,color:'var(--text-3)',paddingBottom:8}}>Sin detalle registrado para este servicio.</div>
+                ) : (
+                  <div>
+                    {items.map((i, k) => (
+                      <div key={k} style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',gap:12,padding:'9px 0',borderBottom:'1px solid var(--border)'}}>
+                        <div style={{minWidth:0}}>
+                          <div style={{fontSize:14,fontWeight:600,lineHeight:1.35}}>{i.nombre || i.codigo || 'Ítem'}</div>
+                          <div style={{fontSize:12,color:'var(--text-3)',marginTop:1}}>
+                            {i.esServicio ? 'Mano de obra' : 'Repuesto'}
+                            {(parseInt(i.cantidad) || 1) > 1 && <> · {parseInt(i.cantidad)} × {fmt(Math.round(parseFloat(i.precio) || 0))}</>}
+                          </div>
+                        </div>
+                        <div className="mono" style={{fontSize:14,fontWeight:700,whiteSpace:'nowrap'}}>{fmt(linea(i))}</div>
+                      </div>
+                    ))}
+                    <div style={{display:'flex',justifyContent:'space-between',padding:'12px 0',fontSize:15.5,fontWeight:800}}>
+                      <span>Total</span>
+                      <span className="mono" style={{color:'var(--green-600)'}}>{fmt(total)}</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {t.tecnicoId && tecNombre(t.tecnicoId) && (
+                <div style={{margin:'0 20px 12px',display:'flex',alignItems:'center',gap:10}}>
+                  <div style={{width:34,height:34,borderRadius:'50%',background:'var(--navy-800,#152544)',color:'#fff',display:'flex',alignItems:'center',justifyContent:'center',fontWeight:800,fontSize:12,flexShrink:0}}>
+                    {tecNombre(t.tecnicoId).split(' ').map(x=>x[0]).slice(0,2).join('')}
+                  </div>
+                  <div>
+                    <div style={{fontSize:13.5,fontWeight:700}}>{tecNombre(t.tecnicoId)}</div>
+                    <div style={{fontSize:12,color:'var(--text-3)'}}>Técnico responsable</div>
+                  </div>
+                </div>
+              )}
+
+              {t.observaciones && (
+                <div style={{margin:'0 20px 12px',padding:'11px 14px',background:'var(--bg-subtle)',border:'1px solid var(--border)',borderRadius:10}}>
+                  <div style={{fontSize:11.5,fontWeight:700,color:'var(--text-3)',textTransform:'uppercase',letterSpacing:'.05em',marginBottom:4}}>Observaciones</div>
+                  <div style={{fontSize:13.5,lineHeight:1.5}}>{t.observaciones}</div>
+                </div>
+              )}
+
+              {tieneProx && (
+                <div style={{margin:'0 20px 12px',padding:'11px 14px',background:'var(--blue-50,#eff6ff)',border:'1px solid rgba(37,99,235,.22)',borderRadius:10}}>
+                  <div style={{fontSize:11.5,fontWeight:700,color:'var(--blue-600,#1E3A8A)',textTransform:'uppercase',letterSpacing:'.05em',marginBottom:4}}>Próximo mantenimiento</div>
+                  <div style={{fontSize:13.5,lineHeight:1.5}}>
+                    {[
+                      t.tipoAceite && `Aceite ${t.tipoAceite}`,
+                      t.proximoKm && `próximo cambio a los ${t.proximoKm} km`,
+                      t.proximaVisita && `visita sugerida: ${fmtDate(t.proximaVisita)}`,
+                    ].filter(Boolean).join(' · ')}
+                    {t.notasProximoMant && <div style={{marginTop:3,color:'var(--text-2)'}}>{t.notasProximoMant}</div>}
+                  </div>
+                </div>
+              )}
+
+              {t.evidencias?.length > 0 && (
+                <div style={{margin:'0 20px 12px'}}>
+                  <div style={{fontSize:11.5,fontWeight:700,color:'var(--text-3)',textTransform:'uppercase',letterSpacing:'.05em',marginBottom:6}}>Fotos</div>
+                  <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(84px,1fr))',gap:8}}>
+                    {t.evidencias.map((f,i)=>(
+                      <button key={f.id||i} onClick={()=>{setGaleria(t.evidencias);setGalIdx(i)}}
+                        style={{padding:0,border:'1px solid var(--border)',borderRadius:8,overflow:'hidden',cursor:'pointer',aspectRatio:'1',background:'var(--bg-subtle)'}}>
+                        <img src={f.dataUrl} alt={f.nota||'Foto del servicio'} loading="lazy" style={{width:'100%',height:'100%',objectFit:'cover',display:'block'}}/>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div style={{padding:'12px 20px 18px',display:'flex',justifyContent:'flex-end'}}>
+                <button className="btn btn-outline" onClick={()=>setVistaServicio(null)}>Cerrar</button>
+              </div>
+            </div>
+          </div>
+        )
+      })()}
 
       {/* Visor de fotos (lightbox) */}
       {galeria && galeria.length > 0 && (
