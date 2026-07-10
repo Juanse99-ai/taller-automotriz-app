@@ -611,7 +611,7 @@ export default function PortalCliente() {
                   <div style={{fontSize:13.5,lineHeight:1.5}}>
                     {[
                       t.tipoAceite && `Aceite ${t.tipoAceite}`,
-                      t.proximoKm && `próximo cambio a los ${t.proximoKm} km`,
+                      t.proximoKm && `próximo cambio a los ${Number(t.proximoKm) ? Number(t.proximoKm).toLocaleString('es-CO') : t.proximoKm} km`,
                       t.proximaVisita && `visita sugerida: ${fmtDate(t.proximaVisita)}`,
                     ].filter(Boolean).join(' · ')}
                     {t.notasProximoMant && <div style={{marginTop:3,color:'var(--text-2)'}}>{t.notasProximoMant}</div>}
