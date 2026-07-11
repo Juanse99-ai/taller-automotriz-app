@@ -504,6 +504,23 @@ export default function CuenttiPanel({ trabajos, actualizarTrabajo, notify }) {
     }
   }
 
+  // Recupera una factura de efectivo/transferencia cuyo pago NO entró a caja
+  // (falló el paso al facturar). Solo marca el estado local como pagada — NO
+  // escribe a Cuentti aquí, para no arriesgar un pago DOBLE (el usuario ya lo
+  // registra en Cuentti, manual o en "Pago / Abono").
+  const marcarFacturaPagada = (f) => {
+    setConfirmCfg({
+      title: 'Marcar como pagada',
+      lead: `Confirma que el pago de la factura ${f.cuenttiTransacionId} (${fmt(f.total || 0)}) YA quedó registrado en Cuentti. Esto solo actualiza el estado aquí para que cuadre la caja.`,
+      confirmLabel: 'Sí, ya está pagada',
+      tone: 'primary',
+      onConfirm: () => {
+        if (actualizarTrabajo) actualizarTrabajo(f.id, { pagado: true })
+        notify(`Factura ${f.cuenttiTransacionId} marcada como pagada`, 'success')
+      },
+    })
+  }
+
   const emitirFE = async () => {
     if (!emitId.trim()) { notify('Ingresa la Factura # que devolvio Cuentti', 'error'); return }
     setEmitiendo(true)
@@ -1004,22 +1021,38 @@ export default function CuenttiPanel({ trabajos, actualizarTrabajo, notify }) {
                     const tipo = f.cuenttiPrefijo || (f.cuenttiTransacionId?.toString().startsWith('FE') ? 'FEIC' : 'MAS')
                     const tipoLabel = tipo === 'FEIC' ? 'Electrónica DIAN' : 'Interna'
                     const num = f.cuenttiTransacionId
-                    const estadoBadge = (f.pagado || f.cuenttiPagado) ? { c: 'badge-success', l: 'pagada' } : f.cuenttiAprobado ? { c: 'badge-success', l: 'aprobada' } : { c: 'badge-warning', l: 'pendiente' }
+                    // efectivo/transferencia SIN pagar = el pago NO entró a caja (falló al
+                    // facturar). Se distingue del crédito, que sí es "pendiente" normal.
+                    const pagoNoEntroCaja = !f.pagado && !f.cuenttiPagado && !f.cuenttiAprobado && !!f.metodoPago && f.metodoPago !== 'credito'
+                    const estadoBadge = (f.pagado || f.cuenttiPagado)
+                      ? { c: 'badge-success', l: 'pagada' }
+                      : f.cuenttiAprobado ? { c: 'badge-success', l: 'aprobada' }
+                      : pagoNoEntroCaja ? { c: 'badge-danger', l: '⚠ no entró a caja' }
+                      : f.metodoPago === 'credito' ? { c: 'badge-warning', l: 'a crédito' }
+                      : { c: 'badge-warning', l: 'pendiente' }
                     return (
                       <div key={i} style={{
                         padding: '12px 16px',
                         borderBottom: i < ultimas.length - 1 ? '1px solid var(--border)' : 'none',
-                        display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10,
+                        display: 'flex', flexDirection: 'column', gap: 8,
                       }}>
-                        <div style={{ minWidth: 0 }}>
-                          <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '.4px' }}>{tipoLabel}</div>
-                          <div className="mono" style={{ fontSize: 12, fontWeight: 700, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{num}</div>
-                          <div style={{ fontSize: 11, color: 'var(--text-3)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{f.cliente || '—'}</div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10 }}>
+                          <div style={{ minWidth: 0 }}>
+                            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '.4px' }}>{tipoLabel}</div>
+                            <div className="mono" style={{ fontSize: 12, fontWeight: 700, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{num}</div>
+                            <div style={{ fontSize: 11, color: 'var(--text-3)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{f.cliente || '—'}</div>
+                          </div>
+                          <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                            <div className="mono" style={{ fontSize: 12, fontWeight: 700 }}>{fmt(f.total || 0)}</div>
+                            <span className={`badge ${estadoBadge.c}`} style={{ fontSize: 9.5, marginTop: 2, textTransform: 'uppercase', letterSpacing: '.4px' }}>{estadoBadge.l}</span>
+                          </div>
                         </div>
-                        <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                          <div className="mono" style={{ fontSize: 12, fontWeight: 700 }}>{fmt(f.total || 0)}</div>
-                          <span className={`badge ${estadoBadge.c}`} style={{ fontSize: 9.5, marginTop: 2, textTransform: 'uppercase', letterSpacing: '.4px' }}>{estadoBadge.l}</span>
-                        </div>
+                        {pagoNoEntroCaja && (
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap', padding: '8px 10px', background: 'var(--red-100)', border: '1px solid rgba(220,38,38,.25)', borderRadius: 8 }}>
+                            <span style={{ fontSize: 11.5, color: 'var(--red-700)', lineHeight: 1.35, flex: 1, minWidth: 150 }}>El pago en {f.metodoPago} no entró a caja. Regístralo en Cuentti y márcalo pagado aquí.</span>
+                            <Button variant="outline" size="sm" onClick={() => marcarFacturaPagada(f)}>Marcar pagada</Button>
+                          </div>
+                        )}
                       </div>
                     )
                   })}
