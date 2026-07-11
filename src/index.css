@@ -696,10 +696,12 @@ tbody tr:hover{background:var(--bg-subtle)}
   /* El stagger de entrada del menu ahora lo hace motion (spring) en Sidebar.jsx. */
   .main{margin-left:0}
   .app.has-collapsed .main{margin-left:0}
-  .topbar{padding:0 16px;gap:8px;height:56px}
+  .topbar{padding:8px 16px;gap:8px;height:auto;min-height:56px;flex-wrap:wrap}
   .topbar .title h1{font-size:16px}
   .topbar .title p{display:none}
-  .topbar .search{display:none}
+  /* Buscador global: en movil baja a su propia fila completa (antes se ocultaba
+     con display:none, dejando al celular sin busqueda). */
+  .topbar .search{display:flex;order:10;flex-basis:100%;width:auto;max-width:100%;margin-top:2px}
   .topbar .icobtn{width:36px;height:36px}
   .content{padding:18px 14px 44px}
   .pagehd{margin-bottom:16px}
@@ -802,6 +804,15 @@ tbody tr:hover{background:var(--bg-subtle)}
 }
 @media(max-width:600px){
   .kpi-hero > div:last-child > div:first-child{font-size:32px !important}
+  /* Grids INLINE de columnas fijas (1fr 1fr, repeat(2,1fr)…) → 1 columna en
+     celular, para que no queden apretados (Inspeccion, CuenttiPanel, etc.).
+     Solo afecta estilos inline; las grids con clase propia no se tocan.
+     Stopgap sobre inline styles; la version limpia es moverlos a clases. */
+  .content [style*="grid-template-columns"][style*="1fr 1fr"],
+  .content [style*="grid-template-columns"][style*="repeat(2,1fr)"],
+  .content [style*="grid-template-columns"][style*="repeat(3,1fr)"],
+  .content [style*="grid-template-columns"][style*="minmax("]
+  { grid-template-columns:1fr !important; gap:10px !important }
 }
 
 /* === Recepcion stepper (parche-correcciones-tablet) === */

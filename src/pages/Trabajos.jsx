@@ -12,6 +12,7 @@ import Switch from '../components/Switch'
 import MoneyInput from '../components/MoneyInput'
 import SignaturePad from '../components/SignaturePad'
 import ConfirmDialog from '../components/ConfirmDialog'
+import { Button, Badge } from '../components/ui'
 
 // ¿La fecha cae dentro del rango elegido? (hoy / semana = últimos 7 días / mes = mes actual)
 function dentroDeFecha(fecha, modo, now) {
@@ -94,14 +95,6 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
   // Por defecto 'hoy' → al abrir Trabajos solo se ven las OT del día.
   const [filtroFecha, setFiltroFecha] = useState('hoy')
 
-  const stats = useMemo(() => {
-    const total = trabajos.length
-    const comp = trabajos.filter(t => t.estado === ESTADOS.COMPLETADO).length
-    const pend = trabajos.filter(t => t.estado === ESTADOS.PENDIENTE).length
-    const prog = trabajos.filter(t => t.estado === ESTADOS.EN_PROGRESO).length
-    return { total, comp, pend, prog }
-  }, [trabajos])
-
   const filtered = useMemo(() => {
     let list = [...trabajos]
     if (filtroEstado === 'activos') {
@@ -127,6 +120,16 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
     }
     return list.sort((a, b) => new Date(b.fecha) - new Date(a.fecha))
   }, [trabajos, filtroEstado, filtroTecnico, filtroBusqueda, filtroFecha, vista])
+
+  // KPIs del encabezado: cuentan sobre la lista FILTRADA (la misma que se ve abajo),
+  // para que cambien al aplicar búsqueda/estado/técnico/fecha.
+  const stats = useMemo(() => {
+    const total = filtered.length
+    const comp = filtered.filter(t => t.estado === ESTADOS.COMPLETADO).length
+    const pend = filtered.filter(t => t.estado === ESTADOS.PENDIENTE).length
+    const prog = filtered.filter(t => t.estado === ESTADOS.EN_PROGRESO).length
+    return { total, comp, pend, prog }
+  }, [filtered])
 
   const tecNombre = (id) => TECNICOS.find(t => t.id === parseInt(id))?.nombre || '—'
 
@@ -438,7 +441,7 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
   const statesTabs = [
     ['activos', 'Activos'],
     [ESTADOS.PENDIENTE, 'Pendientes'],
-    [ESTADOS.EN_DIAGNOSTICO, 'Diagnostico'],
+    [ESTADOS.EN_DIAGNOSTICO, 'Diagnóstico'],
     [ESTADOS.EN_PROGRESO, 'En Progreso'],
     [ESTADOS.ESPERANDO_REPUESTOS, 'Esperando Rep.'],
     [ESTADOS.EN_PRUEBA, 'En Prueba'],
@@ -454,13 +457,13 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
       {/* Page header */}
       <div className="pagehd">
         <div>
-          <h2>Ordenes de trabajo</h2>
-          <p className="sub">{stats.total} OT registradas</p>
+          <h2>Órdenes de trabajo</h2>
+          <p className="sub">{trabajos.length} OT registradas</p>
         </div>
         <div className="actions">
           <button className={`btn ${vista === 'lista' ? 'btn-primary' : 'btn-outline'}`} onClick={() => setVista('lista')}>Lista</button>
           <button className={`btn ${vista === 'kanban' ? 'btn-primary' : 'btn-outline'}`} onClick={() => setVista('kanban')}>Kanban</button>
-          <button className="btn btn-primary" onClick={() => setVista('nuevo')}>+ Nueva OT</button>
+          <Button variant="primary" onClick={() => setVista('nuevo')}>+ Nueva OT</Button>
         </div>
       </div>
 
@@ -469,7 +472,7 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
         <div className="kpi">
           <div className="kpi__head">
             <div className="kpi__ic blue"><svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg></div>
-            <div className="kpi__lbl">Total OTs</div>
+            <div className="kpi__lbl">En vista</div>
           </div>
           <div className="kpi__v">{stats.total}</div>
         </div>
@@ -604,7 +607,7 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
                     <span className="r1">
                       <span className="ot">{t.otCodigo || '—'}</span>
                       <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                        {estancado && <span className="badge badge-d" style={{ fontSize: 9, padding: '1px 6px' }}>{dias}d</span>}
+                        {estancado && <Badge tone="d" style={{ fontSize: 9, padding: '1px 6px' }}>{dias}d</Badge>}
                         <span className={`badge ${estadoBadge(t.estado)}`}>{t.estado}</span>
                       </span>
                     </span>
@@ -679,10 +682,10 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
                     </div>
                   )}
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                    <button className="btn btn-outline btn-sm" onClick={() => handleEditar(selTrabajo.id)}>Editar</button>
-                    {selTrabajo.otCodigo && <button className="btn btn-outline btn-sm" onClick={() => imprimirOT(selTrabajo)}>PDF</button>}
-                    {selTrabajo.estado !== ESTADOS.COMPLETADO && <button className="btn btn-primary btn-sm" onClick={() => handleCompletar(selTrabajo.id)}>Marcar listo</button>}
-                    <button className="btn btn-ghost btn-sm" style={{ color: 'var(--red-600)' }} onClick={() => setConfirmCfg({ title: 'Eliminar OT', confirmLabel: 'Eliminar', tone: 'danger', onConfirm: () => handleEliminar(selTrabajo.id) })}>Eliminar</button>
+                    <Button variant="outline" size="sm" onClick={() => handleEditar(selTrabajo.id)}>Editar</Button>
+                    {selTrabajo.otCodigo && <Button variant="outline" size="sm" onClick={() => imprimirOT(selTrabajo)}>PDF</Button>}
+                    {selTrabajo.estado !== ESTADOS.COMPLETADO && <Button variant="primary" size="sm" onClick={() => handleCompletar(selTrabajo.id)}>Marcar listo</Button>}
+                    <Button variant="ghost" size="sm" style={{ color: 'var(--red-600)' }} onClick={() => setConfirmCfg({ title: 'Eliminar OT', confirmLabel: 'Eliminar', tone: 'danger', onConfirm: () => handleEliminar(selTrabajo.id) })}>Eliminar</Button>
                   </div>
                 </div>
               </div>
@@ -707,8 +710,8 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
                   <th>OT</th>
                   <th>Placa</th>
                   <th>Cliente</th>
-                  <th>Vehiculo</th>
-                  <th>Tecnico</th>
+                  <th>Vehículo</th>
+                  <th>Técnico</th>
                   <th>Estado</th>
                   <th className="c-right">Total</th>
                   <th>Fecha</th>
@@ -734,26 +737,26 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
                       </td>
                       <td data-label="Estado">
                         <span className={`badge ${bc}`}>{t.estado}</span>
-                        {estancado && <span className="badge badge-d" style={{ marginLeft: 4, fontSize: 10 }}>{diasSinMover}d</span>}
+                        {estancado && <Badge tone="d" style={{ marginLeft: 4, fontSize: 10 }}>{diasSinMover}d</Badge>}
                       </td>
                       <td className="c-mono c-right" data-label="Total" style={{ fontWeight: 700 }}>{fmt(t.total)}</td>
                       <td className="c-mono c-muted" data-label="Fecha" style={{ fontSize: 12 }}>{fmtDate(t.fecha)}</td>
                       <td className="c-right td-actions">
                         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 4 }}>
-                          <button className="btn btn-ghost btn-sm" onClick={() => handleEditar(t.id)}>Editar</button>
-                          {t.otCodigo && <button className="btn btn-ghost btn-sm" onClick={() => imprimirOT(t)}>PDF</button>}
+                          <Button variant="ghost" size="sm" onClick={() => handleEditar(t.id)}>Editar</Button>
+                          {t.otCodigo && <Button variant="ghost" size="sm" onClick={() => imprimirOT(t)}>PDF</Button>}
                           {t.estado !== ESTADOS.COMPLETADO && (
-                            <button className="btn btn-ghost btn-sm" style={{ color: 'var(--green-600)' }} onClick={() => handleCompletar(t.id)}>✓</button>
+                            <Button variant="ghost" size="sm" style={{ color: 'var(--green-600)' }} onClick={() => handleCompletar(t.id)}>✓</Button>
                           )}
                           {confirmDel === t.id ? (
                             <>
-                              <button className="btn btn-ghost btn-sm" style={{ color: 'var(--red-600)' }} onClick={() => handleEliminar(t.id)}>Si</button>
-                              <button className="btn btn-ghost btn-sm" onClick={() => setConfirmDel(null)}>No</button>
+                              <Button variant="ghost" size="sm" style={{ color: 'var(--red-600)' }} onClick={() => handleEliminar(t.id)}>Si</Button>
+                              <Button variant="ghost" size="sm" onClick={() => setConfirmDel(null)}>No</Button>
                             </>
                           ) : (
-                            <button className="btn btn-ghost btn-sm" style={{ color: 'var(--red-500)' }} onClick={() => setConfirmDel(t.id)}>
+                            <Button variant="ghost" size="sm" style={{ color: 'var(--red-500)' }} onClick={() => setConfirmDel(t.id)}>
                               <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
-                            </button>
+                            </Button>
                           )}
                         </div>
                       </td>
@@ -824,17 +827,17 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
                   ) : t.firmaCliente ? (
                     <div>
                       <img src={t.firmaCliente} alt="Firma del cliente" style={{ width: '100%', maxHeight: 130, objectFit: 'contain', background: '#fff', border: '1px solid var(--border)', borderRadius: 8 }} />
-                      <button type="button" className="btn btn-outline btn-sm" style={{ marginTop: 8 }} onClick={() => setFirmando(true)}>Firmar de nuevo</button>
+                      <Button variant="outline" size="sm" type="button" style={{ marginTop: 8 }} onClick={() => setFirmando(true)}>Firmar de nuevo</Button>
                     </div>
                   ) : (
-                    <button type="button" className="btn btn-outline btn-sm" onClick={() => setFirmando(true)}>✍ Firmar recibido</button>
+                    <Button variant="outline" size="sm" type="button" onClick={() => setFirmando(true)}>✍ Firmar recibido</Button>
                   )}
                 </div>
               </div>
               <div className="modal-footer" style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-                {t.otCodigo && <button className="btn btn-outline btn-sm" onClick={() => imprimirOT(t)}>PDF</button>}
-                {t.estado !== ESTADOS.COMPLETADO && <button className="btn btn-outline btn-sm" onClick={() => { handleCompletar(t.id); setPreviewId(null) }}>Marcar listo</button>}
-                <button className="btn btn-primary btn-sm" onClick={() => { setPreviewId(null); handleEditar(t.id) }}>Editar</button>
+                {t.otCodigo && <Button variant="outline" size="sm" onClick={() => imprimirOT(t)}>PDF</Button>}
+                {t.estado !== ESTADOS.COMPLETADO && <Button variant="outline" size="sm" onClick={() => { handleCompletar(t.id); setPreviewId(null) }}>Marcar listo</Button>}
+                <Button variant="primary" size="sm" onClick={() => { setPreviewId(null); handleEditar(t.id) }}>Editar</Button>
               </div>
             </div>
           </div>
@@ -858,12 +861,12 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
               <p style={{ fontSize: 14 }}>Deseas facturar este trabajo en Cuentti?</p>
             </div>
             <div className="modal-footer">
-              <button className="btn btn-outline" onClick={() => setShowFacturarModal(null)}>Despues</button>
-              <button className="btn btn-primary" onClick={() => {
+              <Button variant="outline" onClick={() => setShowFacturarModal(null)}>Después</Button>
+              <Button variant="primary" onClick={() => {
                 setShowFacturarModal(null)
                 if (onAutoFacturar) onAutoFacturar(showFacturarModal)
-                else notify('Ve a la pestana Cuentti para facturar', 'info')
-              }}>Ir a Facturar</button>
+                else notify('Ve a la pestaña Cuentti para facturar', 'info')
+              }}>Ir a Facturar</Button>
             </div>
           </div>
         </div>
@@ -1266,7 +1269,7 @@ function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [], vehiculosHoo
             </div>
           )}
         </div>
-        <div className="actions"><button className="btn btn-outline" onClick={onCancel}>Volver</button></div>
+        <div className="actions"><Button variant="outline" onClick={onCancel}>Volver</Button></div>
       </div>
 
       <form onSubmit={handleSubmit} className="form-stack">
@@ -1277,7 +1280,7 @@ function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [], vehiculosHoo
           <div className="card__h"><h3>Cliente</h3></div>
           <div className="card__b" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
             <div className="field" style={{ position: 'relative' }}>
-              <label>Cedula / NIT <span className="req">*</span></label>
+              <label>Cédula / NIT <span className="req">*</span></label>
               <input className="input" value={form.cedula} placeholder="Buscar por documento..."
                 onFocus={() => setCampoActivo('cedula')}
                 onChange={e => { set('cedula', e.target.value); buscarDebounced(e.target.value) }} />
@@ -1312,7 +1315,7 @@ function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [], vehiculosHoo
               )}
             </div>
             <div className="field">
-              <label>Telefono</label>
+              <label>Teléfono</label>
               <input className="input" value={form.telefonoCliente} placeholder="300..." onChange={e => set('telefonoCliente', e.target.value)} />
             </div>
             <div className="field">
@@ -1325,7 +1328,7 @@ function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [], vehiculosHoo
         {/* VEHICULO */}
         <div className="card">
           <div className="card__h" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
-            <h3>Vehiculo</h3>
+            <h3>Vehículo</h3>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 13, fontWeight: 500, color: 'var(--text-2)' }}>
               <Switch checked={!!form.sinVehiculo} onChange={v => set('sinVehiculo', v)} ariaLabel="Servicio sin vehículo" />
               <span style={{ cursor: 'pointer' }} onClick={() => set('sinVehiculo', !form.sinVehiculo)}>Servicio sin vehículo (no entra carro)</span>
@@ -1417,7 +1420,7 @@ function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [], vehiculosHoo
                       <tr>
                         <th>OT</th>
                         <th>Estado</th>
-                        <th>Tecnico</th>
+                        <th>Técnico</th>
                         <th className="text-right">Total</th>
                         <th>Fecha</th>
                       </tr>
@@ -1496,7 +1499,7 @@ function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [], vehiculosHoo
                 </button>
               </div>
             )}
-            <button type="button" className="btn btn-outline btn-sm" onClick={addItem} style={{ marginLeft: 'auto' }}>+ Agregar linea</button>
+            <Button variant="outline" size="sm" type="button" onClick={addItem} style={{ marginLeft: 'auto' }}>+ Agregar línea</Button>
           </div>
           {items.length === 0 ? (
             <div style={{ padding: '36px 20px', textAlign: 'center', color: 'var(--text-3)', fontSize: 13.5 }}>
@@ -1513,7 +1516,7 @@ function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [], vehiculosHoo
               <table>
                 <thead>
                   <tr>
-                    <th style={{ width: '35%' }}>Descripcion</th>
+                    <th style={{ width: '35%' }}>Descripción</th>
                     <th style={{ width: '15%' }}>Precio</th>
                     <th style={{ width: '10%' }}>Cant.</th>
                     <th style={{ width: '10%' }}>IVA %</th>
@@ -1530,7 +1533,7 @@ function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [], vehiculosHoo
                       <tr key={item.id}>
                         <td style={{ position: 'relative' }}>
                           <div style={{ position: 'relative' }}>
-                            <input className="form-input" value={item.nombre} placeholder={item._bloqueado ? 'Edita la descripcion libremente...' : 'Producto, código o referencia...'}
+                            <input className="form-input" value={item.nombre} placeholder={item._bloqueado ? 'Edita la descripción libremente...' : 'Producto, código o referencia...'}
                               autoComplete="off" autoCorrect="off" autoCapitalize="off" spellCheck={false} name={`it-desc-${item.id}`}
                               onChange={e => {
                                 updateItem(item.id, 'nombre', e.target.value)
@@ -1649,7 +1652,7 @@ function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [], vehiculosHoo
                         </td>
                         <td className="text-right text-mono" style={{ fontWeight: 600 }}>{fmt(lineTotal)}</td>
                         <td>
-                          <button type="button" className="btn btn-ghost btn-sm" onClick={() => removeItem(item.id)}>🗑</button>
+                          <Button variant="ghost" size="sm" type="button" onClick={() => removeItem(item.id)}>🗑</Button>
                         </td>
                       </tr>
                     )
@@ -1761,8 +1764,8 @@ function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [], vehiculosHoo
               </div>
             )}
             <div className="field" style={{ gridColumn: '1 / -1' }}>
-              <label>Diagnostico / Notas</label>
-              <textarea className="input" value={form.observaciones} placeholder="Diagnostico, notas, recomendaciones..."
+              <label>Diagnóstico / Notas</label>
+              <textarea className="input" value={form.observaciones} placeholder="Diagnóstico, notas, recomendaciones..."
                 onChange={e => set('observaciones', e.target.value)} style={{ minHeight: 88, resize: 'vertical' }} />
             </div>
           </div>
@@ -1775,8 +1778,8 @@ function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [], vehiculosHoo
             <span className="val">{fmt(totales.total)}</span>
           </div>
           <div className="form-actionbar__btns">
-            <button type="button" className="btn btn-outline" onClick={onCancel}>Cancelar</button>
-            <button type="submit" className="btn btn-primary">{isEdit ? 'Actualizar OT' : `Guardar OT · ${fmt(totales.total)}`}</button>
+            <Button variant="outline" type="button" onClick={onCancel}>Cancelar</Button>
+            <Button variant="primary" type="submit">{isEdit ? 'Actualizar OT' : `Guardar OT · ${fmt(totales.total)}`}</Button>
           </div>
         </div>
       </form>
@@ -1796,7 +1799,7 @@ function ThumbGrid({ fotos = [], onNota, onRemove }) {
           </div>
           <input className="form-input text-xs" placeholder="Nota breve" value={fv.nota || ''}
             onChange={e => onNota?.(fv.id, e.target.value)} />
-          <button type="button" className="btn btn-ghost btn-sm" onClick={() => onRemove?.(fv.id)} style={{ width: '100%', marginTop: 4 }}>Eliminar</button>
+          <Button variant="ghost" size="sm" type="button" onClick={() => onRemove?.(fv.id)} style={{ width: '100%', marginTop: 4 }}>Eliminar</Button>
         </div>
       ))}
     </div>

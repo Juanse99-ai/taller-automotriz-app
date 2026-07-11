@@ -16,6 +16,7 @@ import {
 } from '../services/cuentti'
 import { RESOLUCIONES } from '../utils/constants'
 import ConfirmDialog from '../components/ConfirmDialog'
+import { Button, Badge } from '../components/ui'
 
 export default function CuenttiPanel({ trabajos, actualizarTrabajo, notify }) {
   const [confirmCfg, setConfirmCfg] = useState(null)
@@ -32,7 +33,7 @@ export default function CuenttiPanel({ trabajos, actualizarTrabajo, notify }) {
   const [prefijo, setPrefijo] = useState('MAS')
   const resoluciones = [
     { code: 'MAS', label: 'Interna' },
-    { code: 'FEIC', label: 'Electronica DIAN' },
+    { code: 'FEIC', label: 'Electrónica DIAN' },
   ]
 
   const [emitId, setEmitId] = useState('')
@@ -60,7 +61,7 @@ export default function CuenttiPanel({ trabajos, actualizarTrabajo, notify }) {
   const METODOS_DEFAULT = [
     { key: 'efectivo', nombre: 'Efectivo', defaultId: 1 },
     { key: 'transferencia', nombre: 'Transferencia', defaultId: 7 },
-    { key: 'credito', nombre: 'Credito', defaultId: 0 },
+    { key: 'credito', nombre: 'Crédito', defaultId: 0 },
   ]
   const [metodosConfig, setMetodosConfig] = useState(() => {
     try {
@@ -117,7 +118,7 @@ export default function CuenttiPanel({ trabajos, actualizarTrabajo, notify }) {
       if (res.ok && res.medios.length > 0) {
         notify(`Detectados ${res.medios.length} medios de pago en tu Cuentti`, 'success')
       } else {
-        notify('Tu Cuentti no expone los medios de pago publicamente. Usa "Probar este ID" para encontrarlos.', 'info')
+        notify('Tu Cuentti no expone los medios de pago públicamente. Usa "Probar este ID" para encontrarlos.', 'info')
       }
     } catch (e) {
       notify('Error detectando medios: ' + e.message, 'error')
@@ -139,7 +140,7 @@ export default function CuenttiPanel({ trabajos, actualizarTrabajo, notify }) {
       guardarMetodoId(key, medio.id)
       notify(`"${medio.nombre}" → ${key} ahora usa ID ${medio.id}`, 'success')
     } else {
-      notify(`No se mapeo automaticamente "${medio.nombre}". Asignalo manualmente.`, 'info')
+      notify(`No se mapeó automáticamente "${medio.nombre}". Asígnalo manualmente.`, 'info')
     }
   }
 
@@ -157,7 +158,7 @@ export default function CuenttiPanel({ trabajos, actualizarTrabajo, notify }) {
           const res = await probarIdMedioPago(id, idBancoConfig)
           setResultadoPrueba(prev => ({ ...prev, [key]: res }))
           if (res.ok) {
-            notify(`✓ ID ${id} VALIDO para ${key}`, 'success')
+            notify(`✓ ID ${id} VÁLIDO para ${key}`, 'success')
           } else {
             notify(res.mensaje, 'error')
           }
@@ -188,7 +189,7 @@ export default function CuenttiPanel({ trabajos, actualizarTrabajo, notify }) {
             if (res.ok) {
               foundId = id
               guardarMetodoId(key, id)
-              setResultadoPrueba(prev => ({ ...prev, [key]: { ok: true, mensaje: `ID ${id} VALIDO` } }))
+              setResultadoPrueba(prev => ({ ...prev, [key]: { ok: true, mensaje: `ID ${id} VÁLIDO` } }))
               notify(`✓ Encontrado: ${key} = ID ${id}`, 'success')
               break
             }
@@ -204,8 +205,8 @@ export default function CuenttiPanel({ trabajos, actualizarTrabajo, notify }) {
           }
         }
         if (!foundId) {
-          setResultadoPrueba(prev => ({ ...prev, [key]: { ok: false, mensaje: 'Ningun ID 1-15 funciono. Tu Cuentti puede usar IDs mayores.' } }))
-          notify(`No se encontro ID valido en 1-15 para ${key}`, 'error')
+          setResultadoPrueba(prev => ({ ...prev, [key]: { ok: false, mensaje: 'Ningún ID 1-15 funcionó. Tu Cuentti puede usar IDs mayores.' } }))
+          notify(`No se encontró ID válido en 1-15 para ${key}`, 'error')
         }
         setProbandoId(null)
       },
@@ -245,7 +246,7 @@ export default function CuenttiPanel({ trabajos, actualizarTrabajo, notify }) {
             break
           }
         }
-        if (!foundId) notify('No se encontro id_banco valido en 1-15', 'error')
+        if (!foundId) notify('No se encontró id_banco válido en 1-15', 'error')
         setProbandoId(null)
       },
     })
@@ -532,13 +533,13 @@ export default function CuenttiPanel({ trabajos, actualizarTrabajo, notify }) {
       <div className="pagehd">
         <div>
           <h2>Cuentti</h2>
-          <p className="sub">Facturacion electronica · sincronizacion DIAN</p>
+          <p className="sub">Facturación electrónica · sincronización DIAN</p>
         </div>
         <div className="actions">
           {testResult && testResult.clientes?.startsWith('OK') && (
-            <span className="badge badge-success" style={{ marginRight: 6 }}>● Conexion OK</span>
+            <Badge tone="success" style={{ marginRight: 6 }}>● Conexión OK</Badge>
           )}
-          <button className="btn btn-primary" onClick={testConexion} disabled={testing}>{testing ? 'Probando...' : 'Probar Conexion'}</button>
+          <Button variant="primary" onClick={testConexion} disabled={testing}>{testing ? 'Probando...' : 'Probar Conexión'}</Button>
         </div>
       </div>
 
@@ -579,7 +580,7 @@ export default function CuenttiPanel({ trabajos, actualizarTrabajo, notify }) {
               <svg width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">{testResult.clientes?.startsWith('OK')?<path d="M5 13l4 4L19 7"/>:<path d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>}</svg>
             </div>
             <div style={{flex:1}}>
-              <div style={{fontWeight:800,fontSize:15,marginBottom:2}}>{testResult.clientes?.startsWith('OK')?'Conectado a Cuentti':'Error de conexion'}</div>
+              <div style={{fontWeight:800,fontSize:15,marginBottom:2}}>{testResult.clientes?.startsWith('OK')?'Conectado a Cuentti':'Error de conexión'}</div>
               <div style={{fontSize:12.5,color:'var(--text-3)'}}>Clientes: {testResult.clientes} · Inventario: {testResult.inventario}</div>
             </div>
           </div>
@@ -589,7 +590,7 @@ export default function CuenttiPanel({ trabajos, actualizarTrabajo, notify }) {
       {/* Test de conexion - detalle */}
       {testResult && (
         <div className="card">
-          <div className="card__h"><h3>Test de Conexion</h3></div>
+          <div className="card__h"><h3>Test de Conexión</h3></div>
           <div className="card__b">
             <table className="tbl">
               <thead>
@@ -616,7 +617,7 @@ export default function CuenttiPanel({ trabajos, actualizarTrabajo, notify }) {
             </table>
             {testResult.tokenRaw && (
               <div style={{ marginTop: 12 }}>
-                <div style={{fontSize:11,color:'var(--text-3)',marginBottom:4}}>Respuesta cruda del token test (para diagnostico):</div>
+                <div style={{fontSize:11,color:'var(--text-3)',marginBottom:4}}>Respuesta cruda del token test (para diagnóstico):</div>
                 <pre style={{ background: '#0f172a', color: testResult.tokenRaw.ok ? '#86efac' : '#fca5a5', padding: 12, borderRadius: 8, fontSize: 12, overflowX: 'auto' }}>
                   {formatJson(testResult.tokenRaw)}
                 </pre>
@@ -644,7 +645,7 @@ export default function CuenttiPanel({ trabajos, actualizarTrabajo, notify }) {
         <div className="card__b">
           <p style={{fontSize:13,color:'var(--text-3)',marginBottom:14}}>
             Selecciona un trabajo completado para enviar la factura a Cuentti.
-            {!verFacturados && yaFacturadosCount > 0 && ` Los ${yaFacturadosCount} trabajos ya facturados estan ocultos.`}
+            {!verFacturados && yaFacturadosCount > 0 && ` Los ${yaFacturadosCount} trabajos ya facturados están ocultos.`}
           </p>
           {trabajoFacturaSel?.cuenttiTransacionId && (
             <div style={{padding:'10px 14px',background:'rgba(22,163,74,.08)',border:'1px solid rgba(22,163,74,.4)',borderRadius:10,marginBottom:14,display:'flex',alignItems:'center',gap:10}}>
@@ -676,7 +677,7 @@ export default function CuenttiPanel({ trabajos, actualizarTrabajo, notify }) {
                 ))}
               </select>
               <div style={{fontSize:11,color:'var(--text-3)',marginTop:4}}>
-                Resolucion (Interna · Electronica DIAN)
+                Resolución (Interna · Electrónica DIAN)
               </div>
             </div>
             <div className="field">
@@ -686,7 +687,7 @@ export default function CuenttiPanel({ trabajos, actualizarTrabajo, notify }) {
                 ))}
               </select>
               <div style={{fontSize:11,color:'var(--text-3)',marginTop:4,display:'flex',justifyContent:'space-between',alignItems:'center'}}>
-                <span>Metodo de pago</span>
+                <span>Método de pago</span>
                 <button type="button" onClick={() => setShowConfigIds(s => !s)}
                   style={{background:'none',border:'none',color:'var(--blue-600)',fontSize:11,cursor:'pointer',padding:0,fontWeight:600}}>
                   {showConfigIds ? '▼ Cerrar' : '⚙ Encontrar IDs'}
@@ -700,18 +701,17 @@ export default function CuenttiPanel({ trabajos, actualizarTrabajo, notify }) {
             <div style={{marginTop:14,padding:'14px 16px',background:'var(--bg-subtle)',border:'1px solid var(--border)',borderRadius:10}}>
               <div style={{fontSize:13,fontWeight:700,color:'var(--text)',marginBottom:6}}>🔍 Encontrar IDs reales de tu Cuentti</div>
               <div style={{fontSize:12,color:'var(--text-2)',marginBottom:12,lineHeight:1.5}}>
-                Tu Cuentti tiene IDs unicos en su tabla <code className="mono">vent_medio_pago</code>. Hay 2 formas de encontrarlos:
+                Tu Cuentti tiene IDs únicos en su tabla <code className="mono">vent_medio_pago</code>. Hay 2 formas de encontrarlos:
               </div>
 
               {/* Opcion 1: detector automatico */}
               <div style={{marginBottom:12,padding:'10px 12px',background:'var(--bg-raised)',border:'1px solid var(--border)',borderRadius:8}}>
-                <div style={{fontSize:12.5,fontWeight:700,marginBottom:6}}>Opcion 1: Auto-detectar (rapido)</div>
+                <div style={{fontSize:12.5,fontWeight:700,marginBottom:6}}>Opción 1: Auto-detectar (rápido)</div>
                 <div style={{display:'flex',alignItems:'center',gap:10,flexWrap:'wrap',marginBottom:8}}>
-                  <button type="button" onClick={detectarIdsAutomaticamente}
-                    disabled={detectandoMedios}
-                    className="btn btn-primary btn-sm">
+                  <Button type="button" variant="primary" size="sm" onClick={detectarIdsAutomaticamente}
+                    disabled={detectandoMedios}>
                     {detectandoMedios ? '🔍 Probando 30 endpoints...' : '🔍 Auto-detectar'}
-                  </button>
+                  </Button>
                   <div style={{fontSize:11.5,color:'var(--text-3)',flex:'1 1 200px'}}>
                     Prueba 30+ endpoints comunes hasta encontrar uno que liste tus medios.
                   </div>
@@ -735,16 +735,16 @@ export default function CuenttiPanel({ trabajos, actualizarTrabajo, notify }) {
                 )}
                 {mediosDetectados && !mediosDetectados.ok && (
                   <div style={{padding:'8px 10px',background:'rgba(245,158,11,.08)',border:'1px solid rgba(245,158,11,.3)',borderRadius:6,fontSize:11.5,color:'var(--text-2)'}}>
-                    Tu Cuentti no expone los medios via API. Usa la <strong>Opcion 2</strong> abajo para probar IDs uno por uno.
+                    Tu Cuentti no expone los medios vía API. Usa la <strong>Opción 2</strong> abajo para probar IDs uno por uno.
                   </div>
                 )}
               </div>
 
               {/* Opcion 2: probar IDs manualmente */}
               <div style={{padding:'10px 12px',background:'var(--bg-raised)',border:'1px solid var(--border)',borderRadius:8}}>
-                <div style={{fontSize:12.5,fontWeight:700,marginBottom:6}}>Opcion 2: Probar ID con factura test</div>
+                <div style={{fontSize:12.5,fontWeight:700,marginBottom:6}}>Opción 2: Probar ID con factura test</div>
                 <div style={{fontSize:11.5,color:'var(--text-3)',marginBottom:10,lineHeight:1.4}}>
-                  Cambia el numero al lado de cada metodo y dale "Probar". La app crea una factura de $1 con ese ID y la anula inmediatamente. Si funciona, el ID es valido.
+                  Cambia el número al lado de cada método y dale "Probar". La app crea una factura de $1 con ese ID y la anula inmediatamente. Si funciona, el ID es válido.
                 </div>
                 <div style={{display:'flex',flexDirection:'column',gap:8}}>
                   {metodosConfig.filter(m => m.key !== 'credito').map(m => {
@@ -756,7 +756,7 @@ export default function CuenttiPanel({ trabajos, actualizarTrabajo, notify }) {
                           <div style={{fontSize:12.5,fontWeight:600}}>{m.nombre}</div>
                           {res && (
                             <div style={{fontSize:10.5,marginTop:2,color: res.ok ? 'var(--green-700)' : 'var(--red-700)',fontWeight:600}}>
-                              {res.loading ? (res.mensaje || 'Probando...') : (res.ok ? `✓ ${res.mensaje || 'ID valido'}` : '✗ ' + (res.mensaje || '').slice(0,50))}
+                              {res.loading ? (res.mensaje || 'Probando...') : (res.ok ? `✓ ${res.mensaje || 'ID válido'}` : '✗ ' + (res.mensaje || '').slice(0,50))}
                             </div>
                           )}
                         </div>
@@ -765,18 +765,16 @@ export default function CuenttiPanel({ trabajos, actualizarTrabajo, notify }) {
                           onChange={e => guardarMetodoId(m.key, parseInt(e.target.value) || 0)}
                           style={{width:54,fontFamily:'var(--mono)',fontWeight:700,textAlign:'center',fontSize:13,padding:'5px 6px'}}
                         />
-                        <button type="button" onClick={() => probarIdEspecifico(m.key, m.id)}
+                        <Button type="button" variant="outline" size="sm" onClick={() => probarIdEspecifico(m.key, m.id)}
                           disabled={isLoading}
-                          className="btn btn-outline btn-sm"
                           style={{minWidth:60,fontSize:11.5,padding:'5px 8px'}}>
                           {isLoading ? '⏳' : '▶'}
-                        </button>
-                        <button type="button" onClick={() => autoProbarIds(m.key)}
+                        </Button>
+                        <Button type="button" variant="primary" size="sm" onClick={() => autoProbarIds(m.key)}
                           disabled={isLoading}
-                          className="btn btn-primary btn-sm"
                           style={{minWidth:80,fontSize:11.5,padding:'5px 10px'}}>
                           {isLoading && probandoId?.id === 'auto' ? '🔍...' : '🤖 Auto 1-15'}
-                        </button>
+                        </Button>
                       </div>
                     )
                   })}
@@ -792,33 +790,32 @@ export default function CuenttiPanel({ trabajos, actualizarTrabajo, notify }) {
                     onChange={e => guardarIdBanco(parseInt(e.target.value) || 1)}
                     style={{width:54,fontFamily:'var(--mono)',fontWeight:700,textAlign:'center',fontSize:13,padding:'5px 6px'}}
                   />
-                  <button type="button" onClick={autoProbarBanco}
+                  <Button type="button" variant="primary" size="sm" onClick={autoProbarBanco}
                     disabled={probandoId !== null}
-                    className="btn btn-primary btn-sm"
                     style={{minWidth:80,fontSize:11.5,padding:'5px 10px'}}>
                     🤖 Auto 1-15
-                  </button>
+                  </Button>
                 </div>
               </div>
 
               <div style={{fontSize:11.5,color:'var(--text-3)',marginTop:10,padding:'8px 10px',background:'var(--blue-50,#eff6ff)',borderRadius:6,lineHeight:1.5}}>
-                <strong>💡 Recomendado:</strong> click <strong>"🤖 Auto 1-15"</strong> al lado de cada metodo. La app prueba IDs del 1 al 15 hasta encontrar el correcto, lo guarda y se detiene. Tarda ~30 segundos por metodo. Cada prueba crea-y-anula una factura test de $1.
+                <strong>💡 Recomendado:</strong> click <strong>"🤖 Auto 1-15"</strong> al lado de cada método. La app prueba IDs del 1 al 15 hasta encontrar el correcto, lo guarda y se detiene. Tarda ~30 segundos por método. Cada prueba crea-y-anula una factura test de $1.
               </div>
             </div>
           )}
 
           <div style={{display:'flex',justifyContent:'flex-end',marginTop:14}}>
-            <button className="btn btn-primary" onClick={facturarTrabajo}
+            <Button variant="primary" onClick={facturarTrabajo}
               disabled={!facturaId || facturando}>
               {facturando ? 'Enviando...' : 'Enviar a Cuentti'}
-            </button>
+            </Button>
           </div>
         </div>
       </div>
 
       {previewPayload && (
         <div className="card">
-          <div className="card__h"><h3>Previsualizacion de envio</h3></div>
+          <div className="card__h"><h3>Previsualización de envío</h3></div>
           <div className="card__b">
             <p style={{fontSize:13,color:'var(--text-3)',marginBottom:10}}>
               Payload que se enviara a Cuentti (token en headers enmascarado).
@@ -840,7 +837,7 @@ export default function CuenttiPanel({ trabajos, actualizarTrabajo, notify }) {
 
       {ultimoPayload && (
         <div className="card">
-          <div className="card__h"><h3>Ultimo payload enviado</h3></div>
+          <div className="card__h"><h3>Último payload enviado</h3></div>
           <div className="card__b">
             <pre style={{ background: '#0f172a', color: '#e2e8f0', padding: 12, borderRadius: 8, fontSize: 12, overflowX: 'auto' }}>
               {formatJson(ultimoPayload)}
@@ -859,7 +856,7 @@ export default function CuenttiPanel({ trabajos, actualizarTrabajo, notify }) {
 
       {facturaResp && (
         <div className="card">
-          <div className="card__h"><h3>Ultima respuesta de facturacion</h3></div>
+          <div className="card__h"><h3>Última respuesta de facturación</h3></div>
           <div className="card__b">
             <p style={{fontSize:13,color:'var(--text-3)',marginBottom:10}}>
               Factura # detectada: <span className="mono">{extractIdTransacion(facturaResp) || '—'}</span>
@@ -872,7 +869,7 @@ export default function CuenttiPanel({ trabajos, actualizarTrabajo, notify }) {
       )}
 
       <div className="card">
-        <div className="card__h"><h3>Emitir Factura Electronica (DIAN)</h3></div>
+        <div className="card__h"><h3>Emitir Factura Electrónica (DIAN)</h3></div>
         <div className="card__b">
           <div style={{display:'grid',gridTemplateColumns:'1fr auto',gap:14,alignItems:'end'}}>
             <div className="field">
@@ -881,9 +878,9 @@ export default function CuenttiPanel({ trabajos, actualizarTrabajo, notify }) {
                 onChange={e => setEmitId(e.target.value)} />
             </div>
             <div>
-              <button className="btn btn-primary" type="button" onClick={emitirFE} disabled={emitiendo || !emitId}>
+              <Button variant="primary" type="button" onClick={emitirFE} disabled={emitiendo || !emitId}>
                 {emitiendo ? 'Enviando...' : 'Emitir FE + DIAN'}
-              </button>
+              </Button>
             </div>
           </div>
           {emitResp && (
@@ -914,7 +911,7 @@ export default function CuenttiPanel({ trabajos, actualizarTrabajo, notify }) {
           ]
           return (
             <div className="card">
-              <div className="card__h"><h3>Estado de envio</h3></div>
+              <div className="card__h"><h3>Estado de envío</h3></div>
               <div className="card__b" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                 {statusItems.map((s, i) => (
                   <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 13 }}>
@@ -947,18 +944,18 @@ export default function CuenttiPanel({ trabajos, actualizarTrabajo, notify }) {
             .slice(0, 5)
           return (
             <div className="card">
-              <div className="card__h"><h3>Ultimas facturas</h3>{ultimas.length > 0 && <span className="count">{ultimas.length}</span>}</div>
+              <div className="card__h"><h3>Últimas facturas</h3>{ultimas.length > 0 && <span className="count">{ultimas.length}</span>}</div>
               {ultimas.length === 0 ? (
                 <div className="card__b" style={{ textAlign: 'center', color: 'var(--text-3)', fontSize: 13, padding: '20px 12px' }}>
                   <div style={{ fontSize: 22, opacity: .35, marginBottom: 4 }}>📄</div>
                   <div>Sin facturas registradas</div>
-                  <div style={{ fontSize: 11, marginTop: 2 }}>Las facturas emitidas aparecen aqui.</div>
+                  <div style={{ fontSize: 11, marginTop: 2 }}>Las facturas emitidas aparecen aquí.</div>
                 </div>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column' }}>
                   {ultimas.map((f, i) => {
                     const tipo = f.cuenttiPrefijo || (f.cuenttiTransacionId?.toString().startsWith('FE') ? 'FEIC' : 'MAS')
-                    const tipoLabel = tipo === 'FEIC' ? 'Electronica DIAN' : 'Interna'
+                    const tipoLabel = tipo === 'FEIC' ? 'Electrónica DIAN' : 'Interna'
                     const num = f.cuenttiTransacionId
                     const estadoBadge = (f.pagado || f.cuenttiPagado) ? { c: 'badge-success', l: 'pagada' } : f.cuenttiAprobado ? { c: 'badge-success', l: 'aprobada' } : { c: 'badge-warning', l: 'pendiente' }
                     return (

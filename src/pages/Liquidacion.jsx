@@ -11,6 +11,7 @@ import { usePrestamos } from '../hooks/usePrestamos'
 import { upsertPrestamo, fetchPrestamos } from '../services/supabase'
 import { splitComision } from '../services/money'
 import ConfirmDialog, { DlgRow } from '../components/ConfirmDialog'
+import { Button, Badge } from '../components/ui'
 import { loadLogo, drawHeader, drawSectionHeader, drawDataBlock, drawTotalsBox, drawSignatures, drawFooter, tableStylesItems, tableStylesMuted, PDF_LAYOUT } from '../utils/pdfTheme'
 
 // Obtener base de mano de obra SIN IVA (solo servicios)
@@ -1014,7 +1015,7 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
           <p className="sub">Cierre de periodo · {COMISION.TOTAL * 100}% comisión total · {COMISION.TOTAL * 50}% c/u si el trabajo es compartido</p>
         </div>
         <div className="actions">
-          <button className="btn btn-outline" onClick={() => setVerHistorial(!verHistorial)}>{verHistorial ? 'Ocultar historial' : 'Ver historial'}</button>
+          <Button variant="outline" onClick={() => setVerHistorial(!verHistorial)}>{verHistorial ? 'Ocultar historial' : 'Ver historial'}</Button>
         </div>
       </div>
       {tabsLiq}
@@ -1076,7 +1077,7 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--text)', display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                   {t.nombre}
-                  {t.activo === false && <span className="badge badge-n">Inactivo</span>}
+                  {t.activo === false && <Badge tone="neutral">Inactivo</Badge>}
                   {t.saldoCuenta > 0 && <span className="mono" style={{ fontSize: 11, fontWeight: 700, color: 'var(--red-600)', background: 'var(--red-100)', padding: '2px 8px', borderRadius: 999 }}>debe {fmt(t.saldoCuenta)}</span>}
                   {t.saldoCuenta < 0 && <span className="mono" style={{ fontSize: 11, fontWeight: 700, color: 'var(--green-700)', background: 'var(--green-100)', padding: '2px 8px', borderRadius: 999 }}>a favor {fmt(-t.saldoCuenta)}</span>}
                 </div>
@@ -1102,13 +1103,14 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
 
       {trabajosLiquidados.length > 0 && (
         <div style={{ marginTop: 10 }}>
-          <button
-            className="btn btn-ghost btn-sm"
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={() => setVerLiquidados(v => !v)}
             style={{ fontSize: 12, padding: '4px 10px', color: 'var(--text-3)' }}
           >
             {verLiquidados ? '▾' : '▸'} {trabajosLiquidados.length} trabajos ya liquidados (ocultos)
-          </button>
+          </Button>
           {verLiquidados && (
             <div style={{ marginTop: 8, border: '1px solid var(--border)', borderRadius: 10, overflow: 'hidden', maxWidth: 560 }}>
               {trabajosLiquidados.length === 0 ? (
@@ -1120,13 +1122,14 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
                   <span style={{ color: 'var(--text-2)', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {fmtDate(t.fecha)} · <strong>{t.placa || '—'}</strong> · {t.cliente || '—'}
                   </span>
-                  <button
-                    className="btn btn-ghost btn-sm"
+                  <Button
+                    variant="ghost"
+                    size="sm"
                     onClick={() => desliquidarUno(t.id, t)}
                     style={{ color: 'var(--amber-600)', fontSize: 11.5, padding: '2px 8px', flexShrink: 0 }}
                   >
                     Desliquidar
-                  </button>
+                  </Button>
                 </div>
               ))}
             </div>
@@ -1149,9 +1152,9 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
                 {!colapso.trabajos && <span style={{ fontSize: 13, color: 'var(--text-3)' }}>Selecciona los que vas a liquidar</span>}
                 {colapso.trabajos && cantSeleccionados > 0 && <span className="count">{cantSeleccionados} seleccionados</span>}
                 {!colapso.trabajos && (
-                  <button className="btn btn-outline btn-sm" onClick={() => seleccionarTodos(tecTrabajos.map(t => t.id))}>
+                  <Button variant="outline" size="sm" onClick={() => seleccionarTodos(tecTrabajos.map(t => t.id))}>
                     {tecTrabajos.length > 0 && tecTrabajos.every(t => seleccionados[t.id]) ? 'Deseleccionar' : 'Todos'}
-                  </button>
+                  </Button>
                 )}
               </div>
             </div>
@@ -1252,7 +1255,7 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
                       <div style={{ flex: 1, minWidth: 130, fontSize: 13.5, color: 'var(--text-3)' }}>
                         Diario a cargar: <strong style={{ color: 'var(--amber-700)', fontFamily: 'var(--mono)' }}>{fmt((Number(valorDiario) || 0) * (parseInt(diarioDias) || 0))}</strong>
                       </div>
-                      <button type="button" className="btn btn-outline" onClick={agregarDiario}>Agregar diario</button>
+                      <Button variant="outline" type="button" onClick={agregarDiario}>Agregar diario</Button>
                     </>
                   ) : (
                     <div style={{ flex: 1, minWidth: 220, fontSize: 13.5, color: 'var(--text-3)' }}>
@@ -1280,7 +1283,7 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
                         </label>
                       ))}
                     </div>
-                    <button type="button" className="btn btn-outline" onClick={repartirDiario}>Repartir diario</button>
+                    <Button variant="outline" type="button" onClick={repartirDiario}>Repartir diario</Button>
                   </div>
                 )}
               </div>
@@ -1356,7 +1359,7 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
                 <div className="field"><label>Monto</label><MoneyInput value={movForm.monto} onChange={v => setMovForm(f => ({ ...f, monto: v }))} placeholder="0" /></div>
                 <div className="field"><label>Fecha</label><input className="input" type="date" value={movForm.fecha} onChange={e => setMovForm(f => ({ ...f, fecha: e.target.value }))}/></div>
                 <div className="field"><label>Nota</label><input className="input" value={movForm.nota} onChange={e => setMovForm(f => ({ ...f, nota: e.target.value }))} placeholder="Almuerzo, anticipo..."/></div>
-                <div style={{ display: 'flex', alignItems: 'flex-end' }}><button type="submit" className="btn btn-outline">Agregar</button></div>
+                <div style={{ display: 'flex', alignItems: 'flex-end' }}><Button variant="outline" type="submit">Agregar</Button></div>
               </form>
               {tecMovs.length === 0 ? (
                 <p style={{ fontSize: 13.5, color: 'var(--text-3)' }}>Sin aportes del administrador pendientes.</p>
@@ -1372,12 +1375,12 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
                         <td>{tipoLabel(m.tipo)}</td>
                         <td className="c-muted">{m.nota || '—'}</td>
                         <td className="c-mono c-right" style={{ color: 'var(--amber-600)' }}>{fmt(m.monto)}</td>
-                        <td><button className="btn btn-ghost btn-sm" onClick={() => setDialog({
+                        <td><Button variant="ghost" size="sm" onClick={() => setDialog({
                           title: 'Eliminar movimiento',
                           lead: `${tipoLabel(m.tipo)} · ${fmt(m.monto)} · ${fmtDate(m.fecha)}`,
                           confirmLabel: 'Sí, eliminar', tone: 'danger',
                           onConfirm: () => hookEliminarMov(m.id),
-                        })} aria-label="Eliminar movimiento">✕</button></td>
+                        })} aria-label="Eliminar movimiento">✕</Button></td>
                       </tr>
                     ))}
                   </tbody>
@@ -1450,8 +1453,8 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
                   </div>
                 )}
                 <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
-                  <button className="btn btn-outline" onClick={exportPdfPago}>Exportar PDF</button>
-                  <button className="btn btn-primary" onClick={pedirPago}>Generar pago</button>
+                  <Button variant="outline" onClick={exportPdfPago}>Exportar PDF</Button>
+                  <Button variant="primary" onClick={pedirPago}>Generar pago</Button>
                 </div>
               </div>
             </div>
@@ -1492,7 +1495,7 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
           <h3>Historial de pagos</h3>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <span className="count">{historial.length} pagos</span>
-            <button className="btn btn-outline btn-sm" onClick={() => setVerHistorial(!verHistorial)}>{verHistorial ? 'Ocultar' : 'Ver'}</button>
+            <Button variant="outline" size="sm" onClick={() => setVerHistorial(!verHistorial)}>{verHistorial ? 'Ocultar' : 'Ver'}</Button>
           </div>
         </div>
         {verHistorial && (
@@ -1510,7 +1513,7 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
                           style={{ fontSize: 12, fontWeight: 700, color: 'var(--blue-600)', background: 'rgba(37,99,235,.10)', border: '1px solid rgba(37,99,235,.2)', padding: '2px 8px', borderRadius: 6, cursor: 'pointer' }}>
                           #{liqRef(reg.id)}
                         </button>
-                        <span className="badge badge-i" style={{ marginLeft: 8 }}>{reg.tecnico}</span>
+                        <Badge tone="info" style={{ marginLeft: 8 }}>{reg.tecnico}</Badge>
                       </div>
                       <span style={{ fontSize: 13, color: 'var(--text-3)' }}>{fmtDate(reg.fecha)}</span>
                     </div>
@@ -1540,22 +1543,22 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
                               <option value="efectivo">Efectivo</option>
                               <option value="transferencia">Transferencia</option>
                             </select>
-                            <button className="btn btn-outline btn-sm" disabled={regCuenttiId === reg.id} onClick={() => registrarEnCuentti(reg)}>
+                            <Button variant="outline" size="sm" disabled={regCuenttiId === reg.id} onClick={() => registrarEnCuentti(reg)}>
                               {regCuenttiId === reg.id ? 'Registrando…' : 'Registrar en Cuentti'}
-                            </button>
+                            </Button>
                           </>
                         )}
-                        <button className="btn btn-outline btn-sm" onClick={() => exportPdfHistorial(reg)}>PDF</button>
+                        <Button variant="outline" size="sm" onClick={() => exportPdfHistorial(reg)}>PDF</Button>
                       </div>
                     </div>
                   </div>
                 ))}
                 <div style={{ textAlign: 'right', marginTop: 8 }}>
-                  <button className="btn btn-ghost btn-sm" style={{ color: 'var(--red-600)' }} onClick={() => {
+                  <Button variant="ghost" size="sm" style={{ color: 'var(--red-600)' }} onClick={() => {
                     if (!historial.length) { notify('No hay historial para borrar', 'info'); return }
                     const r = prompt(`Esto borra los ${historial.length} pagos del historial y NO se puede deshacer.\n\nEscribe BORRAR para confirmar:`)
                     if (r && r.trim().toUpperCase() === 'BORRAR') { guardarHistorial([]); notify('Historial de pagos borrado', 'info') }
-                  }}>Limpiar historial</button>
+                  }}>Limpiar historial</Button>
                 </div>
               </>
             )}
@@ -1754,7 +1757,7 @@ function EstadoCuenta({ prestamos, tecnicos, notify }) {
             <div className="field"><label>Nota</label><input className="input" value={form.nota} onChange={e => setForm(f => ({ ...f, nota: e.target.value }))} placeholder="Concepto, referencia…" /></div>
             {(() => {
               const hayMonto = (parseFloat(form.monto) || 0) > 0 || ((parseFloat(form.valorDia) || 0) > 0 && (parseInt(form.dias) || 0) > 0)
-              return <button type="button" className="btn btn-primary" onClick={guardar} disabled={!hayMonto} style={{ opacity: hayMonto ? 1 : 0.5, cursor: hayMonto ? 'pointer' : 'not-allowed' }}>Registrar</button>
+              return <Button variant="primary" type="button" onClick={guardar} disabled={!hayMonto} style={{ opacity: hayMonto ? 1 : 0.5, cursor: hayMonto ? 'pointer' : 'not-allowed' }}>Registrar</Button>
             })()}
           </div>
         </div>
@@ -1772,8 +1775,8 @@ function EstadoCuenta({ prestamos, tecnicos, notify }) {
                 </span>
               </div>
               <div style={{ display: 'flex', gap: 8, marginLeft: 'auto' }}>
-                {cuentaSel.saldo !== 0 && <button className="btn btn-primary btn-sm" onClick={() => saldarCuenta(cuentaSel)}>Saldar</button>}
-                <button className="btn btn-outline btn-sm" onClick={() => exportarPDF(cuentaSel)}>PDF</button>
+                {cuentaSel.saldo !== 0 && <Button variant="primary" size="sm" onClick={() => saldarCuenta(cuentaSel)}>Saldar</Button>}
+                <Button variant="outline" size="sm" onClick={() => exportarPDF(cuentaSel)}>PDF</Button>
               </div>
             </div>
             {cuentaSel.movs.length === 0 ? (
@@ -1783,16 +1786,16 @@ function EstadoCuenta({ prestamos, tecnicos, notify }) {
                 {cuentaSel.movs.map((m, i) => (
                   <div key={m.id} style={{ padding: '13px 2px', borderTop: i === 0 ? 'none' : '1px solid var(--border)' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                      <span className={`badge ${m.tipo === 'abono' ? 'badge-success' : 'badge-warning'}`}>{m.tipo === 'abono' ? 'Abono' : 'Préstamo'}</span>
+                      <Badge tone={m.tipo === 'abono' ? 'success' : 'warning'}>{m.tipo === 'abono' ? 'Abono' : 'Préstamo'}</Badge>
                       <span className="text-mono" style={{ marginLeft: 'auto', fontWeight: 700, fontSize: 15, whiteSpace: 'nowrap', color: m.tipo === 'abono' ? 'var(--green-700)' : 'var(--amber-700)' }}>
                         {m.tipo === 'abono' ? '− ' : '+ '}{fmt(m.monto)}
                       </span>
-                      <button className="btn btn-ghost btn-sm" style={{ color: 'var(--red-600)', padding: '4px 7px', flex: 'none' }} onClick={() => setDlg({
+                      <Button variant="ghost" size="sm" style={{ color: 'var(--red-600)', padding: '4px 7px', flex: 'none' }} onClick={() => setDlg({
                         title: 'Eliminar movimiento',
                         lead: `${m.tipo === 'abono' ? 'Abono' : 'Préstamo'} · ${fmt(m.monto)} · ${fmtDate(m.fecha)}`,
                         confirmLabel: 'Sí, eliminar', tone: 'danger',
                         onConfirm: () => eliminarMovimiento(m.id),
-                      })} aria-label="Eliminar movimiento" title="Eliminar">✕</button>
+                      })} aria-label="Eliminar movimiento" title="Eliminar">✕</Button>
                     </div>
                     <div style={{ marginTop: 6, fontSize: 12.5, color: 'var(--text-3)', display: 'flex', gap: 8 }}>
                       <span style={{ flex: 'none' }}>{fmtDate(m.fecha)}</span>
