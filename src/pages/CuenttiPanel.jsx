@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { fmt } from '../utils/helpers'
 import {
   buscarClientePorCedula,
@@ -45,6 +45,8 @@ export default function CuenttiPanel({ trabajos, actualizarTrabajo, notify }) {
   const [testing, setTesting] = useState(false)
   const [facturaId, setFacturaId] = useState('')
   const [facturando, setFacturando] = useState(false)
+  const factRef = useRef(new Set()) // facturas EN CURSO (anti doble-clic síncrono; el estado es async y deja pasar 2 clics)
+  const [factError, setFactError] = useState({}) // trabajo.id -> true si el último envío falló (reintento con aviso)
   const [facturaResp, setFacturaResp] = useState(null)
   const [previewPayload, setPreviewPayload] = useState(null)
   const [previewHeaders, setPreviewHeaders] = useState(null)
@@ -385,10 +387,28 @@ export default function CuenttiPanel({ trabajos, actualizarTrabajo, notify }) {
       return
     }
 
+    // Reintento tras un error: el envío anterior PUDO haber creado la factura en
+    // Cuentti aunque aquí se viera error (timeout que sí grabó — mismo caso del
+    // gasto de nómina doble). Pedir verificación antes de reenviar.
+    if (factError[trabajo.id]) {
+      setConfirmCfg({
+        title: 'Reintentar envío a Cuentti',
+        lead: `El envío anterior de ${trabajo.otCodigo || trabajo.id} falló por red, pero la factura PUDO haber quedado creada en Cuentti. Revisa "Últimas facturas" (o Cuentti) antes de reenviar, para no duplicarla.`,
+        confirmLabel: 'Ya verifiqué, enviar',
+        tone: 'danger',
+        onConfirm: () => enviarFacturaTrabajo(trabajo),
+      })
+      return
+    }
+
     return enviarFacturaTrabajo(trabajo)
   }
 
   const enviarFacturaTrabajo = async (trabajo) => {
+    // Guard SÍNCRONO anti doble-clic: el disabled del botón depende del estado
+    // (async) y deja pasar dos clics rápidos; el ref se lee al instante.
+    if (factRef.current.has(trabajo.id)) return
+    factRef.current.add(trabajo.id)
     setFacturando(true)
     try {
       // Mapear id_banco segun el metodo de pago (VERIFICADO en Cuentti:
@@ -456,17 +476,30 @@ export default function CuenttiPanel({ trabajos, actualizarTrabajo, notify }) {
               metodoPago: metodoPagoKey,
             })
           } catch (err) {
+            // Sin este marcado, otro dispositivo (o esta misma pantalla tras
+            // recargar) podría re-facturar la OT. Avisar, no solo loguear.
+            notify(`⚠ Factura #${txId} creada, pero no se pudo marcar la OT como facturada. Anótalo: si reintentas, se duplicaría.`, 'error')
             console.warn('No se pudo persistir el id_transacion en el trabajo:', err.message)
           }
         }
+        setFactError(f => { const n = { ...f }; delete n[trabajo.id]; return n })
+        notify('Factura enviada a Cuentti exitosamente', 'success')
+      } else {
+        // Cuentti respondió pero no se pudo leer el número de factura: NO es un
+        // éxito confiable. La OT no quedó marcada — un reintento podría duplicar.
+        setFactError(f => ({ ...f, [trabajo.id]: true }))
+        notify('⚠ Cuentti respondió pero no se pudo leer el número de factura. Revisa "Última respuesta" y verifica en Cuentti ANTES de reenviar.', 'error')
       }
-      notify('Factura enviada a Cuentti exitosamente', 'success')
       console.log('Factura result:', result)
     } catch (e) {
       setFacturaResp({ error: e.message, detalle: e.body || e.headers || e.stack })
-      notify(`Error facturando: ${e.message}`, 'error')
+      // La red falló, PERO la factura pudo haber llegado a Cuentti igual (timeout
+      // que sí grabó). Se marca para que el reintento pida verificar antes.
+      setFactError(f => ({ ...f, [trabajo.id]: true }))
+      notify(`Error facturando: ${e.message}. ⚠️ La factura PUDO quedar en Cuentti — verifícalo antes de reintentar.`, 'error')
       console.error('Factura error detalle:', e)
     } finally {
+      factRef.current.delete(trabajo.id)
       setFacturando(false)
     }
   }
