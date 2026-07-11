@@ -18,6 +18,26 @@ import { RESOLUCIONES } from '../utils/constants'
 import ConfirmDialog from '../components/ConfirmDialog'
 import { Button, Badge } from '../components/ui'
 
+// Tarjeta de debug/JSON colapsable: PLEGADA por defecto, con chevron para
+// expandir. Mantiene los bloques técnicos (payload/headers/respuesta) fuera del
+// camino sin quitarlos (siguen ahí para depurar cuando se necesiten).
+function DebugCard({ title, sub, open, onToggle, children }) {
+  return (
+    <div className="card">
+      <div className="card__h" style={{ cursor: 'pointer', userSelect: 'none' }} onClick={onToggle}>
+        <h3 style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ transform: open ? 'none' : 'rotate(-90deg)', transition: 'transform .18s var(--ease-out)', flexShrink: 0, color: 'var(--text-3)' }}>
+            <polyline points="6 9 12 15 18 9" />
+          </svg>
+          {title}
+        </h3>
+        {sub != null && <span className="count">{sub}</span>}
+      </div>
+      {open && <div className="card__b">{children}</div>}
+    </div>
+  )
+}
+
 export default function CuenttiPanel({ trabajos, actualizarTrabajo, notify }) {
   const [confirmCfg, setConfirmCfg] = useState(null)
   const [verFacturados, setVerFacturados] = useState(false)
@@ -30,6 +50,9 @@ export default function CuenttiPanel({ trabajos, actualizarTrabajo, notify }) {
   const [previewHeaders, setPreviewHeaders] = useState(null)
   const [ultimoPayload, setUltimoPayload] = useState(null)
   const [ultimoHeaders, setUltimoHeaders] = useState(null)
+  // Los bloques de debug (payload/headers/respuesta) van PLEGADOS por defecto.
+  const [debugOpen, setDebugOpen] = useState({})
+  const toggleDebug = (k) => setDebugOpen(o => ({ ...o, [k]: !o[k] }))
   const [prefijo, setPrefijo] = useState('MAS')
   const resoluciones = [
     { code: 'MAS', label: 'Interna' },
@@ -814,58 +837,49 @@ export default function CuenttiPanel({ trabajos, actualizarTrabajo, notify }) {
       </div>
 
       {previewPayload && (
-        <div className="card">
-          <div className="card__h"><h3>Previsualización de envío</h3></div>
-          <div className="card__b">
-            <p style={{fontSize:13,color:'var(--text-3)',marginBottom:10}}>
-              Payload que se enviara a Cuentti (token en headers enmascarado).
-            </p>
-            <pre style={{ background: '#0f172a', color: '#e2e8f0', padding: 12, borderRadius: 8, fontSize: 12, overflowX: 'auto' }}>
-              {formatJson(previewPayload)}
-            </pre>
-            {previewHeaders && (
-              <>
-                <div style={{fontSize:11,color:'var(--text-3)',marginTop:6}}>Headers</div>
-                <pre style={{ background: '#0f172a', color: '#e2e8f0', padding: 12, borderRadius: 8, fontSize: 12, overflowX: 'auto' }}>
-                  {formatJson(previewHeaders)}
-                </pre>
-              </>
-            )}
-          </div>
-        </div>
+        <DebugCard title="Previsualización de envío" open={!!debugOpen.preview} onToggle={() => toggleDebug('preview')}>
+          <p style={{fontSize:13,color:'var(--text-3)',marginBottom:10}}>
+            Payload que se enviara a Cuentti (token en headers enmascarado).
+          </p>
+          <pre style={{ background: '#0f172a', color: '#e2e8f0', padding: 12, borderRadius: 8, fontSize: 12, overflowX: 'auto' }}>
+            {formatJson(previewPayload)}
+          </pre>
+          {previewHeaders && (
+            <>
+              <div style={{fontSize:11,color:'var(--text-3)',marginTop:6}}>Headers</div>
+              <pre style={{ background: '#0f172a', color: '#e2e8f0', padding: 12, borderRadius: 8, fontSize: 12, overflowX: 'auto' }}>
+                {formatJson(previewHeaders)}
+              </pre>
+            </>
+          )}
+        </DebugCard>
       )}
 
       {ultimoPayload && (
-        <div className="card">
-          <div className="card__h"><h3>Último payload enviado</h3></div>
-          <div className="card__b">
-            <pre style={{ background: '#0f172a', color: '#e2e8f0', padding: 12, borderRadius: 8, fontSize: 12, overflowX: 'auto' }}>
-              {formatJson(ultimoPayload)}
-            </pre>
-            {ultimoHeaders && (
-              <>
-                <div style={{fontSize:11,color:'var(--text-3)',marginTop:6}}>Headers</div>
-                <pre style={{ background: '#0f172a', color: '#e2e8f0', padding: 12, borderRadius: 8, fontSize: 12, overflowX: 'auto' }}>
-                  {formatJson(ultimoHeaders)}
-                </pre>
-              </>
-            )}
-          </div>
-        </div>
+        <DebugCard title="Último payload enviado" open={!!debugOpen.ultimo} onToggle={() => toggleDebug('ultimo')}>
+          <pre style={{ background: '#0f172a', color: '#e2e8f0', padding: 12, borderRadius: 8, fontSize: 12, overflowX: 'auto' }}>
+            {formatJson(ultimoPayload)}
+          </pre>
+          {ultimoHeaders && (
+            <>
+              <div style={{fontSize:11,color:'var(--text-3)',marginTop:6}}>Headers</div>
+              <pre style={{ background: '#0f172a', color: '#e2e8f0', padding: 12, borderRadius: 8, fontSize: 12, overflowX: 'auto' }}>
+                {formatJson(ultimoHeaders)}
+              </pre>
+            </>
+          )}
+        </DebugCard>
       )}
 
       {facturaResp && (
-        <div className="card">
-          <div className="card__h"><h3>Última respuesta de facturación</h3></div>
-          <div className="card__b">
-            <p style={{fontSize:13,color:'var(--text-3)',marginBottom:10}}>
-              Factura # detectada: <span className="mono">{extractIdTransacion(facturaResp) || '—'}</span>
-            </p>
-            <pre style={{ background: '#0f172a', color: '#e2e8f0', padding: 12, borderRadius: 8, fontSize: 12, overflowX: 'auto' }}>
-              {formatJson(facturaResp)}
-            </pre>
-          </div>
-        </div>
+        <DebugCard title="Última respuesta de facturación" sub={extractIdTransacion(facturaResp) ? `Factura #${extractIdTransacion(facturaResp)}` : null} open={!!debugOpen.resp} onToggle={() => toggleDebug('resp')}>
+          <p style={{fontSize:13,color:'var(--text-3)',marginBottom:10}}>
+            Factura # detectada: <span className="mono">{extractIdTransacion(facturaResp) || '—'}</span>
+          </p>
+          <pre style={{ background: '#0f172a', color: '#e2e8f0', padding: 12, borderRadius: 8, fontSize: 12, overflowX: 'auto' }}>
+            {formatJson(facturaResp)}
+          </pre>
+        </DebugCard>
       )}
 
       <div className="card">
