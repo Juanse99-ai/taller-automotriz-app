@@ -124,6 +124,8 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
   useEffect(() => { setCuentaMonto(''); setCuentaSelIds({}) }, [tecnicoSel])
   const [regCuenttiId, setRegCuenttiId] = useState(null) // id del pago que se está registrando en Cuentti
   const [metodoGasto, setMetodoGasto] = useState({}) // reg.id -> 'efectivo' | 'transferencia'
+  const gastoRef = useRef(new Set()) // pagos con registro de gasto EN CURSO (anti doble-clic síncrono)
+  const [gastoError, setGastoError] = useState({}) // reg.id -> true si el último intento falló (reintento con aviso)
 
   // Ids de medio de pago, reusando la MISMA config que la facturación (localStorage).
   const medioPagoIds = (key) => {
@@ -138,12 +140,19 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
 
   // Registra el gasto de nómina de un pago en Cuentti (botón del historial).
   const registrarEnCuentti = async (reg) => {
+    // Ya registrado: no re-registrar (evita gasto doble).
+    if (reg.cuenttiGasto) { notify(`Este pago ya está registrado en Cuentti (${reg.cuenttiGasto}).`, 'info'); return }
+    // Guard SÍNCRONO: si ya hay una petición en curso para este pago, ignora el
+    // clic. El ref se lee al instante (a diferencia del estado, que es async y
+    // deja pasar dos clics rápidos antes de deshabilitar el botón).
+    if (gastoRef.current.has(reg.id)) return
     const tec = TECNICOS.find(t => t.id === reg.tecnicoId)
     const cedula = tec?.cedula
     if (!cedula) { notify(`Falta la cédula de ${reg.tecnico}. Agrégala en Mecánicos.`, 'error'); return }
     const monto = reg.pagado != null ? reg.pagado : reg.neto
     if (!(monto > 0)) { notify('El neto de este pago no es positivo; no se registra gasto.', 'error'); return }
     const { idMedioPago, idBanco } = medioPagoIds(metodoGasto[reg.id] || 'efectivo')
+    gastoRef.current.add(reg.id)
     setRegCuenttiId(reg.id)
     try {
       const data = await registrarGastoNominaBackend({
@@ -156,12 +165,33 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
       })
       const doc = data.numeroDoc ? `G-${data.numeroDoc}` : (data.idTransacion || 'OK')
       guardarHistorial(historial.map(h => h.id === reg.id ? { ...h, cuenttiGasto: doc } : h))
+      setGastoError(g => { const n = { ...g }; delete n[reg.id]; return n })
       notify(`Gasto registrado en Cuentti: ${doc}`, 'success')
-    } catch (e) {
-      notify(`Error registrando en Cuentti: ${e.message}`, 'error')
+    } catch {
+      // La red falló, PERO el gasto pudo haber llegado a Cuentti igual. Se marca
+      // para que el reintento avise de verificar antes (ver pedirRegistrarCuentti).
+      setGastoError(g => ({ ...g, [reg.id]: true }))
+      notify('Error de red al registrar. ⚠️ El gasto PUDO quedar en Cuentti — verifícalo antes de reintentar.', 'error')
     } finally {
+      gastoRef.current.delete(reg.id)
       setRegCuenttiId(null)
     }
+  }
+
+  // Reintento tras un error: avisa que el intento anterior pudo entrar en Cuentti
+  // (timeout de red que igual se grabó) para que el usuario NO pague doble.
+  const pedirRegistrarCuentti = (reg) => {
+    if (gastoError[reg.id]) {
+      setDialog({
+        title: 'Reintentar registro en Cuentti',
+        lead: `El intento anterior falló por red, pero el gasto de ${reg.tecnico} PUDO haber quedado registrado en Cuentti. Revisa en Cuentti que NO exista ya (para no pagar doble) antes de continuar.`,
+        confirmLabel: 'Ya verifiqué, registrar',
+        tone: 'danger',
+        onConfirm: () => registrarEnCuentti(reg),
+      })
+      return
+    }
+    registrarEnCuentti(reg)
   }
   const toggleDiarioRepTec = (id) => setDiarioRepTec(p => ({ ...p, [id]: !p[id] }))
 
@@ -1543,8 +1573,8 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
                               <option value="efectivo">Efectivo</option>
                               <option value="transferencia">Transferencia</option>
                             </select>
-                            <Button variant="outline" size="sm" disabled={regCuenttiId === reg.id} onClick={() => registrarEnCuentti(reg)}>
-                              {regCuenttiId === reg.id ? 'Registrando…' : 'Registrar en Cuentti'}
+                            <Button variant="outline" size="sm" disabled={regCuenttiId === reg.id} onClick={() => pedirRegistrarCuentti(reg)}>
+                              {regCuenttiId === reg.id ? 'Registrando…' : (gastoError[reg.id] ? 'Reintentar' : 'Registrar en Cuentti')}
                             </Button>
                           </>
                         )}
