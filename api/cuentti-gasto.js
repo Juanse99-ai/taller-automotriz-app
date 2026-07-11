@@ -105,6 +105,9 @@ export default async function handler(req, res) {
   try {
     const { proveedorCedula, monto } = req.body || {}
     if (!proveedorCedula || !monto) { res.status(400).json({ ok: false, error: 'Falta proveedorCedula o monto' }); return }
+    // El monto debe ser positivo: un negativo grabaría un gasto de nómina invertido.
+    const montoNum = Math.round(parseFloat(monto) || 0)
+    if (!(montoNum > 0)) { res.status(400).json({ ok: false, error: 'El monto debe ser mayor a 0' }); return }
 
     const { token, idUsuario } = await login()
     const doc = buildGasto(req.body)

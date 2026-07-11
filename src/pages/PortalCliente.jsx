@@ -17,10 +17,20 @@ const ESTADO_TRABAJO_DISPLAY = {
   [ESTADOS.CANCELADO]: { label: 'Cancelado', color: '#dc2626', icon: '✕', pct: 0 },
 }
 
+// Columnas que el portal SÍ necesita. Se piden explícitamente (en vez de SELECT *)
+// para NO exponer datos sensibles del cliente (telefono_cliente, email_cliente,
+// firma_cliente) a cualquiera que conozca/adivine una cédula. 'inspeccion' se omite
+// a propósito: no es una columna real (pedirla haría fallar la consulta).
+const SELECT_PORTAL = [
+  'id', 'fecha', 'created_at', 'cedula_cliente', 'cliente', 'placa', 'marca', 'modelo',
+  'ano', 'kilometraje', 'tecnico_id', 'estado', 'observaciones', 'items', 'total',
+  'ot_codigo', 'tipo_aceite', 'proximo_km', 'proxima_visita', 'notas_proximo_mant', 'evidencias',
+].join(',')
+
 // Consulta directa a Supabase via proxy (funciona desde cualquier dispositivo)
 async function buscarTrabajosPorCedula(cedula) {
   try {
-    const url = `/api/supabase?table=trabajos&cedula_cliente=eq.${encodeURIComponent(cedula)}&order=fecha.desc`
+    const url = `/api/supabase?table=trabajos&cedula_cliente=eq.${encodeURIComponent(cedula)}&select=${SELECT_PORTAL}&order=fecha.desc`
     const res = await fetch(url)
     if (!res.ok) throw new Error('Error consultando')
     const rows = await res.json()
