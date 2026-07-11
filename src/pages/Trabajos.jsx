@@ -88,12 +88,17 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
   // Filtros
   // Default: 'activos' = todos los que NO estan terminados (Completado/Cancelado).
   // Asi al abrir Trabajos solo ves los que estan en proceso, no los ya cerrados.
-  const [filtroEstado, setFiltroEstado] = useState('activos')
-  const [filtroTecnico, setFiltroTecnico] = useState('todos')
+  // Los filtros se RECUERDAN entre navegaciones/recargas (localStorage). La
+  // búsqueda de texto (filtroBusqueda) se deja transitoria a propósito.
+  const [filtroEstado, setFiltroEstado] = useState(() => lsGet('mda:trab_estado', 'activos'))
+  const [filtroTecnico, setFiltroTecnico] = useState(() => lsGet('mda:trab_tecnico', 'todos'))
   const [filtroBusqueda, setFiltroBusqueda] = useState('')
   // Filtro de fecha de la LISTA (el kanban siempre muestra todo el trabajo activo).
   // Por defecto 'hoy' → al abrir Trabajos solo se ven las OT del día.
-  const [filtroFecha, setFiltroFecha] = useState('hoy')
+  const [filtroFecha, setFiltroFecha] = useState(() => lsGet('mda:trab_fecha', 'hoy'))
+  useEffect(() => {
+    lsSet('mda:trab_estado', filtroEstado); lsSet('mda:trab_tecnico', filtroTecnico); lsSet('mda:trab_fecha', filtroFecha)
+  }, [filtroEstado, filtroTecnico, filtroFecha])
 
   const filtered = useMemo(() => {
     let list = [...trabajos]

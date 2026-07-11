@@ -176,6 +176,7 @@ export default function TopBar({ title, subtitle, onToggleSidebar, sidebarOpen, 
             value={query}
             onChange={e => handleSearch(e.target.value)}
             onFocus={() => { if (results.length) setShowResults(true) }}
+            onKeyDown={e => { if (e.key === 'Enter' && results.length) { e.preventDefault(); selectResult(results[0]) } }}
             placeholder="Buscar placa, cliente, OT..."
           />
           {showResults && (
