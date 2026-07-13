@@ -116,6 +116,7 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
   // menos, la diferencia va al Estado de cuenta según diffDestino.
   const [pagoReal, setPagoReal] = useState('')
   const [diffDestino, setDiffDestino] = useState('debo') // 'debo' | 'prestamo'
+  const [metodoPagoLiq, setMetodoPagoLiq] = useState('efectivo') // 'efectivo' | 'transferencia' (cómo se le entrega al técnico)
   // Descuento desde el Estado de cuenta en ESTE pago: se marcan deudas o se
   // escribe el monto. '' = no descontar nada. Al confirmar el pago se abona
   // automático a la cuenta del técnico con la referencia de la liquidación.
@@ -600,6 +601,7 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
       cargosEfectivos: totalSeleccion.cargosEfectivos,
       neto: totalSeleccion.neto,
       pagado,
+      metodoPago: metodoPagoLiq,
       movimientos: [
         ...tecMovs.map(m => ({ ...m })),
         // Fila sintética para el PDF/historial: el movimiento de su cuenta.
@@ -686,7 +688,7 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
       }
     }
 
-    setSeleccionados({}); setPagoReal(''); setDiffDestino('debo'); setCuentaMonto(''); setCuentaSelIds({})
+    setSeleccionados({}); setPagoReal(''); setDiffDestino('debo'); setCuentaMonto(''); setCuentaSelIds({}); setMetodoPagoLiq('efectivo')
     const difMsg = pagado !== netoCalc ? ` (pagado ${fmt(pagado)}, diferencia a Estado de cuenta)` : ''
     notify(`Pago #${liqRef(nuevoId)} generado: ${fmt(pagado)} para ${tecData.tecnico.nombre}${difMsg} · copia la ref en Cuentti`, 'success')
     // Descargar automáticamente el comprobante del pago recién generado
@@ -967,7 +969,7 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
     y = drawTotalsBox(doc, {
       y, x: 122, w: 74,
       rows: rowsReg,
-      finalLabel: tienePago ? 'Pagado en efectivo' : (esNuevoPago ? 'Neto a pagar' : 'NETO PAGADO'),
+      finalLabel: tienePago ? (reg.metodoPago === 'transferencia' ? 'Pagado por transferencia' : 'Pagado en efectivo') : (esNuevoPago ? 'Neto a pagar' : 'NETO PAGADO'),
       finalValue: fmt(tienePago ? reg.pagado : (reg.neto || 0)),
     })
     y += 18
@@ -1496,9 +1498,16 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
                 )}
                 {totalSeleccion.neto > 0 && (
                   <div style={{ marginBottom: 14, padding: '12px 14px', background: 'var(--bg-subtle)', border: '1px solid var(--border)', borderRadius: 'var(--radius)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12, flexWrap: 'wrap' }}>
+                      <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '.4px' }}>Método de pago</span>
+                      <div className="tabs" style={{ margin: 0 }}>
+                        <button type="button" className={metodoPagoLiq === 'efectivo' ? 'on' : ''} onClick={() => setMetodoPagoLiq('efectivo')} style={{ fontSize: 12.5 }}>Efectivo</button>
+                        <button type="button" className={metodoPagoLiq === 'transferencia' ? 'on' : ''} onClick={() => setMetodoPagoLiq('transferencia')} style={{ fontSize: 12.5 }}>Transferencia</button>
+                      </div>
+                    </div>
                     <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-end', gap: 12 }}>
                       <div className="field" style={{ flex: '0 0 190px' }}>
-                        <label>Pagado en efectivo</label>
+                        <label>Pagado {metodoPagoLiq === 'transferencia' ? 'por transferencia' : 'en efectivo'}</label>
                         <MoneyInput value={pagoReal} onChange={setPagoReal} />
                       </div>
                       <div style={{ flex: 1, minWidth: 180, fontSize: 12.5, color: 'var(--text-3)' }}>
@@ -1613,7 +1622,7 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
                           <span className="badge" style={{ background: 'var(--green-100)', color: 'var(--green-700)', fontWeight: 700 }} title="Gasto ya registrado en Cuentti">✓ Cuentti {reg.cuenttiGasto}</span>
                         ) : (
                           <>
-                            <select className="input" aria-label="Método de pago" value={metodoGasto[reg.id] || 'efectivo'} onChange={e => setMetodoGasto(m => ({ ...m, [reg.id]: e.target.value }))} style={{ height: 30, minHeight: 30, fontSize: 12, padding: '2px 8px', width: 'auto' }}>
+                            <select className="input" aria-label="Método de pago" value={metodoGasto[reg.id] || reg.metodoPago || 'efectivo'} onChange={e => setMetodoGasto(m => ({ ...m, [reg.id]: e.target.value }))} style={{ height: 30, minHeight: 30, fontSize: 12, padding: '2px 8px', width: 'auto' }}>
                               <option value="efectivo">Efectivo</option>
                               <option value="transferencia">Transferencia</option>
                             </select>
