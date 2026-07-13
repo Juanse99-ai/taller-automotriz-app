@@ -1039,6 +1039,22 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
   return (
     <div>
       <ConfirmDialog cfg={dialog} onClose={() => setDialog(null)} />
+      <style>{`
+        .liq-book{ display:grid; grid-template-columns: minmax(280px, 340px) minmax(0, 1fr); gap:22px; align-items:start; }
+        .liq-aside{ position:sticky; top:12px; }
+        .liq-roster-row{ display:flex; align-items:center; gap:12px; width:100%; padding:13px 16px; text-align:left; background:transparent; border:none; border-top:1px solid var(--border); cursor:pointer; transition:background .15s var(--ease-out); }
+        .liq-roster-row:first-of-type{ border-top:none; }
+        .liq-roster-row:hover{ background:var(--bg-subtle); }
+        .liq-roster-row.on{ background:var(--navy-900); }
+        .liq-sheet-col{ min-width:0; }
+        .liq-empty{ border:1px solid var(--border); border-radius:var(--radius-lg); background:var(--bg-raised); padding:52px 24px; text-align:center; color:var(--text-3); }
+        .liq-empty p{ font-size:14px; max-width:300px; margin:12px auto 0; line-height:1.5; }
+        .liq-neto__row{ display:flex; align-items:baseline; padding:5px 0; font-size:14.5px; color:var(--text-2); }
+        .liq-neto__row .a{ margin-left:auto; }
+        .liq-neto__tot .l{ font-size:12.5px; font-weight:800; letter-spacing:.5px; text-transform:uppercase; color:var(--text); }
+        .liq-neto__tot .v{ margin-left:auto; font-size:26px; font-weight:800; letter-spacing:-.02em; }
+        @media (max-width: 860px){ .liq-book{ grid-template-columns:1fr; } .liq-aside{ position:static; } }
+      `}</style>
       <div className="pagehd">
         <div>
           <h2>Liquidación de comisiones</h2>
@@ -1073,6 +1089,8 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
         </div>
       </div>
 
+      <div className="liq-book">
+      <aside className="liq-aside">
       {/* Nómina: técnicos en un solo panel, filas divididas (clic para liquidar) */}
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 12 }}>
         <h3 style={{ margin: 0 }}>Nómina</h3>
@@ -1083,49 +1101,30 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
           <div style={{ padding: '22px', fontSize: 13.5, color: 'var(--text-3)' }}>No hay técnicos con trabajos pendientes de liquidar.</div>
         ) : resumenTecnicos.map((t, i) => {
           const activo = tecnicoSel === String(t.id)
-          // Antes se deshabilitaba con 0 OTs pendientes; ahora se puede abrir igual
-          // para registrarle un adelanto/descuento (ej. almuerzo) aunque no tenga trabajos.
-          const disabled = false
           return (
             <button
               key={t.id}
               onClick={() => { setTecnicoSel(activo ? '' : String(t.id)); setSeleccionados({}); setColapso({ trabajos: false, movs: false }) }}
-              disabled={disabled}
-              style={{
-                display: 'flex', alignItems: 'center', gap: 14, width: '100%',
-                padding: '15px 18px', textAlign: 'left',
-                borderTop: i === 0 ? 'none' : '1px solid var(--border)',
-                background: activo ? 'var(--bg-subtle)' : 'transparent',
-                cursor: disabled ? 'default' : 'pointer',
-                opacity: disabled ? .55 : 1,
-                transition: 'background .15s var(--ease-out)',
-              }}
+              className={`liq-roster-row${activo ? ' on' : ''}`}
             >
-              <span className={`av av-${(i % 5) + 1}`} style={{ width: 38, height: 38, fontSize: 13, flexShrink: 0 }}>
+              <span className={`av av-${(i % 5) + 1}`} style={{ width: 36, height: 36, fontSize: 12.5, flexShrink: 0 }}>
                 {t.nombre.split(' ').map(x => x[0]).slice(0, 2).join('')}
               </span>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--text)', display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                  {t.nombre}
-                  {t.activo === false && <Badge tone="neutral">Inactivo</Badge>}
-                  {t.saldoCuenta > 0 && <span className="mono" style={{ fontSize: 11, fontWeight: 700, color: 'var(--red-600)', background: 'var(--red-100)', padding: '2px 8px', borderRadius: 999 }}>debe {fmt(t.saldoCuenta)}</span>}
-                  {t.saldoCuenta < 0 && <span className="mono" style={{ fontSize: 11, fontWeight: 700, color: 'var(--green-700)', background: 'var(--green-100)', padding: '2px 8px', borderRadius: 999 }}>a favor {fmt(-t.saldoCuenta)}</span>}
+                <div style={{ fontWeight: 700, fontSize: 14.5, color: activo ? '#fff' : 'var(--text)', display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'wrap' }}>
+                  {t.nombre.split(' ').slice(0, 2).join(' ')}
+                  {t.activo === false && <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.4px', color: activo ? '#c6d2ea' : 'var(--text-3)', border: `1px solid ${activo ? 'rgba(255,255,255,.3)' : 'var(--border-strong)'}`, borderRadius: 999, padding: '1px 7px' }}>Inactivo</span>}
                 </div>
-                <div style={{ fontSize: 12.5, color: 'var(--text-3)', marginTop: 2 }}>
-                  {t.pendientes} OT{t.pendientes !== 1 ? 's' : ''} pendiente{t.pendientes !== 1 ? 's' : ''}
-                  {t.especialidad ? ` · ${t.especialidad}` : ''}{t.activo === false ? ' · cierre de cuentas' : ''}
+                <div style={{ fontSize: 12, color: activo ? '#9fb0d0' : 'var(--text-3)', marginTop: 1 }}>
+                  {t.pendientes} OT{t.pendientes !== 1 ? 's' : ''}{t.especialidad ? ` · ${t.especialidad}` : ''}
+                  {t.saldoCuenta > 0 && <> · <span style={{ fontWeight: 700, color: activo ? '#f4a9a9' : 'var(--red-600)' }}>debe {fmt(t.saldoCuenta)}</span></>}
+                  {t.saldoCuenta < 0 && <> · <span style={{ fontWeight: 700, color: activo ? '#86efac' : 'var(--green-700)' }}>a favor {fmt(-t.saldoCuenta)}</span></>}
                 </div>
               </div>
               <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                <div className="mono" style={{ fontSize: 20, fontWeight: 700, color: t.neto > 0 ? 'var(--green-700)' : 'var(--text-3)', lineHeight: 1.1 }}>{fmt(t.neto)}</div>
-                <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 2 }}>
-                  Comisión {fmt(t.comisionTotal)}{t.cargosEf > 0 ? ` − ${fmt(t.cargosEf)}` : ''}
-                </div>
+                <div className="mono" style={{ fontSize: 16.5, fontWeight: 700, color: activo ? '#fff' : (t.neto > 0 ? 'var(--green-700)' : 'var(--text-3)'), lineHeight: 1.1 }}>{t.pendientes > 0 ? fmt(t.neto) : '—'}</div>
+                <div style={{ fontSize: 10.5, color: activo ? '#9fb0d0' : 'var(--text-3)', marginTop: 1 }}>{t.pendientes > 0 ? 'neto' : 'sin pendientes'}</div>
               </div>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-3)" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"
-                style={{ flexShrink: 0, transform: activo ? 'rotate(90deg)' : 'none', transition: 'transform 200ms var(--ease-out)', opacity: disabled ? 0 : 1 }}>
-                <polyline points="9 18 15 12 9 6"/>
-              </svg>
             </button>
           )
         })}
@@ -1167,8 +1166,24 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
         </div>
       )}
 
-      {tecData && (
+      </aside>
+
+      <main className="liq-sheet-col">
+      {!tecData ? (
+        <div className="liq-empty">
+          <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: .7 }}><path d="M4 4h16v4H4z"/><path d="M4 12h16"/><path d="M4 18h10"/></svg>
+          <p>Selecciona un técnico de la nómina para ver su hoja de pago.</p>
+        </div>
+      ) : (
         <>
+          <div style={{ padding: '2px 2px 14px', borderBottom: '1px solid var(--border)', marginBottom: 4 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '.8px', textTransform: 'uppercase', color: 'var(--text-3)' }}>Hoja de liquidación · cierre actual</div>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, flexWrap: 'wrap', marginTop: 4 }}>
+              <h2 style={{ margin: 0, fontSize: 26, letterSpacing: '-.02em' }}>{tecData.tecnico.nombre}</h2>
+              <span className="mono" style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--blue-600)', background: 'rgba(37,99,235,.10)', padding: '3px 9px', borderRadius: 7 }}>Ref. #{liqRef(nextLiqId(tecData.tecnico.nombre))}</span>
+            </div>
+            <div style={{ fontSize: 13, color: 'var(--text-3)', marginTop: 3 }}>{tecData.tecnico.especialidad || 'Técnico'} · comisión {COMISION.TOTAL * 100}% de la mano de obra</div>
+          </div>
           <div className="card" style={{ marginTop: 16 }}>
             <div className="card__h" style={{ cursor: 'pointer' }} onClick={() => toggleColapso('trabajos')}>
               <h3 style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -1430,13 +1445,16 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
                 </span>
               </div>
               <div className="card__b">
-                <div className="kpi-bh" style={{ marginBottom: 16 }}>
-                  {[[cantSeleccionados, 'Trabajos'], [fmt(totalSeleccion.manoObra), 'M.O. (sin IVA)'], [fmt(totalSeleccion.comision), 'Comisión', 'var(--green-700)'], [`${totalSeleccion.cargosEfectivos >= 0 ? '−' : '+'} ${fmt(Math.abs(totalSeleccion.cargosEfectivos))}`, 'Aportes / descuentos', 'var(--amber-600)'], [fmt(totalSeleccion.neto), 'Neto a pagar', totalSeleccion.neto >= 0 ? 'var(--green-700)' : 'var(--red-700)']].map(([v, l, c], i) => (
-                    <div key={i} className="kpi-bh__s">
-                      <div className="kpi-bh__l">{l}</div>
-                      <div className="kpi-bh__row"><span className="kpi-bh__v" style={{ fontSize: 20, color: c || 'var(--text)' }}>{v}</span></div>
-                    </div>
-                  ))}
+                <div style={{ marginBottom: 16 }}>
+                  <div className="liq-neto__row"><span>M.O. (sin IVA) · {cantSeleccionados} {cantSeleccionados === 1 ? 'OT' : 'OTs'}</span><span className="a mono">{fmt(totalSeleccion.manoObra)}</span></div>
+                  <div className="liq-neto__row"><span>Comisión ({COMISION.TOTAL * 100}%)</span><span className="a mono" style={{ color: 'var(--green-700)', fontWeight: 700 }}>{fmt(totalSeleccion.comision)}</span></div>
+                  {totalSeleccion.cargosEfectivos !== 0 && (
+                    <div className="liq-neto__row"><span>Aportes / descuentos</span><span className="a mono" style={{ color: 'var(--amber-600)', fontWeight: 700 }}>{totalSeleccion.cargosEfectivos >= 0 ? '− ' : '+ '}{fmt(Math.abs(totalSeleccion.cargosEfectivos))}</span></div>
+                  )}
+                  <div className="liq-neto__tot" style={{ display: 'flex', alignItems: 'baseline', borderTop: '3px double var(--text)', marginTop: 8, paddingTop: 12 }}>
+                    <span className="l">Neto a pagar</span>
+                    <span className="v mono" style={{ color: totalSeleccion.neto >= 0 ? 'var(--green-700)' : 'var(--red-700)' }}>{fmt(totalSeleccion.neto)}</span>
+                  </div>
                 </div>
                 {totalSeleccion.cargos > 0 && (
                   <div style={{ padding: '9px 13px', background: 'rgba(245,158,11,.07)', border: '1px solid rgba(245,158,11,.25)', borderRadius: 9, fontSize: 12.5, color: 'var(--text-2)', marginBottom: 14 }}>
@@ -1491,6 +1509,8 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
           )}
         </>
       )}
+      </main>
+      </div>
 
       <div className="card" style={{ marginTop: 16 }}>
         <div className="card__h">
