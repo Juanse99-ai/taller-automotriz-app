@@ -257,7 +257,7 @@ export default function App() {
       case 'clientes':
         return <Clientes clientes={clientesHook} vehiculos={vehiculosHook} notify={notify} />
       case 'vehiculos':
-        return <Vehiculos vehiculos={vehiculosHook} clientes={clientesHook} notify={notify} />
+        return <Vehiculos vehiculos={vehiculosHook} clientes={clientesHook} trabajos={trabajosHook.trabajos} notify={notify} />
       case 'cuentti':
         return <CuenttiPanel trabajos={trabajosHook.trabajos} actualizarTrabajo={trabajosHook.actualizarTrabajo} notify={notify} />
       case 'crm':

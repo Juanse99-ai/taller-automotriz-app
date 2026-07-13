@@ -1,13 +1,51 @@
 import { useState, useMemo } from 'react'
 import { fmtDate, fmt } from '../utils/helpers'
+import { ESTADOS } from '../utils/constants'
+import { useTecnicos } from '../services/tecnicos'
 
-export default function Vehiculos({ vehiculos, clientes, notify }) {
+export default function Vehiculos({ vehiculos, clientes, trabajos = [], notify }) {
   const {
-    vehiculos: vehiculosList, buscarPorPlaca, buscarPorCedula,
+    vehiculos: vehiculosBase, buscarPorPlaca, buscarPorCedula,
     agregarVehiculo, agregarHistorial, actualizarVehiculo,
   } = vehiculos
 
   const { obtenerCliente, clientesTable } = clientes
+  const TECNICOS = useTecnicos()
+
+  // El historial de servicio se deriva de las OT COMPLETADAS de cada placa.
+  // No se persiste en el vehiculo: siempre refleja los trabajos actuales.
+  const historialPorPlaca = useMemo(() => {
+    const nombreTecnico = (id) => {
+      const t = TECNICOS.find(tc => tc.id === parseInt(id))
+      return t ? t.nombre : ''
+    }
+    const map = {}
+    trabajos.forEach(t => {
+      if (t.estado !== ESTADOS.COMPLETADO) return
+      const placa = (t.placa || '').trim().toUpperCase()
+      if (!placa) return
+      ;(map[placa] || (map[placa] = [])).push({
+        id: t.id,
+        trabajoId: t.otCodigo || t.id,
+        fecha: t.fecha,
+        kilometraje: t.kilometraje ?? null,
+        tecnico: nombreTecnico(t.tecnicoId),
+        total: t.total || 0,
+        estado: t.estado,
+        observaciones: t.observaciones || '',
+      })
+    })
+    return map
+  }, [trabajos, TECNICOS])
+
+  // Vehiculos con su historial derivado inyectado (reemplaza el campo vacio de BD)
+  const vehiculosList = useMemo(
+    () => vehiculosBase.map(v => ({
+      ...v,
+      historial: historialPorPlaca[(v.placa || '').trim().toUpperCase()] || [],
+    })),
+    [vehiculosBase, historialPorPlaca],
+  )
 
   const [busqueda, setBusqueda] = useState('')
   const [vehiculoSeleccionado, setVehiculoSeleccionado] = useState(null)
