@@ -121,7 +121,8 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
   // automático a la cuenta del técnico con la referencia de la liquidación.
   const [cuentaMonto, setCuentaMonto] = useState('')
   const [cuentaSelIds, setCuentaSelIds] = useState({})
-  useEffect(() => { setCuentaMonto(''); setCuentaSelIds({}) }, [tecnicoSel])
+  const [aporteForm, setAporteForm] = useState(null) // 'diario' | 'adelanto' | null (formulario en línea, a demanda)
+  useEffect(() => { setCuentaMonto(''); setCuentaSelIds({}); setAporteForm(null) }, [tecnicoSel])
   const [regCuenttiId, setRegCuenttiId] = useState(null) // id del pago que se está registrando en Cuentti
   const [metodoGasto, setMetodoGasto] = useState({}) // reg.id -> 'efectivo' | 'transferencia'
   const gastoRef = useRef(new Set()) // pagos con registro de gasto EN CURSO (anti doble-clic síncrono)
@@ -1047,7 +1048,7 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
         .liq-roster-row:hover{ background:var(--bg-subtle); }
         .liq-roster-row.on{ background:var(--navy-900); }
         .liq-sheet-col{ min-width:0; }
-        .liq-empty{ border:1px solid var(--border); border-radius:var(--radius-lg); background:var(--bg-raised); padding:52px 24px; text-align:center; color:var(--text-3); }
+        .liq-empty{ border:1px solid var(--border); border-radius:var(--radius-lg); background:var(--bg-raised); padding:52px 24px; text-align:center; color:var(--text-3); height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; }
         .liq-empty p{ font-size:14px; max-width:300px; margin:12px auto 0; line-height:1.5; }
         .liq-neto__row{ display:flex; align-items:baseline; padding:5px 0; font-size:14.5px; color:var(--text-2); }
         .liq-neto__row .a{ margin-left:auto; }
@@ -1089,7 +1090,7 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
         </div>
       </div>
 
-      <div className="liq-book">
+      <div className="liq-book" style={{ alignItems: tecData ? 'start' : 'stretch' }}>
       <aside className="liq-aside">
       {/* Nómina: técnicos en un solo panel, filas divididas (clic para liquidar) */}
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 12 }}>
@@ -1283,61 +1284,118 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
             </div>
             {!colapso.movs && (
             <div className="card__b">
-              {/* DIARIO: gasto del admin por día. Modo "solo este técnico" o "repartir" entre varios. */}
-              <div style={{ marginBottom: 16, padding: 14, background: 'var(--bg-subtle)', border: '1px solid var(--border)', borderRadius: 'var(--radius)' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 10, flexWrap: 'wrap' }}>
-                  <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--amber-700)', textTransform: 'uppercase', letterSpacing: '.4px' }}>Diario · gasto del administrador</span>
-                  <div className="tabs" style={{ margin: 0 }}>
-                    <button type="button" className={!diarioReparto ? 'on' : ''} onClick={() => setDiarioReparto(false)} style={{ fontSize: 12 }}>Solo este técnico</button>
-                    <button type="button" className={diarioReparto ? 'on' : ''} onClick={() => setDiarioReparto(true)} style={{ fontSize: 12 }}>Repartir</button>
+              {/* Acciones compactas: el formulario aparece SOLO al elegir qué agregar (nada de cajas permanentes) */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '.4px', marginRight: 2 }}>Agregar</span>
+                {[['adelanto', 'Adelanto o cargo'], ['diario', 'Diario del administrador']].map(([k, lbl]) => {
+                  const on = aporteForm === k
+                  return (
+                    <button key={k} type="button" onClick={() => setAporteForm(on ? null : k)}
+                      style={{ fontFamily: 'inherit', fontSize: 13, fontWeight: 600, cursor: 'pointer', padding: '6px 13px', borderRadius: 999,
+                        border: `1px solid ${on ? 'var(--blue-600)' : 'var(--border-strong)'}`,
+                        background: on ? 'var(--blue-600)' : 'var(--bg-raised)', color: on ? '#fff' : 'var(--text-2)',
+                        transition: 'background .12s, color .12s, border-color .12s' }}>
+                      {on ? '✕ ' : '＋ '}{lbl}
+                    </button>
+                  )
+                })}
+              </div>
+
+              {/* ADELANTO / CARGO — formulario en línea, plano */}
+              {aporteForm === 'adelanto' && (
+                <form onSubmit={agregarMovimiento} style={{ borderTop: '1px solid var(--border)', marginTop: 14, paddingTop: 16, display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 2fr auto', gap: 12 }}>
+                  <div className="field"><label>Tipo</label><select className="input" value={movForm.tipo} onChange={e => setMovForm(f => ({ ...f, tipo: e.target.value }))}><option value="adelanto">Adelanto</option><option value="prestamo">Préstamo</option><option value="consumo">Consumo</option><option value="descuento">Descuento</option></select></div>
+                  <div className="field"><label>Monto</label><MoneyInput value={movForm.monto} onChange={v => setMovForm(f => ({ ...f, monto: v }))} placeholder="0" /></div>
+                  <div className="field"><label>Fecha</label><input className="input" type="date" value={movForm.fecha} onChange={e => setMovForm(f => ({ ...f, fecha: e.target.value }))}/></div>
+                  <div className="field"><label>Nota</label><input className="input" value={movForm.nota} onChange={e => setMovForm(f => ({ ...f, nota: e.target.value }))} placeholder="Almuerzo, anticipo..."/></div>
+                  <div style={{ display: 'flex', alignItems: 'flex-end' }}><Button variant="primary" type="submit">Agregar</Button></div>
+                </form>
+              )}
+
+              {/* DIARIO — gasto del admin por día (50/50). Plano, sin caja anidada. */}
+              {aporteForm === 'diario' && (
+                <div style={{ borderTop: '1px solid var(--border)', marginTop: 14, paddingTop: 16 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 10, flexWrap: 'wrap' }}>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--amber-700)', textTransform: 'uppercase', letterSpacing: '.4px' }}>Diario · gasto del administrador (50/50)</span>
+                    <div className="tabs" style={{ margin: 0 }}>
+                      <button type="button" className={!diarioReparto ? 'on' : ''} onClick={() => setDiarioReparto(false)} style={{ fontSize: 12 }}>Solo este técnico</button>
+                      <button type="button" className={diarioReparto ? 'on' : ''} onClick={() => setDiarioReparto(true)} style={{ fontSize: 12 }}>Repartir</button>
+                    </div>
                   </div>
-                </div>
-                <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-end', gap: 12 }}>
-                  <div className="field" style={{ flex: '0 0 150px' }}><label>Valor diario</label><MoneyInput value={valorDiario} onChange={cambiarValorDiario} /></div>
-                  <div className="field" style={{ flex: '0 0 110px' }}><label>Días</label><input className="input" type="number" min="0" value={diarioDias} onChange={e => setDiarioDias(e.target.value)} placeholder="Ej. 6" /></div>
-                  {!diarioReparto ? (
-                    <>
-                      <div style={{ flex: 1, minWidth: 130, fontSize: 13.5, color: 'var(--text-3)' }}>
-                        Diario a cargar: <strong style={{ color: 'var(--amber-700)', fontFamily: 'var(--mono)' }}>{fmt((Number(valorDiario) || 0) * (parseInt(diarioDias) || 0))}</strong>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-end', gap: 12 }}>
+                    <div className="field" style={{ flex: '0 0 150px' }}><label>Valor diario</label><MoneyInput value={valorDiario} onChange={cambiarValorDiario} /></div>
+                    <div className="field" style={{ flex: '0 0 110px' }}><label>Días</label><input className="input" type="number" min="0" value={diarioDias} onChange={e => setDiarioDias(e.target.value)} placeholder="Ej. 6" /></div>
+                    {!diarioReparto ? (
+                      <>
+                        <div style={{ flex: 1, minWidth: 130, fontSize: 13.5, color: 'var(--text-3)' }}>
+                          Diario a cargar: <strong style={{ color: 'var(--amber-700)', fontFamily: 'var(--mono)' }}>{fmt((Number(valorDiario) || 0) * (parseInt(diarioDias) || 0))}</strong>
+                        </div>
+                        <Button variant="outline" type="button" onClick={agregarDiario}>Agregar diario</Button>
+                      </>
+                    ) : (
+                      <div style={{ flex: 1, minWidth: 220, fontSize: 13.5, color: 'var(--text-3)' }}>
+                        {(() => {
+                          const nRep = Object.keys(diarioRepTec).filter(id => diarioRepTec[id]).length
+                          const totalDia = (Number(valorDiario) || 0) * (parseInt(diarioDias) || 0)
+                          const parteDia = nRep > 0 ? Math.round(totalDia / nRep) : 0
+                          return <>Total <strong style={{ color: 'var(--amber-700)', fontFamily: 'var(--mono)' }}>{fmt(totalDia)}</strong>{nRep > 0 && <> ÷ {nRep} = <strong style={{ color: 'var(--amber-700)', fontFamily: 'var(--mono)' }}>{fmt(parteDia)}</strong> c/u</>}</>
+                        })()}
                       </div>
-                      <Button variant="outline" type="button" onClick={agregarDiario}>Agregar diario</Button>
-                    </>
-                  ) : (
-                    <div style={{ flex: 1, minWidth: 220, fontSize: 13.5, color: 'var(--text-3)' }}>
-                      {(() => {
-                        const nRep = Object.keys(diarioRepTec).filter(id => diarioRepTec[id]).length
-                        const totalDia = (Number(valorDiario) || 0) * (parseInt(diarioDias) || 0)
-                        const parteDia = nRep > 0 ? Math.round(totalDia / nRep) : 0
-                        return <>Total <strong style={{ color: 'var(--amber-700)', fontFamily: 'var(--mono)' }}>{fmt(totalDia)}</strong>{nRep > 0 && <> ÷ {nRep} = <strong style={{ color: 'var(--amber-700)', fontFamily: 'var(--mono)' }}>{fmt(parteDia)}</strong> c/u</>}</>
-                      })()}
+                    )}
+                  </div>
+                  <div className="field" style={{ marginTop: 12 }}>
+                    <label>Nota (lo que verá el técnico en su liquidación)</label>
+                    <input className="input" value={diarioNota} onChange={e => setDiarioNota(e.target.value)} placeholder={DIARIO_NOTA_DEFAULT} />
+                  </div>
+                  {diarioReparto && (
+                    <div style={{ marginTop: 10 }}>
+                      <div style={{ fontSize: 12, color: 'var(--text-3)', marginBottom: 6 }}>¿Entre quiénes se reparte?</div>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 10 }}>
+                        {resumenTecnicos.map(t => (
+                          <label key={t.id} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '5px 10px', border: '1px solid', borderColor: diarioRepTec[t.id] ? 'var(--amber-600)' : 'var(--border)', background: diarioRepTec[t.id] ? 'rgba(245,158,11,.10)' : 'var(--bg-raised)', borderRadius: 999, cursor: 'pointer', fontSize: 13 }}>
+                            <input type="checkbox" checked={!!diarioRepTec[t.id]} onChange={() => toggleDiarioRepTec(t.id)} />
+                            {t.nombre.split(' ')[0]}
+                          </label>
+                        ))}
+                      </div>
+                      <Button variant="outline" type="button" onClick={repartirDiario}>Repartir diario</Button>
                     </div>
                   )}
                 </div>
-                <div className="field" style={{ marginTop: 12 }}>
-                  <label>Nota (lo que verá el técnico en su liquidación)</label>
-                  <input className="input" value={diarioNota} onChange={e => setDiarioNota(e.target.value)} placeholder={DIARIO_NOTA_DEFAULT} />
-                </div>
-                {diarioReparto && (
-                  <div style={{ marginTop: 10 }}>
-                    <div style={{ fontSize: 12, color: 'var(--text-3)', marginBottom: 6 }}>¿Entre quiénes se reparte?</div>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 10 }}>
-                      {resumenTecnicos.map(t => (
-                        <label key={t.id} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '5px 10px', border: '1px solid', borderColor: diarioRepTec[t.id] ? 'var(--amber-600)' : 'var(--border)', background: diarioRepTec[t.id] ? 'rgba(245,158,11,.10)' : 'var(--bg-raised)', borderRadius: 999, cursor: 'pointer', fontSize: 13 }}>
-                          <input type="checkbox" checked={!!diarioRepTec[t.id]} onChange={() => toggleDiarioRepTec(t.id)} />
-                          {t.nombre.split(' ')[0]}
-                        </label>
+              )}
+
+              {/* Movimientos ya aplicados en este cierre */}
+              {tecMovs.length === 0 ? (
+                <p style={{ fontSize: 13.5, color: 'var(--text-3)', marginTop: 16 }}>Sin aportes ni descuentos registrados en este cierre.</p>
+              ) : (
+                <div style={{ marginTop: 16 }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '.4px', marginBottom: 8 }}>Movimientos · {tecMovs.length}</div>
+                  <table className="tbl">
+                    <thead><tr><th>Fecha</th><th>Tipo</th><th>Nota</th><th className="c-right">Monto</th><th></th></tr></thead>
+                    <tbody>
+                      {tecMovs.map(m => (
+                        <tr key={m.id}>
+                          <td className="c-muted">{fmtDate(m.fecha)}</td>
+                          <td>{tipoLabel(m.tipo)}</td>
+                          <td className="c-muted">{m.nota || '—'}</td>
+                          <td className="c-mono c-right" style={{ color: 'var(--amber-600)' }}>{fmt(m.monto)}</td>
+                          <td><Button variant="ghost" size="sm" onClick={() => setDialog({
+                            title: 'Eliminar movimiento',
+                            lead: `${tipoLabel(m.tipo)} · ${fmt(m.monto)} · ${fmtDate(m.fecha)}`,
+                            confirmLabel: 'Sí, eliminar', tone: 'danger',
+                            onConfirm: () => hookEliminarMov(m.id),
+                          })} aria-label="Eliminar movimiento">✕</Button></td>
+                        </tr>
                       ))}
-                    </div>
-                    <Button variant="outline" type="button" onClick={repartirDiario}>Repartir diario</Button>
-                  </div>
-                )}
-              </div>
-              {/* CUENTA DEL TÉCNICO — mismo libro que la pestaña Estado de cuenta.
-                  Marca deudas o escribe el monto a descontar en este pago; al
-                  confirmar se abona automático con la ref. de la liquidación. */}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+
+              {/* CUENTA DEL TÉCNICO — deudas del Estado de cuenta para descontar aquí. Plano. */}
               {(tecCuenta.saldo !== 0 || tecCuenta.deudas.length > 0) && (
-                <div style={{ marginBottom: 16, padding: 14, background: 'var(--bg-subtle)', border: '1px solid var(--border)', borderRadius: 'var(--radius)' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap', marginBottom: 8 }}>
+                <div style={{ borderTop: '1px solid var(--border)', marginTop: 16, paddingTop: 16 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap', marginBottom: 10 }}>
                     <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--blue-600)', textTransform: 'uppercase', letterSpacing: '.4px' }}>Cuenta del técnico · Estado de cuenta</span>
                     <span className="mono" style={{ fontSize: 13.5, fontWeight: 800, color: tecCuenta.saldo > 0 ? 'var(--red-600)' : 'var(--green-600)' }}>
                       {tecCuenta.saldo > 0 ? `Debe ${fmt(tecCuenta.saldo)}` : tecCuenta.saldo < 0 ? `A favor ${fmt(-tecCuenta.saldo)}` : 'En $ 0'}
@@ -1397,40 +1455,6 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
                     <div style={{ fontSize: 12.5, color: 'var(--text-3)' }}>Sin deuda pendiente por descontar.</div>
                   )}
                 </div>
-              )}
-              <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '.4px', marginBottom: 8 }}>Registrar adelanto o cargo</div>
-              <form onSubmit={agregarMovimiento} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 2fr auto', gap: 12, marginBottom: 16 }}>
-                <div className="field"><label>Tipo</label><select className="input" value={movForm.tipo} onChange={e => setMovForm(f => ({ ...f, tipo: e.target.value }))}><option value="adelanto">Adelanto</option><option value="prestamo">Préstamo</option><option value="consumo">Consumo</option><option value="descuento">Descuento</option></select></div>
-                <div className="field"><label>Monto</label><MoneyInput value={movForm.monto} onChange={v => setMovForm(f => ({ ...f, monto: v }))} placeholder="0" /></div>
-                <div className="field"><label>Fecha</label><input className="input" type="date" value={movForm.fecha} onChange={e => setMovForm(f => ({ ...f, fecha: e.target.value }))}/></div>
-                <div className="field"><label>Nota</label><input className="input" value={movForm.nota} onChange={e => setMovForm(f => ({ ...f, nota: e.target.value }))} placeholder="Almuerzo, anticipo..."/></div>
-                <div style={{ display: 'flex', alignItems: 'flex-end' }}><Button variant="outline" type="submit">Agregar</Button></div>
-              </form>
-              {tecMovs.length === 0 ? (
-                <p style={{ fontSize: 13.5, color: 'var(--text-3)' }}>Sin aportes del administrador pendientes.</p>
-              ) : (
-                <>
-                <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '.4px', marginBottom: 8 }}>Movimientos · {tecMovs.length}</div>
-                <table className="tbl">
-                  <thead><tr><th>Fecha</th><th>Tipo</th><th>Nota</th><th className="c-right">Monto</th><th></th></tr></thead>
-                  <tbody>
-                    {tecMovs.map(m => (
-                      <tr key={m.id}>
-                        <td className="c-muted">{fmtDate(m.fecha)}</td>
-                        <td>{tipoLabel(m.tipo)}</td>
-                        <td className="c-muted">{m.nota || '—'}</td>
-                        <td className="c-mono c-right" style={{ color: 'var(--amber-600)' }}>{fmt(m.monto)}</td>
-                        <td><Button variant="ghost" size="sm" onClick={() => setDialog({
-                          title: 'Eliminar movimiento',
-                          lead: `${tipoLabel(m.tipo)} · ${fmt(m.monto)} · ${fmtDate(m.fecha)}`,
-                          confirmLabel: 'Sí, eliminar', tone: 'danger',
-                          onConfirm: () => hookEliminarMov(m.id),
-                        })} aria-label="Eliminar movimiento">✕</Button></td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-                </>
               )}
             </div>
             )}
