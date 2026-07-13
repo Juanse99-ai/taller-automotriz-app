@@ -1519,10 +1519,25 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
                       const diffNum = totalSeleccion.neto - pagadoNum
                       if (diffNum > 0) return (
                         <div style={{ marginTop: 12 }}>
-                          <div style={{ fontSize: 13, color: 'var(--text-2)', marginBottom: 8 }}>Diferencia de <strong className="mono" style={{ color: 'var(--amber-700)' }}>{fmt(diffNum)}</strong> — ¿qué hago con ella?</div>
-                          <div className="tabs" style={{ margin: 0 }}>
-                            <button type="button" className={diffDestino === 'debo' ? 'on' : ''} onClick={() => setDiffDestino('debo')} style={{ fontSize: 12.5 }}>Se lo quedo debiendo</button>
-                            <button type="button" className={diffDestino === 'prestamo' ? 'on' : ''} onClick={() => setDiffDestino('prestamo')} style={{ fontSize: 12.5 }}>Abona a su préstamo</button>
+                          <div style={{ fontSize: 13, color: 'var(--text-2)', marginBottom: 8 }}>Le pagas <strong className="mono">{fmt(pagadoNum)}</strong> de <strong className="mono">{fmt(totalSeleccion.neto)}</strong>. La diferencia de <strong className="mono" style={{ color: 'var(--amber-700)' }}>{fmt(diffNum)}</strong> — ¿qué hago con ella?</div>
+                          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                            {[['debo', 'Se lo quedo debiendo'], ['prestamo', 'Abona a su préstamo']].map(([k, lbl]) => {
+                              const on = diffDestino === k
+                              return (
+                                <button key={k} type="button" onClick={() => setDiffDestino(k)}
+                                  style={{ fontFamily: 'inherit', fontSize: 13, fontWeight: 600, cursor: 'pointer', padding: '9px 15px', borderRadius: 8,
+                                    border: `1px solid ${on ? 'var(--blue-600)' : 'var(--border-strong)'}`,
+                                    background: on ? 'var(--blue-600)' : 'var(--bg-raised)', color: on ? '#fff' : 'var(--text-2)',
+                                    transition: 'background .12s, color .12s, border-color .12s' }}>
+                                  {lbl}
+                                </button>
+                              )
+                            })}
+                          </div>
+                          <div style={{ marginTop: 8, fontSize: 12.5, color: 'var(--text-3)' }}>
+                            {diffDestino === 'debo'
+                              ? <>Queda como <strong>saldo a favor del técnico</strong>: le sigues debiendo <strong className="mono">{fmt(diffNum)}</strong> en su Estado de cuenta.</>
+                              : <>Esos <strong className="mono">{fmt(diffNum)}</strong> <strong>bajan lo que el técnico te debe</strong> (sus préstamos o adelantos).</>}
                           </div>
                         </div>
                       )
