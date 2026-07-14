@@ -317,7 +317,7 @@ export default function Inventario({ notify }) {
                   <th onClick={() => toggleSort('precio')} className="c-right" style={{ cursor: 'pointer', userSelect: 'none' }}>
                     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, justifyContent: 'flex-end' }}>Precio {sortIcon('precio')}</span>
                   </th>
-                  <th className="c-right" title="Utilidad = (precio venta − costo) / costo, sobre valores sin IVA">
+                  <th className="c-right" title="Utilidad = margen sobre la venta = (precio − costo) / precio, sin IVA (como Cuentti)">
                     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, justifyContent: 'flex-end' }}>Utilidad</span>
                   </th>
                   <th onClick={() => toggleSort('iva')} className="c-right" style={{ cursor: 'pointer', userSelect: 'none' }}>
@@ -333,7 +333,8 @@ export default function Inventario({ notify }) {
                   const s = stockState(p)
                   const baseCosto = parseFloat(p.costoBase) || 0
                   const costoIva = baseCosto > 0 ? baseCosto * (1 + (p.iva || 0) / 100) : 0
-                  const util = (baseCosto > 0 && p.precioBase > 0) ? ((p.precioBase - baseCosto) / baseCosto) * 100 : null
+                  // Utilidad = MARGEN sobre el precio de venta (como Cuentti): (precio − costo) / precio, sin IVA.
+                  const util = (baseCosto > 0 && p.precioBase > 0) ? ((p.precioBase - baseCosto) / p.precioBase) * 100 : null
                   return (
                     <tr key={p.id || p.codigo}>
                       <td className="c-mono" data-label="Código" style={{ color: 'var(--text-3)', fontSize: 11.5 }}>{p.codigo}</td>

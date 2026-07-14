@@ -564,7 +564,7 @@ export async function cargarInventarioCompleto() {
 }
 
 // Calcula costoConIva y utilidadPct a partir de costoBase (sin IVA) y precioBase.
-// utilidadPct = markup sobre costo = (precioVenta - costo) / costo * 100.
+// utilidadPct = MARGEN sobre la venta (como Cuentti) = (precioVenta - costo) / precioVenta * 100.
 // Muta el producto. Si no hay costo, deja costoConIva=0 y utilidadPct=null.
 export function derivarCosto(p) {
   const costoBase = parseFloat(p.costoBase) || 0
@@ -573,7 +573,7 @@ export function derivarCosto(p) {
   p.costoBase = costoBase
   p.costoConIva = costoBase > 0 ? costoBase * (1 + iva / 100) : 0
   p.utilidadPct = (costoBase > 0 && precioBase > 0)
-    ? ((precioBase - costoBase) / costoBase) * 100
+    ? ((precioBase - costoBase) / precioBase) * 100
     : null
   return p
 }
