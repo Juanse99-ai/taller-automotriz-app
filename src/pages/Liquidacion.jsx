@@ -1822,6 +1822,8 @@ function EstadoCuenta({ prestamos, tecnicos, notify }) {
         .ec-row:first-of-type{ border-top:none; }
         .ec-row:hover{ background:var(--bg-subtle); }
         .ec-row.on{ background:var(--navy-900); }
+        .ec-del{ flex-shrink:0; width:30px; height:30px; border-radius:8px; border:1px solid var(--border); background:var(--bg-raised); color:var(--text-4); cursor:pointer; display:inline-flex; align-items:center; justify-content:center; font-size:13px; transition:border-color .12s, color .12s, background .12s; }
+        .ec-del:hover{ border-color:var(--red-600); color:var(--red-600); background:rgba(220,38,38,.06); }
         @media (max-width: 820px){ .ec-book{ grid-template-columns:1fr; } .ec-aside{ position:static; } }
       `}</style>
 
@@ -1927,27 +1929,25 @@ function EstadoCuenta({ prestamos, tecnicos, notify }) {
               </div>
             </div>
             {cuentaSel.movs.length === 0 ? (
-              <div className="card__b"><p className="text-sm text-muted">Sin movimientos. Registra un préstamo o abono.</p></div>
+              <div className="card__b"><p style={{ fontSize: 13.5, color: 'var(--text-3)' }}>Sin movimientos. Registra un préstamo o abono abajo.</p></div>
             ) : (
-              <div className="card__b">
+              <div className="card__b" style={{ paddingTop: 4, paddingBottom: 4 }}>
                 {cuentaSel.movs.map((m, i) => (
-                  <div key={m.id} style={{ padding: '13px 2px', borderTop: i === 0 ? 'none' : '1px solid var(--border)' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                      <Badge tone={m.tipo === 'abono' ? 'success' : 'warning'}>{m.tipo === 'abono' ? 'Abono' : 'Préstamo'}</Badge>
-                      <span className="text-mono" style={{ marginLeft: 'auto', fontWeight: 700, fontSize: 15, whiteSpace: 'nowrap', color: m.tipo === 'abono' ? 'var(--green-700)' : 'var(--amber-700)' }}>
-                        {m.tipo === 'abono' ? '− ' : '+ '}{fmt(m.monto)}
-                      </span>
-                      <Button variant="ghost" size="sm" style={{ color: 'var(--red-600)', padding: '4px 7px', flex: 'none' }} onClick={() => setDlg({
-                        title: 'Eliminar movimiento',
-                        lead: `${m.tipo === 'abono' ? 'Abono' : 'Préstamo'} · ${fmt(m.monto)} · ${fmtDate(m.fecha)}`,
-                        confirmLabel: 'Sí, eliminar', tone: 'danger',
-                        onConfirm: () => eliminarMovimiento(m.id),
-                      })} aria-label="Eliminar movimiento" title="Eliminar">✕</Button>
+                  <div key={m.id} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '12px 4px', borderTop: i === 0 ? 'none' : '1px solid var(--border)' }}>
+                    <Badge tone={m.tipo === 'abono' ? 'success' : 'warning'}>{m.tipo === 'abono' ? 'Abono' : 'Préstamo'}</Badge>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      {m.nota && <div style={{ fontSize: 13.5, color: 'var(--text-2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.nota}</div>}
+                      <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: m.nota ? 2 : 0 }}>{fmtDate(m.fecha)}</div>
                     </div>
-                    <div style={{ marginTop: 6, fontSize: 12.5, color: 'var(--text-3)', display: 'flex', gap: 8 }}>
-                      <span style={{ flex: 'none' }}>{fmtDate(m.fecha)}</span>
-                      <span style={{ color: 'var(--text-2)', minWidth: 0 }}>{m.nota || '—'}</span>
-                    </div>
+                    <span className="mono" style={{ fontWeight: 700, fontSize: 15.5, whiteSpace: 'nowrap', color: m.tipo === 'abono' ? 'var(--green-700)' : 'var(--amber-700)' }}>
+                      {m.tipo === 'abono' ? '− ' : '+ '}{fmt(m.monto)}
+                    </span>
+                    <button type="button" className="ec-del" aria-label="Eliminar movimiento" title="Eliminar" onClick={() => setDlg({
+                      title: 'Eliminar movimiento',
+                      lead: `${m.tipo === 'abono' ? 'Abono' : 'Préstamo'} · ${fmt(m.monto)} · ${fmtDate(m.fecha)}`,
+                      confirmLabel: 'Sí, eliminar', tone: 'danger',
+                      onConfirm: () => eliminarMovimiento(m.id),
+                    })}>✕</button>
                   </div>
                 ))}
               </div>
