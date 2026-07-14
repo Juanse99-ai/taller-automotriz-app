@@ -672,7 +672,15 @@ tbody tr:hover{background:var(--bg-subtle)}
 .items-center{align-items:center}
 .justify-between{justify-content:space-between}
 .totals-row{display:flex;justify-content:flex-end;gap:16px;flex-wrap:wrap;align-items:center}
-.actions-cell{display:flex;gap:6px;flex-wrap:wrap}
+.actions-cell{display:flex;gap:6px;flex-wrap:nowrap;align-items:center}
+
+/* Boton de icono cuadrado: acciones utilitarias en tablas (PDF, editar, eliminar).
+   Las DECISIONES (Aprobar/Rechazar/Crear trabajo) siguen siendo botones con texto. */
+.icon-btn{display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;width:32px;height:32px;padding:0;border-radius:8px;border:1px solid var(--border-strong);background:var(--bg-raised);color:var(--text-3);cursor:pointer;transition:border-color .12s var(--ease-out),color .12s var(--ease-out),background .12s var(--ease-out)}
+.icon-btn:hover{border-color:var(--text-3);color:var(--text);background:var(--bg-subtle)}
+.icon-btn:focus-visible{outline:2px solid var(--primary);outline-offset:2px}
+.icon-btn svg{width:15px;height:15px}
+.icon-btn--danger:hover{border-color:var(--red-600);color:var(--red-600);background:rgba(220,38,38,.06)}
 
 /* tabs alias */
 .tabs button.active{color:var(--blue-600);border-bottom-color:var(--blue-600)}
@@ -766,8 +774,9 @@ tbody tr:hover{background:var(--bg-subtle)}
   .card-title{font-size:13px}
   .toast{left:12px;right:12px;max-width:none}
   .totals-row{flex-direction:column;align-items:flex-end;gap:6px}
-  .actions-cell{flex-direction:column;gap:4px}
-  .actions-cell .btn{width:100%;justify-content:center}
+  .actions-cell{flex-direction:row;flex-wrap:wrap;gap:6px}
+  .actions-cell .btn{flex:1 1 auto;justify-content:center}
+  .actions-cell .icon-btn{width:36px;height:36px}
   .modal{margin:8px;max-height:95vh}
   .modal-body{padding:16px}
 }
