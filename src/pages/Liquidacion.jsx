@@ -1737,6 +1737,20 @@ function EstadoCuenta({ prestamos, tecnicos, notify }) {
   const mismaPersona = (a, b) => (a || '').trim().toLowerCase() === (b || '').trim().toLowerCase()
   const cuentaSel = cuentas.find(c => mismaPersona(c.persona, sel)) || null
 
+  // Personas que existen como opción del select (técnicos + personas fijas).
+  const opcionesPersona = useMemo(() => new Set([
+    ...tecnicos.filter(t => !t.eliminado).map(t => t.nombre),
+    ...PERSONAS_CUENTA.map(p => p.nombre),
+  ]), [tecnicos])
+
+  // Elegir una cuenta de la lista: la selecciona Y deja el formulario listo para
+  // registrarle un movimiento (si es un tercero no listado, cae a "otra persona").
+  const elegirCuenta = (persona) => {
+    setSel(persona)
+    if (opcionesPersona.has(persona)) setForm(f => ({ ...f, personaSel: persona, personaOtra: '' }))
+    else setForm(f => ({ ...f, personaSel: '__otra', personaOtra: persona }))
+  }
+
   const guardar = () => {
     if (!personaFinal) { notify('Elige o escribe la persona', 'error'); return }
     const monto = Math.abs(parseFloat(form.monto) || 0)
@@ -1803,9 +1817,46 @@ function EstadoCuenta({ prestamos, tecnicos, notify }) {
   return (
     <div>
       <ConfirmDialog cfg={dlg} onClose={() => setDlg(null)} />
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: 16, alignItems: 'start' }}>
-        <div className="card" style={{ boxShadow: 'none' }}>
-          <div className="card__h"><span style={{ fontSize: 12.5, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.06em', color: 'var(--text-3)' }}>Registrar movimiento</span></div>
+      <style>{`
+        .ec-book{ display:grid; grid-template-columns: minmax(280px, 340px) minmax(0, 1fr); gap:20px; align-items:start; }
+        .ec-aside{ position:sticky; top:12px; }
+        .ec-row{ display:flex; align-items:center; gap:12px; width:100%; padding:12px 16px; text-align:left; background:transparent; border:none; border-top:1px solid var(--border); cursor:pointer; transition:background .15s var(--ease-out); }
+        .ec-row:first-of-type{ border-top:none; }
+        .ec-row:hover{ background:var(--bg-subtle); }
+        .ec-row.on{ background:var(--navy-900); }
+        @media (max-width: 820px){ .ec-book{ grid-template-columns:1fr; } .ec-aside{ position:static; } }
+      `}</style>
+
+      <div className="ec-book">
+      <aside className="ec-aside">
+        <div className="card" style={{ boxShadow: 'none', overflow: 'hidden' }}>
+          <div className="card__h"><h3 style={{ margin: 0, fontSize: 15 }}>Cuentas</h3><span className="count">Por cobrar {fmt(totalPorCobrar)}</span></div>
+          <div style={{ padding: 0 }}>
+            {cuentas.map((c, i) => {
+              const on = mismaPersona(sel, c.persona)
+              return (
+                <button key={c.persona} type="button" className={`ec-row${on ? ' on' : ''}`} onClick={() => elegirCuenta(c.persona)}>
+                  <span className={`av av-${(i % 5) + 1}`} style={{ width: 34, height: 34, fontSize: 12, flexShrink: 0 }}>
+                    {(c.persona || '?').split(' ').map(x => x[0]).slice(0, 2).join('')}
+                  </span>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontWeight: 700, fontSize: 14, color: on ? '#fff' : 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.persona}</div>
+                    {c.rol && <div style={{ fontSize: 11.5, color: on ? '#9fb0d0' : 'var(--text-3)' }}>{c.rol}</div>}
+                  </div>
+                  <div className="mono" style={{ textAlign: 'right', flexShrink: 0, fontSize: 13, fontWeight: 700, whiteSpace: 'nowrap',
+                    color: on ? '#fff' : (c.saldo > 0 ? 'var(--amber-700)' : c.saldo < 0 ? 'var(--green-700)' : 'var(--text-4)') }}>
+                    {c.saldo > 0 ? fmt(c.saldo) : c.saldo < 0 ? `a favor ${fmt(-c.saldo)}` : '—'}
+                  </div>
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      </aside>
+
+      <main style={{ minWidth: 0, display: 'flex', flexDirection: 'column', gap: 16 }}>
+        <div className="card" style={{ boxShadow: 'none', order: 2 }}>
+          <div className="card__h"><h3 style={{ margin: 0, fontSize: 15 }}>Registrar movimiento{cuentaSel ? <span style={{ fontWeight: 500, color: 'var(--text-3)' }}> · {cuentaSel.persona}</span> : ''}</h3></div>
           <div className="card__b" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             <div className="field">
               <label>Persona</label>
@@ -1860,7 +1911,7 @@ function EstadoCuenta({ prestamos, tecnicos, notify }) {
           </div>
         </div>
 
-        <div className="card" ref={detailRef} style={{ boxShadow: 'none' }}>
+        <div className="card" ref={detailRef} style={{ boxShadow: 'none', order: 1 }}>
         {!cuentaSel ? (
           <div className="card__b"><div className="empty"><h4>Selecciona una cuenta</h4><p>Elige una persona de la lista para ver su estado de cuenta.</p></div></div>
         ) : (
@@ -1906,25 +1957,7 @@ function EstadoCuenta({ prestamos, tecnicos, notify }) {
           </>
         )}
       </div>
-      </div>
-
-      <div className="card" style={{ marginTop: 16, boxShadow: 'none' }}>
-        <div className="card__h"><span style={{ fontSize: 12.5, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.06em', color: 'var(--text-3)' }}>Cuentas</span><span className="count">Por cobrar: {fmt(totalPorCobrar)}</span></div>
-        <div className="card__b card__b--flush">
-          <table className="tbl tbl-cards">
-            <thead><tr><th>Persona</th><th className="text-right">Saldo</th></tr></thead>
-            <tbody>
-              {cuentas.map(c => (
-                <tr key={c.persona} onClick={() => setSel(c.persona)} style={{ cursor: 'pointer', background: mismaPersona(sel, c.persona) ? 'var(--bg-subtle)' : undefined }}>
-                  <td className="c-name" style={{ fontWeight: 600 }}>{c.persona}</td>
-                  <td className="text-right text-mono" data-label="Saldo" style={{ fontWeight: 700, color: c.saldo > 0 ? 'var(--amber-700)' : c.saldo < 0 ? 'var(--green-700)' : 'var(--text-3)' }}>
-                    {c.saldo > 0 ? fmt(c.saldo) : c.saldo < 0 ? `a favor ${fmt(-c.saldo)}` : '—'}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+      </main>
       </div>
     </div>
   )
