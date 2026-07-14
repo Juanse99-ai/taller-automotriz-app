@@ -184,7 +184,6 @@ export default function Vehiculos({ vehiculos, clientes, trabajos = [], notify }
       <div className="pagehd">
         <div>
           <h2>Vehiculos</h2>
-          <p className="sub">Historial y seguimiento vehicular</p>
         </div>
       </div>
 

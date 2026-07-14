@@ -1029,7 +1029,6 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
         <div className="pagehd">
           <div>
             <h2>Estado de cuenta · préstamos</h2>
-            <p className="sub">Préstamos y abonos por persona — técnicos, administrador, terceros</p>
           </div>
         </div>
         {tabsLiq}
@@ -1061,7 +1060,6 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
       <div className="pagehd">
         <div>
           <h2>Liquidación de comisiones</h2>
-          <p className="sub">Cierre de periodo · {COMISION.TOTAL * 100}% comisión total · {COMISION.TOTAL * 50}% c/u si el trabajo es compartido</p>
         </div>
         <div className="actions">
           <Button variant="outline" onClick={() => setVerHistorial(!verHistorial)}>{verHistorial ? 'Ocultar historial' : 'Ver historial'}</Button>

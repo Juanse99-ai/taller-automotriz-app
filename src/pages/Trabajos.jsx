@@ -463,7 +463,6 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
       <div className="pagehd">
         <div>
           <h2>Órdenes de trabajo</h2>
-          <p className="sub">{trabajos.length} OT registradas</p>
         </div>
         <div className="actions">
           <button className={`btn ${vista === 'lista' ? 'btn-primary' : 'btn-outline'}`} onClick={() => setVista('lista')}>Lista</button>

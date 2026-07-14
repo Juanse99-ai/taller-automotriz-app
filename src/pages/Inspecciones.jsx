@@ -74,7 +74,7 @@ export default function Inspecciones({ trabajos, notify, onVincularInspeccion, i
     <>
     <div>
       <div className="pagehd">
-        <div><h2>Inspecciones digitales</h2><p className="sub">DVI · {stats.total} inspecciones realizadas · <b style={{color:'var(--red-600)'}}>{stats.conUrgentes}</b> con items urgentes</p></div>
+        <div><h2>Inspecciones digitales</h2></div>
         <div className="actions">
           <Button variant="primary" onClick={() => setVista('nueva')}>+ Nueva inspeccion</Button>
         </div>
@@ -212,7 +212,7 @@ function InspeccionForm({ inspeccion, trabajos, onSave, onCancel }) {
       <div className="pagehd">
         <div style={{display:'flex',alignItems:'center',gap:12}}>
           <Button variant="outline" size="sm" onClick={onCancel}><svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg> Volver</Button>
-          <div><h2>{isEdit ? 'Editar inspeccion' : 'Nueva inspeccion digital'}</h2><p className="sub">Recorre el checklist y marca cada item</p></div>
+          <div><h2>{isEdit ? 'Editar inspeccion' : 'Nueva inspeccion digital'}</h2></div>
         </div>
         <div className="actions">
           <Button type="button" variant="outline" onClick={onCancel}>Cancelar</Button>

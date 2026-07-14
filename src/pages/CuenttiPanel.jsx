@@ -606,7 +606,6 @@ export default function CuenttiPanel({ trabajos, actualizarTrabajo, notify }) {
       <div className="pagehd">
         <div>
           <h2>Cuentti</h2>
-          <p className="sub">Facturación electrónica · sincronización DIAN</p>
         </div>
         <div className="actions">
           {testResult && testResult.clientes?.startsWith('OK') && (

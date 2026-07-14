@@ -104,7 +104,6 @@ export default function Mecanicos({ trabajos, onNavigate, notify }) {
       <div className="pagehd">
         <div>
           <h2>Equipo técnico</h2>
-          <p className="sub">{equipoActivo.length} mecánico{equipoActivo.length !== 1 ? 's' : ''} activo{equipoActivo.length !== 1 ? 's' : ''} · comisión {COMISION.TOTAL * 100}%</p>
         </div>
         <div className="actions">
           <button

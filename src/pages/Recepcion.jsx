@@ -131,7 +131,6 @@ export default function Recepcion({ hook, vehiculosHook, clientesHook, notify })
       <div className="pagehd">
         <div>
           <h2>Recibir vehiculo</h2>
-          <p className="sub">Registra un nuevo ingreso al taller</p>
         </div>
         <div className="actions">
           <button className="btn btn-outline" onClick={() => {

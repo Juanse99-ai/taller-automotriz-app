@@ -324,7 +324,7 @@ export default function Reportes({ trabajos }) {
   return (
     <div>
       <div className="pagehd">
-        <div><h2>Reportes</h2><p className="sub">Metricas del periodo {fmtDate(rango.desde)} al {fmtDate(rango.hasta)} · {filtrados.length} {filtrados.length === 1 ? 'OT' : 'OTs'}</p></div>
+        <div><h2>Reportes</h2></div>
         <div className="actions" style={{ flexWrap: 'wrap', gap: 8 }}>
           <Button variant="outline" size="sm" onClick={exportarCSV}>📊 CSV</Button>
           <Button variant="outline" size="sm" onClick={() => exportarResumen()}>

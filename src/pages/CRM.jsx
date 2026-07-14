@@ -415,7 +415,6 @@ export default function CRM({ trabajos = [], clientes, vehiculos, notify, actual
       <div className="pagehd">
         <div>
           <h2>CRM · Recordatorios</h2>
-          <p className="sub">{stats.total} recordatorios · {stats.vencidos} vencidos · {stats.contactadosHoy} contactados hoy</p>
         </div>
         <div className="actions" style={{ flexWrap: 'wrap', gap: 8 }}>
           {recordatoriosImportar.length > 0 && (

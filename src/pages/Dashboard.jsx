@@ -187,15 +187,6 @@ export default function Dashboard({ trabajos = [], onNavigate, user }) {
       <div className="pagehd">
         <div>
           <h2>Hola{user?.nombre ? `, ${user.nombre.split(' ')[0]}` : ''} 👋</h2>
-          <p className="sub">
-            Esto es lo que pasa hoy
-            {estancados.length > 0 && (
-              <> · Hay <b style={{ color: 'var(--red-600)' }}>{estancados.length} trabajo{estancados.length !== 1 ? 's estancados' : ' estancado'}</b></>
-            )}
-            {estancados.length === 0 && stats.activos > 0 && (
-              <> · <b style={{ color: 'var(--text)' }}>{stats.activos} activos</b> en el taller</>
-            )}
-          </p>
         </div>
         <div className="actions">
           {onNavigate && (

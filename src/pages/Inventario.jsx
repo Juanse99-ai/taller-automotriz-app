@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { fmt, fmtCompact } from '../utils/helpers'
 import { TALLER } from '../utils/constants'
-import { useInventario, formatCacheAge } from '../hooks/useInventario'
+import { useInventario } from '../hooks/useInventario'
 import { Button, Badge } from '../components/ui'
 
 const STOCK_BAJO_UMBRAL = 3
@@ -12,8 +12,6 @@ export default function Inventario({ notify }) {
     loading,
     refreshing,
     error,
-    cacheAge,
-    isStale,
     refresh,
   } = useInventario()
   const [busqueda, setBusqueda] = useState('')
@@ -196,15 +194,6 @@ export default function Inventario({ notify }) {
       <div className="pagehd">
         <div>
           <h2>Inventario</h2>
-          <p className="sub">
-            {stats.total} referencias · {stats.stockBajo} bajo mínimo · {stats.sinStock} sin stock
-            {!loading && <>
-              {' · '}
-              <span style={{ color: isStale ? 'var(--amber-600)' : 'var(--green-600)', fontWeight: 600 }}>
-                {refreshing ? 'sincronizando…' : `Cuentti ${formatCacheAge(cacheAge)}`}
-              </span>
-            </>}
-          </p>
         </div>
         <div className="actions">
           <Button variant="outline" size="sm" onClick={() => cargar(true)} disabled={loading || refreshing}>

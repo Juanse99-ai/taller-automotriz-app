@@ -278,7 +278,7 @@ export default function Cotizaciones({ notify, trabajos = [], onCrearTrabajo, co
     <>
     <div>
       <div className="pagehd">
-        <div><h2>Cotizaciones</h2><p className="sub">{stats.total} cotizaciones · {stats.aprobadas} aprobadas</p></div>
+        <div><h2>Cotizaciones</h2></div>
         <div className="actions">
           <Button variant="primary" onClick={() => setVista('nueva')}>+ Nueva cotizacion</Button>
         </div>

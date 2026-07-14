@@ -436,7 +436,7 @@ export default function Clientes({ clientes, vehiculos, notify }) {
             <Button variant="outline" size="sm" onClick={() => setCreando(false)}>
               <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
             </Button>
-            <div><h2>Nuevo Cliente</h2><p className="sub">Crear cliente y sincronizar con Cuentti</p></div>
+            <div><h2>Nuevo Cliente</h2></div>
           </div>
         </div>
 
@@ -658,7 +658,7 @@ export default function Clientes({ clientes, vehiculos, notify }) {
     <>
     <div>
       <div className="pagehd">
-        <div><h2>Clientes</h2><p className="sub">{totalClientes} clientes en la base · {conCuenttiId} sincronizados con Cuentti · {sinTelefono} sin telefono</p></div>
+        <div><h2>Clientes</h2></div>
         <div className="actions" style={{display:'flex',gap:8,alignItems:'center'}}>
           {sinTelefono > 0 && (
             <Button

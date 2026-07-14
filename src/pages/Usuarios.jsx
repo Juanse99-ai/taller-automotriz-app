@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Button, Badge } from '../components/ui'
 
 const ROLES = [
@@ -126,13 +126,6 @@ export default function Usuarios({ notify, currentUser }) {
     }
   }
 
-  const stats = useMemo(() => ({
-    total: usuarios.length,
-    activos: usuarios.filter(u => u.activo).length,
-    admins: usuarios.filter(u => u.rol === 'admin').length,
-    jefes: usuarios.filter(u => u.rol === 'jefe_taller').length,
-  }), [usuarios])
-
   const rolBadge = (rol) => {
     if (rol === 'admin') return { tone: 'info', l: 'Admin' }
     if (rol === 'jefe_taller') return { tone: 'warning', l: 'Jefe taller' }
@@ -144,7 +137,6 @@ export default function Usuarios({ notify, currentUser }) {
       <div className="pagehd">
         <div>
           <h2>Usuarios</h2>
-          <p className="sub">{stats.total} usuarios · {stats.activos} activos · {stats.admins} admin · {stats.jefes} jefe taller</p>
         </div>
         <div className="actions">
           <Button variant="outline" onClick={() => setRefreshTick(t => t + 1)}>Recargar</Button>
