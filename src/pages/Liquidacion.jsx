@@ -2033,17 +2033,17 @@ function EstadoCuenta({ prestamos, tecnicos, notify }) {
                       })}>✕</button>
                     </div>
                     {puedeCuentti && (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 9, flexWrap: 'wrap' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 10, flexWrap: 'wrap' }}>
                         {doc ? (
-                          <span className="badge" style={{ background: 'var(--green-100)', color: 'var(--green-700)', fontWeight: 700 }} title="Gasto ya registrado en Cuentti">✓ Cuentti {doc}</span>
+                          <span className="badge" style={{ background: 'var(--green-100)', color: 'var(--green-700)', fontWeight: 700 }} title="Gasto ya registrado en Cuentti">✓ Registrado en Cuentti · {doc}</span>
                         ) : (
                           <>
-                            <span style={{ fontSize: 12, color: 'var(--text-3)' }}>Registrar en Cuentti:</span>
-                            <select className="input" aria-label="Método de pago" value={metodoG[m.id] || 'efectivo'} onChange={e => setMetodoG(g => ({ ...g, [m.id]: e.target.value }))} style={{ height: 30, minHeight: 30, fontSize: 12, padding: '2px 8px', width: 'auto' }}>
-                              <option value="efectivo">Efectivo</option>
-                              <option value="transferencia">Transferencia</option>
-                            </select>
-                            <Button variant="outline" size="sm" disabled={gastoReg === m.id} onClick={() => pedirRegistrarGastoEC(m, cuentaSel)}>
+                            <span style={{ fontSize: 11.5, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '.4px' }}>Cuentti</span>
+                            <div className="tabs" style={{ margin: 0 }}>
+                              <button type="button" className={(metodoG[m.id] || 'efectivo') === 'efectivo' ? 'on' : ''} onClick={() => setMetodoG(g => ({ ...g, [m.id]: 'efectivo' }))} style={{ fontSize: 12 }}>Efectivo</button>
+                              <button type="button" className={(metodoG[m.id] || 'efectivo') === 'transferencia' ? 'on' : ''} onClick={() => setMetodoG(g => ({ ...g, [m.id]: 'transferencia' }))} style={{ fontSize: 12 }}>Transferencia</button>
+                            </div>
+                            <Button variant="outline" size="sm" style={{ marginLeft: 'auto' }} disabled={gastoReg === m.id} onClick={() => pedirRegistrarGastoEC(m, cuentaSel)}>
                               {gastoReg === m.id ? 'Registrando…' : (gastoErr[m.id] ? 'Reintentar' : 'Registrar en Cuentti')}
                             </Button>
                           </>
