@@ -1682,6 +1682,83 @@ function EstadoCuenta({ prestamos, tecnicos, notify }) {
     if (sel && detailRef.current) detailRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
   }, [sel])
 
+  // ── Registrar un pago a Cuentti (mismo motor que los tecnicos: gasto contra la
+  //    cuenta Nomina). La marca "ya registrado" es LOCAL (localStorage) por
+  //    movimiento. Solo para cuentas que NO son de un tecnico (Nicanor/admin/
+  //    terceros con cedula): los tecnicos ya lo registran en la liquidacion.
+  const cedulaDeCuenta = (c) => {
+    if (!c) return ''
+    const nom = (c.persona || '').trim().toLowerCase()
+    const p = PERSONAS_CUENTA.find(x => (x.nombre || '').trim().toLowerCase() === nom)
+    if (p?.cedula) return String(p.cedula)
+    const t = tecnicos.find(x => (x.nombre || '').trim().toLowerCase() === nom)
+    return t?.cedula ? String(t.cedula) : ''
+  }
+  const medioPagoIdsEC = (key) => {
+    let metodos = { efectivo: 1, transferencia: 7 }
+    try { metodos = { ...metodos, ...JSON.parse(localStorage.getItem('cuentti:metodos_pago') || '{}') } } catch { /* defaults */ }
+    let idBancoT = 2
+    try { idBancoT = parseInt(localStorage.getItem('cuentti:id_banco')) || 2 } catch { /* default */ }
+    return key === 'transferencia'
+      ? { idMedioPago: metodos.transferencia ?? 7, idBanco: idBancoT }
+      : { idMedioPago: metodos.efectivo ?? 1, idBanco: 1 }
+  }
+  const GKEY = (id) => `cuentti:gasto:mov:${id}`
+  const [gastoDone, setGastoDone] = useState({}) // movId -> doc (G-XXX), hidratado de localStorage
+  const [gastoReg, setGastoReg] = useState(null) // movId en curso
+  const [gastoErr, setGastoErr] = useState({})   // movId -> true si el ultimo intento fallo
+  const [metodoG, setMetodoG] = useState({})     // movId -> 'efectivo' | 'transferencia'
+  const gastoRefEC = useRef(new Set())           // anti doble-clic sincrono
+  useEffect(() => {
+    const done = {}
+    try { for (const m of movimientos) { const v = localStorage.getItem(GKEY(m.id)); if (v) done[m.id] = v } } catch { /* ignore */ }
+    setGastoDone(done)
+  }, [movimientos])
+
+  const registrarGastoEC = async (m, c) => {
+    if (gastoDone[m.id]) { notify(`Este pago ya está registrado en Cuentti (${gastoDone[m.id]}).`, 'info'); return }
+    if (gastoRefEC.current.has(m.id)) return
+    const cedula = cedulaDeCuenta(c)
+    if (!cedula) { notify(`Falta la cédula de ${c.persona} para registrar en Cuentti.`, 'error'); return }
+    const monto = Math.abs(parseFloat(m.monto) || 0)
+    if (!(monto > 0)) { notify('El monto no es positivo; no se registra.', 'error'); return }
+    const { idMedioPago, idBanco } = medioPagoIdsEC(metodoG[m.id] || 'efectivo')
+    gastoRefEC.current.add(m.id)
+    setGastoReg(m.id)
+    try {
+      const data = await registrarGastoNominaBackend({
+        proveedorCedula: cedula,
+        proveedorNombre: c.persona,
+        monto,
+        idMedioPago, idBanco,
+        nota: `${c.persona} · ${m.nota || 'Pago'} · ${fmtDate(m.fecha)}`,
+      })
+      const doc = data.numeroDoc ? `G-${data.numeroDoc}` : (data.idTransacion || 'OK')
+      try { localStorage.setItem(GKEY(m.id), doc) } catch { /* ignore */ }
+      setGastoDone(g => ({ ...g, [m.id]: doc }))
+      setGastoErr(g => { const n = { ...g }; delete n[m.id]; return n })
+      notify(`Gasto registrado en Cuentti: ${doc}`, 'success')
+    } catch {
+      setGastoErr(g => ({ ...g, [m.id]: true }))
+      notify('Error de red al registrar. ⚠️ El gasto PUDO quedar en Cuentti — verifícalo antes de reintentar.', 'error')
+    } finally {
+      gastoRefEC.current.delete(m.id)
+      setGastoReg(null)
+    }
+  }
+  const pedirRegistrarGastoEC = (m, c) => {
+    if (gastoErr[m.id]) {
+      setDlg({
+        title: 'Reintentar registro en Cuentti',
+        lead: `El intento anterior falló por red, pero el gasto de ${c.persona} PUDO haber quedado en Cuentti. Revisa que NO exista ya (para no pagar doble) antes de continuar.`,
+        confirmLabel: 'Ya verifiqué, registrar', tone: 'danger',
+        onConfirm: () => registrarGastoEC(m, c),
+      })
+      return
+    }
+    registrarGastoEC(m, c)
+  }
+
   // Cálculo "por días": al escribir valor/día y días, llena el monto automático.
   const setDia = (patch) => setForm(f => {
     const nf = { ...f, ...patch }
@@ -1932,24 +2009,50 @@ function EstadoCuenta({ prestamos, tecnicos, notify }) {
               <div className="card__b"><p style={{ fontSize: 13.5, color: 'var(--text-3)' }}>Sin movimientos. Registra un préstamo o abono abajo.</p></div>
             ) : (
               <div className="card__b" style={{ paddingTop: 4, paddingBottom: 4 }}>
-                {cuentaSel.movs.map((m, i) => (
-                  <div key={m.id} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '12px 4px', borderTop: i === 0 ? 'none' : '1px solid var(--border)' }}>
-                    <Badge tone={m.tipo === 'abono' ? 'success' : 'warning'}>{m.tipo === 'abono' ? 'Abono' : 'Préstamo'}</Badge>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      {m.nota && <div style={{ fontSize: 13.5, color: 'var(--text-2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.nota}</div>}
-                      <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: m.nota ? 2 : 0 }}>{fmtDate(m.fecha)}</div>
+                {cuentaSel.movs.map((m, i) => {
+                  // El boton de Cuentti sale en los ABONOS (pagos) de cuentas que NO son
+                  // de un tecnico y que tienen cedula (Nicanor/admin/terceros).
+                  const puedeCuentti = m.tipo === 'abono' && !cuentaSel.tecnicoId && !!cedulaDeCuenta(cuentaSel)
+                  const doc = gastoDone[m.id]
+                  return (
+                  <div key={m.id} style={{ borderTop: i === 0 ? 'none' : '1px solid var(--border)', padding: '10px 4px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                      <Badge tone={m.tipo === 'abono' ? 'success' : 'warning'}>{m.tipo === 'abono' ? 'Abono' : 'Préstamo'}</Badge>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        {m.nota && <div style={{ fontSize: 13.5, color: 'var(--text-2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.nota}</div>}
+                        <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: m.nota ? 2 : 0 }}>{fmtDate(m.fecha)}</div>
+                      </div>
+                      <span className="mono" style={{ fontWeight: 700, fontSize: 15.5, whiteSpace: 'nowrap', color: m.tipo === 'abono' ? 'var(--green-700)' : 'var(--amber-700)' }}>
+                        {m.tipo === 'abono' ? '− ' : '+ '}{fmt(m.monto)}
+                      </span>
+                      <button type="button" className="ec-del" aria-label="Eliminar movimiento" title="Eliminar" onClick={() => setDlg({
+                        title: 'Eliminar movimiento',
+                        lead: `${m.tipo === 'abono' ? 'Abono' : 'Préstamo'} · ${fmt(m.monto)} · ${fmtDate(m.fecha)}`,
+                        confirmLabel: 'Sí, eliminar', tone: 'danger',
+                        onConfirm: () => eliminarMovimiento(m.id),
+                      })}>✕</button>
                     </div>
-                    <span className="mono" style={{ fontWeight: 700, fontSize: 15.5, whiteSpace: 'nowrap', color: m.tipo === 'abono' ? 'var(--green-700)' : 'var(--amber-700)' }}>
-                      {m.tipo === 'abono' ? '− ' : '+ '}{fmt(m.monto)}
-                    </span>
-                    <button type="button" className="ec-del" aria-label="Eliminar movimiento" title="Eliminar" onClick={() => setDlg({
-                      title: 'Eliminar movimiento',
-                      lead: `${m.tipo === 'abono' ? 'Abono' : 'Préstamo'} · ${fmt(m.monto)} · ${fmtDate(m.fecha)}`,
-                      confirmLabel: 'Sí, eliminar', tone: 'danger',
-                      onConfirm: () => eliminarMovimiento(m.id),
-                    })}>✕</button>
+                    {puedeCuentti && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 9, flexWrap: 'wrap' }}>
+                        {doc ? (
+                          <span className="badge" style={{ background: 'var(--green-100)', color: 'var(--green-700)', fontWeight: 700 }} title="Gasto ya registrado en Cuentti">✓ Cuentti {doc}</span>
+                        ) : (
+                          <>
+                            <span style={{ fontSize: 12, color: 'var(--text-3)' }}>Registrar en Cuentti:</span>
+                            <select className="input" aria-label="Método de pago" value={metodoG[m.id] || 'efectivo'} onChange={e => setMetodoG(g => ({ ...g, [m.id]: e.target.value }))} style={{ height: 30, minHeight: 30, fontSize: 12, padding: '2px 8px', width: 'auto' }}>
+                              <option value="efectivo">Efectivo</option>
+                              <option value="transferencia">Transferencia</option>
+                            </select>
+                            <Button variant="outline" size="sm" disabled={gastoReg === m.id} onClick={() => pedirRegistrarGastoEC(m, cuentaSel)}>
+                              {gastoReg === m.id ? 'Registrando…' : (gastoErr[m.id] ? 'Reintentar' : 'Registrar en Cuentti')}
+                            </Button>
+                          </>
+                        )}
+                      </div>
+                    )}
                   </div>
-                ))}
+                  )
+                })}
               </div>
             )}
           </>
