@@ -440,7 +440,39 @@ const tools = [
         observaciones, validez_dias: validezDias, estado: 'Pendiente',
       }
       await supabase('cotizaciones', { method: 'POST', body: row, upsert: true })
-      return [`## ✅ Cotizacion creada`, ``, `**${id}** — ${cliente}`, `**Total:** ${fmtCOP(t.total)}`, `Estado: Pendiente · Validez ${validezDias} dias`].join('\n')
+
+      // Dar de alta al cliente en el taller si aun no existe (por cedula), para que
+      // deje de ser "fantasma" y aparezca en la lista de Clientes. Se enriquece con
+      // los datos reales de Cuentti (nombre/telefono/email). Si algo falla, NO se
+      // rompe la cotizacion (ya quedo guardada).
+      let clienteMsg = ''
+      const ced = String(cedula || '').trim()
+      if (ced) {
+        try {
+          const existentes = await supabase('clientes', { query: `select=id&or=(cedula.eq.${ced},identificacion.eq.${ced})&limit=1` })
+          if (!existentes || existentes.length === 0) {
+            const cc = /^\d{5,}$/.test(ced) ? await buscarClienteEnCuentti(ced) : null
+            const nombreFinal = (cc?.nombre || cliente || '').trim()
+            const nuevo = {
+              id: `CL-${Date.now()}`,
+              identificacion: ced,
+              cedula: ced,
+              cuentti_id: cc?.idCliente || null,
+              nombre: nombreFinal,
+              telefono1: cc?.telefono || telefono || '',
+              email: cc?.email || '',
+              vehiculos: JSON.stringify(placa ? [String(placa).trim().toUpperCase()] : []),
+              fecha_creacion: new Date().toISOString(),
+              total_visitas: 0,
+              total_gastado: 0,
+            }
+            await supabase('clientes', { method: 'POST', body: nuevo, upsert: true })
+            clienteMsg = `\n👤 Cliente **${nombreFinal}** dado de alta en el taller (CC ${ced}${cc ? ', datos traídos de Cuentti' : ''}).`
+          }
+        } catch { /* el alta del cliente no debe tumbar la cotizacion */ }
+      }
+
+      return [`## ✅ Cotizacion creada`, ``, `**${id}** — ${cliente}`, `**Total:** ${fmtCOP(t.total)}`, `Estado: Pendiente · Validez ${validezDias} dias${clienteMsg}`].join('\n')
     },
   },
   {
