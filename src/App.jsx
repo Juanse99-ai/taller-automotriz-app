@@ -255,7 +255,7 @@ export default function App() {
             trabajosHook.actualizarTrabajo(trabajoId, { inspeccion })
           }} />
       case 'clientes':
-        return <Clientes clientes={clientesHook} vehiculos={vehiculosHook} notify={notify} />
+        return <Clientes clientes={clientesHook} vehiculos={vehiculosHook} trabajos={trabajosHook.trabajos} notify={notify} />
       case 'vehiculos':
         return <Vehiculos vehiculos={vehiculosHook} clientes={clientesHook} trabajos={trabajosHook.trabajos} notify={notify} />
       case 'cuentti':

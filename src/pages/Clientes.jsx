@@ -15,7 +15,7 @@ const _normNombre = (s) => _sinAcentos(s)
 // Solo digitos (para detectar si se busca por cedula)
 const soloDigitos = (s) => (s || '').toString().replace(/\D/g, '')
 
-export default function Clientes({ clientes, vehiculos, notify }) {
+export default function Clientes({ clientes, vehiculos, trabajos = [], notify }) {
   const {
     clientesTable, guardarCliente, obtenerCliente, listarClientes,
     vincularVehiculo, guardarEnCuentti, buscarDebounced, resultados,
@@ -104,6 +104,23 @@ export default function Clientes({ clientes, vehiculos, notify }) {
   //    nombre+cedula combinados. Garantiza coincidencias predecibles 100% correctas
   //    para busquedas tipo "juan sebastian cervantes".
   // 2. Si AND-tokens no devuelve resultados, fallback a Fuse.js fuzzy (tolera typos).
+
+  // Última visita REAL: derivada de las OT COMPLETADAS del cliente (por cédula). El
+  // campo fecha_ultima_visita quedó en la fecha de importación (hoy) para los clientes
+  // traídos en bloque, así que no es confiable; esto sí. Si el taller no tiene OT de
+  // ese cliente, no se sabe la visita (su historial vive en Cuentti) → se muestra "—".
+  const ultimaVisitaPorCedula = useMemo(() => {
+    const map = {}
+    for (const t of trabajos) {
+      if (t.estado !== 'Completado') continue
+      const ced = (t.cedula || '').toString().trim()
+      if (!ced || !t.fecha) continue
+      if (!map[ced] || new Date(t.fecha) > new Date(map[ced])) map[ced] = t.fecha
+    }
+    return map
+  }, [trabajos])
+  const uvDe = (c) => ultimaVisitaPorCedula[(c.cedula || '').toString().trim()] || null
+
   const clientesFiltrados = useMemo(() => {
     const termRaw = busqueda.trim()
 
@@ -116,7 +133,7 @@ export default function Clientes({ clientes, vehiculos, notify }) {
         case 'telefono': av = (a.telefono || ''); bv = (b.telefono || ''); break
         case 'email': av = (a.email || '').toLowerCase(); bv = (b.email || '').toLowerCase(); break
         case 'veh': av = (a.vehiculos || []).length; bv = (b.vehiculos || []).length; break
-        case 'visita': av = a.fechaUltimaVisita ? new Date(a.fechaUltimaVisita).getTime() : 0; bv = b.fechaUltimaVisita ? new Date(b.fechaUltimaVisita).getTime() : 0; break
+        case 'visita': av = uvDe(a) ? new Date(uvDe(a)).getTime() : 0; bv = uvDe(b) ? new Date(uvDe(b)).getTime() : 0; break
         case 'cuentti': av = a.cuenttiId ? 1 : 0; bv = b.cuenttiId ? 1 : 0; break
         default: return 0
       }
@@ -166,10 +183,13 @@ export default function Clientes({ clientes, vehiculos, notify }) {
 
     // PASO 2: si no hay matches exactos, usar Fuse.js fuzzy como fallback
     // (tolera "perez" cuando el cliente es "péréz", "jaun" cuando es "juan", etc.)
+    // PERO no para cedulas: una cedula es EXACTA. El fuzzy devuelve cedulas parecidas
+    // que confunden y ademas tapan el fallback a Cuentti (que solo corre con 0
+    // resultados). Si es cedula y no hubo match exacto → 0 resultados.
+    const esBusquedaCedula = /^[\d.\-\s]{6,}$/.test(termRaw)
     let list
     if (scored.length === 0) {
-      const fuseResults = fuse.search(termNom).slice(0, 50)
-      list = fuseResults.map(r => r.item)
+      list = esBusquedaCedula ? [] : fuse.search(termNom).slice(0, 50).map(r => r.item)
     } else {
       scored.sort((a, b) => {
         if (b.score !== a.score) return b.score - a.score
@@ -180,7 +200,7 @@ export default function Clientes({ clientes, vehiculos, notify }) {
 
     if (sortBy) list = [...list].sort(cmp)
     return list
-  }, [dedup, fuse, busqueda, sortBy, sortDir])
+  }, [dedup, fuse, busqueda, sortBy, sortDir, ultimaVisitaPorCedula])
 
   // Auto-buscar en Cuentti cuando no hay resultados locales y el termino parece cedula
   useEffect(() => {
@@ -802,7 +822,7 @@ export default function Clientes({ clientes, vehiculos, notify }) {
                         {(c.vehiculos || []).length}
                       </Badge>
                     </td>
-                    <td className="c-muted" data-label="Última visita">{fmtDate(c.fechaUltimaVisita)}</td>
+                    <td className="c-muted" data-label="Última visita">{uvDe(c) ? fmtDate(uvDe(c)) : '—'}</td>
                     <td data-label="Cuentti">{c.cuenttiId ? <Badge tone="s">OK</Badge> : <Badge tone="w">Pendiente</Badge>}</td>
                     <td className="td-chevron" style={{opacity:.5}}>›</td>
                   </tr>
