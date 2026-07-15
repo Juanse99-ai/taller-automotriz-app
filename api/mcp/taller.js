@@ -12,6 +12,67 @@ import { handleMcp } from '../_mcp/shared.js'
 const SUPABASE_URL = process.env.MCP_SUPABASE_URL || ''
 const SUPABASE_KEY = process.env.SUPABASE_KEY || ''
 
+// Cuentti comparte proyecto de Vercel con el taller, asi que comparte estas env.
+// Se usa SOLO como fallback de lectura en buscar_clientes: muchos clientes se
+// crean directo en Cuentti al facturar y nunca pasan por la base del taller.
+const CUENTTI = {
+  baseUrl: process.env.CUENTTI_BASE_URL || 'https://app.cuenti.com',
+  token: process.env.CUENTTI_TOKEN || '',
+  companyId: process.env.CUENTTI_COMPANY_ID || '11464',
+  branchId: process.env.CUENTTI_BRANCH_ID || '1',
+  employeeId: process.env.CUENTTI_EMPLOYEE_ID || '2',
+  gtm: process.env.CUENTTI_GTM || 'GMT-0500',
+}
+
+// Busca un cliente en Cuentti por cedula/NIT. Devuelve datos minimos o null.
+// Falla en silencio (null): es un fallback, nunca debe romper la busqueda del taller.
+async function buscarClienteEnCuentti(cedula) {
+  const ced = String(cedula || '').trim()
+  if (!CUENTTI.token || !ced) return null
+  try {
+    const controller = new AbortController()
+    const timer = setTimeout(() => controller.abort(), 12000)
+    const r = await fetch(
+      `${CUENTTI.baseUrl}/jServerj4ErpPro/api/token/consultarClienteIdentificacion/${encodeURIComponent(ced)}`,
+      {
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${CUENTTI.token}`,
+          'x-auth-token-empresa': CUENTTI.companyId,
+          'x-id-sucursal': CUENTTI.branchId,
+          'x-id-empleado': CUENTTI.employeeId,
+          'X-Auth-Token-id-usuario': CUENTTI.employeeId,
+          'X-Auth-Token-usuario': CUENTTI.employeeId,
+          'x-gtm': CUENTTI.gtm,
+          usuario: CUENTTI.employeeId,
+          Accept: 'application/json',
+        },
+        signal: controller.signal,
+      },
+    )
+    clearTimeout(timer)
+    if (!r.ok) return null
+    let data = null
+    try { data = JSON.parse(await r.text()) } catch { return null }
+    if (!data || data.message || data.type === 0) return null
+    const items = Array.isArray(data) ? data : (data.data ? data.data : [data])
+    const c = items.filter(x => x && Object.keys(x).length > 0 && !x.message)[0]
+    if (!c) return null
+    const nombre = c.nombre_cliente
+      || [c.primer_nombre, c.segundo_nombre, c.primer_apellido, c.segundo_apellido].filter(Boolean).join(' ')
+      || '(sin nombre)'
+    return {
+      idCliente: c.id_cliente || c.id || null,
+      identificacion: c.identificacion || ced,
+      nombre,
+      telefono: c.telefono1 || c.telefono3 || c.telefono || '',
+      email: c.email1 || c.email2 || c.email || '',
+    }
+  } catch {
+    return null
+  }
+}
+
 const TABLES = [
   'trabajos', 'cotizaciones', 'clientes', 'vehiculos', 'inspecciones',
   'movimientos_tecnicos', 'liquidacion_historial', 'liquidados', 'trabajos_compartidos',
@@ -186,7 +247,7 @@ const tools = [
   },
   {
     name: 'buscar_clientes',
-    description: 'Buscar clientes por cedula, nombre o telefono',
+    description: 'Buscar clientes por cedula, nombre o telefono. Si el cliente no esta en la base del taller y buscas por cedula/NIT, tambien consulta Cuentti (muchos clientes se crean directo alla al facturar).',
     inputSchema: {
       type: 'object',
       properties: { termino: { type: 'string' } },
@@ -200,10 +261,28 @@ const tools = [
         (c.nombre || '').toLowerCase().includes(tLow) ||
         (c.telefono1 || '').includes(termino.trim()) ||
         (c.identificacion || '').includes(termino.trim()))
-      if (filtrados.length === 0) return `No se encontraron clientes para "${termino}".`
-      const lineas = filtrados.slice(0, 15).map(c =>
-        `- **${c.nombre || '—'}** | CC: ${c.cedula || c.identificacion || '—'} | Tel: ${c.telefono1 || '—'} | Email: ${c.email || '—'}`)
-      return `## Clientes encontrados (${filtrados.length})\n\n${lineas.join('\n')}`
+      if (filtrados.length > 0) {
+        const lineas = filtrados.slice(0, 15).map(c =>
+          `- **${c.nombre || '—'}** | CC: ${c.cedula || c.identificacion || '—'} | Tel: ${c.telefono1 || '—'} | Email: ${c.email || '—'}`)
+        return `## Clientes encontrados (${filtrados.length})\n\n${lineas.join('\n')}`
+      }
+      // No esta en el taller. Si el termino parece cedula/NIT (solo digitos),
+      // preguntarle a Cuentti: muchos clientes viven solo alla.
+      const term = String(termino || '').trim()
+      if (/^\d{5,}$/.test(term)) {
+        const cc = await buscarClienteEnCuentti(term)
+        if (cc) {
+          return [
+            `No está en la base del taller, pero **sí existe en Cuentti**:`,
+            ``,
+            `- **${cc.nombre}** | CC/NIT: ${cc.identificacion} | Tel: ${cc.telefono || '—'} | Email: ${cc.email || '—'} | id_cliente Cuentti: ${cc.idCliente || '—'}`,
+            ``,
+            `Puedes crear la cotización o el trabajo con estos datos; queda registrado en el taller al hacerlo.`,
+          ].join('\n')
+        }
+        return `No se encontró "${termino}" ni en el taller ni en Cuentti.`
+      }
+      return `No se encontraron clientes para "${termino}" en el taller. Si es un cliente que solo está en Cuentti, búscalo por su cédula/NIT para revisar allá.`
     },
   },
   {
