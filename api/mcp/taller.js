@@ -415,7 +415,6 @@ const tools = [
                      ano, cilindraje = '', items = [], observaciones = '', validezDias = 15, confirm = false }) => {
       if (!cliente || !Array.isArray(items) || items.length === 0) return '❌ Se requiere cliente e items (al menos uno).'
       const t = calcularTotales(items)
-      const id = `COT-${uid()}`
       const fecha = new Date().toISOString()
       const resumen = t.items.map((i, idx) => `  ${idx + 1}. ${i.nombre} x${i.cantidad} — ${fmtCOP(i.precio * i.cantidad)} (IVA ${i.iva}%)`).join('\n')
 
@@ -423,7 +422,7 @@ const tools = [
         return [
           `## Dry-run: cotizacion (NO guardada)`,
           `Pasa **confirm:true** para guardar.`, ``,
-          `**ID:** ${id}`,
+          `**ID:** COT-#### (el número se asigna al guardar)`,
           `**Cliente:** ${cliente}${cedula ? ` (CC ${cedula})` : ''}`,
           `**Vehiculo:** ${[placa, marca, modelo, ano].filter(Boolean).join(' ') || '—'}`,
           ``, `### Items`, resumen, ``,
@@ -431,6 +430,19 @@ const tools = [
           `Validez: ${validezDias} dias`,
         ].join('\n')
       }
+
+      // Consecutivo secuencial atomico (secuencia Postgres via RPC next_cotizacion_num).
+      // Solo al guardar de verdad — el dry-run no gasta numeros. Si la secuencia aun
+      // no existe (o la RPC falla), cae al formato viejo COT-<base36>: nunca rompe.
+      let id
+      try {
+        const seqRes = await supabase('rpc/next_cotizacion_num', { method: 'POST', body: {} })
+        let num = Array.isArray(seqRes) ? seqRes[0] : seqRes
+        if (num && typeof num === 'object') num = Object.values(num)[0]
+        num = parseInt(num, 10)
+        if (Number.isFinite(num) && num > 0) id = `COT-${String(num).padStart(4, '0')}`
+      } catch { /* cae al fallback de abajo */ }
+      if (!id) id = `COT-${uid()}`
 
       const row = {
         id, fecha, cedula, cliente, telefono_cliente: telefono,
