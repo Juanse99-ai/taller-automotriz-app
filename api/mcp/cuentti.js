@@ -10,6 +10,7 @@
 //   CUENTTI_GTM            - Timezone (default GMT-0500)
 
 import { handleMcp } from '../_mcp/shared.js'
+import { enviarGasto, desglosarIva } from '../_lib/gasto.js'
 
 const CONFIG = {
   baseUrl: process.env.CUENTTI_BASE_URL || 'https://app.cuenti.com',
@@ -1035,6 +1036,56 @@ const tools = [
           ? 'Para los nuevos: busca por nombre con buscar_producto_sku_cuentti / listar_inventario_cuentti, o créalos con crear_producto; luego guarda la equivalencia con guardar_equivalencia.'
           : 'Todo emparejado.',
       ].join('\n')
+    },
+  },
+  {
+    name: 'registrar_gasto',
+    description: 'Registra un GASTO (egreso) en Cuentti contra una cuenta del plan contable. Es para lo que NO es autoparte y NO toca inventario: servicios comprados a otro taller, arriendo, comisiones, nomina, etc. (a diferencia de registrar_compra, que suma inventario). Usa el mismo motor probado del gasto de nomina: tipoDocumento=7 con id_producto=0 + id_plan_cuentas. El monto va CON IVA INCLUIDO; si pasas iva>0 se desglosa la base automaticamente. Dry-run por defecto: pasa confirm:true para grabar.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        proveedorNit: { type: 'string', description: 'NIT o cedula del proveedor (Cuentti lo busca/crea por este numero)' },
+        proveedorNombre: { type: 'string', description: 'Nombre del proveedor' },
+        monto: { type: 'number', description: 'Total del gasto CON IVA incluido (lo que se paga)' },
+        idPlanCuentas: { type: 'integer', description: 'Cuenta del plan contable de Cuentti. Ej: 28 = Costos Servicios Vendidos, 43 = Nomina, 20 = Alquiler de Equipos y Licencias, 21 = Comisiones.' },
+        iva: { type: 'number', default: 0, description: 'Porcentaje de IVA YA INCLUIDO en el monto (ej. 19). 0 = sin IVA.' },
+        descripcion: { type: 'string', description: 'Descripcion de la linea del gasto' },
+        nota: { type: 'string', default: '', description: 'Nota del documento (ej. numero de factura del proveedor)' },
+        metodoPago: { type: 'string', enum: ['efectivo', 'transferencia'], default: 'efectivo' },
+        fecha: { type: 'string', description: 'YYYY-MM-DD (default: hoy)' },
+        confirm: { type: 'boolean', default: false, description: 'true = grabar en Cuentti; false (default) = dry-run' },
+      },
+      required: ['proveedorNit', 'proveedorNombre', 'monto', 'idPlanCuentas'],
+    },
+    handler: async ({ proveedorNit, proveedorNombre, monto, idPlanCuentas, iva = 0, descripcion, nota = '', metodoPago = 'efectivo', fecha, confirm = false }) => {
+      const { total, base, impuestos, pct } = desglosarIva(monto, iva)
+      if (!(total > 0)) return '❌ El monto debe ser mayor a 0.'
+      if (!idPlanCuentas) return '❌ Falta idPlanCuentas (la cuenta contable del gasto).'
+      // Mismos ids que usa la app: efectivo → caja general; transferencia → banco.
+      const { idMedioPago, idBanco } = metodoPago === 'transferencia'
+        ? { idMedioPago: 7, idBanco: 2 }
+        : { idMedioPago: 1, idBanco: 1 }
+
+      const resumen = [
+        `**Proveedor:** ${proveedorNombre} (NIT ${proveedorNit})`,
+        `**Cuenta contable:** id_plan_cuentas ${idPlanCuentas}`,
+        `**Concepto:** ${descripcion || nota || 'Gasto'}`,
+        `**Base:** ${fmtCOP(base)} · **IVA ${pct}%:** ${fmtCOP(impuestos)} · **Total:** ${fmtCOP(total)}`,
+        `**Pago:** ${metodoPago} · **Fecha:** ${fecha || 'hoy'}`,
+      ].join('\n')
+
+      if (!confirm) {
+        return [`## Dry-run: gasto (NO registrado)`, `Pasa **confirm:true** para grabarlo en Cuentti.`, ``, resumen].join('\n')
+      }
+
+      const r = await enviarGasto({
+        proveedorCedula: proveedorNit, proveedorNombre, monto: total, iva: pct,
+        idPlanCuentas, descripcion, nota, idMedioPago, idBanco, fecha,
+      })
+      if (!r.ok) {
+        return [`❌ Cuentti rechazó el gasto.`, ``, '```json', JSON.stringify(r.cuentti, null, 2).slice(0, 1500), '```'].join('\n')
+      }
+      return [`## ✅ Gasto registrado en Cuentti`, ``, `**Documento:** G-${r.numeroDoc || '?'}`, `**id_transacion:** ${r.idTransacion || '—'}`, ``, resumen].join('\n')
     },
   },
   {
