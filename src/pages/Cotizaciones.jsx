@@ -74,15 +74,18 @@ export default function Cotizaciones({ notify, trabajos = [], onCrearTrabajo, co
     ], cursorY)
     cursorY += 3
 
-    // ============= VEHÍCULO =============
-    cursorY = drawSectionHeader(doc, 'Vehículo', cursorY)
-    cursorY = drawDataBlock(doc, [
-      { label: 'Placa', value: (c.placa || '').toUpperCase(), bold: true },
-      { label: 'Marca / Modelo', value: `${c.marca || '—'} ${c.modelo || ''}`.trim() },
-      { label: 'Año', value: String(c.ano || '—') },
-      { label: 'Cilindraje', value: c.cilindraje || '—' },
-    ], cursorY)
-    cursorY += 3
+    // ============= VEHÍCULO (solo si hay datos; si no, no se dibuja la sección) =============
+    const hayVehiculo = [c.placa, c.marca, c.modelo, c.ano, c.cilindraje].some(v => v && String(v).trim())
+    if (hayVehiculo) {
+      cursorY = drawSectionHeader(doc, 'Vehículo', cursorY)
+      cursorY = drawDataBlock(doc, [
+        { label: 'Placa', value: (c.placa || '').toUpperCase(), bold: true },
+        { label: 'Marca / Modelo', value: `${c.marca || '—'} ${c.modelo || ''}`.trim() },
+        { label: 'Año', value: String(c.ano || '—') },
+        { label: 'Cilindraje', value: c.cilindraje || '—' },
+      ], cursorY)
+      cursorY += 3
+    }
 
     // ============= ITEMS =============
     if (c.items?.length) {
@@ -134,14 +137,9 @@ export default function Cotizaciones({ notify, trabajos = [], onCrearTrabajo, co
       const iva = c.iva || 0
       const total = c.total || 0
 
-      // OBSERVACIONES (izquierda)
+      // OBSERVACIONES (izquierda) — misma cabecera de sección liviana que el resto
       const obsText = c.observaciones || 'Precios sujetos a disponibilidad de inventario al momento de la aprobación. Tiempo estimado de entrega: 1 día hábil. Incluye garantía de 90 días en repuestos originales y mano de obra. Esta cotización no genera obligación de compra ni reserva de inventario.'
-      doc.setFillColor(...NAVY)
-      doc.rect(MARGIN, cursorY, 104, 5.4, 'F')
-      doc.setTextColor(255, 255, 255)
-      doc.setFontSize(7.2)
-      doc.setFont(undefined, 'bold')
-      doc.text('OBSERVACIONES', MARGIN + 3, cursorY + 3.6)
+      drawSectionHeader(doc, 'Observaciones', cursorY, 104)
 
       const obsLines = doc.splitTextToSize(obsText, 96)
       const obsHeight = Math.max(40, obsLines.length * 3.8 + 6)
@@ -166,10 +164,11 @@ export default function Cotizaciones({ notify, trabajos = [], onCrearTrabajo, co
 
       // Card aprobación (debajo de la caja de totales)
       tY += 4
+      doc.setFillColor(...PDF_COLORS.SLATE_50)
       doc.setDrawColor(...SLATE_300)
-      doc.setLineDashPattern([1, 1], 0)
-      doc.roundedRect(boxX, tY, boxW, 15, 1, 1, 'D')
-      doc.setLineDashPattern([], 0)
+      doc.setLineWidth(0.3)
+      doc.roundedRect(boxX, tY, boxW, 15, 1.5, 1.5, 'FD')
+      doc.setLineWidth(0.2)
       doc.setFontSize(7)
       doc.setTextColor(...SLATE_600)
       doc.setFont(undefined, 'normal')

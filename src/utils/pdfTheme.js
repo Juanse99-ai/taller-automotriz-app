@@ -216,14 +216,25 @@ function colorFromName(name) {
 
 // ----- SECTION HEADER -------------------------------------------------
 export function drawSectionHeader(doc, title, y, width = PDF_LAYOUT.CONTENT_W) {
-  const { NAVY, WHITE } = PDF_COLORS
-  doc.setFillColor(...NAVY)
-  doc.rect(PDF_LAYOUT.MARGIN, y, width, 5.4, 'F')
-  doc.setTextColor(...WHITE)
-  doc.setFontSize(7.2)
-  doc.setFont(undefined, 'bold')
-  doc.text(title.toUpperCase(), PDF_LAYOUT.MARGIN + 3, y + 3.6)
+  const { NAVY, AMBER, SLATE_300 } = PDF_COLORS
+  const { MARGIN } = PDF_LAYOUT
+  const label = (title || '').toUpperCase()
+  // Título navy con guion ámbar + regla fina (en vez de barra navy llena):
+  // separa igual de claro pero pesa menos con varias secciones seguidas.
+  doc.setFillColor(...AMBER)
+  doc.rect(MARGIN, y + 1.2, 4.5, 1.7, 'F')
   doc.setTextColor(...NAVY)
+  doc.setFontSize(8)
+  doc.setFont(undefined, 'bold')
+  doc.text(label, MARGIN + 7, y + 3.2)
+  const ruleStart = MARGIN + 7 + doc.getTextWidth(label) + 3
+  const ruleEnd = MARGIN + width
+  if (ruleEnd > ruleStart) {
+    doc.setDrawColor(...SLATE_300)
+    doc.setLineWidth(0.3)
+    doc.line(ruleStart, y + 2.5, ruleEnd, y + 2.5)
+    doc.setLineWidth(0.2)
+  }
   doc.setFont(undefined, 'normal')
   return y + 5.4
 }
@@ -282,12 +293,16 @@ export function drawTotalsBox(doc, opts) {
     doc.text(r.lbl, x + 4, tY)
     doc.setTextColor(...NAVY)
     doc.text(r.val, x + w - 4, tY, { align: 'right' })
-    doc.setDrawColor(...SLATE_300)
-    doc.setLineDashPattern([0.5, 0.5], 0)
-    doc.line(x + 4, tY + 2, x + w - 4, tY + 2)
-    doc.setLineDashPattern([], 0)
     tY += 6
   })
+  // Una sola regla fina antes del TOTAL (en vez de puntitos bajo cada fila).
+  if (rows.length) {
+    doc.setDrawColor(...SLATE_300)
+    doc.setLineWidth(0.3)
+    doc.line(x + 4, tY - 1.5, x + w - 4, tY - 1.5)
+    doc.setLineWidth(0.2)
+    tY += 1
+  }
 
   // Caja TOTAL navy
   doc.setFillColor(...NAVY)
@@ -297,7 +312,7 @@ export function drawTotalsBox(doc, opts) {
   doc.setFont(undefined, 'bold')
   doc.text(finalLabel.toUpperCase(), x + 4, tY + 6.5)
   doc.setTextColor(...WHITE)
-  doc.setFontSize(12.5)
+  doc.setFontSize(13.5)
   doc.text(finalValue, x + w - 4, tY + 7, { align: 'right' })
   doc.setFont(undefined, 'normal')
 
