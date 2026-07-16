@@ -762,7 +762,7 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
     y = drawSectionHeader(doc, 'Trabajos liquidados', y)
     autoTable(doc, {
       startY: y,
-      head: [['FECHA', 'PLACA', 'CLIENTE', 'COMP.', 'M.O.', 'COMISIÓN']],
+      head: [['FECHA', 'PLACA', 'CLIENTE', 'COMP.', 'MANO DE OBRA', 'COMISIÓN']],
       body: rows,
       ...tableStylesItems,
       theme: 'grid',
@@ -817,7 +817,7 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
 
     // Presentación: comisión de los trabajos menos los cargos efectivos = neto.
     const rowsSel = [
-      { lbl: 'M.O. (sin IVA)', val: fmt(totalSeleccion.manoObra) },
+      { lbl: 'Mano de obra (sin IVA)', val: fmt(totalSeleccion.manoObra) },
       { lbl: `Comisión (${COMISION.TOTAL * 100}%)`, val: fmt(totalSeleccion.comision) },
     ]
     if ((totalSeleccion.cargosMovsEf || 0) > 0) {
@@ -879,7 +879,7 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
     y = drawSectionHeader(doc, 'Trabajos liquidados', y)
     autoTable(doc, {
       startY: y,
-      head: [['FECHA', 'PLACA', 'CLIENTE', 'COMP.', 'M.O.', 'COMISIÓN']],
+      head: [['FECHA', 'PLACA', 'CLIENTE', 'COMP.', 'MANO DE OBRA', 'COMISIÓN']],
       body: detRows,
       ...tableStylesItems,
       theme: 'grid',
@@ -944,7 +944,7 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
     let rowsReg
     if (esNuevoPago) {
       rowsReg = [
-        { lbl: 'M.O. (sin IVA)', val: fmt(reg.manoObra || 0) },
+        { lbl: 'Mano de obra (sin IVA)', val: fmt(reg.manoObra || 0) },
         { lbl: `Comisión (${COMISION.TOTAL * 100}%)`, val: fmt(reg.comision || 0) },
       ]
       const _ef = reg.cargosEfectivos || 0
@@ -1081,7 +1081,7 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
           </div>
         </div>
         <div style={{ display: 'flex', gap: 26, flexWrap: 'wrap' }}>
-          {[['Comisiones', fmt(kpis.comisiones)], ['M.O. facturada', fmt(kpis.facturado)], ['Utilidad taller', fmt(kpis.utilidad)]].map(([l, v]) => (
+          {[['Comisiones', fmt(kpis.comisiones)], ['Mano de obra facturada', fmt(kpis.facturado)], ['Utilidad taller', fmt(kpis.utilidad)]].map(([l, v]) => (
             <div key={l} style={{ textAlign: 'right' }}>
               <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '.5px' }}>{l}</div>
               <div className="mono" style={{ fontWeight: 600, fontSize: 18, color: 'var(--text-2)', marginTop: 3 }}>{v}</div>
@@ -1210,7 +1210,7 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
                 <div className="empty"><h4>Sin pendientes</h4><p>No hay trabajos pendientes de liquidar.</p></div>
               ) : (
                 <table className="tbl">
-                  <thead><tr><th style={{ width: 40 }}></th><th>Fecha</th><th>OT</th><th>Placa</th><th>Cliente</th><th style={{ textAlign: 'center' }}>Compartido</th><th className="c-right">M.O.</th><th className="c-right">Comisión</th></tr></thead>
+                  <thead><tr><th style={{ width: 40 }}></th><th>Fecha</th><th>OT</th><th>Placa</th><th>Cliente</th><th style={{ textAlign: 'center' }}>Compartido</th><th className="c-right">Mano de obra</th><th className="c-right">Comisión</th></tr></thead>
                   <tbody>
                     {tecTrabajos.map(t => {
                       const mano = moMap[t.id] || 0
@@ -1470,7 +1470,7 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
               </div>
               <div className="card__b">
                 <div style={{ marginBottom: 16 }}>
-                  <div className="liq-neto__row"><span>M.O. (sin IVA) · {cantSeleccionados} {cantSeleccionados === 1 ? 'OT' : 'OTs'}</span><span className="a mono">{fmt(totalSeleccion.manoObra)}</span></div>
+                  <div className="liq-neto__row"><span>Mano de obra (sin IVA) · {cantSeleccionados} {cantSeleccionados === 1 ? 'OT' : 'OTs'}</span><span className="a mono">{fmt(totalSeleccion.manoObra)}</span></div>
                   <div className="liq-neto__row"><span>Comisión ({COMISION.TOTAL * 100}%)</span><span className="a mono" style={{ color: 'var(--green-700)', fontWeight: 700 }}>{fmt(totalSeleccion.comision)}</span></div>
                   {totalSeleccion.cargosEfectivos !== 0 && (
                     <div className="liq-neto__row"><span>Aportes / descuentos</span><span className="a mono" style={{ color: 'var(--amber-600)', fontWeight: 700 }}>{totalSeleccion.cargosEfectivos >= 0 ? '− ' : '+ '}{fmt(Math.abs(totalSeleccion.cargosEfectivos))}</span></div>
@@ -1615,7 +1615,7 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
                     </div>
                     <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', alignItems: 'center' }}>
                       <span style={{ fontSize: 13.5 }}><strong>{reg.cantidadTrabajos}</strong> trabajos</span>
-                      <span style={{ fontSize: 13.5 }}>M.O.: <strong className="mono">{fmt(reg.manoObra || 0)}</strong></span>
+                      <span style={{ fontSize: 13.5 }}>Mano de obra: <strong className="mono">{fmt(reg.manoObra || 0)}</strong></span>
                       <span style={{ fontSize: 13.5, color: 'var(--green-600)' }}>Comisión: <strong className="mono">{fmt(reg.comision || 0)}</strong></span>
                       <span style={{ fontSize: 13.5, color: 'var(--amber-600)' }}>Cargos: <strong className="mono">{fmt(reg.cargos || 0)}</strong></span>
                       <span style={{ fontSize: 13.5, color: reg.neto >= 0 ? 'var(--green-600)' : 'var(--red-600)', fontWeight: 700 }}>Neto: <strong className="mono">{fmt(reg.neto || 0)}</strong></span>

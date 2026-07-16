@@ -1686,7 +1686,7 @@ function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [], vehiculosHoo
           {/* Totales — totalizer redesigned (M.O./Repuestos breakdown + Total destacado) */}
           <div className="ot-totals">
             <div className="ot-totals__group">
-              <span className="ot-stat"><span className="ot-stat__lbl">M.O.</span><span className="ot-stat__val">{fmt(manoObraEf)}</span></span>
+              <span className="ot-stat"><span className="ot-stat__lbl">Mano de obra</span><span className="ot-stat__val">{fmt(manoObraEf)}</span></span>
               <span className="ot-stat"><span className="ot-stat__lbl">Repuestos</span><span className="ot-stat__val">{fmt(totales.repuestos)}</span></span>
             </div>
             <div className="ot-totals__group">
