@@ -249,9 +249,13 @@ function buildFacturaPayload(factura) {
     total_sin_impuestos: to2(totalSinImp),
     observacion: '',
     objClienteMini: {
+      // Con un id_cliente real Cuentti ignora este objeto (comprobado con el 929).
+      // Solo pesa cuando va -1, o sea cuando Cuentti crea el cliente por NIT: por
+      // eso el tipo de persona se deduce y ya no se deja al default de Cuentti.
       id_cliente: idCliente,
       nombre_cliente: upper(factura.cliente || 'CONSUMIDOR FINAL'),
       identificacion: (factura.cedula || '222222222222').toString(),
+      id_tipo_persona: parseInt(factura.tipoPersona, 10) || inferirTipoPersona(factura.cedula, factura.cliente),
     },
     objDetalle: items,
     lstPagos: factura.aCredito ? [] : [{
@@ -563,13 +567,17 @@ function buildCotizacionPayload(c) {
     total_sin_impuestos: totalSinImp,
     observacion: c.observacion || '',
     objClienteMini: {
-      id_cliente: -1,
+      // Con un id_cliente real Cuentti IGNORA este objeto y no toca al cliente
+      // (comprobado: un gasto contra el 929 le mando direccion:'' y quedo null).
+      // Con -1 lo busca/crea por NIT — y ahi si manda todo lo de abajo.
+      id_cliente: parseInt(c.cliente_id ?? -1, 10),
       nombre_cliente: upper(c.cliente_nombre || ''),
       identificacion: (c.cliente_identificacion || '').toString(),
       telefono1: c.cliente_telefono || '',
       email1: c.cliente_email || '',
       direccion: 'N/A',
-      id_tipo_persona: 1,
+      // Antes: 1 fijo => cualquier empresa nacia como persona natural.
+      id_tipo_persona: parseInt(c.tipoPersona, 10) || inferirTipoPersona(c.cliente_identificacion, c.cliente_nombre),
       es_cliente: 1,
       es_proveedor: 0,
       departamento: c.cliente_departamento || '',
@@ -900,11 +908,24 @@ const tools = [
       // 1=Caja General, 2=Bancolombia, 3=Nequi (verificado). Efectivo => Caja General.
       const banco = idBanco ?? (metodoPago === 'transferencia' ? 2 : metodoPago === 'credito' ? 0 : 1)
 
+      // El id de Cuentti manda: con un id_cliente real Cuentti NO toca al cliente
+      // (comprobado con el 929). Si el registro del taller no lo trae, se resuelve
+      // por cedula/NIT: caer en -1 haria que Cuentti lo cree/matchee por NIT, que
+      // es como nacen los terceros mal configurados y los duplicados.
+      const cedulaFac = registro.cedula || registro.cedula_cliente || '222222222222'
+      let clienteIdFac = registro.cuentti_id || undefined
+      let cliFac = null
+      if (!clienteIdFac && cedulaFac !== '222222222222') {
+        cliFac = await resolverProveedor(cedulaFac)
+        if (cliFac?.ambiguo) return avisoProveedorAmbiguo(cedulaFac, cliFac.ambiguo)
+        if (cliFac?.id) clienteIdFac = cliFac.id
+      }
+
       const factura = {
         items,
         cliente: registro.cliente,
-        cedula: registro.cedula || registro.cedula_cliente || '222222222222',
-        clienteId: registro.cuentti_id || undefined,
+        cedula: cliFac?.identificacion || cedulaFac,
+        clienteId: clienteIdFac,
         resolucion,
         tipoDocumento: 1,
         idMedioPago: medio,
@@ -987,8 +1008,10 @@ const tools = [
     inputSchema: {
       type: 'object',
       properties: {
-        cliente_nombre: { type: 'string', description: 'Nombre del cliente' },
-        cliente_identificacion: { type: 'string', description: 'Cedula o NIT del cliente' },
+        cliente_nombre: { type: 'string', description: 'Nombre del cliente. Solo se usa si hay que crearlo: si ya existe manda el de Cuentti.' },
+        cliente_identificacion: { type: 'string', description: 'Cedula o NIT del cliente. Se busca en Cuentti antes de emitir. Ojo: el NIT va SIN digito de verificacion, aunque se prueban las dos formas.' },
+        cliente_id: { type: 'integer', description: 'id_cliente exacto en Cuentti. Normalmente no hace falta: se resuelve solo desde la identificacion. Sirve para desempatar si hay duplicados.' },
+        tipoPersona: { type: 'integer', enum: [1, 2], description: '1 = natural (persona), 2 = juridica (empresa). Si se omite se deduce del NIT y del nombre. Solo importa si hay que crear el cliente.' },
         cliente_telefono: { type: 'string', default: '', description: 'Telefono (opcional)' },
         cliente_email: { type: 'string', default: '', description: 'Email (opcional)' },
         cliente_ciudad: { type: 'string', description: 'Ciudad del cliente' },
@@ -1021,15 +1044,31 @@ const tools = [
       if (!a.cliente_ciudad || !a.cliente_departamento) return '❌ cliente_ciudad y cliente_departamento son obligatorios.'
       if (!Array.isArray(a.items) || a.items.length === 0) return '❌ Se requiere al menos un item.'
 
+      // Resolver el cliente ANTES de emitir. Con su id_cliente real Cuentti no
+      // toca el registro; con -1 lo crea por NIT y ahi es donde se ensucia
+      // (asi nacio SERVICAR como persona natural).
+      const cli = a.cliente_id
+        ? { id: parseInt(a.cliente_id, 10) }
+        : await resolverProveedor(a.cliente_identificacion)
+      if (!a.cliente_id && cli?.ambiguo) return avisoProveedorAmbiguo(a.cliente_identificacion, cli.ambiguo)
+      if (cli?.id) a = { ...a, cliente_id: cli.id, cliente_identificacion: cli.identificacion || a.cliente_identificacion }
+
       const payload = buildCotizacionPayload(a)
       const totalFmt = fmtCOP(payload.total_neto)
+      const tipoTxt = payload.objClienteMini.id_tipo_persona === 2 ? 'Jurídica' : 'Natural'
+      const lineaCli = cli?.id
+        ? `**Cliente:** ${cli.nombre || a.cliente_nombre} · id_cliente **${cli.id}** · ${a.cliente_identificacion} _(ya existía — Cuentti no lo va a modificar)_`
+          + (cli.viaDV ? `\n> ⚠️ El NIT que pasaste trae el dígito de verificación; en Cuentti está como \`${cli.identificacion}\`.` : '')
+          + (cli.descartados?.length ? `\n> Se descartó un duplicado inactivo: ${cli.descartados.map(d => d.id).join(', ')}.` : '')
+        : `**Cliente:** ${a.cliente_nombre} (${a.cliente_identificacion}) — 🆕 **NO existe: Cuentti lo va a CREAR** como **${tipoTxt}**`
+          + `\n> Si el tipo está mal, pasa **tipoPersona** (1 = natural, 2 = jurídica).`
 
       if (!a.confirm) {
         return [
           `## Dry-run: cotizacion (NO enviada a Cuentti)`,
           `Pasa **confirm:true** para emitir de verdad.`,
           ``,
-          `**Cliente:** ${a.cliente_nombre} (${a.cliente_identificacion})`,
+          lineaCli,
           `**Ubicacion:** ${a.cliente_ciudad}, ${a.cliente_departamento}`,
           `**Items:** ${payload.objDetalle.length}`,
           `**Subtotal (sin IVA):** ${fmtCOP(payload.total_sin_impuestos)} · **IVA:** ${fmtCOP(payload.total_impuestos)} · **Total:** ${totalFmt}`,
