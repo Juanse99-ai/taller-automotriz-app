@@ -92,14 +92,20 @@ async function buscarClienteCuentti(ident) {
     nombre: c.nombre_cliente
       || [c.primer_nombre, c.segundo_nombre, c.primer_apellido, c.segundo_apellido].filter(Boolean).join(' ')
       || '',
+    activo: Number(c.es_activo) === 1, // llega como numero, no como texto
+    tipoPersona: Number(c.id_tipo_persona) || null,
   }
 }
 
-// Devuelve el proveedor existente { id, identificacion, nombre, viaDV, ambiguo } o null.
+// Devuelve el proveedor existente { id, identificacion, nombre, viaDV, ... } o null.
 // Se prueba el NIT tal como viene ANTES que sin el DV: una cedula de 10 digitos es
 // legitima, y recortarla de entrada podria pegar con OTRA persona.
-// Si ambas formas existen pero son clientes distintos => ya hay un duplicado en
-// Cuentti: se marca ambiguo y quien llama debe abortar, no adivinar.
+//
+// Desempate por estado: Cuentti NO borra de verdad — la X deja el registro con
+// es_activo 0 y consultarClienteIdentificacion lo sigue devolviendo. Asi que un
+// inactivo casi siempre es un duplicado ya descartado y el ACTIVO gana. Sin esto
+// un NIT con un duplicado muerto quedaria bloqueado para siempre.
+// Solo se aborta si hay dos o mas ACTIVOS: ahi si tiene que elegir un humano.
 async function resolverProveedor(nit) {
   const cands = candidatosNit(nit)
   const hits = []
@@ -108,23 +114,28 @@ async function resolverProveedor(nit) {
     if (hit && !hits.some(h => h.id === hit.id)) hits.push({ ...hit, viaDV: c !== cands[0] })
   }
   if (!hits.length) return null
-  return { ...hits[0], ambiguo: hits.length > 1 ? hits : null }
+
+  const activos = hits.filter(h => h.activo)
+  if (activos.length === 1) return { ...activos[0], descartados: hits.filter(h => !h.activo) }
+  if (activos.length > 1) return { ...activos[0], ambiguo: activos }
+  // Ninguno activo: se reusa igual. Reciclar un inactivo es mejor que crear otro duplicado.
+  return { ...hits[0], inactivo: true, ambiguo: hits.length > 1 ? hits : null }
 }
 
-// Dos clientes distintos para el mismo NIT (tipico: uno con DV y otro sin).
+// Dos o mas clientes ACTIVOS para el mismo NIT (tipico: uno con DV y otro sin).
 function avisoProveedorAmbiguo(nit, hits) {
   return [
-    `## 🛑 Hay proveedores DUPLICADOS para ese NIT — no se registró nada`,
+    `## 🛑 Hay proveedores DUPLICADOS activos para ese NIT — no se registró nada`,
     ``,
-    `El NIT **${nit}** calza con ${hits.length} clientes distintos en Cuentti:`,
+    `El NIT **${nit}** calza con ${hits.length} clientes activos en Cuentti:`,
     ``,
-    `| id_cliente | Identificacion | Nombre |`,
-    `|---|---|---|`,
-    ...hits.map(h => `| **${h.id}** | ${h.identificacion} | ${h.nombre || '—'} |`),
+    `| id_cliente | Identificacion | Nombre | Tipo |`,
+    `|---|---|---|---|`,
+    ...hits.map(h => `| **${h.id}** | ${h.identificacion} | ${h.nombre || '—'} | ${h.tipoPersona === 2 ? 'Jurídica' : 'Natural'} |`),
     ``,
     `Casi siempre es el mismo proveedor cargado dos veces: uno con el dígito de verificación pegado y otro sin él. Cuentti guarda el NIT **sin DV**, así que el bueno suele ser el de la identificación más corta.`,
     ``,
-    `**Qué hacer:** decide cuál es el correcto y vuelve a llamar pasando **proveedorId** con ese id_cliente. Y borra el duplicado en Cuentti para que no vuelva a pasar.`,
+    `**Qué hacer:** decide cuál es el correcto y vuelve a llamar pasando **proveedorId** con ese id_cliente.`,
   ].join('\n')
 }
 
@@ -1223,8 +1234,10 @@ const tools = [
       const tipoTxt = tipoPer === TIPO_PERSONA_JURIDICA ? 'Jurídica (empresa)' : 'Natural (persona)'
 
       const lineaProv = prov
-        ? `**Proveedor:** ${prov.nombre || proveedorNombre} · id_cliente **${prov.id}** · NIT ${prov.identificacion} _(ya existía)_`
+        ? `**Proveedor:** ${prov.nombre || proveedorNombre} · id_cliente **${prov.id}** · NIT ${prov.identificacion} · ${prov.tipoPersona === 2 ? 'Jurídica' : 'Natural'} _(ya existía)_`
           + (prov.viaDV ? `\n> ⚠️ El NIT que pasaste (\`${proveedorNit}\`) trae el dígito de verificación. En Cuentti está como \`${prov.identificacion}\`; se usa ese para no duplicarlo.` : '')
+          + (prov.descartados?.length ? `\n> Se descartó un duplicado inactivo: id_cliente ${prov.descartados.map(d => `${d.id} (${d.identificacion})`).join(', ')}.` : '')
+          + (prov.inactivo ? `\n> ⚠️ Este proveedor está INACTIVO en Cuentti. Se reusa igual para no crear otro duplicado.` : '')
         : `**Proveedor:** ${proveedorNombre} (NIT ${proveedorNit}) — 🆕 **se va a CREAR** como **${tipoTxt}**`
           + `\n> Revisa el tipo: si está mal, pasa **tipoPersona** (1 = natural, 2 = jurídica). Una empresa mal creada como natural queda con cédula en vez de NIT.`
 
