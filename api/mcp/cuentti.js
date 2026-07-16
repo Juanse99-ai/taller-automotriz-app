@@ -579,13 +579,16 @@ const tools = [
   },
   {
     name: 'buscar_cliente_cuentti',
-    description: 'Busca un cliente en Cuentti por numero de identificacion (cedula / NIT). Devuelve nombre, telefono, email, direccion y el id_cliente de Cuentti.',
+    description: 'Busca un cliente en Cuentti por numero de identificacion (cedula / NIT). Devuelve nombre, telefono, email, direccion y el id_cliente de Cuentti. Con raw:true devuelve el registro crudo completo (util para ver como esta configurado de verdad: tipo de persona, tipo de identificacion, regimen...).',
     inputSchema: {
       type: 'object',
-      properties: { cedula: { type: 'string', description: 'Cedula o NIT' } },
+      properties: {
+        cedula: { type: 'string', description: 'Cedula o NIT' },
+        raw: { type: 'boolean', default: false, description: 'true = devolver el JSON crudo del cliente, con todos sus campos.' },
+      },
       required: ['cedula'],
     },
-    handler: async ({ cedula }) => {
+    handler: async ({ cedula, raw = false }) => {
       const ced = String(cedula || '').trim()
       if (!ced) return '❌ Debes pasar una cedula no vacia'
       const data = await cuenttiRequest(`/jServerj4ErpPro/api/token/consultarClienteIdentificacion/${encodeURIComponent(ced)}`)
@@ -596,6 +599,9 @@ const tools = [
       const filtered = items.filter(r => r && Object.keys(r).length > 0 && !r.message)
       if (!filtered.length) return `No se encontro cliente con cedula **${ced}** en Cuentti.`
       const c = filtered[0]
+      if (raw) {
+        return [`## Cliente ${ced} — registro crudo`, '', '```json', JSON.stringify(c, null, 2).slice(0, 6000), '```'].join('\n')
+      }
       const nombre = c.nombre_cliente
         || [c.primer_nombre, c.segundo_nombre, c.primer_apellido, c.segundo_apellido].filter(Boolean).join(' ')
         || '(sin nombre)'
