@@ -354,6 +354,44 @@ async function guardarCompraRegistrada({ proveedorNit, proveedorNombre, numeroFa
   } catch { /* no-fatal: la compra ya se creo en Cuentti */ }
 }
 
+// --- Bitacora de gastos ------------------------------------------------------
+// El servidor MCP es stateless: si el gasto no se anota aca, su id_transacion
+// queda SOLO en el chat que lo registro (Cowork, Claude Code...) y despues no
+// hay como encontrarlo — Cuentti no expone ningun endpoint que liste
+// transacciones, solo traer una por id. Espeja lo que ya hace compras.
+async function buscarGastoRegistrado(proveedorNit, numeroFactura) {
+  const nf = String(numeroFactura || '').trim()
+  const nit = String(proveedorNit || '').trim()
+  if (!nf || !nit) return null
+  try {
+    const q = `select=*&proveedor_nit=eq.${encodeURIComponent(nit)}&numero_factura=eq.${encodeURIComponent(nf)}&limit=1`
+    const rows = await supabaseTaller('gastos_registrados', { query: q })
+    return Array.isArray(rows) && rows[0] ? rows[0] : null
+  } catch { return null }
+}
+
+async function guardarGastoRegistrado(g) {
+  try {
+    await supabaseTaller('gastos_registrados', {
+      method: 'POST',
+      body: {
+        id: uidc(),
+        proveedor_nit: String(g.proveedorNit || '').trim(),
+        proveedor_nombre: g.proveedorNombre || '',
+        proveedor_id: g.proveedorId ?? null,
+        numero_factura: String(g.numeroFactura || '').trim(),
+        id_plan_cuentas: parseInt(g.idPlanCuentas, 10) || null,
+        concepto: g.concepto || '',
+        fecha: fechaDocumento(g.fecha) || '',
+        total: parseFloat(g.total) || 0,
+        iva: parseFloat(g.iva) || 0,
+        id_transacion: String(g.idTransacion || ''),
+        numero_doc: String(g.numeroDoc || ''),
+      },
+    })
+  } catch { /* no-fatal: el gasto ya se creo en Cuentti */ }
+}
+
 // Normaliza la fecha del documento a "YYYY-MM-DD". Acepta "YYYY-MM-DD" o
 // "YYYY-MM-DDTHH:..." (toma solo la parte de fecha). Devuelve null si viene
 // vacia o invalida -> en ese caso NO se manda fecha y Cuentti usa la de hoy
@@ -1136,14 +1174,16 @@ const tools = [
         iva: { type: 'number', default: 0, description: 'Porcentaje de IVA YA INCLUIDO en el monto (ej. 19). 0 = sin IVA.' },
         idImpuesto: { type: 'integer', default: 5, description: 'Id del impuesto en Cuentti: 5 = IVA 19% (default), 1 = IVA 16%, 4 = exento. Solo aplica si iva > 0.' },
         descripcion: { type: 'string', description: 'Descripcion de la linea del gasto' },
-        nota: { type: 'string', default: '', description: 'Nota del documento (ej. numero de factura del proveedor)' },
+        numeroFactura: { type: 'string', default: '', description: 'Numero de la factura del proveedor (ej. JB708). Se usa para el anti-duplicado: si ya se registro un gasto con ese proveedor+factura, se bloquea.' },
+        nota: { type: 'string', default: '', description: 'Nota del documento. Si se omite se usa el numeroFactura.' },
         metodoPago: { type: 'string', enum: ['efectivo', 'transferencia'], default: 'efectivo' },
         fecha: { type: 'string', description: 'YYYY-MM-DD (default: hoy)' },
         confirm: { type: 'boolean', default: false, description: 'true = grabar en Cuentti; false (default) = dry-run' },
+        permitirDuplicado: { type: 'boolean', default: false, description: 'true = registrar aunque ya exista un gasto con ese proveedor+numeroFactura. Default false (bloquea duplicados).' },
       },
       required: ['proveedorNit', 'proveedorNombre', 'monto', 'idPlanCuentas'],
     },
-    handler: async ({ proveedorNit, proveedorNombre, proveedorId, crearProveedor = false, monto, idPlanCuentas, iva = 0, idImpuesto = 5, descripcion, nota = '', metodoPago = 'efectivo', fecha, confirm = false }) => {
+    handler: async ({ proveedorNit, proveedorNombre, proveedorId, crearProveedor = false, monto, idPlanCuentas, iva = 0, idImpuesto = 5, descripcion, numeroFactura = '', nota = '', metodoPago = 'efectivo', fecha, confirm = false, permitirDuplicado = false }) => {
       const { total, base, impuestos, pct } = desglosarIva(monto, iva)
       if (!(total > 0)) return '❌ El monto debe ser mayor a 0.'
       if (!idPlanCuentas) return '❌ Falta idPlanCuentas (la cuenta contable del gasto).'
@@ -1176,8 +1216,27 @@ const tools = [
         `**Pago:** ${metodoPago} · **Fecha:** ${fecha || 'hoy'}`,
       ].join('\n')
 
+      // Anti-duplicado: ¿ya se registro esta factura de este proveedor?
+      const yaRegistrado = await buscarGastoRegistrado(prov?.identificacion || proveedorNit, numeroFactura)
+      const avisoDup = yaRegistrado
+        ? `> ⚠️ **OJO: esta factura YA se registró como gasto.** id_transacion **${yaRegistrado.id_transacion || '—'}** (doc G-${yaRegistrado.numero_doc || '?'}), el ${fmtFecha(yaRegistrado.registrado_en)} por ${fmtCOP(yaRegistrado.total)}.`
+        : ''
+
       if (!confirm) {
-        return [`## Dry-run: gasto (NO registrado)`, `Pasa **confirm:true** para grabarlo en Cuentti.`, ``, resumen].join('\n')
+        return [
+          `## Dry-run: gasto (NO registrado)`,
+          avisoDup,
+          avisoDup ? `> Si de verdad quieres registrarlo otra vez, pasa **confirm:true** y **permitirDuplicado:true**.` : `Pasa **confirm:true** para grabarlo en Cuentti.`,
+          ``, resumen,
+        ].filter(Boolean).join('\n')
+      }
+
+      // confirm:true pero ya existe y NO se forzo el duplicado => bloquear.
+      if (yaRegistrado && !permitirDuplicado) {
+        return [
+          `## 🛑 Gasto NO registrado (duplicado evitado)`, ``, avisoDup, ``,
+          `Para registrarlo de todas formas (crear un duplicado a propósito), vuelve a llamar con **permitirDuplicado:true**.`,
+        ].join('\n')
       }
 
       const r = await enviarGasto({
@@ -1186,11 +1245,22 @@ const tools = [
         proveedorCedula: prov?.identificacion || proveedorNit,
         proveedorNombre: prov?.nombre || proveedorNombre,
         monto: total, iva: pct, idImpuesto,
-        idPlanCuentas, descripcion, nota, idMedioPago, idBanco, fecha,
+        idPlanCuentas, descripcion, nota: nota || numeroFactura, idMedioPago, idBanco, fecha,
       })
       if (!r.ok) {
         return [`❌ Cuentti rechazó el gasto.`, ``, '```json', JSON.stringify(r.cuentti, null, 2).slice(0, 1500), '```'].join('\n')
       }
+
+      // Dejar rastro: sin esto el id_transacion se pierde apenas se cierre el chat.
+      await guardarGastoRegistrado({
+        proveedorNit: prov?.identificacion || proveedorNit,
+        proveedorNombre: prov?.nombre || proveedorNombre,
+        proveedorId: prov?.id, numeroFactura, idPlanCuentas,
+        concepto: descripcion || nota || 'Gasto',
+        fecha, total, iva: pct,
+        idTransacion: r.idTransacion, numeroDoc: r.numeroDoc,
+      })
+
       return [`## ✅ Gasto registrado en Cuentti`, ``, `**Documento:** G-${r.numeroDoc || '?'}`, `**id_transacion:** ${r.idTransacion || '—'}`, ``, resumen].join('\n')
     },
   },
@@ -1339,6 +1409,40 @@ const tools = [
       if (!confirm) return `## Dry-run: cambiar fecha de tx ${tx} → ${fechaDocumento(fecha)}\nEpoch ms: ${fechaMs}. Pasa **confirm:true** para aplicar.`
       const resp = await cambiarFechaTransacion(tx, fechaMs, Date.now())
       return [`## ✅ Fecha cambiada`, `**id_transacion:** ${tx}`, `**Nueva fecha:** ${fechaDocumento(fecha)}`, '', '```json', JSON.stringify(resp, null, 2).slice(0, 800), '```'].join('\n')
+    },
+  },
+  {
+    name: 'listar_gastos_registrados',
+    description: 'Lista los gastos que el MCP ha registrado en Cuentti, con su id_transacion. Sirve para encontrar un gasto despues (ej. para anularlo): Cuentti NO tiene endpoint para listar transacciones, asi que esta bitacora es la unica forma de recuperar el id_transacion desde otra conversacion. Solo ve gastos hechos con registrar_gasto.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        proveedorNit: { type: 'string', description: 'Filtrar por NIT (opcional)' },
+        numeroFactura: { type: 'string', description: 'Filtrar por numero de factura (opcional)' },
+        limite: { type: 'integer', default: 20 },
+      },
+    },
+    handler: async ({ proveedorNit, numeroFactura, limite = 20 }) => {
+      const filtros = ['select=*', `order=registrado_en.desc`, `limit=${parseInt(limite, 10) || 20}`]
+      // El NIT puede venir con DV: se filtra por las dos formas.
+      if (proveedorNit) {
+        const cands = candidatosNit(proveedorNit)
+        filtros.push(`proveedor_nit=in.(${cands.join(',')})`)
+      }
+      if (numeroFactura) filtros.push(`numero_factura=eq.${encodeURIComponent(String(numeroFactura).trim())}`)
+      let rows
+      try { rows = await supabaseTaller('gastos_registrados', { query: filtros.join('&') }) }
+      catch (e) { return `❌ No se pudo leer la bitácora: ${e.message}` }
+      if (!Array.isArray(rows) || !rows.length) {
+        return `No hay gastos registrados que coincidan.\n\n> Ojo: la bitácora arrancó hoy. Los gastos hechos antes no aparecen — su id_transacion solo está en el chat que los registró o en Cuentti.`
+      }
+      return [
+        `## Gastos registrados por el MCP (${rows.length})`,
+        ``,
+        `| Fecha | Proveedor | Factura | Total | id_transacion | Doc |`,
+        `|---|---|---|---|---|---|`,
+        ...rows.map(g => `| ${g.fecha || fmtFecha(g.registrado_en)} | ${g.proveedor_nombre || g.proveedor_nit} | ${g.numero_factura || '—'} | ${fmtCOP(g.total)} | \`${g.id_transacion || '—'}\` | G-${g.numero_doc || '?'} |`),
+      ].join('\n')
     },
   },
   {
