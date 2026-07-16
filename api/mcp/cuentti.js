@@ -61,6 +61,89 @@ async function cuenttiRequest(endpoint, method = 'GET', body = null) {
   }
 }
 
+// --- Proveedores: resolucion segura por NIT ---------------------------------
+// En Colombia el NIT de una empresa es <numero>-<DV> (ej. 902045058-2) y Cuentti
+// guarda SOLO el numero, sin el digito de verificacion (el campo se llama
+// literalmente "Identificacion sin digito de verificacion"). Las facturas lo
+// imprimen pegado (9020450582), asi que si se manda tal cual NO calza con el
+// proveedor que ya existe y el endpoint lo CREA duplicado, en silencio.
+// Por eso nunca se manda id_cliente:-1 a ciegas: primero se resuelve.
+
+// Candidatos a probar, en orden: como viene y sin el DV.
+function candidatosNit(nit) {
+  const limpio = String(nit || '').replace(/\D/g, '')
+  const cands = [limpio]
+  // 10+ digitos en un NIT empresarial = numero + DV pegado.
+  if (limpio.length >= 10) cands.push(limpio.slice(0, -1))
+  return [...new Set(cands.filter(Boolean))]
+}
+
+async function buscarClienteCuentti(ident) {
+  const data = await cuenttiRequest(`/jServerj4ErpPro/api/token/consultarClienteIdentificacion/${encodeURIComponent(ident)}`).catch(() => null)
+  if (!data || data.message || data.type === 0) return null
+  const items = Array.isArray(data) ? data : (data?.data ? data.data : [data])
+  const c = items.find(r => r && Object.keys(r).length > 0 && !r.message)
+  if (!c) return null
+  const id = parseInt(c.id_cliente || c.id, 10)
+  if (!id) return null
+  return {
+    id,
+    identificacion: String(c.identificacion || ident),
+    nombre: c.nombre_cliente
+      || [c.primer_nombre, c.segundo_nombre, c.primer_apellido, c.segundo_apellido].filter(Boolean).join(' ')
+      || '',
+  }
+}
+
+// Devuelve el proveedor existente { id, identificacion, nombre, viaDV, ambiguo } o null.
+// Se prueba el NIT tal como viene ANTES que sin el DV: una cedula de 10 digitos es
+// legitima, y recortarla de entrada podria pegar con OTRA persona.
+// Si ambas formas existen pero son clientes distintos => ya hay un duplicado en
+// Cuentti: se marca ambiguo y quien llama debe abortar, no adivinar.
+async function resolverProveedor(nit) {
+  const cands = candidatosNit(nit)
+  const hits = []
+  for (const c of cands) {
+    const hit = await buscarClienteCuentti(c)
+    if (hit && !hits.some(h => h.id === hit.id)) hits.push({ ...hit, viaDV: c !== cands[0] })
+  }
+  if (!hits.length) return null
+  return { ...hits[0], ambiguo: hits.length > 1 ? hits : null }
+}
+
+// Dos clientes distintos para el mismo NIT (tipico: uno con DV y otro sin).
+function avisoProveedorAmbiguo(nit, hits) {
+  return [
+    `## 🛑 Hay proveedores DUPLICADOS para ese NIT — no se registró nada`,
+    ``,
+    `El NIT **${nit}** calza con ${hits.length} clientes distintos en Cuentti:`,
+    ``,
+    `| id_cliente | Identificacion | Nombre |`,
+    `|---|---|---|`,
+    ...hits.map(h => `| **${h.id}** | ${h.identificacion} | ${h.nombre || '—'} |`),
+    ``,
+    `Casi siempre es el mismo proveedor cargado dos veces: uno con el dígito de verificación pegado y otro sin él. Cuentti guarda el NIT **sin DV**, así que el bueno suele ser el de la identificación más corta.`,
+    ``,
+    `**Qué hacer:** decide cuál es el correcto y vuelve a llamar pasando **proveedorId** con ese id_cliente. Y borra el duplicado en Cuentti para que no vuelva a pasar.`,
+  ].join('\n')
+}
+
+// Mensaje unico para cuando el NIT no existe: NO crear en silencio.
+function avisoProveedorNoExiste(nit, param = 'crearProveedor') {
+  return [
+    `## ⚠️ Proveedor no encontrado — no se registró nada`,
+    ``,
+    `Ningun cliente/proveedor en Cuentti tiene el NIT **${nit}** (probé: ${candidatosNit(nit).join(', ')}).`,
+    ``,
+    `No se crea uno automaticamente porque asi es como salen proveedores DUPLICADOS.`,
+    ``,
+    `**Qué hacer:**`,
+    `1. Revisa el NIT. Ojo: Cuentti lo guarda **sin digito de verificacion** — si la factura dice \`902045058-2\`, en Cuentti es \`902045058\`.`,
+    `2. Busca el nombre con \`buscar_cliente_cuentti\` para confirmar.`,
+    `3. Si de verdad es un proveedor NUEVO, repite pasando **${param}:true**.`,
+  ].join('\n')
+}
+
 function fmtCOP(n) {
   return new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(parseFloat(n) || 0)
 }
@@ -1044,8 +1127,10 @@ const tools = [
     inputSchema: {
       type: 'object',
       properties: {
-        proveedorNit: { type: 'string', description: 'NIT o cedula del proveedor (Cuentti lo busca/crea por este numero)' },
-        proveedorNombre: { type: 'string', description: 'Nombre del proveedor' },
+        proveedorNit: { type: 'string', description: 'NIT o cedula del proveedor. Se busca en Cuentti antes de grabar; si no existe, NO se crea (se aborta) salvo que pases crearProveedor:true. Ojo: Cuentti guarda el NIT SIN digito de verificacion, pero igual se prueban ambas formas.' },
+        proveedorNombre: { type: 'string', description: 'Nombre del proveedor (solo se usa si hay que crearlo; si ya existe manda el de Cuentti)' },
+        proveedorId: { type: 'integer', description: 'id_cliente exacto en Cuentti. Si lo pasas se usa ese y no se busca por NIT. Sirve para desempatar cuando hay proveedores duplicados.' },
+        crearProveedor: { type: 'boolean', default: false, description: 'true = permitir crear el proveedor si no existe. Dejalo en false salvo que estes seguro de que es nuevo: evita duplicados.' },
         monto: { type: 'number', description: 'Total del gasto CON IVA incluido (lo que se paga)' },
         idPlanCuentas: { type: 'integer', description: 'Cuenta del plan contable de Cuentti. Ej: 28 = Costos Servicios Vendidos, 43 = Nomina, 20 = Alquiler de Equipos y Licencias, 21 = Comisiones.' },
         iva: { type: 'number', default: 0, description: 'Porcentaje de IVA YA INCLUIDO en el monto (ej. 19). 0 = sin IVA.' },
@@ -1058,7 +1143,7 @@ const tools = [
       },
       required: ['proveedorNit', 'proveedorNombre', 'monto', 'idPlanCuentas'],
     },
-    handler: async ({ proveedorNit, proveedorNombre, monto, idPlanCuentas, iva = 0, idImpuesto = 5, descripcion, nota = '', metodoPago = 'efectivo', fecha, confirm = false }) => {
+    handler: async ({ proveedorNit, proveedorNombre, proveedorId, crearProveedor = false, monto, idPlanCuentas, iva = 0, idImpuesto = 5, descripcion, nota = '', metodoPago = 'efectivo', fecha, confirm = false }) => {
       const { total, base, impuestos, pct } = desglosarIva(monto, iva)
       if (!(total > 0)) return '❌ El monto debe ser mayor a 0.'
       if (!idPlanCuentas) return '❌ Falta idPlanCuentas (la cuenta contable del gasto).'
@@ -1067,8 +1152,23 @@ const tools = [
         ? { idMedioPago: 7, idBanco: 2 }
         : { idMedioPago: 1, idBanco: 1 }
 
+      // Resolver el proveedor ANTES de grabar: mandar id_cliente -1 con un NIT que
+      // no calza (ej. con digito de verificacion) crea un proveedor duplicado.
+      const prov = proveedorId
+        ? { id: parseInt(proveedorId, 10), identificacion: String(proveedorNit), nombre: proveedorNombre }
+        : await resolverProveedor(proveedorNit)
+      if (!proveedorId) {
+        if (!prov && !crearProveedor) return avisoProveedorNoExiste(proveedorNit)
+        if (prov?.ambiguo) return avisoProveedorAmbiguo(proveedorNit, prov.ambiguo)
+      }
+
+      const lineaProv = prov
+        ? `**Proveedor:** ${prov.nombre || proveedorNombre} · id_cliente **${prov.id}** · NIT ${prov.identificacion} _(ya existía)_`
+          + (prov.viaDV ? `\n> ⚠️ El NIT que pasaste (\`${proveedorNit}\`) trae el dígito de verificación. En Cuentti está como \`${prov.identificacion}\`; se usa ese para no duplicarlo.` : '')
+        : `**Proveedor:** ${proveedorNombre} (NIT ${proveedorNit}) — 🆕 **se va a CREAR** (no existe en Cuentti)`
+
       const resumen = [
-        `**Proveedor:** ${proveedorNombre} (NIT ${proveedorNit})`,
+        lineaProv,
         `**Cuenta contable:** id_plan_cuentas ${idPlanCuentas}`,
         `**Concepto:** ${descripcion || nota || 'Gasto'}`,
         `**Base:** ${fmtCOP(base)} · **IVA ${pct}%:** ${fmtCOP(impuestos)} · **Total:** ${fmtCOP(total)}`,
@@ -1081,7 +1181,11 @@ const tools = [
       }
 
       const r = await enviarGasto({
-        proveedorCedula: proveedorNit, proveedorNombre, monto: total, iva: pct, idImpuesto,
+        // Si ya existe: su id_cliente real + los datos tal como estan en Cuentti.
+        proveedorId: prov?.id,
+        proveedorCedula: prov?.identificacion || proveedorNit,
+        proveedorNombre: prov?.nombre || proveedorNombre,
+        monto: total, iva: pct, idImpuesto,
         idPlanCuentas, descripcion, nota, idMedioPago, idBanco, fecha,
       })
       if (!r.ok) {
@@ -1092,13 +1196,14 @@ const tools = [
   },
   {
     name: 'registrar_compra',
-    description: 'Registra una factura de COMPRA (egreso) en Cuentti vía grabarFacturaSimple. Verificado con Cuentti: tipoDocumento=7, id_consecutivo=1, proveedor con id_cliente=-1 (Cuentti lo busca/crea por NIT), el costo de cada item va en precio_venta (base sin IVA). Suma inventario y actualiza costo. dry-run por defecto; pasa confirm:true para registrar de verdad.',
+    description: 'Registra una factura de COMPRA (egreso) en Cuentti vía grabarFacturaSimple. Verificado con Cuentti: tipoDocumento=7, id_consecutivo=1, el costo de cada item va en precio_venta (base sin IVA). Suma inventario y actualiza costo. El proveedor se BUSCA en Cuentti por NIT antes de grabar; si no existe se aborta (no se crea en silencio) salvo crearProveedor:true. dry-run por defecto; pasa confirm:true para registrar de verdad.',
     inputSchema: {
       type: 'object',
       properties: {
-        proveedorNit: { type: 'string' },
-        proveedorNombre: { type: 'string', default: '' },
-        proveedorId: { type: 'integer', description: 'id_cliente del proveedor en Cuentti (si lo tienes). Si no, se usa -1.' },
+        proveedorNit: { type: 'string', description: 'NIT del proveedor. Ojo: Cuentti lo guarda SIN digito de verificacion, pero se prueban ambas formas.' },
+        proveedorNombre: { type: 'string', default: '', description: 'Solo se usa si hay que crear el proveedor; si ya existe manda el nombre de Cuentti.' },
+        crearProveedor: { type: 'boolean', default: false, description: 'true = permitir crear el proveedor si no existe. Dejalo en false salvo que estes seguro de que es nuevo: evita duplicados.' },
+        proveedorId: { type: 'integer', description: 'id_cliente del proveedor en Cuentti. Normalmente no hace falta: se resuelve solo desde el NIT.' },
         numeroFactura: { type: 'string', default: '' },
         fecha: { type: 'string', default: '', description: 'Fecha de la factura del proveedor (YYYY-MM-DD). Se aplica al documento DESPUÉS de crearlo, vía el endpoint "Editar fecha transacción" (grabarFacturaSimple no acepta fecha). Si se omite, queda con la fecha de hoy.' },
         items: {
@@ -1124,6 +1229,21 @@ const tools = [
     },
     handler: async (c) => {
       if (!c.proveedorNit || !Array.isArray(c.items) || c.items.length === 0) return '❌ Se requiere proveedorNit e items.'
+
+      // Resolver el proveedor ANTES de armar el payload: con id_cliente -1 y un NIT
+      // que no calza (ej. con digito de verificacion) Cuentti crea un duplicado.
+      const prov = c.proveedorId ? null : await resolverProveedor(c.proveedorNit)
+      if (!c.proveedorId) {
+        if (!prov && !c.crearProveedor) return avisoProveedorNoExiste(c.proveedorNit)
+        if (prov?.ambiguo) return avisoProveedorAmbiguo(c.proveedorNit, prov.ambiguo)
+      }
+      if (prov) c = { ...c, proveedorId: prov.id, proveedorNit: prov.identificacion, proveedorNombre: prov.nombre || c.proveedorNombre }
+
+      const lineaProv = prov
+        ? `**Proveedor:** ${prov.nombre || c.proveedorNombre} · id_cliente **${prov.id}** · NIT ${prov.identificacion} _(ya existía)_`
+          + (prov.viaDV ? `\n> ⚠️ El NIT que pasaste trae el dígito de verificación; en Cuentti está sin él. Se usa \`${prov.identificacion}\` para no duplicarlo.` : '')
+        : `**Proveedor:** ${c.proveedorNombre || '—'} (NIT ${c.proveedorNit})${c.proveedorId ? ` · id_cliente ${c.proveedorId}` : ' — 🆕 **se va a CREAR**'}`
+
       const payload = buildCompraPayload(c)
       const totalFmt = fmtCOP(payload.total_neto)
 
@@ -1139,7 +1259,7 @@ const tools = [
           avisoDup,
           avisoDup ? `> Si de verdad quieres registrarla otra vez, pasa **confirm:true** y **permitirDuplicado:true**.` : `Pasa **confirm:true** para registrar de verdad.`,
           ``,
-          `**Proveedor:** ${c.proveedorNombre || '—'} (NIT ${c.proveedorNit})`,
+          lineaProv,
           `**Factura:** ${c.numeroFactura || '—'} · **Items:** ${payload.objDetalle.length} · **Total:** ${totalFmt}`,
           `**Fecha documento:** ${c.fecha ? `${fechaDocumento(c.fecha)} (se aplicará tras crear, vía "Editar fecha transacción")` : 'hoy (no especificada — Cuentti usa la fecha actual)'}`,
           ``, '<details><summary>Payload Cuentti</summary>', '', '```json', JSON.stringify(payload, null, 2).slice(0, 4000), '```', '</details>',
