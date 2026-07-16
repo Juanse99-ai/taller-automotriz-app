@@ -111,6 +111,16 @@ function uid() {
 
 // Calcula subtotal/IVA/total de una lista de items. El precio de cada item
 // INCLUYE IVA (misma convencion que Cotizaciones.jsx y buildFacturaPayload).
+// El sku del item viaja hasta la factura de Cuentti y es lo que hace que se
+// descuente el inventario. Sin el, facturar cae al generico 'MO1' y la
+// existencia NO se mueve. Se muestra en el dry-run para que el hueco se vea
+// ANTES de guardar, no cuando el stock ya quedo mal.
+function etiquetaSku(i) {
+  if (i.sku) return ` · ref ${i.sku}`
+  if (i.esServicio) return ` · servicio (no toca inventario)`
+  return ` · ⚠️ SIN REFERENCIA: no va a descontar del inventario`
+}
+
 function calcularTotales(items) {
   let subtotal = 0, iva = 0, total = 0
   const norm = (items || []).map(i => {
@@ -401,6 +411,8 @@ const tools = [
               precio: { type: 'number', description: 'Precio unitario con IVA incluido' },
               cantidad: { type: 'number', default: 1 },
               iva: { type: 'number', default: 19 },
+              sku: { type: 'string', description: 'IMPORTANTE si es un repuesto del inventario: es la REFERENCIA del producto en Cuentti (buscar_producto_sku_cuentti / listar_inventario_cuentti). Viaja hasta la factura y es lo que hace que Cuentti descuente la existencia. Sin sku el item se factura contra un generico y el inventario NO se mueve. Dejalo vacio solo para mano de obra o cosas escritas a mano.' },
+              esServicio: { type: 'boolean', default: false, description: 'true = mano de obra / servicio (no toca inventario, no lleva sku).' },
             },
             required: ['nombre', 'precio'],
           },
@@ -416,7 +428,7 @@ const tools = [
       if (!cliente || !Array.isArray(items) || items.length === 0) return '❌ Se requiere cliente e items (al menos uno).'
       const t = calcularTotales(items)
       const fecha = new Date().toISOString()
-      const resumen = t.items.map((i, idx) => `  ${idx + 1}. ${i.nombre} x${i.cantidad} — ${fmtCOP(i.precio * i.cantidad)} (IVA ${i.iva}%)`).join('\n')
+      const resumen = t.items.map((i, idx) => `  ${idx + 1}. ${i.nombre} x${i.cantidad} — ${fmtCOP(i.precio * i.cantidad)} (IVA ${i.iva}%)${etiquetaSku(i)}`).join('\n')
 
       if (!confirm) {
         return [
@@ -496,28 +508,59 @@ const tools = [
         id: { type: 'string', description: 'ID de la cotizacion (COT-...)' },
         estado: { type: 'string', enum: ['Pendiente', 'Aprobada', 'Rechazada', 'Facturada'] },
         observaciones: { type: 'string' },
+        items: {
+          type: 'array',
+          description: 'Reemplaza TODOS los items (no es un merge: manda la lista completa). Sirve sobre todo para agregarle el sku a items que quedaron sin referencia. Recalcula subtotal/IVA/total.',
+          items: {
+            type: 'object',
+            properties: {
+              nombre: { type: 'string' },
+              precio: { type: 'number', description: 'Precio unitario con IVA incluido' },
+              cantidad: { type: 'number', default: 1 },
+              iva: { type: 'number', default: 19 },
+              sku: { type: 'string', description: 'Referencia del producto en Cuentti. Sin ella el item no descuenta inventario al facturar.' },
+              esServicio: { type: 'boolean', default: false },
+            },
+            required: ['nombre', 'precio'],
+          },
+        },
         confirm: { type: 'boolean', description: 'true = aplicar; false (default) = dry-run' },
       },
       required: ['id'],
     },
-    handler: async ({ id, estado, observaciones, confirm = false }) => {
+    handler: async ({ id, estado, observaciones, items, confirm = false }) => {
       const found = await supabase('cotizaciones', { query: `select=*&id=eq.${encodeURIComponent(id)}` })
       const cot = found[0]
       if (!cot) return `❌ No existe la cotizacion "${id}".`
       const cambios = {}
       if (estado) cambios.estado = estado
       if (observaciones !== undefined) cambios.observaciones = observaciones
-      if (Object.keys(cambios).length === 0) return '❌ Nada que actualizar (pasa estado u observaciones).'
+      let resumenItems = ''
+      if (Array.isArray(items) && items.length) {
+        // Reemplazo completo: se recalculan los totales para que no queden
+        // desalineados con los items nuevos.
+        const t = calcularTotales(items)
+        cambios.items = JSON.stringify(t.items)
+        cambios.subtotal = t.subtotal
+        cambios.iva = t.iva
+        cambios.total = t.total
+        resumenItems = ['', `### Items nuevos`,
+          ...t.items.map((i, idx) => `  ${idx + 1}. ${i.nombre} x${i.cantidad} — ${fmtCOP(i.precio * i.cantidad)} (IVA ${i.iva}%)${etiquetaSku(i)}`),
+          ``, `Subtotal: ${fmtCOP(t.subtotal)} · IVA: ${fmtCOP(t.iva)} · **Total: ${fmtCOP(t.total)}**`,
+        ].join('\n')
+      }
+      if (Object.keys(cambios).length === 0) return '❌ Nada que actualizar (pasa estado, observaciones o items).'
       if (!confirm) {
         return [
           `## Dry-run: actualizar ${id}`,
           estado ? `Estado: **${cot.estado}** → **${estado}**` : `Estado: ${cot.estado} (sin cambio)`,
           observaciones !== undefined ? `Observaciones → ${observaciones}` : '',
+          resumenItems,
           ``, `Pasa **confirm:true** para aplicar.`,
         ].filter(Boolean).join('\n')
       }
       await supabase('cotizaciones', { method: 'PATCH', query: `id=eq.${encodeURIComponent(id)}`, body: cambios })
-      return `## ✅ Cotizacion ${id} actualizada\n${estado ? `Estado: ${estado}` : ''}`.trim()
+      return [`## ✅ Cotizacion ${id} actualizada`, estado ? `Estado: ${estado}` : '', resumenItems].filter(Boolean).join('\n')
     },
   },
   {
@@ -539,7 +582,14 @@ const tools = [
           type: 'array',
           items: {
             type: 'object',
-            properties: { nombre: { type: 'string' }, precio: { type: 'number' }, cantidad: { type: 'number' }, iva: { type: 'number' } },
+            properties: {
+              nombre: { type: 'string' },
+              precio: { type: 'number', description: 'Precio unitario con IVA incluido' },
+              cantidad: { type: 'number', default: 1 },
+              iva: { type: 'number', default: 19 },
+              sku: { type: 'string', description: 'IMPORTANTE si es un repuesto del inventario: es la REFERENCIA del producto en Cuentti (buscar_producto_sku_cuentti / listar_inventario_cuentti). Viaja hasta la factura y es lo que hace que Cuentti descuente la existencia. Sin sku el item se factura contra un generico y el inventario NO se mueve. Dejalo vacio solo para mano de obra o cosas escritas a mano.' },
+              esServicio: { type: 'boolean', default: false, description: 'true = mano de obra / servicio (no toca inventario, no lleva sku).' },
+            },
             required: ['nombre', 'precio'],
           },
         },

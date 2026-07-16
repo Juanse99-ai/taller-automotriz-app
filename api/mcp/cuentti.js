@@ -945,6 +945,12 @@ const tools = [
           `**Resolucion:** ${resolucion} ${resolucion === 'FEIC' ? '(electronica DIAN)' : '(interna)'}`,
           `**Medio de pago:** ${metodoPago} (id_medio_pago=${medio}, id_banco=${banco})`,
           `**Items:** ${items.length} · **Total:** ${fmtCOP(payload.total_neto)}`,
+          ``,
+          `### Enlace con el inventario`,
+          ...payload.objDetalle.map(d => `- ${d.descripcion} x${d.cantidad} — ${d.sku === 'MO1' ? '⚠️ **genérico MO1**: NO descuenta inventario' : `ref \`${d.sku}\` → descuenta`}`),
+          payload.objDetalle.some(d => d.sku === 'MO1')
+            ? `\n> ⚠️ Hay items sin referencia. Si alguno es un repuesto real, el stock de Cuentti va a quedar mal (se factura contra un genérico). Corrige el \`sku\` del item en la OT/cotización antes de emitir. Si es mano de obra, está bien así.`
+            : `\n> ✅ Todos los items tienen referencia: el inventario se va a descontar.`,
           ``, '<details><summary>Payload Cuentti</summary>', '', '```json',
           JSON.stringify(payload, null, 2).slice(0, 4000), '```', '</details>',
         ].join('\n')
