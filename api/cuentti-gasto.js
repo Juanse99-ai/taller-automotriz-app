@@ -7,7 +7,7 @@
 //
 // Requiere en Vercel (Sensitive): CUENTTI_USER (email) y CUENTTI_PASS (clave).
 
-import { login, enviarGasto } from './_lib/gasto.js'
+import { login, enviarGasto, TIPO_PERSONA_NATURAL } from './_lib/gasto.js'
 
 const ALLOWED_ORIGINS = [
   'https://taller-multias.vercel.app',
@@ -42,7 +42,9 @@ export default async function handler(req, res) {
     const montoNum = Math.round(parseFloat(monto) || 0)
     if (!(montoNum > 0)) { res.status(400).json({ ok: false, error: 'El monto debe ser mayor a 0' }); return }
 
-    const r = await enviarGasto(req.body)
+    // La nomina siempre es un empleado => persona natural. Se fija aqui para que
+    // la deduccion por NIT/nombre no aplique y el payload historico no cambie.
+    const r = await enviarGasto({ tipoPersona: TIPO_PERSONA_NATURAL, ...req.body })
     if (!r.ok) { res.status(502).json({ ok: false, cuentti: r.cuentti }); return }
     res.status(200).json({ ok: true, idTransacion: r.idTransacion, numeroDoc: r.numeroDoc })
   } catch (e) {

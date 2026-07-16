@@ -10,7 +10,7 @@
 //   CUENTTI_GTM            - Timezone (default GMT-0500)
 
 import { handleMcp } from '../_mcp/shared.js'
-import { enviarGasto, desglosarIva } from '../_lib/gasto.js'
+import { enviarGasto, desglosarIva, inferirTipoPersona, TIPO_PERSONA_JURIDICA } from '../_lib/gasto.js'
 
 const CONFIG = {
   baseUrl: process.env.CUENTTI_BASE_URL || 'https://app.cuenti.com',
@@ -474,6 +474,8 @@ function buildCompraPayload(c) {
       id_cliente: parseInt(c.proveedorId ?? -1, 10),
       nombre_cliente: upper(c.proveedorNombre || 'PROVEEDOR'),
       identificacion: (c.proveedorNit || '222222222222').toString(),
+      // Sin esto una empresa entraba como persona natural (ver gasto.js).
+      id_tipo_persona: parseInt(c.tipoPersona, 10) || inferirTipoPersona(c.proveedorNit, c.proveedorNombre),
     },
     objDetalle: items,
     lstPagos: c.aCredito === false
@@ -617,7 +619,10 @@ const tools = [
         `| **Email** | ${c.email1 || c.email2 || c.email || '—'} |`,
         `| **Direccion** | ${c.direccion || '—'} |`,
         `| **Ciudad** | ${c.ciudad || '—'} |`,
-        `| **Activo** | ${c.es_activo === '1' ? 'sí' : 'no'} |`,
+        // Cuentti manda es_activo como NUMERO (1), no como texto: comparar con
+        // '1' hacia que TODOS los clientes salieran como inactivos.
+        `| **Tipo** | ${Number(c.id_tipo_persona) === 2 ? 'Jurídica (empresa)' : 'Natural (persona)'} |`,
+        `| **Activo** | ${Number(c.es_activo) === 1 ? 'sí' : 'no'} |`,
       ].join('\n')
     },
   },
@@ -738,7 +743,11 @@ const tools = [
       const nom = String(nombre || '').trim()
       if (!ced || !nom) return '❌ cedula y nombre son obligatorios'
 
-      const partes = nom.split(/\s+/)
+      // Una empresa no tiene nombre/apellido: en el registro bueno de Cuentti
+      // (SERVICAR JB, id 929) esos campos van vacios y la razon social vive solo
+      // en nombre_cliente. Partirla dejaria primer_nombre=SERVICAR, apellido=SAS.
+      const esJuridica = parseInt(tipoPersona, 10) === 2
+      const partes = esJuridica ? [] : nom.split(/\s+/)
       const primer_nombre = partes[0] || ''
       const primer_apellido = partes.length > 1 ? partes[partes.length - 1] : ''
       const segundo_nombre = partes.length > 2 ? partes.slice(1, -1).join(' ') : ''
@@ -1175,6 +1184,7 @@ const tools = [
         proveedorNombre: { type: 'string', description: 'Nombre del proveedor (solo se usa si hay que crearlo; si ya existe manda el de Cuentti)' },
         proveedorId: { type: 'integer', description: 'id_cliente exacto en Cuentti. Si lo pasas se usa ese y no se busca por NIT. Sirve para desempatar cuando hay proveedores duplicados.' },
         crearProveedor: { type: 'boolean', default: false, description: 'true = permitir crear el proveedor si no existe. Dejalo en false salvo que estes seguro de que es nuevo: evita duplicados.' },
+        tipoPersona: { type: 'integer', enum: [1, 2], description: '1 = natural (persona), 2 = juridica (empresa). Si se omite se deduce del NIT y de la razon social, y el dry-run muestra que dedujo. Solo importa al crear.' },
         monto: { type: 'number', description: 'Total del gasto CON IVA incluido (lo que se paga)' },
         idPlanCuentas: { type: 'integer', description: 'Cuenta del plan contable de Cuentti. Ej: 28 = Costos Servicios Vendidos, 43 = Nomina, 20 = Alquiler de Equipos y Licencias, 21 = Comisiones.' },
         iva: { type: 'number', default: 0, description: 'Porcentaje de IVA YA INCLUIDO en el monto (ej. 19). 0 = sin IVA.' },
@@ -1189,7 +1199,7 @@ const tools = [
       },
       required: ['proveedorNit', 'proveedorNombre', 'monto', 'idPlanCuentas'],
     },
-    handler: async ({ proveedorNit, proveedorNombre, proveedorId, crearProveedor = false, monto, idPlanCuentas, iva = 0, idImpuesto = 5, descripcion, numeroFactura = '', nota = '', metodoPago = 'efectivo', fecha, confirm = false, permitirDuplicado = false }) => {
+    handler: async ({ proveedorNit, proveedorNombre, proveedorId, crearProveedor = false, tipoPersona, monto, idPlanCuentas, iva = 0, idImpuesto = 5, descripcion, numeroFactura = '', nota = '', metodoPago = 'efectivo', fecha, confirm = false, permitirDuplicado = false }) => {
       const { total, base, impuestos, pct } = desglosarIva(monto, iva)
       if (!(total > 0)) return '❌ El monto debe ser mayor a 0.'
       if (!idPlanCuentas) return '❌ Falta idPlanCuentas (la cuenta contable del gasto).'
@@ -1208,10 +1218,15 @@ const tools = [
         if (prov?.ambiguo) return avisoProveedorAmbiguo(proveedorNit, prov.ambiguo)
       }
 
+      // Solo importa al crear: si ya existe, Cuentti conserva su configuracion.
+      const tipoPer = parseInt(tipoPersona, 10) || inferirTipoPersona(proveedorNit, proveedorNombre)
+      const tipoTxt = tipoPer === TIPO_PERSONA_JURIDICA ? 'Jurídica (empresa)' : 'Natural (persona)'
+
       const lineaProv = prov
         ? `**Proveedor:** ${prov.nombre || proveedorNombre} · id_cliente **${prov.id}** · NIT ${prov.identificacion} _(ya existía)_`
           + (prov.viaDV ? `\n> ⚠️ El NIT que pasaste (\`${proveedorNit}\`) trae el dígito de verificación. En Cuentti está como \`${prov.identificacion}\`; se usa ese para no duplicarlo.` : '')
-        : `**Proveedor:** ${proveedorNombre} (NIT ${proveedorNit}) — 🆕 **se va a CREAR** (no existe en Cuentti)`
+        : `**Proveedor:** ${proveedorNombre} (NIT ${proveedorNit}) — 🆕 **se va a CREAR** como **${tipoTxt}**`
+          + `\n> Revisa el tipo: si está mal, pasa **tipoPersona** (1 = natural, 2 = jurídica). Una empresa mal creada como natural queda con cédula en vez de NIT.`
 
       const resumen = [
         lineaProv,
@@ -1250,6 +1265,7 @@ const tools = [
         proveedorId: prov?.id,
         proveedorCedula: prov?.identificacion || proveedorNit,
         proveedorNombre: prov?.nombre || proveedorNombre,
+        tipoPersona: tipoPer,
         monto: total, iva: pct, idImpuesto,
         idPlanCuentas, descripcion, nota: nota || numeroFactura, idMedioPago, idBanco, fecha,
       })

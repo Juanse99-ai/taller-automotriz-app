@@ -18,6 +18,28 @@ const EMPRESA = '11464'
 // Cuenta por defecto: "Nomina" (comportamiento historico de la app).
 export const ID_CUENTA_NOMINA = 43
 
+// Tipo de persona en Cuentti. VERIFICADO contra el registro real de SERVICAR JB
+// AUTOMOTRIZ SAS (id_cliente 929): id_tipo_persona = 2. Antes esto iba
+// hardcodeado en 1 y creo la empresa como persona natural.
+// Ojo: id_tipo_identificacion NO es el campo que manda — en el registro bueno
+// viene en null. El que define si es empresa o persona es este.
+export const TIPO_PERSONA_NATURAL = 1
+export const TIPO_PERSONA_JURIDICA = 2
+
+// Deduce si es empresa o persona. Dos señales, cualquiera basta:
+//   - NIT de empresa: en Colombia empieza por 8 o 9 y tiene 9 digitos (+DV).
+//     Las cedulas no caen ahi: las de 10 digitos empiezan por 1, y las viejas
+//     tienen 8 o menos.
+//   - Razon social terminada en SAS / LTDA / S.A. / E.U. ...
+// Es una heuristica, asi que quien llama puede forzarla con tipoPersona y el
+// dry-run siempre muestra que se dedujo, para que un humano lo pueda corregir.
+export function inferirTipoPersona(identificacion, nombre = '') {
+  const num = String(identificacion || '').replace(/\D/g, '')
+  const esNitEmpresa = /^[89]\d{8,9}$/.test(num)
+  const esRazonSocial = /\b(s\.?a\.?s|ltda|limitada|s\.?a|e\.?u|s\.?c\.?a|s\.?e\.?n\.?c)\.?\s*$/i.test(String(nombre || '').trim())
+  return (esNitEmpresa || esRazonSocial) ? TIPO_PERSONA_JURIDICA : TIPO_PERSONA_NATURAL
+}
+
 // Cache del token en la instancia (sirve mientras la funcion este "caliente").
 let cachedToken = null
 let cachedIdUsuario = null
@@ -82,7 +104,10 @@ export function buildGasto(opts = {}) {
   const {
     proveedorId, proveedorCedula, proveedorNombre, monto, iva = 0, idImpuesto,
     idPlanCuentas = ID_CUENTA_NOMINA, descripcion, nota, idMedioPago, idBanco, fecha,
+    tipoPersona,
   } = opts
+  // Sin tipoPersona explicito se deduce del NIT/nombre (antes: siempre natural).
+  const idTipoPersona = parseInt(tipoPersona, 10) || inferirTipoPersona(proveedorCedula, proveedorNombre)
   const { total, base, impuestos, pct } = desglosarIva(monto, iva)
   // Con IVA (>0) va el id del impuesto (5 = 19%). Sin IVA se conserva el 1 del
   // payload historico de nomina, que esta probado y no debe cambiar.
@@ -101,7 +126,7 @@ export function buildGasto(opts = {}) {
     fecha_registro: iso, fecha_inicial: iso, fecha_final: iso, fecha_vencimiento: iso,
     total_neto: total, total_sin_impuestos: base, total_impuestos: impuestos, total_estampilla: 0, total_impoconsumo: 0,
     json: JSON.stringify({ lstImpuestos: [{ breve: 'G', impuestosPor: pct, base, valor: impuestos, total, tipo_impuesto: tipoImp }] }),
-    objClienteMini: { nombre_cliente: proveedorNombre || '', identificacion: String(proveedorCedula), es_proveedor: 1, es_cliente: 0, id_tipo_persona: 1, telefono1: '', telefono2: '', direccion: '', email1: '', medio_pago: null },
+    objClienteMini: { nombre_cliente: proveedorNombre || '', identificacion: String(proveedorCedula), es_proveedor: 1, es_cliente: 0, id_tipo_persona: idTipoPersona, telefono1: '', telefono2: '', direccion: '', email1: '', medio_pago: null },
     objTransacionDetalle: [{
       id_producto: 0, id_plan_cuentas: parseInt(idPlanCuentas, 10) || ID_CUENTA_NOMINA,
       descripcion: desc, cantidad: 1, precio_venta: base, precio_real: base, total,
