@@ -854,7 +854,7 @@ const tools = [
   },
   {
     name: 'facturar',
-    description: 'Crea una factura en Cuentti a partir de una orden de trabajo del taller (id o codigo OT-...) o de una cotizacion (COT-...). Por defecto hace DRY-RUN (muestra el payload sin enviar nada); pasa confirm:true para emitir de verdad. Anti-duplicado: avisa si la OT ya fue facturada. Para factura electronica DIAN usa resolucion:"FEIC" y emitirFE:true. Tras facturar, marca la OT/cotizacion en Supabase con el id_transacion.',
+    description: 'Factura una OT (OT-...) o cotizacion (COT-...) QUE YA EXISTE en el taller. Solo lee de Supabase: no sirve para facturar items sueltos. OJO: si te piden facturar algo que no viene de una OT/cotizacion (ej. una venta de mostrador), usa facturar_directo — NO inventes una cotizacion en el taller solo para poder facturarla. Por defecto hace DRY-RUN; confirm:true para emitir. Anti-duplicado: avisa si la OT ya fue facturada. Para factura electronica DIAN usa resolucion:"FEIC" y emitirFE:true. Tras facturar, marca la OT/cotizacion en Supabase con el id_transacion.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -1006,6 +1006,125 @@ const tools = [
         urlDoc ? `**Documento:** ${urlDoc}` : '',
         !txId ? `\n\`\`\`json\n${JSON.stringify(result, null, 2).slice(0, 1500)}\n\`\`\`` : '',
       ].filter(Boolean).join('\n')
+    },
+  },
+  {
+    name: 'facturar_directo',
+    description: 'Factura DIRECTO en Cuentti a partir de los items, sin pasar por el taller. Es para ventas de mostrador: vender 2 llantas no es un flujo cotizacion->aprobacion->factura. Usa esto en vez de inventar una cotizacion en el taller solo para poder facturarla (la tool facturar solo sabe facturar una OT/COT que ya exista). NO crea ni toca nada en Supabase: la venta queda solo en Cuentti. El precio de cada item va CON IVA incluido. Pon el sku de cada repuesto o el inventario NO se descuenta. Dry-run por defecto; confirm:true para emitir.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        cliente_nombre: { type: 'string', description: 'Nombre del cliente. Solo se usa si hay que crearlo en Cuentti; si ya existe manda el de Cuentti.' },
+        cliente_identificacion: { type: 'string', description: 'Cedula o NIT. Se busca en Cuentti antes de emitir. El NIT va SIN digito de verificacion (se prueban las dos formas).' },
+        cliente_id: { type: 'integer', description: 'id_cliente exacto en Cuentti. Normalmente no hace falta: se resuelve desde la identificacion.' },
+        tipoPersona: { type: 'integer', enum: [1, 2], description: '1 = natural, 2 = juridica. Se deduce del NIT/nombre si se omite. Solo importa si hay que crear el cliente.' },
+        items: {
+          type: 'array',
+          description: 'Items a facturar. El precio INCLUYE IVA.',
+          items: {
+            type: 'object',
+            properties: {
+              nombre: { type: 'string', description: 'Descripcion que sale en la factura' },
+              precio: { type: 'number', description: 'Precio unitario CON IVA incluido' },
+              cantidad: { type: 'number', default: 1 },
+              iva: { type: 'number', default: 19, description: 'Porcentaje de IVA. 0 = exento.' },
+              sku: { type: 'string', description: 'REFERENCIA del producto en Cuentti. Es lo que hace que se descuente la existencia. Sin sku se factura contra un generico y el inventario NO se mueve. Vacio solo para mano de obra.' },
+              esServicio: { type: 'boolean', default: false, description: 'true = mano de obra / servicio (no lleva sku ni toca inventario).' },
+            },
+            required: ['nombre', 'precio'],
+          },
+        },
+        resolucion: { type: 'string', enum: ['MAS', 'FEIC'], default: 'MAS', description: 'MAS = factura interna; FEIC = factura electronica DIAN.' },
+        metodoPago: { type: 'string', enum: ['efectivo', 'transferencia', 'credito'], default: 'efectivo' },
+        idMedioPago: { type: 'integer', description: 'Override. Default: efectivo=1, transferencia=7.' },
+        idBanco: { type: 'integer', description: 'Override. 1=Caja General, 2=Bancolombia, 3=Nequi.' },
+        emitirFE: { type: 'boolean', default: false, description: 'Si resolucion=FEIC, emite ante la DIAN tras crear la factura.' },
+        observaciones: { type: 'string', default: '' },
+        confirm: { type: 'boolean', default: false, description: 'true = emitir de verdad; false (default) = dry-run.' },
+      },
+      required: ['cliente_nombre', 'cliente_identificacion', 'items'],
+    },
+    handler: async ({ cliente_nombre, cliente_identificacion, cliente_id, tipoPersona, items,
+                      resolucion = 'MAS', metodoPago = 'efectivo', idMedioPago, idBanco,
+                      emitirFE = false, observaciones = '', confirm = false }) => {
+      if (!cliente_nombre || !cliente_identificacion) return '❌ cliente_nombre y cliente_identificacion son obligatorios.'
+      if (!Array.isArray(items) || items.length === 0) return '❌ Se requiere al menos un item.'
+
+      // Resolver el cliente: con su id_cliente real Cuentti no toca el registro;
+      // con -1 lo crea por NIT, que es como nacen los terceros mal configurados.
+      const cli = cliente_id
+        ? { id: parseInt(cliente_id, 10) }
+        : await resolverProveedor(cliente_identificacion)
+      if (!cliente_id && cli?.ambiguo) return avisoProveedorAmbiguo(cliente_identificacion, cli.ambiguo)
+
+      const aCredito = metodoPago === 'credito'
+      const medio = idMedioPago ?? (metodoPago === 'transferencia' ? 7 : 1)
+      const banco = idBanco ?? (metodoPago === 'transferencia' ? 2 : metodoPago === 'credito' ? 0 : 1)
+
+      const factura = {
+        items,
+        cliente: cli?.nombre || cliente_nombre,
+        cedula: cli?.identificacion || cliente_identificacion,
+        clienteId: cli?.id,
+        tipoPersona,
+        resolucion,
+        tipoDocumento: 1,
+        idMedioPago: medio, idBanco: banco, aCredito,
+        observaciones,
+      }
+      const payload = buildFacturaPayload(factura)
+
+      const lineaCli = cli?.id
+        ? `**Cliente:** ${cli.nombre || cliente_nombre} · id_cliente **${cli.id}** · ${factura.cedula} _(ya existía — no se modifica)_`
+          + (cli.viaDV ? `\n> ⚠️ El NIT que pasaste trae el dígito de verificación; en Cuentti está como \`${cli.identificacion}\`.` : '')
+          + (cli.descartados?.length ? `\n> Se descartó un duplicado inactivo: ${cli.descartados.map(d => d.id).join(', ')}.` : '')
+        : `**Cliente:** ${cliente_nombre} (${cliente_identificacion}) — 🆕 **NO existe: Cuentti lo va a CREAR** como **${payload.objClienteMini.id_tipo_persona === 2 ? 'Jurídica' : 'Natural'}**`
+
+      const sinRef = payload.objDetalle.filter(d => d.sku === 'MO1')
+      const bloqueInv = [
+        ``, `### Enlace con el inventario`,
+        ...payload.objDetalle.map(d => `- ${d.descripcion} x${d.cantidad} — ${d.sku === 'MO1' ? '⚠️ **genérico MO1**: NO descuenta inventario' : `ref \`${d.sku}\` → descuenta`}`),
+        sinRef.length
+          ? `\n> ⚠️ Hay ${sinRef.length} item(s) sin referencia. Si alguno es un repuesto real el stock va a quedar mal. Si es mano de obra, está bien así.`
+          : `\n> ✅ Todos los items tienen referencia: el inventario se va a descontar.`,
+      ].join('\n')
+
+      if (!confirm) {
+        return [
+          `## Dry-run: factura DIRECTA (NO enviada a Cuentti)`,
+          `Pasa **confirm:true** para emitir de verdad.`, ``,
+          lineaCli,
+          `**Resolucion:** ${resolucion} ${resolucion === 'FEIC' ? '(electronica DIAN — NO se deshace)' : '(interna)'}`,
+          `**Medio de pago:** ${metodoPago} (id_medio_pago=${medio}, id_banco=${banco})`,
+          `**Items:** ${payload.objDetalle.length} · **Subtotal:** ${fmtCOP(payload.total_sin_impuestos)} · **IVA:** ${fmtCOP(payload.total_impuestos)} · **Total:** ${fmtCOP(payload.total_neto)}`,
+          bloqueInv,
+          ``, `> Esta venta queda SOLO en Cuentti: no crea cotizacion ni OT en el taller.`,
+          ``, '<details><summary>Payload Cuentti</summary>', '', '```json',
+          JSON.stringify(payload, null, 2).slice(0, 4000), '```', '</details>',
+        ].join('\n')
+      }
+
+      const result = await cuenttiRequest(FACTURA_PATHS.grabarSimple, 'POST', payload)
+      const txId = extractIdTransacion(result)
+
+      let feMsg = ''
+      if (txId && resolucion === 'FEIC' && emitirFE) {
+        try {
+          await cuenttiRequest(FACTURA_PATHS.emitirFE.replace('{id}', encodeURIComponent(txId)))
+          feMsg = `\n**Factura electronica:** ✅ enviada a la DIAN`
+        } catch (e) {
+          feMsg = `\n**Factura electronica:** ⚠️ error emitiendo FE: ${e.message}`
+        }
+      }
+
+      return [
+        `## ✅ Factura directa creada en Cuentti`,
+        `**id_transacion:** ${txId || '—'}${feMsg}`,
+        ``, lineaCli,
+        `**Total:** ${fmtCOP(payload.total_neto)} · **Resolucion:** ${resolucion}`,
+        bloqueInv,
+        ``, `> Anota el id_transacion: esta venta no queda registrada en el taller.`,
+      ].join('\n')
     },
   },
   {
