@@ -375,9 +375,27 @@ async function buscarGastoRegistrado(proveedorNit, numeroFactura) {
   const nit = String(proveedorNit || '').trim()
   if (!nf || !nit) return null
   try {
-    const q = `select=*&proveedor_nit=eq.${encodeURIComponent(nit)}&numero_factura=eq.${encodeURIComponent(nf)}&limit=1`
+    // Los ANULADOS no cuentan: un gasto anulado y vuelto a registrar es el mismo
+    // gasto, no un duplicado. Sin este filtro el anti-duplicado bloquearia el
+    // re-registro legitimo despues de corregir un error.
+    const q = `select=*&proveedor_nit=eq.${encodeURIComponent(nit)}&numero_factura=eq.${encodeURIComponent(nf)}&anulado_en=is.null&limit=1`
     const rows = await supabaseTaller('gastos_registrados', { query: q })
     return Array.isArray(rows) && rows[0] ? rows[0] : null
+  } catch { return null }
+}
+
+// Marca en la bitacora el gasto que se anulo en Cuentti, para que deje de contar
+// como registrado. Sin esto la bitacora afirma que sigue vivo un doc anulado.
+async function marcarGastoAnulado(idTransacion) {
+  const tx = String(idTransacion || '').trim()
+  if (!tx) return null
+  try {
+    const rows = await supabaseTaller('gastos_registrados', {
+      method: 'PATCH',
+      query: `id_transacion=eq.${encodeURIComponent(tx)}&anulado_en=is.null`,
+      body: { anulado_en: new Date().toISOString() },
+    })
+    return Array.isArray(rows) && rows.length ? rows[0] : null
   } catch { return null }
 }
 
@@ -1454,11 +1472,13 @@ const tools = [
       properties: {
         proveedorNit: { type: 'string', description: 'Filtrar por NIT (opcional)' },
         numeroFactura: { type: 'string', description: 'Filtrar por numero de factura (opcional)' },
+        incluirAnulados: { type: 'boolean', default: true, description: 'false = mostrar solo los que siguen vivos.' },
         limite: { type: 'integer', default: 20 },
       },
     },
-    handler: async ({ proveedorNit, numeroFactura, limite = 20 }) => {
+    handler: async ({ proveedorNit, numeroFactura, incluirAnulados = true, limite = 20 }) => {
       const filtros = ['select=*', `order=registrado_en.desc`, `limit=${parseInt(limite, 10) || 20}`]
+      if (!incluirAnulados) filtros.push('anulado_en=is.null')
       // El NIT puede venir con DV: se filtra por las dos formas.
       if (proveedorNit) {
         const cands = candidatosNit(proveedorNit)
@@ -1474,9 +1494,11 @@ const tools = [
       return [
         `## Gastos registrados por el MCP (${rows.length})`,
         ``,
-        `| Fecha | Proveedor | Factura | Total | id_transacion | Doc |`,
-        `|---|---|---|---|---|---|`,
-        ...rows.map(g => `| ${g.fecha || fmtFecha(g.registrado_en)} | ${g.proveedor_nombre || g.proveedor_nit} | ${g.numero_factura || '—'} | ${fmtCOP(g.total)} | \`${g.id_transacion || '—'}\` | G-${g.numero_doc || '?'} |`),
+        `| Estado | Fecha | Proveedor | Factura | Total | id_transacion | Doc |`,
+        `|---|---|---|---|---|---|---|`,
+        ...rows.map(g => `| ${g.anulado_en ? `🚫 anulado` : '✅ vivo'} | ${g.fecha || fmtFecha(g.registrado_en)} | ${g.proveedor_nombre || g.proveedor_nit} | ${g.numero_factura || '—'} | ${fmtCOP(g.total)} | \`${g.id_transacion || '—'}\` | G-${g.numero_doc || '?'} |`),
+        ``,
+        `> Los 🚫 anulados NO cuentan para el anti-duplicado: un gasto anulado y vuelto a registrar es el mismo gasto, no uno nuevo.`,
       ].join('\n')
     },
   },
@@ -1503,7 +1525,19 @@ const tools = [
         fecha_registro: Date.now(), id_transacion_remplazo: null,
       }
       const resp = await cuenttiRequest('/jServerj4ErpPro/com/j4ErpPro/server/transacion/anularTransacion', 'POST', body)
-      return [`## ✅ Solicitud de anulación enviada`, `**id_transacion:** ${tx}`, '', '```json', JSON.stringify(resp, null, 2).slice(0, 800), '```'].join('\n')
+
+      // Si el doc estaba en la bitacora de gastos, marcarlo: si no, seguiria
+      // contando como registrado y bloquearia un re-registro legitimo.
+      const anotado = await marcarGastoAnulado(tx)
+
+      return [
+        `## ✅ Solicitud de anulación enviada`,
+        `**id_transacion:** ${tx}`,
+        anotado
+          ? `**Bitácora:** marcado como anulado (${anotado.proveedor_nombre || anotado.proveedor_nit}, factura ${anotado.numero_factura || '—'}). Ya no cuenta como registrado.`
+          : `**Bitácora:** no había ningún gasto anotado con ese id (normal si fue una venta/compra, o un gasto anterior a la bitácora).`,
+        '', '```json', JSON.stringify(resp, null, 2).slice(0, 800), '```',
+      ].join('\n')
     },
   },
 ]
