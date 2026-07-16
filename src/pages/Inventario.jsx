@@ -289,7 +289,7 @@ export default function Inventario({ notify }) {
               <thead>
                 <tr>
                   <th onClick={() => toggleSort('codigo')} style={{ cursor: 'pointer', userSelect: 'none' }}>
-                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>Código {sortIcon('codigo')}</span>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>Referencia {sortIcon('codigo')}</span>
                   </th>
                   <th onClick={() => toggleSort('nombre')} className="col-left" style={{ cursor: 'pointer', userSelect: 'none' }}>
                     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>Producto {sortIcon('nombre')}</span>
@@ -326,7 +326,7 @@ export default function Inventario({ notify }) {
                   const util = (baseCosto > 0 && p.precioBase > 0) ? ((p.precioBase - baseCosto) / p.precioBase) * 100 : null
                   return (
                     <tr key={p.id || p.codigo}>
-                      <td className="c-mono" data-label="Código" style={{ color: 'var(--text-3)', fontSize: 11.5 }}>{p.codigo}</td>
+                      <td className="c-mono" data-label="Referencia" style={{ color: 'var(--text-3)', fontSize: 11.5 }}>{p.codigo}</td>
                       <td className="c-name col-left">{p.nombre}</td>
                       <td className="c-muted" data-label="Categoría" style={{ textTransform: 'capitalize' }}>{p.categoria}</td>
                       <td className="c-mono c-right" data-label="Stock" style={{

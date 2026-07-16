@@ -454,7 +454,10 @@ export async function cargarInventario(pagina = 0) {
         const iva = parseFloat(p.valor_impuesto || 0)
         return {
           id: p.id_producto || p.idProductoSucursal,
-          codigo: p.codigo_barras || p.sku || `PROD-${p.id_producto}`,
+          // OJO: en Cuentti `sku` es la REFERENCIA del producto (ej. HCF5719) y
+          // `codigo_barras` es el EAN (ej. FGFII0330). Se muestra la referencia,
+          // que es la que usa el taller; el EAN queda solo como respaldo.
+          codigo: p.sku || p.codigo_barras || `PROD-${p.id_producto}`,
           sku: p.sku || '',
           codigoBarras: p.codigo_barras || '',
           nombre: p.nombre || 'Sin nombre',
@@ -490,7 +493,8 @@ export async function buscarProductoPorSku(sku) {
     const iva = parseFloat(p.valor_impuesto || 0)
     return {
       id: p.id_producto || p.idProductoSucursal,
-      codigo: p.codigo_barras || p.sku || '',
+      // `sku` = REFERENCIA en Cuentti; `codigo_barras` = EAN (ver cargarInventario).
+      codigo: p.sku || p.codigo_barras || '',
       sku: p.sku || '',
       codigoBarras: p.codigo_barras || '',
       nombre: p.nombre || 'Sin nombre',
