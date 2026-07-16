@@ -1049,6 +1049,7 @@ const tools = [
         monto: { type: 'number', description: 'Total del gasto CON IVA incluido (lo que se paga)' },
         idPlanCuentas: { type: 'integer', description: 'Cuenta del plan contable de Cuentti. Ej: 28 = Costos Servicios Vendidos, 43 = Nomina, 20 = Alquiler de Equipos y Licencias, 21 = Comisiones.' },
         iva: { type: 'number', default: 0, description: 'Porcentaje de IVA YA INCLUIDO en el monto (ej. 19). 0 = sin IVA.' },
+        idImpuesto: { type: 'integer', default: 5, description: 'Id del impuesto en Cuentti: 5 = IVA 19% (default), 1 = IVA 16%, 4 = exento. Solo aplica si iva > 0.' },
         descripcion: { type: 'string', description: 'Descripcion de la linea del gasto' },
         nota: { type: 'string', default: '', description: 'Nota del documento (ej. numero de factura del proveedor)' },
         metodoPago: { type: 'string', enum: ['efectivo', 'transferencia'], default: 'efectivo' },
@@ -1057,7 +1058,7 @@ const tools = [
       },
       required: ['proveedorNit', 'proveedorNombre', 'monto', 'idPlanCuentas'],
     },
-    handler: async ({ proveedorNit, proveedorNombre, monto, idPlanCuentas, iva = 0, descripcion, nota = '', metodoPago = 'efectivo', fecha, confirm = false }) => {
+    handler: async ({ proveedorNit, proveedorNombre, monto, idPlanCuentas, iva = 0, idImpuesto = 5, descripcion, nota = '', metodoPago = 'efectivo', fecha, confirm = false }) => {
       const { total, base, impuestos, pct } = desglosarIva(monto, iva)
       if (!(total > 0)) return '❌ El monto debe ser mayor a 0.'
       if (!idPlanCuentas) return '❌ Falta idPlanCuentas (la cuenta contable del gasto).'
@@ -1071,6 +1072,7 @@ const tools = [
         `**Cuenta contable:** id_plan_cuentas ${idPlanCuentas}`,
         `**Concepto:** ${descripcion || nota || 'Gasto'}`,
         `**Base:** ${fmtCOP(base)} · **IVA ${pct}%:** ${fmtCOP(impuestos)} · **Total:** ${fmtCOP(total)}`,
+        pct > 0 ? `**Impuesto:** id ${idImpuesto}${idImpuesto === 5 ? ' (IVA 19%)' : idImpuesto === 1 ? ' (IVA 16%)' : idImpuesto === 4 ? ' (exento)' : ''}` : `**Impuesto:** sin IVA`,
         `**Pago:** ${metodoPago} · **Fecha:** ${fecha || 'hoy'}`,
       ].join('\n')
 
@@ -1079,7 +1081,7 @@ const tools = [
       }
 
       const r = await enviarGasto({
-        proveedorCedula: proveedorNit, proveedorNombre, monto: total, iva: pct,
+        proveedorCedula: proveedorNit, proveedorNombre, monto: total, iva: pct, idImpuesto,
         idPlanCuentas, descripcion, nota, idMedioPago, idBanco, fecha,
       })
       if (!r.ok) {

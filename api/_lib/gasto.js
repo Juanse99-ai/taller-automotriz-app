@@ -72,14 +72,21 @@ export function desglosarIva(monto, iva = 0) {
   return { total, base, impuestos: total - base, pct }
 }
 
+// Id del impuesto en Cuentti (mismo catalogo que usa crear_producto):
+//   5 = IVA 19% (lo normal aca) · 1 = IVA 16% · 4 = exento
+export const ID_IVA_19 = 5
+
 // opts: { proveedorId, proveedorCedula, proveedorNombre, monto (CON IVA), iva,
-//         idPlanCuentas, descripcion, nota, idMedioPago, idBanco, fecha }
+//         idImpuesto, idPlanCuentas, descripcion, nota, idMedioPago, idBanco, fecha }
 export function buildGasto(opts = {}) {
   const {
-    proveedorId, proveedorCedula, proveedorNombre, monto, iva = 0,
+    proveedorId, proveedorCedula, proveedorNombre, monto, iva = 0, idImpuesto,
     idPlanCuentas = ID_CUENTA_NOMINA, descripcion, nota, idMedioPago, idBanco, fecha,
   } = opts
   const { total, base, impuestos, pct } = desglosarIva(monto, iva)
+  // Con IVA (>0) va el id del impuesto (5 = 19%). Sin IVA se conserva el 1 del
+  // payload historico de nomina, que esta probado y no debe cambiar.
+  const tipoImp = pct > 0 ? (parseInt(idImpuesto, 10) || ID_IVA_19) : 1
   const iso = fecha ? new Date(`${fecha}T12:00:00`).toISOString() : new Date().toISOString()
   const rand5 = Math.random().toString(36).slice(2, 7)
   const cu = `${EMPRESA}${Date.now()}${Math.floor(Math.random() * 900 + 100)}`
@@ -93,12 +100,12 @@ export function buildGasto(opts = {}) {
     codigo_unico: cu, codigo_unico_volatil: cu, codeUnicoQr: `${EMPRESA}-7-2-${rand5}`,
     fecha_registro: iso, fecha_inicial: iso, fecha_final: iso, fecha_vencimiento: iso,
     total_neto: total, total_sin_impuestos: base, total_impuestos: impuestos, total_estampilla: 0, total_impoconsumo: 0,
-    json: JSON.stringify({ lstImpuestos: [{ breve: 'G', impuestosPor: pct, base, valor: impuestos, total, tipo_impuesto: 1 }] }),
+    json: JSON.stringify({ lstImpuestos: [{ breve: 'G', impuestosPor: pct, base, valor: impuestos, total, tipo_impuesto: tipoImp }] }),
     objClienteMini: { nombre_cliente: proveedorNombre || '', identificacion: String(proveedorCedula), es_proveedor: 1, es_cliente: 0, id_tipo_persona: 1, telefono1: '', telefono2: '', direccion: '', email1: '', medio_pago: null },
     objTransacionDetalle: [{
       id_producto: 0, id_plan_cuentas: parseInt(idPlanCuentas, 10) || ID_CUENTA_NOMINA,
       descripcion: desc, cantidad: 1, precio_venta: base, precio_real: base, total,
-      impuesto: pct, tipo_impuesto: 1, editoPrecioManul: true, es_devolucion: 0, es_promocion: 0,
+      impuesto: pct, tipo_impuesto: tipoImp, editoPrecioManul: true, es_devolucion: 0, es_promocion: 0,
       descuentoPor: 0, descuento_valor: 0, id_centro_costo: 0, id_lista_precio: 0, total_estampilla: 0, total_impoconsumo: 0,
     }],
     lstPagos: [{ id_medio_pago: idMedioPago || 1, id_banco: idBanco || 1, valor: total, nota: '', boucher: '', digitos: '', devuelta: 0 }],
