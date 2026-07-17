@@ -26,7 +26,11 @@ function buildRecord(data, existing) {
     email: data.email || existing?.email || '',
     direccion: data.direccion || existing?.direccion || '',
     ciudad: data.ciudad || existing?.ciudad || '',
-    vehiculos: existing?.vehiculos || [],
+    // Se descartaba lo que trae `data` (Supabase) y por eso el contador decía
+    // "Con vehículos: 0" aunque la BD tenga vínculos. Gana quien traiga algo:
+    // así un array vacío del servidor no borra de la vista un vínculo local
+    // que todavía no ha subido.
+    vehiculos: (data.vehiculos?.length ? data.vehiculos : existing?.vehiculos) || [],
     fechaCreacion: existing?.fechaCreacion || now,
     fechaUltimaVisita: existing?.fechaUltimaVisita || now,
     totalVisitas: existing?.totalVisitas || 0,
