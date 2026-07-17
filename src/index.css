@@ -464,12 +464,18 @@ a,button,[role=button],.navlink,.mob-tab,.icobtn,.tabs button{-webkit-tap-highli
    separadores hairline (0.5px) y filas que responden al toque. */
 .tbl{width:100%;border-collapse:collapse;font-size:14px}
 .tbl thead th{text-align:left;padding:9px 16px;background:transparent;font-size:12px;font-weight:600;color:var(--text-3);text-transform:none;letter-spacing:0;border-bottom:.5px solid var(--separator);white-space:nowrap}
-.tbl tbody td{padding:13px 16px;border-bottom:.5px solid var(--separator);color:var(--text-2);vertical-align:middle}
+/* line-height 1.4 (no el 1.55 del body): en celdas densas, los nombres que
+   envuelven a 2 líneas quedaban muy separados ("mucha sangría"). */
+.tbl tbody td{padding:11px 16px;line-height:1.4;border-bottom:.5px solid var(--separator);color:var(--text-2);vertical-align:middle}
 .tbl tbody tr:hover{background:var(--fill)}
 .tbl tbody tr:active{background:var(--fill-2)}
 .tbl tbody tr:last-child td{border-bottom:none}
 /* Chevron de navegación: mismo peso y color que en las listas agrupadas */
 .td-chevron{width:26px;text-align:right;color:var(--text-4);font-size:19px;line-height:1;opacity:1!important;padding-left:0!important}
+/* La fecha ("17 de jul de 2026") en columna angosta partía en 3 líneas e
+   inflaba el alto de fila. En escritorio se mantiene en 1 línea. (En celular
+   la tabla es tarjetas y hay ancho de sobra.) */
+@media(min-width:601px){ .tbl [data-label="Fecha"],.tbl [data-label="OT"]{white-space:nowrap} }
 .tbl .c-name{font-weight:600;color:var(--text)}
 .tbl .c-muted{color:var(--text-3);font-size:12px}
 .tbl .c-right{text-align:right}
@@ -611,7 +617,7 @@ textarea.input{min-height:88px;resize:vertical;padding-top:11px}
 /* table base (legacy: muchas paginas usan <table> directo) */
 table{width:100%;border-collapse:collapse;font-size:14px}
 th{text-align:left;padding:9px 16px;background:transparent;font-size:12px;font-weight:600;color:var(--text-3);text-transform:none;letter-spacing:0;border-bottom:.5px solid var(--separator);white-space:nowrap}
-td{padding:13px 16px;border-bottom:.5px solid var(--separator);color:var(--text-2);vertical-align:middle}
+td{padding:11px 16px;line-height:1.4;border-bottom:.5px solid var(--separator);color:var(--text-2);vertical-align:middle}
 tbody tr:last-child td{border-bottom:none}
 tbody tr:hover{background:var(--fill)}
 tbody tr:active{background:var(--fill-2)}
