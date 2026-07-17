@@ -183,7 +183,7 @@ export default function Vehiculos({ vehiculos, clientes, trabajos = [], notify }
     <div>
       <div className="pagehd">
         <div>
-          <h2>Vehiculos</h2>
+          <h2>Vehículos</h2>
         </div>
       </div>
 
@@ -252,7 +252,7 @@ export default function Vehiculos({ vehiculos, clientes, trabajos = [], notify }
 
       {/* Tabla */}
       <div className="card">
-        <div className="card__h"><h3>Vehiculos</h3><span className="badge badge-n">{vehiculosFiltrados.length}</span></div>
+        <div className="card__h"><h3>Vehículos</h3><span className="badge badge-n">{vehiculosFiltrados.length}</span></div>
         <div className="card__b" style={{ padding: 0 }}>
           {vehiculosFiltrados.length === 0 ? (
             <div style={{ textAlign: 'center', padding: 40, color: 'var(--text-3)' }}>
@@ -263,8 +263,8 @@ export default function Vehiculos({ vehiculos, clientes, trabajos = [], notify }
               <p>No se encontraron vehículos</p>
             </div>
           ) : (
-            <div className="tbl">
-              <table>
+            <div>
+              <table className="tbl tbl-cards">
                 <thead>
                   <tr>
                     <th>Placa</th>
@@ -273,7 +273,7 @@ export default function Vehiculos({ vehiculos, clientes, trabajos = [], notify }
                     <th>Año</th>
                     <th>Propietario</th>
                     <th>Visitas</th>
-                    <th>Ultimo Servicio</th>
+                    <th>Último servicio</th>
                     <th></th>
                   </tr>
                 </thead>
@@ -281,21 +281,17 @@ export default function Vehiculos({ vehiculos, clientes, trabajos = [], notify }
                   {vehiculosFiltrados.map(v => {
                     const ultimo = ultimoServicio(v)
                     return (
-                      <tr key={v.placa}>
-                        <td><span className="mono" style={{ fontWeight: 700 }}>{v.placa}</span></td>
-                        <td>{v.marca || '--'}</td>
-                        <td>{v.modelo || '--'}</td>
-                        <td>{v.ano || '--'}</td>
-                        <td>{nombrePropietario(v.cedulaPropietario)}</td>
-                        <td><span className="badge badge-n">{(v.historial || []).length}</span></td>
-                        <td style={{ fontSize: 12, color: 'var(--text-3)' }}>
+                      <tr key={v.placa} style={{ cursor: 'pointer' }} onClick={() => seleccionar(v)}>
+                        <td className="c-name" data-label="Placa"><span className="mono" style={{ fontWeight: 700 }}>{v.placa}</span></td>
+                        <td data-label="Marca">{v.marca || '--'}</td>
+                        <td data-label="Modelo">{v.modelo || '--'}</td>
+                        <td data-label="Año">{v.ano || '--'}</td>
+                        <td data-label="Propietario">{nombrePropietario(v.cedulaPropietario)}</td>
+                        <td data-label="Visitas"><span className="badge badge-n">{(v.historial || []).length}</span></td>
+                        <td data-label="Último servicio" style={{ fontSize: 12, color: 'var(--text-3)' }}>
                           {ultimo ? fmtDate(ultimo.fecha) : fmtDate(v.fechaUltimoServicio)}
                         </td>
-                        <td>
-                          <button className="btn btn-outline btn-sm" onClick={() => seleccionar(v)}>
-                            Ver
-                          </button>
-                        </td>
+                        <td className="td-chevron">›</td>
                       </tr>
                     )
                   })}

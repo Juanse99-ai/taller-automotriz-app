@@ -397,6 +397,9 @@ a,button,[role=button],.navlink,.mob-tab,.icobtn,.tabs button{-webkit-tap-highli
 .card__h .act{display:flex;gap:6px;align-items:center}
 .card__b{padding:16px 18px}
 .card__b--flush{padding:0}
+/* Una tabla ancha scrollea DENTRO de su tarjeta; nunca mueve la página entera
+   en horizontal (antes se desbordaba y arrastraba todo el body). */
+.card__b--flush:has(>table){overflow-x:auto;-webkit-overflow-scrolling:touch}
 
 /* badge */
 .badge{display:inline-flex;align-items:center;padding:3px 10px;border-radius:999px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.4px;white-space:nowrap}
@@ -441,12 +444,16 @@ a,button,[role=button],.navlink,.mob-tab,.icobtn,.tabs button{-webkit-tap-highli
 [data-theme="dark"] .kpi__delta .up{background:rgba(22,163,74,.16);color:#4ade80}
 [data-theme="dark"] .kpi__delta .down{background:rgba(220,38,38,.16);color:#fca5a5}
 
-/* table (prototipo class) */
+/* table (prototipo class) — pulida al estilo iOS: encabezado sin bloque gris,
+   separadores hairline (0.5px) y filas que responden al toque. */
 .tbl{width:100%;border-collapse:collapse;font-size:14px}
-.tbl thead th{text-align:left;padding:11px 16px;background:var(--bg-subtle);font-size:11.5px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:.4px;border-bottom:1px solid var(--border);white-space:nowrap}
-.tbl tbody td{padding:13px 16px;border-bottom:1px solid var(--border);color:var(--text-2);vertical-align:middle}
-.tbl tbody tr:hover{background:var(--bg-subtle)}
+.tbl thead th{text-align:left;padding:9px 16px;background:transparent;font-size:12px;font-weight:600;color:var(--text-3);text-transform:none;letter-spacing:0;border-bottom:.5px solid var(--separator);white-space:nowrap}
+.tbl tbody td{padding:13px 16px;border-bottom:.5px solid var(--separator);color:var(--text-2);vertical-align:middle}
+.tbl tbody tr:hover{background:var(--fill)}
+.tbl tbody tr:active{background:var(--fill-2)}
 .tbl tbody tr:last-child td{border-bottom:none}
+/* Chevron de navegación: mismo peso y color que en las listas agrupadas */
+.td-chevron{width:26px;text-align:right;color:var(--text-4);font-size:19px;line-height:1;opacity:1!important;padding-left:0!important}
 .tbl .c-name{font-weight:600;color:var(--text)}
 .tbl .c-muted{color:var(--text-3);font-size:12px}
 .tbl .c-right{text-align:right}
@@ -560,10 +567,11 @@ textarea.input{min-height:88px;resize:vertical;padding-top:11px}
 
 /* table base (legacy: muchas paginas usan <table> directo) */
 table{width:100%;border-collapse:collapse;font-size:14px}
-th{text-align:left;padding:11px 16px;background:var(--bg-subtle);font-size:11.5px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:.4px;border-bottom:1px solid var(--border);white-space:nowrap}
-td{padding:13px 16px;border-bottom:1px solid var(--border);color:var(--text-2);vertical-align:middle}
+th{text-align:left;padding:9px 16px;background:transparent;font-size:12px;font-weight:600;color:var(--text-3);text-transform:none;letter-spacing:0;border-bottom:.5px solid var(--separator);white-space:nowrap}
+td{padding:13px 16px;border-bottom:.5px solid var(--separator);color:var(--text-2);vertical-align:middle}
 tbody tr:last-child td{border-bottom:none}
-tbody tr:hover{background:var(--bg-subtle)}
+tbody tr:hover{background:var(--fill)}
+tbody tr:active{background:var(--fill-2)}
 .c-name{font-weight:600;color:var(--text)}
 .c-muted{color:var(--text-3);font-size:12px}
 .c-right{text-align:right}
