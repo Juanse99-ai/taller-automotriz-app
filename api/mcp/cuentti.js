@@ -61,6 +61,25 @@ async function cuenttiRequest(endpoint, method = 'GET', body = null) {
   }
 }
 
+// --- Catalogos de terceros ---------------------------------------------------
+// LEIDOS del formulario real de Cuentti (Maestro de Contacto, #/adm/cliente/todos,
+// 2026-07-16), no inventados. Los que habia antes estaban corridos: decian
+// 5=NIT cuando el 5 es Cedula de extranjeria, y 5=Resp IVA cuando ese campo solo
+// acepta 1 o 2 — por eso "Regimen Impuestos" salia en blanco.
+// Cada uno se ata a un campo DISTINTO del payload; no mezclarlos.
+const CAT_TIPO_PERSONA = { 1: 'Natural', 2: 'Juridica' }                        // id_tipo_persona
+const CAT_TIPO_IDENT = {                                                        // id_tipo_identificacion
+  1: 'Registro civil', 2: 'Tarjeta de identidad', 3: 'Cedula de ciudadania',
+  4: 'Tarjeta de extranjeria', 5: 'Cedula de extranjeria', 6: 'NIT',
+  7: 'Pasaporte', 8: 'Doc. identificacion extranjero', 9: 'Otro', 13: 'Identificacion',
+}
+const CAT_LEGALIDAD = {                                                         // legalidad
+  29: 'No responsable', 20: 'Regimen simple de tributacion',
+  12: 'Agente de retencion IVA', 7: 'Autorretenedor', 5: 'Gran contribuyente',
+}
+const CAT_REGIMEN_IMP = { 1: 'Impuesto sobre las ventas – IVA', 2: 'No responsable de IVA' } // regimenImpuesto
+const CAT_REGIMEN = { 0: 'Ninguno', 1: 'Regimen ordinario', 2: 'Regimen simple' }            // regimen
+
 // --- Proveedores: resolucion segura por NIT ---------------------------------
 // En Colombia el NIT de una empresa es <numero>-<DV> (ej. 902045058-2) y Cuentti
 // guarda SOLO el numero, sin el digito de verificacion (el campo se llama
@@ -766,16 +785,23 @@ const tools = [
         email: { type: 'string', default: '' },
         direccion: { type: 'string', default: '' },
         ciudad: { type: 'string', default: '' },
-        tipoIdentificacion: { type: 'string', enum: ['2', '3', '4', '5', '6'], default: '3', description: '2=CExt, 3=CC, 4=TI, 5=NIT, 6=Pasaporte' },
-        tipoPersona: { type: 'string', enum: ['1', '2'], default: '1', description: '1=Natural, 2=Juridica' },
-        regimen: { type: 'integer', default: 2, description: '2=Simple, 5=Resp IVA, 49=No Resp IVA' },
+        // Catalogos LEIDOS del formulario real de Cuentti (Maestro de Contacto,
+        // 2026-07-16). Los de antes estaban inventados y corridos: decian 5=NIT
+        // cuando el 5 es Cedula de extranjeria, y por eso una empresa con NIT
+        // quedaba como cedula de extranjeria.
+        tipoIdentificacion: { type: 'string', enum: ['1', '2', '3', '4', '5', '6', '7', '8', '9', '13'], description: 'Campo id_tipo_identificacion. 1=Registro civil, 2=Tarjeta de identidad, 3=Cedula de ciudadania, 4=Tarjeta de extranjeria, 5=Cedula de extranjeria, 6=NIT, 7=Pasaporte, 8=Doc. identificacion extranjero, 9=Otro, 13=Identificacion. Si se omite: 6 (NIT) cuando tipoPersona=2, si no 3 (CC).' },
+        tipoPersona: { type: 'string', enum: ['1', '2'], default: '1', description: 'Campo id_tipo_persona. 1=Natural, 2=Juridica. Es el que define si es empresa o persona.' },
+        legalidad: { type: 'integer', enum: [29, 20, 12, 7, 5], default: 29, description: 'Campo legalidad. 29=No responsable (default), 20=Regimen simple de tributacion, 12=Agente de retencion IVA (usalo si el RUT trae responsabilidades 07/09), 7=Autorretenedor, 5=Gran contribuyente.' },
+        regimenImpuesto: { type: 'integer', enum: [1, 2], default: 2, description: 'Campo regimenImpuesto ("Regimen Impuestos" en la UI). 1=Impuesto sobre las ventas – IVA (responsable), 2=No responsable de IVA (default).' },
+        regimen: { type: 'integer', enum: [0, 1, 2], default: 2, description: 'Campo regimen ("Regimen" en la UI). 0=Ninguno, 1=Regimen ordinario, 2=Regimen simple (default). OJO: es distinto de regimenImpuesto.' },
         cuenttiId: { type: 'integer', description: 'id_cliente existente para actualizar' },
         confirm: { type: 'boolean', description: 'true para ejecutar; false para dry-run' },
       },
       required: ['cedula', 'nombre', 'confirm'],
     },
     handler: async ({ cedula, nombre, telefono = '', email = '', direccion = '', ciudad = '',
-                     tipoIdentificacion = '3', tipoPersona = '1', regimen = 2, cuenttiId, confirm }) => {
+                     tipoIdentificacion, tipoPersona = '1', legalidad = 29, regimenImpuesto = 2,
+                     regimen = 2, cuenttiId, confirm }) => {
       const ced = String(cedula || '').trim()
       const nom = String(nombre || '').trim()
       if (!ced || !nom) return '❌ cedula y nombre son obligatorios'
@@ -784,6 +810,9 @@ const tools = [
       // (SERVICAR JB, id 929) esos campos van vacios y la razon social vive solo
       // en nombre_cliente. Partirla dejaria primer_nombre=SERVICAR, apellido=SAS.
       const esJuridica = parseInt(tipoPersona, 10) === 2
+      // Sin tipoIdentificacion explicito: una empresa lleva NIT (6), una persona
+      // cedula (3). Antes el default era 3 para todo => empresas con cedula.
+      const tipoIdent = String(tipoIdentificacion || (esJuridica ? '6' : '3'))
       const partes = esJuridica ? [] : nom.split(/\s+/)
       const primer_nombre = partes[0] || ''
       const primer_apellido = partes.length > 1 ? partes[partes.length - 1] : ''
@@ -795,8 +824,11 @@ const tools = [
         es_consumidor_final: '0',
         dias_vencimiento_cartera_cliente: 30,
         alias: '',
-        regimenImpuesto: regimen,
-        legalidad: 29,
+        // Antes: regimenImpuesto recibia el param `regimen` (catalogos distintos!)
+        // y legalidad iba clavada en 29 = "No responsable". Ahora cada campo
+        // tiene su propio parametro con el catalogo real de Cuentti.
+        regimenImpuesto: parseInt(regimenImpuesto, 10),
+        legalidad: parseInt(legalidad, 10),
         cliente_predeterminado: '0',
         nombre_cliente: nom,
         id_tipo_persona: tipoPersona,
@@ -820,8 +852,8 @@ const tools = [
         lstContactoCliente: [],
         envioSmsCartera: '0', envioSmsProducto: '0',
         departamento: '', pais: 'Colombia',
-        regimen,
-        id_tipo_identificacion: tipoIdentificacion,
+        regimen: parseInt(regimen, 10),
+        id_tipo_identificacion: tipoIdent,
         id_empleado: parseInt(CONFIG.employeeId, 10),
       }
 
@@ -835,7 +867,11 @@ const tools = [
           `**Nombre:** ${nom}`,
           `**Telefono:** ${telefono || '—'} · **Email:** ${email || '—'}`,
           `**Direccion:** ${direccion || '—'} · **Ciudad:** ${ciudad || '—'}`,
-          `**Tipo ident.:** ${tipoIdentificacion} · **Persona:** ${tipoPersona} · **Regimen:** ${regimen}`,
+          `**Tipo persona:** ${CAT_TIPO_PERSONA[tipoPersona] || tipoPersona}`,
+          `**Tipo identificacion:** ${CAT_TIPO_IDENT[tipoIdent] || tipoIdent} (id ${tipoIdent})${!tipoIdentificacion ? ' _(deducido del tipo de persona)_' : ''}`,
+          `**Legalidad:** ${CAT_LEGALIDAD[legalidad] || legalidad} (id ${legalidad})`,
+          `**Regimen impuestos:** ${CAT_REGIMEN_IMP[regimenImpuesto] || regimenImpuesto} (id ${regimenImpuesto})`,
+          `**Regimen:** ${CAT_REGIMEN[regimen] || regimen} (id ${regimen})`,
           ``,
           `Para ejecutar, llama de nuevo con \`confirm: true\`.`,
         ].join('\n')
