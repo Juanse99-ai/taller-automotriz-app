@@ -568,6 +568,15 @@ textarea.input{min-height:88px;resize:vertical;padding-top:11px}
 }
 .tbl--sticky tbody td{padding-top:11px;padding-bottom:11px}
 
+/* Líneas verticales que dividen las columnas (cuadrícula) en TODAS las tablas.
+   Hace la tabla más legible y, donde hay columnas arrastrables (Clientes), deja
+   ver dónde agarrar. Solo escritorio: en celular la tabla se vuelve tarjetas. La
+   última columna no lleva línea (es el borde de la tabla). */
+@media(min-width:601px){
+  .tbl thead th:not(:last-child),
+  .tbl tbody td:not(:last-child){ border-right:1px solid var(--separator) }
+}
+
 /* Clientes: anchos fijos para que el NOMBRE quede en UNA línea y no lo aprieten.
    El auto-layout le daba a CC/NIT 253px y a Email 450px (casi vacíos) y dejaba
    el nombre en 179px → se partía en 3 renglones. Con table-layout:fixed el
