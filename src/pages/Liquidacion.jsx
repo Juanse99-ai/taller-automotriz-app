@@ -1209,7 +1209,7 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
               {tecTrabajos.length === 0 ? (
                 <div className="empty"><h4>Sin pendientes</h4><p>No hay trabajos pendientes de liquidar.</p></div>
               ) : (
-                <table className="tbl">
+                <table className="tbl tbl-cards tbl-liq">
                   <thead><tr><th style={{ width: 40 }}></th><th>Fecha</th><th>OT</th><th>Placa</th><th>Cliente</th><th style={{ textAlign: 'center' }}>Compartido</th><th className="c-right">Mano de obra</th><th className="c-right">Comisión</th></tr></thead>
                   <tbody>
                     {tecTrabajos.map(t => {
@@ -1220,12 +1220,12 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
                       const tidAsignado = parseInt(t.tecnicoId)
                       return (
                         <tr key={t.id} style={{ background: selected ? 'rgba(22,163,74,.06)' : undefined, cursor: 'pointer' }} onClick={() => toggleSeleccion(t.id)}>
-                          <td style={{ textAlign: 'center' }}><input type="checkbox" checked={selected} onChange={() => {}} aria-label="Seleccionar trabajo"/></td>
-                          <td className="c-muted">{fmtDate(t.fecha)}</td>
-                          <td className="c-mono" style={{ color: 'var(--blue-600)', fontWeight: 700 }}>{t.otCodigo || t.id}</td>
-                          <td className="c-mono" style={{ fontWeight: 700 }}>{t.placa}</td>
+                          <td className="td-check" data-label="Liquidar" style={{ textAlign: 'center' }}><input type="checkbox" checked={selected} onChange={() => {}} aria-label="Seleccionar trabajo"/></td>
+                          <td className="c-muted" data-label="Fecha">{fmtDate(t.fecha)}</td>
+                          <td className="c-mono" data-label="OT" style={{ color: 'var(--blue-600)', fontWeight: 700 }}>{t.otCodigo || t.id}</td>
+                          <td className="c-mono" data-label="Placa" style={{ fontWeight: 700 }}>{t.placa}</td>
                           <td className="c-name">{t.cliente || '—'}</td>
-                          <td style={{ textAlign: 'center' }} onClick={e => e.stopPropagation()}>
+                          <td data-label="Compartido" style={{ textAlign: 'center' }} onClick={e => e.stopPropagation()}>
                             <input type="checkbox" checked={esComp} onChange={() => {
                               const yaLiq = liquidados.some(x => x === t.id || x.startsWith(`${t.id}#`))
                               if (yaLiq) { setDialog({ title: 'Cambiar “Compartido”', lead: 'Este trabajo ya tiene un pago liquidado; cambiarlo puede descuadrar lo pagado.', confirmLabel: 'Cambiar igual', tone: 'danger', onConfirm: () => toggleCompartido(t.id) }); return }
@@ -1251,11 +1251,11 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
                               </select>
                             )}
                           </td>
-                          <td className="c-mono c-right" style={mano === 0 ? { color: 'var(--red-600)', fontWeight: 700 } : undefined}>
+                          <td className="c-mono c-right" data-label="Mano de obra" style={mano === 0 ? { color: 'var(--red-600)', fontWeight: 700 } : undefined}>
                             {fmt(mano)}
                             {mano === 0 && <span style={{ display: 'block', fontSize: 10, color: 'var(--red-600)', fontWeight: 600 }}>sin servicios</span>}
                           </td>
-                          <td className="c-mono c-right" style={{ color: 'var(--green-600)', fontWeight: 600 }}>
+                          <td className="c-mono c-right" data-label="Comisión" style={{ color: 'var(--green-600)', fontWeight: 600 }}>
                             {fmt(Math.round(com))}
                             {esComp && <span style={{ display: 'block', fontSize: 10, color: 'var(--text-3)' }}>50/50</span>}
                           </td>
@@ -1370,16 +1370,16 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
               ) : (
                 <div style={{ marginTop: 16 }}>
                   <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '.4px', marginBottom: 8 }}>Movimientos · {tecMovs.length}</div>
-                  <table className="tbl">
-                    <thead><tr><th>Fecha</th><th>Tipo</th><th>Nota</th><th className="c-right">Monto</th><th></th></tr></thead>
+                  <table className="tbl tbl-cards">
+                    <thead><tr><th>Tipo</th><th>Fecha</th><th>Nota</th><th className="c-right">Monto</th><th></th></tr></thead>
                     <tbody>
                       {tecMovs.map(m => (
                         <tr key={m.id}>
-                          <td className="c-muted">{fmtDate(m.fecha)}</td>
-                          <td>{tipoLabel(m.tipo)}</td>
-                          <td className="c-muted">{m.nota || '—'}</td>
-                          <td className="c-mono c-right" style={{ color: 'var(--amber-600)' }}>{fmt(m.monto)}</td>
-                          <td><Button variant="ghost" size="sm" onClick={() => setDialog({
+                          <td className="c-name">{tipoLabel(m.tipo)}</td>
+                          <td className="c-muted" data-label="Fecha">{fmtDate(m.fecha)}</td>
+                          <td className="c-muted" data-label="Nota">{m.nota || '—'}</td>
+                          <td className="c-mono c-right" data-label="Monto" style={{ color: 'var(--amber-600)' }}>{fmt(m.monto)}</td>
+                          <td className="td-actions"><Button variant="ghost" size="sm" onClick={() => setDialog({
                             title: 'Eliminar movimiento',
                             lead: `${tipoLabel(m.tipo)} · ${fmt(m.monto)} · ${fmtDate(m.fecha)}`,
                             confirmLabel: 'Sí, eliminar', tone: 'danger',
@@ -1567,15 +1567,15 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
           {cuentasTecnicos.length === 0 ? (
             <div className="empty"><h4>Sin datos</h4><p>Aún no hay liquidaciones ni saldos que mostrar.</p></div>
           ) : (
-            <table className="tbl">
+            <table className="tbl tbl-cards">
               <thead><tr><th>Técnico</th><th className="c-right">Liquidado</th><th className="c-right">Pagado</th><th className="c-right">Saldo (le debes / te debe)</th></tr></thead>
               <tbody>
                 {cuentasTecnicos.map((c, i) => (
                   <tr key={i}>
                     <td className="c-name" style={{ fontWeight: 600 }}>{c.nombre}</td>
-                    <td className="c-mono c-right">{fmt(c.liquidado)}</td>
-                    <td className="c-mono c-right">{fmt(c.pagado)}</td>
-                    <td className="c-mono c-right" style={{ fontWeight: 700, color: c.saldo > 0 ? 'var(--amber-700)' : c.saldo < 0 ? 'var(--green-700)' : 'var(--text-3)' }}>
+                    <td className="c-mono c-right" data-label="Liquidado">{fmt(c.liquidado)}</td>
+                    <td className="c-mono c-right" data-label="Pagado">{fmt(c.pagado)}</td>
+                    <td className="c-mono c-right" data-label="Saldo" style={{ fontWeight: 700, color: c.saldo > 0 ? 'var(--amber-700)' : c.saldo < 0 ? 'var(--green-700)' : 'var(--text-3)' }}>
                       {c.saldo > 0 ? `Te debe ${fmt(c.saldo)}` : c.saldo < 0 ? `Le debes ${fmt(-c.saldo)}` : 'Al día'}
                     </td>
                   </tr>
