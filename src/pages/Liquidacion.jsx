@@ -214,6 +214,25 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
     }
     registrarEnCuentti(reg)
   }
+
+  // Reconciliación segura tras un timeout: si el usuario verificó en Cuentti que
+  // el gasto SÍ quedó (el envío entró pero la app no recibió confirmación), lo
+  // marca como registrado SIN volver a enviarlo → evita el gasto doble. Es la
+  // salida que hoy toca hacer a mano (anular el duplicado). El fix de fondo es la
+  // idempotencia en /api/cuentti-gasto (misma bitácora que ya usa el MCP).
+  const marcarYaRegistradoCuentti = (reg) => {
+    setDialog({
+      title: 'Marcar como ya registrado',
+      lead: `Usa esto SOLO si revisaste en Cuentti y el gasto de ${reg.tecnico} por ${fmt(reg.pagado != null ? reg.pagado : reg.neto)} YA aparece. Se marca como registrado y no se vuelve a enviar (así no queda doble).`,
+      confirmLabel: 'Sí, ya está en Cuentti',
+      tone: 'primary',
+      onConfirm: () => {
+        guardarHistorial(historial.map(h => h.id === reg.id ? { ...h, cuenttiGasto: '✓ verificado' } : h))
+        setGastoError(g => { const n = { ...g }; delete n[reg.id]; return n })
+        notify(`Pago de ${reg.tecnico} marcado como registrado en Cuentti.`, 'success')
+      },
+    })
+  }
   const toggleDiarioRepTec = (id) => setDiarioRepTec(p => ({ ...p, [id]: !p[id] }))
 
   // compartidos[id] puede ser true (legacy, sin partner) o { partner: tecId }
@@ -1669,6 +1688,11 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
                               <option value="efectivo">Efectivo</option>
                               <option value="transferencia">Transferencia</option>
                             </select>
+                            {gastoError[reg.id] && regCuenttiId !== reg.id && (
+                              <Button variant="outline" size="sm" onClick={() => marcarYaRegistradoCuentti(reg)} title="Si ya verificaste en Cuentti que quedó registrado" style={{ color: 'var(--green-700)', borderColor: 'rgba(22,163,74,.35)' }}>
+                                Ya está en Cuentti
+                              </Button>
+                            )}
                             <Button variant="outline" size="sm" disabled={regCuenttiId === reg.id} onClick={() => pedirRegistrarCuentti(reg)}>
                               {regCuenttiId === reg.id ? 'Registrando…' : (gastoError[reg.id] ? 'Reintentar' : 'Registrar en Cuentti')}
                             </Button>
