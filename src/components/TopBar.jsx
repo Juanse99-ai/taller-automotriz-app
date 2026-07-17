@@ -102,6 +102,15 @@ export default function TopBar({ title, subtitle, onToggleSidebar, sidebarOpen, 
   const [notifOpen, setNotifOpen] = useState(false)
   const notifRef = useRef(null)
   const [confirmCfg, setConfirmCfg] = useState(null)
+  // Navigation bar iOS: al hacer scroll aparecen el titulo chico y el hairline
+  const [scrolled, setScrolled] = useState(false)
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 28)
+    onScroll()
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => window.removeEventListener('scroll', onScroll)
+  }, [])
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light')
@@ -158,7 +167,7 @@ export default function TopBar({ title, subtitle, onToggleSidebar, sidebarOpen, 
 
   return (
     <>
-      <header className="topbar">
+      <header className={`topbar${scrolled ? ' scrolled' : ''}`}>
         <button className="topbar__menu" onClick={onToggleSidebar} aria-label={menuAbierto ? 'Cerrar menú' : 'Abrir menú'} aria-expanded={menuAbierto}>
           <MenuToggleIcon open={menuAbierto} reduce={reduceMotion} />
         </button>

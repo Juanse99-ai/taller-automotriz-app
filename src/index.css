@@ -3,13 +3,13 @@
    Tokens + Components (from prototipo) + LEGACY COMPAT
    ============================================ */
 
-/* Tipografía: Inter (estilo beehiiv), con fallback a la fuente del sistema.
-   Una sola familia; números con cifras tabulares (tabular-nums) para alinear. */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+/* Tipografía: SF Pro vía pila del sistema (en Mac/iPhone/iPad renderiza San
+   Francisco, la fuente nativa de iOS). Sin Google Fonts: cero peso de red.
+   Números con cifras tabulares (tabular-nums) para alinear. */
 
 /* === TOKENS === */
 :root{
-  --font:'Inter',-apple-system,BlinkMacSystemFont,system-ui,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+  --font:-apple-system,BlinkMacSystemFont,'SF Pro Text','SF Pro Display',system-ui,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
   --mono:var(--font);
 
   /* navy ramp (sidebar + headers) */
@@ -52,17 +52,25 @@
   --orange-500:#f97316;
   --purple-500:#7c3aed;
 
-  /* semantic (light mode) */
-  --bg:#f1f4f9;
+  /* semantic (light mode) — fondo agrupado iOS */
+  --bg:#f2f2f7;
   --bg-raised:#ffffff;
-  --bg-subtle:#f8fafc;
+  --bg-subtle:#f7f7fa;
   --bg-side:#0d1b35;
-  --border:#e2e8f0;
-  --border-strong:#cbd5e1;
+  --border:#e3e3e8;
+  --border-strong:#cfcfd6;
   --text:#0f172a;
   --text-2:#334155;
   --text-3:#475569;
   --text-4:#64748b;
+
+  /* materiales iOS: hairline, relleno gris de controles, barra translúcida */
+  --separator:rgba(60,60,67,.29);
+  --fill:rgba(120,120,128,.12);
+  --fill-2:rgba(120,120,128,.16);
+  --bar:rgba(249,249,249,.78);
+  --seg-thumb:#ffffff;
+  --shadow-card:0 1px 2px rgba(15,23,42,.05);
 
   --primary:var(--blue-600);
   --primary-hover:var(--blue-700);
@@ -87,18 +95,18 @@
   --sidebar-w:240px;
   --sidebar-w-collapsed:72px;
   --sidebar-width:240px; /* legacy alias */
-  --topbar-h:60px;
+  --topbar-h:52px;
 }
 
 /* dark mode — "night" neutro y profundo (negro casi puro, superficies sutiles,
    bordes finísimos). Antes era azul marino; ahora es gris neutro tipo deep-dark. */
 [data-theme="dark"]{
-  --bg:#0a0a0b;
-  --bg-raised:#141416;
-  --bg-subtle:#0f0f11;
+  --bg:#000000;
+  --bg-raised:#1c1c1e;
+  --bg-subtle:#151517;
   --bg-side:#0b0b0d;
-  --border:#242428;
-  --border-strong:#323237;
+  --border:#2a2a2e;
+  --border-strong:#3a3a40;
   --text:#ededee;
   --text-2:#b0b0b7;
   --text-3:#84848b;
@@ -111,12 +119,13 @@
   --shadow:0 2px 8px rgba(0,0,0,.5);
   --shadow-md:0 8px 24px rgba(0,0,0,.55);
   --shadow-lg:0 24px 60px rgba(0,0,0,.65);
+  --separator:rgba(84,84,88,.65);
+  --fill:rgba(120,120,128,.24);
+  --fill-2:rgba(120,120,128,.32);
+  --bar:rgba(16,16,18,.75);
+  --seg-thumb:#636366;
+  --shadow-card:none;
 }
-/* Estados del menú en dark: overlays blancos sutiles (como el referente).
-   El activo conserva un toque de marca con el ícono en ámbar. */
-[data-theme="dark"] .navlink:hover{background:rgba(255,255,255,.045);color:var(--text)}
-[data-theme="dark"] .navlink.active{background:rgba(255,255,255,.075);color:#f5f5f7}
-[data-theme="dark"] .navlink.active svg{stroke:var(--amber-400)}
 
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 html{-webkit-text-size-adjust:100%}
@@ -191,28 +200,32 @@ input,select,textarea{font-family:inherit;font-size:14px;color:inherit}
 
 /* Shell (prototipo) */
 .app{display:flex;min-height:100vh;background:var(--bg)}
-/* Sidebar CLARO (estilo beehiiv): fondo claro, texto oscuro, activo ámbar.
-   Usa variables del tema, así se adapta solo al modo oscuro. */
-.sidebar{position:fixed;top:0;left:0;bottom:0;width:var(--sidebar-w);background:var(--bg-raised);color:var(--text);border-right:1px solid var(--border);display:flex;flex-direction:column;z-index:40;overflow:hidden;transition:transform .32s var(--ease-drawer),width .38s var(--ease)}
-.sidebar__brand{display:flex;align-items:center;gap:10px;padding:16px 14px 18px;border-bottom:1px solid var(--border);transition:padding .28s var(--ease)}
-.sidebar__brand .logo{width:40px;height:40px;border-radius:10px;background:#fff;display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0;border:1px solid var(--border)}
+/* Sidebar NAVY (marca) en claro y casi-negro en oscuro (shell iOS aprobado):
+   texto claro fijo, hover/activo con velos blancos, ícono activo ámbar. */
+.sidebar{position:fixed;top:0;left:0;bottom:0;width:var(--sidebar-w);background:var(--bg-side);color:#e7ecf5;border-right:1px solid rgba(255,255,255,.06);display:flex;flex-direction:column;z-index:40;overflow:hidden;transition:transform .32s var(--ease-drawer),width .38s var(--ease)}
+.sidebar__brand{display:flex;align-items:center;gap:10px;padding:16px 14px 18px;border-bottom:1px solid rgba(255,255,255,.07);transition:padding .28s var(--ease)}
+.sidebar__brand .logo{width:40px;height:40px;border-radius:10px;background:#fff;display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0;border:1px solid rgba(255,255,255,.12)}
 .sidebar__brand .logo img{width:100%;height:100%;object-fit:cover;object-position:center}
 .sidebar__brand .wm{min-width:0;flex:1}
-.sidebar__brand .wm .n{font-size:13px;font-weight:700;letter-spacing:.1px;color:var(--text);line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.sidebar__brand .wm .s{font-size:9.5px;color:var(--text-4);font-weight:600;margin-top:3px;letter-spacing:1px;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sidebar__brand .wm .n{font-size:13px;font-weight:700;letter-spacing:.1px;color:#f5f7fb;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sidebar__brand .wm .s{font-size:9.5px;color:rgba(231,236,245,.5);font-weight:600;margin-top:3px;letter-spacing:1px;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .sidebar__nav{flex:1;padding:10px 8px;overflow-y:auto}
-.sidebar__group{padding:14px 10px 6px;font-size:10px;font-weight:700;color:var(--text-4);text-transform:uppercase;letter-spacing:1.4px;max-height:32px;overflow:hidden;transition:opacity .16s ease,max-height .3s var(--ease),padding .3s var(--ease)}
-.navlink{display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:8px;font-size:14.5px;font-weight:500;color:var(--text-2);margin-bottom:2px;transition:background .12s,color .12s,padding .28s var(--ease);position:relative;cursor:pointer}
-.navlink:hover{background:var(--bg-subtle);color:var(--text)}
+.sidebar__group{padding:14px 10px 6px;font-size:10px;font-weight:700;color:rgba(231,236,245,.42);text-transform:uppercase;letter-spacing:1.4px;max-height:32px;overflow:hidden;transition:opacity .16s ease,max-height .3s var(--ease),padding .3s var(--ease)}
+.navlink{display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:8px;font-size:14.5px;font-weight:500;color:rgba(231,236,245,.82);margin-bottom:2px;transition:background .12s,color .12s,padding .28s var(--ease);position:relative;cursor:pointer}
+.navlink:hover{background:rgba(255,255,255,.05);color:#fff}
 .navlink svg{stroke:currentColor}
-.navlink.active{background:rgba(245,158,11,.15);color:var(--amber-600);font-weight:600}
+.navlink.active{background:rgba(255,255,255,.1);color:#fff;font-weight:600}
+.navlink.active svg{stroke:var(--amber-400)}
 .navlink svg{width:17px;height:17px;flex-shrink:0;stroke:currentColor;fill:none;stroke-width:1.8}
-.navlink .pill{margin-left:auto;font-family:var(--mono);font-size:10px;background:var(--red-100);color:var(--red-700);padding:1px 6px;border-radius:999px;font-weight:700}
-.sidebar__foot{padding:14px 14px 18px;border-top:1px solid var(--border);display:flex;align-items:center;gap:10px;transition:padding .28s var(--ease)}
+.navlink .pill{margin-left:auto;font-family:var(--mono);font-size:10px;background:var(--red-500);color:#fff;padding:1px 6px;border-radius:999px;font-weight:700}
+.sidebar__foot{padding:14px 14px 18px;border-top:1px solid rgba(255,255,255,.07);display:flex;align-items:center;gap:10px;transition:padding .28s var(--ease)}
 .sidebar__foot .av{width:34px;height:34px;border-radius:50%;background:var(--amber-400);color:var(--navy-900);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12px}
 .sidebar__foot .me{flex:1;min-width:0}
-.sidebar__foot .me .n{font-size:12.5px;font-weight:600;color:var(--text);line-height:1.2}
-.sidebar__foot .me .r{font-size:10.5px;color:var(--text-3);margin-top:1px}
+.sidebar__foot .me .n{font-size:12.5px;font-weight:600;color:#f5f7fb;line-height:1.2}
+.sidebar__foot .me .r{font-size:10.5px;color:rgba(231,236,245,.5);margin-top:1px}
+.sidebar__foot .icobtn{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;color:rgba(231,236,245,.6);transition:background .12s,color .12s}
+.sidebar__foot .icobtn:hover{background:rgba(255,255,255,.06);color:#fff}
+.sidebar__foot .icobtn svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:1.8}
 
 /* sidebar collapsed state (desktop only) */
 .sidebar.collapsed{width:var(--sidebar-w-collapsed)}
@@ -237,17 +250,21 @@ input,select,textarea{font-family:inherit;font-size:14px;color:inherit}
 .sidebar.hover-expand ~ .main{margin-left:var(--sidebar-w)}
 
 /* topbar menu button */
-.topbar__menu{width:38px;height:38px;border-radius:9px;background:transparent;border:1px solid var(--border);color:var(--text);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;margin-right:-4px}
-.topbar__menu:hover{background:var(--bg-subtle)}
+.topbar__menu{width:36px;height:36px;border-radius:9px;background:transparent;border:none;color:var(--text);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;margin-right:-4px}
+.topbar__menu:hover{background:var(--fill)}
 .topbar__menu svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:2}
 
 .main{flex:1;margin-left:var(--sidebar-w);min-width:0;transition:margin-left .38s var(--ease)}
-.topbar{position:sticky;top:0;z-index:30;background:var(--bg-raised);border-bottom:1px solid var(--border);height:var(--topbar-h);display:flex;align-items:center;gap:16px;padding:0 28px}
-.topbar .title{display:flex;flex-direction:column;gap:1px;min-width:0}
-.topbar .title h1{margin:0;font-size:18.5px;font-weight:800;letter-spacing:-.3px}
-.topbar .title p{margin:0;font-size:13px;color:var(--text-3);font-weight:500}
+/* Navigation bar iOS: translúcida con blur real; el título chico aparece solo
+   al hacer scroll (el grande vive en .pagehd) igual que el hairline inferior. */
+.topbar{position:sticky;top:0;z-index:30;background:var(--bar);-webkit-backdrop-filter:saturate(180%) blur(20px);backdrop-filter:saturate(180%) blur(20px);border-bottom:.5px solid transparent;height:var(--topbar-h);display:flex;align-items:center;gap:12px;padding:0 24px;transition:border-color .2s ease}
+.topbar.scrolled{border-bottom-color:var(--separator)}
+.topbar .title{display:flex;flex-direction:column;gap:1px;min-width:0;opacity:0;transform:translateY(5px);transition:opacity .18s ease,transform .18s ease;pointer-events:none}
+.topbar.scrolled .title{opacity:1;transform:translateY(0)}
+.topbar .title h1{margin:0;font-size:15.5px;font-weight:600;letter-spacing:-.2px}
+.topbar .title p{display:none}
 .topbar .sp{flex:1}
-.topbar .search{display:flex;align-items:center;gap:9px;background:var(--bg-subtle);border:1px solid var(--border);border-radius:10px;padding:7px 12px;width:280px;max-width:30vw}
+.topbar .search{display:flex;align-items:center;gap:8px;background:var(--fill);border:none;border-radius:10px;padding:7px 12px;width:280px;max-width:30vw}
 .topbar .search svg{width:14px;height:14px;stroke:var(--text-4)}
 .topbar .search input{flex:1;border:none;outline:none;background:none;font-size:13px}
 .topbar .icobtn{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;color:var(--text-2);transition:background .12s,color .12s;position:relative}
@@ -332,12 +349,12 @@ input,select,textarea{font-family:inherit;font-size:14px;color:inherit}
 
 /* page head */
 .pagehd{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:22px;flex-wrap:wrap}
-.pagehd h2{margin:0;font-size:26px;font-weight:800;letter-spacing:-.4px}
-.pagehd .sub{color:var(--text-3);font-size:14.5px;margin-top:4px;font-weight:500}
+.pagehd h2{margin:0;font-size:30px;font-weight:700;letter-spacing:-.55px;line-height:1.15}
+.pagehd .sub{color:var(--text-3);font-size:13.5px;margin-top:4px;font-weight:500}
 .pagehd .actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 
 /* button */
-.btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;height:40px;padding:0 18px;border-radius:999px;font-size:13.5px;font-weight:600;transition:background .12s,transform 140ms var(--ease-out),box-shadow .12s;white-space:nowrap}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;height:40px;padding:0 18px;border-radius:11px;font-size:13.5px;font-weight:600;transition:background .12s,transform 140ms var(--ease-out),box-shadow .12s;white-space:nowrap}
 .btn:active{transform:scale(.97)}
 .btn:hover:not(:active){transform:translateY(-1px)}
 .btn:focus-visible{outline:2px solid var(--primary);outline-offset:2px}
@@ -351,8 +368,9 @@ a,button,[role=button],.navlink,.mob-tab,.icobtn,.tabs button{-webkit-tap-highli
 .btn svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:2}
 .btn-primary{background:var(--primary);color:#fff;box-shadow:0 1px 2px rgba(30,58,138,.3),0 4px 10px rgba(30,58,138,.15)}
 .btn-primary:hover{background:var(--primary-hover)}
-.btn-outline{background:var(--bg-raised);color:var(--text-2);border:1px solid var(--border-strong);box-shadow:var(--shadow-sm)}
-.btn-outline:hover{background:var(--bg-subtle);color:var(--text)}
+/* Secundario iOS: relleno gris del sistema, sin borde */
+.btn-outline{background:var(--fill);color:var(--text-2);border:none;box-shadow:none}
+.btn-outline:hover{background:var(--fill-2);color:var(--text)}
 .btn-ghost{color:var(--text-3);background:transparent}
 .btn-ghost:hover{background:var(--bg-subtle);color:var(--text)}
 .btn-danger{background:var(--red-600);color:#fff;box-shadow:0 1px 2px rgba(220,38,38,.3),0 4px 10px rgba(220,38,38,.15)}
@@ -361,8 +379,9 @@ a,button,[role=button],.navlink,.mob-tab,.icobtn,.tabs button{-webkit-tap-highli
 .btn-accent:hover{background:var(--amber-500);color:#fff}
 .btn-sm{height:36px;padding:0 14px;font-size:13px;border-radius:8px}
 
-/* card */
-.card{background:var(--bg-raised);border:1px solid var(--border);border-radius:14px;box-shadow:var(--shadow-sm)}
+/* card — iOS: blanca sobre fondo agrupado, sin borde, sombra mínima
+   (en dark la elevación es la superficie #1c1c1e sobre negro) */
+.card{background:var(--bg-raised);border:none;border-radius:14px;box-shadow:var(--shadow-card)}
 .card__h{display:flex;align-items:center;justify-content:space-between;padding:15px 18px 13px;border-bottom:1px solid var(--border);gap:10px}
 .card__h h3{margin:0;font-size:15.5px;font-weight:800;letter-spacing:-.2px;display:flex;align-items:center;gap:9px;color:var(--text)}
 .card-title .count,
@@ -386,10 +405,10 @@ a,button,[role=button],.navlink,.mob-tab,.icobtn,.tabs button{-webkit-tap-highli
 [data-theme="dark"] .badge-n{background:rgba(100,116,139,.2);color:#cbd5e1}
 
 /* KPI card */
-.kpi{background:var(--bg-raised);border:1px solid var(--border);border-radius:12px;padding:16px 18px;display:flex;flex-direction:column;gap:8px;transition:border-color .12s,box-shadow .12s}
+.kpi{background:var(--bg-raised);border:none;border-radius:14px;padding:16px 18px;display:flex;flex-direction:column;gap:8px;box-shadow:var(--shadow-card);transition:box-shadow .12s,transform .12s}
 /* hover gated: en tablet (uso real de la app) el hover por tap queda pegado */
 @media (hover:hover) and (pointer:fine){
-  .kpi:hover{border-color:var(--border-strong);box-shadow:var(--shadow);transform:translateY(-1px)}
+  .kpi:hover{box-shadow:var(--shadow);transform:translateY(-1px)}
 }
 .kpi__head{display:flex;align-items:center;gap:10px}
 /* Tarjetas .kpi viejas: se ocultan los íconos-en-cuadrito (el tell "IA") para que
@@ -442,7 +461,7 @@ a,button,[role=button],.navlink,.mob-tab,.icobtn,.tabs button{-webkit-tap-highli
 .field{display:flex;flex-direction:column;gap:6px}
 .field label{font-size:12px;font-weight:700;color:var(--text-2);letter-spacing:.1px}
 .field label .req{color:var(--red-600);margin-left:3px}
-.input,textarea.input,select.input{width:100%;padding:10px 13px;border:1px solid var(--border-strong);border-radius:9px;background:var(--bg-raised);color:var(--text);font-size:13.5px;min-height:42px;outline:none;transition:border-color .12s,box-shadow .12s}
+.input,textarea.input,select.input{width:100%;padding:10px 13px;border:1px solid var(--border-strong);border-radius:10px;background:var(--bg-raised);color:var(--text);font-size:13.5px;min-height:42px;outline:none;transition:border-color .12s,box-shadow .12s}
 .input:hover{border-color:var(--text-3)}
 .input:focus{outline:none;border-color:var(--blue-600);box-shadow:0 0 0 3px rgba(37,99,235,.12)}
 select.input{appearance:none;padding-right:34px;background:var(--bg-raised) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round'%3E%3Cpolyline points='1 1 6 6 11 1'/%3E%3C/svg%3E") no-repeat right 13px center}
@@ -484,6 +503,23 @@ textarea.input{min-height:88px;resize:vertical;padding-top:11px}
    sentía brusco aunque el deslizamiento sí animara. */
 .scrim{position:fixed;inset:0;background:rgba(6,11,26,.72);z-index:35;opacity:0;visibility:hidden;pointer-events:none;transition:opacity .32s ease,visibility .32s}
 .scrim.on{opacity:1;visibility:visible;pointer-events:auto;transition:opacity .46s ease,visibility .46s}
+
+/* === Lista agrupada iOS (inset grouped, estilo Ajustes) ===
+   Filas con ícono de color, separador hairline que arranca tras el ícono,
+   texto secundario a la derecha y chevron. Uso: .glist > .grow */
+.glist{background:var(--bg-raised);border-radius:12px;overflow:hidden;box-shadow:var(--shadow-card)}
+.grow{display:flex;align-items:center;gap:12px;padding:11px 14px;position:relative;cursor:pointer;transition:background .1s ease;-webkit-user-select:none;user-select:none}
+.grow:active{background:var(--fill)}
+.grow+.grow::before{content:'';position:absolute;top:0;left:58px;right:0;height:.5px;background:var(--separator)}
+.grow--flat+.grow--flat::before{left:14px}
+.grow .ic{width:32px;height:32px;border-radius:8px;flex-shrink:0;display:grid;place-items:center;color:#fff}
+.grow .ic svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2}
+.grow .tx{flex:1;min-width:0}
+.grow .tx .t{font-size:14.5px;font-weight:500;letter-spacing:-.1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text)}
+.grow .tx .s{font-size:12.5px;color:var(--text-3);margin-top:1px}
+.grow .detail{font-size:13.5px;color:var(--text-3);font-variant-numeric:tabular-nums;flex-shrink:0}
+.grow .chev{color:var(--text-4);flex-shrink:0;display:flex}
+.grow .chev svg{width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:2.6}
 
 /* ============================================
    LEGACY COMPAT — clases que el codigo actual usa.
@@ -548,7 +584,7 @@ tbody tr:hover{background:var(--bg-subtle)}
 .ck-d-cell .v{font-size:13.5px;color:var(--text);font-weight:600;margin-top:3px}
 /* Tarjetas KPI industriales: planas, borde + barra de acento, sin sombra, número protagonista */
 .kpi-ind-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
-.kpi-ind{background:var(--bg-raised);border:1px solid var(--border);border-top:3px solid var(--navy-900);border-radius:11px;padding:14px 16px}
+.kpi-ind{background:var(--bg-raised);border:none;border-top:3px solid var(--navy-900);border-radius:11px;padding:14px 16px;box-shadow:var(--shadow-card)}
 .kpi-ind.red{border-top-color:var(--red-600)}
 .kpi-ind.green{border-top-color:var(--green-600)}
 .kpi-ind.amber{border-top-color:var(--amber-500)}
@@ -560,8 +596,8 @@ tbody tr:hover{background:var(--bg-subtle)}
 @media(max-width:760px){.kpi-ind-row{grid-template-columns:repeat(2,1fr)}}
 /* Tarjetas KPI estilo beehiiv: agrupadas en un contenedor, divididas por líneas,
    número grande + pastilla verde de % + subtexto. Limpio y aireado. */
-.kpi-bh{display:flex;background:var(--bg-raised);border:1px solid var(--border);border-radius:14px;overflow:hidden}
-.kpi-bh__s{flex:1;padding:16px 20px;border-left:1px solid var(--border);min-width:0}
+.kpi-bh{display:flex;flex-wrap:wrap;background:var(--bg-raised);border:none;border-radius:14px;overflow:hidden;box-shadow:var(--shadow-card)}
+.kpi-bh__s{flex:1 1 185px;padding:16px 20px;border-left:1px solid var(--border);min-width:0}
 .kpi-bh__s:first-child{border-left:none}
 .kpi-bh__l{font-size:12px;color:var(--text-3);font-weight:500}
 .kpi-bh__row{display:flex;align-items:center;gap:10px;margin-top:8px;flex-wrap:wrap}
@@ -571,10 +607,11 @@ tbody tr:hover{background:var(--bg-subtle)}
 .kpi-bh__sub{font-size:11.5px;color:var(--text-4);margin-top:6px}
 @media(max-width:760px){.kpi-bh{flex-direction:column}.kpi-bh__s{border-left:none;border-top:1px solid var(--border)}.kpi-bh__s:first-child{border-top:none}}
 /* Control segmentado de filtros — consistente en toda la app (Inventario, CRM…) */
-.segctl{display:inline-flex;gap:2px;background:var(--bg-subtle);border:1px solid var(--border);border-radius:9px;padding:3px;flex-wrap:wrap}
-.segctl button{padding:5px 11px;font-size:12px;font-weight:600;border-radius:999px;border:none;background:none;color:var(--text-3);cursor:pointer;white-space:nowrap;transition:background .12s,color .12s}
+/* Segmented control iOS: pista gris, thumb blanco con sombrita */
+.segctl{display:inline-flex;gap:2px;background:var(--fill);border:none;border-radius:9px;padding:2px;flex-wrap:wrap}
+.segctl button{padding:5px 14px;font-size:12.5px;font-weight:600;border-radius:7px;border:none;background:none;color:var(--text-2);cursor:pointer;white-space:nowrap;transition:background .18s cubic-bezier(.3,.9,.4,1),color .18s}
 .segctl button:hover{color:var(--text)}
-.segctl button.on{background:var(--bg-raised);color:var(--text);box-shadow:var(--shadow-sm)}
+.segctl button.on{background:var(--seg-thumb);color:var(--text);box-shadow:0 1px 4px rgba(0,0,0,.12),0 0 1px rgba(0,0,0,.08)}
 /* Tabla centrada (inventario): todo al centro menos las columnas .col-left */
 .tbl.tbl--center thead th,.tbl.tbl--center tbody td{text-align:center}
 .tbl.tbl--center thead th>span{justify-content:center}
@@ -622,7 +659,7 @@ tbody tr:hover{background:var(--bg-subtle)}
    El sistema vigente es: .kpi, .sidebar/.navlink/.sidebar__*, .topbar/.topbar__*, .chartbar. */
 
 /* generic search */
-.search{display:flex;align-items:center;gap:9px;background:var(--bg-subtle);border:1px solid var(--border);border-radius:10px;padding:7px 12px}
+.search{display:flex;align-items:center;gap:8px;background:var(--fill);border:none;border-radius:10px;padding:7px 12px}
 .search svg{width:14px;height:14px;stroke:var(--text-4)}
 .search input{flex:1;border:none;outline:none;background:none;font-size:13px;color:var(--text)}
 
@@ -676,8 +713,8 @@ tbody tr:hover{background:var(--bg-subtle)}
 
 /* Boton de icono cuadrado: acciones utilitarias en tablas (PDF, editar, eliminar).
    Las DECISIONES (Aprobar/Rechazar/Crear trabajo) siguen siendo botones con texto. */
-.icon-btn{display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;width:32px;height:32px;padding:0;border-radius:8px;border:1px solid var(--border-strong);background:var(--bg-raised);color:var(--text-3);cursor:pointer;transition:border-color .12s var(--ease-out),color .12s var(--ease-out),background .12s var(--ease-out)}
-.icon-btn:hover{border-color:var(--text-3);color:var(--text);background:var(--bg-subtle)}
+.icon-btn{display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;width:32px;height:32px;padding:0;border-radius:8px;border:none;background:var(--fill);color:var(--text-2);cursor:pointer;transition:color .12s var(--ease-out),background .12s var(--ease-out)}
+.icon-btn:hover{color:var(--text);background:var(--fill-2)}
 .icon-btn:focus-visible{outline:2px solid var(--primary);outline-offset:2px}
 .icon-btn svg{width:15px;height:15px}
 .icon-btn--danger:hover{border-color:var(--red-600);color:var(--red-600);background:rgba(220,38,38,.06)}
@@ -713,7 +750,7 @@ tbody tr:hover{background:var(--bg-subtle)}
   .topbar .icobtn{width:36px;height:36px}
   .content{padding:18px 14px 44px}
   .pagehd{margin-bottom:16px}
-  .pagehd h2{font-size:20px}
+  .pagehd h2{font-size:24px}
   .pagehd .sub{font-size:13.5px}
   .pagehd .actions{width:100%}
   .pagehd .actions .btn{flex:1}
