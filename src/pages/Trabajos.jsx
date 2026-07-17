@@ -919,6 +919,10 @@ function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [], vehiculosHoo
     // Mano de obra manual: solo se usa cuando NO hay líneas marcadas "Servicio"
     // (ej. cambio de aceite). Base para la comisión del técnico, no se cobra al cliente.
     manoObra: trabajo?.manoObra ? String(trabajo.manoObra) : '',
+    // M.O. adicional (no facturada): se SUMA a la comisión aunque ya haya líneas de
+    // servicio (ej. la mano de obra del cambio de aceite además de la reparación).
+    // Nunca entra al total del cliente.
+    manoObraExtra: trabajo?.manoObraExtra ? String(trabajo.manoObraExtra) : '',
     estado: trabajo?.estado || ESTADOS.PENDIENTE,
     fecha: trabajo?.fecha ? trabajo.fecha.slice(0, 10) : hoyISO(),
     // Evidencias unificadas: TODAS las fotos del trabajo (antes/durante/después).
@@ -1179,11 +1183,20 @@ function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [], vehiculosHoo
   //  - Si hay líneas marcadas "Servicio", manda esa suma (igual que siempre).
   //  - Si no hay (ej. cambio de aceite), se usa la mano de obra escrita a mano.
   const hayServicios = totales.manoObra > 0
-  const manoObraEf = hayServicios ? totales.manoObra : Math.max(0, parseFloat(form.manoObra) || 0)
+  // M.O. adicional (no facturada): base extra que se SUMA a la comisión aunque ya
+  // haya líneas de servicio. Ya es sin IVA (no se factura). No toca el total.
+  const manoObraExtra = Math.max(0, parseFloat(form.manoObraExtra) || 0)
+  // Mano de obra "de línea" (SIN el extra): las líneas de servicio o, si no hay, la
+  // M.O. manual. Es lo que se guarda en `manoObra`; el extra va en su propio campo
+  // y getManoObra/manoObraBase lo VUELVEN a sumar → guardarlo aquí lo duplicaría.
+  const manoObraLinea = hayServicios ? totales.manoObra : Math.max(0, parseFloat(form.manoObra) || 0)
+  const manoObraEf = manoObraLinea + manoObraExtra // solo para mostrar (la M.O. total acreditada)
   // La comisión se calcula sobre la base SIN IVA (igual que Liquidación, que es lo
-  // que realmente cobra el técnico). El M.O. manual ya viene sin IVA.
-  const baseComision = hayServicios ? totales.manoObraBase : Math.max(0, parseFloat(form.manoObra) || 0)
+  // que realmente cobra el técnico). El M.O. manual y el extra ya vienen sin IVA.
+  const baseComision = (hayServicios ? totales.manoObraBase : Math.max(0, parseFloat(form.manoObra) || 0)) + manoObraExtra
   const comisionTecnico = Math.round(baseComision * COMISION.TOTAL)
+  // Comisión que aporta solo el extra (para el preview de su propio campo).
+  const comisionExtra = Math.round(manoObraExtra * COMISION.TOTAL)
 
   // Guardado real de la OT. skipAviso salta el aviso de M.O.=0 (patrón skipConfirm).
   const guardar = (skipAviso = false) => {
@@ -1211,7 +1224,8 @@ function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [], vehiculosHoo
       subtotalSinIva: totales.subtotal,
       totalIva: totales.iva,
       total: totales.total,
-      manoObra: manoObraEf,
+      manoObra: manoObraLinea, // SIN el extra (el extra va aparte y se re-suma al liquidar)
+      manoObraExtra,
       repuestos: totales.repuestos,
       estado: form.estado || trabajo?.estado || ESTADOS.PENDIENTE,
       fecha: new Date(form.fecha + 'T12:00:00').toISOString(),
@@ -1666,7 +1680,7 @@ function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [], vehiculosHoo
             </div>
           )}
 
-          {/* MANO DE OBRA MANUAL — solo cuando no hay línea marcada "Servicio" (ej. cambio de aceite) */}
+          {/* MANO DE OBRA MANUAL — cuando no hay línea marcada "Servicio" (ej. cambio de aceite) */}
           {!hayServicios && (
             <div className="mo-manual">
               <div className="mo-manual__row">
@@ -1680,6 +1694,25 @@ function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [], vehiculosHoo
                 </div>
               </div>
               <span className="help">Para servicios sin mano de obra cobrada aparte (ej. cambio de aceite). No se le suma al total del cliente; solo define cuánto se le liquida al técnico.</span>
+            </div>
+          )}
+
+          {/* M.O. ADICIONAL (no facturada) — cuando YA hay línea de Servicio pero se
+              hizo trabajo extra que se le paga al técnico sin cobrarlo al cliente
+              (ej. la mano de obra del cambio de aceite además de la reparación). */}
+          {hayServicios && (
+            <div className="mo-manual">
+              <div className="mo-manual__row">
+                <div className="field" style={{ flex: '1 1 220px', minWidth: 0 }}>
+                  <label htmlFor="mo-extra-input">M.O. adicional del técnico <span style={{ fontWeight: 500, color: 'var(--text-3)' }}>(no se factura)</span></label>
+                  <MoneyInput id="mo-extra-input" value={form.manoObraExtra} onChange={v => set('manoObraExtra', v)} placeholder="0" />
+                </div>
+                <div className="mo-manual__com">
+                  <span className="mo-manual__com-lbl">Comisión adicional ({COMISION.TOTAL * 100}%)</span>
+                  <span className="mo-manual__com-val">{fmt(comisionExtra)}</span>
+                </div>
+              </div>
+              <span className="help">Se suma a lo que se le liquida al técnico, sin cobrárselo al cliente (ej. la mano de obra del cambio de aceite). El total de la factura no cambia.</span>
             </div>
           )}
 

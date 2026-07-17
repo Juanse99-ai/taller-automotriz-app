@@ -16,6 +16,10 @@ import { loadLogo, drawHeader, drawSectionHeader, drawDataBlock, drawTotalsBox, 
 
 // Obtener base de mano de obra SIN IVA (solo servicios)
 const getManoObra = (t) => {
+  // M.O. adicional (no facturada): base extra que se le paga al técnico sin
+  // cobrarla al cliente. Ya viene SIN IVA y se SUMA siempre. Espejo de
+  // manoObraBase() en src/utils/comision.js — mantener las dos en sync.
+  const extra = Math.max(0, parseFloat(t?.manoObraExtra ?? t?.mano_obra_extra) || 0)
   if (Array.isArray(t?.items) && t.items.length) {
     const suma = t.items.reduce((s, i) => {
       const precio = parseFloat(i?.precio) || 0
@@ -28,15 +32,15 @@ const getManoObra = (t) => {
       const base = ivaPct > 0 ? totalLinea / (1 + ivaPct / 100) : totalLinea
       return s + base
     }, 0)
-    // Si hay líneas marcadas "Servicio", esas mandan (comportamiento de siempre).
-    // Si NO hay (ej. cambio de aceite), se cae al valor guardado de mano de obra
-    // que se escribió a mano en la OT.
-    if (suma > 0) return Math.round(suma)
+    // Si hay líneas marcadas "Servicio", esas mandan (comportamiento de siempre)
+    // MÁS la M.O. adicional. Si NO hay (ej. cambio de aceite), se cae al valor
+    // guardado de mano de obra que se escribió a mano en la OT.
+    if (suma > 0) return Math.round(suma + extra)
   }
-  // Fallback a campos directos (mano de obra manual de la OT)
-  if (typeof t?.manoObra === 'number' && !Number.isNaN(t.manoObra)) return Math.round(Math.max(0, t.manoObra))
-  if (typeof t?.mano_obra === 'number' && !Number.isNaN(t.mano_obra)) return Math.round(Math.max(0, t.mano_obra))
-  return 0
+  // Fallback a campos directos (mano de obra manual de la OT) + adicional
+  if (typeof t?.manoObra === 'number' && !Number.isNaN(t.manoObra)) return Math.round(Math.max(0, t.manoObra) + extra)
+  if (typeof t?.mano_obra === 'number' && !Number.isNaN(t.mano_obra)) return Math.round(Math.max(0, t.mano_obra) + extra)
+  return Math.round(extra)
 }
 
 // El gasto del administrador ("diario") se reparte MITAD Y MITAD con el técnico.

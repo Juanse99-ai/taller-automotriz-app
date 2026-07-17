@@ -63,6 +63,9 @@ export async function upsertTrabajo(trabajo, opts = {}) {
     // Evidencias (fotos comprimidas) para que el cliente las vea en su portal
     evidencias: JSON.stringify(trabajo.evidenciasIngreso || []),
     mano_obra: trabajo.manoObra || 0,
+    // M.O. adicional (no facturada): base extra que se le paga al técnico sin
+    // cobrarla al cliente. Columna aditiva; en OTs viejas = 0.
+    mano_obra_extra: trabajo.manoObraExtra || 0,
     subtotal_sin_iva: trabajo.subtotalSinIva || 0,
     total_iva: trabajo.totalIva || 0,
     total: trabajo.total || 0,

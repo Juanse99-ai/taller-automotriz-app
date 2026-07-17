@@ -25,6 +25,7 @@ function normalizar(r) {
     observaciones: r.observaciones || '',
     items: typeof r.items === 'string' ? JSON.parse(r.items) : (r.items || []),
     manoObra: parseFloat(r.mano_obra ?? r.manoObra) || 0,
+    manoObraExtra: parseFloat(r.mano_obra_extra ?? r.manoObraExtra) || 0,
     subtotalSinIva: parseFloat(r.subtotal_sin_iva ?? r.subtotalSinIva) || 0,
     totalIva: parseFloat(r.total_iva ?? r.totalIva) || 0,
     total: parseFloat(r.total) || 0,
@@ -162,7 +163,8 @@ export function useTrabajos() {
             const p = prev[i]
             if (!p) return true
             return p.otCodigo !== n.otCodigo || p.estado !== n.estado ||
-              p.total !== n.total || p.pagado !== n.pagado || p.tecnicoId !== n.tecnicoId
+              p.total !== n.total || p.pagado !== n.pagado || p.tecnicoId !== n.tecnicoId ||
+              p.manoObra !== n.manoObra || p.manoObraExtra !== n.manoObraExtra
           })
         if (changed) {
           setTrabajos(merged)
