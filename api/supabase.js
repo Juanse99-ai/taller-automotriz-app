@@ -22,7 +22,10 @@ function getOrigin(reqOrigin = '') {
 const escHtml = (s) => String(s || '')
   .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
   .replace(/"/g, '&quot;').replace(/'/g, '&#39;')
-const tituloNombre = (n) => String(n || '').toLowerCase().replace(/\b\p{L}/gu, c => c.toUpperCase()).trim()
+// Capitaliza solo la primera letra tras inicio/espacio/guion. NO usar \b\p{L}:
+// el \b de JS es ASCII, trata la ñ/tildes como frontera y parte "NIÑO"→"NiÑO".
+const tituloNombre = (n) => String(n || '').toLowerCase()
+  .replace(/(^|[\s-])(\p{L})/gu, (_, sep, c) => sep + c.toUpperCase()).trim()
 
 async function servirPortal(req, res) {
   const host = req.headers['x-forwarded-host'] || req.headers.host
