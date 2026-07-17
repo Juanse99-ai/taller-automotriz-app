@@ -61,6 +61,66 @@ async function cuenttiRequest(endpoint, method = 'GET', body = null) {
   }
 }
 
+// --- Medio de pago -----------------------------------------------------------
+// NO poner default. Un default silencioso ('efectivo') hizo que una venta pagada
+// por transferencia se facturara como efectivo; la FEIC ya tenia CUFE aceptado
+// por la DIAN, o sea que no se edita: toca nota credito + reemision.
+// El medio de pago es un dato del NEGOCIO que solo sabe quien vendio. Si no
+// viene, la tool falla; nunca adivina.
+const METODOS_PAGO = ['efectivo', 'transferencia', 'credito']
+
+function avisoMetodoPago(recibido) {
+  return [
+    `## 🛑 Falta el medio de pago — no se facturó nada`,
+    ``,
+    recibido
+      ? `\`metodoPago: "${recibido}"\` no es válido.`
+      : `**metodoPago es obligatorio** y no vino en la llamada.`,
+    ``,
+    `Valores: **efectivo** | **transferencia** | **credito**`,
+    ``,
+    `No hay valor por defecto a propósito: **pregúntale al usuario cómo se pagó**. Este dato queda grabado en la factura y, si es FEIC, la DIAN ya la aceptó y NO se puede editar — corregirlo cuesta una nota crédito y volver a emitir.`,
+  ].join('\n')
+}
+
+// Deriva los ids de Cuentti desde el metodo. Solo se llama con metodoPago ya validado.
+function idsMedioPago(metodoPago, idMedioPago, idBanco) {
+  const medio = idMedioPago ?? (metodoPago === 'transferencia' ? 7 : metodoPago === 'credito' ? 0 : 1)
+  const banco = idBanco ?? (metodoPago === 'transferencia' ? 2 : metodoPago === 'credito' ? 0 : 1)
+  return { medio, banco }
+}
+
+// --- Resolucion --------------------------------------------------------------
+// Misma regla que metodoPago y por lo mismo: 'MAS' por defecto decidia EN
+// SILENCIO que la factura no fuera electronica. Es un dato del negocio, no algo
+// que el codigo pueda suponer.
+const RESOLUCIONES = ['MAS', 'FEIC']
+
+function avisoResolucion(recibido) {
+  return [
+    `## 🛑 Falta la resolución — no se facturó nada`,
+    ``,
+    recibido
+      ? `\`resolucion: "${recibido}"\` no es válida.`
+      : `**resolucion es obligatoria** y no vino en la llamada.`,
+    ``,
+    `| Valor | Qué es |`,
+    `|---|---|`,
+    `| **FEIC** | Factura electrónica: se reporta a la DIAN |`,
+    `| **MAS** | Factura interna: NO va a la DIAN |`,
+    ``,
+    `No hay valor por defecto a propósito: **pregúntale al usuario qué factura necesita**. Emitir una interna cuando tocaba electrónica (o al revés) no se arregla editando.`,
+  ].join('\n')
+}
+
+// Describe el estado fiscal de la factura para que se vea, no se deduzca.
+function lineaResolucion(resolucion, emitirFE) {
+  if (resolucion !== 'FEIC') return `### 🧾 Resolución: **MAS** — factura interna, **NO se reporta a la DIAN**`
+  return emitirFE
+    ? `### 🧾 Resolución: **FEIC** — electrónica, **se transmite a la DIAN** (no se deshace: corregir cuesta nota crédito)`
+    : `### 🧾 Resolución: **FEIC** — electrónica\n> ⚠️ **emitirFE está en false: se crea pero NO se transmite a la DIAN.** Si la necesitas reportada, pasa \`emitirFE: true\`.`
+}
+
 // --- Catalogos de terceros ---------------------------------------------------
 // LEIDOS del formulario real de Cuentti (Maestro de Contacto, #/adm/cliente/todos,
 // 2026-07-16), no inventados. Los que habia antes estaban corridos: decian
@@ -895,19 +955,25 @@ const tools = [
       type: 'object',
       properties: {
         origen: { type: 'string', description: 'ID o codigo de la OT (ej OT-0001) o de la cotizacion (ej COT-abc123) a facturar.' },
-        resolucion: { type: 'string', enum: ['MAS', 'FEIC'], default: 'MAS', description: 'MAS = factura interna; FEIC = factura electronica DIAN.' },
-        metodoPago: { type: 'string', enum: ['efectivo', 'transferencia', 'credito'], default: 'efectivo' },
-        idMedioPago: { type: 'integer', description: 'Override del id_medio_pago de Cuentti. Default: efectivo=1, transferencia=7.' },
-        idBanco: { type: 'integer', description: 'Override del id_banco (1=Caja General, 2=Bancolombia, 3=Nequi). Default: efectivo=1 (Caja General), transferencia=2.' },
+        // SIN default: decide si la factura se reporta a la DIAN. Suponerlo es
+        // tan grave como suponer el medio de pago.
+        resolucion: { type: 'string', enum: ['MAS', 'FEIC'], description: 'OBLIGATORIO. FEIC = factura electronica (se reporta a la DIAN); MAS = factura interna (NO va a la DIAN). NO tiene default: si no lo sabes, PREGUNTA.' },
+        // SIN default: ver facturar_directo. Un default silencioso aqui emitio
+        // una FEIC por transferencia como si fuera efectivo.
+        metodoPago: { type: 'string', enum: ['efectivo', 'transferencia', 'credito'], description: 'OBLIGATORIO. Como se pago de verdad: efectivo | transferencia | credito. NO tiene default: si no lo sabes, PREGUNTA antes de facturar. Queda en la factura y no se puede corregir despues.' },
+        idMedioPago: { type: 'integer', description: 'Override del id_medio_pago de Cuentti. Por defecto se deriva de metodoPago: efectivo=1, transferencia=7.' },
+        idBanco: { type: 'integer', description: 'Override del id_banco (1=Caja General, 2=Bancolombia, 3=Nequi). Por defecto se deriva de metodoPago.' },
         emitirFE: { type: 'boolean', description: 'Si resolucion=FEIC, emite ante la DIAN tras crear la factura.' },
         confirm: { type: 'boolean', description: 'true = emitir de verdad; false (default) = dry-run.' },
         permitirDuplicado: { type: 'boolean', default: false, description: 'true para permitir RE-facturar una OT/cotizacion ya facturada (crea un duplicado real). Por defecto se bloquea.' },
       },
-      required: ['origen'],
+      required: ['origen', 'metodoPago', 'resolucion'],
     },
-    handler: async ({ origen, resolucion = 'MAS', metodoPago = 'efectivo', idMedioPago, idBanco, emitirFE = false, confirm = false, permitirDuplicado = false }) => {
+    handler: async ({ origen, resolucion, metodoPago, idMedioPago, idBanco, emitirFE = false, confirm = false, permitirDuplicado = false }) => {
       const key = String(origen || '').trim()
       if (!key) return '❌ Debes pasar el id/codigo de la OT o cotizacion.'
+      if (!METODOS_PAGO.includes(metodoPago)) return avisoMetodoPago(metodoPago)
+      if (!RESOLUCIONES.includes(resolucion)) return avisoResolucion(resolucion)
       const esCotizacion = /^COT-/i.test(key)
 
       // Resolver origen en Supabase
@@ -938,11 +1004,10 @@ const tools = [
         return `⚠️ La cotizacion ${key} ya esta marcada como Facturada. Para facturar de nuevo (duplicado) usa permitirDuplicado:true.`
       }
 
-      // Mapeo de medio de pago
+      // Mapeo de medio de pago. 1=Caja General, 2=Bancolombia, 3=Nequi (verificado).
       const aCredito = metodoPago === 'credito'
-      const medio = idMedioPago ?? (metodoPago === 'transferencia' ? 7 : 1)
-      // 1=Caja General, 2=Bancolombia, 3=Nequi (verificado). Efectivo => Caja General.
-      const banco = idBanco ?? (metodoPago === 'transferencia' ? 2 : metodoPago === 'credito' ? 0 : 1)
+      const { medio, banco } = idsMedioPago(metodoPago, idMedioPago, idBanco)
+      const lineaPago = `### 💳 Medio de pago: **${metodoPago.toUpperCase()}**\n> Si esto no es como se pagó de verdad, PARA: en una FEIC no se corrige, toca nota crédito. (id_medio_pago=${medio}, id_banco=${banco})`
 
       // El id de Cuentti manda: con un id_cliente real Cuentti NO toca al cliente
       // (comprobado con el 929). Si el registro del taller no lo trae, se resuelve
@@ -976,10 +1041,11 @@ const tools = [
         return [
           `## Dry-run: factura (NO enviada a Cuentti)`,
           `Pasa **confirm:true** para emitir de verdad.`, ``,
+          lineaResolucion(resolucion, emitirFE),
+          ``, lineaPago,
+          ``,
           `**Origen:** ${esCotizacion ? 'cotizacion' : 'OT'} ${key}`,
           `**Cliente:** ${factura.cliente} (CC ${factura.cedula})`,
-          `**Resolucion:** ${resolucion} ${resolucion === 'FEIC' ? '(electronica DIAN)' : '(interna)'}`,
-          `**Medio de pago:** ${metodoPago} (id_medio_pago=${medio}, id_banco=${banco})`,
           `**Items:** ${items.length} · **Total:** ${fmtCOP(payload.total_neto)}`,
           ``,
           `### Enlace con el inventario`,
@@ -1035,10 +1101,10 @@ const tools = [
         `## ✅ Factura creada en Cuentti`,
         ``,
         `**id_transacion:** ${txId || '(no devuelto — revisa la respuesta)'}`,
+        ``, lineaResolucion(resolucion, emitirFE), ``, lineaPago, ``,
         `**Origen:** ${esCotizacion ? 'cotizacion' : 'OT'} ${key}`,
         `**Cliente:** ${factura.cliente}`,
-        `**Total:** ${fmtCOP(payload.total_neto)}`,
-        `**Resolucion:** ${resolucion}${feMsg}`,
+        `**Total:** ${fmtCOP(payload.total_neto)}${feMsg}`,
         urlDoc ? `**Documento:** ${urlDoc}` : '',
         !txId ? `\n\`\`\`json\n${JSON.stringify(result, null, 2).slice(0, 1500)}\n\`\`\`` : '',
       ].filter(Boolean).join('\n')
@@ -1070,21 +1136,28 @@ const tools = [
             required: ['nombre', 'precio'],
           },
         },
-        resolucion: { type: 'string', enum: ['MAS', 'FEIC'], default: 'MAS', description: 'MAS = factura interna; FEIC = factura electronica DIAN.' },
-        metodoPago: { type: 'string', enum: ['efectivo', 'transferencia', 'credito'], default: 'efectivo' },
-        idMedioPago: { type: 'integer', description: 'Override. Default: efectivo=1, transferencia=7.' },
-        idBanco: { type: 'integer', description: 'Override. 1=Caja General, 2=Bancolombia, 3=Nequi.' },
+        // SIN default: decide si la factura se reporta a la DIAN.
+        resolucion: { type: 'string', enum: ['MAS', 'FEIC'], description: 'OBLIGATORIO. FEIC = factura electronica (se reporta a la DIAN); MAS = factura interna (NO va a la DIAN). NO tiene default: si no lo sabes, PREGUNTA.' },
+        // SIN default a proposito: un default silencioso ya facturo una venta
+        // por transferencia como efectivo, y con CUFE emitido eso no se edita
+        // (toca nota credito + reemision). Preguntar siempre.
+        metodoPago: { type: 'string', enum: ['efectivo', 'transferencia', 'credito'], description: 'OBLIGATORIO. Como se pago de verdad: efectivo | transferencia | credito. NO tiene default: si no lo sabes, PREGUNTA antes de facturar. Queda en la factura y no se puede corregir despues.' },
+        idMedioPago: { type: 'integer', description: 'Override. Por defecto se deriva de metodoPago: efectivo=1, transferencia=7, credito=0.' },
+        idBanco: { type: 'integer', description: 'Override. 1=Caja General, 2=Bancolombia, 3=Nequi. Por defecto se deriva de metodoPago.' },
         emitirFE: { type: 'boolean', default: false, description: 'Si resolucion=FEIC, emite ante la DIAN tras crear la factura.' },
         observaciones: { type: 'string', default: '' },
         confirm: { type: 'boolean', default: false, description: 'true = emitir de verdad; false (default) = dry-run.' },
       },
-      required: ['cliente_nombre', 'cliente_identificacion', 'items'],
+      required: ['cliente_nombre', 'cliente_identificacion', 'items', 'metodoPago', 'resolucion'],
     },
     handler: async ({ cliente_nombre, cliente_identificacion, cliente_id, tipoPersona, items,
-                      resolucion = 'MAS', metodoPago = 'efectivo', idMedioPago, idBanco,
+                      resolucion, metodoPago, idMedioPago, idBanco,
                       emitirFE = false, observaciones = '', confirm = false }) => {
       if (!cliente_nombre || !cliente_identificacion) return '❌ cliente_nombre y cliente_identificacion son obligatorios.'
       if (!Array.isArray(items) || items.length === 0) return '❌ Se requiere al menos un item.'
+      // Sin default: asumir efectivo ya emitio una FEIC equivocada.
+      if (!METODOS_PAGO.includes(metodoPago)) return avisoMetodoPago(metodoPago)
+      if (!RESOLUCIONES.includes(resolucion)) return avisoResolucion(resolucion)
 
       // Resolver el cliente: con su id_cliente real Cuentti no toca el registro;
       // con -1 lo crea por NIT, que es como nacen los terceros mal configurados.
@@ -1094,8 +1167,7 @@ const tools = [
       if (!cliente_id && cli?.ambiguo) return avisoProveedorAmbiguo(cliente_identificacion, cli.ambiguo)
 
       const aCredito = metodoPago === 'credito'
-      const medio = idMedioPago ?? (metodoPago === 'transferencia' ? 7 : 1)
-      const banco = idBanco ?? (metodoPago === 'transferencia' ? 2 : metodoPago === 'credito' ? 0 : 1)
+      const { medio, banco } = idsMedioPago(metodoPago, idMedioPago, idBanco)
 
       const factura = {
         items,
@@ -1125,13 +1197,17 @@ const tools = [
           : `\n> ✅ Todos los items tienen referencia: el inventario se va a descontar.`,
       ].join('\n')
 
+      // El medio de pago va en su propia linea y en mayusculas: enterrado entre
+      // los demas campos ya se colo una FEIC en efectivo que era transferencia.
+      const lineaPago = `### 💳 Medio de pago: **${metodoPago.toUpperCase()}**\n> Si esto no es como se pagó de verdad, PARA: en una FEIC no se corrige, toca nota crédito. (id_medio_pago=${medio}, id_banco=${banco})`
+
       if (!confirm) {
         return [
           `## Dry-run: factura DIRECTA (NO enviada a Cuentti)`,
           `Pasa **confirm:true** para emitir de verdad.`, ``,
-          lineaCli,
-          `**Resolucion:** ${resolucion} ${resolucion === 'FEIC' ? '(electronica DIAN — NO se deshace)' : '(interna)'}`,
-          `**Medio de pago:** ${metodoPago} (id_medio_pago=${medio}, id_banco=${banco})`,
+          lineaResolucion(resolucion, emitirFE),
+          ``, lineaPago,
+          ``, lineaCli,
           `**Items:** ${payload.objDetalle.length} · **Subtotal:** ${fmtCOP(payload.total_sin_impuestos)} · **IVA:** ${fmtCOP(payload.total_impuestos)} · **Total:** ${fmtCOP(payload.total_neto)}`,
           bloqueInv,
           ``, `> Esta venta queda SOLO en Cuentti: no crea cotizacion ni OT en el taller.`,
@@ -1156,8 +1232,10 @@ const tools = [
       return [
         `## ✅ Factura directa creada en Cuentti`,
         `**id_transacion:** ${txId || '—'}${feMsg}`,
+        ``, lineaResolucion(resolucion, emitirFE),
+        ``, lineaPago,
         ``, lineaCli,
-        `**Total:** ${fmtCOP(payload.total_neto)} · **Resolucion:** ${resolucion}`,
+        `**Total:** ${fmtCOP(payload.total_neto)}`,
         bloqueInv,
         ``, `> Anota el id_transacion: esta venta no queda registrada en el taller.`,
       ].join('\n')
