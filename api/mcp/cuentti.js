@@ -69,17 +69,17 @@ async function cuenttiRequest(endpoint, method = 'GET', body = null) {
 // viene, la tool falla; nunca adivina.
 const METODOS_PAGO = ['efectivo', 'transferencia', 'credito']
 
-function avisoMetodoPago(recibido) {
+function avisoMetodoPago(recibido, validos = METODOS_PAGO, queEs = 'facturó') {
   return [
-    `## 🛑 Falta el medio de pago — no se facturó nada`,
+    `## 🛑 Falta el medio de pago — no se ${queEs} nada`,
     ``,
     recibido
       ? `\`metodoPago: "${recibido}"\` no es válido.`
       : `**metodoPago es obligatorio** y no vino en la llamada.`,
     ``,
-    `Valores: **efectivo** | **transferencia** | **credito**`,
+    `Valores: ${validos.map(v => `**${v}**`).join(' | ')}`,
     ``,
-    `No hay valor por defecto a propósito: **pregúntale al usuario cómo se pagó**. Este dato queda grabado en la factura y, si es FEIC, la DIAN ya la aceptó y NO se puede editar — corregirlo cuesta una nota crédito y volver a emitir.`,
+    `No hay valor por defecto a propósito: **pregúntale al usuario cómo se pagó**. Es un dato del negocio, no algo que el código pueda suponer — y suponerlo mal ya costó una nota crédito.`,
   ].join('\n')
 }
 
@@ -850,7 +850,10 @@ const tools = [
         // cuando el 5 es Cedula de extranjeria, y por eso una empresa con NIT
         // quedaba como cedula de extranjeria.
         tipoIdentificacion: { type: 'string', enum: ['1', '2', '3', '4', '5', '6', '7', '8', '9', '13'], description: 'Campo id_tipo_identificacion. 1=Registro civil, 2=Tarjeta de identidad, 3=Cedula de ciudadania, 4=Tarjeta de extranjeria, 5=Cedula de extranjeria, 6=NIT, 7=Pasaporte, 8=Doc. identificacion extranjero, 9=Otro, 13=Identificacion. Si se omite: 6 (NIT) cuando tipoPersona=2, si no 3 (CC).' },
-        tipoPersona: { type: 'string', enum: ['1', '2'], default: '1', description: 'Campo id_tipo_persona. 1=Natural, 2=Juridica. Es el que define si es empresa o persona.' },
+        // SIN default '1': asumir "natural" fue lo que creo a SERVICAR JB (una
+        // SAS) como persona natural con cedula. Ahora se deduce del NIT/nombre
+        // igual que en gastos y compras, y el dry-run muestra que dedujo.
+        tipoPersona: { type: 'string', enum: ['1', '2'], description: 'Campo id_tipo_persona. 1=Natural, 2=Juridica. Si se omite se deduce del NIT y la razon social; el dry-run muestra la deduccion para poder corregirla.' },
         legalidad: { type: 'integer', enum: [29, 20, 12, 7, 5], default: 29, description: 'Campo legalidad. 29=No responsable (default), 20=Regimen simple de tributacion, 12=Agente de retencion IVA (usalo si el RUT trae responsabilidades 07/09), 7=Autorretenedor, 5=Gran contribuyente.' },
         regimenImpuesto: { type: 'integer', enum: [1, 2], default: 2, description: 'Campo regimenImpuesto ("Regimen Impuestos" en la UI). 1=Impuesto sobre las ventas – IVA (responsable), 2=No responsable de IVA (default).' },
         regimen: { type: 'integer', enum: [0, 1, 2], default: 2, description: 'Campo regimen ("Regimen" en la UI). 0=Ninguno, 1=Regimen ordinario, 2=Regimen simple (default). OJO: es distinto de regimenImpuesto.' },
@@ -859,17 +862,20 @@ const tools = [
       },
       required: ['cedula', 'nombre', 'confirm'],
     },
-    handler: async ({ cedula, nombre, telefono = '', email = '', direccion = '', ciudad = '',
-                     tipoIdentificacion, tipoPersona = '1', legalidad = 29, regimenImpuesto = 2,
-                     regimen = 2, cuenttiId, confirm }) => {
+    handler: async (args) => {
+      const { cedula, nombre, telefono = '', email = '', direccion = '', ciudad = '',
+              tipoIdentificacion, tipoPersona, legalidad = 29, regimenImpuesto = 2,
+              regimen = 2, cuenttiId, confirm } = args
       const ced = String(cedula || '').trim()
       const nom = String(nombre || '').trim()
       if (!ced || !nom) return '❌ cedula y nombre son obligatorios'
+      // Deducido, no asumido: el default '1' creaba empresas como persona natural.
+      const tipoPer = String(tipoPersona || inferirTipoPersona(ced, nom))
 
       // Una empresa no tiene nombre/apellido: en el registro bueno de Cuentti
       // (SERVICAR JB, id 929) esos campos van vacios y la razon social vive solo
       // en nombre_cliente. Partirla dejaria primer_nombre=SERVICAR, apellido=SAS.
-      const esJuridica = parseInt(tipoPersona, 10) === 2
+      const esJuridica = parseInt(tipoPer, 10) === 2
       // Sin tipoIdentificacion explicito: una empresa lleva NIT (6), una persona
       // cedula (3). Antes el default era 3 para todo => empresas con cedula.
       const tipoIdent = String(tipoIdentificacion || (esJuridica ? '6' : '3'))
@@ -891,7 +897,7 @@ const tools = [
         legalidad: parseInt(legalidad, 10),
         cliente_predeterminado: '0',
         nombre_cliente: nom,
-        id_tipo_persona: tipoPersona,
+        id_tipo_persona: tipoPer,
         identificacion: ced,
         id_empresa_portal: 0,
         id_usuario_portal: 0,
@@ -927,11 +933,16 @@ const tools = [
           `**Nombre:** ${nom}`,
           `**Telefono:** ${telefono || '—'} · **Email:** ${email || '—'}`,
           `**Direccion:** ${direccion || '—'} · **Ciudad:** ${ciudad || '—'}`,
-          `**Tipo persona:** ${CAT_TIPO_PERSONA[tipoPersona] || tipoPersona}`,
+          `**Tipo persona:** ${CAT_TIPO_PERSONA[tipoPer] || tipoPer}${!tipoPersona ? ' _(deducido del NIT/nombre)_' : ''}`,
           `**Tipo identificacion:** ${CAT_TIPO_IDENT[tipoIdent] || tipoIdent} (id ${tipoIdent})${!tipoIdentificacion ? ' _(deducido del tipo de persona)_' : ''}`,
           `**Legalidad:** ${CAT_LEGALIDAD[legalidad] || legalidad} (id ${legalidad})`,
           `**Regimen impuestos:** ${CAT_REGIMEN_IMP[regimenImpuesto] || regimenImpuesto} (id ${regimenImpuesto})`,
           `**Regimen:** ${CAT_REGIMEN[regimen] || regimen} (id ${regimen})`,
+          // Para una persona natural los defaults aciertan casi siempre; para una
+          // empresa salen del RUT y el codigo no tiene como saberlos.
+          esJuridica && (args.legalidad === undefined || args.regimenImpuesto === undefined)
+            ? `\n> ⚠️ **Es una empresa y estos 3 campos van por defecto.** Salen del RUT (casilla 53): 48→regimenImpuesto 1 · 07/09→legalidad 12 · 05→regimen 1 · 47→regimen 2. Si tienes el RUT, pásalos.`
+            : '',
           ``,
           `Para ejecutar, llama de nuevo con \`confirm: true\`.`,
         ].join('\n')
@@ -1189,9 +1200,12 @@ const tools = [
         : `**Cliente:** ${cliente_nombre} (${cliente_identificacion}) — 🆕 **NO existe: Cuentti lo va a CREAR** como **${payload.objClienteMini.id_tipo_persona === 2 ? 'Jurídica' : 'Natural'}**`
 
       const sinRef = payload.objDetalle.filter(d => d.sku === 'MO1')
+      // El IVA se muestra por item: sigue teniendo default 19 (acierta casi
+      // siempre y se refleja en los totales), pero un exento facturado al 19%
+      // tiene que verse, no deducirse del total.
       const bloqueInv = [
-        ``, `### Enlace con el inventario`,
-        ...payload.objDetalle.map(d => `- ${d.descripcion} x${d.cantidad} — ${d.sku === 'MO1' ? '⚠️ **genérico MO1**: NO descuenta inventario' : `ref \`${d.sku}\` → descuenta`}`),
+        ``, `### Items — IVA y enlace con el inventario`,
+        ...payload.objDetalle.map(d => `- ${d.descripcion} x${d.cantidad} · **IVA ${d.impuesto}%** — ${d.sku === 'MO1' ? '⚠️ **genérico MO1**: NO descuenta inventario' : `ref \`${d.sku}\` → descuenta`}`),
         sinRef.length
           ? `\n> ⚠️ Hay ${sinRef.length} item(s) sin referencia. Si alguno es un repuesto real el stock va a quedar mal. Si es mano de obra, está bien así.`
           : `\n> ✅ Todos los items tienen referencia: el inventario se va a descontar.`,
@@ -1499,17 +1513,20 @@ const tools = [
         descripcion: { type: 'string', description: 'Descripcion de la linea del gasto' },
         numeroFactura: { type: 'string', default: '', description: 'Numero de la factura del proveedor (ej. JB708). Se usa para el anti-duplicado: si ya se registro un gasto con ese proveedor+factura, se bloquea.' },
         nota: { type: 'string', default: '', description: 'Nota del documento. Si se omite se usa el numeroFactura.' },
-        metodoPago: { type: 'string', enum: ['efectivo', 'transferencia'], default: 'efectivo' },
+        // SIN default: decide contra que caja/banco entra el egreso, o sea el
+        // cierre de caja. El codigo no puede saberlo.
+        metodoPago: { type: 'string', enum: ['efectivo', 'transferencia'], description: 'OBLIGATORIO. Como se pago de verdad: efectivo | transferencia. NO tiene default: si no lo sabes, PREGUNTA. Decide contra que caja/banco entra el egreso.' },
         fecha: { type: 'string', description: 'YYYY-MM-DD (default: hoy)' },
         confirm: { type: 'boolean', default: false, description: 'true = grabar en Cuentti; false (default) = dry-run' },
         permitirDuplicado: { type: 'boolean', default: false, description: 'true = registrar aunque ya exista un gasto con ese proveedor+numeroFactura. Default false (bloquea duplicados).' },
       },
-      required: ['proveedorNit', 'proveedorNombre', 'monto', 'idPlanCuentas'],
+      required: ['proveedorNit', 'proveedorNombre', 'monto', 'idPlanCuentas', 'metodoPago'],
     },
-    handler: async ({ proveedorNit, proveedorNombre, proveedorId, crearProveedor = false, tipoPersona, monto, idPlanCuentas, iva = 0, idImpuesto = 5, descripcion, numeroFactura = '', nota = '', metodoPago = 'efectivo', fecha, confirm = false, permitirDuplicado = false }) => {
+    handler: async ({ proveedorNit, proveedorNombre, proveedorId, crearProveedor = false, tipoPersona, monto, idPlanCuentas, iva = 0, idImpuesto = 5, descripcion, numeroFactura = '', nota = '', metodoPago, fecha, confirm = false, permitirDuplicado = false }) => {
       const { total, base, impuestos, pct } = desglosarIva(monto, iva)
       if (!(total > 0)) return '❌ El monto debe ser mayor a 0.'
       if (!idPlanCuentas) return '❌ Falta idPlanCuentas (la cuenta contable del gasto).'
+      if (!['efectivo', 'transferencia'].includes(metodoPago)) return avisoMetodoPago(metodoPago, ['efectivo', 'transferencia'], 'registró')
       // Mismos ids que usa la app: efectivo → caja general; transferencia → banco.
       const { idMedioPago, idBanco } = metodoPago === 'transferencia'
         ? { idMedioPago: 7, idBanco: 2 }
