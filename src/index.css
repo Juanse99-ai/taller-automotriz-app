@@ -416,6 +416,11 @@ a,button,[role=button],.navlink,.mob-tab,.icobtn,.tabs button{-webkit-tap-highli
 [data-theme="dark"] .badge-n{background:rgba(100,116,139,.2);color:#cbd5e1}
 
 /* KPI card */
+/* Las filas de KPIs se escriben inline como `repeat(4,minmax(200px,1fr))`:
+   4 columnas fijas que nunca bajan de 200px exigen ~842px y, junto al sidebar,
+   el área útil es ~697px → empujaban la página entera de lado (Cotizaciones).
+   auto-fit + min() reparte según el espacio real y nunca desborda. */
+.content [style*="grid-template-columns"]:has(>.kpi){grid-template-columns:repeat(auto-fit,minmax(min(190px,100%),1fr))!important}
 .kpi{background:var(--bg-raised);border:none;border-radius:14px;padding:16px 18px;display:flex;flex-direction:column;gap:8px;box-shadow:var(--shadow-card);transition:box-shadow .12s,transform .12s}
 /* hover gated: en tablet (uso real de la app) el hover por tap queda pegado */
 @media (hover:hover) and (pointer:fine){
@@ -488,9 +493,11 @@ textarea.input{min-height:88px;resize:vertical;padding-top:11px}
 .empty h4{margin:8px 0 4px;color:var(--text);font-weight:700;font-size:15px}
 .empty p{margin:0;max-width:420px;font-size:13px;line-height:1.5}
 
-/* tabs */
-.tabs{display:flex;gap:2px;border-bottom:1px solid var(--border);margin-bottom:18px}
-.tabs button{padding:10px 14px;font-size:13px;font-weight:600;color:var(--text-3);border-bottom:2px solid transparent;margin-bottom:-1px}
+/* tabs — con muchas pestañas (Trabajos tiene 9) no caben junto al sidebar y
+   antes empujaban la página entera de lado; ahora scrollean dentro de su fila. */
+.tabs{display:flex;gap:2px;border-bottom:1px solid var(--border);margin-bottom:18px;overflow-x:auto;flex-wrap:nowrap;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.tabs::-webkit-scrollbar{display:none}
+.tabs button{padding:10px 14px;font-size:13px;font-weight:600;color:var(--text-3);border-bottom:2px solid transparent;margin-bottom:-1px;white-space:nowrap;flex-shrink:0}
 .tabs button:hover{color:var(--text)}
 .tabs button.on{color:var(--blue-600);border-bottom-color:var(--blue-600)}
 [data-theme="dark"] .tabs button.on{color:#93c5fd;border-bottom-color:#93c5fd}
@@ -639,7 +646,10 @@ tbody tr:active{background:var(--fill-2)}
   .tbl.tbl-cards{min-width:0;width:100%;display:block}
   .tbl.tbl-cards thead{display:none}
   .tbl.tbl-cards tbody{display:block}
-  .tbl.tbl-cards tbody tr{display:block;background:var(--bg-raised);border:1px solid var(--border);border-radius:12px;padding:8px 14px;margin:0 0 10px}
+  /* flex-column + `order`: el nombre (.c-name) encabeza la tarjeta aunque en la
+     tabla de escritorio sea la 3ª o 5ª columna. La tabla no se toca. */
+  .tbl.tbl-cards tbody tr{display:flex;flex-direction:column;background:var(--bg-raised);border:1px solid var(--border);border-radius:12px;padding:8px 14px;margin:0 0 10px}
+  .tbl.tbl-cards tbody td.c-name{order:-1}
   .tbl.tbl-cards tbody tr:hover{background:var(--bg-raised)}
   /* Nombres sin espacios (ej. "CLIO II/MEGANE/SYMBOL/LOGAN") deben partir línea:
      si no, estiran la tarjeta y el texto se sale por la derecha. */
@@ -654,14 +664,9 @@ tbody tr:active{background:var(--fill-2)}
   .tbl.tbl-cards tbody td.td-actions{display:block;text-align:left;padding-top:8px;margin-top:4px;border-top:1px solid var(--border)}
   .tbl.tbl-cards tbody td.td-actions::before{display:none}
   .tbl.tbl-cards tbody td.td-actions>div{justify-content:flex-start!important;flex-wrap:wrap}
-  /* Liquidación en celular: el check de liquidar encabeza la tarjeta (área de
-     toque cómoda) y el selector de compañero baja completo bajo su etiqueta.
-     El cliente es la 5ª columna en escritorio; aquí sube a título con `order`
-     (solo reordena la vista móvil, la tabla de escritorio no se toca). */
-  .tbl-liq.tbl-cards tbody tr{display:flex;flex-direction:column}
-  .tbl-liq.tbl-cards tbody td.td-check{order:-2}
-  .tbl-liq.tbl-cards tbody td.c-name{order:-1}
-  .tbl-liq.tbl-cards tbody td.td-check{justify-content:space-between;text-align:left;padding:2px 0 8px}
+  /* Liquidación en celular: el check de liquidar va antes que el título, con
+     área de toque cómoda; el selector de compañero baja a ancho completo. */
+  .tbl-liq.tbl-cards tbody td.td-check{order:-2;justify-content:space-between;text-align:left;padding:2px 0 8px}
   .tbl-liq.tbl-cards tbody td.td-check input[type=checkbox]{width:22px;height:22px;flex-shrink:0}
   .tbl-liq.tbl-cards tbody td[data-label="Compartido"]{flex-wrap:wrap;justify-content:space-between}
   .tbl-liq.tbl-cards tbody td[data-label="Compartido"] .input{width:100%!important;margin:6px 0 0!important;flex-basis:100%}
@@ -888,6 +893,17 @@ tbody tr:active{background:var(--fill-2)}
   .content [style*="grid-template-columns"][style*="repeat(3,1fr)"],
   .content [style*="grid-template-columns"][style*="minmax("]
   { grid-template-columns:1fr !important; gap:10px !important }
+}
+
+/* KPIs en celular: 2 por fila, no uno por pantallazo.
+   La regla de arriba colapsa TODO grid inline a 1 columna, lo que dejaba los
+   KPIs (etiqueta + número, contenido mínimo) ocupando el ancho completo cada
+   uno: en Trabajos había que pasar 4 pantallas para llegar a la primera OT.
+   Va después para ganar en cascada; `:has` lo limita a grids DE KPIs. */
+@media(max-width:600px){
+  .content [style*="grid-template-columns"]:has(>.kpi){grid-template-columns:1fr 1fr!important;gap:8px!important}
+  .content [style*="grid-template-columns"]:has(>.kpi) .kpi{padding:12px 14px;gap:6px}
+  .content [style*="grid-template-columns"]:has(>.kpi) .kpi__v{font-size:21px!important}
 }
 
 /* === Recepcion stepper (parche-correcciones-tablet) === */
