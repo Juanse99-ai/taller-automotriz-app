@@ -14,7 +14,61 @@ function getOrigin(reqOrigin = '') {
   return ALLOWED_ORIGINS[0]
 }
 
+// ---- Portal: meta OpenGraph personalizados por cliente ----
+// Vive AQUÍ (no en su propio api/portal.js) porque el plan Hobby de Vercel
+// permite máximo 12 Serverless Functions por deployment y ya estamos en el
+// límite; un archivo nuevo en /api las volvería 13 y el deploy falla.
+// Se activa con /api/supabase?portal=1&c=<cedula> (rewrite desde /portal).
+const escHtml = (s) => String(s || '')
+  .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+  .replace(/"/g, '&quot;').replace(/'/g, '&#39;')
+const tituloNombre = (n) => String(n || '').toLowerCase().replace(/\b\p{L}/gu, c => c.toUpperCase()).trim()
+
+async function servirPortal(req, res) {
+  const host = req.headers['x-forwarded-host'] || req.headers.host
+  const proto = (req.headers['x-forwarded-proto'] || 'https').split(',')[0]
+  const base = `${proto}://${host}`
+
+  let html
+  try { html = await (await fetch(`${base}/index.html`)).text() }
+  catch { res.status(302).setHeader('Location', '/index.html'); res.end(); return }
+
+  const ced = (req.query.c || '').toString().replace(/[.\-\s]/g, '')
+  let nombre = ''
+  if (ced) {
+    try {
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/clientes?identificacion=eq.${encodeURIComponent(ced)}&select=nombre&limit=1`,
+        { headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` } })
+      if (r.ok) { const rows = await r.json(); nombre = tituloNombre(rows?.[0]?.nombre) }
+    } catch { /* sin nombre → título genérico */ }
+  }
+
+  const titulo = nombre ? `Portal del Vehículo — ${nombre}` : 'Portal del Vehículo — Multidiagnósticos AS'
+  const desc = nombre
+    ? `${nombre}, consulta aquí el estado de tu vehículo en Multidiagnósticos AS.`
+    : 'Consulta el estado de tu vehículo en Multidiagnósticos AS.'
+  const img = `${base}/logo.png`
+  const meta = [
+    `<meta property="og:title" content="${escHtml(titulo)}">`,
+    `<meta property="og:description" content="${escHtml(desc)}">`,
+    `<meta property="og:image" content="${escHtml(img)}">`,
+    `<meta property="og:type" content="website">`,
+    `<meta property="og:site_name" content="Multidiagnósticos AS">`,
+    `<meta name="twitter:card" content="summary">`,
+    `<meta name="twitter:title" content="${escHtml(titulo)}">`,
+    `<meta name="twitter:description" content="${escHtml(desc)}">`,
+    `<meta name="twitter:image" content="${escHtml(img)}">`,
+  ].join('')
+  html = html.replace(/<title>[\s\S]*?<\/title>/i, `<title>${escHtml(titulo)}</title>`).replace('</head>', `${meta}</head>`)
+  res.setHeader('Content-Type', 'text/html; charset=utf-8')
+  res.setHeader('Cache-Control', 'public, max-age=0, must-revalidate')
+  res.status(200).send(html)
+}
+
 export default async function handler(req, res) {
+  // El portal se sirve ANTES del CORS/allowlist de tablas: es HTML público, no la API.
+  if (req.query.portal === '1') { await servirPortal(req, res); return }
+
   const origin = getOrigin(req.headers.origin || '')
   res.setHeader('Access-Control-Allow-Origin', origin)
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS')
