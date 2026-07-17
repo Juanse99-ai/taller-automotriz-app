@@ -143,7 +143,11 @@ export default function Inventario({ notify }) {
 
   const stats = useMemo(() => ({
     total: productos.length,
-    sinStock: productos.filter(p => !p.esServicio && (parseFloat(p.stock) || 0) <= 0).length,
+    // "Agotado" = en cero. El stock NEGATIVO va aparte (descuadre): se vendio mas de
+    // lo registrado, y eso se arregla cuadrando el inventario, no comprando. Antes
+    // los 472 negativos se sumaban a los agotados y el titular pedia reponer de mas.
+    sinStock: productos.filter(p => !p.esServicio && (parseFloat(p.stock) || 0) === 0).length,
+    descuadre: productos.filter(p => !p.esServicio && (parseFloat(p.stock) || 0) < 0).length,
     stockBajo: productos.filter(p => !p.esServicio && p.stock > 0 && p.stock <= STOCK_BAJO_UMBRAL).length,
     // Solo repuestos con stock en mano (>0). Los servicios/mano de obra quedan en
     // negativo por venderse sin control de existencias y falseaban el total.
@@ -161,9 +165,16 @@ export default function Inventario({ notify }) {
     }, 0),
   }), [productos])
 
+  // Un servicio (mano de obra, "Mas Administracion"…) no tiene existencias: decir
+  // "Sin stock" sobre el hace pensar que hay que reponerlo. Y un stock NEGATIVO no
+  // es lo mismo que uno en cero: significa que se vendio mas de lo registrado, o
+  // sea que el inventario esta descuadrado — comprar no lo arregla, cuadrarlo si.
   const stockState = (p) => {
-    if (p.stock <= 0) return { tone: 'danger', lbl: 'Sin stock' }
-    if (p.stock <= STOCK_BAJO_UMBRAL) return { tone: 'warning', lbl: 'Bajo' }
+    if (p.esServicio) return { tone: 'neutral', lbl: 'Servicio' }
+    const st = parseFloat(p.stock) || 0
+    if (st < 0) return { tone: 'danger', lbl: 'Descuadre' }
+    if (st === 0) return { tone: 'danger', lbl: 'Sin stock' }
+    if (st <= STOCK_BAJO_UMBRAL) return { tone: 'warning', lbl: 'Bajo' }
     return { tone: 'success', lbl: 'OK' }
   }
 
@@ -213,8 +224,14 @@ export default function Inventario({ notify }) {
       <div className="kpi-bh" style={{ marginBottom: 18 }}>
         <div className="kpi-bh__s">
           <div className="kpi-bh__l">A reponer</div>
-          <div className="kpi-bh__row"><span className="kpi-bh__v" style={{ color: 'var(--red-700)' }}>{(stats.sinStock + stats.stockBajo).toLocaleString('es-CO')}</span></div>
-          <div className="kpi-bh__sub">{stats.sinStock} agotados · {stats.stockBajo} bajo mínimo</div>
+          {/* Mismo total que el botón "Por reponer" (los tres grupos hay que
+              comprarlos), pero el desglose separa los que están en negativo:
+              esos no son solo falta de stock, es inventario descuadrado. */}
+          <div className="kpi-bh__row"><span className="kpi-bh__v" style={{ color: 'var(--red-700)' }}>{(stats.sinStock + stats.descuadre + stats.stockBajo).toLocaleString('es-CO')}</span></div>
+          <div className="kpi-bh__sub">
+            {stats.sinStock.toLocaleString('es-CO')} agotados · {stats.stockBajo.toLocaleString('es-CO')} bajo mínimo
+            {stats.descuadre > 0 && <> · <strong style={{ color: 'var(--amber-600)' }}>{stats.descuadre.toLocaleString('es-CO')} en negativo</strong></>}
+          </div>
         </div>
         <div className="kpi-bh__s">
           <div className="kpi-bh__l">Referencias</div>
@@ -239,16 +256,24 @@ export default function Inventario({ notify }) {
           <h3>Productos ({filtrados.length})</h3>
           <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-end', flexWrap: 'wrap', gap: 8 }}>
             {/* Búsqueda */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 9, background: 'var(--bg-subtle)', border: '1px solid var(--border)', borderRadius: 9, padding: '7px 12px', minWidth: 220 }}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-4)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+            {/* Search bar iOS: relleno gris del sistema, sin borde, con botón de
+                limpiar cuando hay texto (antes tocaba borrar a mano). */}
+            <div className="search" style={{ minWidth: 220 }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, color: 'var(--text-4)' }}>
                 <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
               </svg>
               <input
                 value={busqueda}
                 onChange={e => setBusqueda(e.target.value)}
                 placeholder="Buscar código o nombre..."
-                style={{ border: 'none', outline: 'none', background: 'none', flex: 1, fontSize: 13.5 }}
+                aria-label="Buscar producto"
               />
+              {busqueda && (
+                <button type="button" onClick={() => setBusqueda('')} aria-label="Limpiar búsqueda"
+                  style={{ display: 'flex', color: 'var(--text-4)', padding: 0, lineHeight: 1 }}>
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="10" opacity=".28"/><path d="M15 9l-6 6M9 9l6 6" stroke="var(--bg-raised)" strokeWidth="2.2" strokeLinecap="round" fill="none"/></svg>
+                </button>
+              )}
             </div>
             {/* Filtro categorías */}
             <div className="segctl">
@@ -285,7 +310,7 @@ export default function Inventario({ notify }) {
           </div>
         ) : (
           <div className="card__b card__b--flush">
-            <table className="tbl tbl--center tbl-cards">
+            <table className="tbl tbl--center tbl-cards tbl--sticky">
               <thead>
                 <tr>
                   <th onClick={() => toggleSort('codigo')} style={{ cursor: 'pointer', userSelect: 'none' }}>
@@ -324,27 +349,42 @@ export default function Inventario({ notify }) {
                   const costoIva = baseCosto > 0 ? baseCosto * (1 + (p.iva || 0) / 100) : 0
                   // Utilidad = MARGEN sobre el precio de venta (como Cuentti): (precio − costo) / precio, sin IVA.
                   const util = (baseCosto > 0 && p.precioBase > 0) ? ((p.precioBase - baseCosto) / p.precioBase) * 100 : null
+                  // Un margen bajo -100% no existe: significa que el costo o el precio
+                  // estan mal en Cuentti (ej. "Bolsa": costo $63.865 y precio $20 daba
+                  // -383.093%). Mostrar ese numero lo hace pasar por dato bueno.
+                  const utilRota = util != null && util < -100
                   return (
                     <tr key={p.id || p.codigo}>
                       <td className="c-mono" data-label="Referencia" style={{ color: 'var(--text-3)', fontSize: 11.5 }}>{p.codigo}</td>
                       <td className="c-name col-left">{p.nombre}</td>
                       <td className="c-muted" data-label="Categoría" style={{ textTransform: 'capitalize' }}>{p.categoria}</td>
+                      {/* Un servicio no tiene existencias: su "0" en rojo hacia creer
+                          que estaba agotado. Se muestra en gris, sin alarma. */}
                       <td className="c-mono c-right" data-label="Stock" style={{
-                        fontWeight: 700,
-                        color: p.stock <= 0 ? 'var(--red-600)' : p.stock <= STOCK_BAJO_UMBRAL ? 'var(--amber-500)' : 'var(--text)',
-                      }}>{p.stock}</td>
+                        fontWeight: p.esServicio ? 500 : 700,
+                        color: p.esServicio ? 'var(--text-4)'
+                          : p.stock <= 0 ? 'var(--red-600)'
+                          : p.stock <= STOCK_BAJO_UMBRAL ? 'var(--amber-500)' : 'var(--text)',
+                      }}>{p.esServicio ? '—' : p.stock}</td>
                       <td className="c-mono c-right" data-label="Costo" style={{ fontWeight: 600, color: 'var(--text-2)' }}>
                         {costoIva > 0 ? fmt(costoIva) : '—'}
                       </td>
                       <td className="c-mono c-right" data-label="Precio" style={{ fontWeight: 700 }}>{fmt(p.precio)}</td>
                       <td className="c-mono c-right" data-label="Utilidad" style={{
                         fontWeight: 700,
-                        color: util == null ? 'var(--text-4)' : util < 0 ? 'var(--red-600)' : util < 15 ? 'var(--amber-600)' : 'var(--green-600)',
+                        color: util == null ? 'var(--text-4)' : utilRota ? 'var(--amber-600)' : util < 0 ? 'var(--red-600)' : util < 15 ? 'var(--amber-600)' : 'var(--green-600)',
                       }}>
-                        {util == null ? '—' : `${util.toFixed(0)}%`}
+                        {util == null ? '—'
+                          : utilRota
+                            ? <span title={`Costo ${fmt(baseCosto)} y precio ${fmt(p.precioBase)}: revisar el producto en Cuentti`}>Revisar</span>
+                            : `${util.toFixed(0)}%`}
                       </td>
                       <td className="c-mono c-right c-muted" data-label="IVA">{p.iva}%</td>
-                      <td data-label="Estado"><Badge tone={s.tone}>{s.lbl}</Badge></td>
+                      {/* Punto + texto (estilo macOS) en vez de pastilla: el estado
+                          acompaña, no compite con el nombre del producto. */}
+                      <td data-label="Estado">
+                        <span className={`st st--${s.tone}`}><i /> {s.lbl}</span>
+                      </td>
                     </tr>
                   )
                 })}

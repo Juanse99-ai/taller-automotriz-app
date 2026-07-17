@@ -248,6 +248,10 @@ export default function Sidebar({ active, onNavigate, isOpen, collapsed, onColla
                   key={item.key}
                   className={`navlink ${active === item.key ? 'active' : ''}`}
                   onClick={() => onNavigate(item.key)}
+                  // Con el rail colapsado solo se ven iconos: sin esto hay que
+                  // adivinar cual es cual.
+                  title={effectiveCollapsed ? item.label : undefined}
+                  aria-label={item.label}
                 >
                   {ICONS[item.key]}
                   <span>{item.label}</span>

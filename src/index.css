@@ -537,6 +537,31 @@ textarea.input{min-height:88px;resize:vertical;padding-top:11px}
 .scrim{position:fixed;inset:0;background:rgba(6,11,26,.72);z-index:35;opacity:0;visibility:hidden;pointer-events:none;transition:opacity .32s ease,visibility .32s}
 .scrim.on{opacity:1;visibility:visible;pointer-events:auto;transition:opacity .46s ease,visibility .46s}
 
+/* === Estado con punto (estilo macOS: Finder/Correo) ===
+   Reemplaza la pastilla de color en tablas densas: el punto informa sin gritar
+   ni competir con el nombre de la fila. */
+.st{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:500;color:var(--text-2);white-space:nowrap}
+.st i{width:7px;height:7px;border-radius:50%;flex-shrink:0;background:var(--text-4)}
+.st--success i{background:var(--green-500)}
+.st--warning i{background:var(--amber-400)}
+.st--danger i{background:var(--red-500)}
+.st--neutral{color:var(--text-4)}
+.st--neutral i{background:var(--text-4);opacity:.5}
+
+/* === Tabla estilo macOS (Finder): la lista scrollea dentro de su marco y la
+   cabecera se queda fija ===
+   Solo en escritorio. `position:sticky` se pega al ANCESTRO scrollable, y el
+   contenedor ya es uno (lleva overflow-x para que una tabla ancha no arrastre
+   la pagina); sin darle alto, el sticky nunca se dispara. En celular la tabla
+   se vuelve tarjetas y no hay cabecera que fijar: ahi no aplica, y de paso se
+   evita el scroll anidado, que en tactil es incomodo. */
+@media(min-width:961px){
+  .card__b--flush:has(>.tbl--sticky){max-height:calc(100vh - 250px);overflow-y:auto}
+  .tbl--sticky thead th{position:sticky;top:0;z-index:2;background:var(--bg-raised);
+    box-shadow:inset 0 -.5px 0 var(--separator)}
+}
+.tbl--sticky tbody td{padding-top:11px;padding-bottom:11px}
+
 /* === Lista agrupada iOS (inset grouped, estilo Ajustes) ===
    Filas con ícono de color, separador hairline que arranca tras el ícono,
    texto secundario a la derecha y chevron. Uso: .glist > .grow */
