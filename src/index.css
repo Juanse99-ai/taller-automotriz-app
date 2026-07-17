@@ -992,6 +992,17 @@ tbody tr:active{background:var(--fill-2)}
 .rc-step__sep{flex:0 0 24px;height:1.5px;background:var(--border-strong);border-radius:1px}
 .rc-step__sep.is-done{background:var(--green-500,#22c55e)}
 
+/* === Portal del cliente: layout que usa el ancho en pantalla grande ===
+   El cliente lo ve sobre todo en el celular (una columna), pero en tablet/PC
+   una sola columna de 780px dejaba todo muy vertical y con los lados vacíos.
+   Ahora: hero e historial a lo ancho; en el medio, dos columnas. */
+.portal-main{max-width:1080px;margin:0 auto;padding:20px 16px;display:grid;gap:20px;grid-template-columns:1fr}
+.portal-col{display:flex;flex-direction:column;gap:20px;min-width:0}
+@media(min-width:900px){
+  .portal-main{grid-template-columns:1.5fr 1fr;align-items:start}
+  .portal-main>.portal-full{grid-column:1 / -1}
+}
+
 /* LOGIN — split screen sólido (sin glass, sin gradients) */
 .login-shell{transition:none}
 .login-art{min-height:100vh}

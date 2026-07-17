@@ -6,6 +6,15 @@ import { ESTADOS, TECNICOS, TALLER } from '../utils/constants'
 import { fmtDate, fmt } from '../utils/helpers'
 import { drawHeader, drawSectionHeader, drawDataBlock, drawFooter, tableStylesItems, PDF_LAYOUT, PDF_COLORS, SEVERITY_HEAD } from '../utils/pdfTheme'
 
+// Capitaliza el nombre del cliente que viene en MAYÚSCULAS ("TRANSPORTES
+// MAJAGUA S.A.S." → "Transportes Majagua S.A.S."). Se muestra COMPLETO, no solo
+// la primera palabra. Las siglas jurídicas (con punto, o SAS/SA/LTDA/CIA/EU) se
+// dejan en mayúscula; el resto va con inicial mayúscula (respeta ñ/tildes).
+const tituloCliente = (s) => String(s || '').trim().split(/\s+/).map(w => {
+  if (/\./.test(w) || /^(sas|sa|ltda|cia|eu)$/i.test(w)) return w.toUpperCase()
+  return w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()
+}).join(' ')
+
 const ESTADO_TRABAJO_DISPLAY = {
   [ESTADOS.PENDIENTE]: { label: 'Recibido', color: '#64748b', icon: '1', pct: 15 },
   [ESTADOS.EN_DIAGNOSTICO]: { label: 'En Diagnostico', color: '#2563eb', icon: '2', pct: 30 },
@@ -334,9 +343,9 @@ export default function PortalCliente() {
   ]
 
   return (
-    <div style={{maxWidth:780,margin:'0 auto',display:'flex',flexDirection:'column',gap:20,padding:'20px 16px'}}>
+    <div className="portal-main">
       {/* Hero card */}
-      <div className="card" style={{padding:0,overflow:'hidden'}}>
+      <div className="card portal-full" style={{padding:0,overflow:'hidden'}}>
         <div style={{padding:'22px 26px',background:'var(--navy-900)',color:'#fff',position:'relative'}}>
           <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start'}}>
             <div style={{display:'flex',alignItems:'center',gap:10,fontSize:11,fontWeight:700,letterSpacing:'.08em',textTransform:'uppercase',opacity:.7,marginBottom:8}}>
@@ -349,7 +358,7 @@ export default function PortalCliente() {
           </div>
           {trabajoActivo ? (
             <>
-              <div style={{fontSize:13,opacity:.75,marginBottom:2}}>Hola, {datos.trabajos[0]?.cliente?.split(' ')[0] || ''}</div>
+              <div style={{fontSize:13,opacity:.75,marginBottom:2}}>Hola, {tituloCliente(datos.trabajos[0]?.cliente)}</div>
               <h2 style={{fontSize:22,fontWeight:700,letterSpacing:'-.01em',marginBottom:4}}>
                 {[trabajoActivo.marca,trabajoActivo.modelo].filter(Boolean).join(' ') || 'Su vehiculo'}
               </h2>
@@ -360,7 +369,7 @@ export default function PortalCliente() {
             </>
           ) : (
             <>
-              <div style={{fontSize:13,opacity:.75,marginBottom:2}}>Hola, {datos.trabajos[0]?.cliente?.split(' ')[0] || ''}</div>
+              <div style={{fontSize:13,opacity:.75,marginBottom:2}}>Hola, {tituloCliente(datos.trabajos[0]?.cliente)}</div>
               <h2 style={{fontSize:22,fontWeight:700,letterSpacing:'-.01em'}}>Historial de servicios</h2>
             </>
           )}
@@ -387,23 +396,9 @@ export default function PortalCliente() {
         )}
       </div>
 
-      {/* Tecnico asignado */}
-      {trabajoActivo && tecNombre(trabajoActivo.tecnicoId) && (
-        <div className="card">
-          <div className="card__h"><h3>Tecnico asignado</h3></div>
-          <div className="card__b" style={{display:'flex',gap:14,alignItems:'center'}}>
-            <div style={{width:54,height:54,borderRadius:'50%',background:'var(--amber-500)',display:'flex',alignItems:'center',justifyContent:'center',color:'var(--navy-900)',fontWeight:800,fontSize:18,flexShrink:0}}>
-              {tecNombre(trabajoActivo.tecnicoId).split(' ').map(x=>x[0]).slice(0,2).join('')}
-            </div>
-            <div style={{flex:1}}>
-              <div style={{fontWeight:700,fontSize:15}}>{tecNombre(trabajoActivo.tecnicoId)}</div>
-              <div style={{fontSize:12.5,color:'var(--text-3)'}}>Multidiagnosticos AS</div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Timeline de avance */}
+      {/* Columna principal (avance) + columna lateral (técnico, fotos, insp) */}
+      <div className="portal-col">
+      {/* Timeline de avance primero (lo que más le importa al cliente) */}
       {trabajoActivo && (
         <div className="card">
           <div className="card__h"><h3>Avance del trabajo</h3></div>
@@ -439,6 +434,24 @@ export default function PortalCliente() {
         <div className="card" style={{padding:'16px 20px',background:'var(--bg-subtle)',border:'1px solid var(--border)'}}>
           <div style={{fontSize:12,fontWeight:700,color:'var(--text-3)',textTransform:'uppercase',letterSpacing:'.04em',marginBottom:6}}>Observaciones</div>
           <div style={{fontSize:13.5,color:'var(--text)',lineHeight:1.55}}>{trabajoActivo.observaciones}</div>
+        </div>
+      )}
+      </div>
+
+      <div className="portal-col">
+      {/* Tecnico asignado */}
+      {trabajoActivo && tecNombre(trabajoActivo.tecnicoId) && (
+        <div className="card">
+          <div className="card__h"><h3>Tecnico asignado</h3></div>
+          <div className="card__b" style={{display:'flex',gap:14,alignItems:'center'}}>
+            <div style={{width:54,height:54,borderRadius:'50%',background:'var(--amber-500)',display:'flex',alignItems:'center',justifyContent:'center',color:'var(--navy-900)',fontWeight:800,fontSize:18,flexShrink:0}}>
+              {tecNombre(trabajoActivo.tecnicoId).split(' ').map(x=>x[0]).slice(0,2).join('')}
+            </div>
+            <div style={{flex:1}}>
+              <div style={{fontWeight:700,fontSize:15}}>{tecNombre(trabajoActivo.tecnicoId)}</div>
+              <div style={{fontSize:12.5,color:'var(--text-3)'}}>Multidiagnosticos AS</div>
+            </div>
+          </div>
         </div>
       )}
 
@@ -495,9 +508,11 @@ export default function PortalCliente() {
         </div>
       )}
 
-      {/* Historial de trabajos */}
+      </div>{/* cierra columna lateral */}
+
+      {/* Historial de trabajos — a lo ancho */}
       {datos.trabajos.length > 0 && (
-        <div className="card">
+        <div className="card portal-full">
           <div className="card__h"><h3>Historial de servicios</h3><span className="count">{datos.trabajos.length}</span></div>
           <div className="card__b card__b--flush">
             <table className="tbl tbl-cards">
@@ -538,12 +553,12 @@ export default function PortalCliente() {
       )}
 
       {!trabajoActivo && datos.trabajos.length === 0 && (
-        <div className="empty">
+        <div className="empty portal-full">
           <p>No hay trabajos activos en este momento.</p>
         </div>
       )}
 
-      <div style={{textAlign:'center',fontSize:12,color:'var(--text-4)',padding:'8px 0 18px'}}>
+      <div className="portal-full" style={{textAlign:'center',fontSize:12,color:'var(--text-4)',padding:'8px 0 18px'}}>
         Multidiagnosticos AS · Sabanalarga, Atlantico
       </div>
 
