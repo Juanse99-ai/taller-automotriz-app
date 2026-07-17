@@ -43,11 +43,15 @@ const getManoObra = (t) => {
   return Math.round(extra)
 }
 
-// El gasto del administrador ("diario") se reparte MITAD Y MITAD con el técnico.
-const APORTE_ADMIN_SPLIT = 0.5
+// Del gasto del administrador ("diario") el TALLER asume el 60% y los TÉCNICOS
+// el 40%. Ese 40% se aplica sobre el monto del movimiento, que ya viene:
+//   - completo si es de un solo técnico (ej. $40.000 → asume $16.000),
+//   - dividido si es repartido (ej. $40.000 entre 2 = $20.000 c/u → $8.000 c/u).
+// En ambos casos el taller termina asumiendo los $24.000 (60%). (Antes era 50%.)
+const APORTE_ADMIN_SPLIT = 0.40
 // Cargo EFECTIVO que se le descuenta al técnico:
-//  - "diario" (gasto del administrador por día): costo compartido 50/50; el
-//    técnico asume su mitad (50%) y el taller la otra mitad.
+//  - "diario" (gasto del administrador por día): el técnico asume el 40% del
+//    monto del movimiento; el taller cubre el 60%.
 //  - todos los demás (adelanto, préstamo, consumo, descuento): es plata que el
 //    técnico debe, se recupera al 100%.
 const cargoEfectivo = (m) => {
