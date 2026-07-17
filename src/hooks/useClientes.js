@@ -5,12 +5,20 @@ import { lsGet, lsSet, LS_KEYS } from '../services/storage'
 import { normalizarDoc, normalizarNombre, fmtTelefono } from '../utils/helpers'
 
 // Build a richer local client record from any client-like object
+//
+// OJO con `data.id`: en los objetos que vienen de la API de Cuentti ese campo
+// es el id_cliente de CUENTTI (por eso alimenta cuenttiId). El id local propio
+// (CL-…) NUNCA se toma de ahí: llega por `data.localId` cuando el registro se
+// hidrata desde Supabase, que es su fuente de verdad.
 function buildRecord(data, existing) {
   const now = new Date().toISOString()
   const cedula = (data.cedula || data.identificacion || data.documento || existing?.cedula || '').toString().trim()
 
   return {
-    id: existing?.id || ('CL-' + Date.now()),
+    // Sin localId se generaba un id nuevo por registro; al hidratar cientos de
+    // clientes en el mismo milisegundo, `Date.now()` repetía el id y cientos
+    // quedaban con la misma PK (upsert silenciosamente fallido o pisando otro).
+    id: existing?.id || data.localId || ('CL-' + Date.now()),
     cuenttiId: data.cuenttiId ?? data.id ?? existing?.cuenttiId ?? null,
     cedula,
     nombre: data.nombre || data.nombre_cliente || existing?.nombre || '',
@@ -51,7 +59,7 @@ export function useClientes() {
         const sbData = await fetchClientesLocal()
         if (sbData.length > 0) {
           const norm = sbData.map(r => buildRecord({
-            id: r.id, cuenttiId: r.cuentti_id, cedula: r.cedula, nombre: r.nombre,
+            localId: r.id, cuenttiId: r.cuentti_id, cedula: r.cedula, nombre: r.nombre,
             telefono: fmtTelefono(r.telefono1 || r.telefono || ''), email: r.email, direccion: r.direccion, ciudad: r.ciudad,
             vehiculos: typeof r.vehiculos === 'string' ? JSON.parse(r.vehiculos) : (r.vehiculos || []),
             fechaCreacion: r.fecha_creacion, fechaUltimaVisita: r.fecha_ultima_visita,
@@ -81,7 +89,7 @@ export function useClientes() {
         const sbData = await fetchClientesLocal()
         if (sbData.length > 0) {
           const norm = sbData.map(r => buildRecord({
-            id: r.id, cuenttiId: r.cuentti_id, cedula: r.cedula, nombre: r.nombre,
+            localId: r.id, cuenttiId: r.cuentti_id, cedula: r.cedula, nombre: r.nombre,
             telefono: fmtTelefono(r.telefono1 || r.telefono || ''), email: r.email, direccion: r.direccion, ciudad: r.ciudad,
             vehiculos: typeof r.vehiculos === 'string' ? JSON.parse(r.vehiculos) : (r.vehiculos || []),
             fechaCreacion: r.fecha_creacion, fechaUltimaVisita: r.fecha_ultima_visita,
