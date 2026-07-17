@@ -806,7 +806,7 @@ export default function Clientes({ clientes, vehiculos, trabajos = [], notify })
               </p>
             </div>
           ) : (
-            <table className="tbl tbl-cards tbl--sticky">
+            <table className="tbl tbl-cards tbl--sticky tbl--clientes">
               <thead>
                 <tr>
                   <th onClick={() => toggleSort('cedula')} style={{ cursor: 'pointer', userSelect: 'none' }}>CC/NIT{sortIcon('cedula')}</th>
@@ -823,7 +823,7 @@ export default function Clientes({ clientes, vehiculos, trabajos = [], notify })
                 {clientesFiltrados.map(c => (
                   <tr key={c.id || c.cedula} style={{cursor:'pointer'}} onClick={() => seleccionar(c)}>
                     <td className="c-mono" data-label="CC/NIT" style={{fontSize:12.5}}>{c.cedula || '--'}</td>
-                    <td className="c-name">{c.nombre || '--'}</td>
+                    <td className="c-name" title={c.nombre || ''}>{c.nombre || '--'}</td>
                     <td className="c-mono" data-label="Teléfono">{fmtTelefono(c.telefono) || '--'}</td>
                     <td className="c-muted" data-label="Email">{c.email || '--'}</td>
                     <td data-label="Vehículos" style={{textAlign:'center'}}>
@@ -831,7 +831,7 @@ export default function Clientes({ clientes, vehiculos, trabajos = [], notify })
                         {(c.vehiculos || []).length}
                       </Badge>
                     </td>
-                    <td className="c-muted" data-label="Última visita">{uvDe(c) ? fmtDate(uvDe(c)) : '—'}</td>
+                    <td className="c-muted" data-label="Última visita">{uvDe(c) ? fmtDate(uvDe(c)).replace(/ de /g, ' ') : '—'}</td>
                     {/* "En Cuentti" HONESTO: verde = confirmado (tenemos su id de Cuentti);
                         gris "Sin verificar" = NO sabemos (no lo hemos consultado). Antes
                         decía "Pendiente" (implicaba que NO estaba) aunque sí estuviera. */}

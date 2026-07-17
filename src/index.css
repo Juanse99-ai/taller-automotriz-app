@@ -568,6 +568,26 @@ textarea.input{min-height:88px;resize:vertical;padding-top:11px}
 }
 .tbl--sticky tbody td{padding-top:11px;padding-bottom:11px}
 
+/* Clientes: anchos fijos para que el NOMBRE quede en UNA línea y no lo aprieten.
+   El auto-layout le daba a CC/NIT 253px y a Email 450px (casi vacíos) y dejaba
+   el nombre en 179px → se partía en 3 renglones. Con table-layout:fixed el
+   nombre (col 2, sin ancho) toma el espacio que sobra; Email trunca si es largo.
+   Solo escritorio: en celular la tabla es tarjetas. */
+@media(min-width:601px){
+  .tbl--clientes{table-layout:fixed}
+  /* Columnas angostas (suman ~700px); el Nombre (col 2, sin ancho) se queda con
+     el resto (~250px). TODAS las celdas van en UNA línea; nombre y email
+     truncan con puntos suspensivos, el resto es texto corto. */
+  .tbl--clientes th:nth-child(1),.tbl--clientes td:nth-child(1){width:124px}   /* CC/NIT */
+  .tbl--clientes th:nth-child(3),.tbl--clientes td:nth-child(3){width:122px}   /* Teléfono */
+  .tbl--clientes th:nth-child(4),.tbl--clientes td:nth-child(4){width:106px}   /* Email (trunca) */
+  .tbl--clientes th:nth-child(5),.tbl--clientes td:nth-child(5){width:62px}    /* Vehículos */
+  .tbl--clientes th:nth-child(6),.tbl--clientes td:nth-child(6){width:108px}   /* Última visita */
+  .tbl--clientes th:nth-child(7),.tbl--clientes td:nth-child(7){width:108px}   /* En Cuentti */
+  .tbl--clientes th:nth-child(8),.tbl--clientes td:nth-child(8){width:28px}    /* chevron */
+  .tbl--clientes tbody td{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+}
+
 /* === Lista agrupada iOS (inset grouped, estilo Ajustes) ===
    Filas con ícono de color, separador hairline que arranca tras el ícono,
    texto secundario a la derecha y chevron. Uso: .glist > .grow */
