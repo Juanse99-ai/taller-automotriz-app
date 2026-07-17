@@ -81,7 +81,7 @@ export default function Recepcion({ hook, vehiculosHook, clientesHook, notify })
       }
     }
 
-    notify('Vehiculo recibido exitosamente', 'success')
+    notify('Vehículo recibido exitosamente', 'success')
     setPaso(1)
     setForm({
       cedula: '', cliente: '', telefonoCliente: '', emailCliente: '', clienteId: '',
@@ -130,7 +130,7 @@ export default function Recepcion({ hook, vehiculosHook, clientesHook, notify })
       {/* Page Header */}
       <div className="pagehd">
         <div>
-          <h2>Recibir vehiculo</h2>
+          <h2>Recibir vehículo</h2>
         </div>
         <div className="actions">
           <button className="btn btn-outline" onClick={() => {
@@ -148,7 +148,7 @@ export default function Recepcion({ hook, vehiculosHook, clientesHook, notify })
 
       {/* Stepper (parche-correcciones-tablet) */}
       <div className="rc-stepper">
-        {['Cliente', 'Vehiculo', 'Fotos', 'Confirmar'].map((label, i) => {
+        {['Cliente', 'Vehículo', 'Fotos', 'Confirmar'].map((label, i) => {
           const num = i + 1
           const isActive = paso === num
           const isDone = paso > num
@@ -179,7 +179,7 @@ export default function Recepcion({ hook, vehiculosHook, clientesHook, notify })
                 <div className="card__h"><h3>Cliente</h3></div>
                 <div className="card__b" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
                   <div className="field" style={{ position: 'relative' }}>
-                    <label>Cedula / NIT<span className="req">*</span></label>
+                    <label>Cédula / NIT<span className="req">*</span></label>
                     <input className="input" value={form.cedula} placeholder="Buscar por documento..."
                       onChange={e => { set('cedula', e.target.value); buscarDebounced(e.target.value) }} />
                     {resultados.length > 0 && (
@@ -200,7 +200,7 @@ export default function Recepcion({ hook, vehiculosHook, clientesHook, notify })
                       onChange={e => { set('cliente', e.target.value); buscarDebounced(e.target.value) }} />
                   </div>
                   <div className="field">
-                    <label>Telefono<span className="req">*</span></label>
+                    <label>Teléfono<span className="req">*</span></label>
                     <input className="input" value={form.telefonoCliente} placeholder="300 ..."
                       onChange={e => set('telefonoCliente', e.target.value)} />
                   </div>
@@ -223,7 +223,7 @@ export default function Recepcion({ hook, vehiculosHook, clientesHook, notify })
             {paso === 2 && (
               <div id="rc-vehiculo" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                 <div className="card">
-                  <div className="card__h"><h3>Vehiculo</h3></div>
+                  <div className="card__h"><h3>Vehículo</h3></div>
                   <div className="card__b" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 14 }}>
                     <div className="field">
                       <label>Placa<span className="req">*</span></label>
@@ -262,7 +262,7 @@ export default function Recepcion({ hook, vehiculosHook, clientesHook, notify })
                   <div className="card__b" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
                     <div className="field" style={{ gridColumn: '1 / -1' }}>
                       <label>Motivo de ingreso / Observaciones<span className="req">*</span></label>
-                      <textarea className="input" value={form.observaciones} placeholder="Danos visibles, sintomas que reporta el cliente, diagnostico previo..."
+                      <textarea className="input" value={form.observaciones} placeholder="Daños visibles, síntomas que reporta el cliente, diagnóstico previo..."
                         onChange={e => set('observaciones', e.target.value)} />
                     </div>
                     <div className="field">
@@ -283,7 +283,7 @@ export default function Recepcion({ hook, vehiculosHook, clientesHook, notify })
                 </div>
 
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <button type="button" className="btn btn-outline" onClick={() => setPaso(1)}>Atras</button>
+                  <button type="button" className="btn btn-outline" onClick={() => setPaso(1)}>Atrás</button>
                   <button type="button" className="btn btn-primary" onClick={() => {
                     if (!form.placa) { notify('La placa es obligatoria', 'error'); return }
                     setPaso(3)
@@ -295,10 +295,10 @@ export default function Recepcion({ hook, vehiculosHook, clientesHook, notify })
             {/* Paso 3: Fotos */}
             {paso === 3 && (
               <div className="card" id="rc-fotos">
-                <div className="card__h"><h3>Evidencia fotografica</h3><span className="count">{form.evidenciasIngreso.length} / {maxPhotos}</span></div>
+                <div className="card__h"><h3>Evidencia fotográfica</h3><span className="count">{form.evidenciasIngreso.length} / {maxPhotos}</span></div>
                 <div className="card__b">
                   <p style={{ fontSize: 13, color: 'var(--text-3)', marginBottom: 12 }}>
-                    Toma fotos del vehiculo: frente, lados y parte trasera para evitar reclamos.
+                    Toma fotos del vehículo: frente, lados y parte trasera para evitar reclamos.
                   </p>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: 10 }}>
                     {form.evidenciasIngreso.map(fv => (
@@ -323,7 +323,7 @@ export default function Recepcion({ hook, vehiculosHook, clientesHook, notify })
                   </div>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0 16px 16px' }}>
-                  <button type="button" className="btn btn-outline" onClick={() => setPaso(2)}>Atras</button>
+                  <button type="button" className="btn btn-outline" onClick={() => setPaso(2)}>Atrás</button>
                   <button type="button" className="btn btn-primary" onClick={() => setPaso(4)}>Siguiente</button>
                 </div>
               </div>
@@ -349,7 +349,7 @@ export default function Recepcion({ hook, vehiculosHook, clientesHook, notify })
                     <span style={{ fontSize: 13, cursor: 'pointer' }} onClick={() => set('programar', !form.programar)}>Programar (genera OT)</span>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <button type="button" className="btn btn-outline" onClick={() => setPaso(3)}>Atras</button>
+                    <button type="button" className="btn btn-outline" onClick={() => setPaso(3)}>Atrás</button>
                     <button type="submit" className="btn btn-primary">Recibir Vehiculo</button>
                   </div>
                 </div>
@@ -358,29 +358,54 @@ export default function Recepcion({ hook, vehiculosHook, clientesHook, notify })
           </form>
         </div>
 
-        {/* Right: Sidebar - Evidence + Summary */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-          {/* Evidence photos grid */}
+        {/* Right: Sidebar - Evidence + Summary.
+            Sigue al scroll: el formulario de la izquierda crece por paso y antes
+            el resumen quedaba fuera de vista justo cuando se va a confirmar. */}
+        <div className="rc-side">
+          {/* Evidencia: sin fotos es una sola zona compacta para agregar; con
+              fotos, miniaturas + un boton. Antes se pintaban 6 cuadros vacios
+              del ancho de la columna (~800px de alto) y por eso el paso 1
+              dejaba un hueco enorme al lado.
+              En el paso 3 se oculta: ese paso ya trae el panel completo (con
+              nota por foto) y se veia el mismo titulo dos veces en pantalla. */}
+          {paso !== 3 && (
           <div className="card">
-            <div className="card__h"><h3>Evidencia fotografica</h3><span className="count">{form.evidenciasIngreso.length} / {maxPhotos}</span></div>
-            <div className="card__b" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-              {form.evidenciasIngreso.map(fv => (
-                <div key={fv.id} style={{ aspectRatio: '1', borderRadius: 10, overflow: 'hidden', position: 'relative' }}>
-                  <img src={fv.dataUrl} alt={fv.nombre} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                  <button type="button" onClick={() => quitarFoto(fv.id)}
-                    style={{ position: 'absolute', top: 4, right: 4, background: 'rgba(0,0,0,0.6)', color: '#fff', border: 'none', borderRadius: '50%', width: 22, height: 22, cursor: 'pointer', fontSize: 12, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    x
-                  </button>
-                </div>
-              ))}
-              {Array.from({ length: Math.max(0, maxPhotos - form.evidenciasIngreso.length) }).map((_, i) => (
-                <label key={`empty-${i}`} style={{ aspectRatio: '1', border: '1.5px dashed var(--border-strong)', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-4)', background: 'var(--bg-subtle)', cursor: 'pointer' }}>
-                  <span style={{ fontSize: 20 }}>+</span>
+            <div className="card__h">
+              <h3>Evidencia fotográfica</h3>
+              <span className="count">{form.evidenciasIngreso.length} / {maxPhotos}</span>
+            </div>
+            <div className="card__b">
+              {form.evidenciasIngreso.length === 0 ? (
+                <label className="rc-drop">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+                    <circle cx="12" cy="13" r="4"/>
+                  </svg>
+                  <div>
+                    <strong>Agregar fotos</strong>
+                    <span>Frente, lados y parte trasera</span>
+                  </div>
                   <input type="file" accept="image/*" multiple onChange={e => addFotosIngreso(e.target.files)} style={{ display: 'none' }} />
                 </label>
-              ))}
+              ) : (
+                <div className="rc-thumbs">
+                  {form.evidenciasIngreso.map(fv => (
+                    <div key={fv.id} className="rc-thumb">
+                      <img src={fv.dataUrl} alt={fv.nombre} />
+                      <button type="button" onClick={() => quitarFoto(fv.id)} aria-label={`Quitar ${fv.nombre}`}>×</button>
+                    </div>
+                  ))}
+                  {form.evidenciasIngreso.length < maxPhotos && (
+                    <label className="rc-thumb rc-thumb--add" title="Agregar fotos">
+                      <span>+</span>
+                      <input type="file" accept="image/*" multiple onChange={e => addFotosIngreso(e.target.files)} style={{ display: 'none' }} />
+                    </label>
+                  )}
+                </div>
+              )}
             </div>
           </div>
+          )}
 
           {/* Summary card */}
           <div className="card">
@@ -412,7 +437,7 @@ export default function Recepcion({ hook, vehiculosHook, clientesHook, notify })
               )}
               <div style={{ height: 1, background: 'var(--border)', margin: '4px 0' }} />
               <div style={{ fontSize: 12, color: 'var(--text-3)', lineHeight: 1.5 }}>
-                Al generar la OT se notificara al tecnico asignado y quedara registrado el ingreso del vehiculo.
+                Al generar la OT se notificará al técnico asignado y quedará registrado el ingreso del vehículo.
               </div>
             </div>
           </div>
