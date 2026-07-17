@@ -1,9 +1,17 @@
 import { RESOLUCIONES } from '../utils/constants'
 
 // Configuracion de Cuentti
+//
+// SIN TOKEN a proposito: este archivo se compila en el bundle que descarga el
+// navegador, asi que todo lo que viva aqui es publico. El token estaba
+// hardcodeado y se leia con DevTools; ahora lo inyecta el proxy `api/cuentti.js`
+// desde CUENTTI_TOKEN (variable del servidor).
+//
+// Los ids de abajo NO son secretos y siguen aqui porque el frontend los necesita
+// para armar los CUERPOS de las peticiones (id_empleado, id_sucursal…). Deben
+// coincidir con las env vars del proxy, que solo manda los headers.
 const CONFIG = {
   baseUrl: '/api/cuentti',
-  token: 'MTE0NjR8MTE0NjR8OTAxNTcyMjI1fDB8ZXlKMGVYQWlPaUpLVjFRaUxDSmhiR2NpT2lKSVV6STFOaUo5LmV5SnpkV0lpT2lJeE1UUTJOQzB5TURJek1EQTVOREF3TUROak5Ea3laRGMwWlMwMU4yRmpMVFJrTVRrdE9HUm1OeTAxTkdSaU9EYzVaVGxtWlRGOE9UQXhOVGN5TWpJMUlpd2lhV0YwSWpveE56YzJNemd5T0RZMExDSmxlSEFpT201MWJHeDkuNnZueUpKZmFaZWh5ZmxGdUhlLTFMSHE5R2V3TVlBZk5CR3FCR2h4TzA0OA==',
   companyId: '11464',
   branchId: '1',
   // Empleado 2 = el usuario/cajero real con la CAJA abierta. Antes era 1, por eso los
@@ -39,28 +47,10 @@ const CONFIG = {
   },
 }
 
-// Construye los headers; se puede enmascarar el token para depurar
-function buildHeaders({ maskToken = false } = {}) {
-  const emp = (CONFIG.employeeId ?? '1').toString()
-  const company = (CONFIG.companyId ?? '11464').toString()
-  const branch = (CONFIG.branchId ?? '1').toString()
-  const gtm = CONFIG.gtm || 'GMT-0500'
-  const tok = CONFIG.token || ''
-  const tokValue = maskToken && tok.length > 10
-    ? `${tok.slice(0, 10)}...${tok.slice(-6)}`
-    : tok
-
-  return {
-    'Content-Type': 'application/json',
-    'Authorization': `Bearer ${tokValue}`,
-    'x-auth-token-empresa': company,
-    'x-id-sucursal': branch,
-    'x-id-empleado': emp,
-    'X-Auth-Token-id-usuario': emp,
-    'X-Auth-Token-usuario': emp,
-    'x-gtm': gtm,
-    'usuario': emp,
-  }
+// Headers de la peticion al proxy. NO llevan credenciales a proposito: el proxy
+// las inyecta en el servidor e ignora las que mande el navegador.
+function buildHeaders() {
+  return { 'Content-Type': 'application/json' }
 }
 
 // Request generico al proxy de Cuentti
@@ -221,9 +211,10 @@ export async function registrarGastoNominaBackend({ proveedorId, proveedorCedula
   return data
 }
 
-// Devuelve headers en formato depuracion (token enmascarado)
+// Headers que manda el navegador. Ya no hay token que enmascarar aqui: las
+// credenciales las pone el proxy en el servidor y nunca llegan al bundle.
 export function getCuenttiDebugHeaders() {
-  return buildHeaders({ maskToken: true })
+  return { ...buildHeaders(), 'Authorization': '(lo pone el servidor: CUENTTI_TOKEN)' }
 }
 
 // ---------- CLIENTES ----------

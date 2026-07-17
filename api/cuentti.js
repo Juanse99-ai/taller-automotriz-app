@@ -26,14 +26,33 @@ export default async function handler(req, res) {
     const baseUrl = 'https://app.cuenti.com';
     const cuenttiUrl = new URL(path, baseUrl).toString();
 
-    const headers = { 'Content-Type': 'application/json' };
-    const fwd = ['authorization','x-api-key','x-auth-token','x-auth-token-api','x-auth-token-empresa','x-id-sucursal','x-id-empleado','x-gtm','x-auth-token-id-usuario','token','x-auth-token-usuario','usuario'];
-    fwd.forEach(h => { if (req.headers[h]) headers[h] = req.headers[h]; });
+    // El token lo pone el SERVIDOR, nunca el navegador.
+    //
+    // Antes viajaba hardcodeado en el bundle del frontend y este proxy solo lo
+    // reenviaba: cualquiera que abriera la app podia leerlo con DevTools y
+    // facturar o anular en el ERP por su cuenta. Ahora sale de la variable de
+    // entorno y las credenciales que mande el cliente se IGNORAN a proposito
+    // (si se reenviaran, seguiria sirviendo mandar un token propio).
+    const token = process.env.CUENTTI_TOKEN;
+    if (!token) {
+      // Fallar claro y temprano: sin esto Cuentti responde 401 y el error real
+      // (falta la env var) queda enterrado en la respuesta del ERP.
+      console.error('Proxy Cuentti: falta la variable de entorno CUENTTI_TOKEN');
+      return res.status(500).json({ error: 'Cuentti no esta configurado en el servidor (falta CUENTTI_TOKEN)' });
+    }
 
-    // Defaults de seguridad: evitar valores "undefined" que Cuentti rechaza
-    headers['x-auth-token-id-usuario'] = headers['x-auth-token-id-usuario'] || req.headers['x-auth-token-id-usuario'] || '1';
-    headers['x-auth-token-usuario'] = headers['x-auth-token-usuario'] || req.headers['x-auth-token-usuario'] || '1';
-    headers['x-id-empleado'] = headers['x-id-empleado'] || req.headers['x-id-empleado'] || '1';
+    const empleado = process.env.CUENTTI_EMPLOYEE_ID || '2'; // 2 = cajero con la caja abierta
+    const headers = {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`,
+      'x-auth-token-empresa': process.env.CUENTTI_COMPANY_ID || '11464',
+      'x-id-sucursal': process.env.CUENTTI_BRANCH_ID || '1',
+      'x-id-empleado': empleado,
+      'X-Auth-Token-id-usuario': empleado,
+      'X-Auth-Token-usuario': empleado,
+      'x-gtm': process.env.CUENTTI_GTM || 'GMT-0500',
+      'usuario': empleado,
+    };
 
     const options = { method: req.method, headers };
     if (req.body && (req.method === 'POST' || req.method === 'PUT')) {
