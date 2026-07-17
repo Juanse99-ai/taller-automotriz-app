@@ -293,7 +293,7 @@ export default function PortalCliente() {
             <div style={{padding:'28px 32px 22px',background:'var(--navy-900)',color:'#fff',textAlign:'center'}}>
               <img src="/logo.png" alt="MDA" style={{width:50,height:50,objectFit:'contain',borderRadius:12,background:'#fff',padding:4,marginBottom:12}}/>
               <h1 style={{fontSize:20,fontWeight:800,margin:'0 0 4px',letterSpacing:'.02em'}}>Multidiagnosticos AS</h1>
-              <p style={{fontSize:13,opacity:.65,margin:0}}>Seguimiento en linea de su vehiculo</p>
+              <p style={{fontSize:13,opacity:.82,margin:0}}>Seguimiento en línea de su vehículo</p>
             </div>
             <div style={{padding:'24px 32px 28px'}}>
               <form onSubmit={buscar} style={{display:'flex',flexDirection:'column',gap:16}}>
@@ -348,7 +348,7 @@ export default function PortalCliente() {
       <div className="card portal-full" style={{padding:0,overflow:'hidden'}}>
         <div style={{padding:'22px 26px',background:'var(--navy-900)',color:'#fff',position:'relative'}}>
           <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start'}}>
-            <div style={{display:'flex',alignItems:'center',gap:10,fontSize:11,fontWeight:700,letterSpacing:'.08em',textTransform:'uppercase',opacity:.7,marginBottom:8}}>
+            <div style={{display:'flex',alignItems:'center',gap:10,fontSize:11,fontWeight:700,letterSpacing:'.08em',textTransform:'uppercase',opacity:.88,marginBottom:8}}>
               <img src="/logo.png" alt="MDA" style={{width:20,height:20,objectFit:'contain',borderRadius:4}}/> Multidiagnosticos AS
             </div>
             <button className="btn btn-ghost btn-sm" style={{color:'rgba(255,255,255,.7)',border:'1px solid rgba(255,255,255,.15)'}}
@@ -358,18 +358,18 @@ export default function PortalCliente() {
           </div>
           {trabajoActivo ? (
             <>
-              <div style={{fontSize:13,opacity:.75,marginBottom:2}}>Hola, {tituloCliente(datos.trabajos[0]?.cliente)}</div>
+              <div style={{fontSize:13,opacity:.92,marginBottom:2}}>Hola, {tituloCliente(datos.trabajos[0]?.cliente)}</div>
               <h2 style={{fontSize:22,fontWeight:700,letterSpacing:'-.01em',marginBottom:4}}>
                 {[trabajoActivo.marca,trabajoActivo.modelo].filter(Boolean).join(' ') || 'Su vehiculo'}
               </h2>
-              <div style={{fontSize:13,opacity:.75}}>
+              <div style={{fontSize:13,opacity:.86}}>
                 Placa <span className="mono" style={{fontWeight:700}}>{trabajoActivo.placa}</span>
                 {trabajoActivo.otCodigo && <> · Orden <span className="mono">{trabajoActivo.otCodigo}</span></>}
               </div>
             </>
           ) : (
             <>
-              <div style={{fontSize:13,opacity:.75,marginBottom:2}}>Hola, {tituloCliente(datos.trabajos[0]?.cliente)}</div>
+              <div style={{fontSize:13,opacity:.92,marginBottom:2}}>Hola, {tituloCliente(datos.trabajos[0]?.cliente)}</div>
               <h2 style={{fontSize:22,fontWeight:700,letterSpacing:'-.01em'}}>Historial de servicios</h2>
             </>
           )}
