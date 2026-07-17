@@ -599,6 +599,23 @@ textarea.input{min-height:88px;resize:vertical;padding-top:11px}
   .tbl--clientes.is-resizing,.tbl--clientes.is-resizing tbody tr{cursor:col-resize;user-select:none}
 }
 
+/* Liquidación: tabla de selección de trabajos con ancho fijo para que las
+   columnas de plata (Mano de obra y Comisión) SIEMPRE se vean sin deslizar.
+   El Cliente (col 5, sin ancho) toma el espacio que sobra y trunca si es largo.
+   Solo escritorio: en celular la tabla es tarjetas. Columnas:
+   1 casilla · 2 Fecha · 3 OT · 4 Placa · 5 Cliente · 6 Compartido · 7 M.O. · 8 Comisión */
+@media(min-width:601px){
+  .tbl-liq{table-layout:fixed}
+  .tbl-liq th:nth-child(1),.tbl-liq td:nth-child(1){width:40px}
+  .tbl-liq th:nth-child(2),.tbl-liq td:nth-child(2){width:92px}
+  .tbl-liq th:nth-child(3),.tbl-liq td:nth-child(3){width:82px}
+  .tbl-liq th:nth-child(4),.tbl-liq td:nth-child(4){width:78px}
+  .tbl-liq th:nth-child(6),.tbl-liq td:nth-child(6){width:126px}
+  .tbl-liq th:nth-child(7),.tbl-liq td:nth-child(7){width:100px}
+  .tbl-liq th:nth-child(8),.tbl-liq td:nth-child(8){width:100px}
+  .tbl-liq td:nth-child(5){white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+}
+
 /* === Lista agrupada iOS (inset grouped, estilo Ajustes) ===
    Filas con ícono de color, separador hairline que arranca tras el ícono,
    texto secundario a la derecha y chevron. Uso: .glist > .grow */

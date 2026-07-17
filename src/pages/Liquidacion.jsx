@@ -1251,7 +1251,7 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
                       return (
                         <tr key={t.id} style={{ background: selected ? 'var(--accent-soft)' : undefined, cursor: 'pointer' }} onClick={() => toggleSeleccion(t.id)}>
                           <td className="td-check" data-label="Liquidar" style={{ textAlign: 'center' }}><input type="checkbox" checked={selected} onChange={() => {}} aria-label="Seleccionar trabajo" style={{ accentColor: 'var(--primary)', cursor: 'pointer' }}/></td>
-                          <td className="c-muted" data-label="Fecha">{fmtDate(t.fecha)}</td>
+                          <td className="c-muted" data-label="Fecha">{fmtDate(t.fecha).replace(/ de /g, ' ')}</td>
                           <td className="c-mono" data-label="OT" style={{ color: 'var(--blue-600)', fontWeight: 700 }}>{t.otCodigo || t.id}</td>
                           <td className="c-mono" data-label="Placa" style={{ fontWeight: 700 }}>{t.placa}</td>
                           <td className="c-name">{t.cliente || '—'}</td>
