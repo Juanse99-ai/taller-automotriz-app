@@ -46,6 +46,10 @@ export default function Clientes({ clientes, vehiculos, trabajos = [], notify })
   const conCuenttiId = useMemo(() => clientesTable.filter(c => c.cuenttiId).length, [clientesTable])
   const conVehiculos = useMemo(() => clientesTable.filter(c => c.vehiculos && c.vehiculos.length > 0).length, [clientesTable])
   const sinTelefono = useMemo(() => clientesTable.filter(c => !c.telefono || !c.telefono.toString().trim()).length, [clientesTable])
+  // A verificar en Cuentti: los que aún no tienen id de Cuentti guardado O no
+  // tienen teléfono. El sync los consulta uno por uno y les guarda id + teléfono
+  // + email si existen → la columna "En Cuentti" pasa a decir la verdad.
+  const sinVerificar = useMemo(() => clientesTable.filter(c => !c.cuenttiId || !c.telefono || !c.telefono.toString().trim()).length, [clientesTable])
 
   // Ordenamiento de columnas (clickeable). null = orden natural por scoring de busqueda.
   const [sortBy, setSortBy] = useState(null)
@@ -230,15 +234,18 @@ export default function Clientes({ clientes, vehiculos, trabajos = [], notify })
   // Recorre clientes sin telefono, los consulta uno por uno (con concurrencia 3)
   // y actualiza el registro local + Supabase via guardarCliente.
   const sincronizarTelefonosCuentti = async () => {
-    const objetivo = clientesTable.filter(c => !c.telefono || !c.telefono.toString().trim())
+    // Verifica en Cuentti a los que no tienen id guardado O no tienen teléfono:
+    // les guarda id_cliente + teléfono + email si existen. Así "En Cuentti" deja
+    // de decir "Sin verificar" para los que sí están.
+    const objetivo = clientesTable.filter(c => !c.cuenttiId || !c.telefono || !c.telefono.toString().trim())
     if (!objetivo.length) {
-      notify('Todos los clientes ya tienen telefono', 'info')
+      notify('Todos los clientes ya están verificados en Cuentti', 'info')
       return
     }
     setConfirmCfg({
-      title: 'Sincronizar teléfonos',
-      lead: `${objetivo.length} clientes en Cuentti · ~${Math.ceil(objetivo.length / 3 * 0.4)}s.`,
-      confirmLabel: 'Sincronizar',
+      title: 'Verificar en Cuentti',
+      lead: `Se consultarán ${objetivo.length} clientes uno por uno en Cuentti (~${Math.ceil(objetivo.length / 3 * 0.4)}s). Se guarda su id, teléfono y correo si existen.`,
+      confirmLabel: 'Verificar',
       tone: 'primary',
       onConfirm: async () => {
         setSyncTel({ activo: true, total: objetivo.length, procesados: 0, actualizados: 0, errores: 0 })
@@ -251,15 +258,17 @@ export default function Clientes({ clientes, vehiculos, trabajos = [], notify })
         const procesarUno = async (cliente) => {
           try {
             const data = await buscarClientePorCedula(cliente.cedula)
-            const tel = data?.telefono || ''
-            if (tel) {
+            // Encontrado en Cuentti → guardar su id (confirma "En Cuentti") y de paso
+            // teléfono/correo. Antes solo guardaba si había teléfono, así que un
+            // cliente en Cuentti sin teléfono nunca quedaba verificado.
+            if (data && (data.id || data.telefono)) {
               guardarCliente({
                 cedula: cliente.cedula,
                 nombre: cliente.nombre,
-                telefono: tel,
-                email: cliente.email || data?.email || '',
-                direccion: cliente.direccion || data?.direccion || '',
-                cuenttiId: cliente.cuenttiId || data?.id || null,
+                telefono: data.telefono || cliente.telefono || '',
+                email: cliente.email || data.email || '',
+                direccion: cliente.direccion || data.direccion || '',
+                cuenttiId: data.id || cliente.cuenttiId || null,
               })
               actualizados++
             }
@@ -680,17 +689,17 @@ export default function Clientes({ clientes, vehiculos, trabajos = [], notify })
       <div className="pagehd">
         <div><h2>Clientes</h2></div>
         <div className="actions" style={{display:'flex',gap:8,alignItems:'center'}}>
-          {sinTelefono > 0 && (
+          {sinVerificar > 0 && (
             <Button
               variant="outline"
               size="sm"
               onClick={sincronizarTelefonosCuentti}
               disabled={syncTel.activo}
-              title="Consulta uno por uno los clientes sin telefono en Cuentti"
+              title="Consulta uno por uno en Cuentti: guarda id, teléfono y correo"
             >
               {syncTel.activo
-                ? `📡 Sincronizando ${syncTel.procesados}/${syncTel.total}…`
-                : `📡 Sincronizar ${sinTelefono} telefonos de Cuentti`}
+                ? `Verificando ${syncTel.procesados}/${syncTel.total}…`
+                : `Verificar ${sinVerificar} en Cuentti`}
             </Button>
           )}
           <Button variant="primary" onClick={() => setCreando(true)}>+ Nuevo cliente</Button>
@@ -725,13 +734,13 @@ export default function Clientes({ clientes, vehiculos, trabajos = [], notify })
           <div className="kpi-bh__row"><span className="kpi-bh__v">{totalClientes}</span></div>
           <div className="kpi-bh__sub">en la base</div>
         </div>
+        {/* NO es "% de clientes en Cuentti" (eso engañaba: casi todos están en
+            Cuentti, vinieron de ahí). Es cuántos tienen su id de Cuentti guardado
+            en la app; del resto no sabemos hasta verificar. */}
         <div className="kpi-bh__s">
-          <div className="kpi-bh__l">Sincronizados Cuentti</div>
-          <div className="kpi-bh__row">
-            <span className="kpi-bh__v">{conCuenttiId}</span>
-            <span className="kpi-bh__pill">{totalClientes > 0 ? Math.round(conCuenttiId / totalClientes * 100) : 0}%</span>
-          </div>
-          <div className="kpi-bh__sub">del total</div>
+          <div className="kpi-bh__l">Verificados en Cuentti</div>
+          <div className="kpi-bh__row"><span className="kpi-bh__v">{conCuenttiId}</span></div>
+          <div className="kpi-bh__sub">con id guardado · el resto sin verificar</div>
         </div>
         <div className="kpi-bh__s">
           <div className="kpi-bh__l">Con vehículos</div>
@@ -797,16 +806,16 @@ export default function Clientes({ clientes, vehiculos, trabajos = [], notify })
               </p>
             </div>
           ) : (
-            <table className="tbl tbl-cards">
+            <table className="tbl tbl-cards tbl--sticky">
               <thead>
                 <tr>
                   <th onClick={() => toggleSort('cedula')} style={{ cursor: 'pointer', userSelect: 'none' }}>CC/NIT{sortIcon('cedula')}</th>
                   <th onClick={() => toggleSort('nombre')} style={{ cursor: 'pointer', userSelect: 'none' }}>Nombre{sortIcon('nombre')}</th>
                   <th onClick={() => toggleSort('telefono')} style={{ cursor: 'pointer', userSelect: 'none' }}>Teléfono{sortIcon('telefono')}</th>
                   <th onClick={() => toggleSort('email')} style={{ cursor: 'pointer', userSelect: 'none' }}>Email{sortIcon('email')}</th>
-                  <th onClick={() => toggleSort('veh')} style={{ cursor: 'pointer', userSelect: 'none', textAlign: 'center' }}>Veh.{sortIcon('veh')}</th>
-                  <th onClick={() => toggleSort('visita')} style={{ cursor: 'pointer', userSelect: 'none' }}>Última Visita{sortIcon('visita')}</th>
-                  <th onClick={() => toggleSort('cuentti')} style={{ cursor: 'pointer', userSelect: 'none' }}>Cuentti{sortIcon('cuentti')}</th>
+                  <th onClick={() => toggleSort('veh')} style={{ cursor: 'pointer', userSelect: 'none', textAlign: 'center' }}>Vehículos{sortIcon('veh')}</th>
+                  <th onClick={() => toggleSort('visita')} style={{ cursor: 'pointer', userSelect: 'none' }}>Última visita{sortIcon('visita')}</th>
+                  <th onClick={() => toggleSort('cuentti')} style={{ cursor: 'pointer', userSelect: 'none' }}>En Cuentti{sortIcon('cuentti')}</th>
                   <th></th>
                 </tr>
               </thead>
@@ -818,12 +827,19 @@ export default function Clientes({ clientes, vehiculos, trabajos = [], notify })
                     <td className="c-mono" data-label="Teléfono">{fmtTelefono(c.telefono) || '--'}</td>
                     <td className="c-muted" data-label="Email">{c.email || '--'}</td>
                     <td data-label="Vehículos" style={{textAlign:'center'}}>
-                      <Badge tone={(c.vehiculos || []).length > 0 ? 'i' : 'w'}>
+                      <Badge tone={(c.vehiculos || []).length > 0 ? 'i' : 'n'}>
                         {(c.vehiculos || []).length}
                       </Badge>
                     </td>
                     <td className="c-muted" data-label="Última visita">{uvDe(c) ? fmtDate(uvDe(c)) : '—'}</td>
-                    <td data-label="Cuentti">{c.cuenttiId ? <Badge tone="s">OK</Badge> : <Badge tone="w">Pendiente</Badge>}</td>
+                    {/* "En Cuentti" HONESTO: verde = confirmado (tenemos su id de Cuentti);
+                        gris "Sin verificar" = NO sabemos (no lo hemos consultado). Antes
+                        decía "Pendiente" (implicaba que NO estaba) aunque sí estuviera. */}
+                    <td data-label="En Cuentti">
+                      {c.cuenttiId
+                        ? <span className="st st--success"><i /> En Cuentti</span>
+                        : <span className="st st--neutral"><i /> Sin verificar</span>}
+                    </td>
                     <td className="td-chevron" style={{opacity:.5}}>›</td>
                   </tr>
                 ))}
