@@ -22,10 +22,15 @@ function getOrigin(reqOrigin = '') {
 const escHtml = (s) => String(s || '')
   .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
   .replace(/"/g, '&quot;').replace(/'/g, '&#39;')
-// Capitaliza solo la primera letra tras inicio/espacio/guion. NO usar \b\p{L}:
-// el \b de JS es ASCII, trata la ñ/tildes como frontera y parte "NIÑO"→"NiÑO".
-const tituloNombre = (n) => String(n || '').toLowerCase()
-  .replace(/(^|[\s-])(\p{L})/gu, (_, sep, c) => sep + c.toUpperCase()).trim()
+// Capitaliza el nombre. Siglas jurídicas (S.A.S., LTDA…) en mayúscula; el resto
+// con inicial mayúscula (respeta ñ/tildes: no se usa \b\p{L}, que en JS es ASCII
+// y partiría "NIÑO"→"NiÑO"). Igual que tituloCliente en PortalCliente.jsx, para
+// que el título del link coincida con el saludo dentro del portal.
+const tituloNombre = (n) => String(n || '').trim().split(/\s+/).map(w =>
+  (/\./.test(w) || /^(sas|sa|ltda|cia|eu)$/i.test(w))
+    ? w.toUpperCase()
+    : w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()
+).join(' ')
 
 async function servirPortal(req, res) {
   const host = req.headers['x-forwarded-host'] || req.headers.host
