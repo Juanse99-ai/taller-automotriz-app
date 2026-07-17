@@ -671,6 +671,11 @@ tbody tr:active{background:var(--fill-2)}
 .segctl button{padding:5px 14px;font-size:12.5px;font-weight:600;border-radius:7px;border:none;background:none;color:var(--text-2);cursor:pointer;white-space:nowrap;transition:background .18s cubic-bezier(.3,.9,.4,1),color .18s}
 .segctl button:hover{color:var(--text)}
 .segctl button.on{background:var(--seg-thumb);color:var(--text);box-shadow:0 1px 4px rgba(0,0,0,.12),0 0 1px rgba(0,0,0,.08)}
+/* Variante full-width para muchos ítems en columna angosta (ej. "Cambiar estado"
+   del detalle de una OT: 5 estados que antes hacían un wrap descuadrado). Los
+   botones reparten el ancho parejo y las filas quedan balanceadas. */
+.segctl--full{display:flex;width:100%}
+.segctl--full button{flex:1 1 auto;justify-content:center;padding:7px 10px;text-align:center;white-space:nowrap}
 /* Tabla centrada (inventario): todo al centro menos las columnas .col-left */
 .tbl.tbl--center thead th,.tbl.tbl--center tbody td{text-align:center}
 .tbl.tbl--center thead th>span{justify-content:center}

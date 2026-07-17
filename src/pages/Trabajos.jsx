@@ -80,6 +80,9 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
     if (!id) return
     const t = trabajos.find(x => x.id === id)
     if (t && t.estado !== estado) {
+      // Soltar en "Completados" debe ofrecer facturar, igual que "Marcar listo":
+      // antes el kanban solo cambiaba el estado y no aparecía la opción de factura.
+      if (estado === ESTADOS.COMPLETADO) { handleCompletar(id); return }
       actualizarTrabajo(id, { estado })
       notify?.(`${t.otCodigo || 'OT'} → ${estado}`, 'info')
     }
@@ -660,7 +663,7 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
                   {selTrabajo.estado !== ESTADOS.COMPLETADO && selTrabajo.estado !== ESTADOS.CANCELADO && (
                     <div>
                       <div style={{ fontSize: 10, color: 'var(--text-4)', textTransform: 'uppercase', letterSpacing: '.4px', marginBottom: 6 }}>Cambiar estado</div>
-                      <div className="segctl">
+                      <div className="segctl segctl--full">
                         {[
                           [ESTADOS.PENDIENTE, 'Pendiente'],
                           [ESTADOS.EN_DIAGNOSTICO, 'Diagnóstico'],

@@ -89,15 +89,36 @@ export function useTrabajos() {
     return { ...trabajo, otCodigo: nextOtCodigo() }
   }, [nextOtCodigo])
 
+  // Ediciones locales recién hechas y aún sin confirmar contra el servidor.
+  // Protegen contra la CARRERA optimista↔poll: al marcar una OT (ej. Completado)
+  // el cambio se refleja local al instante y el upsert sale en camino (~700ms). Si
+  // un poll alcanza a leer el servidor ANTES de que ese upsert commitee, trae el
+  // estado viejo y el merge (que trata "el servidor manda") revertía el cambio a
+  // Pendiente. Durante DIRTY_TTL lo local manda; para entonces el upsert ya
+  // commiteó y los polls siguientes traen el valor correcto.
+  const dirtyRef = useRef(new Map()) // id -> timestamp de la edición local
+  const DIRTY_TTL = 20000
+  const marcarDirty = useCallback((id) => { if (id) dirtyRef.current.set(id, Date.now()) }, [])
+
   // Merge inteligente: Supabase es fuente de verdad, pero preservar datos solo-locales
   const mergeConLocal = useCallback((sbNormalized) => {
     const local = trabajosRef.current
     const locById = new Map(local.map(t => [t.id, t]))
     const locByOt = new Map(local.filter(t => t.otCodigo).map(t => [t.otCodigo, t]))
+    const now = Date.now()
+    // Podar dirty vencidos para que el Map no crezca indefinidamente.
+    for (const [id, t] of dirtyRef.current) { if (now - t >= DIRTY_TTL) dirtyRef.current.delete(id) }
 
     // Preservar evidencias locales si el servidor aún no las tiene (fotos no subidas):
     // sin esto, el sync reemplazaría el trabajo local (con fotos) por el de Supabase (sin ellas).
     const sbConEvid = sbNormalized.map(t => {
+      // Edición local reciente sin confirmar: NO dejar que el servidor la revierta.
+      // Se devuelve la fila LOCAL completa (protege estado, items, etc.), no solo
+      // el estado. Cede al servidor recién pasado el TTL (arriba se poda).
+      if (dirtyRef.current.has(t.id)) {
+        const loc = locById.get(t.id)
+        if (loc) return loc
+      }
       if (t.evidenciasIngreso && t.evidenciasIngreso.length) return t
       const loc = locById.get(t.id) || (t.otCodigo && locByOt.get(t.otCodigo))
       const locFotos = loc ? [...(loc.evidenciasIngreso || []), ...(loc.evidenciasEntrega || [])] : []
@@ -261,12 +282,13 @@ export function useTrabajos() {
       evidenciasEntrega: data.evidenciasEntrega || [],
     }
     setTrabajos(prev => [trabajo, ...prev])
+    marcarDirty(trabajo.id) // proteger de que un poll con datos viejos lo revierta
     const result = await upsertTrabajo(trabajo)
     if (!result) {
       console.warn('Trabajo guardado solo en local — Supabase fallo:', trabajo.otCodigo)
     }
     return trabajo
-  }, [nextOtCodigo])
+  }, [nextOtCodigo, marcarDirty])
 
   const actualizarTrabajo = useCallback(async (id, changes) => {
     // Calcular el trabajo actualizado desde la ref (estado ACTUAL), NO dentro del
@@ -279,11 +301,12 @@ export function useTrabajos() {
     const trabajoActualizado = { ...actual, ...changes }
     if (!trabajoActualizado.otCodigo) trabajoActualizado.otCodigo = nextOtCodigo()
     setTrabajos(prev => prev.map(t => t.id === id ? trabajoActualizado : t))
+    marcarDirty(id) // proteger de que un poll con datos viejos revierta este cambio
     const result = await upsertTrabajo(trabajoActualizado)
     if (!result) {
       console.warn('Cambio guardado solo en local — Supabase fallo:', id)
     }
-  }, [nextOtCodigo])
+  }, [nextOtCodigo, marcarDirty])
 
   const eliminarTrabajo = useCallback(async (id) => {
     setTrabajos(prev => prev.filter(t => t.id !== id))
