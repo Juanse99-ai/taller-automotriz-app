@@ -447,20 +447,15 @@ export default function Dashboard({ trabajos = [], onNavigate, user }) {
               </div>
             </div>
           ) : (
-            <div className="card__b" style={{ display: 'flex', flexDirection: 'column', gap: 10, padding: 14 }}>
+            <div className="card__b card__b--flush">
               {agenda.map((t, i) => (
-                <div key={t.id} style={{
-                  display: 'flex', gap: 12, padding: '11px 13px', alignItems: 'center',
-                  background: 'var(--bg-subtle)', borderRadius: 10, border: '1px solid var(--border)'
-                }}>
-                  <span className={`av av-${(i % 5) + 1}`} style={{ fontSize: 11, width: 38, height: 38, flexShrink: 0 }}>
+                <div key={t.id} className="grow" style={{ cursor: 'default' }}>
+                  <span className={`av av-${(i % 5) + 1}`} style={{ fontSize: 11, width: 36, height: 36, flexShrink: 0 }}>
                     {initials(t.cliente)}
                   </span>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontWeight: 600, fontSize: 14 }}>{t.cliente || '—'}</div>
-                    <div style={{ fontSize: 12.5, color: 'var(--text-3)', marginTop: 2 }}>
-                      <span className="mono">{t.placa || '—'}</span> · {t.marca || ''} {t.modelo || ''}
-                    </div>
+                  <div className="tx">
+                    <div className="t">{t.cliente || '—'}</div>
+                    <div className="s"><span className="mono">{t.placa || '—'}</span> · {t.marca || ''} {t.modelo || ''}</div>
                   </div>
                 </div>
               ))}
@@ -519,8 +514,7 @@ export default function Dashboard({ trabajos = [], onNavigate, user }) {
             <div className="card__b" style={{ display: 'flex', flexDirection: 'column', gap: 10, padding: 14 }}>
               {listos.map((t, i) => (
                 <div key={t.id} style={{
-                  padding: 12, border: '1px solid var(--border)',
-                  borderRadius: 10, background: 'var(--bg-subtle)'
+                  padding: 12, borderRadius: 10, background: 'var(--bg-subtle)'
                 }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
                     <span className="mono" style={{ fontWeight: 700 }}>{t.placa || '—'}</span>

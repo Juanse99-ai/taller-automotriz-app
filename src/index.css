@@ -149,6 +149,14 @@ input,select,textarea{font-family:inherit;font-size:14px;color:inherit}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
 /* Nada aparece desde scale(0): entra desde .97 + leve translateY (animations.dev) */
 @keyframes modalIn{from{transform:translateY(10px) scale(.97);opacity:0}to{transform:translateY(0) scale(1);opacity:1}}
+/* Sheet iOS en celular: el modal sube desde abajo con grabber y aterrizaje suave */
+@media(max-width:600px){
+  .modal-overlay{align-items:flex-end;padding:0}
+  .modal-overlay .modal{width:100%;max-width:100%;margin:0;border-radius:16px 16px 0 0;max-height:92vh;animation:sheetIn .42s cubic-bezier(.32,.72,.35,1)}
+  .modal::before{content:'';display:block;width:38px;height:5px;border-radius:3px;background:var(--fill-2);margin:8px auto 0;flex-shrink:0}
+  .modal__f,.modal-footer{padding-bottom:calc(14px + env(safe-area-inset-bottom,0px))}
+}
+@keyframes sheetIn{from{transform:translateY(100%)}to{transform:translateY(0)}}
 /* navSectionIn removido: el stagger del menu ahora lo hace motion (Sidebar.jsx) */
 @keyframes slideUp{from{transform:translateY(12px);opacity:0}to{transform:translateY(0);opacity:1}}
 
