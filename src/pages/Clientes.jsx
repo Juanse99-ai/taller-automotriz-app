@@ -15,6 +15,21 @@ const _normNombre = (s) => _sinAcentos(s)
 // Solo digitos (para detectar si se busca por cedula)
 const soloDigitos = (s) => (s || '').toString().replace(/\D/g, '')
 
+// Columnas de la tabla de clientes. Anchos arrastrables por el usuario (se
+// guardan en localStorage). La de Nombre no lleva ancho fijo: absorbe el
+// espacio libre para que la tabla siempre llene el ancho de la ventana.
+const CLIENTES_COLS = [
+  { key: 'cedula',   label: 'CC/NIT',        sort: 'cedula',   def: 130, min: 70 },
+  { key: 'nombre',   label: 'Nombre',        sort: 'nombre',   flex: true },
+  { key: 'telefono', label: 'Teléfono',      sort: 'telefono', def: 130, min: 80 },
+  { key: 'email',    label: 'Email',         sort: 'email',    def: 210, min: 80 },
+  { key: 'veh',      label: 'Vehículos',     sort: 'veh',      def: 92,  min: 60, center: true },
+  { key: 'visita',   label: 'Última visita', sort: 'visita',   def: 118, min: 80 },
+  { key: 'cuentti',  label: 'En Cuentti',    sort: 'cuentti',  def: 126, min: 90 },
+  { key: 'chevron',  label: '',              sort: null,       def: 30,  noResize: true },
+]
+const CLIENTES_COL_LS = 'clientes_col_widths_v1'
+
 export default function Clientes({ clientes, vehiculos, trabajos = [], notify }) {
   const {
     clientesTable, guardarCliente, obtenerCliente, listarClientes,
@@ -40,6 +55,38 @@ export default function Clientes({ clientes, vehiculos, trabajos = [], notify })
   // Estado del sync masivo de telefonos desde Cuentti
   const [syncTel, setSyncTel] = useState({ activo: false, total: 0, procesados: 0, actualizados: 0, errores: 0 })
   const [confirmCfg, setConfirmCfg] = useState(null)
+
+  // Anchos de columna arrastrables (persisten en localStorage por navegador).
+  const [colWidths, setColWidths] = useState(() => {
+    const base = Object.fromEntries(CLIENTES_COLS.filter(c => c.def != null).map(c => [c.key, c.def]))
+    try { const s = JSON.parse(localStorage.getItem(CLIENTES_COL_LS)); if (s && typeof s === 'object') return { ...base, ...s } } catch { /* usa defaults */ }
+    return base
+  })
+  const [colResizing, setColResizing] = useState(null)
+  const iniciarResize = (key, e) => {
+    e.preventDefault(); e.stopPropagation()
+    const col = CLIENTES_COLS.find(c => c.key === key)
+    const startX = e.clientX
+    const startW = colWidths[key] ?? col.def
+    setColResizing(key)
+    const onMove = (ev) => {
+      const w = Math.max(col.min || 56, startW + (ev.clientX - startX))
+      setColWidths(prev => ({ ...prev, [key]: w }))
+    }
+    const onUp = () => {
+      document.removeEventListener('mousemove', onMove)
+      document.removeEventListener('mouseup', onUp)
+      setColResizing(null)
+      setColWidths(prev => { try { localStorage.setItem(CLIENTES_COL_LS, JSON.stringify(prev)) } catch { /* quota */ } return prev })
+    }
+    document.addEventListener('mousemove', onMove)
+    document.addEventListener('mouseup', onUp)
+  }
+  const resetColWidths = () => {
+    const base = Object.fromEntries(CLIENTES_COLS.filter(c => c.def != null).map(c => [c.key, c.def]))
+    setColWidths(base)
+    try { localStorage.removeItem(CLIENTES_COL_LS) } catch { /* ignore */ }
+  }
 
   // Metricas
   const totalClientes = clientesTable.length
@@ -760,6 +807,15 @@ export default function Clientes({ clientes, vehiculos, trabajos = [], notify })
           <span className="count" style={{ background: clientesFiltrados.length === 0 && busqueda.trim() ? 'var(--red-100)' : undefined, color: clientesFiltrados.length === 0 && busqueda.trim() ? 'var(--red-700)' : undefined }}>
             {busqueda.trim() ? `${clientesFiltrados.length} de ${totalClientes}` : `${clientesFiltrados.length} clientes`}
           </span>
+          <button
+            type="button"
+            onClick={resetColWidths}
+            title="Restaurar el ancho original de las columnas"
+            style={{ background: 'none', border: 'none', color: 'var(--text-3)', cursor: 'pointer', fontSize: 12, display: 'flex', alignItems: 'center', gap: 4, padding: '4px 6px', borderRadius: 6 }}
+          >
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>
+            Anchos
+          </button>
         </div>
 
         {/* Banner: encontrado en Cuentti pero NO en local */}
@@ -806,17 +862,34 @@ export default function Clientes({ clientes, vehiculos, trabajos = [], notify })
               </p>
             </div>
           ) : (
-            <table className="tbl tbl-cards tbl--sticky tbl--clientes">
+            <table
+              className={`tbl tbl-cards tbl--sticky tbl--clientes${colResizing ? ' is-resizing' : ''}`}
+              style={{ minWidth: CLIENTES_COLS.reduce((s, c) => c.flex ? s : s + (colWidths[c.key] ?? c.def), 0) + 170 }}
+            >
+              <colgroup>
+                {CLIENTES_COLS.map(c => (
+                  <col key={c.key} style={c.flex ? undefined : { width: colWidths[c.key] ?? c.def }} />
+                ))}
+              </colgroup>
               <thead>
                 <tr>
-                  <th onClick={() => toggleSort('cedula')} style={{ cursor: 'pointer', userSelect: 'none' }}>CC/NIT{sortIcon('cedula')}</th>
-                  <th onClick={() => toggleSort('nombre')} style={{ cursor: 'pointer', userSelect: 'none' }}>Nombre{sortIcon('nombre')}</th>
-                  <th onClick={() => toggleSort('telefono')} style={{ cursor: 'pointer', userSelect: 'none' }}>Teléfono{sortIcon('telefono')}</th>
-                  <th onClick={() => toggleSort('email')} style={{ cursor: 'pointer', userSelect: 'none' }}>Email{sortIcon('email')}</th>
-                  <th onClick={() => toggleSort('veh')} style={{ cursor: 'pointer', userSelect: 'none', textAlign: 'center' }}>Vehículos{sortIcon('veh')}</th>
-                  <th onClick={() => toggleSort('visita')} style={{ cursor: 'pointer', userSelect: 'none' }}>Última visita{sortIcon('visita')}</th>
-                  <th onClick={() => toggleSort('cuentti')} style={{ cursor: 'pointer', userSelect: 'none' }}>En Cuentti{sortIcon('cuentti')}</th>
-                  <th></th>
+                  {CLIENTES_COLS.map(c => (
+                    <th
+                      key={c.key}
+                      onClick={c.sort ? () => toggleSort(c.sort) : undefined}
+                      style={{ cursor: c.sort ? 'pointer' : 'default', userSelect: 'none', textAlign: c.center ? 'center' : undefined }}
+                    >
+                      {c.label}{c.sort ? sortIcon(c.sort) : null}
+                      {!c.flex && !c.noResize && (
+                        <span
+                          className={`col-resizer${colResizing === c.key ? ' is-drag' : ''}`}
+                          onMouseDown={(e) => iniciarResize(c.key, e)}
+                          onClick={(e) => e.stopPropagation()}
+                          title="Arrastra para cambiar el ancho de la columna"
+                        />
+                      )}
+                    </th>
+                  ))}
                 </tr>
               </thead>
               <tbody>

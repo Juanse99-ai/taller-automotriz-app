@@ -575,17 +575,19 @@ textarea.input{min-height:88px;resize:vertical;padding-top:11px}
    Solo escritorio: en celular la tabla es tarjetas. */
 @media(min-width:601px){
   .tbl--clientes{table-layout:fixed}
-  /* Columnas angostas (suman ~700px); el Nombre (col 2, sin ancho) se queda con
-     el resto (~250px). TODAS las celdas van en UNA línea; nombre y email
-     truncan con puntos suspensivos, el resto es texto corto. */
-  .tbl--clientes th:nth-child(1),.tbl--clientes td:nth-child(1){width:124px}   /* CC/NIT */
-  .tbl--clientes th:nth-child(3),.tbl--clientes td:nth-child(3){width:122px}   /* Teléfono */
-  .tbl--clientes th:nth-child(4),.tbl--clientes td:nth-child(4){width:106px}   /* Email (trunca) */
-  .tbl--clientes th:nth-child(5),.tbl--clientes td:nth-child(5){width:62px}    /* Vehículos */
-  .tbl--clientes th:nth-child(6),.tbl--clientes td:nth-child(6){width:108px}   /* Última visita */
-  .tbl--clientes th:nth-child(7),.tbl--clientes td:nth-child(7){width:108px}   /* En Cuentti */
-  .tbl--clientes th:nth-child(8),.tbl--clientes td:nth-child(8){width:28px}    /* chevron */
+  /* Los anchos los define el <colgroup> desde React (arrastrables y guardados en
+     localStorage). La columna Nombre no lleva ancho: absorbe el espacio libre y
+     así la tabla siempre llena el ancho. Todas las celdas en UNA línea; el texto
+     largo trunca con puntos suspensivos. */
   .tbl--clientes tbody td{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .tbl--clientes thead th{position:relative}
+  /* Agarradera para cambiar el ancho: zona invisible en el borde derecho de cada
+     columna; al pasar el cursor o arrastrar aparece una guía azul. */
+  .tbl--clientes .col-resizer{position:absolute;top:0;right:-5px;width:11px;height:100%;
+    cursor:col-resize;z-index:3;display:flex;justify-content:center}
+  .tbl--clientes .col-resizer::before{content:'';width:2px;height:100%;background:transparent;transition:background .12s}
+  .tbl--clientes .col-resizer:hover::before,.tbl--clientes .col-resizer.is-drag::before{background:var(--primary)}
+  .tbl--clientes.is-resizing,.tbl--clientes.is-resizing tbody tr{cursor:col-resize;user-select:none}
 }
 
 /* === Lista agrupada iOS (inset grouped, estilo Ajustes) ===
