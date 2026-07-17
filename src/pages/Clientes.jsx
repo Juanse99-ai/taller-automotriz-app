@@ -15,20 +15,23 @@ const _normNombre = (s) => _sinAcentos(s)
 // Solo digitos (para detectar si se busca por cedula)
 const soloDigitos = (s) => (s || '').toString().replace(/\D/g, '')
 
-// Columnas de la tabla de clientes. Anchos arrastrables por el usuario (se
-// guardan en localStorage). La de Nombre no lleva ancho fijo: absorbe el
-// espacio libre para que la tabla siempre llene el ancho de la ventana.
+// Columnas de la tabla de clientes. TODAS son arrastrables (menos el chevron).
+// Anchos guardados en localStorage. Truco para que no sobre ni falte espacio:
+// SIEMPRE hay exactamente una columna "flexible" (sin ancho fijo) que absorbe el
+// sobrante. Por defecto es el Nombre (así llena el ancho y muestra los nombres
+// sin scroll); apenas el usuario arrastra el Nombre, este pasa a ancho fijo y el
+// chevron toma el relevo como flexible. Ver colFlex() abajo.
 const CLIENTES_COLS = [
-  { key: 'cedula',   label: 'CC/NIT',        sort: 'cedula',   def: 130, min: 70 },
-  { key: 'nombre',   label: 'Nombre',        sort: 'nombre',   flex: true },
-  { key: 'telefono', label: 'Teléfono',      sort: 'telefono', def: 130, min: 80 },
-  { key: 'email',    label: 'Email',         sort: 'email',    def: 210, min: 80 },
-  { key: 'veh',      label: 'Vehículos',     sort: 'veh',      def: 92,  min: 60, center: true },
-  { key: 'visita',   label: 'Última visita', sort: 'visita',   def: 118, min: 80 },
-  { key: 'cuentti',  label: 'En Cuentti',    sort: 'cuentti',  def: 126, min: 90 },
-  { key: 'chevron',  label: '',              sort: null,       def: 30,  noResize: true },
+  { key: 'cedula',   label: 'CC/NIT',        sort: 'cedula',   def: 125, min: 70 },
+  { key: 'nombre',   label: 'Nombre',        sort: 'nombre',   min: 120 }, // sin def → flexible por defecto, pero arrastrable
+  { key: 'telefono', label: 'Teléfono',      sort: 'telefono', def: 125, min: 80 },
+  { key: 'email',    label: 'Email',         sort: 'email',    def: 195, min: 80 },
+  { key: 'veh',      label: 'Vehículos',     sort: 'veh',      def: 90,  min: 60, center: true },
+  { key: 'visita',   label: 'Última visita', sort: 'visita',   def: 116, min: 80 },
+  { key: 'cuentti',  label: 'En Cuentti',    sort: 'cuentti',  def: 118, min: 90 },
+  { key: 'chevron',  label: '',              sort: null,       noResize: true }, // sin def; flexible solo cuando el Nombre es fijo
 ]
-const CLIENTES_COL_LS = 'clientes_col_widths_v1'
+const CLIENTES_COL_LS = 'clientes_col_widths_v2'
 
 export default function Clientes({ clientes, vehiculos, trabajos = [], notify }) {
   const {
@@ -66,8 +69,11 @@ export default function Clientes({ clientes, vehiculos, trabajos = [], notify })
   const iniciarResize = (key, e) => {
     e.preventDefault(); e.stopPropagation()
     const col = CLIENTES_COLS.find(c => c.key === key)
+    const th = e.currentTarget.closest('th')
     const startX = e.clientX
-    const startW = colWidths[key] ?? col.def
+    // Si la columna aún no tiene ancho fijo (p.ej. Nombre flexible), se parte de
+    // su ancho ACTUAL renderizado, no de un default.
+    const startW = colWidths[key] ?? (th ? th.offsetWidth : (col.def ?? 120))
     setColResizing(key)
     const onMove = (ev) => {
       const w = Math.max(col.min || 56, startW + (ev.clientX - startX))
@@ -87,6 +93,18 @@ export default function Clientes({ clientes, vehiculos, trabajos = [], notify })
     setColWidths(base)
     try { localStorage.removeItem(CLIENTES_COL_LS) } catch { /* ignore */ }
   }
+  // Ancho de cada columna. SIEMPRE hay una flexible (devuelve null = sin ancho):
+  // el Nombre por defecto; si el usuario ya lo arrastró, el flexible es el chevron.
+  const nombreFijo = colWidths.nombre != null
+  const anchoCol = (c) => {
+    if (c.key === 'nombre') return nombreFijo ? colWidths.nombre : null
+    if (c.key === 'chevron') return nombreFijo ? null : 30
+    return colWidths[c.key] ?? c.def
+  }
+  // Ancho mínimo de la tabla: si al ensanchar columnas ya no cabe, hace scroll
+  // horizontal en vez de aplastar (el Nombre nunca baja de 120, el chevron de 30).
+  const tablaMinWidth = CLIENTES_COLS.reduce((s, c) =>
+    s + (c.key === 'chevron' ? 30 : (colWidths[c.key] ?? c.def ?? c.min ?? 120)), 0)
 
   // Metricas
   const totalClientes = clientesTable.length
@@ -864,12 +882,13 @@ export default function Clientes({ clientes, vehiculos, trabajos = [], notify })
           ) : (
             <table
               className={`tbl tbl-cards tbl--sticky tbl--clientes${colResizing ? ' is-resizing' : ''}`}
-              style={{ minWidth: CLIENTES_COLS.reduce((s, c) => c.flex ? s : s + (colWidths[c.key] ?? c.def), 0) + 170 }}
+              style={{ minWidth: tablaMinWidth }}
             >
               <colgroup>
-                {CLIENTES_COLS.map(c => (
-                  <col key={c.key} style={c.flex ? undefined : { width: colWidths[c.key] ?? c.def }} />
-                ))}
+                {CLIENTES_COLS.map(c => {
+                  const w = anchoCol(c)
+                  return <col key={c.key} style={w != null ? { width: w } : undefined} />
+                })}
               </colgroup>
               <thead>
                 <tr>
@@ -880,7 +899,7 @@ export default function Clientes({ clientes, vehiculos, trabajos = [], notify })
                       style={{ cursor: c.sort ? 'pointer' : 'default', userSelect: 'none', textAlign: c.center ? 'center' : undefined }}
                     >
                       {c.label}{c.sort ? sortIcon(c.sort) : null}
-                      {!c.flex && !c.noResize && (
+                      {!c.noResize && (
                         <span
                           className={`col-resizer${colResizing === c.key ? ' is-drag' : ''}`}
                           onMouseDown={(e) => iniciarResize(c.key, e)}
