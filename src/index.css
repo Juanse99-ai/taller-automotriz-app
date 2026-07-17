@@ -641,7 +641,9 @@ tbody tr:active{background:var(--fill-2)}
   .tbl.tbl-cards tbody{display:block}
   .tbl.tbl-cards tbody tr{display:block;background:var(--bg-raised);border:1px solid var(--border);border-radius:12px;padding:8px 14px;margin:0 0 10px}
   .tbl.tbl-cards tbody tr:hover{background:var(--bg-raised)}
-  .tbl.tbl-cards tbody td{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:6px 0;border:none;text-align:right}
+  /* Nombres sin espacios (ej. "CLIO II/MEGANE/SYMBOL/LOGAN") deben partir línea:
+     si no, estiran la tarjeta y el texto se sale por la derecha. */
+  .tbl.tbl-cards tbody td{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:6px 0;border:none;text-align:right;overflow-wrap:anywhere;min-width:0}
   .tbl.tbl-cards tbody td::before{content:attr(data-label);color:var(--text-3);font-weight:500;font-size:12px;text-align:left;white-space:nowrap}
   .tbl.tbl-cards tbody td.c-name{display:block;text-align:left;font-size:15px;font-weight:600;color:var(--text);padding:2px 0 8px;border-bottom:1px solid var(--border);margin-bottom:6px}
   .tbl.tbl-cards tbody td.c-name::before{display:none}
