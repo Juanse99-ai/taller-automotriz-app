@@ -88,7 +88,7 @@ export default async function handler(req, res) {
   const ALLOWED_TABLES = [
     'trabajos', 'cotizaciones', 'clientes', 'vehiculos', 'inspecciones',
     'movimientos_tecnicos', 'liquidacion_historial', 'liquidados', 'trabajos_compartidos',
-    'prestamos_movimientos',
+    'prestamos_movimientos', 'tecnicos',
   ]
   if (!ALLOWED_TABLES.includes(table)) { res.status(403).json({ error: 'Tabla no permitida' }); return }
 
