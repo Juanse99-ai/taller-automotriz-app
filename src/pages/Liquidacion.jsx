@@ -65,6 +65,17 @@ const cargoEfectivo = (m) => {
 const TIPO_LABELS = { diario: 'Administrador', cuenta: 'Cuenta' }
 const tipoLabel = (t) => TIPO_LABELS[t] || (t ? t.charAt(0).toUpperCase() + t.slice(1) : '—')
 
+// Nota del "diario" con el número de días SIEMPRE explícito: si son 2 días el
+// descuento es el doble, así que el comprobante debe decirlo (antes la nota por
+// defecto solo decía "Aporte del día" y se perdía cuántos días eran). No duplica
+// si el texto ya menciona los días.
+const notaDiario = (base, dias) => {
+  const b = (base || '').trim() || 'Aporte de administración (Nicanor)'
+  const d = Math.max(1, Math.floor(dias) || 1)
+  const yaLoDice = new RegExp(`\\b${d}\\s*d[ií]as?\\b`, 'i').test(b)
+  return yaLoDice ? b : `${b} · ${d} ${d === 1 ? 'día' : 'días'}`
+}
+
 // Iniciales del técnico (2 letras) para la referencia legible.
 const iniciales = (nombre) => (nombre || '?').split(' ').filter(Boolean).map(w => w[0]).slice(0, 2).join('').toUpperCase() || 'XX'
 
@@ -118,7 +129,7 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
   const [diarioRepTec, setDiarioRepTec] = useState({})
   // Nota que verá el técnico en su liquidación. Editable, con texto por defecto
   // que enmarca el diario como aporte (no como cobro).
-  const DIARIO_NOTA_DEFAULT = 'Aporte del día · administración (Nicanor)'
+  const DIARIO_NOTA_DEFAULT = 'Aporte de administración (Nicanor)'
   const [diarioNota, setDiarioNota] = useState(DIARIO_NOTA_DEFAULT)
   // Pago real: cuánto le entregas en efectivo (por defecto el neto). Si pagas de
   // menos, la diferencia va al Estado de cuenta según diffDestino.
@@ -506,7 +517,7 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
     if (monto <= 0) { notify('El valor diario debe ser mayor a 0', 'error'); return }
     hookAgregarMov({
       id: `MV-${uid()}`, tecnicoId: tid,
-      tipo: 'diario', monto, nota: (diarioNota || '').trim() || `${dias} día(s) × ${fmt(valorDiario)}`,
+      tipo: 'diario', monto, dias, nota: notaDiario(diarioNota, dias),
       fecha: hoyISO(),
     })
     setDiarioDias('')
@@ -524,8 +535,8 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
     const parte = Math.round(total / ids.length)
     ids.forEach(tid => hookAgregarMov({
       id: `MV-${uid()}`, tecnicoId: tid,
-      tipo: 'diario', monto: parte,
-      nota: (diarioNota || '').trim() || `${dias} día(s) × ${fmt(valorDiario)} ÷ ${ids.length}`,
+      tipo: 'diario', monto: parte, dias,
+      nota: `${notaDiario(diarioNota, dias)} ÷ ${ids.length}`,
       fecha: hoyISO(),
     }))
     setDiarioDias(''); setDiarioRepTec({})
@@ -846,7 +857,7 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
     y += 18
 
     drawSignatures(doc, {
-      y: Math.max(y, 252),
+      y: Math.min(Math.max(y, 252), PDF_LAYOUT.PAGE_H - 25),
       blocks: [
         { label: 'Firma del técnico', sub: 'Nombre, documento, fecha' },
         { label: 'Autorizado por', sub: 'Nombre, cargo, fecha' },
@@ -983,7 +994,7 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
     y += 18
 
     drawSignatures(doc, {
-      y: Math.max(y, 252),
+      y: Math.min(Math.max(y, 252), PDF_LAYOUT.PAGE_H - 25),
       blocks: [
         { label: 'Firma del técnico', sub: 'Nombre, documento, fecha' },
         { label: 'Autorizado por', sub: 'Nombre, cargo, fecha' },
@@ -1891,7 +1902,7 @@ function EstadoCuenta({ prestamos, tecnicos, notify }) {
       margin: { left: MARGIN, right: MARGIN },
     })
     y = doc.lastAutoTable.finalY + 6
-    drawSignatures(doc, { y: Math.max(y, 240), blocks: [{ label: 'Firma de la persona', sub: 'Nombre, documento, fecha' }, { label: 'Autorizado por', sub: 'Nombre, cargo, fecha' }] })
+    drawSignatures(doc, { y: Math.min(Math.max(y, 240), PDF_LAYOUT.PAGE_H - 25), blocks: [{ label: 'Firma de la persona', sub: 'Nombre, documento, fecha' }, { label: 'Autorizado por', sub: 'Nombre, cargo, fecha' }] })
     drawFooter(doc, { page: 1, total: 1, leftText: 'Estado de cuenta de préstamos · MDA' })
     doc.save(`estado_cuenta_${(c.persona || 'persona').replace(/\s+/g, '_')}_${hoyISO()}.pdf`)
     notify('PDF del estado de cuenta exportado', 'success')
