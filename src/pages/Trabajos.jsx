@@ -5,6 +5,7 @@ import { fmt, fmtDate, uid, hoyISO, normalizarDoc, normalizarNombre, fmtTelefono
 import { TECNICOS, ESTADOS, IVA_DEFAULT, DIAS_ESTANCADO, TALLER, COMISION } from '../utils/constants'
 import { loadLogo as loadPdfLogo, drawHeader, drawSectionHeader, drawDataBlock, drawTotalsBox, drawSignatures, drawFooter, tableStylesItems, PDF_LAYOUT, PDF_COLORS } from '../utils/pdfTheme'
 import FichaTecnico from '../components/FichaTecnico'
+import { exportarFichasTecnico } from '../utils/fichaPdf'
 import { MARCAS, getModelos } from '../utils/vehiculos'
 import { useClientes } from '../hooks/useClientes'
 import { useInventario, formatCacheAge } from '../hooks/useInventario'
@@ -534,6 +535,13 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
               {TECNICOS.map(t => <option key={t.id} value={t.id}>{t.nombre}{t.activo === false ? ' (inactivo)' : ''}</option>)}
             </select>
           </div>
+          {filtroTecnico !== 'todos' && filtered.length > 0 && (
+            <Button variant="outline" size="sm" title="Un PDF con la ficha de cada OT de este técnico (sin precios)"
+              onClick={() => {
+                const nom = (TECNICOS.find(x => String(x.id) === filtroTecnico)?.nombre || 'tecnico').split(' ')[0]
+                exportarFichasTecnico(filtered, tecNombre, `fichas_${nom}.pdf`)
+              }}>Imprimir fichas ({filtered.length})</Button>
+          )}
         </div>
       </div>
 

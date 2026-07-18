@@ -8,12 +8,11 @@
 // Fase 2: checklist interactivo (marca tareas, se guarda) + cronómetro
 //         del trabajo (Iniciar/Pausar, se guarda). Persisten en el trabajo
 //         (tareasHechas / cronoInicio / cronoAcumulado) vía actualizarTrabajo.
+//
+// El PDF vive en utils/fichaPdf.js (para no romper Fast Refresh).
 // =====================================================================
 import { useState, useEffect } from 'react'
-import { jsPDF } from 'jspdf'
-import autoTable from 'jspdf-autotable'
-import { loadLogo, drawHeader, drawSectionHeader, drawDataBlock, drawSignatures, drawFooter, tableStylesItems, PDF_LAYOUT, PDF_COLORS } from '../utils/pdfTheme'
-import { fmtDate } from '../utils/helpers'
+import { imprimirFichaOT } from '../utils/fichaPdf'
 import { Button } from './ui'
 
 // Segundos → "mm:ss" o "h:mm:ss".
@@ -59,92 +58,8 @@ export default function FichaTecnico({ trabajo: t, tecNombre, onClose, guardar }
     setAcumulado(seg); setCronoInicio(null)
     guardar?.({ cronoAcumulado: seg, cronoInicio: null })
   }
-
-  // ---- PDF imprimible (sin precios) ----
-  const imprimirFicha = async () => {
-    const doc = new jsPDF()
-    const { MARGIN, CONTENT_W } = PDF_LAYOUT
-    const { NAVY, SLATE_300, SLATE_400, SLATE_600 } = PDF_COLORS
-    const logoData = await loadLogo()
-
-    drawHeader(doc, {
-      logoData,
-      docType: 'ORDEN DE TRABAJO',
-      docNumber: t.otCodigo || '—',
-      badge: { label: t.estado || 'Pendiente', estado: t.estado || 'Pendiente' },
-      dateRows: [
-        { lbl: 'Fecha', val: fmtDate(t.fecha) },
-        { lbl: 'Técnico', val: tecNombre?.(t.tecnicoId) || '—' },
-      ],
-    })
-
-    let y = 47
-    y = drawSectionHeader(doc, 'Vehículo y cliente', y)
-    y = drawDataBlock(doc, [
-      { label: 'Placa', value: (t.placa || '').toUpperCase(), bold: true },
-      { label: 'Vehículo', value: [t.marca, t.modelo, t.ano].filter(Boolean).join(' ') || '—' },
-      { label: 'Kilometraje', value: t.kilometraje ? `${Number(t.kilometraje).toLocaleString('es-CO')} km` : '—' },
-      { label: 'Cliente', value: t.cliente || '—' },
-    ], y)
-    y += 4
-
-    if (t.observaciones) {
-      y = drawSectionHeader(doc, 'Motivo / lo que reporta el cliente', y)
-      const lines = doc.splitTextToSize(t.observaciones, CONTENT_W - 6)
-      const h = Math.max(11, lines.length * 3.8 + 6)
-      doc.setDrawColor(...SLATE_300); doc.setLineWidth(0.2); doc.rect(MARGIN, y, CONTENT_W, h)
-      doc.setFontSize(8); doc.setTextColor(...NAVY); doc.setFont(undefined, 'normal')
-      doc.text(lines, MARGIN + 3, y + 4.5)
-      y += h + 4
-    }
-
-    if (items.length) {
-      y = drawSectionHeader(doc, 'Trabajo a realizar (marca al terminar cada uno)', y)
-      autoTable(doc, {
-        startY: y,
-        head: [['#', 'TAREA / REPUESTO', 'CANT.', 'HECHO']],
-        body: items.map((it, idx) => [String(idx + 1), it.nombre || '—', String(it.cantidad || 1), '']),
-        ...tableStylesItems,
-        columnStyles: {
-          0: { halign: 'center', cellWidth: 9, textColor: SLATE_400 },
-          1: { cellWidth: 'auto', fontStyle: 'bold' },
-          2: { halign: 'center', cellWidth: 18 },
-          3: { halign: 'center', cellWidth: 20 },
-        },
-        margin: { left: MARGIN, right: MARGIN },
-        // Casilla en la columna HECHO: cuadro vacío (para marcar a mano) o con
-        // check si el técnico ya la marcó en la app.
-        didDrawCell: (d) => {
-          if (d.section !== 'body' || d.column.index !== 3) return
-          const cx = d.cell.x + d.cell.width / 2, cy = d.cell.y + d.cell.height / 2
-          doc.setDrawColor(...SLATE_600); doc.setLineWidth(0.4)
-          doc.rect(cx - 2.4, cy - 2.4, 4.8, 4.8)
-          if (hechas.has(d.row.index)) {
-            doc.setLineWidth(0.7)
-            doc.line(cx - 1.6, cy, cx - 0.4, cy + 1.5)
-            doc.line(cx - 0.4, cy + 1.5, cx + 1.9, cy - 1.9)
-          }
-        },
-      })
-      y = doc.lastAutoTable.finalY + 6
-    }
-
-    // Notas (renglones para escribir a mano)
-    y = drawSectionHeader(doc, 'Notas del técnico', y)
-    doc.setDrawColor(...SLATE_300); doc.setLineWidth(0.15)
-    for (let i = 0; i < 3; i++) { doc.line(MARGIN, y + 6 + i * 7, MARGIN + CONTENT_W, y + 6 + i * 7) }
-    y += 6 + 3 * 7 + 4
-
-    drawSignatures(doc, {
-      y: Math.min(Math.max(y, 250), PDF_LAYOUT.PAGE_H - 25),
-      blocks: [
-        { label: 'Firma del técnico', sub: 'Nombre y fecha' },
-        { label: 'Recibido / revisado', sub: 'Nombre y fecha' },
-      ],
-    })
-    drawFooter(doc, { page: 1, total: 1, leftText: 'Orden de trabajo interna · MDA (sin valores)' })
-    doc.save(`ficha_${(t.otCodigo || t.id)}.pdf`)
-  }
+  // Usa el avance actual del modal (hechas), no el guardado, por si aún no sincroniza.
+  const imprimirFicha = () => imprimirFichaOT(t, tecNombre, hechas)
 
   const totalTareas = items.length
   const listas = items.reduce((n, _it, idx) => n + (hechas.has(idx) ? 1 : 0), 0)
