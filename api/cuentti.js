@@ -51,6 +51,41 @@ export default async function handler(req, res) {
     return;
   }
 
+  // === Wompi: webhook de eventos (verifica que el "pago aprobado" sea REAL) ===
+  // Etapa 1 (segura): valida la firma del evento y lo registra. NO escribe en
+  // Cuentti todavía (eso es el paso siguiente, con el medio de pago Wompi).
+  // Firma Wompi = SHA256(valores de signature.properties, EN ORDEN, + timestamp + secreto de eventos).
+  if (req.query.wompi === 'webhook') {
+    if (req.method !== 'POST') { res.status(405).json({ error: 'Solo POST' }); return; }
+    const secreto = process.env.WOMPI_EVENTS_SECRET;
+    if (!secreto) { res.status(500).json({ error: 'Falta WOMPI_EVENTS_SECRET en el servidor' }); return; }
+    const evento = req.body || {};
+    const props = Array.isArray(evento?.signature?.properties) ? evento.signature.properties : [];
+    const checksumRecibido = evento?.signature?.checksum || req.headers['x-event-checksum'] || '';
+    const timestamp = evento?.timestamp;
+    // Cada propiedad (ej. "transaction.id") se resuelve dentro de evento.data.
+    const valorDe = (ruta) => String(ruta.split('.').reduce((o, k) => (o == null ? o : o[k]), evento.data) ?? '');
+    const cadena = props.map(valorDe).join('') + String(timestamp) + secreto;
+    const checksumCalc = crypto.createHash('sha256').update(cadena, 'utf8').digest('hex');
+    const firmaOk = checksumRecibido && checksumCalc.toLowerCase() === String(checksumRecibido).toLowerCase();
+    if (!firmaOk) {
+      console.error('[Wompi webhook] FIRMA INVÁLIDA — evento ignorado', { props, timestamp, tieneChecksum: !!checksumRecibido });
+      res.status(401).json({ ok: false, error: 'Firma de evento inválida' });
+      return;
+    }
+    const tx = evento?.data?.transaction || {};
+    // Log estructurado: así, tras un pago de prueba, se ve el evento en los logs de Vercel.
+    console.log('[Wompi webhook] evento VERIFICADO', {
+      env: evento.environment, event: evento.event, status: tx.status,
+      reference: tx.reference, montoCentavos: tx.amount_in_cents, txId: tx.id,
+    });
+    // TODO etapa 2: if (tx.status === 'APPROVED') → buscar trabajo por tx.reference en
+    // Supabase (cuentti_id_transacion + total) → agregarPagoTransacion (idempotente por
+    // trabajo.pagado) → marcar pagado. Solo escribir en Cuentti si environment === 'prod'.
+    res.status(200).json({ ok: true, verificado: true, status: tx.status || null });
+    return;
+  }
+
   try {
     const path = req.query.path || '';
     if (!path.startsWith('/jServerj4ErpPro/')) { res.status(400).json({ error: 'Invalid API path' }); return; }
