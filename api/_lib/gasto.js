@@ -99,12 +99,16 @@ export function desglosarIva(monto, iva = 0) {
 export const ID_IVA_19 = 5
 
 // opts: { proveedorId, proveedorCedula, proveedorNombre, monto (CON IVA), iva,
-//         idImpuesto, idPlanCuentas, descripcion, nota, idMedioPago, idBanco, fecha }
+//         idImpuesto, idPlanCuentas, descripcion, nota, idMedioPago, idBanco, fecha,
+//         aCredito }
+// aCredito:true → gasto A CRÉDITO (cuenta por pagar): NO se registra pago, se deja
+//   lstPagos vacío (mismo modelo que una factura/compra a crédito). El egreso
+//   queda "por pagar" en Cuentti; el pago real se registra después.
 export function buildGasto(opts = {}) {
   const {
     proveedorId, proveedorCedula, proveedorNombre, monto, iva = 0, idImpuesto,
     idPlanCuentas = ID_CUENTA_NOMINA, descripcion, nota, idMedioPago, idBanco, fecha,
-    tipoPersona,
+    tipoPersona, aCredito = false,
   } = opts
   // Sin tipoPersona explicito se deduce del NIT/nombre (antes: siempre natural).
   const idTipoPersona = parseInt(tipoPersona, 10) || inferirTipoPersona(proveedorCedula, proveedorNombre)
@@ -133,7 +137,9 @@ export function buildGasto(opts = {}) {
       impuesto: pct, tipo_impuesto: tipoImp, editoPrecioManul: true, es_devolucion: 0, es_promocion: 0,
       descuentoPor: 0, descuento_valor: 0, id_centro_costo: 0, id_lista_precio: 0, total_estampilla: 0, total_impoconsumo: 0,
     }],
-    lstPagos: [{ id_medio_pago: idMedioPago || 1, id_banco: idBanco || 1, valor: total, nota: '', boucher: '', digitos: '', devuelta: 0 }],
+    // A crédito: sin líneas de pago (queda como cuenta por pagar). Al contado:
+    // una línea con el medio de pago (efectivo/transferencia) por el total.
+    lstPagos: aCredito ? [] : [{ id_medio_pago: idMedioPago || 1, id_banco: idBanco || 1, valor: total, nota: '', boucher: '', digitos: '', devuelta: 0 }],
   }
 }
 

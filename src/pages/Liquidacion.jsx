@@ -170,9 +170,12 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
     const tec = TECNICOS.find(t => t.id === reg.tecnicoId)
     const cedula = tec?.cedula
     if (!cedula) { notify(`Falta la cédula de ${reg.tecnico}. Agrégala en Mecánicos.`, 'error'); return }
-    const monto = reg.pagado != null ? reg.pagado : reg.neto
-    if (!(monto > 0)) { notify('El neto de este pago no es positivo; no se registra gasto.', 'error'); return }
-    const { idMedioPago, idBanco } = medioPagoIds(metodoGasto[reg.id] || 'efectivo')
+    const esCredito = (metodoGasto[reg.id] || 'efectivo') === 'credito'
+    // A crédito registra el TOTAL que se le debe (el neto), no lo entregado en
+    // efectivo (que puede ser 0 si se le quedó debiendo). Al contado usa lo pagado.
+    const monto = esCredito ? (reg.neto ?? 0) : (reg.pagado != null ? reg.pagado : reg.neto)
+    if (!(monto > 0)) { notify('El monto de este pago no es positivo; no se registra gasto.', 'error'); return }
+    const { idMedioPago, idBanco } = esCredito ? { idMedioPago: 0, idBanco: 0 } : medioPagoIds(metodoGasto[reg.id] || 'efectivo')
     gastoRef.current.add(reg.id)
     setRegCuenttiId(reg.id)
     try {
@@ -182,7 +185,8 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
         monto,
         idMedioPago,
         idBanco,
-        nota: `Nómina ${reg.tecnico} · liq #${liqRef(reg.id)}`,
+        aCredito: esCredito,
+        nota: `Nómina ${reg.tecnico} · liq #${liqRef(reg.id)}${esCredito ? ' · A CRÉDITO' : ''}`,
       })
       const doc = data.numeroDoc ? `G-${data.numeroDoc}` : (data.idTransacion || 'OK')
       guardarHistorial(historial.map(h => h.id === reg.id ? { ...h, cuenttiGasto: doc } : h))
@@ -1687,6 +1691,7 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
                             <select className="input" aria-label="Método de pago" value={metodoGasto[reg.id] || reg.metodoPago || 'efectivo'} onChange={e => setMetodoGasto(m => ({ ...m, [reg.id]: e.target.value }))} style={{ height: 30, minHeight: 30, fontSize: 12, padding: '2px 8px', width: 'auto' }}>
                               <option value="efectivo">Efectivo</option>
                               <option value="transferencia">Transferencia</option>
+                              <option value="credito">Crédito (queda debiendo)</option>
                             </select>
                             {gastoError[reg.id] && regCuenttiId !== reg.id && (
                               <Button variant="outline" size="sm" onClick={() => marcarYaRegistradoCuentti(reg)} title="Si ya verificaste en Cuentti que quedó registrado" style={{ color: 'var(--green-700)', borderColor: 'rgba(22,163,74,.35)' }}>
