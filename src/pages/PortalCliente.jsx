@@ -762,6 +762,11 @@ export default function PortalCliente() {
       {galeria && galeria.length > 0 && (
         <div onClick={()=>setGaleria(null)}
           style={{position:'fixed',inset:0,background:'rgba(6,11,26,.93)',zIndex:1000,display:'flex',overflowY:'auto',WebkitOverflowScrolling:'touch',padding:20}}>
+          {/* Cerrar (X) fija en la esquina superior derecha */}
+          <button aria-label="Cerrar" onClick={(e)=>{e.stopPropagation();setGaleria(null)}}
+            style={{position:'fixed',top:14,right:14,zIndex:1001,width:40,height:40,borderRadius:'50%',background:'rgba(255,255,255,.14)',border:'1px solid rgba(255,255,255,.28)',color:'#fff',display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer'}}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+          </button>
           <div onTouchStart={onGalTouchStart} onTouchEnd={onGalTouchEnd}
             style={{margin:'auto',display:'flex',flexDirection:'column',alignItems:'center',maxWidth:'100%'}}>
             <img src={galeria[galIdx]?.dataUrl} alt={galeria[galIdx]?.nota||''} onClick={e=>e.stopPropagation()}
@@ -769,18 +774,15 @@ export default function PortalCliente() {
             {galeria[galIdx]?.nota && (
               <div style={{color:'#fff',marginTop:12,fontSize:14,textAlign:'center',maxWidth:600}}>{galeria[galIdx].nota}</div>
             )}
-            <div onClick={e=>e.stopPropagation()} style={{display:'flex',gap:12,marginTop:18,alignItems:'center',flexWrap:'wrap',justifyContent:'center'}}>
-              {galeria.length > 1 && (
-                <>
-                  <button style={{background:'rgba(255,255,255,.12)',color:'#fff',border:'1px solid rgba(255,255,255,.28)',borderRadius:8,padding:'8px 16px',fontSize:13,fontWeight:600,cursor:'pointer'}}
-                    onClick={()=>setGalIdx(i=>(i-1+galeria.length)%galeria.length)}>‹ Anterior</button>
-                  <span style={{color:'rgba(255,255,255,.7)',fontSize:13,fontWeight:600}}>{galIdx+1} / {galeria.length}</span>
-                  <button style={{background:'rgba(255,255,255,.12)',color:'#fff',border:'1px solid rgba(255,255,255,.28)',borderRadius:8,padding:'8px 16px',fontSize:13,fontWeight:600,cursor:'pointer'}}
-                    onClick={()=>setGalIdx(i=>(i+1)%galeria.length)}>Siguiente ›</button>
-                </>
-              )}
-              <button className="btn btn-primary btn-sm" onClick={()=>setGaleria(null)}>Cerrar</button>
-            </div>
+            {galeria.length > 1 && (
+              <div onClick={e=>e.stopPropagation()} style={{display:'flex',gap:12,marginTop:18,alignItems:'center',flexWrap:'wrap',justifyContent:'center'}}>
+                <button style={{background:'rgba(255,255,255,.12)',color:'#fff',border:'1px solid rgba(255,255,255,.28)',borderRadius:8,padding:'8px 16px',fontSize:13,fontWeight:600,cursor:'pointer'}}
+                  onClick={()=>setGalIdx(i=>(i-1+galeria.length)%galeria.length)}>‹ Anterior</button>
+                <span style={{color:'rgba(255,255,255,.7)',fontSize:13,fontWeight:600}}>{galIdx+1} / {galeria.length}</span>
+                <button style={{background:'rgba(255,255,255,.12)',color:'#fff',border:'1px solid rgba(255,255,255,.28)',borderRadius:8,padding:'8px 16px',fontSize:13,fontWeight:600,cursor:'pointer'}}
+                  onClick={()=>setGalIdx(i=>(i+1)%galeria.length)}>Siguiente ›</button>
+              </div>
+            )}
           </div>
         </div>
       )}
