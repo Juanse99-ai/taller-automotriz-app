@@ -93,8 +93,11 @@ export default async function handler(req, res) {
       return;
     }
     try {
-      const sbUrl = process.env.SUPABASE_URL || 'https://hpndvrjjizzkusuuhefb.supabase.co';
-      const sbKey = process.env.SUPABASE_KEY;
+      // URL + anon key HARDCODEADAS (como api/supabase.js). NO usar process.env.SUPABASE_URL:
+      // esa variable en Vercel apunta a OTRO proyecto (lsobszypdaiiznwxvfyo) y hacía
+      // "fetch failed" al buscar el trabajo. La anon key es pública (ya va en el bundle).
+      const sbUrl = 'https://hpndvrjjizzkusuuhefb.supabase.co';
+      const sbKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhwbmR2cmpqaXp6a3VzdXVoZWZiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM0NjkwMzMsImV4cCI6MjA4OTA0NTAzM30.-6Jz1TsDjAladZUOGD-WNMvVbZXd1Z4WBoOF-npew5c';
       const sbHead = { apikey: sbKey, Authorization: `Bearer ${sbKey}` };
       // 1) Buscar el trabajo por la referencia (= id del trabajo).
       const trResp = await fetch(`${sbUrl}/rest/v1/trabajos?id=eq.${encodeURIComponent(tx.reference)}&select=id,total,pagado,cuentti_id_transacion&limit=1`, { headers: sbHead });
