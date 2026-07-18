@@ -176,6 +176,28 @@ export default function PortalCliente() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  // Con un overlay abierto (visor de fotos o detalle), bloquea el scroll del
+  // fondo para que no se "cuele" detrás del modal en móvil.
+  useEffect(() => {
+    const hayOverlay = (galeria && galeria.length > 0) || vistaServicio
+    if (!hayOverlay) return
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => { document.body.style.overflow = prev }
+  }, [galeria, vistaServicio])
+
+  // Teclado en el visor de fotos: Esc cierra, flechas navegan.
+  useEffect(() => {
+    if (!galeria || galeria.length === 0) return
+    const onKey = (e) => {
+      if (e.key === 'Escape') setGaleria(null)
+      else if (galeria.length > 1 && e.key === 'ArrowLeft') setGalIdx(i => (i - 1 + galeria.length) % galeria.length)
+      else if (galeria.length > 1 && e.key === 'ArrowRight') setGalIdx(i => (i + 1) % galeria.length)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [galeria])
+
   const buscar = (e) => {
     e.preventDefault()
     ejecutarBusqueda(cedula)
@@ -720,23 +742,25 @@ export default function PortalCliente() {
       {/* Visor de fotos (lightbox) */}
       {galeria && galeria.length > 0 && (
         <div onClick={()=>setGaleria(null)}
-          style={{position:'fixed',inset:0,background:'rgba(6,11,26,.93)',zIndex:1000,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:20}}>
-          <img src={galeria[galIdx]?.dataUrl} alt={galeria[galIdx]?.nota||''} onClick={e=>e.stopPropagation()}
-            style={{maxWidth:'100%',maxHeight:'78vh',objectFit:'contain',borderRadius:8,boxShadow:'0 10px 40px rgba(0,0,0,.5)'}}/>
-          {galeria[galIdx]?.nota && (
-            <div style={{color:'#fff',marginTop:12,fontSize:14,textAlign:'center',maxWidth:600}}>{galeria[galIdx].nota}</div>
-          )}
-          <div onClick={e=>e.stopPropagation()} style={{display:'flex',gap:12,marginTop:18,alignItems:'center',flexWrap:'wrap',justifyContent:'center'}}>
-            {galeria.length > 1 && (
-              <>
-                <button style={{background:'rgba(255,255,255,.12)',color:'#fff',border:'1px solid rgba(255,255,255,.28)',borderRadius:8,padding:'8px 16px',fontSize:13,fontWeight:600,cursor:'pointer'}}
-                  onClick={()=>setGalIdx(i=>(i-1+galeria.length)%galeria.length)}>‹ Anterior</button>
-                <span style={{color:'rgba(255,255,255,.7)',fontSize:13,fontWeight:600}}>{galIdx+1} / {galeria.length}</span>
-                <button style={{background:'rgba(255,255,255,.12)',color:'#fff',border:'1px solid rgba(255,255,255,.28)',borderRadius:8,padding:'8px 16px',fontSize:13,fontWeight:600,cursor:'pointer'}}
-                  onClick={()=>setGalIdx(i=>(i+1)%galeria.length)}>Siguiente ›</button>
-              </>
+          style={{position:'fixed',inset:0,background:'rgba(6,11,26,.93)',zIndex:1000,display:'flex',overflowY:'auto',WebkitOverflowScrolling:'touch',padding:20}}>
+          <div style={{margin:'auto',display:'flex',flexDirection:'column',alignItems:'center',maxWidth:'100%'}}>
+            <img src={galeria[galIdx]?.dataUrl} alt={galeria[galIdx]?.nota||''} onClick={e=>e.stopPropagation()}
+              style={{maxWidth:'100%',maxHeight:'72vh',objectFit:'contain',borderRadius:8,boxShadow:'0 10px 40px rgba(0,0,0,.5)'}}/>
+            {galeria[galIdx]?.nota && (
+              <div style={{color:'#fff',marginTop:12,fontSize:14,textAlign:'center',maxWidth:600}}>{galeria[galIdx].nota}</div>
             )}
-            <button className="btn btn-primary btn-sm" onClick={()=>setGaleria(null)}>Cerrar</button>
+            <div onClick={e=>e.stopPropagation()} style={{display:'flex',gap:12,marginTop:18,alignItems:'center',flexWrap:'wrap',justifyContent:'center'}}>
+              {galeria.length > 1 && (
+                <>
+                  <button style={{background:'rgba(255,255,255,.12)',color:'#fff',border:'1px solid rgba(255,255,255,.28)',borderRadius:8,padding:'8px 16px',fontSize:13,fontWeight:600,cursor:'pointer'}}
+                    onClick={()=>setGalIdx(i=>(i-1+galeria.length)%galeria.length)}>‹ Anterior</button>
+                  <span style={{color:'rgba(255,255,255,.7)',fontSize:13,fontWeight:600}}>{galIdx+1} / {galeria.length}</span>
+                  <button style={{background:'rgba(255,255,255,.12)',color:'#fff',border:'1px solid rgba(255,255,255,.28)',borderRadius:8,padding:'8px 16px',fontSize:13,fontWeight:600,cursor:'pointer'}}
+                    onClick={()=>setGalIdx(i=>(i+1)%galeria.length)}>Siguiente ›</button>
+                </>
+              )}
+              <button className="btn btn-primary btn-sm" onClick={()=>setGaleria(null)}>Cerrar</button>
+            </div>
           </div>
         </div>
       )}
