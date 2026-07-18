@@ -623,9 +623,9 @@ export default function PortalCliente() {
         const tieneProx = t.tipoAceite || t.proximoKm || t.proximaVisita || t.notasProximoMant
         return (
           <div onClick={() => setVistaServicio(null)} role="presentation"
-            style={{position:'fixed',inset:0,zIndex:900,background:'rgba(16,23,37,.45)',display:'flex',alignItems:'center',justifyContent:'center',padding:14}}>
+            style={{position:'fixed',inset:0,zIndex:900,background:'rgba(16,23,37,.45)',display:'flex',overflowY:'auto',WebkitOverflowScrolling:'touch',padding:14}}>
             <div onClick={e => e.stopPropagation()} role="dialog" aria-label="Detalle del servicio"
-              style={{width:'min(560px,100%)',maxHeight:'88vh',overflowY:'auto',background:'var(--bg-raised)',borderRadius:16,boxShadow:'0 24px 60px -12px rgba(16,23,37,.35)'}}>
+              style={{width:'min(560px,100%)',margin:'auto',background:'var(--bg-raised)',borderRadius:16,boxShadow:'0 24px 60px -12px rgba(16,23,37,.35)'}}>
 
               <div style={{padding:'18px 20px 14px',borderBottom:'1px solid var(--border)',display:'flex',justifyContent:'space-between',gap:12,alignItems:'flex-start'}}>
                 <div style={{minWidth:0}}>
