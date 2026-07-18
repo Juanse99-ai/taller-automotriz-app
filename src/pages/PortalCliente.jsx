@@ -34,6 +34,9 @@ const SELECT_PORTAL = [
   'id', 'fecha', 'created_at', 'cedula_cliente', 'cliente', 'placa', 'marca', 'modelo',
   'ano', 'kilometraje', 'tecnico_id', 'estado', 'observaciones', 'items', 'total',
   'ot_codigo', 'tipo_aceite', 'proximo_km', 'proxima_visita', 'notas_proximo_mant', 'evidencias',
+  // Para el botón "Pagar" (Wompi): saber si ya está facturada y si sigue sin pagar.
+  // OJO: NO se trae cuentti_id_transacion — ese lo resuelve el webhook en el servidor.
+  'pagado', 'facturado_en',
 ].join(',')
 
 // Consulta directa a Supabase via proxy (funciona desde cualquier dispositivo)
@@ -59,6 +62,8 @@ async function buscarTrabajosPorCedula(cedula) {
       items: typeof r.items === 'string' ? JSON.parse(r.items) : (r.items || []),
       total: parseFloat(r.total) || 0,
       otCodigo: r.ot_codigo || '',
+      pagado: r.pagado === true,
+      facturadoEn: r.facturado_en || null,
       // Próximo mantenimiento: se le recuerda al cliente en el detalle del servicio
       tipoAceite: r.tipo_aceite || '',
       proximoKm: r.proximo_km || '',
@@ -89,6 +94,46 @@ export default function PortalCliente() {
   const [cargando, setCargando] = useState(false)
   const [galeria, setGaleria] = useState(null) // array de fotos para el visor
   const [galIdx, setGalIdx] = useState(0)
+  const [pagando, setPagando] = useState(null) // id del trabajo cuyo pago Wompi se está abriendo
+
+  // Inicia el pago de una factura con Wompi (Web Checkout hosteado, la tarjeta NO
+  // toca nuestro servidor). Pide la firma al servidor (el secreto nunca viaja al
+  // navegador) y arma el formulario que redirige a la página segura de Wompi. La
+  // referencia = id del trabajo → la usa el webhook para registrar el pago.
+  const pagarConWompi = async (t) => {
+    const montoCentavos = Math.round((t.total || 0) * 100)
+    if (!(montoCentavos > 0)) { setError('Esta factura no tiene un valor a pagar.'); return }
+    setPagando(t.id)
+    try {
+      const res = await fetch('/api/cuentti?wompi=firma', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ referencia: t.id, montoCentavos }),
+      })
+      const data = await res.json().catch(() => null)
+      if (!res.ok || !data?.ok || !data.firma || !data.publicKey) {
+        setError('No se pudo iniciar el pago. Intenta de nuevo en un momento.')
+        setPagando(null); return
+      }
+      const form = document.createElement('form')
+      form.method = 'GET'
+      form.action = data.checkoutUrl || 'https://checkout.wompi.co/p/'
+      const campos = {
+        'public-key': data.publicKey, 'currency': 'COP',
+        'amount-in-cents': String(montoCentavos), 'reference': t.id,
+        'signature:integrity': data.firma, 'redirect-url': window.location.href,
+      }
+      Object.entries(campos).forEach(([name, value]) => {
+        const input = document.createElement('input')
+        input.type = 'hidden'; input.name = name; input.value = value
+        form.appendChild(input)
+      })
+      document.body.appendChild(form)
+      form.submit()
+    } catch {
+      setError('No se pudo iniciar el pago. Revisa tu conexión.')
+      setPagando(null)
+    }
+  }
 
   const ejecutarBusqueda = async (cedulaInput) => {
     const cedulaLimpia = (cedulaInput || '').trim().replace(/[.\-\s]/g, '')
@@ -542,6 +587,12 @@ export default function PortalCliente() {
                       ) : <span style={{color:'var(--text-4)'}}>—</span>}
                     </td>
                     <td className="td-actions" style={{textAlign:'right'}}>
+                      {t.facturadoEn && !t.pagado && t.total > 0 && (
+                        <button className="btn btn-primary btn-sm" style={{marginRight:8}} disabled={pagando===t.id} onClick={()=>pagarConWompi(t)}>
+                          {pagando===t.id ? 'Abriendo…' : `Pagar ${fmt(t.total)}`}
+                        </button>
+                      )}
+                      {t.pagado && <span className="badge" style={{background:'var(--green-100)',color:'var(--green-700)',fontWeight:700,marginRight:8}}>Pagado ✓</span>}
                       <button className="btn btn-outline btn-sm" onClick={()=>setVistaServicio(t)}>Ver detalle</button>
                     </td>
                   </tr>
