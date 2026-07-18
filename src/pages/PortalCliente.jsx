@@ -95,6 +95,7 @@ export default function PortalCliente() {
   const [galeria, setGaleria] = useState(null) // array de fotos para el visor
   const [galIdx, setGalIdx] = useState(0)
   const [pagando, setPagando] = useState(null) // id del trabajo cuyo pago Wompi se está abriendo
+  const [confirmandoPago, setConfirmandoPago] = useState(false) // volvió del checkout; esperando que el webhook marque pagado
   const touchRef = useRef(null) // gesto de swipe en el visor de fotos
 
   // Swipe horizontal en el visor: izquierda → siguiente, derecha → anterior.
@@ -140,6 +141,8 @@ export default function PortalCliente() {
         'public-key': data.publicKey, 'currency': 'COP',
         'amount-in-cents': String(montoCentavos), 'reference': t.id,
         'signature:integrity': data.firma, 'redirect-url': window.location.href,
+        // Prellenar el nombre del cliente (con mayúsculas correctas) para que no lo teclee.
+        ...(t.cliente ? { 'customer-data:full-name': tituloCliente(t.cliente) } : {}),
       }
       Object.entries(campos).forEach(([name, value]) => {
         const input = document.createElement('input')
@@ -191,6 +194,16 @@ export default function PortalCliente() {
   useEffect(() => {
     if (cedulaInicial) {
       ejecutarBusqueda(cedulaInicial)
+      // ¿Volvió de pagar en Wompi? (Wompi agrega ?id= al redirigir). El webhook
+      // marca "pagado" 1-2s después, así que mostramos "confirmando" y refrescamos
+      // solo, para que "Pagar" se vuelva "PAGADO ✓" sin que el cliente re-pague.
+      if (urlParams.get('id')) {
+        setConfirmandoPago(true)
+        const t1 = setTimeout(() => ejecutarBusqueda(cedulaInicial), 3500)
+        const t2 = setTimeout(() => ejecutarBusqueda(cedulaInicial), 8000)
+        const t3 = setTimeout(() => setConfirmandoPago(false), 9000)
+        return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3) }
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -595,6 +608,18 @@ export default function PortalCliente() {
       )}
 
       </div>{/* cierra columna lateral */}
+
+      {confirmandoPago && (
+        <div className="card portal-full" style={{ background: 'var(--green-100)', border: '1px solid var(--green-600)' }}>
+          <div className="card__b" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div style={{ width: 22, height: 22, border: '2.5px solid var(--green-600)', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite', flexShrink: 0 }} />
+            <div>
+              <div style={{ fontWeight: 700, color: 'var(--green-700)' }}>Estamos confirmando tu pago…</div>
+              <div style={{ fontSize: 13, color: 'var(--green-700)' }}>Un momento, no vuelvas a pagar. En unos segundos verás la factura como <strong>Pagada ✓</strong>.</div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Historial de trabajos — a lo ancho */}
       {datos.trabajos.length > 0 && (
