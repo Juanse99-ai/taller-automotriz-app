@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import { InspeccionDetalle } from './Inspecciones'
@@ -95,6 +95,25 @@ export default function PortalCliente() {
   const [galeria, setGaleria] = useState(null) // array de fotos para el visor
   const [galIdx, setGalIdx] = useState(0)
   const [pagando, setPagando] = useState(null) // id del trabajo cuyo pago Wompi se está abriendo
+  const touchRef = useRef(null) // gesto de swipe en el visor de fotos
+
+  // Swipe horizontal en el visor: izquierda → siguiente, derecha → anterior.
+  const onGalTouchStart = (e) => {
+    const t = e.touches[0]
+    touchRef.current = { x: t.clientX, y: t.clientY }
+  }
+  const onGalTouchEnd = (e) => {
+    const start = touchRef.current
+    touchRef.current = null
+    if (!start || !galeria || galeria.length < 2) return
+    const t = e.changedTouches[0]
+    const dx = t.clientX - start.x
+    const dy = t.clientY - start.y
+    if (Math.abs(dx) > 45 && Math.abs(dx) > Math.abs(dy)) {
+      if (dx < 0) setGalIdx(i => (i + 1) % galeria.length)
+      else setGalIdx(i => (i - 1 + galeria.length) % galeria.length)
+    }
+  }
 
   // Inicia el pago de una factura con Wompi (Web Checkout hosteado, la tarjeta NO
   // toca nuestro servidor). Pide la firma al servidor (el secreto nunca viaja al
@@ -743,7 +762,8 @@ export default function PortalCliente() {
       {galeria && galeria.length > 0 && (
         <div onClick={()=>setGaleria(null)}
           style={{position:'fixed',inset:0,background:'rgba(6,11,26,.93)',zIndex:1000,display:'flex',overflowY:'auto',WebkitOverflowScrolling:'touch',padding:20}}>
-          <div style={{margin:'auto',display:'flex',flexDirection:'column',alignItems:'center',maxWidth:'100%'}}>
+          <div onTouchStart={onGalTouchStart} onTouchEnd={onGalTouchEnd}
+            style={{margin:'auto',display:'flex',flexDirection:'column',alignItems:'center',maxWidth:'100%'}}>
             <img src={galeria[galIdx]?.dataUrl} alt={galeria[galIdx]?.nota||''} onClick={e=>e.stopPropagation()}
               style={{maxWidth:'100%',maxHeight:'72vh',objectFit:'contain',borderRadius:8,boxShadow:'0 10px 40px rgba(0,0,0,.5)'}}/>
             {galeria[galIdx]?.nota && (
