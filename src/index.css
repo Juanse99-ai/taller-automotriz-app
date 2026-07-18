@@ -568,14 +568,10 @@ textarea.input{min-height:88px;resize:vertical;padding-top:11px}
 }
 .tbl--sticky tbody td{padding-top:11px;padding-bottom:11px}
 
-/* Líneas verticales que dividen las columnas (cuadrícula) en TODAS las tablas.
-   Hace la tabla más legible y, donde hay columnas arrastrables (Clientes), deja
-   ver dónde agarrar. Solo escritorio: en celular la tabla se vuelve tarjetas. La
-   última columna no lleva línea (es el borde de la tabla). */
-@media(min-width:601px){
-  .tbl thead th:not(:last-child),
-  .tbl tbody td:not(:last-child){ border-right:1px solid var(--separator) }
-}
+/* Las tablas NO llevan rejilla vertical (se veía como Excel). Estilo lista de
+   macOS: solo separadores horizontales finos entre filas, con las columnas
+   alineadas (números a la derecha). En Clientes, el agarre de cada columna ya
+   muestra una guía azul al pasar el cursor, así que tampoco necesita rejilla. */
 
 /* Clientes: anchos fijos para que el NOMBRE quede en UNA línea y no lo aprieten.
    El auto-layout le daba a CC/NIT 253px y a Email 450px (casi vacíos) y dejaba
@@ -610,9 +606,9 @@ textarea.input{min-height:88px;resize:vertical;padding-top:11px}
   .tbl-liq th:nth-child(2),.tbl-liq td:nth-child(2){width:92px}
   .tbl-liq th:nth-child(3),.tbl-liq td:nth-child(3){width:82px}
   .tbl-liq th:nth-child(4),.tbl-liq td:nth-child(4){width:78px}
-  .tbl-liq th:nth-child(6),.tbl-liq td:nth-child(6){width:126px}
-  .tbl-liq th:nth-child(7),.tbl-liq td:nth-child(7){width:100px}
-  .tbl-liq th:nth-child(8),.tbl-liq td:nth-child(8){width:100px}
+  .tbl-liq th:nth-child(6),.tbl-liq td:nth-child(6){width:112px}
+  .tbl-liq th:nth-child(7),.tbl-liq td:nth-child(7){width:112px}
+  .tbl-liq th:nth-child(8),.tbl-liq td:nth-child(8){width:104px;padding-right:20px}
   .tbl-liq td:nth-child(5){white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 }
 
