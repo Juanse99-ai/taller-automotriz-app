@@ -4,6 +4,7 @@ import autoTable from 'jspdf-autotable'
 import { fmt, fmtDate, uid, hoyISO, normalizarDoc, normalizarNombre, fmtTelefono } from '../utils/helpers'
 import { TECNICOS, ESTADOS, IVA_DEFAULT, DIAS_ESTANCADO, TALLER, COMISION } from '../utils/constants'
 import { loadLogo as loadPdfLogo, drawHeader, drawSectionHeader, drawDataBlock, drawTotalsBox, drawSignatures, drawFooter, tableStylesItems, PDF_LAYOUT, PDF_COLORS } from '../utils/pdfTheme'
+import FichaTecnico from '../components/FichaTecnico'
 import { MARCAS, getModelos } from '../utils/vehiculos'
 import { useClientes } from '../hooks/useClientes'
 import { useInventario, formatCacheAge } from '../hooks/useInventario'
@@ -61,6 +62,7 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
   // Cockpit desktop: trabajo seleccionado para el panel de detalle (solo ≥1200px)
   const [selId, setSelId] = useState(null)
   const [previewId, setPreviewId] = useState(null) // vista previa de una OT (modal) antes de editar
+  const [fichaId, setFichaId] = useState(null) // OT abierta en la Ficha del técnico
   const [firmando, setFirmando] = useState(false) // capturando firma del cliente en la vista previa
   const [isWide, setIsWide] = useState(() => typeof window !== 'undefined' && window.matchMedia('(min-width:1200px)').matches)
   useEffect(() => {
@@ -688,6 +690,7 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
                       ))}
                     </div>
                   )}
+                  <Button variant="outline" size="sm" style={{ width: '100%', marginBottom: 8 }} onClick={() => setFichaId(selTrabajo.id)}>Ficha del técnico</Button>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
                     <Button variant="outline" size="sm" onClick={() => handleEditar(selTrabajo.id)}>Editar</Button>
                     {selTrabajo.otCodigo && <Button variant="outline" size="sm" onClick={() => imprimirOT(selTrabajo)}>PDF</Button>}
@@ -878,6 +881,11 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
           </div>
         </div>
       )}
+
+      {fichaId && (() => {
+        const tf = trabajos.find(x => x.id === fichaId)
+        return tf ? <FichaTecnico trabajo={tf} tecNombre={tecNombre} onClose={() => setFichaId(null)} guardar={(changes) => actualizarTrabajo(fichaId, changes)} /> : null
+      })()}
 
       <ConfirmDialog cfg={confirmCfg} onClose={() => setConfirmCfg(null)} />
     </div>

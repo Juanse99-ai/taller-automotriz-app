@@ -79,6 +79,10 @@ export async function upsertTrabajo(trabajo, opts = {}) {
     proxima_visita: trabajo.proximaVisita || null,
     notas_proximo_mant: trabajo.notasProximoMant || null,
     sin_vehiculo: trabajo.sinVehiculo || false,
+    // Ficha del técnico: avance del checklist + cronómetro del trabajo.
+    tareas_hechas: trabajo.tareasHechas || [],
+    crono_inicio: trabajo.cronoInicio || null,
+    crono_acumulado: trabajo.cronoAcumulado || 0,
   }
   // inspeccion: columna no existe aun en Supabase — se preserva en localStorage
   // Para habilitarla: ALTER TABLE trabajos ADD COLUMN IF NOT EXISTS inspeccion jsonb;

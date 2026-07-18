@@ -42,6 +42,10 @@ function normalizar(r) {
     proximaVisita: r.proxima_visita ?? r.proximaVisita ?? '',
     notasProximoMant: r.notas_proximo_mant ?? r.notasProximoMant ?? '',
     sinVehiculo: r.sin_vehiculo ?? r.sinVehiculo ?? false,
+    // Ficha del técnico (checklist + cronómetro)
+    tareasHechas: typeof r.tareas_hechas === 'string' ? JSON.parse(r.tareas_hechas) : (r.tareas_hechas || r.tareasHechas || []),
+    cronoInicio: r.crono_inicio ?? r.cronoInicio ?? null,
+    cronoAcumulado: parseInt(r.crono_acumulado ?? r.cronoAcumulado) || 0,
     deleted: r.deleted === true, // borrado suave: la fila sigue en Supabase pero se oculta
     inspeccion: typeof r.inspeccion === 'string' ? JSON.parse(r.inspeccion) : (r.inspeccion || null),
     // Evidencias: ahora vienen del servidor (columna evidencias). Fallback a local.
