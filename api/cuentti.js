@@ -79,11 +79,74 @@ export default async function handler(req, res) {
       env: evento.environment, event: evento.event, status: tx.status,
       reference: tx.reference, montoCentavos: tx.amount_in_cents, txId: tx.id,
     });
-    // TODO etapa 2: if (tx.status === 'APPROVED') → buscar trabajo por tx.reference en
-    // Supabase (cuentti_id_transacion + total) → agregarPagoTransacion (idempotente por
-    // trabajo.pagado) → marcar pagado. Solo escribir en Cuentti si environment === 'prod'.
-    res.status(200).json({ ok: true, verificado: true, status: tx.status || null });
-    return;
+    // --- Etapa 2: registrar el pago en la factura de Cuentti (solo si aprobado) ---
+    if (tx.status !== 'APPROVED' || !tx.reference) {
+      res.status(200).json({ ok: true, verificado: true, status: tx.status || null });
+      return;
+    }
+    // Gate de seguridad: SOLO dinero real. En sandbox (environment 'test') se verifica
+    // y se registra en logs, pero NO se toca Cuentti ni se marca pagado (así las
+    // pruebas no contaminan la contabilidad real).
+    if (evento.environment !== 'prod') {
+      console.log('[Wompi webhook] sandbox: verificado pero NO se registra en Cuentti', { reference: tx.reference });
+      res.status(200).json({ ok: true, verificado: true, sandbox: true, status: tx.status });
+      return;
+    }
+    try {
+      const sbUrl = process.env.SUPABASE_URL || 'https://hpndvrjjizzkusuuhefb.supabase.co';
+      const sbKey = process.env.SUPABASE_KEY;
+      const sbHead = { apikey: sbKey, Authorization: `Bearer ${sbKey}` };
+      // 1) Buscar el trabajo por la referencia (= id del trabajo).
+      const trResp = await fetch(`${sbUrl}/rest/v1/trabajos?id=eq.${encodeURIComponent(tx.reference)}&select=id,total,pagado,cuentti_id_transacion&limit=1`, { headers: sbHead });
+      const trRows = trResp.ok ? await trResp.json() : [];
+      const trabajo = Array.isArray(trRows) ? trRows[0] : null;
+      if (!trabajo) { console.error('[Wompi webhook] trabajo no encontrado', { reference: tx.reference }); res.status(200).json({ ok: true, nota: 'trabajo no encontrado' }); return; }
+      // 2) Idempotencia: si ya está pagado, no re-registrar (Wompi puede reintentar el webhook).
+      if (trabajo.pagado === true) { console.log('[Wompi webhook] ya estaba pagado, ignoro', { reference: tx.reference }); res.status(200).json({ ok: true, yaPagado: true }); return; }
+      const idTransacion = trabajo.cuentti_id_transacion;
+      if (!idTransacion) { console.error('[Wompi webhook] el trabajo no tiene factura en Cuentti', { reference: tx.reference }); res.status(200).json({ ok: true, nota: 'sin factura en Cuentti' }); return; }
+      const valor = parseFloat(trabajo.total) || (Number(tx.amount_in_cents) / 100);
+      // 3) Registrar el pago en Cuentti contra la factura (Bancolombia/transferencia = id_banco 2, id_medio_pago 7).
+      const empleado = process.env.CUENTTI_EMPLOYEE_ID || '2';
+      const bodyPago = {
+        n_caja: 0, id_transacion: idTransacion, valor, es_activo: '1',
+        id_empleado: parseInt(empleado), nota: `Pago Wompi ${tx.id} · ref ${tx.reference}`,
+        id_sucursal: parseInt(process.env.CUENTTI_BRANCH_ID || '1'),
+        id_banco: 2, id_medio_pago: 7,
+        boucher: '', digitos: '', devuelta: 0, dinero_entregado: valor, es_ingreso: 1,
+        id_cliente: 1, fecha_registro: new Date().toISOString(), id_centro_costo: 1,
+      };
+      const cuenttiResp = await fetch('https://app.cuenti.com/jServerj4ErpPro/com/j4ErpPro/server/transacion/agregarPagoTransacion', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json', 'Authorization': `Bearer ${process.env.CUENTTI_TOKEN}`,
+          'x-auth-token-empresa': process.env.CUENTTI_COMPANY_ID || '11464',
+          'x-id-sucursal': process.env.CUENTTI_BRANCH_ID || '1', 'x-id-empleado': empleado,
+          'X-Auth-Token-id-usuario': empleado, 'X-Auth-Token-usuario': empleado,
+          'x-gtm': process.env.CUENTTI_GTM || 'GMT-0500', 'usuario': empleado,
+        },
+        body: JSON.stringify(bodyPago),
+      });
+      if (!cuenttiResp.ok) {
+        // Falla transitoria: responder !=200 para que Wompi REINTENTE (idempotente por pagado).
+        console.error('[Wompi webhook] agregarPagoTransacion FALLÓ', { status: cuenttiResp.status, reference: tx.reference });
+        res.status(502).json({ ok: false, error: 'Cuentti rechazó el pago' });
+        return;
+      }
+      // 4) Marcar el trabajo pagado (solo tras registrar OK en Cuentti).
+      await fetch(`${sbUrl}/rest/v1/trabajos?id=eq.${encodeURIComponent(tx.reference)}`, {
+        method: 'PATCH', headers: { ...sbHead, 'Content-Type': 'application/json', Prefer: 'return=minimal' },
+        body: JSON.stringify({ pagado: true }),
+      });
+      console.log('[Wompi webhook] PAGO REGISTRADO en Cuentti + trabajo marcado pagado', { reference: tx.reference, valor });
+      res.status(200).json({ ok: true, registrado: true });
+      return;
+    } catch (e) {
+      // Error inesperado: !=200 → Wompi reintenta (el candado de pagado evita el doble).
+      console.error('[Wompi webhook] error etapa 2', e?.message || e);
+      res.status(500).json({ ok: false, error: 'Error procesando el pago' });
+      return;
+    }
   }
 
   try {
