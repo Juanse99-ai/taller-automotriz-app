@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import { gsap } from 'gsap'
 import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import { InspeccionDetalle } from './Inspecciones'
@@ -115,7 +116,10 @@ export default function PortalCliente() {
   const [galIdx, setGalIdx] = useState(0)
   const [pagando, setPagando] = useState(null) // id del trabajo cuyo pago Wompi se está abriendo
   const [confirmandoPago, setConfirmandoPago] = useState(false) // volvió del checkout; esperando que el webhook marque pagado
+  const [vehSel, setVehSel] = useState(null) // placa del vehículo enfocado (modo flota)
   const touchRef = useRef(null) // gesto de swipe en el visor de fotos
+  const portalRef = useRef(null) // contenedor para animaciones GSAP
+  const detalleRef = useRef(null) // detalle del vehículo (para hacer scroll al elegir uno)
 
   // Swipe horizontal en el visor: izquierda → siguiente, derecha → anterior.
   const onGalTouchStart = (e) => {
@@ -248,6 +252,27 @@ export default function PortalCliente() {
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [galeria])
+
+  // Animaciones (GSAP). Comunican estado, no decoran: el conteo de la flota, la
+  // aparición de las tarjetas de vehículo y el llenado de las barras de avance.
+  // Se saltan por completo si el sistema pide menos movimiento.
+  useEffect(() => {
+    if (!autenticado || !datos) return
+    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return
+    const ctx = gsap.context(() => {
+      gsap.utils.toArray('.fleet-num').forEach(el => {
+        const end = parseFloat(el.dataset.n) || 0
+        const obj = { v: 0 }
+        gsap.to(obj, { v: end, duration: 0.8, ease: 'power2.out', onUpdate: () => { el.textContent = String(Math.round(obj.v)) } })
+      })
+      gsap.from('.veh-card', { opacity: 0, y: 12, duration: 0.4, ease: 'power3.out', stagger: 0.06 })
+      gsap.utils.toArray('.bar-fill').forEach(el => {
+        const pct = parseFloat(el.dataset.pct) || 0
+        gsap.fromTo(el, { width: '0%' }, { width: pct + '%', duration: 0.8, ease: 'power2.out', delay: 0.1 })
+      })
+    }, portalRef)
+    return () => ctx.revert()
+  }, [autenticado, datos])
 
   const buscar = (e) => {
     e.preventDefault()
@@ -448,9 +473,60 @@ export default function PortalCliente() {
   }
 
   // Vista principal del cliente
-  const trabajoActivo = datos.trabajos.find(t =>
-    t.estado !== ESTADOS.COMPLETADO && t.estado !== ESTADOS.CANCELADO
-  )
+  const esActivo = (e) => e !== ESTADOS.COMPLETADO && e !== ESTADOS.CANCELADO
+
+  // Agrupar por vehículo (placa). Cada uno lleva su trabajo activo (si está en el
+  // taller), su último y un estado resumido. Esto es lo que hace que una EMPRESA
+  // con varios carros vea su flota, no una lista revuelta.
+  const vehiculos = (() => {
+    const map = new Map()
+    datos.trabajos.forEach(t => {
+      // "SERVICIO" es el marcador de venta directa (sin vehículo): no es un carro.
+      const placa = (t.placa || '').toUpperCase()
+      if (!placa || placa === 'SERVICIO' || placa === '—') return
+      if (!map.has(placa)) map.set(placa, [])
+      map.get(placa).push(t)
+    })
+    const rank = { proceso: 0, listo: 1, aldia: 2 }
+    return [...map.entries()].map(([placa, arr]) => {
+      const orden = [...arr].sort((a, b) => new Date(b.fecha) - new Date(a.fecha))
+      const activo = orden.find(t => esActivo(t.estado)) || null
+      const ultimo = orden[0]
+      const estadoVeh = activo ? 'proceso' : (ultimo?.estado === ESTADOS.COMPLETADO ? 'listo' : 'aldia')
+      return { placa, marca: ultimo?.marca, modelo: ultimo?.modelo, ano: ultimo?.ano,
+        trabajos: orden, activo, ultimo, estadoVeh, ultimaVisita: ultimo?.fecha }
+    }).sort((a, b) => rank[a.estadoVeh] - rank[b.estadoVeh] || new Date(b.ultimaVisita) - new Date(a.ultimaVisita))
+  })()
+  const esFlota = vehiculos.length > 1
+  const placaFoco = esFlota ? (vehSel || vehiculos[0]?.placa) : null
+  const vehFoco = esFlota ? vehiculos.find(v => v.placa === placaFoco) : null
+  // El trabajo en foco: en flota, el del vehículo elegido (activo, o el último si
+  // está "listo"); si es un cliente normal, su único trabajo activo.
+  const trabajoActivo = esFlota
+    ? (vehFoco?.activo || (vehFoco?.estadoVeh === 'listo' ? vehFoco.ultimo : null))
+    : datos.trabajos.find(t => esActivo(t.estado))
+  const enProceso = vehiculos.filter(v => v.estadoVeh === 'proceso').length
+  const listos = vehiculos.filter(v => v.estadoVeh === 'listo').length
+  const VEH_ESTADO = {
+    proceso: { label: 'En el taller', color: '#d97706' },
+    listo: { label: 'Listo para recoger', color: '#16a34a' },
+    aldia: { label: 'Al día', color: '#64748b' },
+  }
+  // Facturas por pagar (de todos sus vehículos).
+  const facturasPendientes = datos.trabajos
+    .filter(t => t.facturadoEn && !t.pagado && (t.total || 0) > 0)
+    .sort((a, b) => new Date(b.fecha) - new Date(a.fecha))
+  const totalPorPagar = facturasPendientes.reduce((s, t) => s + (t.total || 0), 0)
+  // Inspecciones del vehículo en foco (en flota) o todas (cliente normal).
+  const inspFoco = esFlota
+    ? datos.inspecciones.filter(i => (i.placa || '').toUpperCase() === placaFoco)
+    : datos.inspecciones
+  // Elegir un vehículo: enfoca y baja al detalle.
+  const elegirVehiculo = (placa) => {
+    setVehSel(placa)
+    const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+    requestAnimationFrame(() => detalleRef.current?.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' }))
+  }
 
   const tecNombre = (id) => TECNICOS.find(t => t.id === parseInt(id))?.nombre || ''
 
@@ -460,63 +536,153 @@ export default function PortalCliente() {
     {lbl:'Reparacion',pct:60},{lbl:'Prueba',pct:80},{lbl:'Entrega',pct:100},
   ]
 
+  // Una fila del historial. `compact` (modo flota) omite Placa/Vehículo porque ya
+  // están en el encabezado del grupo del vehículo.
+  const filaHist = (t, compact = false) => (
+    <tr key={t.id}>
+      <td data-label="Fecha" style={{color:'var(--text-3)',fontSize:13}}>{fmtDate(t.fecha)}</td>
+      {!compact && <td className="c-name mono" style={{fontWeight:700}}>{t.placa}</td>}
+      {!compact && <td data-label="Vehiculo" style={{color:'var(--text-3)',fontSize:13}}>{[t.marca,t.modelo].filter(Boolean).join(' ')||'—'}</td>}
+      <td data-label="Estado">
+        <span className="badge" style={{background:(ESTADO_TRABAJO_DISPLAY[t.estado]?.color||'#64748b')+'20',color:ESTADO_TRABAJO_DISPLAY[t.estado]?.color||'#64748b'}}>
+          {ESTADO_TRABAJO_DISPLAY[t.estado]?.label || t.estado}
+        </span>
+      </td>
+      <td data-label="Fotos">
+        {t.evidencias?.length > 0 ? (
+          <button className="btn btn-ghost btn-sm" onClick={()=>{setGaleria(t.evidencias);setGalIdx(0)}} style={{gap:5}}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+            {t.evidencias.length}
+          </button>
+        ) : <span style={{color:'var(--text-4)'}}>—</span>}
+      </td>
+      <td className="td-actions" style={{textAlign:'right'}}>
+        {t.facturadoEn && !t.pagado && t.total > 0 && (
+          <button className="btn btn-primary btn-sm" style={{marginRight:8}} disabled={pagando===t.id} onClick={()=>pagarConWompi(t)}>
+            {pagando===t.id ? 'Abriendo…' : `Pagar ${fmt(t.total)}`}
+          </button>
+        )}
+        {t.pagado && <span className="badge" style={{background:'var(--green-100)',color:'var(--green-700)',fontWeight:700,marginRight:8}}>Pagado ✓</span>}
+        <button className="btn btn-outline btn-sm" onClick={()=>setVistaServicio(t)}>Ver detalle</button>
+      </td>
+    </tr>
+  )
+
   return (
-    <div className="portal-main">
-      {/* Hero card */}
+    <div className="portal-main" ref={portalRef}>
+      {/* Hero — identidad + resumen de flota */}
       <div className="card portal-full" style={{padding:0,overflow:'hidden'}}>
-        <div style={{padding:'22px 26px',background:'var(--navy-900)',color:'#fff',position:'relative'}}>
-          <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start'}}>
-            <div style={{display:'flex',alignItems:'center',gap:10,fontSize:11,fontWeight:700,letterSpacing:'.08em',textTransform:'uppercase',opacity:.88,marginBottom:8}}>
+        <div style={{padding:'22px 26px',background:'var(--navy-900)',color:'#fff'}}>
+          <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:10}}>
+            <div style={{display:'flex',alignItems:'center',gap:10,fontSize:11,fontWeight:700,letterSpacing:'.08em',textTransform:'uppercase',opacity:.88}}>
               <img src="/logo.png" alt="MDA" style={{width:20,height:20,objectFit:'contain',borderRadius:4}}/> Multidiagnosticos AS
             </div>
-            <button className="btn btn-ghost btn-sm" style={{color:'rgba(255,255,255,.7)',border:'1px solid rgba(255,255,255,.15)'}}
-              onClick={salir}>
-              Salir
-            </button>
+            <button className="btn btn-ghost btn-sm" style={{color:'rgba(255,255,255,.72)',border:'1px solid rgba(255,255,255,.18)'}} onClick={salir}>Salir</button>
           </div>
-          {trabajoActivo ? (
+          <div style={{fontSize:14,opacity:.92,marginBottom:esFlota?12:2}}>Hola, {tituloCliente(datos.trabajos[0]?.cliente)}</div>
+          {esFlota ? (
+            <div style={{display:'flex',gap:'12px 28px',flexWrap:'wrap',alignItems:'flex-end'}}>
+              {[[vehiculos.length,vehiculos.length===1?'vehículo':'vehículos','#ffffff'],[enProceso,'en el taller','#fbbf24'],[listos,listos===1?'listo para recoger':'listos para recoger','#4ade80']].map(([n,lbl,c],i)=>(
+                <div key={i} style={{display:'flex',alignItems:'baseline',gap:8}}>
+                  <span className="mono fleet-num" data-n={n} style={{fontSize:27,fontWeight:800,lineHeight:1,color:c}}>{n}</span>
+                  <span style={{fontSize:13,opacity:.85}}>{lbl}</span>
+                </div>
+              ))}
+            </div>
+          ) : trabajoActivo ? (
             <>
-              <div style={{fontSize:13,opacity:.92,marginBottom:2}}>Hola, {tituloCliente(datos.trabajos[0]?.cliente)}</div>
-              <h2 style={{fontSize:22,fontWeight:700,letterSpacing:'-.01em',marginBottom:4}}>
-                {[trabajoActivo.marca,trabajoActivo.modelo].filter(Boolean).join(' ') || 'Su vehiculo'}
-              </h2>
-              <div style={{fontSize:13,opacity:.86}}>
-                Placa <span className="mono" style={{fontWeight:700}}>{trabajoActivo.placa}</span>
-                {trabajoActivo.otCodigo && <> · Orden <span className="mono">{trabajoActivo.otCodigo}</span></>}
-              </div>
+              <h2 style={{fontSize:22,fontWeight:700,letterSpacing:'-.01em',marginBottom:4}}>{[trabajoActivo.marca,trabajoActivo.modelo].filter(Boolean).join(' ') || 'Su vehículo'}</h2>
+              <div style={{fontSize:13,opacity:.86}}>Placa <span className="mono" style={{fontWeight:700}}>{trabajoActivo.placa}</span>{trabajoActivo.otCodigo && <> · Orden <span className="mono">{trabajoActivo.otCodigo}</span></>}</div>
             </>
           ) : (
-            <>
-              <div style={{fontSize:13,opacity:.92,marginBottom:2}}>Hola, {tituloCliente(datos.trabajos[0]?.cliente)}</div>
-              <h2 style={{fontSize:22,fontWeight:700,letterSpacing:'-.01em'}}>Historial de servicios</h2>
-            </>
+            <h2 style={{fontSize:22,fontWeight:700,letterSpacing:'-.01em'}}>Historial de servicios</h2>
           )}
         </div>
-        {trabajoActivo && (
-          <div style={{padding:'20px 26px',background:'var(--bg-raised)'}}>
-            <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-end',marginBottom:8}}>
+      </div>
+
+      {/* Facturas por pagar — arriba y visible (es la acción de plata) */}
+      {facturasPendientes.length > 0 && (
+        <div className="card portal-full" style={{padding:0,overflow:'hidden'}}>
+          <div style={{padding:'15px 20px',display:'flex',justifyContent:'space-between',alignItems:'center',gap:12,borderBottom:'1px solid var(--border)'}}>
+            <h3 style={{margin:0}}>{facturasPendientes.length===1?'Factura por pagar':`Facturas por pagar · ${facturasPendientes.length}`}</h3>
+            <div style={{textAlign:'right'}}>
+              <div style={{fontSize:11,fontWeight:700,color:'var(--text-3)',textTransform:'uppercase',letterSpacing:'.04em'}}>Total</div>
+              <div className="mono" style={{fontSize:18,fontWeight:800}}>{fmt(totalPorPagar)}</div>
+            </div>
+          </div>
+          <div>
+            {facturasPendientes.map((t,i)=>(
+              <div key={t.id} style={{display:'flex',justifyContent:'space-between',alignItems:'center',gap:14,padding:'13px 20px',borderTop:i>0?'1px solid var(--border)':'none'}}>
+                <div style={{minWidth:0}}>
+                  <span className="mono" style={{fontWeight:700,fontSize:15}}>{t.placa}</span>
+                  <div style={{fontSize:12.5,color:'var(--text-3)',marginTop:1}}>{fmtDate(t.fecha)}{t.otCodigo?` · ${t.otCodigo}`:''}</div>
+                </div>
+                <div style={{display:'flex',alignItems:'center',gap:12,flexShrink:0}}>
+                  <span className="mono" style={{fontWeight:700,fontSize:15}}>{fmt(t.total)}</span>
+                  <button className="btn btn-primary" disabled={pagando===t.id} onClick={()=>pagarConWompi(t)}>{pagando===t.id?'Abriendo…':'Pagar'}</button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Sus vehículos (empresas con varios) */}
+      {esFlota && (
+        <div className="card portal-full">
+          <div className="card__h"><h3>Sus vehículos</h3><span className="count">{vehiculos.length}</span></div>
+          <div className="card__b" style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(228px,1fr))',gap:12}}>
+            {vehiculos.map(v=>{
+              const est = VEH_ESTADO[v.estadoVeh]
+              const sel = v.placa === placaFoco
+              const pct = v.activo ? (ESTADO_TRABAJO_DISPLAY[v.activo.estado]?.pct||0) : (v.estadoVeh==='listo'?100:0)
+              return (
+                <button key={v.placa} type="button" className={`veh-card${sel?' is-sel':''}`} onClick={()=>elegirVehiculo(v.placa)}>
+                  <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',gap:8}}>
+                    <span className="mono" style={{fontSize:18,fontWeight:800,letterSpacing:'-.01em'}}>{v.placa}</span>
+                    <span className="badge" style={{background:est.color+'22',color:est.color,fontWeight:700}}>{est.label}</span>
+                  </div>
+                  <div style={{fontSize:13,color:'var(--text-3)',marginTop:3}}>{[v.marca,v.modelo].filter(Boolean).join(' ')||'Vehículo'}</div>
+                  {v.estadoVeh!=='aldia' && (
+                    <div style={{height:6,background:'var(--bg-subtle)',borderRadius:99,overflow:'hidden',marginTop:12}}>
+                      <div className="bar-fill" data-pct={pct} style={{height:'100%',width:`${pct}%`,borderRadius:99,background:est.color}}/>
+                    </div>
+                  )}
+                  <div style={{fontSize:12,color:'var(--text-3)',marginTop:v.estadoVeh!=='aldia'?8:12}}>
+                    {v.activo ? (ESTADO_TRABAJO_DISPLAY[v.activo.estado]?.label||'') : `Última visita ${fmtDate(v.ultimaVisita)}`}
+                  </div>
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Detalle del vehículo en foco: avance + observaciones */}
+      <div className="portal-col" ref={detalleRef}>
+      {/* Estado + progreso */}
+      {trabajoActivo && (
+        <div className="card">
+          <div className="card__b">
+            {esFlota && <div style={{fontSize:12.5,color:'var(--text-3)',marginBottom:10}}>Vehículo <span className="mono" style={{fontWeight:700,color:'var(--text)'}}>{trabajoActivo.placa}</span>{trabajoActivo.otCodigo && <> · Orden <span className="mono">{trabajoActivo.otCodigo}</span></>}</div>}
+            <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-end',gap:12,flexWrap:'wrap'}}>
               <div>
                 <div style={{fontSize:11,fontWeight:700,color:'var(--text-3)',letterSpacing:'.06em',textTransform:'uppercase',marginBottom:4}}>Estado actual</div>
-                <div style={{fontSize:18,fontWeight:700,color:ESTADO_TRABAJO_DISPLAY[trabajoActivo.estado]?.color||'var(--text)'}}>
-                  {ESTADO_TRABAJO_DISPLAY[trabajoActivo.estado]?.label || trabajoActivo.estado}
-                </div>
+                <div style={{fontSize:19,fontWeight:800,color:ESTADO_TRABAJO_DISPLAY[trabajoActivo.estado]?.color||'var(--text)'}}>{ESTADO_TRABAJO_DISPLAY[trabajoActivo.estado]?.label || trabajoActivo.estado}</div>
               </div>
               <div style={{textAlign:'right'}}>
                 <div style={{fontSize:11,fontWeight:700,color:'var(--text-3)',letterSpacing:'.06em',textTransform:'uppercase',marginBottom:4}}>Ingreso</div>
-                <div style={{fontSize:15,fontWeight:700,color:'var(--text)'}}>{fmtDate(trabajoActivo.fecha)}</div>
+                <div style={{fontSize:15,fontWeight:700}}>{fmtDate(trabajoActivo.fecha)}</div>
               </div>
             </div>
             <div style={{height:8,background:'var(--bg-subtle)',borderRadius:99,overflow:'hidden',marginTop:14}}>
-              <div style={{width:`${ESTADO_TRABAJO_DISPLAY[trabajoActivo.estado]?.pct||0}%`,height:'100%',background:'var(--amber-500)',borderRadius:99,transition:'width .4s ease-out'}}/>
+              <div style={{width:`${ESTADO_TRABAJO_DISPLAY[trabajoActivo.estado]?.pct||0}%`,height:'100%',background:'var(--amber-500)',borderRadius:99,transition:'width .5s ease-out'}}/>
             </div>
             <div style={{fontSize:11,color:'var(--text-3)',marginTop:6,fontWeight:600}}>{ESTADO_TRABAJO_DISPLAY[trabajoActivo.estado]?.pct||0}% completado</div>
           </div>
-        )}
-      </div>
-
-      {/* Columna principal (avance) + columna lateral (técnico, fotos, insp) */}
-      <div className="portal-col">
-      {/* Timeline de avance primero (lo que más le importa al cliente) */}
+        </div>
+      )}
+      {/* Timeline de avance */}
       {trabajoActivo && (
         <div className="card">
           <div className="card__h"><h3>Avance del trabajo</h3></div>
@@ -588,12 +754,12 @@ export default function PortalCliente() {
         </div>
       )}
 
-      {/* Inspecciones */}
-      {datos.inspecciones.length > 0 && (
+      {/* Inspecciones del vehículo en foco */}
+      {inspFoco.length > 0 && (
         <div className="card">
-          <div className="card__h"><h3>Inspecciones de su vehiculo</h3><span className="count">{datos.inspecciones.length}</span></div>
+          <div className="card__h"><h3>Inspecciones</h3><span className="count">{inspFoco.length}</span></div>
           <div className="card__b" style={{display:'flex',flexDirection:'column',gap:0}}>
-            {datos.inspecciones.map((insp, idx) => {
+            {inspFoco.map((insp, idx) => {
               const items = insp.items || []
               const urgentes = items.filter(i => i.estado === 'urgente').length
               const sugeridos = items.filter(i => i.estado === 'sugerido').length
@@ -602,7 +768,7 @@ export default function PortalCliente() {
               const pct = total > 0 ? Math.round((buenos / total) * 100) : 0
 
               return (
-                <div key={insp.id || idx} style={{padding:'14px 0',borderBottom:idx<datos.inspecciones.length-1?'1px solid var(--border)':'none'}}>
+                <div key={insp.id || idx} style={{padding:'14px 0',borderBottom:idx<inspFoco.length-1?'1px solid var(--border)':'none'}}>
                   <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',flexWrap:'wrap',gap:8}}>
                     <div>
                       <div style={{fontWeight:700,fontSize:14}}>{insp.placa} <span style={{color:'var(--text-3)',fontWeight:400,fontSize:13}}>— {insp.vehiculo || ''}</span></div>
@@ -640,52 +806,39 @@ export default function PortalCliente() {
         </div>
       )}
 
-      {/* Historial de trabajos — a lo ancho */}
+      {/* Historial — flat (cliente normal) o agrupado por vehículo (flota) */}
       {datos.trabajos.length > 0 && (
-        <div className="card portal-full">
-          <div className="card__h"><h3>Historial de servicios</h3><span className="count">{datos.trabajos.length}</span></div>
-          <div className="card__b card__b--flush">
-            <table className="tbl tbl-cards">
-              <thead>
-                <tr><th>Fecha</th><th>Placa</th><th>Vehiculo</th><th>Estado</th><th>Fotos</th><th /></tr>
-              </thead>
-              <tbody>
-                {datos.trabajos.map(t => (
-                  <tr key={t.id}>
-                    <td data-label="Fecha" style={{color:'var(--text-3)',fontSize:13}}>{fmtDate(t.fecha)}</td>
-                    <td className="c-name mono" style={{fontWeight:700}}>{t.placa}</td>
-                    <td data-label="Vehiculo" style={{color:'var(--text-3)',fontSize:13}}>{[t.marca,t.modelo].filter(Boolean).join(' ')||'—'}</td>
-                    <td data-label="Estado">
-                      <span className="badge" style={{
-                        background:(ESTADO_TRABAJO_DISPLAY[t.estado]?.color||'#64748b')+'20',
-                        color:ESTADO_TRABAJO_DISPLAY[t.estado]?.color||'#64748b'
-                      }}>
-                        {ESTADO_TRABAJO_DISPLAY[t.estado]?.label || t.estado}
-                      </span>
-                    </td>
-                    <td data-label="Fotos">
-                      {t.evidencias?.length > 0 ? (
-                        <button className="btn btn-ghost btn-sm" onClick={()=>{setGaleria(t.evidencias);setGalIdx(0)}} style={{gap:5}}>
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
-                          {t.evidencias.length}
-                        </button>
-                      ) : <span style={{color:'var(--text-4)'}}>—</span>}
-                    </td>
-                    <td className="td-actions" style={{textAlign:'right'}}>
-                      {t.facturadoEn && !t.pagado && t.total > 0 && (
-                        <button className="btn btn-primary btn-sm" style={{marginRight:8}} disabled={pagando===t.id} onClick={()=>pagarConWompi(t)}>
-                          {pagando===t.id ? 'Abriendo…' : `Pagar ${fmt(t.total)}`}
-                        </button>
-                      )}
-                      {t.pagado && <span className="badge" style={{background:'var(--green-100)',color:'var(--green-700)',fontWeight:700,marginRight:8}}>Pagado ✓</span>}
-                      <button className="btn btn-outline btn-sm" onClick={()=>setVistaServicio(t)}>Ver detalle</button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+        esFlota ? (
+          <div className="card portal-full">
+            <div className="card__h"><h3>Historial por vehículo</h3><span className="count">{datos.trabajos.length}</span></div>
+            <div className="card__b" style={{display:'flex',flexDirection:'column',gap:22}}>
+              {vehiculos.map(v => (
+                <div key={v.placa}>
+                  <div style={{display:'flex',alignItems:'baseline',gap:8,marginBottom:6,paddingBottom:6,borderBottom:'1px solid var(--border)'}}>
+                    <span className="mono" style={{fontWeight:800,fontSize:15}}>{v.placa}</span>
+                    <span style={{fontSize:13,color:'var(--text-3)'}}>{[v.marca,v.modelo].filter(Boolean).join(' ')}</span>
+                    <span style={{fontSize:12.5,color:'var(--text-4)',marginLeft:'auto'}}>{v.trabajos.length} {v.trabajos.length===1?'servicio':'servicios'}</span>
+                  </div>
+                  <table className="tbl tbl-cards">
+                    <tbody>{v.trabajos.map(t => filaHist(t, true))}</tbody>
+                  </table>
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
+        ) : (
+          <div className="card portal-full">
+            <div className="card__h"><h3>Historial de servicios</h3><span className="count">{datos.trabajos.length}</span></div>
+            <div className="card__b card__b--flush">
+              <table className="tbl tbl-cards">
+                <thead>
+                  <tr><th>Fecha</th><th>Placa</th><th>Vehiculo</th><th>Estado</th><th>Fotos</th><th /></tr>
+                </thead>
+                <tbody>{datos.trabajos.map(t => filaHist(t, false))}</tbody>
+              </table>
+            </div>
+          </div>
+        )
       )}
 
       {!trabajoActivo && datos.trabajos.length === 0 && (
