@@ -122,11 +122,13 @@ export default async function handler(req, res) {
         method: 'DELETE',
         headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` },
       })
-      if (!r.ok && r.status !== 404) {
-        const detail = await r.text()
-        res.status(502).json({ error: 'No se pudo borrar', detail }); return
+      // Idempotente: "ya no existe" (Supabase manda el 404 en el CUERPO, no en el
+      // status HTTP) también cuenta como borrado OK.
+      const body = r.ok ? '' : await r.text()
+      if (!r.ok && !/not_?found|Object not found|"404"/i.test(body)) {
+        res.status(502).json({ error: 'No se pudo borrar', detail: body }); return
       }
-      res.status(200).json({ ok: true }) // 404 = ya no existe → también OK
+      res.status(200).json({ ok: true })
     } catch (e) {
       res.status(500).json({ error: e.message || 'Error borrando' })
     }
