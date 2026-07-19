@@ -3,6 +3,32 @@ const proxy = (table) => `/api/supabase?table=${table}`
 const baseProxy = proxy('trabajos')
 const REQUEST_TIMEOUT_MS = 12000
 
+// Sube un VIDEO de evidencia al bucket de Supabase Storage. El video es muy
+// grande para la columna y para el límite de 4.5MB de una función, así que:
+//   1) el servidor firma una URL de subida (con la llave, que nunca sale al cliente),
+//   2) el navegador sube el archivo DIRECTO a esa URL.
+// Devuelve { url } público para guardar en la evidencia y reproducir en el portal.
+// Sin timeout: subir un video puede tardar; un corte mataría la subida a medias.
+export async function subirVideoEvidencia(file, trabajoId) {
+  const ext = ((file.name || '').split('.').pop() || 'mp4').toLowerCase().replace(/[^a-z0-9]/g, '') || 'mp4'
+  const rand = Math.random().toString(36).slice(2, 8)
+  const carpeta = String(trabajoId || 'sin-ot').replace(/[^\w-]/g, '')
+  const path = `${carpeta}/${Date.now()}-${rand}.${ext}`
+  const sr = await fetch('/api/supabase?storage=sign', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ path }),
+  })
+  const sd = await sr.json().catch(() => null)
+  if (!sr.ok || !sd?.signedUrl) throw new Error(sd?.error || 'No se pudo preparar la subida')
+  const up = await fetch(sd.signedUrl, {
+    method: 'PUT',
+    headers: { 'Content-Type': file.type || 'video/mp4' },
+    body: file,
+  })
+  if (!up.ok) throw new Error(`Falló la subida (${up.status})`)
+  return { url: sd.publicUrl, path }
+}
+
 async function fetchWithTimeout(url, options = {}) {
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS)
@@ -63,11 +89,9 @@ export async function upsertTrabajo(trabajo, opts = {}) {
     // Evidencias (fotos comprimidas) para que el cliente las vea en su portal
     evidencias: JSON.stringify(trabajo.evidenciasIngreso || []),
     mano_obra: trabajo.manoObra || 0,
-    // M.O. adicional interna (se le paga al técnico, NO se le cobra al cliente).
-    // Se persiste para que no se pierda al re-guardar el trabajo.
-    mano_obra_extra: trabajo.manoObraExtra || 0,
     // M.O. adicional (no facturada): base extra que se le paga al técnico sin
-    // cobrarla al cliente. Columna aditiva; en OTs viejas = 0.
+    // cobrarla al cliente. Se persiste para no perderla al re-guardar. En OTs
+    // viejas = 0.
     mano_obra_extra: trabajo.manoObraExtra || 0,
     subtotal_sin_iva: trabajo.subtotalSinIva || 0,
     total_iva: trabajo.totalIva || 0,

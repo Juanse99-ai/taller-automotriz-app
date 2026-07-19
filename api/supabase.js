@@ -83,6 +83,34 @@ export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization')
   if (req.method === 'OPTIONS') { res.status(200).end(); return }
 
+  // Storage: firma una URL de subida para el bucket "evidencias" (videos que no
+  // caben ni en la columna ni en el límite de 4.5MB de una función). El servidor
+  // firma con la llave anon; el navegador sube el archivo grande DIRECTO a esa
+  // URL (la llave nunca sale al cliente). Devuelve también la URL pública.
+  if (req.query.storage === 'sign') {
+    if (req.method !== 'POST') { res.status(405).json({ error: 'Solo POST' }); return }
+    const path = String((req.body && req.body.path) || '').replace(/^\/+/, '')
+    // Ruta simple dentro del bucket: evita path traversal y sobrescribir otras cosas.
+    if (!path || path.includes('..') || !/^[\w./-]+$/.test(path)) { res.status(400).json({ error: 'path inválido' }); return }
+    try {
+      const r = await fetch(`${SUPABASE_URL}/storage/v1/object/upload/sign/evidencias/${path}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` },
+        body: '{}',
+      })
+      const data = await r.json().catch(() => null)
+      if (!r.ok || !data?.url) { res.status(502).json({ error: 'No se pudo firmar la subida', detail: data }); return }
+      res.status(200).json({
+        signedUrl: `${SUPABASE_URL}/storage/v1${data.url}`,
+        publicUrl: `${SUPABASE_URL}/storage/v1/object/public/evidencias/${path}`,
+        path,
+      })
+    } catch (e) {
+      res.status(500).json({ error: e.message || 'Error firmando la subida' })
+    }
+    return
+  }
+
   const table = req.query.table
   if (!table) { res.status(400).json({ error: 'table param requerido' }); return }
   const ALLOWED_TABLES = [

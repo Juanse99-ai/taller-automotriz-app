@@ -10,6 +10,7 @@ import { MARCAS, getModelos } from '../utils/vehiculos'
 import { useClientes } from '../hooks/useClientes'
 import { useInventario, formatCacheAge } from '../hooks/useInventario'
 import { lsGet, lsSet, LS_KEYS } from '../services/storage'
+import { subirVideoEvidencia } from '../services/supabase'
 import Switch from '../components/Switch'
 import MoneyInput from '../components/MoneyInput'
 import SignaturePad from '../components/SignaturePad'
@@ -390,6 +391,7 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
         trabajo={trabajo}
         allTrabajos={trabajos}
         vehiculosHook={vehiculosHook}
+        notify={notify}
         onSave={async (data) => {
           // Helper: registrar/actualizar cliente y vehiculo en BD local
           // (se ejecuta tanto al crear como al editar)
@@ -914,7 +916,7 @@ function Chevron({ open }) {
 // ========================
 // FORMULARIO DE TRABAJO
 // ========================
-function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [], vehiculosHook }) {
+function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [], vehiculosHook, notify }) {
   const isEdit = !!trabajo
   const { resultados, buscando, buscarDebounced, setResultados } = useClientes()
   const [campoActivo, setCampoActivo] = useState('cedula') // cuál campo de búsqueda de cliente está enfocado
@@ -998,6 +1000,36 @@ function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [], vehiculosHoo
         [campo]: [...(f[campo] || []), { id: uid(), nombre: file.name, dataUrl, nota: '' }],
       }))
     })
+  }
+
+  // Video de evidencia (máx 30s). No cabe en la columna: se sube al bucket de
+  // Storage y en la evidencia solo se guarda el link ({ tipo:'video', url }).
+  const MAX_VIDEO_SEG = 30
+  const MAX_VIDEO_BYTES = 75 * 1024 * 1024
+  const [subiendoVideo, setSubiendoVideo] = useState(false)
+  const addVideo = async (campo, file) => {
+    if (!file) return
+    if (!file.type?.startsWith('video/')) { notify?.('Ese archivo no es un video.', 'error'); return }
+    if (file.size > MAX_VIDEO_BYTES) { notify?.('El video pesa más de 75 MB. Grábalo más corto o en menor calidad.', 'error'); return }
+    // Duración: se lee del propio archivo antes de subir.
+    const dur = await new Promise(resolve => {
+      const v = document.createElement('video')
+      v.preload = 'metadata'
+      v.onloadedmetadata = () => { const d = v.duration || 0; URL.revokeObjectURL(v.src); resolve(d) }
+      v.onerror = () => resolve(0)
+      v.src = URL.createObjectURL(file)
+    })
+    if (dur > MAX_VIDEO_SEG + 0.5) { notify?.(`El video dura ${Math.round(dur)}s. El máximo son ${MAX_VIDEO_SEG} segundos.`, 'error'); return }
+    setSubiendoVideo(true)
+    try {
+      const { url } = await subirVideoEvidencia(file, form.otCodigo || form.id)
+      setForm(f => ({ ...f, [campo]: [...(f[campo] || []), { id: uid(), nombre: file.name, tipo: 'video', url, nota: '' }] }))
+      notify?.('Video subido.', 'success')
+    } catch (e) {
+      notify?.(`No se pudo subir el video: ${e.message}`, 'error')
+    } finally {
+      setSubiendoVideo(false)
+    }
   }
 
   const actualizarNotaFoto = (campo, id, nota) => {
@@ -1493,9 +1525,18 @@ function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [], vehiculosHoo
           {showEvid && (
           <div className="card__b">
             <div className="field">
-              <label>Fotos de la orden de trabajo</label>
-              <span className="help">Todas las que necesites: cómo llega el vehículo, durante la reparación, daños, repuestos cambiados y la entrega final.</span>
+              <label>Fotos y videos de la orden de trabajo</label>
+              <span className="help">Todas las que necesites: cómo llega el vehículo, durante la reparación, daños, repuestos cambiados y la entrega final. Los videos duran máximo 30 segundos.</span>
               <input type="file" accept="image/*" multiple onChange={e => addFotos('evidenciasIngreso', e.target.files)} />
+              <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                <label className="btn btn-outline btn-sm" style={{ cursor: subiendoVideo ? 'wait' : 'pointer', margin: 0 }}>
+                  {subiendoVideo ? 'Subiendo video…' : '+ Agregar video (máx 30s)'}
+                  <input type="file" accept="video/*" capture="environment" disabled={subiendoVideo}
+                    onChange={e => { const file = e.target.files?.[0]; e.target.value = ''; addVideo('evidenciasIngreso', file) }}
+                    style={{ display: 'none' }} />
+                </label>
+                {subiendoVideo && <span style={{ fontSize: 12.5, color: 'var(--text-3)' }}>No cierres esta ventana hasta que termine.</span>}
+              </div>
               <ThumbGrid fotos={form.evidenciasIngreso} onNota={(id, nota) => actualizarNotaFoto('evidenciasIngreso', id, nota)} onRemove={id => quitarFoto('evidenciasIngreso', id)} />
             </div>
           </div>
@@ -1850,8 +1891,10 @@ function ThumbGrid({ fotos = [], onNota, onRemove }) {
     <div className="thumb-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px,1fr))', gap: 8, marginTop: 10 }}>
       {fotos.map(fv => (
         <div key={fv.id} style={{ border: '1px solid var(--slate-200)', borderRadius: 8, padding: 6 }}>
-          <div style={{ position: 'relative', paddingBottom: '70%', overflow: 'hidden', borderRadius: 6, marginBottom: 6 }}>
-            <img src={fv.dataUrl} alt={fv.nombre} style={{ position: 'absolute', width: '100%', height: '100%', objectFit: 'cover' }} />
+          <div style={{ position: 'relative', paddingBottom: '70%', overflow: 'hidden', borderRadius: 6, marginBottom: 6, background: '#000' }}>
+            {fv.tipo === 'video'
+              ? <video src={fv.url} controls preload="metadata" playsInline style={{ position: 'absolute', width: '100%', height: '100%', objectFit: 'cover' }} />
+              : <img src={fv.dataUrl} alt={fv.nombre} style={{ position: 'absolute', width: '100%', height: '100%', objectFit: 'cover' }} />}
           </div>
           <input className="form-input text-xs" placeholder="Nota breve" value={fv.nota || ''}
             onChange={e => onNota?.(fv.id, e.target.value)} />

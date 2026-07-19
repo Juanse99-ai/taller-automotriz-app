@@ -15,6 +15,25 @@ const tituloCliente = (s) => String(s || '').trim().split(/\s+/).map(w => {
   return w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()
 }).join(' ')
 
+// Una evidencia es video si trae { tipo:'video', url } (las fotos traen dataUrl).
+const esVideoEvid = (f) => f?.tipo === 'video' || (!!f?.url && !f?.dataUrl)
+
+// Miniatura de una evidencia (foto o video). El video muestra su primer frame
+// con un ▶ encima; la foto, la imagen.
+function MiniEvid({ f }) {
+  if (esVideoEvid(f)) return (
+    <>
+      <video src={f.url} muted preload="metadata" playsInline style={{width:'100%',height:'100%',objectFit:'cover',display:'block'}}/>
+      <span style={{position:'absolute',inset:0,display:'flex',alignItems:'center',justifyContent:'center',pointerEvents:'none'}}>
+        <span style={{width:30,height:30,borderRadius:'50%',background:'rgba(0,0,0,.55)',display:'flex',alignItems:'center',justifyContent:'center'}}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="#fff"><path d="M8 5v14l11-7z"/></svg>
+        </span>
+      </span>
+    </>
+  )
+  return <img src={f.dataUrl} alt={f.nota||'Evidencia'} loading="lazy" style={{width:'100%',height:'100%',objectFit:'cover',display:'block'}}/>
+}
+
 const ESTADO_TRABAJO_DISPLAY = {
   [ESTADOS.PENDIENTE]: { label: 'Recibido', color: '#64748b', icon: '1', pct: 15 },
   [ESTADOS.EN_DIAGNOSTICO]: { label: 'En Diagnostico', color: '#2563eb', icon: '2', pct: 30 },
@@ -557,12 +576,12 @@ export default function PortalCliente() {
       {/* Fotos del trabajo activo */}
       {trabajoActivo?.evidencias?.length > 0 && (
         <div className="card">
-          <div className="card__h"><h3>Fotos de su servicio</h3><span className="count">{trabajoActivo.evidencias.length}</span></div>
+          <div className="card__h"><h3>Fotos y videos de su servicio</h3><span className="count">{trabajoActivo.evidencias.length}</span></div>
           <div className="card__b" style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(92px,1fr))',gap:8}}>
             {trabajoActivo.evidencias.map((f,i)=>(
               <button key={f.id||i} onClick={()=>{setGaleria(trabajoActivo.evidencias);setGalIdx(i)}}
-                style={{padding:0,border:'1px solid var(--border)',borderRadius:8,overflow:'hidden',cursor:'pointer',aspectRatio:'1',background:'var(--bg-subtle)'}}>
-                <img src={f.dataUrl} alt={f.nota||'Evidencia'} loading="lazy" style={{width:'100%',height:'100%',objectFit:'cover',display:'block'}}/>
+                style={{padding:0,border:'1px solid var(--border)',borderRadius:8,overflow:'hidden',cursor:'pointer',aspectRatio:'1',background:'var(--bg-subtle)',position:'relative'}}>
+                <MiniEvid f={f} />
               </button>
             ))}
           </div>
@@ -763,12 +782,12 @@ export default function PortalCliente() {
 
               {t.evidencias?.length > 0 && (
                 <div style={{margin:'0 20px 12px'}}>
-                  <div style={{fontSize:11.5,fontWeight:700,color:'var(--text-3)',textTransform:'uppercase',letterSpacing:'.05em',marginBottom:6}}>Fotos</div>
+                  <div style={{fontSize:11.5,fontWeight:700,color:'var(--text-3)',textTransform:'uppercase',letterSpacing:'.05em',marginBottom:6}}>Fotos y videos</div>
                   <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(84px,1fr))',gap:8}}>
                     {t.evidencias.map((f,i)=>(
                       <button key={f.id||i} onClick={()=>{setGaleria(t.evidencias);setGalIdx(i)}}
-                        style={{padding:0,border:'1px solid var(--border)',borderRadius:8,overflow:'hidden',cursor:'pointer',aspectRatio:'1',background:'var(--bg-subtle)'}}>
-                        <img src={f.dataUrl} alt={f.nota||'Foto del servicio'} loading="lazy" style={{width:'100%',height:'100%',objectFit:'cover',display:'block'}}/>
+                        style={{padding:0,border:'1px solid var(--border)',borderRadius:8,overflow:'hidden',cursor:'pointer',aspectRatio:'1',background:'var(--bg-subtle)',position:'relative'}}>
+                        <MiniEvid f={f} />
                       </button>
                     ))}
                   </div>
@@ -794,8 +813,11 @@ export default function PortalCliente() {
           </button>
           <div onTouchStart={onGalTouchStart} onTouchEnd={onGalTouchEnd}
             style={{margin:'auto',display:'flex',flexDirection:'column',alignItems:'center',maxWidth:'100%'}}>
-            <img src={galeria[galIdx]?.dataUrl} alt={galeria[galIdx]?.nota||''} onClick={e=>e.stopPropagation()}
-              style={{maxWidth:'100%',maxHeight:'72vh',objectFit:'contain',borderRadius:8,boxShadow:'0 10px 40px rgba(0,0,0,.5)'}}/>
+            {esVideoEvid(galeria[galIdx])
+              ? <video key={galeria[galIdx]?.url} src={galeria[galIdx]?.url} controls autoPlay playsInline onClick={e=>e.stopPropagation()}
+                  style={{maxWidth:'100%',maxHeight:'72vh',borderRadius:8,boxShadow:'0 10px 40px rgba(0,0,0,.5)',background:'#000'}}/>
+              : <img src={galeria[galIdx]?.dataUrl} alt={galeria[galIdx]?.nota||''} onClick={e=>e.stopPropagation()}
+                  style={{maxWidth:'100%',maxHeight:'72vh',objectFit:'contain',borderRadius:8,boxShadow:'0 10px 40px rgba(0,0,0,.5)'}}/>}
             {galeria[galIdx]?.nota && (
               <div style={{color:'#fff',marginTop:12,fontSize:14,textAlign:'center',maxWidth:600}}>{galeria[galIdx].nota}</div>
             )}
