@@ -111,6 +111,28 @@ export default async function handler(req, res) {
     return
   }
 
+  // Storage: borra un archivo del bucket "evidencias" (cuando se quita un video
+  // de una OT o se elimina la OT). Solo ese bucket; el servidor usa la llave.
+  if (req.query.storage === 'delete') {
+    if (req.method !== 'POST') { res.status(405).json({ error: 'Solo POST' }); return }
+    const path = String((req.body && req.body.path) || '').replace(/^\/+/, '')
+    if (!path || path.includes('..') || !/^[\w./-]+$/.test(path)) { res.status(400).json({ error: 'path inválido' }); return }
+    try {
+      const r = await fetch(`${SUPABASE_URL}/storage/v1/object/evidencias/${path}`, {
+        method: 'DELETE',
+        headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` },
+      })
+      if (!r.ok && r.status !== 404) {
+        const detail = await r.text()
+        res.status(502).json({ error: 'No se pudo borrar', detail }); return
+      }
+      res.status(200).json({ ok: true }) // 404 = ya no existe → también OK
+    } catch (e) {
+      res.status(500).json({ error: e.message || 'Error borrando' })
+    }
+    return
+  }
+
   const table = req.query.table
   if (!table) { res.status(400).json({ error: 'table param requerido' }); return }
   const ALLOWED_TABLES = [

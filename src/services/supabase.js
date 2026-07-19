@@ -29,6 +29,22 @@ export async function subirVideoEvidencia(file, trabajoId) {
   return { url: sd.publicUrl, path }
 }
 
+// Borra el archivo de un video de evidencia del bucket (al quitarlo de una OT o
+// al eliminar la OT). Recibe la evidencia (o su url/path). Silencioso: si falla
+// solo deja un huérfano, no rompe el guardado. Solo actúa sobre videos.
+export async function borrarVideoEvidencia(evid) {
+  const url = typeof evid === 'string' ? evid : (evid?.url || '')
+  const path = evid?.path || (url.includes('/evidencias/') ? url.split('/evidencias/')[1] : '')
+  if (!path) return false
+  try {
+    const r = await fetch('/api/supabase?storage=delete', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ path: decodeURIComponent(path) }),
+    })
+    return r.ok
+  } catch { return false }
+}
+
 async function fetchWithTimeout(url, options = {}) {
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS)

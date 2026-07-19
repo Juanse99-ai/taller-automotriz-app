@@ -10,7 +10,7 @@ import { MARCAS, getModelos } from '../utils/vehiculos'
 import { useClientes } from '../hooks/useClientes'
 import { useInventario, formatCacheAge } from '../hooks/useInventario'
 import { lsGet, lsSet, LS_KEYS } from '../services/storage'
-import { subirVideoEvidencia } from '../services/supabase'
+import { subirVideoEvidencia, borrarVideoEvidencia } from '../services/supabase'
 import Switch from '../components/Switch'
 import MoneyInput from '../components/MoneyInput'
 import SignaturePad from '../components/SignaturePad'
@@ -156,6 +156,10 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
   }
 
   const handleEliminar = async (id) => {
+    // Borra del bucket los videos de esta OT (no dejar archivos huérfanos).
+    const t = trabajos.find(x => x.id === id)
+    const videos = (t?.evidenciasIngreso || []).filter(e => e?.tipo === 'video')
+    videos.forEach(v => { borrarVideoEvidencia(v) }) // silencioso, no bloquea
     await eliminarTrabajo(id)
     setConfirmDel(null)
     notify('Trabajo eliminado', 'info')
@@ -419,6 +423,11 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
           }
 
           if (vista === 'editar') {
+            // Borra del bucket los videos que se quitaron en esta edición (los
+            // que estaban antes y ya no están). Silencioso, no bloquea el guardado.
+            const videosAntes = [...(trabajo?.evidenciasIngreso || []), ...(trabajo?.evidenciasEntrega || [])].filter(e => e?.tipo === 'video')
+            const urlsAhora = new Set((data.evidenciasIngreso || []).filter(e => e?.tipo === 'video').map(e => e.url))
+            videosAntes.forEach(v => { if (!urlsAhora.has(v.url)) borrarVideoEvidencia(v) })
             await actualizarTrabajo(editId, data)
             sincronizarClienteVehiculo()
             notify('Trabajo actualizado', 'success')
