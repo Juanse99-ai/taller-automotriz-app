@@ -16,6 +16,30 @@ const ALLOWED_ORIGINS = [
   'http://localhost:5173',
 ]
 
+// Bitácora en Supabase (misma que usa el MCP) para idempotencia: si un reintento
+// tras timeout re-envía el mismo gasto, se detecta por la clave (idemKey, ej. el
+// id de la liquidación LQ-...) y NO se graba dos veces.
+const SB_URL = 'https://hpndvrjjizzkusuuhefb.supabase.co'
+const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhwbmR2cmpqaXp6a3VzdXVoZWZiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM0NjkwMzMsImV4cCI6MjA4OTA0NTAzM30.-6Jz1TsDjAladZUOGD-WNMvVbZXd1Z4WBoOF-npew5c'
+const SB_HEAD = { apikey: SB_KEY, Authorization: `Bearer ${SB_KEY}` }
+
+async function buscarPorIdemKey(idemKey) {
+  try {
+    const r = await fetch(`${SB_URL}/rest/v1/gastos_registrados?numero_factura=eq.${encodeURIComponent(idemKey)}&select=id_transacion,numero_doc&limit=1`, { headers: SB_HEAD })
+    if (!r.ok) return null
+    const rows = await r.json()
+    return Array.isArray(rows) && rows.length ? rows[0] : null
+  } catch { return null }
+}
+async function guardarEnBitacora(fila) {
+  try {
+    await fetch(`${SB_URL}/rest/v1/gastos_registrados`, {
+      method: 'POST', headers: { ...SB_HEAD, 'Content-Type': 'application/json', Prefer: 'return=minimal' },
+      body: JSON.stringify(fila),
+    })
+  } catch { /* no-fatal: el gasto ya se creó en Cuentti */ }
+}
+
 export default async function handler(req, res) {
   const origin = req.headers.origin || ''
   res.setHeader('Access-Control-Allow-Origin', ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[1])
@@ -36,16 +60,31 @@ export default async function handler(req, res) {
   if (req.method !== 'POST') { res.status(405).json({ ok: false, error: 'Solo POST' }); return }
 
   try {
-    const { proveedorCedula, monto } = req.body || {}
+    const { proveedorCedula, monto, idemKey } = req.body || {}
     if (!proveedorCedula || !monto) { res.status(400).json({ ok: false, error: 'Falta proveedorCedula o monto' }); return }
     // El monto debe ser positivo: un negativo grabaría un gasto invertido.
     const montoNum = Math.round(parseFloat(monto) || 0)
     if (!(montoNum > 0)) { res.status(400).json({ ok: false, error: 'El monto debe ser mayor a 0' }); return }
 
+    // Idempotencia: si ya se registró un gasto con esta clave (reintento tras
+    // timeout), devolver el existente en vez de grabar doble.
+    if (idemKey) {
+      const previo = await buscarPorIdemKey(idemKey)
+      if (previo) { res.status(200).json({ ok: true, dedup: true, idTransacion: previo.id_transacion, numeroDoc: previo.numero_doc }); return }
+    }
+
     // La nomina siempre es un empleado => persona natural. Se fija aqui para que
     // la deduccion por NIT/nombre no aplique y el payload historico no cambie.
     const r = await enviarGasto({ tipoPersona: TIPO_PERSONA_NATURAL, ...req.body })
     if (!r.ok) { res.status(502).json({ ok: false, cuentti: r.cuentti }); return }
+    // Registrar en la bitácora para que un reintento futuro con la misma clave no re-grabe.
+    if (idemKey) {
+      await guardarEnBitacora({
+        proveedor_nit: String(proveedorCedula).trim(), proveedor_nombre: req.body.proveedorNombre || '',
+        numero_factura: String(idemKey).trim(), concepto: req.body.nota || 'Nómina',
+        total: montoNum, id_transacion: String(r.idTransacion || ''), numero_doc: String(r.numeroDoc || ''),
+      })
+    }
     res.status(200).json({ ok: true, idTransacion: r.idTransacion, numeroDoc: r.numeroDoc })
   } catch (e) {
     res.status(500).json({ ok: false, error: e.message })

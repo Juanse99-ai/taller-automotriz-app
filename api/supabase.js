@@ -117,6 +117,18 @@ export default async function handler(req, res) {
     if (req.method !== 'POST') { res.status(405).json({ error: 'Solo POST' }); return }
     const path = String((req.body && req.body.path) || '').replace(/^\/+/, '')
     if (!path || path.includes('..') || !/^[\w./-]+$/.test(path)) { res.status(400).json({ error: 'path inválido' }); return }
+    // Sólo se puede borrar un archivo que NINGÚN trabajo activo referencia. El
+    // proxy es abierto y los paths son enumerables; sin esto, cualquiera podría
+    // borrar todas las evidencias. Como el cliente persiste ANTES de borrar (quita
+    // el video de la OT y guarda, luego borra), un borrado legítimo pasa; un
+    // atacante que apunte a un video vivo choca con el 403.
+    try {
+      const ref = await fetch(`${SUPABASE_URL}/rest/v1/trabajos?deleted=eq.false&evidencias=like.*${encodeURIComponent(path)}*&select=id&limit=1`, { headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` } })
+      if (ref.ok) {
+        const filas = await ref.json().catch(() => [])
+        if (Array.isArray(filas) && filas.length > 0) { res.status(403).json({ error: 'El archivo aún está referenciado por un trabajo' }); return }
+      }
+    } catch { /* si no se pudo verificar, se sigue (falla abierta hacia el borrado legítimo) */ }
     try {
       const r = await fetch(`${SUPABASE_URL}/storage/v1/object/evidencias/${path}`, {
         method: 'DELETE',

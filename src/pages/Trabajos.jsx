@@ -157,11 +157,12 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
   }
 
   const handleEliminar = async (id) => {
-    // Borra del bucket los videos de esta OT (no dejar archivos huérfanos).
     const t = trabajos.find(x => x.id === id)
     const videos = (t?.evidenciasIngreso || []).filter(e => e?.tipo === 'video')
-    videos.forEach(v => { borrarVideoEvidencia(v) }) // silencioso, no bloquea
+    // ELIMINAR primero (soft-delete: deleted=true) y LUEGO borrar los videos del
+    // bucket: el endpoint solo borra archivos no referenciados por trabajos activos.
     await eliminarTrabajo(id)
+    videos.forEach(v => { borrarVideoEvidencia(v) }) // silencioso, no bloquea
     setConfirmDel(null)
     notify('Trabajo eliminado', 'info')
   }
@@ -424,12 +425,12 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
           }
 
           if (vista === 'editar') {
-            // Borra del bucket los videos que se quitaron en esta edición (los
-            // que estaban antes y ya no están). Silencioso, no bloquea el guardado.
             const videosAntes = [...(trabajo?.evidenciasIngreso || []), ...(trabajo?.evidenciasEntrega || [])].filter(e => e?.tipo === 'video')
             const urlsAhora = new Set((data.evidenciasIngreso || []).filter(e => e?.tipo === 'video').map(e => e.url))
-            videosAntes.forEach(v => { if (!urlsAhora.has(v.url)) borrarVideoEvidencia(v) })
+            // GUARDAR primero (des-referencia el video), LUEGO borrar del bucket: así
+            // el endpoint de borrado (que rechaza archivos aún referenciados) no falla.
             await actualizarTrabajo(editId, data)
+            videosAntes.forEach(v => { if (!urlsAhora.has(v.url)) borrarVideoEvidencia(v) })
             sincronizarClienteVehiculo()
             notify('Trabajo actualizado', 'success')
           } else {

@@ -213,6 +213,27 @@ export default async function handler(req, res) {
   try {
     const path = req.query.path || '';
     if (!path.startsWith('/jServerj4ErpPro/')) { res.status(400).json({ error: 'Invalid API path' }); return; }
+    // Whitelist de prefijos: el proxy reenvía con el token del negocio, así que solo
+    // se permiten las áreas que la app usa de verdad (pagos, facturación, inventario,
+    // clientes, medios de pago). Cualquier otro endpoint de Cuentti (admin, seguridad,
+    // borrados masivos…) queda bloqueado aunque alguien lo intente con curl.
+    const CUENTTI_ALLOWED_PREFIXES = [
+      '/jServerj4ErpPro/api/token/',                         // medios de pago, consultar cliente, grabarFacturaSimple
+      '/jServerj4ErpPro/com/j4ErpPro/server/transacion/',   // pagos, anular, factura electrónica, buscar
+      '/jServerj4ErpPro/com/j4ErpPro/server/inv/producto/', // inventario
+      '/jServerj4ErpPro/com/j4ErpPro/server/vent/',         // ventas / productos / medios de pago
+      '/jServerj4ErpPro/com/j4ErpPro/server/adm/cliente/',  // grabar cliente
+      '/jServerj4ErpPro/com/j4ErpPro/server/admin/',        // fallbacks de listado de medios de pago
+      '/jServerj4ErpPro/com/j4ErpPro/server/general/',      // listas de medios de pago
+      '/jServerj4ErpPro/com/j4ErpPro/server/configuracion/',// config de medios de pago
+      '/jServerj4ErpPro/com/j4ErpPro/server/factura/',      // factura · medio de pago
+    ];
+    const pathSolo = path.split('?')[0];
+    if (!CUENTTI_ALLOWED_PREFIXES.some(p => pathSolo.startsWith(p))) {
+      console.warn('[Cuentti proxy] path no permitido:', pathSolo);
+      res.status(403).json({ error: 'Endpoint de Cuentti no permitido' });
+      return;
+    }
 
     const baseUrl = 'https://app.cuenti.com';
     const cuenttiUrl = new URL(path, baseUrl).toString();

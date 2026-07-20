@@ -186,6 +186,7 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
         idMedioPago,
         idBanco,
         aCredito: esCredito,
+        idemKey: reg.id, // idempotencia: reintento tras timeout no re-graba el gasto
         nota: `Nómina ${reg.tecnico} · liq #${liqRef(reg.id)}${esCredito ? ' · A CRÉDITO' : ''}`,
       })
       const doc = data.numeroDoc ? `G-${data.numeroDoc}` : (data.idTransacion || 'OK')
@@ -1822,6 +1823,7 @@ function EstadoCuenta({ prestamos, tecnicos, notify }) {
         proveedorNombre: c.persona,
         monto,
         idMedioPago, idBanco,
+        idemKey: m.id, // idempotencia por movimiento
         nota: `${c.persona} · ${m.nota || 'Pago'} · ${fmtDate(m.fecha)}`,
       })
       const doc = data.numeroDoc ? `G-${data.numeroDoc}` : (data.idTransacion || 'OK')
