@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from 'react'
 import Fuse from 'fuse.js'
-import { fmtDate, fmtTelefono } from '../utils/helpers'
-import { TIPOS_IDENTIFICACION, TIPOS_PERSONA, REGIMENES, buscarClientePorCedula } from '../services/cuentti'
+import { fmtDate, fmtTelefono, fmt } from '../utils/helpers'
+import { TIPOS_IDENTIFICACION, TIPOS_PERSONA, REGIMENES, buscarClientePorCedula, obtenerUrlDocumento } from '../services/cuentti'
 import ConfirmDialog from '../components/ConfirmDialog'
 import { Button, Badge } from '../components/ui'
 
@@ -46,6 +46,7 @@ export default function Clientes({ clientes, vehiculos, trabajos = [], notify })
   const [clienteSeleccionado, setClienteSeleccionado] = useState(null)
   const [editForm, setEditForm] = useState({ nombre: '', telefono: '', email: '', direccion: '' })
   const [guardandoCuentti, setGuardandoCuentti] = useState(false)
+  const [verFacturaId, setVerFacturaId] = useState(null)
   const [creando, setCreando] = useState(false)
   const [nuevoForm, setNuevoForm] = useState({
     cedula: '', nombre: '', telefono: '', email: '', direccion: '',
@@ -189,6 +190,39 @@ export default function Clientes({ clientes, vehiculos, trabajos = [], notify })
     return map
   }, [trabajos])
   const uvDe = (c) => ultimaVisitaPorCedula[(c.cedula || '').toString().trim()] || null
+
+  // Historial de facturación del cliente seleccionado: las OT que se facturaron
+  // (tienen fecha de facturación o id de transacción de Cuentti), por cédula, más
+  // reciente primero. OJO: solo cubre lo que la app registró; el histórico anterior
+  // a la app vive únicamente en Cuentti (no hay API para listarlo por cliente).
+  const facturasCliente = useMemo(() => {
+    if (!clienteSeleccionado) return []
+    const ced = _normCedula(clienteSeleccionado.cedula)
+    if (!ced) return []
+    return (trabajos || [])
+      .filter(t => !t.deleted && (t.facturadoEn || t.cuenttiTransacionId) && _normCedula(t.cedula) === ced)
+      .sort((a, b) => new Date(b.facturadoEn || b.fecha || 0) - new Date(a.facturadoEn || a.fecha || 0))
+  }, [clienteSeleccionado, trabajos])
+  const totalFacturado = useMemo(
+    () => facturasCliente.reduce((s, t) => s + (t.total || 0), 0),
+    [facturasCliente]
+  )
+
+  // Abrir el PDF/QR de la factura en Cuentti (por id de transacción).
+  const verFactura = async (t) => {
+    if (!t.cuenttiTransacionId) { notify('Esta factura no tiene documento en Cuentti', 'error'); return }
+    setVerFacturaId(t.id)
+    try {
+      const res = await obtenerUrlDocumento(t.cuenttiTransacionId)
+      const url = res?.url_externa || res?.url || res?.qr || (typeof res === 'string' ? res : null)
+      if (url) window.open(url, '_blank', 'noopener')
+      else notify('No se pudo obtener el documento desde Cuentti', 'error')
+    } catch (e) {
+      notify(`Error obteniendo la factura: ${e.message}`, 'error')
+    } finally {
+      setVerFacturaId(null)
+    }
+  }
 
   const clientesFiltrados = useMemo(() => {
     const termRaw = busqueda.trim()
@@ -742,6 +776,73 @@ export default function Clientes({ clientes, vehiculos, trabajos = [], notify })
               </div>
             )}
           </div>
+        </div>
+
+        {/* Historial de facturación del cliente */}
+        <div className="card" style={{ marginTop: 16 }}>
+          <div className="card__h">
+            <h3>Historial de facturación</h3>
+            <span className="count">{facturasCliente.length}</span>
+          </div>
+          {facturasCliente.length === 0 ? (
+            <div className="card__b">
+              <div className="empty">
+                <h4>Sin facturas registradas</h4>
+                <p>Este cliente no tiene facturas emitidas desde la app. El histórico anterior a la app vive en Cuentti.</p>
+              </div>
+            </div>
+          ) : (
+            <>
+              <div className="card__b card__b--flush">
+                <table className="tbl">
+                  <thead>
+                    <tr>
+                      <th>Fecha</th>
+                      <th>OT</th>
+                      <th>Vehiculo</th>
+                      <th style={{ textAlign: 'right' }}>Total</th>
+                      <th style={{ textAlign: 'center' }}>Pago</th>
+                      <th></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {facturasCliente.map(t => (
+                      <tr key={t.id}>
+                        <td className="c-muted">{fmtDate(t.facturadoEn || t.fecha)}</td>
+                        <td className="c-mono">{t.otCodigo || '--'}</td>
+                        <td>
+                          <span className="c-mono" style={{ fontWeight: 700 }}>{t.placa || '--'}</span>
+                          {[t.marca, t.modelo].filter(Boolean).length > 0 && (
+                            <span className="c-muted"> · {[t.marca, t.modelo].filter(Boolean).join(' ')}</span>
+                          )}
+                        </td>
+                        <td className="c-mono" style={{ textAlign: 'right', fontWeight: 700 }}>{fmt(t.total)}</td>
+                        <td style={{ textAlign: 'center' }}>
+                          <Badge tone={t.pagado ? 's' : 'w'}>{t.pagado ? 'Pagada' : 'Pendiente'}</Badge>
+                        </td>
+                        <td style={{ textAlign: 'right' }}>
+                          {t.cuenttiTransacionId && (
+                            <Button variant="ghost" size="sm" onClick={() => verFactura(t)} disabled={verFacturaId === t.id}>
+                              {verFacturaId === t.id ? 'Abriendo…' : 'Ver factura'}
+                            </Button>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <div className="card__b" style={{ borderTop: '1px solid var(--border)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ color: 'var(--text-3)', fontSize: 13.5 }}>Total facturado ({facturasCliente.length})</span>
+                  <span className="c-mono" style={{ fontWeight: 800, fontSize: 15.5 }}>{fmt(totalFacturado)}</span>
+                </div>
+                <p style={{ fontSize: 12, color: 'var(--text-3)', margin: '8px 0 0' }}>
+                  Solo facturas emitidas desde la app. El histórico anterior a la app vive en Cuentti.
+                </p>
+              </div>
+            </>
+          )}
         </div>
       </div>
     )
