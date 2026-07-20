@@ -285,7 +285,17 @@ cambiar perceptiblemente (paridad), salvo los bugs corregidos.
 
 ---
 
-## TANDA 5 — Performance 🟢 — [DIFERIDO a propósito]
+## TANDA 5 — Performance 🟢 — [HECHO: 5.1 lazy + 5.2 cleanup parcial]
+> 5.1 [HECHO] commit `30a11c6`: React.lazy por página → bundle inicial 1.417kB→373kB
+> (419→115 gzip, -73%); jspdf/gsap salen del bundle inicial. Verificado en vivo.
+> 5.2 [PARCIAL]: quitadas variables muertas (loadLogo, ‘i’, emptySlots). Los 2
+> Date.now() en render se dejan (react-hooks/purity; funcionalmente inofensivos,
+> moverlos cambiaría el comportamiento de "obsoleto" — la memoria dice no perseguirlos).
+
+## Pendientes menores (cosmético, no crítico)
+> 4.5 badges del portal (contraste texto-sobre-tinte del mismo color: requiere lógica
+> por color, no un simple alpha). 4.6 migrar botones inline a <Button> (paridad visual,
+> grande y de bajo valor). 4.7 unificar el resto de overlays.
 > No hecho: 5.1 (React.lazy por página + import() de jspdf/gsap) toca el routing de
 > App.jsx, que es load-bearing y ya arrastra la fragilidad de rules-of-hooks (early
 > return antes de hooks). Rushearlo al final de una sesión larga arriesga regresar una

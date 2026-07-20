@@ -167,21 +167,6 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
     notify('Trabajo eliminado', 'info')
   }
 
-  const loadLogo = async () => {
-    try {
-      const res = await fetch('/logo.png')
-      if (!res.ok) return null
-      const type = res.headers.get('content-type') || ''
-      if (!type.includes('image')) return null
-      const blob = await res.blob()
-      return await new Promise(resolve => {
-        const reader = new FileReader()
-        reader.onloadend = () => resolve(reader.result)
-        reader.readAsDataURL(blob)
-      })
-    } catch { return null }
-  }
-
   const imprimirOT = async (t) => {
     const doc = new jsPDF()
     const { MARGIN, CONTENT_W } = PDF_LAYOUT
@@ -1695,7 +1680,7 @@ function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [], vehiculosHoo
 
                                 {/* Results */}
                                 <div className="cmd-results">
-                                  {searchState.results.map((p, i) => {
+                                  {searchState.results.map((p) => {
                                     const q = (searchState.query || '').toLowerCase()
                                     const nombre = p.nombre || ''
                                     const idx = nombre.toLowerCase().indexOf(q)

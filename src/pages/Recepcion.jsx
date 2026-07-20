@@ -129,7 +129,6 @@ export default function Recepcion({ hook, vehiculosHook, clientesHook, notify })
   }
 
   const maxPhotos = 6
-  const emptySlots = Math.max(0, maxPhotos - form.evidenciasIngreso.length)
 
   // Vista previa del código: se deriva del MÁXIMO real (como nextOtCodigo), no de
   // trabajos.length+1 (que con OT borradas o huecos daba un número equivocado). Es
