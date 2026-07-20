@@ -100,6 +100,22 @@ async function buscarTrabajosPorCedula(cedula) {
   }
 }
 
+// Pagos ya iniciados (persistido en el navegador): mientras el webhook confirma,
+// el botón muestra "Confirmando pago…" en vez de "Pagar" para que el cliente NO
+// pague dos veces (doble cargo real). Se poda solo a los 30 min.
+const PAGOS_KEY = 'pagos_iniciados'
+const VENTANA_PAGO_MS = 30 * 60 * 1000
+function leerPagosIniciados() {
+  try {
+    const o = JSON.parse(localStorage.getItem(PAGOS_KEY) || '{}')
+    const ahora = Date.now()
+    let cambio = false
+    for (const k of Object.keys(o)) { if (ahora - o[k] > VENTANA_PAGO_MS) { delete o[k]; cambio = true } }
+    if (cambio) localStorage.setItem(PAGOS_KEY, JSON.stringify(o))
+    return o
+  } catch { return {} }
+}
+
 export default function PortalCliente() {
   // Leer ?c=<cedula> de la URL al montar (link prellenado para el cliente)
   const urlParams = new URLSearchParams(window.location.search)
@@ -116,6 +132,7 @@ export default function PortalCliente() {
   const [galIdx, setGalIdx] = useState(0)
   const [pagando, setPagando] = useState(null) // id del trabajo cuyo pago Wompi se está abriendo
   const [confirmandoPago, setConfirmandoPago] = useState(false) // volvió del checkout; esperando que el webhook marque pagado
+  const [pagosIniciados, setPagosIniciados] = useState(leerPagosIniciados) // { trabajoId: timestamp }
   const [vehSel, setVehSel] = useState(null) // placa del vehículo enfocado (modo flota)
   const touchRef = useRef(null) // gesto de swipe en el visor de fotos
   const portalRef = useRef(null) // contenedor para animaciones GSAP
@@ -143,18 +160,31 @@ export default function PortalCliente() {
   // toca nuestro servidor). Pide la firma al servidor (el secreto nunca viaja al
   // navegador) y arma el formulario que redirige a la página segura de Wompi. La
   // referencia = id del trabajo → la usa el webhook para registrar el pago.
+  const marcarPagoIniciado = (id) => {
+    const o = leerPagosIniciados(); o[id] = Date.now()
+    localStorage.setItem(PAGOS_KEY, JSON.stringify(o)); setPagosIniciados({ ...o })
+  }
+  const quitarPagosIniciados = (ids) => {
+    const o = leerPagosIniciados(); let cambio = false
+    for (const id of ids) if (o[id] != null) { delete o[id]; cambio = true }
+    if (cambio) { localStorage.setItem(PAGOS_KEY, JSON.stringify(o)); setPagosIniciados({ ...o }) }
+  }
+  // ¿Este trabajo tiene un pago iniciado que aún no se confirma? → botón bloqueado.
+  const pagoPorConfirmar = (t) => !t.pagado && pagosIniciados[t.id] != null
+
   const pagarConWompi = async (t) => {
-    const montoCentavos = Math.round((t.total || 0) * 100)
-    if (!(montoCentavos > 0)) { setError('Esta factura no tiene un valor a pagar.'); return }
+    if (!((t.total || 0) > 0)) { setError('Esta factura no tiene un valor a pagar.'); return }
     setPagando(t.id)
     try {
+      // El servidor decide el monto (firma el total real de la factura); acá NO se
+      // manda monto para que no se pueda alterar. Se usa el que devuelve la firma.
       const res = await fetch('/api/cuentti?wompi=firma', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ referencia: t.id, montoCentavos }),
+        body: JSON.stringify({ referencia: t.id }),
       })
       const data = await res.json().catch(() => null)
-      if (!res.ok || !data?.ok || !data.firma || !data.publicKey) {
-        setError('No se pudo iniciar el pago. Intenta de nuevo en un momento.')
+      if (!res.ok || !data?.ok || !data.firma || !data.publicKey || !(data.montoCentavos > 0)) {
+        setError(data?.error || 'No se pudo iniciar el pago. Intenta de nuevo en un momento.')
         setPagando(null); return
       }
       const form = document.createElement('form')
@@ -162,7 +192,8 @@ export default function PortalCliente() {
       form.action = data.checkoutUrl || 'https://checkout.wompi.co/p/'
       const campos = {
         'public-key': data.publicKey, 'currency': 'COP',
-        'amount-in-cents': String(montoCentavos), 'reference': t.id,
+        // Monto FIRMADO por el servidor (debe coincidir con la firma, si no Wompi lo rechaza).
+        'amount-in-cents': String(data.montoCentavos), 'reference': t.id,
         'signature:integrity': data.firma, 'redirect-url': window.location.href,
         // Prellenar el nombre del cliente (con mayúsculas correctas) para que no lo teclee.
         ...(t.cliente ? { 'customer-data:full-name': tituloCliente(t.cliente) } : {}),
@@ -172,6 +203,8 @@ export default function PortalCliente() {
         input.type = 'hidden'; input.name = name; input.value = value
         form.appendChild(input)
       })
+      // Marcar ANTES de irse: al volver (o si vuelve manual), el botón queda bloqueado.
+      marcarPagoIniciado(t.id)
       document.body.appendChild(form)
       form.submit()
     } catch {
@@ -211,6 +244,9 @@ export default function PortalCliente() {
 
     setDatos({ trabajos: misTrab, inspecciones: misInsp, cedula: cedulaLimpia })
     setAutenticado(true)
+    // Un pago ya confirmado (trabajo.pagado) deja de estar "por confirmar".
+    const yaPagados = misTrab.filter(t => t.pagado).map(t => t.id)
+    if (yaPagados.length) quitarPagosIniciados(yaPagados)
   }
 
   // Si vino con ?c= en URL, autobuscar al montar
@@ -222,10 +258,12 @@ export default function PortalCliente() {
       // solo, para que "Pagar" se vuelva "PAGADO ✓" sin que el cliente re-pague.
       if (urlParams.get('id')) {
         setConfirmandoPago(true)
-        const t1 = setTimeout(() => ejecutarBusqueda(cedulaInicial), 3500)
-        const t2 = setTimeout(() => ejecutarBusqueda(cedulaInicial), 8000)
-        const t3 = setTimeout(() => setConfirmandoPago(false), 9000)
-        return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3) }
+        // Sondear varias veces (el webhook marca "pagado" 1-3s después, a veces más).
+        // El botón queda bloqueado por la marca en localStorage aunque el banner se apague.
+        const reintentos = [3500, 8000, 15000, 25000, 40000, 60000].map(ms =>
+          setTimeout(() => ejecutarBusqueda(cedulaInicial), ms))
+        const tFin = setTimeout(() => setConfirmandoPago(false), 62000)
+        return () => { reintentos.forEach(clearTimeout); clearTimeout(tFin) }
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -558,9 +596,13 @@ export default function PortalCliente() {
       </td>
       <td className="td-actions" style={{textAlign:'right'}}>
         {t.facturadoEn && !t.pagado && t.total > 0 && (
-          <button className="btn btn-primary btn-sm" style={{marginRight:8}} disabled={pagando===t.id} onClick={()=>pagarConWompi(t)}>
-            {pagando===t.id ? 'Abriendo…' : `Pagar ${fmt(t.total)}`}
-          </button>
+          pagoPorConfirmar(t) ? (
+            <button className="btn btn-outline btn-sm" style={{marginRight:8}} disabled title="Estamos confirmando tu pago">Confirmando pago…</button>
+          ) : (
+            <button className="btn btn-primary btn-sm" style={{marginRight:8}} disabled={pagando===t.id} onClick={()=>pagarConWompi(t)}>
+              {pagando===t.id ? 'Abriendo…' : `Pagar ${fmt(t.total)}`}
+            </button>
+          )
         )}
         {t.pagado && <span className="badge" style={{background:'var(--green-100)',color:'var(--green-700)',fontWeight:700,marginRight:8}}>Pagado ✓</span>}
         <button className="btn btn-outline btn-sm" onClick={()=>setVistaServicio(t)}>Ver detalle</button>
@@ -619,7 +661,9 @@ export default function PortalCliente() {
                 </div>
                 <div style={{display:'flex',alignItems:'center',gap:12,flexShrink:0}}>
                   <span className="mono" style={{fontWeight:700,fontSize:15}}>{fmt(t.total)}</span>
-                  <button className="btn btn-primary" disabled={pagando===t.id} onClick={()=>pagarConWompi(t)}>{pagando===t.id?'Abriendo…':'Pagar'}</button>
+                  {pagoPorConfirmar(t)
+                    ? <button className="btn btn-outline" disabled title="Estamos confirmando tu pago">Confirmando…</button>
+                    : <button className="btn btn-primary" disabled={pagando===t.id} onClick={()=>pagarConWompi(t)}>{pagando===t.id?'Abriendo…':'Pagar'}</button>}
                 </div>
               </div>
             ))}

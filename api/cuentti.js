@@ -17,6 +17,21 @@ function wompiFirmaIntegridad({ referencia, montoCentavos, moneda, secreto, expi
   return crypto.createHash('sha256').update(cadena, 'utf8').digest('hex');
 }
 
+// Supabase del proyecto del taller. La anon key es pública (RLS es deuda conocida)
+// y va hardcodeada como en api/supabase.js. NO usar process.env.SUPABASE_URL: en
+// Vercel apunta a OTRO proyecto y hace "fetch failed".
+const SB_URL = 'https://hpndvrjjizzkusuuhefb.supabase.co';
+const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhwbmR2cmpqaXp6a3VzdXVoZWZiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM0NjkwMzMsImV4cCI6MjA4OTA0NTAzM30.-6Jz1TsDjAladZUOGD-WNMvVbZXd1Z4WBoOF-npew5c';
+const SB_HEAD = { apikey: SB_KEY, Authorization: `Bearer ${SB_KEY}` };
+
+// Comparación de checksums hex en tiempo constante (defensa en profundidad).
+function checksumIgual(a, b) {
+  const bufA = Buffer.from(String(a || '').toLowerCase(), 'utf8');
+  const bufB = Buffer.from(String(b || '').toLowerCase(), 'utf8');
+  if (bufA.length !== bufB.length || bufA.length === 0) return false;
+  return crypto.timingSafeEqual(bufA, bufB);
+}
+
 function getCorsOrigin(reqOrigin) {
   if (ALLOWED_ORIGINS.includes(reqOrigin)) return reqOrigin;
   if (reqOrigin && (reqOrigin.startsWith('http://localhost') || reqOrigin.startsWith('http://127.0.0.1'))) return reqOrigin;
@@ -38,9 +53,25 @@ export default async function handler(req, res) {
     if (req.method !== 'POST') { res.status(405).json({ error: 'Solo POST' }); return; }
     const secreto = process.env.WOMPI_INTEGRITY_SECRET;
     if (!secreto) { res.status(500).json({ error: 'Falta WOMPI_INTEGRITY_SECRET en el servidor' }); return; }
-    const { referencia, montoCentavos, expiracion } = req.body || {};
-    const monto = Math.round(Number(montoCentavos) || 0);
-    if (!referencia || !(monto > 0)) { res.status(400).json({ error: 'Falta referencia o montoCentavos > 0' }); return; }
+    // SEGURIDAD: el monto NO lo decide el navegador. Se firma SIEMPRE el total real
+    // de la factura leído del servidor; si se firmara lo que manda el cliente, este
+    // podría "pagar" $1 y quedar saldado. El montoCentavos del body se ignora.
+    const { referencia, expiracion } = req.body || {};
+    if (!referencia) { res.status(400).json({ error: 'Falta referencia' }); return; }
+    let trabajo;
+    try {
+      const trResp = await fetch(`${SB_URL}/rest/v1/trabajos?id=eq.${encodeURIComponent(referencia)}&select=total,pagado&limit=1`, { headers: SB_HEAD });
+      const rows = trResp.ok ? await trResp.json() : [];
+      trabajo = Array.isArray(rows) ? rows[0] : null;
+    } catch (e) {
+      console.error('[Wompi firma] no se pudo leer el trabajo', e?.message || e);
+      res.status(502).json({ error: 'No se pudo verificar la factura, intenta de nuevo' });
+      return;
+    }
+    if (!trabajo) { res.status(404).json({ error: 'No encontramos esa factura' }); return; }
+    if (trabajo.pagado === true) { res.status(409).json({ error: 'Esta factura ya está pagada' }); return; }
+    const monto = Math.round((parseFloat(trabajo.total) || 0) * 100);
+    if (!(monto > 0)) { res.status(400).json({ error: 'La factura no tiene un valor a pagar' }); return; }
     const moneda = 'COP';
     const firma = wompiFirmaIntegridad({ referencia, montoCentavos: monto, moneda, secreto, expiracion });
     res.status(200).json({
@@ -67,7 +98,7 @@ export default async function handler(req, res) {
     const valorDe = (ruta) => String(ruta.split('.').reduce((o, k) => (o == null ? o : o[k]), evento.data) ?? '');
     const cadena = props.map(valorDe).join('') + String(timestamp) + secreto;
     const checksumCalc = crypto.createHash('sha256').update(cadena, 'utf8').digest('hex');
-    const firmaOk = checksumRecibido && checksumCalc.toLowerCase() === String(checksumRecibido).toLowerCase();
+    const firmaOk = checksumIgual(checksumCalc, checksumRecibido);
     if (!firmaOk) {
       console.error('[Wompi webhook] FIRMA INVÁLIDA — evento ignorado', { props, timestamp, tieneChecksum: !!checksumRecibido });
       res.status(401).json({ ok: false, error: 'Firma de evento inválida' });
@@ -92,24 +123,42 @@ export default async function handler(req, res) {
       res.status(200).json({ ok: true, verificado: true, sandbox: true, status: tx.status });
       return;
     }
+    const patchTrabajo = (campos) => fetch(`${SB_URL}/rest/v1/trabajos?id=eq.${encodeURIComponent(tx.reference)}`, {
+      method: 'PATCH', headers: { ...SB_HEAD, 'Content-Type': 'application/json', Prefer: 'return=minimal' },
+      body: JSON.stringify(campos),
+    });
     try {
-      // URL + anon key HARDCODEADAS (como api/supabase.js). NO usar process.env.SUPABASE_URL:
-      // esa variable en Vercel apunta a OTRO proyecto (lsobszypdaiiznwxvfyo) y hacía
-      // "fetch failed" al buscar el trabajo. La anon key es pública (ya va en el bundle).
-      const sbUrl = 'https://hpndvrjjizzkusuuhefb.supabase.co';
-      const sbKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhwbmR2cmpqaXp6a3VzdXVoZWZiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM0NjkwMzMsImV4cCI6MjA4OTA0NTAzM30.-6Jz1TsDjAladZUOGD-WNMvVbZXd1Z4WBoOF-npew5c';
-      const sbHead = { apikey: sbKey, Authorization: `Bearer ${sbKey}` };
       // 1) Buscar el trabajo por la referencia (= id del trabajo).
-      const trResp = await fetch(`${sbUrl}/rest/v1/trabajos?id=eq.${encodeURIComponent(tx.reference)}&select=id,total,pagado,cuentti_id_transacion&limit=1`, { headers: sbHead });
+      const trResp = await fetch(`${SB_URL}/rest/v1/trabajos?id=eq.${encodeURIComponent(tx.reference)}&select=id,total,pagado,cuentti_id_transacion,wompi_tx_id&limit=1`, { headers: SB_HEAD });
       const trRows = trResp.ok ? await trResp.json() : [];
       const trabajo = Array.isArray(trRows) ? trRows[0] : null;
       if (!trabajo) { console.error('[Wompi webhook] trabajo no encontrado', { reference: tx.reference }); res.status(200).json({ ok: true, nota: 'trabajo no encontrado' }); return; }
       // 2) Idempotencia: si ya está pagado, no re-registrar (Wompi puede reintentar el webhook).
       if (trabajo.pagado === true) { console.log('[Wompi webhook] ya estaba pagado, ignoro', { reference: tx.reference }); res.status(200).json({ ok: true, yaPagado: true }); return; }
+      // 2b) Idempotencia por transacción: si ya reclamamos/registramos ESTE tx, no re-registrar;
+      // solo asegurar que quede marcado pagado (por si el PATCH anterior no alcanzó).
+      if (trabajo.wompi_tx_id && String(trabajo.wompi_tx_id) === String(tx.id)) {
+        console.log('[Wompi webhook] tx ya procesado, aseguro pagado', { reference: tx.reference, txId: tx.id });
+        await patchTrabajo({ pagado: true }).catch(() => {});
+        res.status(200).json({ ok: true, yaProcesado: true });
+        return;
+      }
       const idTransacion = trabajo.cuentti_id_transacion;
       if (!idTransacion) { console.error('[Wompi webhook] el trabajo no tiene factura en Cuentti', { reference: tx.reference }); res.status(200).json({ ok: true, nota: 'sin factura en Cuentti' }); return; }
-      const valor = parseFloat(trabajo.total) || (Number(tx.amount_in_cents) / 100);
-      // 3) Registrar el pago en Cuentti contra la factura (Bancolombia/transferencia = id_banco 2, id_medio_pago 7).
+      // 2c) SEGURIDAD: lo que entró NO puede ser menor al total real de la factura.
+      const totalCentavos = Math.round((parseFloat(trabajo.total) || 0) * 100);
+      const pagadoCentavos = Math.round(Number(tx.amount_in_cents) || 0);
+      if (totalCentavos > 0 && pagadoCentavos < totalCentavos) {
+        console.error('[Wompi webhook] PAGO INSUFICIENTE — no se marca pagado', { reference: tx.reference, pagadoCentavos, totalCentavos, txId: tx.id });
+        res.status(200).json({ ok: true, nota: 'pago insuficiente' });
+        return;
+      }
+      const valor = parseFloat(trabajo.total) || (pagadoCentavos / 100);
+      // 3) Candado anti-doble: reclamar este tx ANTES de tocar Cuentti. Si Cuentti rechaza
+      // de forma DEFINIDA se libera; si se corta por timeout, el candado queda y el
+      // reintento de Wompi cae en 2b (no re-registra).
+      await patchTrabajo({ wompi_tx_id: String(tx.id) }).catch(() => {});
+      // 4) Registrar el pago en Cuentti contra la factura (Bancolombia/transferencia = id_banco 2, id_medio_pago 7).
       const empleado = process.env.CUENTTI_EMPLOYEE_ID || '2';
       const bodyPago = {
         n_caja: 0, id_transacion: idTransacion, valor, es_activo: '1',
@@ -131,22 +180,31 @@ export default async function handler(req, res) {
         body: JSON.stringify(bodyPago),
       });
       if (!cuenttiResp.ok) {
-        // Falla transitoria: responder !=200 para que Wompi REINTENTE (idempotente por pagado).
+        // Falla DEFINIDA (Cuentti respondió error): liberar el candado para reintentar
+        // limpio, y pedir a Wompi que reintente.
         console.error('[Wompi webhook] agregarPagoTransacion FALLÓ', { status: cuenttiResp.status, reference: tx.reference });
+        await patchTrabajo({ wompi_tx_id: null }).catch(() => {});
         res.status(502).json({ ok: false, error: 'Cuentti rechazó el pago' });
         return;
       }
-      // 4) Marcar el trabajo pagado (solo tras registrar OK en Cuentti).
-      await fetch(`${sbUrl}/rest/v1/trabajos?id=eq.${encodeURIComponent(tx.reference)}`, {
-        method: 'PATCH', headers: { ...sbHead, 'Content-Type': 'application/json', Prefer: 'return=minimal' },
-        body: JSON.stringify({ pagado: true }),
-      });
-      console.log('[Wompi webhook] PAGO REGISTRADO en Cuentti + trabajo marcado pagado', { reference: tx.reference, valor });
-      res.status(200).json({ ok: true, registrado: true });
+      // 5) Marcar pagado (el candado ya quedó puesto). Reintento simple del PATCH.
+      let patchOk = false;
+      for (let i = 0; i < 3 && !patchOk; i++) {
+        const pr = await patchTrabajo({ pagado: true }).catch(() => null);
+        patchOk = !!(pr && pr.ok);
+      }
+      if (!patchOk) {
+        // El pago SÍ se registró en Cuentti; solo no se pudo marcar pagado. NO pedir
+        // reintento a Wompi (re-registraría): el candado wompi_tx_id evita el doble.
+        console.error('[Wompi webhook] REVISAR: pago registrado en Cuentti pero NO se marcó pagado', { reference: tx.reference, txId: tx.id, valor });
+      }
+      console.log('[Wompi webhook] PAGO REGISTRADO en Cuentti', { reference: tx.reference, valor, marcadoPagado: patchOk });
+      res.status(200).json({ ok: true, registrado: true, marcadoPagado: patchOk });
       return;
     } catch (e) {
-      // Error inesperado: !=200 → Wompi reintenta (el candado de pagado evita el doble).
-      console.error('[Wompi webhook] error etapa 2', e?.message || e);
+      // Error inesperado (posible timeout DESPUÉS de que Cuentti registró). El candado
+      // wompi_tx_id ya quedó puesto → el reintento de Wompi cae en 2b y NO re-registra.
+      console.error('[Wompi webhook] error etapa 2 (candado puesto, no re-registra en retry)', e?.message || e);
       res.status(500).json({ ok: false, error: 'Error procesando el pago' });
       return;
     }
