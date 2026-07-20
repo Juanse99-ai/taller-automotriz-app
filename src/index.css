@@ -44,6 +44,14 @@
   --green-500:#22c55e;
   --green-100:#dcfce7;
 
+  /* --amber-700 faltaba y se usa como color de texto (énfasis del diario/aportes):
+     sin definir colapsaba al color heredado y el ámbar nunca se veía. */
+  --amber-700:#92400e;
+  /* tintes suaves para chips de inspección (fondos + bordes) que faltaban */
+  --green-50:#f0fdf4;--green-200:#bbf7d0;
+  --amber-50:#fffbeb;--amber-200:#fde68a;
+  --red-50:#fef2f2;--red-200:#fecaca;
+
   /* slate */
   --slate-50:#f8fafc;--slate-100:#f1f5f9;--slate-200:#e2e8f0;--slate-300:#cbd5e1;
   --slate-400:#94a3b8;--slate-500:#64748b;--slate-600:#475569;--slate-700:#334155;
@@ -135,6 +143,17 @@
   --accent:#4c8dff;
   --accent-soft:rgba(76,141,255,.16);
   --accent-soft-2:rgba(76,141,255,.24);
+  /* Rampa en oscuro: los tonos -700 y el blue-600 son casi ilegibles sobre negro
+     cuando se usan como TEXTO (cifras de plata, ref chips). Se aclaran. NO se tocan
+     los -600 saturados que también sirven de relleno (btn-danger, badges). */
+  --green-700:#4ade80;
+  --red-700:#fca5a5;
+  --amber-700:#fbbf24;
+  --blue-600:#7ab3ff;
+  /* tintes de chips en oscuro: translúcidos (no fondos claros) */
+  --green-50:rgba(74,222,128,.14);--green-200:rgba(74,222,128,.34);
+  --amber-50:rgba(251,191,36,.14);--amber-200:rgba(251,191,36,.34);
+  --red-50:rgba(252,165,165,.14);--red-200:rgba(252,165,165,.34);
 }
 
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -378,6 +397,9 @@ input,select,textarea{font-family:inherit;font-size:14px;color:inherit}
 .btn:hover:not(:active){transform:translateY(-1px)}
 .btn:focus-visible{outline:2px solid var(--primary);outline-offset:2px}
 .icobtn:focus-visible,.tabs button:focus-visible{outline:2px solid var(--primary);outline-offset:2px;border-radius:8px}
+/* Fallback de foco de teclado para cualquier botón/control sin clase propia (a11y):
+   antes los <button> con estilo inline no mostraban foco. */
+button:focus-visible,[role="button"]:focus-visible,a:focus-visible,select:focus-visible{outline:2px solid var(--primary);outline-offset:2px;border-radius:6px}
 .icobtn:active{transform:scale(.94)}
 /* Sin el flash gris al tocar en móvil (feel tipo iOS) en todo lo interactivo */
 a,button,[role=button],.navlink,.mob-tab,.icobtn,.tabs button{-webkit-tap-highlight-color:transparent;touch-action:manipulation}

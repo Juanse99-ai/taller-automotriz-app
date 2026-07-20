@@ -1662,7 +1662,7 @@ function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [], vehiculosHoo
                                 if (e.key === 'Escape') setItemSearch(prev => ({ ...prev, [item.id]: { ...prev[item.id], show: false } }))
                               }}
                               style={{ padding: '6px 32px 6px 10px', fontSize: 13 }} />
-                            {invLoading && !item._bloqueado && <span style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', fontSize: 11, color: '#999' }}>...</span>}
+                            {invLoading && !item._bloqueado && <span style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', fontSize: 11, color: 'var(--text-3)' }}>...</span>}
                             {item._bloqueado && (
                               <button type="button" onClick={() => cambiarProducto(item.id)}
                                 title={`Cambiar producto (actual: ${item.nombreInventario || item.sku || 'sin SKU'})`}

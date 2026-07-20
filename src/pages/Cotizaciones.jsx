@@ -543,7 +543,7 @@ function CotizacionForm({ cotizacion, trabajos = [], onSave, onCancel }) {
                 <input className="input" value={form.cedula} placeholder="Buscar por documento..."
                   onChange={e => { set('cedula', e.target.value); buscarDebounced(e.target.value) }} />
                 {resultados.length > 0 && (
-                  <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 20, background: '#fff', border: '1px solid var(--slate-200)', borderRadius: 8, maxHeight: 200, overflowY: 'auto', boxShadow: 'var(--shadow-md)' }}>
+                  <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 20, background: 'var(--bg-raised)', border: '1px solid var(--border)', borderRadius: 8, maxHeight: 200, overflowY: 'auto', boxShadow: 'var(--shadow-md)' }}>
                     {resultados.map((c, i) => (
                       <div key={i} onClick={() => seleccionarCliente(c)}
                         style={{ padding: '10px 14px', cursor: 'pointer', borderBottom: '1px solid var(--slate-100)', fontSize: 13 }}>
@@ -653,26 +653,26 @@ function CotizacionForm({ cotizacion, trabajos = [], onSave, onCancel }) {
                               onBlur={() => setTimeout(() => setItemSearch(prev => ({ ...prev, [item.id]: { ...prev[item.id], show: false } })), 250)}
                               onKeyDown={e => { if (e.key === 'Escape') setItemSearch(prev => ({ ...prev, [item.id]: { ...prev[item.id], show: false } })) }}
                               style={{ padding: '6px 10px', fontSize: 13 }} />
-                            {invLoading && <span style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', fontSize: 11, color: '#999' }}>...</span>}
+                            {invLoading && <span style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', fontSize: 11, color: 'var(--text-3)' }}>...</span>}
                           </div>
                           {search.show && search.results.length > 0 && (
                             <div style={{
                               position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 99,
-                              background: 'rgba(0,0,0,.3)', display: 'flex', justifyContent: 'center', alignItems: 'flex-start', paddingTop: 80
+                              background: 'rgba(13,27,53,.72)', display: 'flex', justifyContent: 'center', alignItems: 'flex-start', paddingTop: 80
                             }} onClick={() => setItemSearch(prev => ({ ...prev, [item.id]: { ...prev[item.id], show: false } }))}>
                               <div style={{
-                                background: '#fff', borderRadius: 10, width: '90%', maxWidth: 700,
-                                maxHeight: '70vh', display: 'flex', flexDirection: 'column',
-                                boxShadow: '0 20px 60px rgba(0,0,0,.25)', overflow: 'hidden'
+                                background: 'var(--bg-raised)', borderRadius: 10, width: '90%', maxWidth: 700,
+                                maxHeight: '70vh', display: 'flex', flexDirection: 'column', border: '1px solid var(--border)',
+                                boxShadow: 'var(--shadow-lg)', overflow: 'hidden'
                               }} onClick={e => e.stopPropagation()}>
-                                <div style={{ padding: '12px 16px', background: '#1e293b', color: '#fff', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <div style={{ padding: '12px 16px', background: 'var(--navy-900, #1e293b)', color: '#fff', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                   <span style={{ fontWeight: 700, fontSize: 14 }}>Buscar Producto</span>
                                   <span style={{ fontSize: 12, color: '#94a3b8' }}>{search.results.length} resultados</span>
                                 </div>
                                 <div style={{
                                   display: 'grid', gridTemplateColumns: '1fr 100px 70px', gap: 8,
-                                  padding: '8px 16px', background: '#f8fafc', borderBottom: '2px solid #e2e8f0',
-                                  fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '.5px'
+                                  padding: '8px 16px', background: 'var(--bg-subtle)', borderBottom: '1px solid var(--border)',
+                                  fontSize: 11, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '.5px'
                                 }}>
                                   <span>Articulo</span>
                                   <span style={{ textAlign: 'right' }}>P.Venta</span>
@@ -685,12 +685,12 @@ function CotizacionForm({ cotizacion, trabajos = [], onSave, onCancel }) {
                                       style={{
                                         display: 'grid', gridTemplateColumns: '1fr 100px 70px', gap: 8,
                                         padding: '10px 16px', cursor: 'pointer',
-                                        borderBottom: '1px solid #f1f5f9',
-                                        background: i === 0 ? '#1e40af' : 'transparent',
-                                        color: i === 0 ? '#fff' : '#1e293b',
+                                        borderBottom: '1px solid var(--border)',
+                                        background: i === 0 ? 'var(--primary)' : 'transparent',
+                                        color: i === 0 ? '#fff' : 'var(--text)',
                                         transition: 'background .1s'
                                       }}
-                                      onMouseEnter={e => { if (i !== 0) e.currentTarget.style.background = '#f1f5f9' }}
+                                      onMouseEnter={e => { if (i !== 0) e.currentTarget.style.background = 'var(--bg-subtle)' }}
                                       onMouseLeave={e => { if (i !== 0) e.currentTarget.style.background = 'transparent' }}
                                     >
                                       <div style={{ minWidth: 0 }}>

@@ -23,7 +23,7 @@ export default function ConfirmDialog({ cfg, onClose }) {
       role="presentation"
       style={{
         position: 'fixed', inset: 0, zIndex: 1000, display: 'grid', placeItems: 'center',
-        padding: 16, background: 'rgba(16,23,37,.42)', animation: 'cdlgIn .12s ease-out',
+        padding: 16, background: 'rgba(13,27,53,.72)', animation: 'cdlgIn .12s ease-out',
       }}
     >
       <style>{`@keyframes cdlgIn{from{opacity:0}to{opacity:1}}`}</style>
@@ -31,8 +31,8 @@ export default function ConfirmDialog({ cfg, onClose }) {
         role="alertdialog" aria-modal="true" aria-label={cfg.title}
         onClick={(e) => e.stopPropagation()}
         style={{
-          width: 'min(440px, 100%)', background: 'var(--surface, #fff)', borderRadius: 16, padding: 24,
-          boxShadow: '0 24px 60px -12px rgba(16,23,37,.35)', color: 'var(--text-1, #101725)',
+          width: 'min(440px, 100%)', background: 'var(--bg-raised)', borderRadius: 16, padding: 24,
+          boxShadow: 'var(--shadow-lg)', color: 'var(--text)', border: '1px solid var(--border)',
         }}
       >
         <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700, letterSpacing: '-.01em' }}>{cfg.title}</h3>

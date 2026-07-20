@@ -169,7 +169,10 @@ objeto con `{...actual, estado: COMPLETADO}` en vez de `trabajos.find` del closu
 
 ---
 
-## TANDA 3 — Endurecer API (sin romper la app) 🟠
+## TANDA 3 — Endurecer API (sin romper la app) 🟠 — [HECHO] (3.1/3.2/3.3; 3.4 diferido)
+> Verificado en prod: Cuentti whitelist (path real→200, no permitido→403); storage
+> delete (video referenciado→403, no referenciado→200); gasto idempotente por idemKey.
+> 3.4 (bcrypt) NO hecho: toca el login; requiere OK del dueño (auth diferida).
 
 **3.1 [ALTO] `?storage=delete` público permite borrar TODOS los videos de evidencia.**
 `api/supabase.js:116-136`. Los paths son enumerables (las URLs viven en `trabajos.evidencias`,
@@ -206,7 +209,15 @@ Wompi → actualizar `WOMPI_*` en Vercel → redeploy. 10 minutos.
 
 ---
 
-## TANDA 4 — Visual / UX 🟠
+## TANDA 4 — Visual / UX 🟠 — [HECHO parcial: dark-mode + tokens; pendientes 4.5/4.6/4.7-resto]
+> HECHO: 4.0 remap de rampa en dark (verde/rojo/ámbar-700 + blue-600 → texto legible;
+> los -600 de relleno NO se tocan). 4.1 ConfirmDialog + toggle segmentado con tokens
+> reales (ya no caja blanca). 4.2 Cotizaciones (dropdown clientes + modal productos).
+> 4.3 --amber-700 + tintes -50/-200 definidos (el ámbar ya se ve). 4.4 ref chip (via
+> remap). 4.8 fallback global button:focus-visible + #999→token.
+> Verificado en vivo dark: Liquidación (TOTAL verde legible), Dashboard, Recepción.
+> PENDIENTE (polish menor): 4.5 badges del portal, 4.6 migrar botones inline a <Button>,
+> 4.7 unificar el resto de overlays.
 
 **4.0 [MÁXIMA PALANCA — hacer PRIMERO] La rampa de color no se remapea en modo oscuro.**
 El bloque `[data-theme="dark"]` (`src/index.css:107-138`) redefine `--text/--bg/--primary` pero NO

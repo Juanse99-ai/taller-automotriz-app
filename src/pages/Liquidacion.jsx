@@ -1083,8 +1083,8 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
   const segTabStyle = (active) => ({
     fontFamily: 'inherit', fontSize: 14, fontWeight: 600, border: 0, cursor: 'pointer',
     padding: '8px 18px', borderRadius: 7, transition: 'background .15s, color .15s',
-    background: active ? 'var(--surface, #fff)' : 'transparent',
-    color: active ? 'var(--text-1, #101725)' : 'var(--text-3, #5b6472)',
+    background: active ? 'var(--bg-raised)' : 'transparent',
+    color: active ? 'var(--text)' : 'var(--text-3)',
     boxShadow: active ? '0 1px 2px rgba(16,23,37,.10)' : 'none',
   })
   const tabsLiq = (
