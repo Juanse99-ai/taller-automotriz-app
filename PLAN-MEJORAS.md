@@ -282,7 +282,15 @@ cambiar perceptiblemente (paridad), salvo los bugs corregidos.
 
 ---
 
-## TANDA 5 — Performance 🟢
+## TANDA 5 — Performance 🟢 — [DIFERIDO a propósito]
+> No hecho: 5.1 (React.lazy por página + import() de jspdf/gsap) toca el routing de
+> App.jsx, que es load-bearing y ya arrastra la fragilidad de rules-of-hooks (early
+> return antes de hooks). Rushearlo al final de una sesión larga arriesga regresar una
+> app que funciona, por una ganancia SOLO de rendimiento (hoy 419KB gzip, aceptable).
+> Recomendación: hacerlo como cambio enfocado y aislado, con verificación dedicada del
+> tamaño de chunks y de que todos los PDFs sigan saliendo. 5.2 (limpieza eslint de los
+> 4 preexistentes: loadLogo/‘i’ sin usar, 2×Date.now en render) tampoco bloquea el
+> deploy; ir con 5.1. El resto de las tandas (0-4) SÍ está hecho y desplegado.
 
 **5.1 El bundle principal pesa 1.42 MB (gzip 419 KB) y no hay lazy loading.**
 - `React.lazy()` + `Suspense` por página en `src/App.jsx` (todas las pages).
