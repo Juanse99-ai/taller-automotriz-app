@@ -295,23 +295,56 @@ export default function PortalCliente() {
     return () => window.removeEventListener('keydown', onKey)
   }, [galeria])
 
-  // Animaciones (GSAP). Comunican estado, no decoran: el conteo de la flota, la
-  // aparición de las tarjetas de vehículo y el llenado de las barras de avance.
-  // Se saltan por completo si el sistema pide menos movimiento.
+  // Animaciones (GSAP). Comunican estado, no decoran (Design Principle 4: la
+  // sorpresa es un MOMENTO, no toda la página). Una sola línea de tiempo orquesta
+  // la entrada al abrir el portal y luego cuenta la historia "¿dónde va mi carro?":
+  // secciones en cascada → números de la flota → barras que se llenan → la línea
+  // del avance se dibuja y cada paso aparece. Todo easeOut (sin rebote) y se salta
+  // por completo si el sistema pide menos movimiento.
   useEffect(() => {
     if (!autenticado || !datos) return
     if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return
     const ctx = gsap.context(() => {
-      gsap.utils.toArray('.fleet-num').forEach(el => {
+      const tl = gsap.timeline({ defaults: { ease: 'expo.out' } })
+
+      // 1) El momento: las secciones principales suben y aparecen escalonadas.
+      const secciones = Array.from(portalRef.current?.children || [])
+        .filter(el => el.classList?.contains('card') || el.classList?.contains('portal-col'))
+      if (secciones.length) tl.from(secciones, { opacity: 0, y: 22, duration: 0.5, stagger: 0.06 })
+
+      // 2) Números de la flota cuentan hacia arriba (cuántos vehículos, cómo van).
+      gsap.utils.toArray('.fleet-num').forEach((el, i) => {
         const end = parseFloat(el.dataset.n) || 0
         const obj = { v: 0 }
-        gsap.to(obj, { v: end, duration: 0.8, ease: 'power2.out', onUpdate: () => { el.textContent = String(Math.round(obj.v)) } })
+        tl.to(obj, { v: end, duration: 0.7, ease: 'power2.out',
+          onUpdate: () => { el.textContent = String(Math.round(obj.v)) } }, i === 0 ? '-=0.35' : '<')
       })
-      gsap.from('.veh-card', { opacity: 0, y: 12, duration: 0.4, ease: 'power3.out', stagger: 0.06 })
-      gsap.utils.toArray('.bar-fill').forEach(el => {
+
+      // 3) Tarjetas de vehículo en cascada (el fade lo da la sección; aquí, empuje).
+      tl.from('.veh-card', { y: 16, scale: 0.98, duration: 0.42, stagger: 0.05 }, '-=0.4')
+      gsap.utils.toArray('.bar-fill').forEach((el, i) => {
         const pct = parseFloat(el.dataset.pct) || 0
-        gsap.fromTo(el, { width: '0%' }, { width: pct + '%', duration: 0.8, ease: 'power2.out', delay: 0.1 })
+        tl.fromTo(el, { width: '0%' }, { width: pct + '%', duration: 0.6, ease: 'power3.out' }, i === 0 ? '-=0.4' : '<')
       })
+
+      // 4) Vehículo único: la barra grande se llena y el % cuenta hasta su valor.
+      gsap.utils.toArray('.pct-bar').forEach(el => {
+        const pct = parseFloat(el.dataset.pct) || 0
+        tl.fromTo(el, { width: '0%' }, { width: pct + '%', duration: 0.7 }, '-=0.5')
+      })
+      gsap.utils.toArray('.pct-num').forEach(el => {
+        const end = parseFloat(el.dataset.pct) || 0
+        const obj = { v: 0 }
+        tl.to(obj, { v: end, duration: 0.7, ease: 'power2.out',
+          onUpdate: () => { el.textContent = Math.round(obj.v) + '% completado' } }, '<')
+      })
+
+      // 5) "¿Dónde va mi carro?": la línea del avance se dibuja de arriba a abajo y
+      //    cada paso (punto + rótulo) aparece en secuencia. fromTo (no from) para que
+      //    el estado final sea explícito y determinista.
+      tl.fromTo('.paso-line', { scaleY: 0 }, { scaleY: 1, duration: 0.4, ease: 'power2.out' }, '-=0.45')
+      tl.fromTo('.paso-dot', { scale: 0, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.34, stagger: 0.07 }, '-=0.3')
+      tl.fromTo('.paso-lbl', { opacity: 0, x: -8 }, { opacity: 1, x: 0, duration: 0.34, stagger: 0.07 }, '<')
     }, portalRef)
     return () => ctx.revert()
   }, [autenticado, datos])
@@ -724,9 +757,9 @@ export default function PortalCliente() {
               </div>
             </div>
             <div style={{height:8,background:'var(--bg-subtle)',borderRadius:99,overflow:'hidden',marginTop:14}}>
-              <div style={{width:`${ESTADO_TRABAJO_DISPLAY[trabajoActivo.estado]?.pct||0}%`,height:'100%',background:'var(--amber-500)',borderRadius:99,transition:'width .5s ease-out'}}/>
+              <div className="pct-bar" data-pct={ESTADO_TRABAJO_DISPLAY[trabajoActivo.estado]?.pct||0} style={{width:`${ESTADO_TRABAJO_DISPLAY[trabajoActivo.estado]?.pct||0}%`,height:'100%',background:'var(--amber-500)',borderRadius:99,transition:'width .5s ease-out'}}/>
             </div>
-            <div style={{fontSize:11,color:'var(--text-3)',marginTop:6,fontWeight:600}}>{ESTADO_TRABAJO_DISPLAY[trabajoActivo.estado]?.pct||0}% completado</div>
+            <div className="pct-num" data-pct={ESTADO_TRABAJO_DISPLAY[trabajoActivo.estado]?.pct||0} style={{fontSize:11,color:'var(--text-3)',marginTop:6,fontWeight:600}}>{ESTADO_TRABAJO_DISPLAY[trabajoActivo.estado]?.pct||0}% completado</div>
           </div>
         </div>
       )}
@@ -736,20 +769,20 @@ export default function PortalCliente() {
           <div className="card__h"><h3>Avance del trabajo</h3></div>
           <div className="card__b">
             <div style={{position:'relative',paddingLeft:32}}>
-              <div style={{position:'absolute',left:11,top:8,bottom:8,width:2,background:'var(--border)'}}/>
+              <div className="paso-line" style={{position:'absolute',left:11,top:8,bottom:8,width:2,background:'var(--border)',transformOrigin:'top'}}/>
               {pasos.map((p,k)=>{
                 const currentPct = ESTADO_TRABAJO_DISPLAY[trabajoActivo.estado]?.pct || 0
                 const done = currentPct >= p.pct
                 const active = currentPct >= p.pct - 15 && currentPct < p.pct
                 return (
                   <div key={k} style={{position:'relative',paddingBottom:k<pasos.length-1?20:0}}>
-                    <div style={{position:'absolute',left:-26,top:2,width:24,height:24,borderRadius:'50%',
+                    <div className="paso-dot" style={{position:'absolute',left:-26,top:2,width:24,height:24,borderRadius:'50%',
                       background:done?'var(--green-500)':active?'var(--amber-500)':'var(--bg-raised)',
                       border:!done&&!active?'2px solid var(--border)':'none',
                       display:'flex',alignItems:'center',justifyContent:'center',color:'#fff',fontWeight:800,fontSize:12}}>
                       {done?<svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3"><path d="M5 13l4 4L19 7"/></svg>:active?<span style={{width:8,height:8,borderRadius:'50%',background:'#fff'}}/>:''}
                     </div>
-                    <div style={{fontWeight:active?700:600,fontSize:14,color:!done&&!active?'var(--text-3)':'var(--text)'}}>
+                    <div className="paso-lbl" style={{fontWeight:active?700:600,fontSize:14,color:!done&&!active?'var(--text-3)':'var(--text)'}}>
                       {p.lbl}
                       {active && <span className="badge badge-w" style={{marginLeft:8}}>En curso</span>}
                     </div>
