@@ -35,15 +35,18 @@ function MiniEvid({ f }) {
   return <img src={f.dataUrl} alt={f.nota||'Evidencia'} loading="lazy" style={{width:'100%',height:'100%',objectFit:'cover',display:'block'}}/>
 }
 
+// color = acento vivo para barras de progreso y círculos de paso.
+// cls   = clase de badge con contraste AA en tema claro y oscuro (ver .badge-* en index.css).
+// ink   = color del rótulo grande de estado; se adapta al tema (no usar el hex vivo, que baja a ~2.8:1).
 const ESTADO_TRABAJO_DISPLAY = {
-  [ESTADOS.PENDIENTE]: { label: 'Recibido', color: '#64748b', icon: '1', pct: 15 },
-  [ESTADOS.EN_DIAGNOSTICO]: { label: 'En Diagnostico', color: '#2563eb', icon: '2', pct: 30 },
-  [ESTADOS.ESPERANDO_REPUESTOS]: { label: 'Esperando Repuestos', color: '#d97706', icon: '3', pct: 45 },
-  [ESTADOS.EN_PROGRESO]: { label: 'En Reparacion', color: '#2563eb', icon: '4', pct: 60 },
-  [ESTADOS.EN_PRUEBA]: { label: 'En Prueba', color: '#7c3aed', icon: '5', pct: 80 },
-  [ESTADOS.COMPLETADO]: { label: 'Listo para Entrega', color: '#16a34a', icon: '6', pct: 100 },
-  [ESTADOS.PROGRAMADO]: { label: 'Programado', color: '#64748b', icon: '—', pct: 10 },
-  [ESTADOS.CANCELADO]: { label: 'Cancelado', color: '#dc2626', icon: '✕', pct: 0 },
+  [ESTADOS.PENDIENTE]: { label: 'Recibido', color: '#64748b', cls: 'badge-n', ink: 'var(--text)', icon: '1', pct: 15 },
+  [ESTADOS.EN_DIAGNOSTICO]: { label: 'En Diagnostico', color: '#2563eb', cls: 'badge-i', ink: 'var(--blue-600)', icon: '2', pct: 30 },
+  [ESTADOS.ESPERANDO_REPUESTOS]: { label: 'Esperando Repuestos', color: '#d97706', cls: 'badge-w', ink: 'var(--amber-700)', icon: '3', pct: 45 },
+  [ESTADOS.EN_PROGRESO]: { label: 'En Reparacion', color: '#2563eb', cls: 'badge-i', ink: 'var(--blue-600)', icon: '4', pct: 60 },
+  [ESTADOS.EN_PRUEBA]: { label: 'En Prueba', color: '#7c3aed', cls: 'badge-p', ink: 'var(--purple-700)', icon: '5', pct: 80 },
+  [ESTADOS.COMPLETADO]: { label: 'Listo para Entrega', color: '#16a34a', cls: 'badge-s', ink: 'var(--green-700)', icon: '6', pct: 100 },
+  [ESTADOS.PROGRAMADO]: { label: 'Programado', color: '#64748b', cls: 'badge-n', ink: 'var(--text)', icon: '—', pct: 10 },
+  [ESTADOS.CANCELADO]: { label: 'Cancelado', color: '#dc2626', cls: 'badge-d', ink: 'var(--red-700)', icon: '✕', pct: 0 },
 }
 
 // Columnas que el portal SÍ necesita. Se piden explícitamente (en vez de SELECT *)
@@ -546,9 +549,9 @@ export default function PortalCliente() {
   const enProceso = vehiculos.filter(v => v.estadoVeh === 'proceso').length
   const listos = vehiculos.filter(v => v.estadoVeh === 'listo').length
   const VEH_ESTADO = {
-    proceso: { label: 'En el taller', color: '#d97706' },
-    listo: { label: 'Listo para recoger', color: '#16a34a' },
-    aldia: { label: 'Al día', color: '#64748b' },
+    proceso: { label: 'En el taller', color: '#d97706', cls: 'badge-w' },
+    listo: { label: 'Listo para recoger', color: '#16a34a', cls: 'badge-s' },
+    aldia: { label: 'Al día', color: '#64748b', cls: 'badge-n' },
   }
   // Facturas por pagar (de todos sus vehículos).
   const facturasPendientes = datos.trabajos
@@ -582,7 +585,7 @@ export default function PortalCliente() {
       {!compact && <td className="c-name mono" style={{fontWeight:700}}>{t.placa}</td>}
       {!compact && <td data-label="Vehiculo" style={{color:'var(--text-3)',fontSize:13}}>{[t.marca,t.modelo].filter(Boolean).join(' ')||'—'}</td>}
       <td data-label="Estado">
-        <span className="badge" style={{background:(ESTADO_TRABAJO_DISPLAY[t.estado]?.color||'#64748b')+'20',color:ESTADO_TRABAJO_DISPLAY[t.estado]?.color||'#64748b'}}>
+        <span className={`badge ${ESTADO_TRABAJO_DISPLAY[t.estado]?.cls||'badge-n'}`}>
           {ESTADO_TRABAJO_DISPLAY[t.estado]?.label || t.estado}
         </span>
       </td>
@@ -684,7 +687,7 @@ export default function PortalCliente() {
                 <button key={v.placa} type="button" className={`veh-card${sel?' is-sel':''}`} onClick={()=>elegirVehiculo(v.placa)}>
                   <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',gap:8}}>
                     <span className="mono" style={{fontSize:18,fontWeight:800,letterSpacing:'-.01em'}}>{v.placa}</span>
-                    <span className="badge" style={{background:est.color+'22',color:est.color,fontWeight:700}}>{est.label}</span>
+                    <span className={`badge ${est.cls}`} style={{fontWeight:700}}>{est.label}</span>
                   </div>
                   <div style={{fontSize:13,color:'var(--text-3)',marginTop:3}}>{[v.marca,v.modelo].filter(Boolean).join(' ')||'Vehículo'}</div>
                   {v.estadoVeh!=='aldia' && (
@@ -712,7 +715,7 @@ export default function PortalCliente() {
             <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-end',gap:12,flexWrap:'wrap'}}>
               <div>
                 <div style={{fontSize:11,fontWeight:700,color:'var(--text-3)',letterSpacing:'.06em',textTransform:'uppercase',marginBottom:4}}>Estado actual</div>
-                <div style={{fontSize:19,fontWeight:800,color:ESTADO_TRABAJO_DISPLAY[trabajoActivo.estado]?.color||'var(--text)'}}>{ESTADO_TRABAJO_DISPLAY[trabajoActivo.estado]?.label || trabajoActivo.estado}</div>
+                <div style={{fontSize:19,fontWeight:800,color:ESTADO_TRABAJO_DISPLAY[trabajoActivo.estado]?.ink||'var(--text)'}}>{ESTADO_TRABAJO_DISPLAY[trabajoActivo.estado]?.label || trabajoActivo.estado}</div>
               </div>
               <div style={{textAlign:'right'}}>
                 <div style={{fontSize:11,fontWeight:700,color:'var(--text-3)',letterSpacing:'.06em',textTransform:'uppercase',marginBottom:4}}>Ingreso</div>
@@ -915,7 +918,7 @@ export default function PortalCliente() {
                   <div className="mono" style={{fontSize:19,fontWeight:800,letterSpacing:'-.01em',marginTop:2}}>{t.placa}</div>
                   <div style={{fontSize:13,color:'var(--text-3)'}}>{[t.marca,t.modelo,t.ano].filter(Boolean).join(' ') || '—'}</div>
                 </div>
-                <span className="badge" style={{background:(est.color||'#64748b')+'20',color:est.color||'#64748b',flexShrink:0}}>{est.label || t.estado}</span>
+                <span className={`badge ${est.cls||'badge-n'}`} style={{flexShrink:0}}>{est.label || t.estado}</span>
               </div>
 
               <div style={{padding:'14px 20px 6px'}}>

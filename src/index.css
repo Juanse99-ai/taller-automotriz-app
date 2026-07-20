@@ -59,6 +59,7 @@
 
   --orange-500:#f97316;
   --purple-500:#7c3aed;
+  --purple-700:#6d28d9;
 
   /* semantic (light mode) — fondo agrupado iOS */
   --bg:#f2f2f7;
@@ -150,6 +151,7 @@
   --red-700:#fca5a5;
   --amber-700:#fbbf24;
   --blue-600:#7ab3ff;
+  --purple-700:#c4b5fd;
   /* tintes de chips en oscuro: translúcidos (no fondos claros) */
   --green-50:rgba(74,222,128,.14);--green-200:rgba(74,222,128,.34);
   --amber-50:rgba(251,191,36,.14);--amber-200:rgba(251,191,36,.34);
