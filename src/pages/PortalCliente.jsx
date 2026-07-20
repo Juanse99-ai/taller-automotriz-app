@@ -478,7 +478,7 @@ export default function PortalCliente() {
             <div style={{padding:'28px 32px 22px',background:'var(--navy-900)',color:'#fff',textAlign:'center'}}>
               <img src="/logo.png" alt="MDA" style={{width:50,height:50,objectFit:'contain',borderRadius:12,background:'#fff',padding:4,marginBottom:12}}/>
               <h1 style={{fontSize:20,fontWeight:800,margin:'0 0 4px',letterSpacing:'.02em'}}>Multidiagnosticos AS</h1>
-              <p style={{fontSize:13,opacity:.82,margin:0}}>Seguimiento en línea de su vehículo</p>
+              <p style={{fontSize:13,opacity:.92,fontWeight:500,margin:0}}>Seguimiento en línea de su vehículo</p>
             </div>
             <div style={{padding:'24px 32px 28px'}}>
               <form onSubmit={buscar} style={{display:'flex',flexDirection:'column',gap:16}}>
@@ -620,25 +620,25 @@ export default function PortalCliente() {
       <div className="card portal-full" style={{padding:0,overflow:'hidden'}}>
         <div style={{padding:'22px 26px',background:'var(--navy-900)',color:'#fff'}}>
           <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:10}}>
-            <div style={{display:'flex',alignItems:'center',gap:10,fontSize:11,fontWeight:700,letterSpacing:'.08em',textTransform:'uppercase',opacity:.88}}>
+            <div style={{display:'flex',alignItems:'center',gap:10,fontSize:11,fontWeight:700,letterSpacing:'.08em',textTransform:'uppercase',color:'#fff'}}>
               <img src="/logo.png" alt="MDA" style={{width:20,height:20,objectFit:'contain',borderRadius:4}}/> Multidiagnosticos AS
             </div>
-            <button className="btn btn-ghost btn-sm" style={{color:'rgba(255,255,255,.72)',border:'1px solid rgba(255,255,255,.18)'}} onClick={salir}>Salir</button>
+            <button className="btn btn-ghost btn-sm" style={{color:'rgba(255,255,255,.9)',border:'1px solid rgba(255,255,255,.28)'}} onClick={salir}>Salir</button>
           </div>
-          <div style={{fontSize:14,opacity:.92,marginBottom:esFlota?12:2}}>Hola, {tituloCliente(datos.trabajos[0]?.cliente)}</div>
+          <div style={{fontSize:14,fontWeight:500,color:'#fff',marginBottom:esFlota?12:2}}>Hola, {tituloCliente(datos.trabajos[0]?.cliente)}</div>
           {esFlota ? (
             <div style={{display:'flex',gap:'12px 28px',flexWrap:'wrap',alignItems:'flex-end'}}>
               {[[vehiculos.length,vehiculos.length===1?'vehículo':'vehículos','#ffffff'],[enProceso,'en el taller','#fbbf24'],[listos,listos===1?'listo para recoger':'listos para recoger','#4ade80']].map(([n,lbl,c],i)=>(
                 <div key={i} style={{display:'flex',alignItems:'baseline',gap:8}}>
                   <span className="mono fleet-num" data-n={n} style={{fontSize:27,fontWeight:800,lineHeight:1,color:c}}>{n}</span>
-                  <span style={{fontSize:13,opacity:.85}}>{lbl}</span>
+                  <span style={{fontSize:13,opacity:.92,fontWeight:500}}>{lbl}</span>
                 </div>
               ))}
             </div>
           ) : trabajoActivo ? (
             <>
               <h2 style={{fontSize:22,fontWeight:700,letterSpacing:'-.01em',marginBottom:4}}>{[trabajoActivo.marca,trabajoActivo.modelo].filter(Boolean).join(' ') || 'Su vehículo'}</h2>
-              <div style={{fontSize:13,opacity:.86}}>Placa <span className="mono" style={{fontWeight:700}}>{trabajoActivo.placa}</span>{trabajoActivo.otCodigo && <> · Orden <span className="mono">{trabajoActivo.otCodigo}</span></>}</div>
+              <div style={{fontSize:13,opacity:.94,fontWeight:500}}>Placa <span className="mono" style={{fontWeight:700}}>{trabajoActivo.placa}</span>{trabajoActivo.otCodigo && <> · Orden <span className="mono">{trabajoActivo.otCodigo}</span></>}</div>
             </>
           ) : (
             <h2 style={{fontSize:22,fontWeight:700,letterSpacing:'-.01em'}}>Historial de servicios</h2>
