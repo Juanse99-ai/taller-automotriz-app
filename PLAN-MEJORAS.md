@@ -103,7 +103,15 @@ de `utils/money.js` (allocate exacto) en vez de `Math.round(total/n)` para todos
 
 ---
 
-## TANDA 2 — Trabajos / Ficha del técnico / Video 🟠
+## TANDA 2 — Trabajos / Ficha del técnico / Video 🟠 — [HECHO]
+> 2.1 firmaTrabajo compara TODOS los campos sincronizados en el poll. 2.2 videos
+> huérfanos: se registran por sesión y se borran al cancelar o al quitarlos antes de
+> guardar (+ path en la evidencia). 2.3 puedeCrearOT bloquea numerar sin haber visto
+> el servidor. 2.4 ficha re-sincroniza con props. 2.5 checklist por item.id (+ compat
+> índices, PDF). 2.6 cronómetro cap 12h. 2.7 carpeta de video por OT. 2.8 toggleTarea
+> fuera del updater. 2.9 Recepción anti doble-submit. 2.10 nº de OT por máximo real.
+> 2.11 handleCompletar factura con estado ya completado.
+> Verificado: 86 OT cargan/renderizan, Ficha abre con checklist por id, sin crash.
 
 **2.1 [ALTO] El poll solo compara 7 campos → el avance del técnico se pisa entre dispositivos.**
 `useTrabajos.js:186-198,297-313`: cambios de `tareasHechas`, `crono_*`, `items`, `evidencias`,

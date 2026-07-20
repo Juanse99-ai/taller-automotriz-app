@@ -65,6 +65,26 @@ function parseEvidencias(val) {
   return null
 }
 
+// Firma de los campos SINCRONIZADOS de un trabajo, para decidir si un snapshot
+// del servidor cambió algo (y refrescar la UI). Incluye todo lo que persiste;
+// los blobs grandes (evidencias, firma) van por longitud/ids, no por su contenido,
+// para no volver pesada la comparación que corre cada 60s sobre todas las OT.
+function firmaTrabajo(t) {
+  if (!t) return ''
+  const items = Array.isArray(t.items) ? t.items.map(i => `${i.nombre}·${i.precio}·${i.cantidad}·${i.esServicio ? 1 : 0}`).join('|') : ''
+  const evid = Array.isArray(t.evidenciasIngreso) ? t.evidenciasIngreso.map(e => e.id || e.url || (e.dataUrl || '').slice(0, 24)).join(',') : ''
+  const tareas = Array.isArray(t.tareasHechas) ? [...t.tareasHechas].join(',') : ''
+  return [
+    t.otCodigo, t.estado, t.total, t.pagado, t.tecnicoId, t.manoObra, t.manoObraExtra,
+    t.subtotalSinIva, t.totalIva, t.metodoPago, t.observaciones, t.cliente, t.cedula,
+    t.placa, t.marca, t.modelo, t.ano, t.kilometraje, t.cilindraje,
+    t.telefonoCliente, t.emailCliente, t.cuenttiTransacionId, t.facturadoEn,
+    t.cuenttiResolucion, (t.firmaCliente || '').length, t.tipoAceite, t.proximoKm,
+    t.proximaVisita, t.notasProximoMant, t.sinVehiculo ? 1 : 0,
+    tareas, t.cronoInicio, t.cronoAcumulado, items, evid,
+  ].join('~')
+}
+
 export function useTrabajos() {
   // Carga inmediata desde cache local para mostrar UI sin pantalla de loading
   const [trabajos, setTrabajos] = useState(() => lsGet(LS_KEYS.TRABAJOS, []))
@@ -103,6 +123,15 @@ export function useTrabajos() {
   const dirtyRef = useRef(new Map()) // id -> timestamp de la edición local
   const DIRTY_TTL = 20000
   const marcarDirty = useCallback((id) => { if (id) dirtyRef.current.set(id, Date.now()) }, [])
+
+  // ¿El servidor ya respondió alguna vez? Si NO, y encima el cache está vacío, no
+  // sabemos el consecutivo real y nextOtCodigo arrancaría en OT-0001 pisando
+  // códigos existentes. El creador de OT (Recepción/Trabajos) usa esto para
+  // bloquear la creación hasta tener el máximo real.
+  const servidorRespondioRef = useRef(false)
+  const puedeCrearOT = useCallback(
+    () => servidorRespondioRef.current || (trabajosRef.current || []).length > 0,
+    [])
 
   // Merge inteligente: Supabase es fuente de verdad, pero preservar datos solo-locales
   const mergeConLocal = useCallback((sbNormalized) => {
@@ -149,6 +178,7 @@ export function useTrabajos() {
   const sincronizar = useCallback(async () => {
     try {
       const sbData = await fetchTrabajos()
+      servidorRespondioRef.current = true
       setConnectionError(false)
       const normalized = sbData.map(normalizar)
 
@@ -181,16 +211,14 @@ export function useTrabajos() {
 
       if (normalized.length > 0) {
         const merged = mergeConLocal(normalized)
-        // Solo actualizar si cambio algo
+        // Solo actualizar si cambió algo. Antes se comparaban SOLO 7 campos, así
+        // que cambios de otro dispositivo en el checklist/cronómetro del técnico,
+        // items, evidencias u observaciones NO refrescaban esta pantalla (y la
+        // siguiente edición local los pisaba). Ahora se compara una firma de TODOS
+        // los campos sincronizados (los blobs grandes por longitud/ids, no el blob).
         const prev = trabajosRef.current
         const changed = prev.length !== merged.length ||
-          merged.some((n, i) => {
-            const p = prev[i]
-            if (!p) return true
-            return p.otCodigo !== n.otCodigo || p.estado !== n.estado ||
-              p.total !== n.total || p.pagado !== n.pagado || p.tecnicoId !== n.tecnicoId ||
-              p.manoObra !== n.manoObra || p.manoObraExtra !== n.manoObraExtra
-          })
+          merged.some((n, i) => firmaTrabajo(prev[i]) !== firmaTrabajo(n))
         if (changed) {
           setTrabajos(merged)
           lsSet(LS_KEYS.TRABAJOS, merged)
@@ -211,6 +239,7 @@ export function useTrabajos() {
     setConnectionError(false)
     try {
       const sbData = await fetchTrabajos()
+      servidorRespondioRef.current = true // ya sabemos el máximo real → numerar OT es seguro
       if (sbData.length > 0) {
         const normalized = sbData.map(normalizar)
         const merged = mergeConLocal(normalized)
@@ -324,5 +353,6 @@ export function useTrabajos() {
     agregarTrabajo, actualizarTrabajo, eliminarTrabajo,
     recargar: cargarInicial,
     sincronizar,
+    puedeCrearOT,
   }
 }

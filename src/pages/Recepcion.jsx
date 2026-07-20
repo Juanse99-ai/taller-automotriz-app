@@ -6,8 +6,9 @@ import { useClientes } from '../hooks/useClientes'
 import Switch from '../components/Switch'
 
 export default function Recepcion({ hook, vehiculosHook, clientesHook, notify }) {
-  const { trabajos, agregarTrabajo } = hook
+  const { trabajos, agregarTrabajo, puedeCrearOT } = hook
   const { resultados, buscando, buscarDebounced, setResultados } = useClientes()
+  const [enviando, setEnviando] = useState(false) // anti doble-submit (evita 2 OT)
 
   const pendientes = useMemo(() =>
     trabajos.filter(t => t.estado === ESTADOS.PENDIENTE || t.estado === ESTADOS.EN_PROGRESO)
@@ -37,11 +38,16 @@ export default function Recepcion({ hook, vehiculosHook, clientesHook, notify })
 
   const handleRecibir = async (e) => {
     e.preventDefault()
+    if (enviando) return // ya se está enviando: ignora el 2º clic (no crear 2 OT)
     if (!form.placa || !form.cliente) {
       notify('Placa y cliente son obligatorios', 'error')
       return
     }
+    // No numerar una OT si aún no sabemos el consecutivo real (arrancaría en OT-0001).
+    if (!puedeCrearOT()) { notify('Sin conexión con el servidor: no se puede numerar la OT todavía. Reintenta en un momento.', 'error'); return }
     const placaNorm = form.placa.toUpperCase()
+    setEnviando(true)
+    try {
     await agregarTrabajo({
       ...form,
       placa: placaNorm,
@@ -89,6 +95,9 @@ export default function Recepcion({ hook, vehiculosHook, clientesHook, notify })
       kilometraje: '', tecnicoId: '', observaciones: '', fecha: hoyISO(), programar: false,
       evidenciasIngreso: [],
     })
+    } finally {
+      setEnviando(false)
+    }
   }
 
   const addFotosIngreso = (files) => {
@@ -122,7 +131,16 @@ export default function Recepcion({ hook, vehiculosHook, clientesHook, notify })
   const maxPhotos = 6
   const emptySlots = Math.max(0, maxPhotos - form.evidenciasIngreso.length)
 
-  const otNumber = `OT-${String(trabajos.length + 1).padStart(4, '0')}`
+  // Vista previa del código: se deriva del MÁXIMO real (como nextOtCodigo), no de
+  // trabajos.length+1 (que con OT borradas o huecos daba un número equivocado). Es
+  // una estimación; el código definitivo lo asigna nextOtCodigo al crear.
+  const otNumber = useMemo(() => {
+    const max = trabajos.reduce((mx, t) => {
+      const m = /OT-(\d+)/.exec(t.otCodigo || '')
+      return m ? Math.max(mx, parseInt(m[1], 10)) : mx
+    }, 0)
+    return `OT-${String(max + 1).padStart(4, '0')}`
+  }, [trabajos])
   const tecnicoNombre = TECNICOS.find(t => t.id === parseInt(form.tecnicoId))?.nombre || 'Sin asignar'
 
   return (
@@ -142,7 +160,7 @@ export default function Recepcion({ hook, vehiculosHook, clientesHook, notify })
               evidenciasIngreso: [],
             })
           }}>Cancelar</button>
-          <button className="btn btn-primary" onClick={handleRecibir}>Generar OT</button>
+          <button className="btn btn-primary" disabled={enviando} onClick={handleRecibir}>{enviando ? 'Generando…' : 'Generar OT'}</button>
         </div>
       </div>
 
@@ -350,7 +368,7 @@ export default function Recepcion({ hook, vehiculosHook, clientesHook, notify })
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                     <button type="button" className="btn btn-outline" onClick={() => setPaso(3)}>Atrás</button>
-                    <button type="submit" className="btn btn-primary">Recibir Vehiculo</button>
+                    <button type="submit" className="btn btn-primary" disabled={enviando}>{enviando ? 'Recibiendo…' : 'Recibir Vehiculo'}</button>
                   </div>
                 </div>
               </div>

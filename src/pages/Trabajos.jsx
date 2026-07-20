@@ -56,7 +56,7 @@ function tipoServicio(t) {
 }
 
 export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, onAutoFacturar }) {
-  const { trabajos, agregarTrabajo, actualizarTrabajo, eliminarTrabajo } = hook
+  const { trabajos, agregarTrabajo, actualizarTrabajo, eliminarTrabajo, puedeCrearOT } = hook
   const [vista, setVista] = useState('lista') // lista | nuevo | editar | kanban
   const [editId, setEditId] = useState(null)
   const [confirmDel, setConfirmDel] = useState(null)
@@ -150,9 +150,10 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
   const handleCompletar = async (id) => {
     await actualizarTrabajo(id, { estado: ESTADOS.COMPLETADO })
     notify('Trabajo marcado como completado', 'success')
-    // Ofrecer facturar
+    // Ofrecer facturar. Se construye el objeto con el estado YA completado (no el
+    // snapshot viejo del closure `trabajos`, que aún lo tiene sin completar).
     const t = trabajos.find(x => x.id === id)
-    if (t) setShowFacturarModal(t)
+    if (t) setShowFacturarModal({ ...t, estado: ESTADOS.COMPLETADO })
   }
 
   const handleEliminar = async (id) => {
@@ -432,6 +433,9 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
             sincronizarClienteVehiculo()
             notify('Trabajo actualizado', 'success')
           } else {
+            // No numerar una OT nueva si aún no sabemos el consecutivo real del
+            // servidor (arrancaría en OT-0001 y pisaría códigos existentes).
+            if (!puedeCrearOT()) { notify('Sin conexión con el servidor: no se puede numerar la OT todavía. Reintenta en un momento.', 'error'); return }
             await agregarTrabajo(data)
             sincronizarClienteVehiculo()
             notify('Trabajo creado', 'success')
@@ -1016,6 +1020,10 @@ function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [], vehiculosHoo
   const MAX_VIDEO_SEG = 30
   const MAX_VIDEO_BYTES = 75 * 1024 * 1024
   const [subiendoVideo, setSubiendoVideo] = useState(false)
+  // Videos subidos al bucket en ESTA sesión de edición (aún no persistidos en el
+  // trabajo). Si se cancela, o si se quitan antes de guardar, hay que borrarlos del
+  // bucket para no dejar huérfanos.
+  const videosSesionRef = useRef([])
   const addVideo = async (campo, file) => {
     if (!file) return
     if (!file.type?.startsWith('video/')) { notify?.('Ese archivo no es un video.', 'error'); return }
@@ -1025,14 +1033,17 @@ function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [], vehiculosHoo
       const v = document.createElement('video')
       v.preload = 'metadata'
       v.onloadedmetadata = () => { const d = v.duration || 0; URL.revokeObjectURL(v.src); resolve(d) }
-      v.onerror = () => resolve(0)
+      v.onerror = () => { URL.revokeObjectURL(v.src); resolve(0) }
       v.src = URL.createObjectURL(file)
     })
     if (dur > MAX_VIDEO_SEG + 0.5) { notify?.(`El video dura ${Math.round(dur)}s. El máximo son ${MAX_VIDEO_SEG} segundos.`, 'error'); return }
     setSubiendoVideo(true)
     try {
-      const { url } = await subirVideoEvidencia(file, form.otCodigo || form.id)
-      setForm(f => ({ ...f, [campo]: [...(f[campo] || []), { id: uid(), nombre: file.name, tipo: 'video', url, nota: '' }] }))
+      // Carpeta por OT: el `form` no tiene otCodigo/id, se toman del trabajo (o placa).
+      const carpeta = trabajo?.otCodigo || trabajo?.id || form.placa || 'nueva'
+      const { url, path } = await subirVideoEvidencia(file, carpeta)
+      videosSesionRef.current.push({ url, path })
+      setForm(f => ({ ...f, [campo]: [...(f[campo] || []), { id: uid(), nombre: file.name, tipo: 'video', url, path, nota: '' }] }))
       notify?.('Video subido.', 'success')
     } catch (e) {
       notify?.(`No se pudo subir el video: ${e.message}`, 'error')
@@ -1297,11 +1308,26 @@ function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [], vehiculosHoo
       proximaVisita: form.proximaVisita ? new Date(form.proximaVisita + 'T12:00:00').toISOString() : null,
       notasProximoMant: form.notasProximoMant || '',
     })
+    // Videos subidos esta sesión que NO quedaron en el trabajo (agregados y luego
+    // quitados antes de guardar) → borrarlos del bucket. Los que sí quedan ya están
+    // persistidos; los que estaban en el trabajo original y se quitaron los borra el
+    // diff del onSave del padre.
+    const urlsFinal = new Set((form.evidenciasIngreso || []).filter(e => e?.tipo === 'video').map(e => e.url))
+    videosSesionRef.current.filter(v => !urlsFinal.has(v.url)).forEach(v => borrarVideoEvidencia(v))
+    videosSesionRef.current = []
   }
 
   const handleSubmit = (e) => {
     e.preventDefault()
     guardar()
+  }
+
+  // Cancelar: nada se guardó, así que se borran del bucket los videos subidos en
+  // ESTA sesión (si no, quedan huérfanos, sobre todo en una OT nueva descartada).
+  const cancelar = () => {
+    videosSesionRef.current.forEach(v => borrarVideoEvidencia(v))
+    videosSesionRef.current = []
+    onCancel()
   }
 
   // Auto-calcular próximo km y fecha cuando cambia el tipo de aceite
@@ -1347,7 +1373,7 @@ function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [], vehiculosHoo
             </div>
           )}
         </div>
-        <div className="actions"><Button variant="outline" onClick={onCancel}>Volver</Button></div>
+        <div className="actions"><Button variant="outline" onClick={cancelar}>Volver</Button></div>
       </div>
 
       <form onSubmit={handleSubmit} className="form-stack">
@@ -1884,7 +1910,7 @@ function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [], vehiculosHoo
             <span className="val">{fmt(totales.total)}</span>
           </div>
           <div className="form-actionbar__btns">
-            <Button variant="outline" type="button" onClick={onCancel}>Cancelar</Button>
+            <Button variant="outline" type="button" onClick={cancelar}>Cancelar</Button>
             <Button variant="primary" type="submit">{isEdit ? 'Actualizar OT' : `Guardar OT · ${fmt(totales.total)}`}</Button>
           </div>
         </div>

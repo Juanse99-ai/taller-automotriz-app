@@ -66,7 +66,9 @@ export async function dibujarUnaFicha(doc, t, tecNombre, hechasSet, logoData, es
         const cx = d.cell.x + d.cell.width / 2, cy = d.cell.y + d.cell.height / 2
         doc.setDrawColor(...SLATE_600); doc.setLineWidth(0.4)
         doc.rect(cx - 2.4, cy - 2.4, 4.8, 4.8)
-        if (hechasSet.has(d.row.index)) {
+        // Marca por id del ítem (o índice, para datos viejos guardados por índice).
+        const itemRow = items[d.row.index]
+        if (hechasSet.has(itemRow?.id) || hechasSet.has(d.row.index)) {
           doc.setLineWidth(0.7)
           doc.line(cx - 1.6, cy, cx - 0.4, cy + 1.5)
           doc.line(cx - 0.4, cy + 1.5, cx + 1.9, cy - 1.9)

@@ -25,10 +25,26 @@ const fmtTiempo = (seg) => {
 
 export default function FichaTecnico({ trabajo: t, tecNombre, onClose, guardar }) {
   const items = Array.isArray(t.items) ? t.items : []
-  const [hechas, setHechas] = useState(() => new Set(Array.isArray(t.tareasHechas) ? t.tareasHechas : []))
+  // tareasHechas se guarda por item.id (no por índice: reordenar/borrar un ítem ya
+  // no corre las marcas a otra tarea). Compat: datos viejos guardaban ÍNDICES
+  // (números) → se convierten a id una vez y se re-guardan como id al tocar.
+  const idsHechas = (arr) => new Set((Array.isArray(arr) ? arr : [])
+    .map(x => (typeof x === 'number' ? items[x]?.id : x)).filter(Boolean))
+
+  const [hechas, setHechas] = useState(() => idsHechas(t.tareasHechas))
   const [cronoInicio, setCronoInicio] = useState(t.cronoInicio || null)
   const [acumulado, setAcumulado] = useState(t.cronoAcumulado || 0)
   const [ahora, setAhora] = useState(() => Date.now())
+
+  // Re-sincronizar con el trabajo si cambió en otro dispositivo (el poll actualiza
+  // `t`). Seguro: cada acción local persiste al instante y marca el trabajo "dirty"
+  // 20s, así que `t` no trae datos viejos mientras se edita.
+  const tareasKey = Array.isArray(t.tareasHechas) ? t.tareasHechas.join(',') : ''
+  // Sincronizar estado con las props es el propósito (deps estables → sin loop).
+  // eslint-disable-next-line react-hooks/exhaustive-deps, react-hooks/set-state-in-effect
+  useEffect(() => { setHechas(idsHechas(t.tareasHechas)) }, [t.id, tareasKey])
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => { setCronoInicio(t.cronoInicio || null); setAcumulado(t.cronoAcumulado || 0) }, [t.id, t.cronoInicio, t.cronoAcumulado])
 
   // El cronómetro corre solo mientras cronoInicio está seteado.
   useEffect(() => {
@@ -38,15 +54,19 @@ export default function FichaTecnico({ trabajo: t, tecNombre, onClose, guardar }
   }, [cronoInicio])
 
   const corriendo = !!cronoInicio
-  const segActuales = acumulado + (cronoInicio ? Math.floor((ahora - new Date(cronoInicio).getTime()) / 1000) : 0)
+  // Tope de 12h por sesión: si el técnico olvida pausar, no se acumula un tiempo
+  // gigante (días) que quedaría permanente al pausar después.
+  const CAP_SEG = 12 * 3600
+  const deltaCrono = cronoInicio ? Math.min(Math.max(0, Math.floor((ahora - new Date(cronoInicio).getTime()) / 1000)), CAP_SEG) : 0
+  const segActuales = acumulado + deltaCrono
 
-  const toggleTarea = (idx) => {
-    setHechas(prev => {
-      const next = new Set(prev)
-      if (next.has(idx)) next.delete(idx); else next.add(idx)
-      guardar?.({ tareasHechas: [...next] })
-      return next
-    })
+  const toggleTarea = (itemId) => {
+    // Se calcula FUERA del updater (no llamar guardar dentro de setState → evita el
+    // warning de React y el doble upsert en StrictMode).
+    const next = new Set(hechas)
+    if (next.has(itemId)) next.delete(itemId); else next.add(itemId)
+    setHechas(next)
+    guardar?.({ tareasHechas: [...next] })
   }
   const iniciarCrono = () => {
     const iso = new Date().toISOString()
@@ -54,7 +74,8 @@ export default function FichaTecnico({ trabajo: t, tecNombre, onClose, guardar }
     guardar?.({ cronoInicio: iso })
   }
   const pausarCrono = () => {
-    const seg = acumulado + Math.floor((Date.now() - new Date(cronoInicio).getTime()) / 1000)
+    const d = Math.min(Math.max(0, Math.floor((Date.now() - new Date(cronoInicio).getTime()) / 1000)), CAP_SEG)
+    const seg = acumulado + d
     setAcumulado(seg); setCronoInicio(null)
     guardar?.({ cronoAcumulado: seg, cronoInicio: null })
   }
@@ -62,7 +83,7 @@ export default function FichaTecnico({ trabajo: t, tecNombre, onClose, guardar }
   const imprimirFicha = () => imprimirFichaOT(t, tecNombre, hechas)
 
   const totalTareas = items.length
-  const listas = items.reduce((n, _it, idx) => n + (hechas.has(idx) ? 1 : 0), 0)
+  const listas = items.reduce((n, it) => n + (hechas.has(it.id) ? 1 : 0), 0)
 
   return (
     <div className="modal-overlay" onClick={onClose}>
@@ -119,10 +140,10 @@ export default function FichaTecnico({ trabajo: t, tecNombre, onClose, guardar }
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                 {items.map((it, idx) => {
-                  const done = hechas.has(idx)
+                  const done = hechas.has(it.id)
                   return (
-                    <label key={idx} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', border: '1px solid var(--border)', borderRadius: 10, cursor: 'pointer', background: done ? 'var(--accent-soft)' : 'transparent' }}>
-                      <input type="checkbox" checked={done} onChange={() => toggleTarea(idx)} style={{ width: 20, height: 20, accentColor: 'var(--primary)', flexShrink: 0 }} />
+                    <label key={it.id || idx} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', border: '1px solid var(--border)', borderRadius: 10, cursor: 'pointer', background: done ? 'var(--accent-soft)' : 'transparent' }}>
+                      <input type="checkbox" checked={done} onChange={() => toggleTarea(it.id)} style={{ width: 20, height: 20, accentColor: 'var(--primary)', flexShrink: 0 }} />
                       <span style={{ flex: 1, fontSize: 14.5, fontWeight: 600, textDecoration: done ? 'line-through' : 'none', color: done ? 'var(--text-3)' : 'var(--text)' }}>{it.nombre || 'Ítem'}</span>
                       {(parseInt(it.cantidad) || 1) > 1 && <span className="mono" style={{ fontSize: 13, color: 'var(--text-3)', flexShrink: 0 }}>x{parseInt(it.cantidad)}</span>}
                     </label>
