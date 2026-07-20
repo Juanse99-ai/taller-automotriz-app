@@ -403,6 +403,13 @@ input,select,textarea{font-family:inherit;font-size:14px;color:inherit}
    antes los <button> con estilo inline no mostraban foco. */
 button:focus-visible,[role="button"]:focus-visible,a:focus-visible,select:focus-visible{outline:2px solid var(--primary);outline-offset:2px;border-radius:6px}
 .icobtn:active{transform:scale(.94)}
+/* Botón "limpiar" (✕) dentro de las barras de búsqueda — antes eran ✕ sueltos
+   con estilos inline y sin hover; ahora consistentes en toda la app. */
+.input-clear{display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;width:22px;height:22px;padding:0;border:none;border-radius:50%;background:transparent;color:var(--text-4);cursor:pointer;transition:background .12s,color .12s}
+.input-clear:hover{background:var(--fill);color:var(--text-2)}
+.input-clear:active{transform:scale(.92)}
+.input-clear:focus-visible{outline:2px solid var(--primary);outline-offset:1px}
+.input-clear svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2.4;stroke-linecap:round}
 /* Sin el flash gris al tocar en móvil (feel tipo iOS) en todo lo interactivo */
 a,button,[role=button],.navlink,.mob-tab,.icobtn,.tabs button{-webkit-tap-highlight-color:transparent;touch-action:manipulation}
 .m3switch{-webkit-tap-highlight-color:transparent;touch-action:manipulation}

@@ -827,7 +827,7 @@ export default function CRM({ trabajos = [], clientes, vehiculos, notify, actual
                   style={{ border: 'none', outline: 'none', background: 'none', flex: 1, fontSize: 13.5 }}
                 />
                 {busquedaInactivos && (
-                  <button onClick={() => setBusquedaInactivos('')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-3)' }}>✕</button>
+                  <button type="button" className="input-clear" onClick={() => setBusquedaInactivos('')} aria-label="Limpiar búsqueda"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
                 )}
               </div>
               <div className="segctl">

@@ -269,9 +269,8 @@ export default function Inventario({ notify }) {
                 aria-label="Buscar producto"
               />
               {busqueda && (
-                <button type="button" onClick={() => setBusqueda('')} aria-label="Limpiar búsqueda"
-                  style={{ display: 'flex', color: 'var(--text-4)', padding: 0, lineHeight: 1 }}>
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="10" opacity=".28"/><path d="M15 9l-6 6M9 9l6 6" stroke="var(--bg-raised)" strokeWidth="2.2" strokeLinecap="round" fill="none"/></svg>
+                <button type="button" className="input-clear" onClick={() => setBusqueda('')} aria-label="Limpiar búsqueda">
+                  <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
                 </button>
               )}
             </div>

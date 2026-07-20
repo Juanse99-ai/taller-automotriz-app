@@ -679,7 +679,7 @@ export default function PortalCliente() {
       {esFlota && (
         <div className="card portal-full">
           <div className="card__h"><h3>Sus vehículos</h3><span className="count">{vehiculos.length}</span></div>
-          <div className="card__b" style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(228px,1fr))',gap:12}}>
+          <div className="card__b" style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(200px,1fr))',gap:12}}>
             {vehiculos.map(v=>{
               const est = VEH_ESTADO[v.estadoVeh]
               const sel = v.placa === placaFoco
