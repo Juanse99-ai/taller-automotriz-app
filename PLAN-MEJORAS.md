@@ -172,7 +172,10 @@ objeto con `{...actual, estado: COMPLETADO}` en vez de `trabajos.find` del closu
 ## TANDA 3 — Endurecer API (sin romper la app) 🟠 — [HECHO] (3.1/3.2/3.3; 3.4 diferido)
 > Verificado en prod: Cuentti whitelist (path real→200, no permitido→403); storage
 > delete (video referenciado→403, no referenciado→200); gasto idempotente por idemKey.
-> 3.4 (bcrypt) NO hecho: toca el login; requiere OK del dueño (auth diferida).
+> 3.4 [HECHO] commit `6f4df16`: bcrypt con migración perezosa. Verificado en prod:
+> usuario bcrypt (login OK / clave mala rechazada); usuario legacy SHA-256 (login OK
+> y migró solo a $2b$). Sin lockout. (La falta de auth en /api/auth-setup sigue siendo
+> deuda S1 aparte.)
 
 **3.1 [ALTO] `?storage=delete` público permite borrar TODOS los videos de evidencia.**
 `api/supabase.js:116-136`. Los paths son enumerables (las URLs viven en `trabajos.evidencias`,

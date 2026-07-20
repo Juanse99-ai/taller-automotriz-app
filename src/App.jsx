@@ -1,23 +1,30 @@
-import { useState, useCallback, useEffect, useRef, Component } from 'react'
+import { useState, useCallback, useEffect, useRef, Component, lazy, Suspense } from 'react'
 import Sidebar from './components/Sidebar'
 import TopBar from './components/TopBar'
 import Toast from './components/Toast'
 import Login from './components/Login'
-import Dashboard from './pages/Dashboard'
-import Trabajos from './pages/Trabajos'
-import Recepcion from './pages/Recepcion'
-import Mecanicos from './pages/Mecanicos'
-import Cotizaciones from './pages/Cotizaciones'
-import Inventario from './pages/Inventario'
-import Liquidacion from './pages/Liquidacion'
-import Reportes from './pages/Reportes'
-import Inspecciones from './pages/Inspecciones'
-import PortalCliente from './pages/PortalCliente'
-import CuenttiPanel from './pages/CuenttiPanel'
-import Clientes from './pages/Clientes'
-import Vehiculos from './pages/Vehiculos'
-import Usuarios from './pages/Usuarios'
-import CRM from './pages/CRM'
+// Páginas por demanda (React.lazy): cada una es su propio chunk, así el bundle
+// inicial baja y las libs pesadas (jspdf, gsap) viajan solo con la página que las usa.
+const Dashboard = lazy(() => import('./pages/Dashboard'))
+const Trabajos = lazy(() => import('./pages/Trabajos'))
+const Recepcion = lazy(() => import('./pages/Recepcion'))
+const Mecanicos = lazy(() => import('./pages/Mecanicos'))
+const Cotizaciones = lazy(() => import('./pages/Cotizaciones'))
+const Inventario = lazy(() => import('./pages/Inventario'))
+const Liquidacion = lazy(() => import('./pages/Liquidacion'))
+const Reportes = lazy(() => import('./pages/Reportes'))
+const Inspecciones = lazy(() => import('./pages/Inspecciones'))
+const PortalCliente = lazy(() => import('./pages/PortalCliente'))
+const CuenttiPanel = lazy(() => import('./pages/CuenttiPanel'))
+const Clientes = lazy(() => import('./pages/Clientes'))
+const Vehiculos = lazy(() => import('./pages/Vehiculos'))
+const Usuarios = lazy(() => import('./pages/Usuarios'))
+const CRM = lazy(() => import('./pages/CRM'))
+
+// Fallback mientras carga el chunk de una página.
+function CargandoPagina() {
+  return <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-3)', fontSize: 14 }}>Cargando…</div>
+}
 import { useTrabajos } from './hooks/useTrabajos'
 import { useClientes } from './hooks/useClientes'
 import { useVehiculos } from './hooks/useVehiculos'
@@ -75,7 +82,7 @@ const SECTIONS = {
 export default function App() {
   // Portal de clientes (ruta publica)
   if (window.location.pathname === '/portal' || window.location.hash === '#portal') {
-    return <PortalCliente />
+    return <Suspense fallback={<CargandoPagina />}><PortalCliente /></Suspense>
   }
 
   const [user, setUser] = useState(() => getSession())
@@ -326,7 +333,9 @@ export default function App() {
           )}
           <ErrorBoundary key={section}>
             <div className="page-enter">
-              {renderContent()}
+              <Suspense fallback={<CargandoPagina />}>
+                {renderContent()}
+              </Suspense>
             </div>
           </ErrorBoundary>
         </div>
