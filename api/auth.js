@@ -1,3 +1,5 @@
+import bcrypt from 'bcryptjs'
+
 const ALLOWED_ORIGINS = [
   'https://taller-multias.vercel.app',
   'https://taller-automotriz-app.vercel.app',
@@ -14,8 +16,9 @@ function getOrigin(reqOrigin = '') {
   return ALLOWED_ORIGINS[0]
 }
 
-// Hash simple para comparar contraseñas (SHA-256)
-async function hashPassword(password) {
+// Hash LEGACY (SHA-256 + sal global): débil y sin sal por-usuario. Solo se usa
+// para verificar los hashes viejos y MIGRARLOS a bcrypt en el primer login.
+async function hashLegacy(password) {
   const encoder = new TextEncoder()
   const data = encoder.encode(password + '_taller_salt_2026')
   const hashBuffer = await crypto.subtle.digest('SHA-256', data)
@@ -37,8 +40,6 @@ export default async function handler(req, res) {
   }
 
   try {
-    const hashedPwd = await hashPassword(password)
-
     // Buscar usuario en Supabase
     const url = `${SUPABASE_URL}/rest/v1/usuarios?usuario=eq.${encodeURIComponent(usuario)}&activo=eq.true&select=*&limit=1`
     const response = await fetch(url, {
@@ -59,8 +60,31 @@ export default async function handler(req, res) {
     }
 
     const user = usuarios[0]
-    if (user.password_hash !== hashedPwd) {
+    const stored = String(user.password_hash || '')
+    // Verificar: bcrypt (nuevo, empieza por $2) o SHA-256 legacy (hex de 64).
+    let ok = false
+    let migrar = false
+    if (stored.startsWith('$2')) {
+      ok = await bcrypt.compare(password, stored)
+    } else {
+      ok = (stored.length > 0 && stored === (await hashLegacy(password)))
+      migrar = ok // login legacy correcto → re-hashear a bcrypt (migración perezosa)
+    }
+    if (!ok) {
       return res.status(401).json({ error: 'Contraseña incorrecta' })
+    }
+
+    // Migración perezosa: al validar con el hash viejo, guardar uno bcrypt. Si
+    // falla, NO bloquear el login (se reintenta en el próximo).
+    if (migrar) {
+      try {
+        const nuevoHash = await bcrypt.hash(password, 10)
+        await fetch(`${SUPABASE_URL}/rest/v1/usuarios?id=eq.${encodeURIComponent(user.id)}`, {
+          method: 'PATCH',
+          headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json', Prefer: 'return=minimal' },
+          body: JSON.stringify({ password_hash: nuevoHash }),
+        })
+      } catch (e) { console.warn('[auth] no se pudo migrar el hash a bcrypt:', e?.message || e) }
     }
 
     // Login exitoso - devolver datos del usuario sin la contraseña

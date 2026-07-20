@@ -1,6 +1,8 @@
 // Endpoint de gestion de usuarios: hash | create | list | update | delete
 // Requiere proteccion adicional en produccion (ver TODO al final)
 
+import bcrypt from 'bcryptjs'
+
 const SUPABASE_URL = 'https://hpndvrjjizzkusuuhefb.supabase.co'
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhwbmR2cmpqaXp6a3VzdXVoZWZiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM0NjkwMzMsImV4cCI6MjA4OTA0NTAzM30.-6Jz1TsDjAladZUOGD-WNMvVbZXd1Z4WBoOF-npew5c'
 
@@ -11,12 +13,10 @@ const SB_HEADERS = {
   'Prefer': 'return=representation',
 }
 
+// Ahora bcrypt (sal por-usuario + KDF lento). Los hashes viejos SHA-256 siguen
+// funcionando en el login y se migran solos al primer acceso (ver api/auth.js).
 async function hashPassword(password) {
-  const encoder = new TextEncoder()
-  const data = encoder.encode(password + '_taller_salt_2026')
-  const hashBuffer = await crypto.subtle.digest('SHA-256', data)
-  const hashArray = Array.from(new Uint8Array(hashBuffer))
-  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('')
+  return bcrypt.hash(String(password), 10)
 }
 
 export default async function handler(req, res) {
