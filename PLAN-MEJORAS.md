@@ -212,7 +212,11 @@ Wompi → actualizar `WOMPI_*` en Vercel → redeploy. 10 minutos.
 
 ---
 
-## TANDA 4 — Visual / UX 🟠 — [HECHO parcial: dark-mode + tokens + 4.5 badges; pendientes 4.5-resto/4.6/4.7]
+## TANDA 4 — Visual / UX 🟠 — [HECHO: dark-mode + tokens + 4.5 badges + cierres/botones del portal + audit de botones]
+> 2026-07-20: pulidas las X de cierre del portal (visor .lb-ctl + X en cabecera del modal, commit `c0ee1c0`),
+> unificados los ✕ de "limpiar búsqueda" en .input-clear (Clientes/CRM/Inventario) y grid del portal 228→200px
+> (commit `70c5340`). Auditoría de botones: el resto de la app YA usa el sistema (.btn/<Button>, .icobtn, chips
+> .on); 4.6/4.7 (chips internos de Liquidación + overlays) quedan como micro-pulido opcional, bajo valor.
 > HECHO: 4.0 remap de rampa en dark (verde/rojo/ámbar-700 + blue-600 → texto legible;
 > los -600 de relleno NO se tocan). 4.1 ConfirmDialog + toggle segmentado con tokens
 > reales (ya no caja blanca). 4.2 Cotizaciones (dropdown clientes + modal productos).
