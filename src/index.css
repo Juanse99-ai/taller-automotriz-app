@@ -665,6 +665,14 @@ textarea.input{min-height:88px;resize:vertical;padding-top:11px}
 .btn-warning{background:var(--amber-400);color:var(--navy-900);box-shadow:0 1px 2px rgba(245,158,11,.35),0 4px 10px rgba(245,158,11,.2)}
 .btn-warning:hover{background:var(--amber-500);color:#fff}
 .btn:disabled,.btn.disabled{opacity:.52;cursor:not-allowed;pointer-events:none}
+/* Controles del visor de fotos (superficie SIEMPRE oscura: no usan tokens de tema) */
+.lb-ctl{display:inline-flex;align-items:center;justify-content:center;border-radius:12px;background:rgba(255,255,255,.13);border:1px solid rgba(255,255,255,.22);color:#fff;cursor:pointer;font-weight:600;transition:background .15s,transform .15s;-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
+.lb-ctl:hover{background:rgba(255,255,255,.24)}
+.lb-ctl:active{transform:scale(.94)}
+.lb-ctl:focus-visible{outline:2px solid #fff;outline-offset:2px}
+.lb-close{position:fixed;top:max(14px,env(safe-area-inset-top,14px));right:14px;z-index:1001;width:44px;height:44px;border-radius:50%}
+.lb-nav{padding:9px 18px;font-size:13px;gap:6px}
+.lb-nav:disabled{opacity:.4;cursor:default}
 
 /* alias badges (legacy) */
 .badge-success{background:var(--green-100);color:#166534}

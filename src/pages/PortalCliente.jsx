@@ -5,6 +5,7 @@ import autoTable from 'jspdf-autotable'
 import { InspeccionDetalle } from './Inspecciones'
 import { ESTADOS, TECNICOS, TALLER } from '../utils/constants'
 import { fmtDate, fmt } from '../utils/helpers'
+import { Button } from '../components/ui'
 import { drawHeader, drawSectionHeader, drawDataBlock, drawFooter, tableStylesItems, PDF_LAYOUT, PDF_COLORS, SEVERITY_HEAD } from '../utils/pdfTheme'
 
 // Capitaliza el nombre del cliente que viene en MAYÚSCULAS ("TRANSPORTES
@@ -918,7 +919,12 @@ export default function PortalCliente() {
                   <div className="mono" style={{fontSize:19,fontWeight:800,letterSpacing:'-.01em',marginTop:2}}>{t.placa}</div>
                   <div style={{fontSize:13,color:'var(--text-3)'}}>{[t.marca,t.modelo,t.ano].filter(Boolean).join(' ') || '—'}</div>
                 </div>
-                <span className={`badge ${est.cls||'badge-n'}`} style={{flexShrink:0}}>{est.label || t.estado}</span>
+                <div style={{display:'flex',alignItems:'center',gap:8,flexShrink:0}}>
+                  <span className={`badge ${est.cls||'badge-n'}`}>{est.label || t.estado}</span>
+                  <Button variant="ghost" aria-label="Cerrar" onClick={()=>setVistaServicio(null)}>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+                  </Button>
+                </div>
               </div>
 
               <div style={{padding:'14px 20px 6px'}}>
@@ -995,7 +1001,7 @@ export default function PortalCliente() {
               )}
 
               <div style={{padding:'12px 20px 18px',display:'flex',justifyContent:'flex-end'}}>
-                <button className="btn btn-outline" onClick={()=>setVistaServicio(null)}>Cerrar</button>
+                <Button variant="outline" onClick={()=>setVistaServicio(null)}>Cerrar</Button>
               </div>
             </div>
           </div>
@@ -1007,8 +1013,7 @@ export default function PortalCliente() {
         <div onClick={()=>setGaleria(null)}
           style={{position:'fixed',inset:0,background:'rgba(6,11,26,.93)',zIndex:1000,display:'flex',overflowY:'auto',WebkitOverflowScrolling:'touch',padding:20}}>
           {/* Cerrar (X) fija en la esquina superior derecha */}
-          <button aria-label="Cerrar" onClick={(e)=>{e.stopPropagation();setGaleria(null)}}
-            style={{position:'fixed',top:14,right:14,zIndex:1001,width:40,height:40,borderRadius:'50%',background:'rgba(255,255,255,.14)',border:'1px solid rgba(255,255,255,.28)',color:'#fff',display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer'}}>
+          <button className="lb-ctl lb-close" aria-label="Cerrar" onClick={(e)=>{e.stopPropagation();setGaleria(null)}}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
           </button>
           <div onTouchStart={onGalTouchStart} onTouchEnd={onGalTouchEnd}
@@ -1023,11 +1028,9 @@ export default function PortalCliente() {
             )}
             {galeria.length > 1 && (
               <div onClick={e=>e.stopPropagation()} style={{display:'flex',gap:12,marginTop:18,alignItems:'center',flexWrap:'wrap',justifyContent:'center'}}>
-                <button style={{background:'rgba(255,255,255,.12)',color:'#fff',border:'1px solid rgba(255,255,255,.28)',borderRadius:8,padding:'8px 16px',fontSize:13,fontWeight:600,cursor:'pointer'}}
-                  onClick={()=>setGalIdx(i=>(i-1+galeria.length)%galeria.length)}>‹ Anterior</button>
+                <button className="lb-ctl lb-nav" onClick={()=>setGalIdx(i=>(i-1+galeria.length)%galeria.length)}>‹ Anterior</button>
                 <span style={{color:'rgba(255,255,255,.7)',fontSize:13,fontWeight:600}}>{galIdx+1} / {galeria.length}</span>
-                <button style={{background:'rgba(255,255,255,.12)',color:'#fff',border:'1px solid rgba(255,255,255,.28)',borderRadius:8,padding:'8px 16px',fontSize:13,fontWeight:600,cursor:'pointer'}}
-                  onClick={()=>setGalIdx(i=>(i+1)%galeria.length)}>Siguiente ›</button>
+                <button className="lb-ctl lb-nav" onClick={()=>setGalIdx(i=>(i+1)%galeria.length)}>Siguiente ›</button>
               </div>
             )}
           </div>
