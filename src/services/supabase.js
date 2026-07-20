@@ -479,6 +479,29 @@ export async function deleteAllLiquidacionHistorial() {
   }
 }
 
+// Reconciliación: ¿existe ya este registro de historial en el servidor? Se usa
+// cuando el upsert dio timeout (el POST pudo llegar aunque la respuesta se
+// perdiera) → si existe, el pago SÍ se guardó y no hay que abortar.
+export async function fetchLiquidacionHistorialPorId(id) {
+  try {
+    const res = await fetchWithTimeout(`${proxy('liquidacion_historial')}&id=eq.${encodeURIComponent(id)}&select=id&limit=1`)
+    if (!res.ok) return null
+    const rows = await res.json()
+    return Array.isArray(rows) && rows.length > 0 ? rows[0] : null
+  } catch { return null }
+}
+
+// Ids de historial que empiezan por un prefijo. Sirve para elegir el siguiente
+// sufijo libre (-2, -3…) sin pisar un pago que otro dispositivo creó el mismo día.
+export async function fetchLiquidacionIdsPorBase(base) {
+  try {
+    const res = await fetchWithTimeout(`${proxy('liquidacion_historial')}&id=like.${encodeURIComponent(base + '*')}&select=id&limit=100`)
+    if (!res.ok) return []
+    const rows = await res.json()
+    return Array.isArray(rows) ? rows.map(r => r.id) : []
+  } catch { return [] }
+}
+
 // ---------- LIQUIDADOS ----------
 
 export async function fetchLiquidados() {

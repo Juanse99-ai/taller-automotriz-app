@@ -2,10 +2,24 @@ import { useState, useEffect, useCallback } from 'react'
 import {
   fetchMovimientos, upsertMovimiento, deleteMovimiento as sbDeleteMov,
   fetchLiquidacionHistorial, upsertLiquidacionHistorial, deleteAllLiquidacionHistorial,
-  fetchLiquidados, upsertLiquidados, deleteAllLiquidados, deleteLiquidado as sbDeleteLiquidado,
+  fetchLiquidacionHistorialPorId,
+  fetchLiquidados, upsertLiquidados, deleteLiquidado as sbDeleteLiquidado,
   fetchCompartidos, upsertCompartido, deleteCompartido,
 } from '../services/supabase'
 import { lsGet, lsSet, LS_KEYS } from '../services/storage'
+
+// Robustez de sync (esto mueve la plata de las liquidaciones): colas de
+// PENDIENTES + LÁPIDAS por tabla, igual que usePrestamos. Un upsert o un delete
+// fallido ya no pierde ni "resucita" datos: se reintenta en cada sync hasta que
+// el SERVIDOR lo confirme. Sin esto, un cargo borrado reaparecía a los 60s
+// (doble descuento) y un cargo recién agregado se perdía si el upsert falló.
+const MOV_PENDING_KEY = 'movs_tec_pendientes'   // filas completas por confirmar
+const MOV_TOMBS_KEY = 'movs_tec_borrados'       // {id, ts} de borrados por confirmar
+const COMP_PENDING_KEY = 'compartidos_pendientes' // { id: partnerId|0 } por confirmar
+const COMP_TOMBS_KEY = 'compartidos_borrados'
+const TOMB_TTL_MS = 15 * 60 * 1000
+const getLS = (k, d) => lsGet(k, d)
+const setLS = (k, v) => lsSet(k, v)
 
 export function useLiquidacion() {
   // Cargar inicial desde cache local para evitar loading screen
@@ -25,21 +39,6 @@ export function useLiquidacion() {
     fecha: r.fecha,
   })
 
-  // Supabase ahora guarda el compartido Y su partner (columna partner_id).
-  //   compartidos[id] = true                  → compartido, partner sin elegir
-  //   compartidos[id] = { partner: <tecId> }  → compartido con compañero elegido
-  // La base manda: si trae partner, ese gana; sino conservamos el local (por si
-  // se eligió recién y aún no sincroniza).
-  const mergeCompartidos = (prev, sbComp) => {
-    const merged = {}
-    Object.keys(sbComp).forEach(id => {
-      const sb = sbComp[id]
-      if (sb && typeof sb === 'object') merged[id] = sb
-      else merged[id] = (prev[id] && typeof prev[id] === 'object') ? prev[id] : true
-    })
-    return merged
-  }
-
   const normalizarHistorial = (r) => ({
     id: r.id,
     fecha: r.fecha || r.created_at,
@@ -57,6 +56,78 @@ export function useLiquidacion() {
     detalleTrabajo: typeof r.detalle_trabajo === 'string' ? JSON.parse(r.detalle_trabajo) : (r.detalle_trabajo || []),
   })
 
+  // --- Aplicar un snapshot de MOVIMIENTOS con pendientes/lápidas ---
+  const aplicarSyncMovs = (sbMovs) => {
+    if (!Array.isArray(sbMovs)) return
+    const cached = lsGet(LS_KEYS.MOVIMIENTOS_TECNICOS, [])
+    if (sbMovs.length === 0 && cached.length > 0) {
+      // Servidor vacío pero hay local: NO borrar; re-subir (no perder datos).
+      cached.forEach(m => upsertMovimiento(m))
+      return
+    }
+    const norm = sbMovs.map(normalizarMov)
+    const serverIds = new Set(norm.map(m => m.id))
+    const tombsAll = getLS(MOV_TOMBS_KEY, [])
+    const tombSetAll = new Set(tombsAll.map(t => t.id))
+    // Pendientes: re-subir los que el servidor aún no trae y no están tumbados.
+    const pend = getLS(MOV_PENDING_KEY, []).filter(r => !serverIds.has(r.id) && !tombSetAll.has(r.id))
+    setLS(MOV_PENDING_KEY, pend)
+    pend.forEach(r => upsertMovimiento(r))
+    // Lápidas: vivas mientras el servidor devuelva la fila (ocultar + reintentar
+    // DELETE) o hasta el TTL si no la devuelve (por un upsert lento que aterrice
+    // después del borrado). Cumplidas y vencidas se descartan.
+    const ahora = Date.now()
+    const tombs = tombsAll.filter(t => serverIds.has(t.id) || (ahora - (t.ts || 0)) < TOMB_TTL_MS)
+    setLS(MOV_TOMBS_KEY, tombs)
+    tombs.filter(t => serverIds.has(t.id)).forEach(t => sbDeleteMov(t.id))
+    const tombSet = new Set(tombs.map(t => t.id))
+    const merged = [...pend, ...norm.filter(m => !tombSet.has(m.id))]
+    setMovimientos(merged)
+    lsSet(LS_KEYS.MOVIMIENTOS_TECNICOS, merged)
+  }
+
+  // --- Aplicar un snapshot de COMPARTIDOS con pendientes/lápidas ---
+  //   sbComp: { id: true | {partner} }  ·  pendientes: { id: partnerId|0 }
+  const aplicarSyncCompartidos = (sbComp) => {
+    if (!sbComp || typeof sbComp !== 'object') return
+    const cached = lsGet(LS_KEYS.TRABAJOS_COMPARTIDOS, {})
+    if (Object.keys(sbComp).length === 0 && Object.keys(cached).length > 0) {
+      Object.keys(cached).forEach(id => {
+        const c = cached[id]
+        upsertCompartido(id, (c && typeof c === 'object') ? c.partner : null)
+      })
+      return
+    }
+    const serverIds = new Set(Object.keys(sbComp))
+    const tombsAll = getLS(COMP_TOMBS_KEY, [])
+    const tombSetAll = new Set(tombsAll.map(t => t.id))
+    const pendAll = getLS(COMP_PENDING_KEY, {})
+    // Pendientes: re-subir los que el servidor aún no confirma con el MISMO partner.
+    const pend = {}
+    Object.keys(pendAll).forEach(id => {
+      if (tombSetAll.has(id)) return // se borró antes de confirmar
+      const sb = sbComp[id]
+      const partner = pendAll[id] || 0
+      const confirmado = sb && ((partner && typeof sb === 'object' && sb.partner === partner) || (!partner && sb === true))
+      if (confirmado) return // el servidor ya lo tiene igual → sale de la cola
+      pend[id] = partner
+      upsertCompartido(id, partner || null)
+    })
+    setLS(COMP_PENDING_KEY, pend)
+    const ahora = Date.now()
+    const tombs = tombsAll.filter(t => serverIds.has(t.id) || (ahora - (t.ts || 0)) < TOMB_TTL_MS)
+    setLS(COMP_TOMBS_KEY, tombs)
+    tombs.filter(t => serverIds.has(t.id)).forEach(t => deleteCompartido(t.id))
+    const tombSet = new Set(tombs.map(t => t.id))
+    // Merge: servidor (menos tumbados); luego los pendientes locales pisan (es la
+    // intención más reciente del usuario, aún sin confirmar).
+    const merged = {}
+    Object.keys(sbComp).forEach(id => { if (!tombSet.has(id)) merged[id] = sbComp[id] })
+    Object.keys(pend).forEach(id => { merged[id] = pend[id] ? { partner: pend[id] } : true })
+    setCompartidos(merged)
+    lsSet(LS_KEYS.TRABAJOS_COMPARTIDOS, merged)
+  }
+
   // Sincronizacion silenciosa (polling): no toca loading
   const sincronizar = useCallback(async () => {
     try {
@@ -66,41 +137,18 @@ export function useLiquidacion() {
         fetchLiquidados().catch(() => null),
         fetchCompartidos().catch(() => null),
       ])
-
-      let anyOk = false
-
-      if (sbMovs && sbMovs.length > 0) {
-        const norm = sbMovs.map(normalizarMov)
-        setMovimientos(norm)
-        lsSet(LS_KEYS.MOVIMIENTOS_TECNICOS, norm)
-        anyOk = true
-      }
-
+      aplicarSyncMovs(sbMovs)
       if (sbHist && sbHist.length > 0) {
         const norm = sbHist.map(normalizarHistorial)
         setHistorial(norm)
         lsSet(LS_KEYS.LIQUIDACION_HISTORIAL, norm)
-        anyOk = true
       }
-
       if (sbLiq && sbLiq.length > 0) {
         setLiquidados(sbLiq)
         lsSet(LS_KEYS.LIQUIDADOS, sbLiq)
-        anyOk = true
       }
-
-      if (sbComp && Object.keys(sbComp).length > 0) {
-        setCompartidos(prev => {
-          const merged = mergeCompartidos(prev, sbComp)
-          lsSet(LS_KEYS.TRABAJOS_COMPARTIDOS, merged)
-          return merged
-        })
-        anyOk = true
-      }
-
-      if (anyOk || sbMovs !== null || sbHist !== null || sbLiq !== null || sbComp !== null) {
-        setConnectionError(false)
-      }
+      aplicarSyncCompartidos(sbComp)
+      if (sbMovs !== null || sbHist !== null || sbLiq !== null || sbComp !== null) setConnectionError(false)
       return true
     } catch (err) {
       console.warn('Sync liquidacion:', err.message)
@@ -119,18 +167,7 @@ export function useLiquidacion() {
         fetchLiquidados().catch(() => null),
         fetchCompartidos().catch(() => null),
       ])
-
-      // Movimientos
-      if (sbMovs && sbMovs.length > 0) {
-        const norm = sbMovs.map(normalizarMov)
-        setMovimientos(norm)
-        lsSet(LS_KEYS.MOVIMIENTOS_TECNICOS, norm)
-      }
-      // Nota: si el servidor responde vacío NO re-subimos el cache local. Antes
-      // sí, y eso revivía adelantos YA consumidos en otra liquidación → el
-      // técnico se los descontaba DOBLE. El cache local se conserva solo para
-      // mostrar, no se re-sincroniza a Supabase.
-
+      aplicarSyncMovs(sbMovs)
       // Historial
       if (sbHist && sbHist.length > 0) {
         const norm = sbHist.map(normalizarHistorial)
@@ -140,7 +177,6 @@ export function useLiquidacion() {
         const cached = lsGet(LS_KEYS.LIQUIDACION_HISTORIAL, [])
         if (cached.length > 0 && sbHist !== null) cached.forEach(h => upsertLiquidacionHistorial(h))
       }
-
       // Liquidados
       if (sbLiq && sbLiq.length > 0) {
         setLiquidados(sbLiq)
@@ -149,24 +185,7 @@ export function useLiquidacion() {
         const cached = lsGet(LS_KEYS.LIQUIDADOS, [])
         if (cached.length > 0 && sbLiq !== null) upsertLiquidados(cached)
       }
-
-      // Compartidos
-      if (sbComp && Object.keys(sbComp).length > 0) {
-        setCompartidos(prev => {
-          const merged = mergeCompartidos(prev, sbComp)
-          lsSet(LS_KEYS.TRABAJOS_COMPARTIDOS, merged)
-          return merged
-        })
-      } else {
-        const cached = lsGet(LS_KEYS.TRABAJOS_COMPARTIDOS, {})
-        if (Object.keys(cached).length > 0 && sbComp !== null) {
-          Object.keys(cached).forEach(id => {
-            const c = cached[id]
-            upsertCompartido(id, (c && typeof c === 'object') ? c.partner : null)
-          })
-        }
-      }
-
+      aplicarSyncCompartidos(sbComp)
       if (!sbMovs && !sbHist && !sbLiq && !sbComp) setConnectionError(true)
     } catch (err) {
       console.warn('Error cargando liquidacion:', err.message)
@@ -178,7 +197,7 @@ export function useLiquidacion() {
 
   useEffect(() => { cargarDatos() }, [cargarDatos])
 
-  // Polling silencioso 30s + focus
+  // Polling silencioso 60s + focus
   useEffect(() => {
     const interval = setInterval(() => { sincronizar() }, 60000)
     const handleFocus = () => sincronizar()
@@ -196,40 +215,42 @@ export function useLiquidacion() {
   useEffect(() => { if (!loading) lsSet(LS_KEYS.LIQUIDACION_HISTORIAL, historial) }, [historial, loading])
 
   // --- Actions ---
-  const guardarMovs = useCallback((next) => {
-    setMovimientos(next)
-    // Sync: upsert all (simple for small arrays)
-    next.forEach(m => upsertMovimiento(m))
-  }, [])
-
   const agregarMovimiento = useCallback((mov) => {
-    setMovimientos(prev => [...prev, mov])
+    // A la cola COMPLETO antes del upsert; sale solo cuando el servidor lo devuelva.
+    setLS(MOV_PENDING_KEY, [...getLS(MOV_PENDING_KEY, []).filter(r => r.id !== mov.id), mov])
+    setMovimientos(prev => [...prev.filter(m => m.id !== mov.id), mov])
     upsertMovimiento(mov)
   }, [])
 
   const eliminarMovimiento = useCallback((id) => {
+    // Fuera de pendientes (cancela reintentos) y a la cola de lápidas: aunque el
+    // DELETE falle o un upsert en vuelo lo re-cree, el sync lo mantiene oculto y
+    // reintenta el borrado hasta que el servidor lo suelte.
+    setLS(MOV_PENDING_KEY, getLS(MOV_PENDING_KEY, []).filter(r => r.id !== id))
+    setLS(MOV_TOMBS_KEY, [...getLS(MOV_TOMBS_KEY, []).filter(t => t.id !== id), { id, ts: Date.now() }])
     setMovimientos(prev => prev.filter(m => m.id !== id))
     return sbDeleteMov(id)
   }, [])
 
-  const guardarLiquidados = useCallback((next) => {
-    // Borra en Supabase las claves que salieron del array (p.ej. al desliquidar):
-    // el upsert por sí solo no borra, y el sync las revivía.
+  // Agregar liquidados (al pagar): FUSIONA con el estado real, NUNCA borra. Solo
+  // sube las claves nuevas. Antes se pasaba [...liquidados, ...nuevas] con el
+  // closure viejo y el hook borraba en el servidor lo que faltara → si otro
+  // dispositivo liquidó en paralelo, esa OT se "des-liquidaba" y se pagaba DOBLE.
+  const agregarLiquidados = useCallback((nuevas) => {
+    if (!nuevas || nuevas.length === 0) return Promise.resolve()
+    setLiquidados(prev => [...new Set([...prev, ...nuevas])])
+    return upsertLiquidados(nuevas)
+  }, [])
+
+  // Des-liquidar TODAS las claves de un trabajo (id plano + mitades `${id}#tec`).
+  // Cierra sobre `prev` (no sobre un array viejo), así solo borra lo de ESTE
+  // trabajo y no lo que otro dispositivo agregó.
+  const desliquidarPorTrabajo = useCallback((trabajoId) => {
     setLiquidados(prev => {
-      const nextSet = new Set(next)
-      prev.filter(id => !nextSet.has(id)).forEach(id => sbDeleteLiquidado(id))
-      return next
+      const esDeEste = (x) => x === trabajoId || x.startsWith(`${trabajoId}#`)
+      prev.filter(esDeEste).forEach(id => sbDeleteLiquidado(id))
+      return prev.filter(x => !esDeEste(x))
     })
-    return upsertLiquidados(next)
-  }, [])
-
-  const desliquidarTodos = useCallback(() => {
-    setLiquidados([])
-    deleteAllLiquidados()
-  }, [])
-
-  const guardarCompartidos = useCallback((next) => {
-    setCompartidos(next)
   }, [])
 
   const toggleCompartido = useCallback((trabajoId) => {
@@ -237,21 +258,27 @@ export function useLiquidacion() {
       const next = { ...prev }
       if (next[trabajoId]) {
         delete next[trabajoId]
+        setLS(COMP_PENDING_KEY, (() => { const p = getLS(COMP_PENDING_KEY, {}); delete p[trabajoId]; return p })())
+        setLS(COMP_TOMBS_KEY, [...getLS(COMP_TOMBS_KEY, []).filter(t => t.id !== trabajoId), { id: trabajoId, ts: Date.now() }])
         deleteCompartido(trabajoId)
       } else {
         next[trabajoId] = true
+        setLS(COMP_TOMBS_KEY, getLS(COMP_TOMBS_KEY, []).filter(t => t.id !== trabajoId))
+        setLS(COMP_PENDING_KEY, { ...getLS(COMP_PENDING_KEY, {}), [trabajoId]: 0 })
         upsertCompartido(trabajoId)
       }
       return next
     })
   }, [])
 
-  // Asigna el compañero de un trabajo compartido (la otra mitad del 40%).
-  // Persiste el partner en Supabase (columna partner_id) para que no se pierda.
+  // Asigna el compañero (la otra mitad del 40%). Persiste en Supabase (partner_id)
+  // y en la cola de pendientes: si el upsert falla, el sync lo reintenta y NO se
+  // pierde el compartido (antes revertía a 40% para el asignado).
   const setCompartidoPartner = useCallback((trabajoId, partnerId) => {
     setCompartidos(prev => {
       if (!prev[trabajoId]) return prev
-      const pid = parseInt(partnerId)
+      const pid = parseInt(partnerId) || 0
+      setLS(COMP_PENDING_KEY, { ...getLS(COMP_PENDING_KEY, {}), [trabajoId]: pid })
       upsertCompartido(trabajoId, pid || null)
       return { ...prev, [trabajoId]: pid ? { partner: pid } : true }
     })
@@ -259,26 +286,29 @@ export function useLiquidacion() {
 
   const guardarHistorial = useCallback((next) => {
     setHistorial(next)
-    // Lista vacia = limpiar todo: borrar tambien en Supabase para que el
-    // proximo sync no resucite los registros.
     if (next.length === 0) deleteAllLiquidacionHistorial()
     else next.forEach(h => upsertLiquidacionHistorial(h))
   }, [])
 
   const agregarHistorial = useCallback(async (reg) => {
-    // Guardar en el servidor PRIMERO. Solo si lo acepta lo mostramos local: un
-    // pago no debe quedar "fantasma" y desaparecer en el próximo sync.
-    const res = await upsertLiquidacionHistorial(reg)
-    if (res != null) setHistorial(prev => [reg, ...prev])
+    // Guardar en el servidor PRIMERO. Si da timeout, RECONCILIAR: el POST pudo
+    // llegar aunque la respuesta se perdiera → consultar por id; si ya existe, el
+    // pago sí quedó guardado y no hay que abortar (evita re-liquidar y doble pago).
+    let res = await upsertLiquidacionHistorial(reg)
+    if (res == null) {
+      const existe = await fetchLiquidacionHistorialPorId(reg.id)
+      if (existe) res = existe
+    }
+    if (res != null) setHistorial(prev => [reg, ...prev.filter(h => h.id !== reg.id)])
     return res
   }, [])
 
   return {
     movimientos, liquidados, compartidos, historial,
     loading, connectionError,
-    guardarMovs, agregarMovimiento, eliminarMovimiento,
-    guardarLiquidados, desliquidarTodos,
-    guardarCompartidos, toggleCompartido, setCompartidoPartner,
+    agregarMovimiento, eliminarMovimiento,
+    agregarLiquidados, desliquidarPorTrabajo,
+    toggleCompartido, setCompartidoPartner,
     guardarHistorial, agregarHistorial,
     recargar: cargarDatos,
   }

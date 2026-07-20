@@ -8,8 +8,8 @@ import { lsGet, lsSet } from '../services/storage'
 import { useTecnicos } from '../services/tecnicos'
 import { registrarGastoNominaBackend } from '../services/cuentti'
 import { usePrestamos } from '../hooks/usePrestamos'
-import { upsertPrestamo, fetchPrestamos } from '../services/supabase'
-import { splitComision } from '../services/money'
+import { upsertPrestamo, fetchPrestamos, fetchLiquidacionIdsPorBase } from '../services/supabase'
+import { splitComision, repartir } from '../services/money'
 import ConfirmDialog, { DlgRow } from '../components/ConfirmDialog'
 import { Button, Badge } from '../components/ui'
 import { loadLogo, drawHeader, drawSectionHeader, drawDataBlock, drawTotalsBox, drawSignatures, drawFooter, tableStylesItems, tableStylesMuted, PDF_LAYOUT } from '../utils/pdfTheme'
@@ -95,7 +95,7 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
   const {
     movimientos, liquidados, compartidos, historial,
     agregarMovimiento: hookAgregarMov, eliminarMovimiento: hookEliminarMov,
-    guardarLiquidados,
+    agregarLiquidados, desliquidarPorTrabajo,
     toggleCompartido, setCompartidoPartner, agregarHistorial, guardarHistorial,
   } = liquidacionHook
 
@@ -555,15 +555,17 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
     if (dias <= 0) { notify('Escribe cuántos días', 'error'); return }
     if (total <= 0) { notify('El valor diario debe ser mayor a 0', 'error'); return }
     if (ids.length < 2) { notify('Marca al menos 2 técnicos para repartir', 'error'); return }
-    const parte = Math.round(total / ids.length)
-    ids.forEach(tid => hookAgregarMov({
+    // Reparto EXACTO (allocate): las partes suman el total sin perder pesos por
+    // redondeo (antes Math.round(total/n) a todos dejaba 9.999 de 10.000).
+    const partes = repartir(total, ids.map(() => 1))
+    ids.forEach((tid, i) => hookAgregarMov({
       id: `MV-${uid()}`, tecnicoId: tid,
-      tipo: 'diario', monto: parte, dias,
+      tipo: 'diario', monto: partes[i], dias,
       nota: `${notaDiario(diarioNota, dias)} ÷ ${ids.length}`,
       fecha: hoyISO(),
     }))
     setDiarioDias(''); setDiarioRepTec({})
-    notify(`Diario repartido: ${fmt(parte)} a cada uno (${ids.length} técnicos)`, 'success')
+    notify(`Diario repartido entre ${ids.length} técnicos (total ${fmt(total)})`, 'success')
   }
 
   // Próxima referencia legible para un técnico HOY (iniciales + MMDD, con sufijo
@@ -579,11 +581,35 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
     return id
   }
 
+  // Versión SEGURA para grabar: además del historial local, consulta el servidor
+  // por ids con el mismo prefijo para no chocar con un pago que otro dispositivo
+  // creó el mismo día (el upsert por PK lo sobrescribiría y se perdía un registro).
+  const nextLiqIdSeguro = async (nombre) => {
+    const hoy = new Date()
+    const yy = String(hoy.getFullYear()).slice(-2)
+    const mmdd = String(hoy.getMonth() + 1).padStart(2, '0') + String(hoy.getDate()).padStart(2, '0')
+    const base = `LQ-${iniciales(nombre)}${yy}${mmdd}`
+    const usados = new Set(historial.map(h => h.id))
+    try { (await fetchLiquidacionIdsPorBase(base)).forEach(id => usados.add(id)) } catch { /* offline: solo local */ }
+    let id = base, n = 2
+    while (usados.has(id)) id = `${base}-${n++}`
+    return id
+  }
+
   const generarPago = async (skipConfirm = false) => {
     const ids = Object.keys(seleccionados).filter(id => seleccionados[id])
     if (ids.length === 0) { notify('Selecciona al menos un trabajo para liquidar', 'error'); return }
     if (!tecData) return
     if (pagandoRef.current) return
+
+    // Compartido SIN compañero: al pagar solo se abonaría la mitad del asignado y
+    // la otra mitad (20%) quedaría inobtenible. Bloquear hasta elegir compañero.
+    const sinCompanero = ids.filter(id => { const c = compInfo(id); return c.es && !c.partner })
+    if (sinCompanero.length > 0) {
+      const t0 = trabajos.find(tr => tr.id === sinCompanero[0])
+      notify(`El trabajo ${t0?.otCodigo || t0?.placa || sinCompanero[0]} está marcado como Compartido sin compañero. Elige el compañero o desmárcalo antes de pagar.`, 'error')
+      return
+    }
 
     // Neto negativo: la deuda no se borra, se arrastra como saldo anterior
     if (totalSeleccion.neto < 0 && !skipConfirm) {
@@ -625,7 +651,7 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
         return
       }
     }
-    const nuevoId = nextLiqId(tecData.tecnico.nombre)
+    const nuevoId = await nextLiqIdSeguro(tecData.tecnico.nombre)
     // Pago real: lo que entregas en efectivo (por defecto el neto).
     const netoCalc = totalSeleccion.neto
     const pagado = (pagoReal === '' || pagoReal == null) ? netoCalc : Math.round(parseFloat(pagoReal) || 0)
@@ -696,8 +722,9 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
     }
 
     // Compartido: se marca `${id}#${tecnico}` (solo esta mitad). No compartido: id plano.
+    // agregarLiquidados FUSIONA con el estado real (no pisa lo de otro dispositivo).
     const nuevasLiq = ids.map(id => compInfo(id).es ? `${id}#${tecData.tecnico.id}` : id)
-    guardarLiquidados([...liquidados, ...nuevasLiq])
+    agregarLiquidados(nuevasLiq)
 
     // Consumir movimientos del tecnico esperando cada borrado, para que un fallo
     // no los resucite en el sync y se descuenten DOBLE.
@@ -1038,8 +1065,9 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
       lead: etiqueta,
       confirmLabel: 'Desliquidar',
       onConfirm: () => {
-        // Quita el id plano Y las claves por técnico (compartido) de ese trabajo.
-        guardarLiquidados(liquidados.filter(x => x !== id && !x.startsWith(`${id}#`)))
+        // Quita el id plano Y las claves por técnico (compartido) de ese trabajo,
+        // sin pisar liquidados de otros trabajos/dispositivos (cierra sobre prev).
+        desliquidarPorTrabajo(id)
         notify('Trabajo desliquidado', 'info')
       },
     })
@@ -1369,7 +1397,7 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
               {aporteForm === 'diario' && (
                 <div style={{ borderTop: '1px solid var(--border)', marginTop: 14, paddingTop: 16 }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 10, flexWrap: 'wrap' }}>
-                    <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--amber-700)', textTransform: 'uppercase', letterSpacing: '.4px' }}>Diario · gasto del administrador (50/50)</span>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--amber-700)', textTransform: 'uppercase', letterSpacing: '.4px' }}>Diario · gasto del administrador (técnico {APORTE_ADMIN_SPLIT * 100}%)</span>
                     <div className="tabs" style={{ margin: 0 }}>
                       <button type="button" className={!diarioReparto ? 'on' : ''} onClick={() => setDiarioReparto(false)} style={{ fontSize: 12 }}>Solo este técnico</button>
                       <button type="button" className={diarioReparto ? 'on' : ''} onClick={() => setDiarioReparto(true)} style={{ fontSize: 12 }}>Repartir</button>
@@ -1711,8 +1739,12 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
                 <div style={{ textAlign: 'right', marginTop: 8 }}>
                   <Button variant="ghost" size="sm" style={{ color: 'var(--red-600)' }} onClick={() => {
                     if (!historial.length) { notify('No hay historial para borrar', 'info'); return }
-                    const r = prompt(`Esto borra los ${historial.length} pagos del historial y NO se puede deshacer.\n\nEscribe BORRAR para confirmar:`)
-                    if (r && r.trim().toUpperCase() === 'BORRAR') { guardarHistorial([]); notify('Historial de pagos borrado', 'info') }
+                    setDialog({
+                      title: 'Borrar historial de pagos',
+                      lead: `Esto borra los ${historial.length} pagos del historial y NO se puede deshacer.`,
+                      confirmLabel: 'Borrar todo', tone: 'danger',
+                      onConfirm: () => { guardarHistorial([]); notify('Historial de pagos borrado', 'info') },
+                    })
                   }}>Limpiar historial</Button>
                 </div>
               </>

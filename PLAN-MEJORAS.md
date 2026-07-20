@@ -15,7 +15,9 @@
 
 ---
 
-## TANDA 0 — URGENTE: hueco de pago en Wompi (plata real) 🔴
+## TANDA 0 — URGENTE: hueco de pago en Wompi (plata real) 🔴 — [HECHO] commit `1268409`
+> Verificado en prod: firma con monto alterado (100) → firma el total real (1000000);
+> inexistente → 404; ya pagada → 409. Migración `add_wompi_tx_id_a_trabajos` aplicada.
 
 **0.1 [CRÍTICO] La firma acepta cualquier monto — un cliente puede "pagar" $1 y quedar Pagado.**
 `api/cuentti.js:41-45` (rama `?wompi=firma`): firma el `montoCentavos` que mande el navegador sin
@@ -48,7 +50,12 @@ defensa en profundidad, cambio de 3 líneas.
 
 ---
 
-## TANDA 1 — Liquidación: doble pago / pérdida de registros 🔴
+## TANDA 1 — Liquidación: doble pago / pérdida de registros 🔴 — [HECHO]
+> useLiquidacion reescrito con colas pendientes/lápidas (movimientos + compartidos).
+> agregarLiquidados fusiona (no des-liquida ajeno); desliquidarPorTrabajo cierra sobre
+> prev; agregarHistorial reconcilia por id tras timeout; nextLiqIdSeguro consulta el
+> servidor; guard compartido-sin-compañero; repartir() exacto; label 40/60; prompt→dialog.
+> Verificado: Liquidación monta con el hook nuevo, sin errores de consola.
 
 **1.1 [CRÍTICO] `guardarLiquidados` puede des-liquidar OTs de otro dispositivo → doble pago.**
 `Liquidacion.jsx:699-700` pasa `[...liquidados, ...nuevasLiq]` con closure viejo;
