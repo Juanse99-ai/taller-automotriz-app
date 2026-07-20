@@ -212,7 +212,7 @@ Wompi → actualizar `WOMPI_*` en Vercel → redeploy. 10 minutos.
 
 ---
 
-## TANDA 4 — Visual / UX 🟠 — [HECHO parcial: dark-mode + tokens; pendientes 4.5/4.6/4.7-resto]
+## TANDA 4 — Visual / UX 🟠 — [HECHO parcial: dark-mode + tokens + 4.5 badges; pendientes 4.5-resto/4.6/4.7]
 > HECHO: 4.0 remap de rampa en dark (verde/rojo/ámbar-700 + blue-600 → texto legible;
 > los -600 de relleno NO se tocan). 4.1 ConfirmDialog + toggle segmentado con tokens
 > reales (ya no caja blanca). 4.2 Cotizaciones (dropdown clientes + modal productos).
@@ -253,8 +253,10 @@ sin remapear) sobre tinte azul 10%. Es la referencia que se copia a Cuentti. Fix
 (+ el remap de 4.0 lo termina de arreglar).
 
 **4.5 [MEDIO] Portal del cliente (pantalla de pago):**
-- Badges de estado con `est.color+'20'` y texto del mismo color (`PortalCliente.jsx:547,643,874`):
-  contraste ~2.9-3.4:1. Fix: alpha `'33'` + texto un paso más oscuro en light / remapado en dark.
+- [HECHO] commit `0060d45`: badges de estado ya no usan `est.color+'20'` con texto del mismo tono
+  (~2.8:1). Mapeados a las clases del sistema (`.badge-s/w/i/d/n/p`), theme-aware. Rótulo grande
+  "Estado actual" con color `ink` adaptable. Ámbar/verde 2.8→6.4:1 en badges; añadido `--purple-700`.
+  Verificado en vivo (light+dark).
 - Labels de sección a 11px en `--text-3` (`:609,670,674,681,917,924,938`): pequeño para el dueño 40+
   en celular. Fix: 12.5px y `--text-2`.
 - Cero `<Button>` del sistema: 10 `className="btn"` crudos + 16 botones inline (`:561,621,979,982`).
