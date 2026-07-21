@@ -79,6 +79,9 @@
   --fill-2:rgba(120,120,128,.16);
   --bar:rgba(249,249,249,.78);
   --seg-thumb:#ffffff;
+  /* Segmentado tipo iOS: riel periwinkle + pastilla blanca (opción activa). */
+  --seg-track:#5b6cb0;
+  --seg-ink:#33437e;
   --shadow-card:0 1px 2px rgba(15,23,42,.05);
 
   /* Azul como color de contraste (referencia Firecrawl, que usa naranja en este
@@ -137,6 +140,9 @@
   --fill-2:rgba(120,120,128,.32);
   --bar:rgba(16,16,18,.75);
   --seg-thumb:#636366;
+  /* En oscuro el riel se aclara un punto para separar del fondo casi negro. */
+  --seg-track:#6272b8;
+  --seg-ink:#33437e;
   --shadow-card:none;
   /* en dark el azul del sistema aclara para no perderse sobre negro */
   --primary:#4c8dff;
@@ -768,15 +774,17 @@ tbody tr:active{background:var(--fill-2)}
 }
 /* Control segmentado de filtros — consistente en toda la app (Inventario, CRM…) */
 /* Segmented control iOS: pista gris, thumb blanco con sombrita */
-.segctl{display:inline-flex;gap:2px;background:var(--fill);border:none;border-radius:9px;padding:2px;flex-wrap:wrap}
-.segctl button{padding:5px 14px;font-size:12.5px;font-weight:600;border-radius:7px;border:none;background:none;color:var(--text-2);cursor:pointer;white-space:nowrap;transition:background .18s cubic-bezier(.3,.9,.4,1),color .18s}
-.segctl button:hover{color:var(--text)}
-.segctl button.on{background:var(--seg-thumb);color:var(--text);box-shadow:0 1px 4px rgba(0,0,0,.12),0 0 1px rgba(0,0,0,.08)}
+/* Segmentado tipo iOS: riel periwinkle relleno + pastilla blanca en la opción
+   activa (texto navy). No envuelve: si no cabe, hace scroll horizontal limpio. */
+.segctl{display:inline-flex;gap:0;background:var(--seg-track);border:none;border-radius:999px;padding:3px;max-width:100%;overflow-x:auto;scrollbar-width:none}
+.segctl::-webkit-scrollbar{display:none}
+.segctl button{flex-shrink:0;padding:7px 16px;font-size:12.5px;font-weight:600;border-radius:999px;border:none;background:none;color:rgba(255,255,255,.9);cursor:pointer;white-space:nowrap;transition:background .2s cubic-bezier(.3,.9,.4,1),color .2s,box-shadow .2s}
+.segctl button:hover{color:#fff}
+.segctl button.on{background:#fff;color:var(--seg-ink);box-shadow:0 1px 3px rgba(0,0,0,.2)}
 /* Variante full-width para muchos ítems en columna angosta (ej. "Cambiar estado"
-   del detalle de una OT: 5 estados que antes hacían un wrap descuadrado). Los
-   botones reparten el ancho parejo y las filas quedan balanceadas. */
+   del detalle de una OT: 5 estados). Los botones reparten el ancho parejo. */
 .segctl--full{display:flex;width:100%}
-.segctl--full button{flex:1 1 auto;justify-content:center;padding:7px 10px;text-align:center;white-space:nowrap}
+.segctl--full button{flex:1 1 0;justify-content:center;padding:7px 8px;text-align:center;white-space:nowrap}
 /* Tabla centrada (inventario): todo al centro menos las columnas .col-left */
 .tbl.tbl--center thead th,.tbl.tbl--center tbody td{text-align:center}
 .tbl.tbl--center thead th>span{justify-content:center}
