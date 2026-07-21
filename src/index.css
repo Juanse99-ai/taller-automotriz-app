@@ -801,6 +801,10 @@ tbody tr:active{background:var(--fill-2)}
   .tbl.tbl-cards tbody td.c-name::before{display:none}
   .tbl.tbl-cards tbody td.c-muted{font-size:13px}
   .tbl.tbl-cards tbody td.td-chevron{display:none}
+  /* Columna de barra (magnitud relativa): decorativa, se oculta en tarjetas */
+  .tbl.tbl-cards tbody td.td-bar{display:none}
+  /* Separador vertical del filtro de Reportes: sobra cuando el flex envuelve */
+  .filtro-sep{display:none}
   .tbl.tbl-cards tbody td:empty,.tbl.tbl-cards tbody td[data-label=""]:empty{display:none}
   /* Columna de acciones (Trabajos): fila completa de botones que envuelven */
   .tbl.tbl-cards tbody td.td-actions{display:block;text-align:left;padding-top:8px;margin-top:4px;border-top:1px solid var(--border)}

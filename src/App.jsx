@@ -254,7 +254,7 @@ export default function App() {
       case 'liquidacion':
         return <Liquidacion trabajos={trabajosHook.trabajos} notify={notify} liquidacionHook={liquidacionHook} />
       case 'reportes':
-        return <Reportes trabajos={trabajosHook.trabajos} />
+        return <Reportes trabajos={trabajosHook.trabajos} loading={trabajosHook.loading} notify={notify} />
       case 'inspecciones':
         return <Inspecciones trabajos={trabajosHook.trabajos} notify={notify}
           inspeccionesHook={inspeccionesHook}
