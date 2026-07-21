@@ -1714,7 +1714,7 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
                       )}
                       <div style={{ marginLeft: 'auto', display: 'flex', gap: 8, alignItems: 'center' }}>
                         {reg.cuenttiGasto ? (
-                          <span className="badge" style={{ background: 'var(--green-100)', color: 'var(--green-700)', fontWeight: 700 }} title="Gasto ya registrado en Cuentti">✓ Cuentti {reg.cuenttiGasto}</span>
+                          <span className="badge" style={{ background: 'var(--soft-green)', color: 'var(--green-700)', fontWeight: 700 }} title="Gasto ya registrado en Cuentti">✓ Cuentti {reg.cuenttiGasto}</span>
                         ) : (
                           <>
                             <select className="input" aria-label="Método de pago" value={metodoGasto[reg.id] || reg.metodoPago || 'efectivo'} onChange={e => setMetodoGasto(m => ({ ...m, [reg.id]: e.target.value }))} style={{ height: 30, minHeight: 30, fontSize: 12, padding: '2px 8px', width: 'auto' }}>
@@ -2127,7 +2127,7 @@ function EstadoCuenta({ prestamos, tecnicos, notify }) {
                     {puedeCuentti && (
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 10, flexWrap: 'wrap' }}>
                         {doc ? (
-                          <span className="badge" style={{ background: 'var(--green-100)', color: 'var(--green-700)', fontWeight: 700 }} title="Gasto ya registrado en Cuentti">✓ Registrado en Cuentti · {doc}</span>
+                          <span className="badge" style={{ background: 'var(--soft-green)', color: 'var(--green-700)', fontWeight: 700 }} title="Gasto ya registrado en Cuentti">✓ Registrado en Cuentti · {doc}</span>
                         ) : (
                           <>
                             <span style={{ fontSize: 11.5, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '.4px' }}>Cuentti</span>

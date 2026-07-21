@@ -443,7 +443,7 @@ export default function CRM({ trabajos = [], clientes, vehiculos, notify, actual
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
             <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '.5px' }}>Vencidos</span>
             {stats.contactadosHoy > 0 && (
-              <span style={{ fontFamily: 'var(--mono)', fontSize: 12, fontWeight: 700, color: 'var(--green-700)', background: 'var(--green-100)', padding: '4px 10px', borderRadius: 999 }}>
+              <span style={{ fontFamily: 'var(--mono)', fontSize: 12, fontWeight: 700, color: 'var(--green-700)', background: 'var(--soft-green)', padding: '4px 10px', borderRadius: 999 }}>
                 +{stats.contactadosHoy} hoy
               </span>
             )}

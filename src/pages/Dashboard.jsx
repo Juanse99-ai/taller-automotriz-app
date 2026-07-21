@@ -559,7 +559,7 @@ export default function Dashboard({ trabajos = [], onNavigate, user }) {
             <h3 style={{ color: 'var(--red-700)' }}>Trabajos estancados</h3>
             <span style={{
               fontFamily: 'var(--mono)', fontSize: 12, fontWeight: 700,
-              color: 'var(--red-700)', background: 'var(--red-100)',
+              color: 'var(--red-700)', background: 'var(--soft-red)',
               padding: '3px 10px', borderRadius: 999
             }}>{estancados.length}</span>
           </div>

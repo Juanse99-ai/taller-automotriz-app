@@ -923,7 +923,7 @@ export default function Clientes({ clientes, vehiculos, trabajos = [], notify })
             <input placeholder="CC/NIT o nombre del cliente…" value={busqueda} onChange={e => setBusqueda(e.target.value)} style={{border:'none',outline:'none',background:'none',flex:1,fontSize:13.5}}/>
             {busqueda && <button type="button" className="input-clear" onClick={() => setBusqueda('')} aria-label="Limpiar búsqueda"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>}
           </div>
-          <span className="count" style={{ background: clientesFiltrados.length === 0 && busqueda.trim() ? 'var(--red-100)' : undefined, color: clientesFiltrados.length === 0 && busqueda.trim() ? 'var(--red-700)' : undefined }}>
+          <span className="count" style={{ background: clientesFiltrados.length === 0 && busqueda.trim() ? 'var(--soft-red)' : undefined, color: clientesFiltrados.length === 0 && busqueda.trim() ? 'var(--red-700)' : undefined }}>
             {busqueda.trim() ? `${clientesFiltrados.length} de ${totalClientes}` : `${clientesFiltrados.length} clientes`}
           </span>
           <button

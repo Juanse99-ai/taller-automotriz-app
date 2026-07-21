@@ -51,6 +51,9 @@
   --green-50:#f0fdf4;--green-200:#bbf7d0;
   --amber-50:#fffbeb;--amber-200:#fde68a;
   --red-50:#fef2f2;--red-200:#fecaca;
+  /* Fondo de píldora de color, THEME-AWARE: tinte claro en claro, translúcido en
+     oscuro. Va con texto --*-700 (que se aclara en oscuro) sin quedar claro/claro. */
+  --soft-green:#dcfce7;--soft-red:#fee2e2;--soft-amber:#fef3c7;
 
   /* slate */
   --slate-50:#f8fafc;--slate-100:#f1f5f9;--slate-200:#e2e8f0;--slate-300:#cbd5e1;
@@ -162,6 +165,9 @@
   --green-50:rgba(74,222,128,.14);--green-200:rgba(74,222,128,.34);
   --amber-50:rgba(251,191,36,.14);--amber-200:rgba(251,191,36,.34);
   --red-50:rgba(252,165,165,.14);--red-200:rgba(252,165,165,.34);
+  /* píldoras de color en oscuro: translúcidas (no el tinte claro que dejaba
+     texto claro sobre fondo claro) */
+  --soft-green:rgba(74,222,128,.16);--soft-red:rgba(252,165,165,.16);--soft-amber:rgba(251,191,36,.16);
 }
 
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -750,8 +756,8 @@ tbody tr:active{background:var(--fill-2)}
 .kpi-bh__l{font-size:12px;color:var(--text-3);font-weight:500}
 .kpi-bh__row{display:flex;align-items:center;gap:10px;margin-top:8px;flex-wrap:wrap}
 .kpi-bh__v{font-size:26px;font-weight:600;color:var(--text);font-variant-numeric:tabular-nums;letter-spacing:-.5px;line-height:1}
-.kpi-bh__pill{font-size:11px;font-weight:600;color:var(--green-700);background:var(--green-100);border-radius:999px;padding:2px 8px;white-space:nowrap}
-.kpi-bh__pill.red{color:var(--red-700);background:var(--red-100)}
+.kpi-bh__pill{font-size:11px;font-weight:600;color:var(--green-700);background:var(--soft-green);border-radius:999px;padding:2px 8px;white-space:nowrap}
+.kpi-bh__pill.red{color:var(--red-700);background:var(--soft-red)}
 .kpi-bh__sub{font-size:11.5px;color:var(--text-4);margin-top:6px}
 @media(max-width:760px){
   .kpi-bh{flex-direction:column}

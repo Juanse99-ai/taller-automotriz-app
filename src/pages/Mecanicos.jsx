@@ -123,7 +123,7 @@ export default function Mecanicos({ trabajos, onNavigate, notify }) {
         <div className="kpi-hero" style={{ background: 'var(--bg-raised)', border: '1px solid var(--border)', borderRadius: 14, padding: '22px 26px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: 180 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
             <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '.5px' }}>Comisiones del mes</span>
-            <span style={{ fontFamily: 'var(--mono)', fontSize: 12, fontWeight: 700, color: 'var(--green-700)', background: 'var(--green-100)', padding: '4px 10px', borderRadius: 999 }}>
+            <span style={{ fontFamily: 'var(--mono)', fontSize: 12, fontWeight: 700, color: 'var(--green-700)', background: 'var(--soft-green)', padding: '4px 10px', borderRadius: 999 }}>
               {equipoActivo.length} técnico{equipoActivo.length !== 1 ? 's' : ''}
             </span>
           </div>

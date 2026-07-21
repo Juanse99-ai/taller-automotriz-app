@@ -641,7 +641,7 @@ export default function PortalCliente() {
             </button>
           )
         )}
-        {t.pagado && <span className="badge" style={{background:'var(--green-100)',color:'var(--green-700)',fontWeight:700,marginRight:8}}>Pagado ✓</span>}
+        {t.pagado && <span className="badge" style={{background:'var(--soft-green)',color:'var(--green-700)',fontWeight:700,marginRight:8}}>Pagado ✓</span>}
         <button className="btn btn-outline btn-sm" onClick={()=>setVistaServicio(t)}>Ver detalle</button>
       </td>
     </tr>
