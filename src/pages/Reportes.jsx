@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import { fmt, fmtDate } from '../utils/helpers'
@@ -56,26 +56,39 @@ export default function Reportes({ trabajos, loading = false, notify }) {
   // pantalla en el resumen (KPIs) sin scrollear nueve tarjetas. `colapso[id]===true`
   // = recogida. Vacío = todas abiertas.
   const SECCIONES = ['estado', 'ingresos', 'utilidad', 'margen', 'repuestos', 'rotacion', 'clientes', 'equipo', 'vehiculos']
-  const [colapso, setColapso] = useState({})
+  const COLAPSO_KEY = 'mda:reportes-colapso'
+  // Arranca en modo RESUMEN (detalle recogido) la primera vez, y luego recuerda lo
+  // que Juan dejó configurado (persiste en localStorage).
+  const [colapso, setColapso] = useState(() => {
+    try { const raw = localStorage.getItem(COLAPSO_KEY); if (raw) return JSON.parse(raw) } catch { /* default */ }
+    return Object.fromEntries(SECCIONES.map(k => [k, true]))
+  })
+  useEffect(() => {
+    try { localStorage.setItem(COLAPSO_KEY, JSON.stringify(colapso)) } catch { /* quota */ }
+  }, [colapso])
   const toggleColapso = (k) => setColapso(c => ({ ...c, [k]: !c[k] }))
   const todasColapsadas = SECCIONES.every(k => colapso[k])
   const toggleTodas = () => {
     const recoger = !todasColapsadas
     setColapso(Object.fromEntries(SECCIONES.map(k => [k, recoger])))
   }
-  // Encabezado plegable reutilizable (chevron que rota + título + aside opcional).
+  // Encabezado plegable reutilizable. El <h3> se mantiene como encabezado real
+  // (para el esquema del lector de pantalla) y DENTRO va un <button> que hace el
+  // disclosure (aria-expanded + teclado nativo Enter/Espacio). El aside (conteo)
+  // queda fuera del botón para que no dispare el plegado.
   const cabezal = (id, titulo, aside = null) => (
-    <div className="card__h" style={{ cursor: 'pointer' }} onClick={() => toggleColapso(id)}
-      role="button" aria-expanded={!colapso[id]} tabIndex={0}
-      onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleColapso(id) } }}>
-      <h3 style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"
-          style={{ transform: colapso[id] ? 'rotate(-90deg)' : 'rotate(0deg)', transition: 'transform 200ms var(--ease-out)', flexShrink: 0, color: 'var(--text-3)' }}>
-          <polyline points="6 9 12 15 18 9" />
-        </svg>
-        {titulo}
+    <div className="card__h">
+      <h3 style={{ margin: 0, flex: 1, minWidth: 0 }}>
+        <button type="button" className="rep-toggle" aria-expanded={!colapso[id]} onClick={() => toggleColapso(id)}
+          style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', background: 'none', border: 0, padding: '2px 4px', margin: '-2px -4px', borderRadius: 8, font: 'inherit', color: 'inherit', cursor: 'pointer', textAlign: 'left' }}>
+          <svg className="rep-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"
+            style={{ transform: colapso[id] ? 'rotate(-90deg)' : 'rotate(0deg)', transition: 'transform 200ms var(--ease-out)', flexShrink: 0, color: 'var(--text-2)' }}>
+            <polyline points="6 9 12 15 18 9" />
+          </svg>
+          {titulo}
+        </button>
       </h3>
-      {aside && <div onClick={e => e.stopPropagation()} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>{aside}</div>}
+      {aside && <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>{aside}</div>}
     </div>
   )
 
@@ -96,9 +109,21 @@ export default function Reportes({ trabajos, loading = false, notify }) {
     })
   }, [trabajos, rango, rangoInvalido])
 
-  // Aviso de tope: si traemos el máximo de OTs y el rango es amplio, puede haber
-  // trabajos antiguos que no llegaron (fetchTrabajos limita a 500, orden fecha desc).
-  const topeAlcanzado = trabajos.length >= MAX_TRABAJOS && ['todo', 'anio', 'trimestre'].includes(presetActivo)
+  // Aviso de tope: fetchTrabajos limita a 500 OT (orden fecha desc). Si llegamos al
+  // tope Y el "desde" pedido es anterior a la OT más antigua que SÍ trajimos, es
+  // probable que haya trabajos viejos por fuera y el total esté corto. Se calcula por
+  // el rango efectivo (no por el nombre del preset), así también avisa en rangos
+  // personalizados amplios (antes solo avisaba en 'todo'/'anio'/'trimestre').
+  const fechaMasAntigua = useMemo(() => {
+    if (trabajos.length < MAX_TRABAJOS) return null
+    let min = null
+    for (const t of trabajos) {
+      const d = (t.fecha || '').slice(0, 10)
+      if (d && (!min || d < min)) min = d
+    }
+    return min
+  }, [trabajos])
+  const topeAlcanzado = !rangoInvalido && trabajos.length >= MAX_TRABAJOS && fechaMasAntigua != null && rango.desde < fechaMasAntigua
 
   const stats = useMemo(() => {
     const completados = filtrados.filter(t => t.estado === ESTADOS.COMPLETADO)
@@ -321,22 +346,22 @@ export default function Reportes({ trabajos, loading = false, notify }) {
     // ----- RIGHT: caja con el APORTE al taller (ventas s/IVA − comisiones − costo).
     // El nombre no dice "neto" porque no resta gastos fijos ni IVA. Si Cuentti aún no
     // da costos (cobertura 0%), el rótulo lo dice para no prometer un número completo.
-    const sinCosto = stats.coberturaMargen === 0
+    const netoConfiablePDF = stats.coberturaMargen >= 75
     doc.setFillColor(...PDF_COLORS.NAVY)
     doc.rect(rightX, y, rightW, cellH * 2, 'F')
     doc.setTextColor(...PDF_COLORS.AMBER)
     doc.setFontSize(8)
     doc.setFont(undefined, 'bold')
-    doc.text(sinCosto ? 'MARGEN ANTES DE REPUESTOS' : 'APORTE AL TALLER', rightX + 5, y + 8)
+    doc.text(netoConfiablePDF ? 'APORTE AL TALLER' : 'MARGEN ANTES DE REPUESTOS', rightX + 5, y + 8)
     doc.setTextColor(...PDF_COLORS.WHITE)
     doc.setFontSize(19)
     doc.text(fmt(stats.neto), rightX + rightW - 5, y + 19, { align: 'right' })
     doc.setFontSize(6.5)
     doc.setFont(undefined, 'normal')
-    const notaNeto = sinCosto
+    const notaNeto = stats.coberturaMargen === 0
       ? 'ventas s/IVA - comisiones (sin costo de repuestos aun)'
-      : stats.coberturaMargen < 100
-        ? `ventas s/IVA - comis. - costo (${stats.coberturaMargen}% repuestos), antes de gastos fijos`
+      : !netoConfiablePDF
+        ? `ventas s/IVA - comis. - costo (solo ${stats.coberturaMargen}% de repuestos), el real es menor`
         : 'ventas s/IVA - comisiones - costo, antes de gastos fijos e IVA'
     doc.text(notaNeto, rightX + 5, y + cellH * 2 - 4)
 
@@ -442,13 +467,18 @@ export default function Reportes({ trabajos, loading = false, notify }) {
 
   const rangoTexto = `${fmtDate(rango.desde)} → ${fmtDate(rango.hasta)}`
 
-  // Presentación honesta del "aporte al taller": el verde se GANA cuando el número
-  // ya descontó el costo de repuestos. Sin costo (cobertura 0%) → neutro + badge;
-  // parcial → verde con salvedad ámbar; completo → verde tranquilo.
+  // Presentación honesta del "aporte al taller": el verde se GANA de forma GRADUAL,
+  // solo cuando el costo de repuestos está casi completo. Bajo el umbral el número
+  // va NEUTRO (no promete una utilidad que no descontó su costo).
+  //  - cobertura 0%           → neutro + badge "sin costo de repuestos", rótulo "Margen antes de repuestos"
+  //  - 0% < cobertura < 75%   → neutro + salvedad ámbar, rótulo "Margen antes de repuestos"
+  //  - cobertura ≥ 75%        → verde, rótulo "Aporte al taller"
+  const UMBRAL_COBERTURA = 75
+  const netoConfiable = stats.coberturaMargen >= UMBRAL_COBERTURA
   const netoSinCosto = stats.coberturaMargen === 0
-  const netoParcial = stats.coberturaMargen > 0 && stats.coberturaMargen < 100
-  const netoLabel = netoSinCosto ? 'Margen antes de repuestos' : 'Aporte al taller'
-  const netoColor = netoSinCosto ? 'var(--text)' : (stats.neto >= 0 ? 'var(--green-600)' : 'var(--red-600)')
+  const netoParcial = stats.coberturaMargen > 0 && !netoConfiable
+  const netoLabel = netoConfiable ? 'Aporte al taller' : 'Margen antes de repuestos'
+  const netoColor = netoConfiable ? (stats.neto >= 0 ? 'var(--green-600)' : 'var(--red-600)') : 'var(--text)'
 
   return (
     <div>
@@ -459,7 +489,7 @@ export default function Reportes({ trabajos, loading = false, notify }) {
         </div>
         <div className="actions" style={{ flexWrap: 'wrap', gap: 8 }}>
           <Button variant="outline" size="sm" onClick={toggleTodas} aria-pressed={todasColapsadas}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+            <svg className="rep-recoger-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
               style={{ transform: todasColapsadas ? 'rotate(0deg)' : 'rotate(180deg)', transition: 'transform 200ms var(--ease-out)' }}>
               <polyline points="4 14 10 14 10 20"/><polyline points="20 10 14 10 14 4"/><line x1="14" y1="10" x2="21" y2="3"/><line x1="3" y1="21" x2="10" y2="14"/>
             </svg>
@@ -489,7 +519,7 @@ export default function Reportes({ trabajos, loading = false, notify }) {
                     variant={on ? 'primary' : 'outline'} size="sm"
                     aria-pressed={on}
                     onClick={() => aplicarPreset(k)}
-                    style={{ padding: '7px 13px', fontSize: 12.5, minHeight: 38 }}>
+                    style={{ padding: '10px 14px', fontSize: 12.5, minHeight: 44 }}>
                     {l}
                   </Button>
                 )

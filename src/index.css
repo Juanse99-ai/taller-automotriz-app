@@ -813,9 +813,16 @@ tbody tr:active{background:var(--fill-2)}
    detalle más pequeña. Clases (no estilo inline) para no activar la regla global
    .content [style*="grid-template-columns"]:has(>.kpi) que fuerza el grid. */
 .rep-money{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;margin-bottom:12px}
-.rep-money .kpi__v{font-size:32px}
+.rep-money .kpi__v{font-size:32px !important}
 .rep-ops{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:12px}
-@media(max-width:600px){ .rep-money .kpi__v{font-size:27px} }
+/* Mantener la jerarquía money>ops en CADA breakpoint. El global .kpi__v baja a 24px
+   (<=960) y 19px (<=480) con !important; sin !important aquí, esas reglas aplastaban
+   las anclas de dinero al mismo tamaño que la operación. Con !important + mayor
+   especificidad (.rep-money .kpi__v), el dinero queda por encima en todo ancho. */
+@media(max-width:960px){ .rep-money .kpi__v{font-size:28px !important} }
+@media(max-width:480px){ .rep-money .kpi__v{font-size:22px !important} }
+/* Cabezal plegable de Reportes: feedback de hover como el resto de la app */
+.rep-toggle:hover{background:var(--bg-subtle)}
 @media(max-width:600px){
   .tbl.tbl-cards tbody td:empty,.tbl.tbl-cards tbody td[data-label=""]:empty{display:none}
   /* Columna de acciones (Trabajos): fila completa de botones que envuelven */
@@ -1149,4 +1156,5 @@ tbody tr:active{background:var(--fill-2)}
   .toast{animation:fadeIn 200ms ease}
   .sidebar.open .sidebar__nav > div{animation:none}
   .skeleton::after{animation:none}
+  .rep-chevron,.rep-recoger-icon{transition:none}
 }
