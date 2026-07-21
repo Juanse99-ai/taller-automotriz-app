@@ -1,5 +1,14 @@
 import { COMISION } from './constants'
 
+// ¿La línea de una OT es mano de obra (servicio) y no un repuesto? Regla ÚNICA para
+// toda la app: acepta camelCase (esServicio) y snake_case (es_servicio) y el tipo/
+// categoría con "serv". Antes Reportes re-implementaba una versión sin `es_servicio`,
+// así una línea guardada en snake_case se contaba DOBLE (M.O. aquí y repuesto allá).
+export function esServicioItem(i) {
+  const tipo = (i?.tipo || i?.categoria || '').toString().toLowerCase()
+  return i?.esServicio === true || i?.es_servicio === 1 || tipo.includes('serv')
+}
+
 // Base de mano de obra SIN IVA para calcular la comisión del técnico.
 // Es la MISMA regla que usa Liquidación (lo que realmente se paga):
 //  - Manda la suma de las líneas marcadas "Servicio", quitándoles el IVA.
@@ -17,9 +26,7 @@ export function manoObraBase(t) {
       const precio = parseFloat(i?.precio) || 0
       const cant = parseInt(i?.cantidad) || 1
       const ivaPct = parseFloat(i?.iva) || 0
-      const tipo = (i?.tipo || i?.categoria || '').toString().toLowerCase()
-      const esServ = i?.esServicio === true || i?.es_servicio === 1 || tipo.includes('serv')
-      if (!esServ) return s
+      if (!esServicioItem(i)) return s
       const totalLinea = precio * cant
       const base = ivaPct > 0 ? totalLinea / (1 + ivaPct / 100) : totalLinea
       return s + base

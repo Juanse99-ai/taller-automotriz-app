@@ -823,6 +823,9 @@ tbody tr:active{background:var(--fill-2)}
 @media(max-width:480px){ .rep-money .kpi__v{font-size:22px !important} }
 /* Cabezal plegable de Reportes: feedback de hover como el resto de la app */
 .rep-toggle:hover{background:var(--bg-subtle)}
+/* La transición del chevron va en CSS (no inline) para que el bloque
+   prefers-reduced-motion:reduce pueda anularla (inline gana sin !important). */
+.rep-chevron,.rep-recoger-icon{transition:transform 200ms var(--ease-out)}
 @media(max-width:600px){
   .tbl.tbl-cards tbody td:empty,.tbl.tbl-cards tbody td[data-label=""]:empty{display:none}
   /* Columna de acciones (Trabajos): fila completa de botones que envuelven */

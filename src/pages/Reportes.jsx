@@ -4,7 +4,7 @@ import autoTable from 'jspdf-autotable'
 import { fmt, fmtDate } from '../utils/helpers'
 import { COMISION, ESTADOS } from '../utils/constants'
 import { useTecnicos } from '../services/tecnicos'
-import { manoObraBase } from '../utils/comision'
+import { manoObraBase, esServicioItem } from '../utils/comision'
 import { drawHeader, drawSectionHeader, drawFooter, tableStylesItems, tableStylesMuted, PDF_LAYOUT, PDF_COLORS } from '../utils/pdfTheme'
 import { Button, Badge } from '../components/ui'
 import { useInventario } from '../hooks/useInventario'
@@ -80,9 +80,9 @@ export default function Reportes({ trabajos, loading = false, notify }) {
     <div className="card__h">
       <h3 style={{ margin: 0, flex: 1, minWidth: 0 }}>
         <button type="button" className="rep-toggle" aria-expanded={!colapso[id]} onClick={() => toggleColapso(id)}
-          style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', background: 'none', border: 0, padding: '2px 4px', margin: '-2px -4px', borderRadius: 8, font: 'inherit', color: 'inherit', cursor: 'pointer', textAlign: 'left' }}>
+          style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', background: 'none', border: 0, padding: '12px 4px', margin: '-12px -4px', borderRadius: 8, font: 'inherit', color: 'inherit', cursor: 'pointer', textAlign: 'left' }}>
           <svg className="rep-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"
-            style={{ transform: colapso[id] ? 'rotate(-90deg)' : 'rotate(0deg)', transition: 'transform 200ms var(--ease-out)', flexShrink: 0, color: 'var(--text-2)' }}>
+            style={{ transform: colapso[id] ? 'rotate(-90deg)' : 'rotate(0deg)', flexShrink: 0, color: 'var(--text-2)' }}>
             <polyline points="6 9 12 15 18 9" />
           </svg>
           {titulo}
@@ -178,7 +178,7 @@ export default function Reportes({ trabajos, loading = false, notify }) {
     const repMap = {}
     completados.forEach(t => {
       (t.items || []).forEach(i => {
-        const esServ = i.esServicio === true || (i.tipo || i.categoria || '').toString().toLowerCase().includes('serv')
+        const esServ = esServicioItem(i)
         if (esServ) return
         const cant = parseInt(i.cantidad) || 1
         const ivaPct = parseFloat(i.iva) || 0
@@ -230,7 +230,7 @@ export default function Reportes({ trabajos, loading = false, notify }) {
     const margenMap = {}, rotMap = {}
     completados.forEach(t => {
       (t.items || []).forEach(i => {
-        const esServ = i.esServicio === true || (i.tipo || i.categoria || '').toString().toLowerCase().includes('serv')
+        const esServ = esServicioItem(i)
         if (esServ) return
         const cant = parseInt(i.cantidad) || 1
         const ivaPct = parseFloat(i.iva) || 0
@@ -470,13 +470,15 @@ export default function Reportes({ trabajos, loading = false, notify }) {
   // Presentación honesta del "aporte al taller": el verde se GANA de forma GRADUAL,
   // solo cuando el costo de repuestos está casi completo. Bajo el umbral el número
   // va NEUTRO (no promete una utilidad que no descontó su costo).
-  //  - cobertura 0%           → neutro + badge "sin costo de repuestos", rótulo "Margen antes de repuestos"
-  //  - 0% < cobertura < 75%   → neutro + salvedad ámbar, rótulo "Margen antes de repuestos"
-  //  - cobertura ≥ 75%        → verde, rótulo "Aporte al taller"
+  //  - cobertura 0%             → neutro + badge "sin costo de repuestos", rótulo "Margen antes de repuestos"
+  //  - 0% < cobertura < 75%     → neutro + salvedad ámbar, rótulo "Margen antes de repuestos"
+  //  - 75% ≤ cobertura < 100%   → verde, rótulo "Aporte al taller", PERO conserva salvedad muted
+  //  - cobertura = 100%         → verde limpio, sin salvedad
   const UMBRAL_COBERTURA = 75
   const netoConfiable = stats.coberturaMargen >= UMBRAL_COBERTURA
   const netoSinCosto = stats.coberturaMargen === 0
   const netoParcial = stats.coberturaMargen > 0 && !netoConfiable
+  const netoIncompletoVerde = netoConfiable && stats.coberturaMargen < 100 // verde pero aún no descuenta todo el costo
   const netoLabel = netoConfiable ? 'Aporte al taller' : 'Margen antes de repuestos'
   const netoColor = netoConfiable ? (stats.neto >= 0 ? 'var(--green-600)' : 'var(--red-600)') : 'var(--text)'
 
@@ -490,7 +492,7 @@ export default function Reportes({ trabajos, loading = false, notify }) {
         <div className="actions" style={{ flexWrap: 'wrap', gap: 8 }}>
           <Button variant="outline" size="sm" onClick={toggleTodas} aria-pressed={todasColapsadas}>
             <svg className="rep-recoger-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
-              style={{ transform: todasColapsadas ? 'rotate(0deg)' : 'rotate(180deg)', transition: 'transform 200ms var(--ease-out)' }}>
+              style={{ transform: todasColapsadas ? 'rotate(0deg)' : 'rotate(180deg)' }}>
               <polyline points="4 14 10 14 10 20"/><polyline points="20 10 14 10 14 4"/><line x1="14" y1="10" x2="21" y2="3"/><line x1="3" y1="21" x2="10" y2="14"/>
             </svg>
             {todasColapsadas ? 'Expandir' : 'Recoger'}
@@ -587,6 +589,7 @@ export default function Reportes({ trabajos, loading = false, notify }) {
           <div className="kpi__v" style={{color:netoColor}}>{fmt(stats.neto)}</div>
           {netoSinCosto && <span className="badge badge-w" style={{marginTop:6,alignSelf:'flex-start'}}>sin costo de repuestos</span>}
           {netoParcial && <div className="aviso-ambar" style={{fontSize:12,marginTop:5,fontWeight:600}}>costo cubre {stats.coberturaMargen}%, el real es algo menor</div>}
+          {netoIncompletoVerde && <div style={{fontSize:12,marginTop:5,color:'var(--text-3)'}}>costo cubre {stats.coberturaMargen}%, el real es algo menor</div>}
         </div>
       </div>
       {/* KPIs de detalle (operación + comisiones) */}
@@ -598,7 +601,7 @@ export default function Reportes({ trabajos, loading = false, notify }) {
       </div>
       <p style={{fontSize:12.5,color:'var(--text-3)',margin:'0 2px 18px',lineHeight:1.5}}>
         <strong style={{color:'var(--text-2)'}}>{netoLabel}</strong> = ventas sin IVA − comisiones − costo de repuestos, antes de gastos fijos e IVA.
-        {netoParcial && ` El costo de Cuentti cubre el ${stats.coberturaMargen}% de los repuestos vendidos; sobre el resto no se pudo restar costo, así que el real es algo menor.`}
+        {(netoParcial || netoIncompletoVerde) && ` El costo de Cuentti cubre el ${stats.coberturaMargen}% de los repuestos vendidos; sobre el resto no se pudo restar costo, así que el real es algo menor.`}
         {netoSinCosto && ' Cuentti aún no devuelve el costo de los repuestos, así que todavía no se descuenta ese costo (por eso va en gris, no en verde).'}
       </p>
 
