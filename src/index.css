@@ -805,6 +805,18 @@ tbody tr:active{background:var(--fill-2)}
   .tbl.tbl-cards tbody td.td-bar{display:none}
   /* Separador vertical del filtro de Reportes: sobra cuando el flex envuelve */
   .filtro-sep{display:none}
+}
+/* Texto de aviso ámbar legible en ambos temas (en dark, amber-600 no pasa AA) */
+.aviso-ambar{color:var(--amber-600)}
+[data-theme="dark"] .aviso-ambar{color:#fbbf24}
+/* KPIs de Reportes con jerarquía contable: 2 anclas de dinero grandes + fila de
+   detalle más pequeña. Clases (no estilo inline) para no activar la regla global
+   .content [style*="grid-template-columns"]:has(>.kpi) que fuerza el grid. */
+.rep-money{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;margin-bottom:12px}
+.rep-money .kpi__v{font-size:32px}
+.rep-ops{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:12px}
+@media(max-width:600px){ .rep-money .kpi__v{font-size:27px} }
+@media(max-width:600px){
   .tbl.tbl-cards tbody td:empty,.tbl.tbl-cards tbody td[data-label=""]:empty{display:none}
   /* Columna de acciones (Trabajos): fila completa de botones que envuelven */
   .tbl.tbl-cards tbody td.td-actions{display:block;text-align:left;padding-top:8px;margin-top:4px;border-top:1px solid var(--border)}
@@ -1136,4 +1148,5 @@ tbody tr:active{background:var(--fill-2)}
   .kpi,.kpi:hover{transform:none}
   .toast{animation:fadeIn 200ms ease}
   .sidebar.open .sidebar__nav > div{animation:none}
+  .skeleton::after{animation:none}
 }

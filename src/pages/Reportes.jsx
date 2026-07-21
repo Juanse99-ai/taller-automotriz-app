@@ -30,6 +30,12 @@ const parseFechaLocal = (f) => {
 const esMostradorPlaca = (placa) => /^servicio$/i.test((placa || '').toString().trim())
 const esMostradorCliente = (nombre) => /cuant[ií]as?\s*menores|mostrador|consumidor\s*final|varios/i.test((nombre || '').toString())
 
+// Señal defensiva: un "repuesto" cuyo nombre suena a mano de obra probablemente
+// está mal marcado (esServicio no seteado en la OT) e infla el ranking de
+// repuestos y el split repuestos/M.O. No se excluye ni se corrige el dato: solo
+// se marca "¿servicio?" para que Juan lo revise en la fuente.
+const pareceServicio = (nombre) => /reparaci|mano\s*de\s*obra|servicio|diagn[oó]stic|revisi[oó]n|instalaci|manten|calibraci|sincroniz|alineaci|balanceo|escane|scanner|computador|programaci|soldadura|latoner|pintura|lavad|engras/i.test((nombre || '').toString())
+
 const MAX_TRABAJOS = 500 // debe coincidir con el limit de fetchTrabajos() en services/supabase.js
 
 export default function Reportes({ trabajos, loading = false, notify }) {
@@ -110,7 +116,9 @@ export default function Reportes({ trabajos, loading = false, notify }) {
       if (!t.placa) return
       if (!placaMap[t.placa]) placaMap[t.placa] = { placa: t.placa, marca: t.marca, modelo: t.modelo, visitas: 0, total: 0, mostrador: esMostradorPlaca(t.placa) }
       placaMap[t.placa].visitas++
-      placaMap[t.placa].total += t.total || 0
+      // "Total facturado" = solo OTs completadas (facturadas), igual que Top clientes.
+      // Antes sumaba TODAS las OTs y una cancelada inflaba el total del vehículo.
+      if (t.estado === ESTADOS.COMPLETADO) placaMap[t.placa].total += t.total || 0
     })
     const topVehiculos = Object.values(placaMap).sort((a, b) => b.visitas - a.visitas || b.total - a.total).slice(0, 10)
 
@@ -131,7 +139,7 @@ export default function Reportes({ trabajos, loading = false, notify }) {
       })
     })
     const topRepuestos = Object.values(repMap)
-      .map(r => ({ ...r, ingresos: Math.round(r.ingresos) }))
+      .map(r => ({ ...r, ingresos: Math.round(r.ingresos), sospechoso: pareceServicio(r.nombre) }))
       .sort((a, b) => b.ingresos - a.ingresos).slice(0, 10)
     const ticket = completados.length ? Math.round(facturado / completados.length) : 0
 
@@ -283,21 +291,26 @@ export default function Reportes({ trabajos, loading = false, notify }) {
       doc.text(c.val, cx + 4, cy + 13)
     })
 
-    // ----- RIGHT: caja con NETO TALLER (real: ventas sin IVA − comisiones − costo)
+    // ----- RIGHT: caja con el APORTE al taller (ventas s/IVA − comisiones − costo).
+    // El nombre no dice "neto" porque no resta gastos fijos ni IVA. Si Cuentti aún no
+    // da costos (cobertura 0%), el rótulo lo dice para no prometer un número completo.
+    const sinCosto = stats.coberturaMargen === 0
     doc.setFillColor(...PDF_COLORS.NAVY)
     doc.rect(rightX, y, rightW, cellH * 2, 'F')
     doc.setTextColor(...PDF_COLORS.AMBER)
     doc.setFontSize(8)
     doc.setFont(undefined, 'bold')
-    doc.text('NETO TALLER', rightX + 5, y + 8)
+    doc.text(sinCosto ? 'MARGEN ANTES DE REPUESTOS' : 'APORTE AL TALLER', rightX + 5, y + 8)
     doc.setTextColor(...PDF_COLORS.WHITE)
     doc.setFontSize(19)
     doc.text(fmt(stats.neto), rightX + rightW - 5, y + 19, { align: 'right' })
     doc.setFontSize(6.5)
     doc.setFont(undefined, 'normal')
-    const notaNeto = stats.coberturaMargen > 0 && stats.coberturaMargen < 100
-      ? `ventas s/IVA - comis. - costo (${stats.coberturaMargen}% repuestos)`
-      : 'ventas s/IVA - comisiones - costo repuestos'
+    const notaNeto = sinCosto
+      ? 'ventas s/IVA - comisiones (sin costo de repuestos aun)'
+      : stats.coberturaMargen < 100
+        ? `ventas s/IVA - comis. - costo (${stats.coberturaMargen}% repuestos), antes de gastos fijos`
+        : 'ventas s/IVA - comisiones - costo, antes de gastos fijos e IVA'
     doc.text(notaNeto, rightX + 5, y + cellH * 2 - 4)
 
     y += cellH * 2 + 8
@@ -400,7 +413,15 @@ export default function Reportes({ trabajos, loading = false, notify }) {
     ['todo', 'Todo'],
   ]
 
-  const rangoTexto = `${fmtDate(rango.desde)} — ${fmtDate(rango.hasta)}`
+  const rangoTexto = `${fmtDate(rango.desde)} → ${fmtDate(rango.hasta)}`
+
+  // Presentación honesta del "aporte al taller": el verde se GANA cuando el número
+  // ya descontó el costo de repuestos. Sin costo (cobertura 0%) → neutro + badge;
+  // parcial → verde con salvedad ámbar; completo → verde tranquilo.
+  const netoSinCosto = stats.coberturaMargen === 0
+  const netoParcial = stats.coberturaMargen > 0 && stats.coberturaMargen < 100
+  const netoLabel = netoSinCosto ? 'Margen antes de repuestos' : 'Aporte al taller'
+  const netoColor = netoSinCosto ? 'var(--text)' : (stats.neto >= 0 ? 'var(--green-600)' : 'var(--red-600)')
 
   return (
     <div>
@@ -453,14 +474,14 @@ export default function Reportes({ trabajos, loading = false, notify }) {
         </div>
         {rangoInvalido && (
           <div className="card__b" style={{ paddingTop: 0, display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-            <span style={{ fontSize: 13, color: 'var(--amber-600)', fontWeight: 600 }}>
+            <span className="aviso-ambar" style={{ fontSize: 13, fontWeight: 600 }}>
               El rango está invertido: “desde” ({fmtDate(rango.desde)}) es posterior a “hasta” ({fmtDate(rango.hasta)}).
             </span>
             <Button variant="warning" size="sm" onClick={corregirRango}>Corregir</Button>
           </div>
         )}
         {topeAlcanzado && !rangoInvalido && (
-          <div className="card__b" style={{ paddingTop: 0, fontSize: 12.5, color: 'var(--amber-600)' }}>
+          <div className="card__b aviso-ambar" style={{ paddingTop: 0, fontSize: 12.5 }}>
             Mostrando las últimas {MAX_TRABAJOS} OT. Un historial más largo puede quedar por fuera de este total.
           </div>
         )}
@@ -494,19 +515,27 @@ export default function Reportes({ trabajos, loading = false, notify }) {
         </div>
       ) : (
         <>
-      {/* KPI cards */}
-      <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(200px,1fr))',gap:14,marginBottom:12}}>
+      {/* KPIs de dinero (anclas grandes: lo facturado y lo que le aporta al taller) */}
+      <div className="rep-money">
+        <div className="kpi"><div className="kpi__head"><div className="kpi__lbl">Facturado <span style={{fontWeight:400,color:'var(--text-3)'}}>c/IVA</span></div></div><div className="kpi__v">{fmt(stats.facturado)}</div></div>
+        <div className="kpi">
+          <div className="kpi__head"><div className="kpi__lbl">{netoLabel}</div></div>
+          <div className="kpi__v" style={{color:netoColor}}>{fmt(stats.neto)}</div>
+          {netoSinCosto && <span className="badge badge-w" style={{marginTop:6,alignSelf:'flex-start'}}>sin costo de repuestos</span>}
+          {netoParcial && <div className="aviso-ambar" style={{fontSize:12,marginTop:5,fontWeight:600}}>costo cubre {stats.coberturaMargen}%, el real es algo menor</div>}
+        </div>
+      </div>
+      {/* KPIs de detalle (operación + comisiones) */}
+      <div className="rep-ops">
         <div className="kpi"><div className="kpi__head"><div className="kpi__lbl">Total trabajos</div></div><div className="kpi__v">{stats.total}</div></div>
         <div className="kpi"><div className="kpi__head"><div className="kpi__lbl">Completados</div></div><div className="kpi__v" style={{color:'var(--green-600)'}}>{stats.completados}</div></div>
-        <div className="kpi"><div className="kpi__head"><div className="kpi__lbl">Facturado <span style={{fontWeight:400,color:'var(--text-4)'}}>c/IVA</span></div></div><div className="kpi__v">{fmt(stats.facturado)}</div></div>
         <div className="kpi"><div className="kpi__head"><div className="kpi__lbl">Comisiones técnicos</div></div><div className="kpi__v" style={{color:'var(--amber-600)'}}>{fmt(stats.comisiones)}</div></div>
-        <div className="kpi"><div className="kpi__head"><div className="kpi__lbl">Neto taller</div></div><div className="kpi__v" style={{color:stats.neto>=0?'var(--green-600)':'var(--red-600)'}}>{fmt(stats.neto)}</div></div>
-        <div className="kpi"><div className="kpi__head"><div className="kpi__lbl">Ticket promedio</div></div><div className="kpi__v">{fmt(stats.ticket)}</div></div>
+        <div className="kpi"><div className="kpi__head"><div className="kpi__lbl">Ticket promedio <span style={{fontWeight:400,color:'var(--text-3)'}}>c/IVA</span></div></div><div className="kpi__v">{fmt(stats.ticket)}</div></div>
       </div>
       <p style={{fontSize:12.5,color:'var(--text-3)',margin:'0 2px 18px',lineHeight:1.5}}>
-        <strong style={{color:'var(--text-2)'}}>Neto taller</strong> = ventas sin IVA − comisiones − costo de repuestos.
-        {stats.coberturaMargen > 0 && stats.coberturaMargen < 100 && ` El costo de Cuentti cubre el ${stats.coberturaMargen}% de los repuestos vendidos; sobre el resto no se pudo restar costo, así que el neto real es algo menor.`}
-        {stats.coberturaMargen === 0 && ' Cuentti aún no devuelve el costo de los repuestos, así que este neto todavía no descuenta ese costo.'}
+        <strong style={{color:'var(--text-2)'}}>{netoLabel}</strong> = ventas sin IVA − comisiones − costo de repuestos, antes de gastos fijos e IVA.
+        {netoParcial && ` El costo de Cuentti cubre el ${stats.coberturaMargen}% de los repuestos vendidos; sobre el resto no se pudo restar costo, así que el real es algo menor.`}
+        {netoSinCosto && ' Cuentti aún no devuelve el costo de los repuestos, así que todavía no se descuenta ese costo (por eso va en gris, no en verde).'}
       </p>
 
       {/* Distribution by state - stacked bar */}
@@ -648,7 +677,7 @@ export default function Reportes({ trabajos, loading = false, notify }) {
                   const pct = Math.round(r.ingresos / max * 100)
                   return (
                     <tr key={i}>
-                      <td className="c-name" title={r.nombre}>{r.nombre}</td>
+                      <td className="c-name" title={r.nombre}>{r.nombre}{r.sospechoso && <span className="badge badge-w" title="El nombre suena a mano de obra: puede estar mal marcado como repuesto (revísalo en la OT)." style={{ marginLeft: 8, fontSize: 10.5, verticalAlign: 'middle' }}>¿servicio?</span>}</td>
                       <td className="c-mono c-right" data-label="Cant." style={{ fontWeight: 700 }}>{r.cantidad}</td>
                       <td className="c-mono c-right" data-label="Ingresos" style={{ fontWeight: 700, color: 'var(--green-600)' }}>{fmt(r.ingresos)}</td>
                       <td className="td-bar"><div style={{ height: 6, background: 'var(--bg-subtle)', borderRadius: 3, overflow: 'hidden', border: '1px solid var(--border)' }}><div style={{ width: `${pct}%`, height: '100%', background: 'var(--blue-500)' }} /></div></td>
@@ -708,7 +737,7 @@ export default function Reportes({ trabajos, loading = false, notify }) {
                   const pct = Math.round((c.total/maxTot)*100)
                   return (
                     <tr key={i}>
-                      <td className="c-name"><div style={{display:'flex',alignItems:'center',gap:10}}><span className={`av av-${(i%5)+1}`}>{c.nombre.split(' ').map(x=>x[0]).slice(0,2).join('').toUpperCase()}</span><span style={{fontWeight:600}}>{c.nombre}{c.mostrador && <span style={{marginLeft:6,fontSize:11,fontWeight:600,color:'var(--text-4)'}}>· Mostrador</span>}</span></div></td>
+                      <td className="c-name"><div style={{display:'flex',alignItems:'center',gap:10}}><span className={`av av-${(i%5)+1}`}>{c.nombre.split(' ').map(x=>x[0]).slice(0,2).join('').toUpperCase()}</span><span style={{fontWeight:600}}>{c.nombre}{c.mostrador && <span style={{marginLeft:6,fontSize:11,fontWeight:600,color:'var(--text-3)'}}>· Mostrador</span>}</span></div></td>
                       <td className="c-mono c-right" data-label="OTs" style={{fontWeight:700}}>{c.ots}</td>
                       <td className="c-mono c-right" data-label="Facturado" style={{fontWeight:700,color:'var(--green-600)'}}>{fmt(c.total)}</td>
                       <td className="td-bar">
@@ -739,10 +768,10 @@ export default function Reportes({ trabajos, loading = false, notify }) {
                   <tr key={t.id}>
                     <td className="c-name"><div style={{display:'flex',alignItems:'center',gap:10}}>
                       <span className={`av av-${(i%5)+1}`}>{t.sinAsignar ? '—' : t.nombre.split(' ').map(x=>x[0]).slice(0,2).join('')}</span>
-                      <span style={{fontWeight:600}}>{t.nombre}{t.inactivo && <span style={{marginLeft:6,fontSize:11,fontWeight:600,color:'var(--amber-600)'}}>· Inactivo</span>}</span>
+                      <span style={{fontWeight:600}}>{t.nombre}{t.inactivo && <span className="aviso-ambar" style={{marginLeft:6,fontSize:11,fontWeight:600}}>· Inactivo</span>}</span>
                     </div></td>
                     <td className="c-mono c-right" data-label="Trabajos" style={{fontWeight:700}}>{t.cantidad}</td>
-                    <td className="c-mono c-right" data-label="Mano de obra" style={{fontWeight:700,color:'var(--green-600)'}}>{fmt(t.facturado)}</td>
+                    <td className="c-mono c-right" data-label="Mano de obra" style={{fontWeight:700,color:t.facturado>0?'var(--green-600)':'var(--text-3)'}}>{fmt(t.facturado)}</td>
                     <td className="td-bar">
                       <div style={{height:6,background:'var(--bg-subtle)',borderRadius:3,overflow:'hidden',border:'1px solid var(--border)'}}>
                         <div style={{width:`${pct}%`,height:'100%',background:'var(--blue-500)'}}/>
@@ -766,7 +795,7 @@ export default function Reportes({ trabajos, loading = false, notify }) {
               <tbody>
                 {stats.topVehiculos.map(v=>(
                   <tr key={v.placa}>
-                    <td className="c-name c-mono">{v.placa}{v.mostrador && <span style={{marginLeft:6,fontFamily:'var(--font)',fontSize:11,fontWeight:600,color:'var(--text-4)'}}>· Mostrador</span>}</td>
+                    <td className="c-name c-mono">{v.placa}{v.mostrador && <span style={{marginLeft:6,fontFamily:'var(--font)',fontSize:11,fontWeight:600,color:'var(--text-3)'}}>· Mostrador</span>}</td>
                     <td className="c-muted" data-label="Vehículo">{[v.marca,v.modelo].filter(Boolean).join(' ')||'—'}</td>
                     <td className="c-mono c-right" data-label="Visitas" style={{fontWeight:700}}>{v.visitas}</td>
                     <td className="c-mono c-right" data-label="Total" style={{fontWeight:700}}>{fmt(v.total)}</td>
