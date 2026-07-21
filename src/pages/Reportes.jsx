@@ -52,6 +52,33 @@ export default function Reportes({ trabajos, loading = false, notify }) {
   // Preset activo (para resaltar el botón). null = rango personalizado.
   const [presetActivo, setPresetActivo] = useState('mes')
 
+  // Tarjetas plegables: cada sección de detalle se puede recoger para dejar la
+  // pantalla en el resumen (KPIs) sin scrollear nueve tarjetas. `colapso[id]===true`
+  // = recogida. Vacío = todas abiertas.
+  const SECCIONES = ['estado', 'ingresos', 'utilidad', 'margen', 'repuestos', 'rotacion', 'clientes', 'equipo', 'vehiculos']
+  const [colapso, setColapso] = useState({})
+  const toggleColapso = (k) => setColapso(c => ({ ...c, [k]: !c[k] }))
+  const todasColapsadas = SECCIONES.every(k => colapso[k])
+  const toggleTodas = () => {
+    const recoger = !todasColapsadas
+    setColapso(Object.fromEntries(SECCIONES.map(k => [k, recoger])))
+  }
+  // Encabezado plegable reutilizable (chevron que rota + título + aside opcional).
+  const cabezal = (id, titulo, aside = null) => (
+    <div className="card__h" style={{ cursor: 'pointer' }} onClick={() => toggleColapso(id)}
+      role="button" aria-expanded={!colapso[id]} tabIndex={0}
+      onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleColapso(id) } }}>
+      <h3 style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"
+          style={{ transform: colapso[id] ? 'rotate(-90deg)' : 'rotate(0deg)', transition: 'transform 200ms var(--ease-out)', flexShrink: 0, color: 'var(--text-3)' }}>
+          <polyline points="6 9 12 15 18 9" />
+        </svg>
+        {titulo}
+      </h3>
+      {aside && <div onClick={e => e.stopPropagation()} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>{aside}</div>}
+    </div>
+  )
+
   // Inventario de Cuentti (mismo cache compartido) para costo y stock de repuestos.
   const { inventario } = useInventario()
 
@@ -431,6 +458,13 @@ export default function Reportes({ trabajos, loading = false, notify }) {
           <p className="pagehd__sub" style={{ margin: '2px 0 0', fontSize: 13, color: 'var(--text-3)' }}>{rangoTexto}</p>
         </div>
         <div className="actions" style={{ flexWrap: 'wrap', gap: 8 }}>
+          <Button variant="outline" size="sm" onClick={toggleTodas} aria-pressed={todasColapsadas}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+              style={{ transform: todasColapsadas ? 'rotate(0deg)' : 'rotate(180deg)', transition: 'transform 200ms var(--ease-out)' }}>
+              <polyline points="4 14 10 14 10 20"/><polyline points="20 10 14 10 14 4"/><line x1="14" y1="10" x2="21" y2="3"/><line x1="3" y1="21" x2="10" y2="14"/>
+            </svg>
+            {todasColapsadas ? 'Expandir' : 'Recoger'}
+          </Button>
           <Button variant="outline" size="sm" onClick={exportarCSV}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/></svg>
             CSV
@@ -540,7 +574,8 @@ export default function Reportes({ trabajos, loading = false, notify }) {
 
       {/* Distribution by state - stacked bar */}
       <div className="card" style={{marginBottom:16}}>
-        <div className="card__h"><h3>Distribución por estado</h3></div>
+        {cabezal('estado', 'Distribución por estado')}
+        {!colapso.estado && (
         <div className="card__b" style={{display:'flex',flexDirection:'column',gap:16}}>
           <div style={{display:'flex',height:14,borderRadius:7,overflow:'hidden',border:'1px solid var(--border)'}}>
             {stats.porEstado.filter(e=>e.cantidad>0).map((e,i)=>{
@@ -562,11 +597,13 @@ export default function Reportes({ trabajos, loading = false, notify }) {
             })}
           </div>
         </div>
+        )}
       </div>
 
       {/* Ingresos: repuestos vs mano de obra (SIN IVA) */}
       <div className="card" style={{ marginBottom: 16 }}>
-        <div className="card__h"><h3>Ingresos: repuestos vs mano de obra</h3><span style={{fontSize:12,color:'var(--text-3)'}}>sin IVA</span></div>
+        {cabezal('ingresos', 'Ingresos: repuestos vs mano de obra', <span style={{fontSize:12,color:'var(--text-3)'}}>sin IVA</span>)}
+        {!colapso.ingresos && (
         <div className="card__b" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           {(() => {
             const rep = Math.round(stats.repVentaSinIva), mo = stats.moBase, tot = rep + mo
@@ -586,11 +623,13 @@ export default function Reportes({ trabajos, loading = false, notify }) {
             )
           })()}
         </div>
+        )}
       </div>
 
       {/* Utilidad por mano de obra (margen casi puro; repuestos requieren costo Cuentti) */}
       <div className="card" style={{ marginBottom: 16 }}>
-        <div className="card__h"><h3>Utilidad por mano de obra</h3></div>
+        {cabezal('utilidad', 'Utilidad por mano de obra')}
+        {!colapso.utilidad && (<>
         <div className="card__b" style={{ display: 'flex', gap: 14, flexWrap: 'wrap' }}>
           <div style={{ flex: '1 1 160px' }}>
             <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '.5px', marginBottom: 4 }}>Mano de obra (sin IVA)</div>
@@ -608,12 +647,14 @@ export default function Reportes({ trabajos, loading = false, notify }) {
         <div className="card__b" style={{ paddingTop: 0, fontSize: 12, color: 'var(--text-3)' }}>
           El técnico se lleva el {Math.round(COMISION.TOTAL * 100)}% de la mano de obra; el resto queda al taller.
         </div>
+        </>)}
       </div>
 
       {/* Margen de repuestos (cruza venta con costo de Cuentti) */}
       {stats.repVentaSinIva > 0 && (
         <div className="card" style={{ marginBottom: 16 }}>
-          <div className="card__h"><h3>Margen de repuestos</h3>{stats.coberturaMargen > 0 && <span style={{fontSize:12,color:'var(--text-3)',fontWeight:600}}>margen {stats.margenPct}%</span>}</div>
+          {cabezal('margen', 'Margen de repuestos', stats.coberturaMargen > 0 ? <span style={{fontSize:12,color:'var(--text-3)',fontWeight:600}}>margen {stats.margenPct}%</span> : null)}
+          {!colapso.margen && (<>
           {!stats.inventarioListo ? (
             <div className="card__b"><p className="text-sm text-muted">Sincronizando inventario de Cuentti… vuelve en un momento para ver el margen.</p></div>
           ) : stats.coberturaMargen === 0 ? (
@@ -659,13 +700,15 @@ export default function Reportes({ trabajos, loading = false, notify }) {
               )}
             </>
           )}
+          </>)}
         </div>
       )}
 
       {/* Repuestos más vendidos */}
       <div className="card" style={{ marginBottom: 16 }}>
-        <div className="card__h"><h3>Repuestos más vendidos</h3><span className="count">{stats.topRepuestos.length}</span></div>
-        {stats.topRepuestos.length === 0 ? (
+        {cabezal('repuestos', 'Repuestos más vendidos', <span className="count">{stats.topRepuestos.length}</span>)}
+        {!colapso.repuestos && (
+          stats.topRepuestos.length === 0 ? (
           <div className="card__b"><p className="text-sm text-muted">Sin repuestos vendidos en el periodo.</p></div>
         ) : (
           <div className="card__b card__b--flush">
@@ -687,13 +730,14 @@ export default function Reportes({ trabajos, loading = false, notify }) {
               </tbody>
             </table>
           </div>
-        )}
+        ))}
       </div>
 
       {/* Rotación de inventario (vendidas en el rango vs stock actual de Cuentti) */}
       {stats.inventarioListo && stats.rotacion.length > 0 && (
         <div className="card" style={{ marginBottom: 16 }}>
-          <div className="card__h"><h3>Rotación de inventario</h3><span className="count">{stats.rotacion.length}</span></div>
+          {cabezal('rotacion', 'Rotación de inventario', <span className="count">{stats.rotacion.length}</span>)}
+          {!colapso.rotacion && (
           <div className="card__b card__b--flush">
             <table className="tbl tbl-cards">
               <thead><tr><th>Repuesto</th><th className="c-right">Vendidas</th><th className="c-right">Stock</th><th className="c-right">Estado</th></tr></thead>
@@ -721,13 +765,15 @@ export default function Reportes({ trabajos, loading = false, notify }) {
               </tbody>
             </table>
           </div>
+          )}
         </div>
       )}
 
       {/* Top clientes */}
       {stats.topClientes.length > 0 && (
         <div className="card" style={{marginBottom:16}}>
-          <div className="card__h"><h3>Top clientes</h3><span className="count">{stats.topClientes.length}</span></div>
+          {cabezal('clientes', 'Top clientes', <span className="count">{stats.topClientes.length}</span>)}
+          {!colapso.clientes && (
           <div className="card__b card__b--flush">
             <table className="tbl tbl-cards">
               <thead><tr><th>Cliente</th><th className="c-right">OTs</th><th className="c-right">Facturado</th><th style={{width:'25%'}}/></tr></thead>
@@ -751,12 +797,14 @@ export default function Reportes({ trabajos, loading = false, notify }) {
               </tbody>
             </table>
           </div>
+          )}
         </div>
       )}
 
       {/* Technician ranking */}
       <div className="card" style={{marginBottom:16}}>
-        <div className="card__h"><h3>Rendimiento del equipo</h3></div>
+        {cabezal('equipo', 'Rendimiento del equipo')}
+        {!colapso.equipo && (
         <div className="card__b card__b--flush">
           <table className="tbl tbl-cards">
             <thead><tr><th>Mecánico</th><th className="c-right">Trabajos</th><th className="c-right">Mano de obra</th><th style={{width:'25%'}}/></tr></thead>
@@ -783,12 +831,14 @@ export default function Reportes({ trabajos, loading = false, notify }) {
             </tbody>
           </table>
         </div>
+        )}
       </div>
 
       {/* Top vehicles */}
       {stats.topVehiculos.length > 0 && (
         <div className="card">
-          <div className="card__h"><h3>Vehículos frecuentes</h3><span className="count">{stats.topVehiculos.length}</span></div>
+          {cabezal('vehiculos', 'Vehículos frecuentes', <span className="count">{stats.topVehiculos.length}</span>)}
+          {!colapso.vehiculos && (
           <div className="card__b card__b--flush">
             <table className="tbl tbl-cards">
               <thead><tr><th>Placa</th><th>Vehículo</th><th className="c-right">Visitas</th><th className="c-right">Total facturado</th></tr></thead>
@@ -804,6 +854,7 @@ export default function Reportes({ trabajos, loading = false, notify }) {
               </tbody>
             </table>
           </div>
+          )}
         </div>
       )}
         </>
