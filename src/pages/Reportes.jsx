@@ -34,7 +34,10 @@ const esMostradorCliente = (nombre) => /cuant[ií]as?\s*menores|mostrador|consum
 // está mal marcado (esServicio no seteado en la OT) e infla el ranking de
 // repuestos y el split repuestos/M.O. No se excluye ni se corrige el dato: solo
 // se marca "¿servicio?" para que Juan lo revise en la fuente.
-const pareceServicio = (nombre) => /reparaci|mano\s*de\s*obra|servicio|diagn[oó]stic|revisi[oó]n|instalaci|manten|calibraci|sincroniz|alineaci|balanceo|escane|scanner|computador|programaci|soldadura|latoner|pintura|lavad|engras/i.test((nombre || '').toString())
+// Solo raíces que casi nunca aparecen en el nombre de un repuesto físico. Antes
+// incluía computador/pintura/soldadura/lavad/etc. y marcaba falsos positivos
+// (ECU "computadora", pintura como material, "bomba lavaparabrisas").
+const pareceServicio = (nombre) => /mano\s*de\s*obra|reparaci|servicio|diagn[oó]stic|revisi[oó]n|calibraci|alineaci|balanceo|sincroniz|manten/i.test((nombre || '').toString())
 
 const MAX_TRABAJOS = 500 // debe coincidir con el limit de fetchTrabajos() en services/supabase.js
 
@@ -480,6 +483,8 @@ export default function Reportes({ trabajos, loading = false, notify }) {
   const netoParcial = stats.coberturaMargen > 0 && !netoConfiable
   const netoIncompletoVerde = netoConfiable && stats.coberturaMargen < 100 // verde pero aún no descuenta todo el costo
   const netoLabel = netoConfiable ? 'Aporte al taller' : 'Margen antes de repuestos'
+  // No hay nada que exportar si el rango es inválido o no cae ninguna OT.
+  const sinDatos = rangoInvalido || stats.total === 0
   const netoColor = netoConfiable ? (stats.neto >= 0 ? 'var(--green-600)' : 'var(--red-600)') : 'var(--text)'
 
   return (
@@ -497,11 +502,11 @@ export default function Reportes({ trabajos, loading = false, notify }) {
             </svg>
             {todasColapsadas ? 'Expandir' : 'Recoger'}
           </Button>
-          <Button variant="outline" size="sm" onClick={exportarCSV}>
+          <Button variant="outline" size="sm" onClick={exportarCSV} disabled={sinDatos} title={sinDatos ? 'No hay datos para exportar en este rango' : undefined}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/></svg>
             CSV
           </Button>
-          <Button variant="outline" size="sm" onClick={() => exportarResumen()}>
+          <Button variant="outline" size="sm" onClick={() => exportarResumen()} disabled={sinDatos} title={sinDatos ? 'No hay datos para exportar en este rango' : undefined}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
             PDF
           </Button>
@@ -601,37 +606,7 @@ export default function Reportes({ trabajos, loading = false, notify }) {
       </div>
       <p style={{fontSize:12.5,color:'var(--text-3)',margin:'0 2px 18px',lineHeight:1.5}}>
         <strong style={{color:'var(--text-2)'}}>{netoLabel}</strong> = ventas sin IVA − comisiones − costo de repuestos, antes de gastos fijos e IVA.
-        {(netoParcial || netoIncompletoVerde) && ` El costo de Cuentti cubre el ${stats.coberturaMargen}% de los repuestos vendidos; sobre el resto no se pudo restar costo, así que el real es algo menor.`}
-        {netoSinCosto && ' Cuentti aún no devuelve el costo de los repuestos, así que todavía no se descuenta ese costo (por eso va en gris, no en verde).'}
       </p>
-
-      {/* Distribution by state - stacked bar */}
-      <div className="card" style={{marginBottom:16}}>
-        {cabezal('estado', 'Distribución por estado')}
-        {!colapso.estado && (
-        <div className="card__b" style={{display:'flex',flexDirection:'column',gap:16}}>
-          <div style={{display:'flex',height:14,borderRadius:7,overflow:'hidden',border:'1px solid var(--border)'}}>
-            {stats.porEstado.filter(e=>e.cantidad>0).map((e,i)=>{
-              const colors = {'Completado':'var(--green-500)','Cancelado':'var(--red-500)','En Progreso':'var(--blue-500)','Pendiente':'var(--amber-400)','En Diagnostico':'var(--blue-400)','Esperando Repuestos':'var(--amber-500)','En Prueba':'var(--purple-500,#7c3aed)','Programado':'var(--slate-400)'}
-              return <div key={i} style={{width:`${(e.cantidad/stats.total)*100}%`,background:colors[e.estado]||'var(--slate-400)'}}/>
-            })}
-          </div>
-          <div style={{display:'flex',flexDirection:'column',gap:9}}>
-            {stats.porEstado.filter(e=>e.cantidad>0).map((e,i)=>{
-              const colors = {'Completado':'var(--green-500)','Cancelado':'var(--red-500)','En Progreso':'var(--blue-500)','Pendiente':'var(--amber-400)','En Diagnostico':'var(--blue-400)','Esperando Repuestos':'var(--amber-500)','En Prueba':'var(--purple-500,#7c3aed)','Programado':'var(--slate-400)'}
-              return (
-                <div key={i} style={{display:'flex',alignItems:'center',gap:10,fontSize:13}}>
-                  <div style={{width:10,height:10,borderRadius:3,background:colors[e.estado]||'var(--slate-400)',flexShrink:0}}/>
-                  <span style={{flex:1,fontWeight:500}}>{e.estado}</span>
-                  <span className="mono" style={{fontWeight:700}}>{e.cantidad}</span>
-                  <span className="mono" style={{color:'var(--text-3)'}}>{stats.total>0?Math.round(e.cantidad/stats.total*100):0}%</span>
-                </div>
-              )
-            })}
-          </div>
-        </div>
-        )}
-      </div>
 
       {/* Ingresos: repuestos vs mano de obra (SIN IVA) */}
       <div className="card" style={{ marginBottom: 16 }}>
@@ -890,6 +865,43 @@ export default function Reportes({ trabajos, loading = false, notify }) {
           )}
         </div>
       )}
+
+      {/* Distribución por estado — al final: cuando todo está Completado aporta poco */}
+      <div className="card">
+        {cabezal('estado', 'Distribución por estado')}
+        {!colapso.estado && (() => {
+          const activos = stats.porEstado.filter(e => e.cantidad > 0)
+          const colors = {'Completado':'var(--green-500)','Cancelado':'var(--red-500)','En Progreso':'var(--blue-500)','Pendiente':'var(--amber-400)','En Diagnostico':'var(--blue-400)','Esperando Repuestos':'var(--amber-500)','En Prueba':'var(--purple-500,#7c3aed)','Programado':'var(--slate-400)'}
+          if (activos.length <= 1) {
+            const e = activos[0]
+            return (
+              <div className="card__b" style={{display:'flex',alignItems:'center',gap:10,fontSize:13.5}}>
+                <div style={{width:10,height:10,borderRadius:3,background:colors[e?.estado]||'var(--slate-400)',flexShrink:0}}/>
+                <span style={{fontWeight:500}}>{e ? e.estado : 'Sin trabajos'}</span>
+                <span className="mono" style={{fontWeight:700,marginLeft:'auto'}}>{e?.cantidad||0}</span>
+                <span className="mono" style={{color:'var(--text-3)'}}>100%</span>
+              </div>
+            )
+          }
+          return (
+            <div className="card__b" style={{display:'flex',flexDirection:'column',gap:16}}>
+              <div style={{display:'flex',height:14,borderRadius:7,overflow:'hidden',border:'1px solid var(--border)'}}>
+                {activos.map((e,i)=>(<div key={i} style={{width:`${(e.cantidad/stats.total)*100}%`,background:colors[e.estado]||'var(--slate-400)'}}/>))}
+              </div>
+              <div style={{display:'flex',flexDirection:'column',gap:9}}>
+                {activos.map((e,i)=>(
+                  <div key={i} style={{display:'flex',alignItems:'center',gap:10,fontSize:13}}>
+                    <div style={{width:10,height:10,borderRadius:3,background:colors[e.estado]||'var(--slate-400)',flexShrink:0}}/>
+                    <span style={{flex:1,fontWeight:500}}>{e.estado}</span>
+                    <span className="mono" style={{fontWeight:700}}>{e.cantidad}</span>
+                    <span className="mono" style={{color:'var(--text-3)'}}>{stats.total>0?Math.round(e.cantidad/stats.total*100):0}%</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )
+        })()}
+      </div>
         </>
       )}
     </div>
