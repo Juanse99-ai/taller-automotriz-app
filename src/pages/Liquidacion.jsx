@@ -2045,14 +2045,13 @@ function EstadoCuenta({ prestamos, tecnicos, notify }) {
             )}
             <div className="field">
               <label>Tipo de movimiento</label>
-              <div className="mov-toggle">
-                <button type="button" className={`mov-toggle__btn${form.tipo === 'prestamo' ? ' on prestamo' : ''}`} onClick={() => setForm(f => ({ ...f, tipo: 'prestamo' }))}>
-                  <strong>Préstamo</strong><span>sube lo que debe (+)</span>
-                </button>
-                <button type="button" className={`mov-toggle__btn${form.tipo === 'abono' ? ' on abono' : ''}`} onClick={() => setForm(f => ({ ...f, tipo: 'abono' }))}>
-                  <strong>Abono / descuento</strong><span>baja lo que debe (−)</span>
-                </button>
+              <div className="segctl segctl--full">
+                <button type="button" className={form.tipo === 'prestamo' ? 'on' : ''} onClick={() => setForm(f => ({ ...f, tipo: 'prestamo' }))}>Préstamo</button>
+                <button type="button" className={form.tipo === 'abono' ? 'on' : ''} onClick={() => setForm(f => ({ ...f, tipo: 'abono' }))}>Abono / descuento</button>
               </div>
+              <p style={{ margin: '7px 2px 0', fontSize: 12.5, fontWeight: 600, color: form.tipo === 'prestamo' ? 'var(--amber-700)' : 'var(--green-700)' }}>
+                {form.tipo === 'prestamo' ? 'Sube lo que debe (+)' : 'Baja lo que debe (−)'}
+              </p>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
               <div className="field"><label>Monto</label><MoneyInput value={form.monto} onChange={v => setForm(f => ({ ...f, monto: v, valorDia: '', dias: '' }))} placeholder="0" /></div>
