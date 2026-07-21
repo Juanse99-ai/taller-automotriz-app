@@ -472,8 +472,10 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
           <h2>Órdenes de trabajo</h2>
         </div>
         <div className="actions">
-          <button className={`btn ${vista === 'lista' ? 'btn-primary' : 'btn-outline'}`} onClick={() => setVista('lista')}>Lista</button>
-          <button className={`btn ${vista === 'kanban' ? 'btn-primary' : 'btn-outline'}`} onClick={() => setVista('kanban')}>Kanban</button>
+          <div className="segctl">
+            <button type="button" className={vista === 'lista' ? 'on' : ''} onClick={() => setVista('lista')}>Lista</button>
+            <button type="button" className={vista === 'kanban' ? 'on' : ''} onClick={() => setVista('kanban')}>Kanban</button>
+          </div>
           <Button variant="primary" onClick={() => setVista('nuevo')}>+ Nueva OT</Button>
         </div>
       </div>

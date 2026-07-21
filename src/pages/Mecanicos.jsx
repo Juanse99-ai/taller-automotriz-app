@@ -106,12 +106,10 @@ export default function Mecanicos({ trabajos, onNavigate, notify }) {
           <h2>Equipo técnico</h2>
         </div>
         <div className="actions">
-          <button
-            className={`btn btn-sm ${vistaAgenda ? 'btn-primary' : 'btn-outline'}`}
-            onClick={() => setVistaAgenda(v => !v)}
-          >
-            {vistaAgenda ? 'Ver tarjetas' : 'Agenda semanal'}
-          </button>
+          <div className="segctl">
+            <button type="button" className={!vistaAgenda ? 'on' : ''} onClick={() => setVistaAgenda(false)}>Tarjetas</button>
+            <button type="button" className={vistaAgenda ? 'on' : ''} onClick={() => setVistaAgenda(true)}>Agenda</button>
+          </div>
           <Button variant="primary" size="sm" onClick={() => setAgregando(true)}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
             Agregar técnico
