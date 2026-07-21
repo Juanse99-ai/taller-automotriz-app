@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { Button, Badge } from '../components/ui'
+import { Button, Badge, IconX } from '../components/ui'
 
 const ROLES = [
   { value: 'admin', label: 'Administrador', desc: 'Acceso completo (todas las secciones)' },
@@ -206,7 +206,7 @@ export default function Usuarios({ notify, currentUser }) {
               <h3 style={{ margin: 0, fontSize: 17, fontWeight: 800 }}>
                 {editing === 'new' ? 'Nuevo usuario' : `Editar ${editing.usuario}`}
               </h3>
-              <Button variant="ghost" size="sm" onClick={cerrar}>✕</Button>
+              <Button variant="ghost" size="sm" onClick={cerrar}><IconX /></Button>
             </div>
             <form onSubmit={guardar} className="modal__b" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
               <div className="field">

@@ -3,7 +3,7 @@ import { fmt, fmtDate } from '../utils/helpers'
 import { TALLER, ESTADOS } from '../utils/constants'
 import { lsGet, lsSet } from '../services/storage'
 import ConfirmDialog from '../components/ConfirmDialog'
-import { Button } from '../components/ui'
+import { Button, IconX } from '../components/ui'
 
 // ── Storage keys (locales al CRM) ───────────────────────────────────────────
 const KEY_CONFIG = 'crm:config'
@@ -652,7 +652,7 @@ export default function CRM({ trabajos = [], clientes, vehiculos, notify, actual
           <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 560 }}>
             <div className="modal__h">
               <h3 style={{ margin: 0, fontSize: 16, fontWeight: 800 }}>Contactar a {contactoActivo.cliente.nombre}</h3>
-              <Button variant="ghost" size="sm" onClick={() => setContactoActivo(null)}>✕</Button>
+              <Button variant="ghost" size="sm" onClick={() => setContactoActivo(null)}><IconX /></Button>
             </div>
             <div className="modal__b" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
               <div style={{ background: 'var(--bg-subtle)', borderRadius: 8, padding: '10px 14px', fontSize: 12.5 }}>
@@ -750,7 +750,7 @@ export default function CRM({ trabajos = [], clientes, vehiculos, notify, actual
           <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 480 }}>
             <div className="modal__h">
               <h3 style={{ margin: 0 }}>Tipo de aceite</h3>
-              <Button variant="ghost" size="sm" onClick={() => setEditandoAceite(null)}>✕</Button>
+              <Button variant="ghost" size="sm" onClick={() => setEditandoAceite(null)}><IconX /></Button>
             </div>
             <div className="modal__b" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               <div style={{ fontSize: 12.5, color: 'var(--text-2)' }}>
@@ -811,7 +811,7 @@ export default function CRM({ trabajos = [], clientes, vehiculos, notify, actual
                 </svg>
                 Clientes inactivos · <strong>{filtrados.length}</strong> de {recordatoriosImportar.length}
               </h3>
-              <Button variant="ghost" size="sm" onClick={() => setShowImportar(false)} aria-label="Cerrar">✕</Button>
+              <Button variant="ghost" size="sm" onClick={() => setShowImportar(false)} aria-label="Cerrar"><IconX /></Button>
             </div>
 
             {/* Filtros y búsqueda — siempre visibles */}
@@ -943,7 +943,7 @@ export default function CRM({ trabajos = [], clientes, vehiculos, notify, actual
           <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 640 }}>
             <div className="modal__h">
               <h3 style={{ margin: 0 }}>⚙️ Servicios e intervalos</h3>
-              <Button variant="ghost" size="sm" onClick={() => setShowConfig(false)}>✕</Button>
+              <Button variant="ghost" size="sm" onClick={() => setShowConfig(false)}><IconX /></Button>
             </div>
             <div className="modal__b" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               <p style={{ margin: 0, fontSize: 12.5, color: 'var(--text-3)' }}>
@@ -960,7 +960,7 @@ export default function CRM({ trabajos = [], clientes, vehiculos, notify, actual
                   <input type="number" className="input" value={s.meses}
                     onChange={e => setConfig(c => ({ ...c, servicios: c.servicios.map((x, i) => i === idx ? { ...x, meses: parseInt(e.target.value) || 0 } : x) }))}
                     style={{ fontSize: 12.5 }} placeholder="meses" />
-                  <Button variant="ghost" size="sm" onClick={() => setConfig(c => ({ ...c, servicios: c.servicios.filter((_, i) => i !== idx) }))} style={{ color: 'var(--red-600)' }}>✕</Button>
+                  <Button variant="ghost" size="sm" onClick={() => setConfig(c => ({ ...c, servicios: c.servicios.filter((_, i) => i !== idx) }))} style={{ color: 'var(--red-600)' }}><IconX /></Button>
                 </div>
               ))}
               <Button variant="outline" size="sm" onClick={() => setConfig(c => ({ ...c, servicios: [...c.servicios, { key: `custom_${Date.now()}`, nombre: 'Nuevo servicio', km: 10000, meses: 6 }] }))}>+ Añadir servicio</Button>
@@ -979,7 +979,7 @@ export default function CRM({ trabajos = [], clientes, vehiculos, notify, actual
           <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 720 }}>
             <div className="modal__h">
               <h3 style={{ margin: 0 }}>📝 Plantillas de mensajes</h3>
-              <Button variant="ghost" size="sm" onClick={() => setShowTemplate(null)}>✕</Button>
+              <Button variant="ghost" size="sm" onClick={() => setShowTemplate(null)}><IconX /></Button>
             </div>
             <div className="modal__b" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               <p style={{ margin: 0, fontSize: 12.5, color: 'var(--text-3)' }}>

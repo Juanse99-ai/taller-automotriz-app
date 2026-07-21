@@ -403,6 +403,12 @@ input,select,textarea{font-family:inherit;font-size:14px;color:inherit}
    antes los <button> con estilo inline no mostraban foco. */
 button:focus-visible,[role="button"]:focus-visible,a:focus-visible,select:focus-visible{outline:2px solid var(--primary);outline-offset:2px;border-radius:6px}
 .icobtn:active{transform:scale(.94)}
+/* Estilo BASE del icon-button (antes solo existía scoped a .topbar/.sidebar, así
+   que los .icobtn sueltos —p.ej. la X de cerrar de los modales— quedaban sin
+   estilo: glifo delgado y descolocado). Los scoped siguen ganando por especificidad. */
+.icobtn{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:9px;color:var(--text-3);background:transparent;cursor:pointer;transition:background .12s,color .12s,transform .12s}
+.icobtn:hover{background:var(--bg-subtle);color:var(--text)}
+.icobtn svg{width:18px;height:18px;stroke:currentColor;fill:none}
 /* Botón "limpiar" (✕) dentro de las barras de búsqueda — antes eran ✕ sueltos
    con estilos inline y sin hover; ahora consistentes en toda la app. */
 .input-clear{display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;width:22px;height:22px;padding:0;border:none;border-radius:50%;background:transparent;color:var(--text-4);cursor:pointer;transition:background .12s,color .12s}

@@ -4,7 +4,7 @@ import { COMISION, ESTADOS } from '../utils/constants'
 import { manoObraBase } from '../utils/comision'
 import { useTecnicos, tecnicosActivos, agregarTecnico, actualizarTecnico, setTecnicoActivo, eliminarTecnico } from '../services/tecnicos'
 import ConfirmDialog from '../components/ConfirmDialog'
-import { Button, Badge } from '../components/ui'
+import { Button, Badge, IconX } from '../components/ui'
 
 const ACTIVOS = [ESTADOS.PENDIENTE, ESTADOS.EN_DIAGNOSTICO, ESTADOS.ESPERANDO_REPUESTOS, ESTADOS.EN_PROGRESO]
 
@@ -285,7 +285,7 @@ export default function Mecanicos({ trabajos, onNavigate, notify }) {
           <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 440 }}>
             <div className="modal__h">
               <h3>Editar técnico</h3>
-              <button className="icobtn" onClick={() => setEditando(null)} aria-label="Cerrar">✕</button>
+              <button className="icobtn" onClick={() => setEditando(null)} aria-label="Cerrar"><IconX /></button>
             </div>
             <div className="modal__b" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
               <div className="field">
@@ -335,7 +335,7 @@ export default function Mecanicos({ trabajos, onNavigate, notify }) {
           <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 440 }}>
             <div className="modal__h">
               <h3>Agregar técnico</h3>
-              <button className="icobtn" onClick={() => setAgregando(false)} aria-label="Cerrar">✕</button>
+              <button className="icobtn" onClick={() => setAgregando(false)} aria-label="Cerrar"><IconX /></button>
             </div>
             <form onSubmit={handleAgregar}>
               <div className="modal__b" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>

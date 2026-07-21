@@ -11,6 +11,7 @@ import {
   copiarPortalLink,
   portalQR,
 } from '../utils/portalLink'
+import { IconX } from './ui'
 
 export default function CompartirPortalModal({ cedula = '', cliente = '', telefono = '', onClose }) {
   const [ced, setCed] = useState(cedula)
@@ -38,7 +39,7 @@ export default function CompartirPortalModal({ cedula = '', cliente = '', telefo
               {cliente ? `Para ${cliente}` : 'Genera un link para que el cliente vea el estado de su vehiculo'}
             </p>
           </div>
-          <button className="icobtn" onClick={onClose}>✕</button>
+          <button className="icobtn" onClick={onClose} aria-label="Cerrar"><IconX /></button>
         </div>
         <div className="modal__b" style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
           <div className="field">

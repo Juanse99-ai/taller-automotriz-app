@@ -4,6 +4,7 @@
 // estilos nuevos: adoptarlos reduce el "estilo inline" repetido sin cambiar el look.
 export { default as Button } from './Button'
 export { default as Badge } from './Badge'
+export { default as IconX } from './IconX'
 export { default as Card } from './Card'
 export { default as Toolbar } from './Toolbar'
 export { Field, Input, Select, Textarea } from './Field'

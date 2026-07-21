@@ -13,7 +13,7 @@
 // =====================================================================
 import { useState, useEffect } from 'react'
 import { imprimirFichaOT } from '../utils/fichaPdf'
-import { Button } from './ui'
+import { Button, IconX } from './ui'
 
 // Segundos → "mm:ss" o "h:mm:ss".
 const fmtTiempo = (seg) => {
@@ -95,7 +95,7 @@ export default function FichaTecnico({ trabajo: t, tecNombre, onClose, guardar }
               {t.otCodigo || t.id} · Técnico: <strong style={{ color: 'var(--text-2)' }}>{tecNombre?.(t.tecnicoId) || '—'}</strong>
             </div>
           </div>
-          <button className="icobtn" onClick={onClose} aria-label="Cerrar">✕</button>
+          <button className="icobtn" onClick={onClose} aria-label="Cerrar"><IconX /></button>
         </div>
 
         <div className="modal__b" style={{ overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 14 }}>

@@ -15,7 +15,7 @@ import Switch from '../components/Switch'
 import MoneyInput from '../components/MoneyInput'
 import SignaturePad from '../components/SignaturePad'
 import ConfirmDialog from '../components/ConfirmDialog'
-import { Button, Badge } from '../components/ui'
+import { Button, Badge, IconX } from '../components/ui'
 
 // ¿La fecha cae dentro del rango elegido? (hoy / semana = últimos 7 días / mes = mes actual)
 function dentroDeFecha(fecha, modo, now) {
@@ -802,7 +802,7 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
                   <div className="modal-title" style={{ fontFamily: 'var(--mono)', color: 'var(--blue-600)' }}>{t.otCodigo || '—'} · {t.placa}</div>
                   <div style={{ fontSize: 12.5, color: 'var(--text-3)', marginTop: 2 }}>{t.cliente || 'Sin cliente'} · {[t.marca, t.modelo].filter(Boolean).join(' ') || '—'}</div>
                 </div>
-                <button className="icobtn" onClick={() => { setPreviewId(null); setFirmando(false) }} aria-label="Cerrar" style={{ flexShrink: 0 }}>✕</button>
+                <button className="icobtn" onClick={() => { setPreviewId(null); setFirmando(false) }} aria-label="Cerrar" style={{ flexShrink: 0 }}><IconX /></button>
               </div>
               <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                 <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>

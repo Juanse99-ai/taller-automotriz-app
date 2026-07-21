@@ -4,7 +4,7 @@ import { INSPECCION_CATEGORIAS } from '../utils/vehiculos'
 import { TECNICOS } from '../utils/constants'
 import { lsGet, lsSet, LS_KEYS } from '../services/storage'
 import ConfirmDialog from '../components/ConfirmDialog'
-import { Button, Badge } from '../components/ui'
+import { Button, Badge, IconX } from '../components/ui'
 
 const ESTADO_ITEM = { BUENO: 'bueno', SUGERIDO: 'sugerido', URGENTE: 'urgente', NO_APLICA: 'no_aplica' }
 
@@ -129,7 +129,7 @@ export default function Inspecciones({ trabajos, notify, onVincularInspeccion, i
                         <div style={{display:'flex',gap:4,justifyContent:'flex-end'}}>
                           <Button variant="outline" size="sm" onClick={e => { e.stopPropagation(); setEditId(i.id); setVista('editar') }}>Editar</Button>
                           <Button variant="outline" size="sm" onClick={e => { e.stopPropagation(); vincularATrabajo(i) }} title="Vincular al trabajo">OT</Button>
-                          <Button variant="ghost" size="sm" onClick={e => { e.stopPropagation(); setConfirmCfg({ title: 'Eliminar inspección', lead: 'No se puede deshacer.', confirmLabel: 'Eliminar', tone: 'danger', onConfirm: () => { guardar(inspecciones.filter(x => x.id !== i.id)); notify('Inspeccion eliminada', 'info') } }); return }}>✕</Button>
+                          <Button variant="ghost" size="sm" onClick={e => { e.stopPropagation(); setConfirmCfg({ title: 'Eliminar inspección', lead: 'No se puede deshacer.', confirmLabel: 'Eliminar', tone: 'danger', onConfirm: () => { guardar(inspecciones.filter(x => x.id !== i.id)); notify('Inspeccion eliminada', 'info') } }); return }}><IconX /></Button>
                         </div>
                       </td>
                     </tr>

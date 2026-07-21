@@ -11,7 +11,7 @@ import { usePrestamos } from '../hooks/usePrestamos'
 import { upsertPrestamo, fetchPrestamos, fetchLiquidacionIdsPorBase } from '../services/supabase'
 import { splitComision, repartir } from '../services/money'
 import ConfirmDialog, { DlgRow } from '../components/ConfirmDialog'
-import { Button, Badge } from '../components/ui'
+import { Button, Badge, IconX } from '../components/ui'
 import { loadLogo, drawHeader, drawSectionHeader, drawDataBlock, drawTotalsBox, drawSignatures, drawFooter, tableStylesItems, tableStylesMuted, PDF_LAYOUT } from '../utils/pdfTheme'
 
 // Obtener base de mano de obra SIN IVA (solo servicios)
@@ -1466,7 +1466,7 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
                             lead: `${tipoLabel(m.tipo)} · ${fmt(m.monto)} · ${fmtDate(m.fecha)}`,
                             confirmLabel: 'Sí, eliminar', tone: 'danger',
                             onConfirm: () => hookEliminarMov(m.id),
-                          })} aria-label="Eliminar movimiento">✕</Button></td>
+                          })} aria-label="Eliminar movimiento"><IconX /></Button></td>
                         </tr>
                       ))}
                     </tbody>
@@ -2123,7 +2123,7 @@ function EstadoCuenta({ prestamos, tecnicos, notify }) {
                         lead: `${m.tipo === 'abono' ? 'Abono' : 'Préstamo'} · ${fmt(m.monto)} · ${fmtDate(m.fecha)}`,
                         confirmLabel: 'Sí, eliminar', tone: 'danger',
                         onConfirm: () => eliminarMovimiento(m.id),
-                      })}>✕</button>
+                      })}><IconX /></button>
                     </div>
                     {puedeCuentti && (
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 10, flexWrap: 'wrap' }}>
