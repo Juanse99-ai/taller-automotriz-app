@@ -394,7 +394,7 @@ input,select,textarea{font-family:inherit;font-size:14px;color:inherit}
 .pagehd .actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 
 /* button */
-.btn{position:relative;display:inline-flex;align-items:center;justify-content:center;gap:8px;height:44px;padding:0 20px;border-radius:999px;border:1px solid transparent;font-family:var(--font);font-size:15px;font-weight:600;white-space:nowrap;cursor:pointer;-webkit-backdrop-filter:blur(10px) saturate(160%);backdrop-filter:blur(10px) saturate(160%);transition:background .16s,transform 140ms var(--ease-out),box-shadow .16s,filter .16s}
+.btn{position:relative;display:inline-flex;align-items:center;justify-content:center;gap:8px;height:44px;padding:0 20px;border-radius:999px;border:1px solid transparent;font-family:var(--font);font-size:15px;font-weight:600;white-space:nowrap;cursor:pointer;transition:background .16s,border-color .16s,transform 140ms var(--ease-out),box-shadow .16s,filter .16s}
 .btn:active{transform:scale(.96);filter:brightness(.95)}
 .btn:hover:not(:active){transform:translateY(-1px)}
 .btn:focus-visible{outline:2px solid var(--primary);outline-offset:2px}
@@ -422,22 +422,22 @@ a,button,[role=button],.navlink,.mob-tab,.icobtn,.tabs button{-webkit-tap-highli
 .m3switch:focus-visible{outline:2px solid var(--primary);outline-offset:2px}
 .m3switch svg{width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:2.2}
 .btn svg{width:17px;height:17px;stroke:currentColor;fill:none;stroke-width:2}
-/* === Sistema Liquid Glass (cápsula) — unificado en toda la app ===
-   Vidrio translúcido: el color es el tinte del rol; el borde claro (rim) y los
-   reflejos internos (inset) dan el brillo de vidrio; la sombra hace que flote.
-   color-mix adapta el tinte al tema (light/dark) sin duplicar hex. */
-.btn-primary{background:color-mix(in srgb,var(--primary) 85%,transparent);color:#fff;border-color:rgba(255,255,255,.32);box-shadow:0 8px 20px color-mix(in srgb,var(--primary) 32%,transparent),inset 0 1px 1px rgba(255,255,255,.55),inset 0 -9px 12px -9px rgba(255,255,255,.35)}
-.btn-primary:hover:not(:active){background:color-mix(in srgb,var(--primary) 93%,transparent)}
-/* Secundario: vidrio neutro esmerilado (el look "Get Started") */
-.btn-outline{background:color-mix(in srgb,var(--bg-raised) 62%,transparent);color:var(--text);border-color:rgba(255,255,255,.85);box-shadow:0 8px 20px rgba(15,23,42,.14),inset 0 1px 1px rgba(255,255,255,.95),inset 0 -9px 12px -9px rgba(255,255,255,.6)}
-.btn-outline:hover:not(:active){background:color-mix(in srgb,var(--bg-raised) 80%,transparent)}
-/* Ghost: el miembro más liviano del vidrio (acciones inline / iconos en tabla) */
-.btn-ghost{background:color-mix(in srgb,var(--bg-raised) 28%,transparent);color:var(--text-2);border-color:transparent;box-shadow:0 3px 10px rgba(15,23,42,.10),inset 0 1px 1px rgba(255,255,255,.55)}
-.btn-ghost:hover:not(:active){background:color-mix(in srgb,var(--bg-raised) 55%,transparent);color:var(--text)}
-.btn-danger{background:color-mix(in srgb,var(--red-600) 85%,transparent);color:#fff;border-color:rgba(255,255,255,.30);box-shadow:0 8px 20px color-mix(in srgb,var(--red-600) 30%,transparent),inset 0 1px 1px rgba(255,255,255,.5),inset 0 -9px 12px -9px rgba(255,255,255,.3)}
-.btn-danger:hover:not(:active){background:color-mix(in srgb,var(--red-600) 93%,transparent)}
-.btn-accent{background:color-mix(in srgb,var(--amber-400) 88%,transparent);color:var(--navy-900);border-color:rgba(255,255,255,.4);box-shadow:0 8px 20px color-mix(in srgb,var(--amber-400) 34%,transparent),inset 0 1px 1px rgba(255,255,255,.65),inset 0 -9px 12px -9px rgba(255,255,255,.45)}
-.btn-accent:hover:not(:active){background:color-mix(in srgb,var(--amber-500) 92%,transparent);color:#fff}
+/* === Botones — superficie sólida y sobria (estilo iOS) ===
+   Relleno pleno del color del rol, borde fino, sombra corta y baja. Un solo
+   reflejo muy tenue arriba da relieve, sin el "vidrio": ni brillos fuertes,
+   ni glow inferior, ni blur. color-mix adapta el tinte al tema. */
+.btn-primary{background:var(--primary);color:#fff;border-color:transparent;box-shadow:0 1px 2px rgba(15,23,42,.10),0 2px 6px color-mix(in srgb,var(--primary) 20%,transparent),inset 0 1px 0 rgba(255,255,255,.15)}
+.btn-primary:hover:not(:active){background:color-mix(in srgb,var(--primary) 90%,#000)}
+/* Secundario: superficie limpia con borde fino (ya no vidrio esmerilado) */
+.btn-outline{background:var(--bg-raised);color:var(--text);border-color:var(--border-strong);box-shadow:0 1px 2px rgba(15,23,42,.05)}
+.btn-outline:hover:not(:active){background:var(--bg-subtle)}
+/* Ghost: el más liviano — sin relleno ni sombra hasta el hover */
+.btn-ghost{background:transparent;color:var(--text-2);border-color:transparent;box-shadow:none}
+.btn-ghost:hover:not(:active){background:var(--fill);color:var(--text)}
+.btn-danger{background:var(--red-600);color:#fff;border-color:transparent;box-shadow:0 1px 2px rgba(15,23,42,.10),0 2px 6px color-mix(in srgb,var(--red-600) 20%,transparent),inset 0 1px 0 rgba(255,255,255,.15)}
+.btn-danger:hover:not(:active){background:color-mix(in srgb,var(--red-600) 90%,#000)}
+.btn-accent{background:var(--amber-400);color:var(--navy-900);border-color:transparent;box-shadow:0 1px 2px rgba(15,23,42,.10),0 2px 6px color-mix(in srgb,var(--amber-400) 24%,transparent),inset 0 1px 0 rgba(255,255,255,.22)}
+.btn-accent:hover:not(:active){background:var(--amber-500);color:var(--navy-900)}
 .btn-sm{height:38px;padding:0 16px;font-size:13.5px;gap:6px}
 /* Botón de acción SOLO ícono (cuadrado): para acciones repetidas (editar, PDF,
    eliminar…) que en texto quedan largas. Lleva aria-label + title por claridad. */
@@ -687,13 +687,12 @@ textarea.input{min-height:88px;resize:vertical;padding-top:11px}
    ============================================ */
 
 /* alias botones (legacy) */
-.btn-success{background:color-mix(in srgb,var(--green-600) 85%,transparent);color:#fff;border-color:rgba(255,255,255,.30);box-shadow:0 8px 20px color-mix(in srgb,var(--green-600) 30%,transparent),inset 0 1px 1px rgba(255,255,255,.5),inset 0 -9px 12px -9px rgba(255,255,255,.3)}
-.btn-success:hover:not(:active){background:color-mix(in srgb,var(--green-600) 93%,transparent)}
-.btn-warning{background:color-mix(in srgb,var(--amber-400) 88%,transparent);color:var(--navy-900);border-color:rgba(255,255,255,.4);box-shadow:0 8px 20px color-mix(in srgb,var(--amber-400) 34%,transparent),inset 0 1px 1px rgba(255,255,255,.65)}
-.btn-warning:hover:not(:active){background:color-mix(in srgb,var(--amber-500) 92%,transparent);color:#fff}
-/* Vidrio en modo oscuro: los reflejos blancos fuertes se apagan; el rim se vuelve
-   una línea de luz tenue y la sombra ambiente se profundiza. */
-[data-theme="dark"] .btn-outline{border-color:rgba(255,255,255,.16);box-shadow:0 8px 22px rgba(0,0,0,.42),inset 0 1px 1px rgba(255,255,255,.14),inset 0 -9px 12px -9px rgba(255,255,255,.07)}
+.btn-success{background:var(--green-600);color:#fff;border-color:transparent;box-shadow:0 1px 2px rgba(15,23,42,.10),0 2px 6px color-mix(in srgb,var(--green-600) 22%,transparent),inset 0 1px 0 rgba(255,255,255,.15)}
+.btn-success:hover:not(:active){background:color-mix(in srgb,var(--green-600) 90%,#000)}
+.btn-warning{background:var(--amber-400);color:var(--navy-900);border-color:transparent;box-shadow:0 1px 2px rgba(15,23,42,.10),0 2px 6px color-mix(in srgb,var(--amber-400) 24%,transparent),inset 0 1px 0 rgba(255,255,255,.22)}
+.btn-warning:hover:not(:active){background:var(--amber-500);color:var(--navy-900)}
+/* Modo oscuro: el borde ya adapta (--border-strong); solo baja la sombra ambiente. */
+[data-theme="dark"] .btn-outline{box-shadow:0 1px 2px rgba(0,0,0,.3)}
 [data-theme="dark"] .btn-ghost{box-shadow:0 3px 10px rgba(0,0,0,.35),inset 0 1px 1px rgba(255,255,255,.10)}
 [data-theme="dark"] .btn-primary,[data-theme="dark"] .btn-danger,[data-theme="dark"] .btn-accent,[data-theme="dark"] .btn-success,[data-theme="dark"] .btn-warning{border-color:rgba(255,255,255,.22)}
 .btn:disabled,.btn.disabled{opacity:.52;cursor:not-allowed;pointer-events:none}
@@ -796,8 +795,8 @@ tbody tr:active{background:var(--fill-2)}
 .segctl::-webkit-scrollbar{display:none}
 .segctl button{flex-shrink:0;display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:8px 16px;font-size:13px;font-weight:600;border-radius:999px;border:none;background:none;color:var(--text-3);cursor:pointer;white-space:nowrap;font-family:var(--font);transition:background .2s cubic-bezier(.3,.9,.4,1),color .2s,box-shadow .2s}
 .segctl button:hover:not(.on){color:var(--text-2)}
-.segctl button.on{color:var(--text);background:color-mix(in srgb,var(--bg-raised) 92%,transparent);-webkit-backdrop-filter:blur(10px) saturate(160%);backdrop-filter:blur(10px) saturate(160%);box-shadow:0 4px 12px rgba(15,23,42,.16),inset 0 1px 1px rgba(255,255,255,.9)}
-[data-theme="dark"] .segctl button.on{background:color-mix(in srgb,var(--bg-raised) 96%,transparent);box-shadow:0 4px 14px rgba(0,0,0,.42),inset 0 1px 1px rgba(255,255,255,.12)}
+.segctl button.on{color:var(--text);background:var(--bg-raised);box-shadow:0 1px 3px rgba(15,23,42,.12),0 1px 1px rgba(15,23,42,.04)}
+[data-theme="dark"] .segctl button.on{background:color-mix(in srgb,var(--bg-raised) 86%,#fff);box-shadow:0 1px 3px rgba(0,0,0,.4)}
 /* Checklist de inventario del vehículo (estado de ingreso) */
 .ingreso-inv-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1px 14px}
 .ingreso-chk{display:flex;align-items:center;gap:9px;padding:7px 2px;cursor:pointer;font-size:14px;color:var(--text-2);position:relative;user-select:none}

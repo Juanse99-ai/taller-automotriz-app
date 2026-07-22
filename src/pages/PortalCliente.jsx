@@ -816,7 +816,7 @@ export default function PortalCliente() {
                 <div style={{marginTop:12,display:'flex',justifyContent:'flex-end'}}>
                   {c.aprobada
                     ? <span className="badge badge-s" style={{textTransform:'none',letterSpacing:0}}>Aprobada ✓{c.aprobadaEn?` · ${fmtDate(c.aprobadaEn)}`:''}</span>
-                    : <Button variant="primary" onClick={()=>{setErrorCotiz('');setFirmandoCotiz(c)}}>Aprobar cotización</Button>}
+                    : <Button variant="success" onClick={()=>{setErrorCotiz('');setFirmandoCotiz(c)}}>Aprobar cotización</Button>}
                 </div>
               </div>
             ))}
