@@ -109,14 +109,10 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
     lsSet('mda:trab_estado', filtroEstado); lsSet('mda:trab_tecnico', filtroTecnico); lsSet('mda:trab_fecha', filtroFecha)
   }, [filtroEstado, filtroTecnico, filtroFecha])
 
-  const filtered = useMemo(() => {
+  // Base: aplica técnico + búsqueda + fecha, pero NO el estado (así se cuenta cuántos
+  // hay en cada estado para los chips, y los conteos siempre cuadran con la lista).
+  const baseFiltrado = useMemo(() => {
     let list = [...trabajos]
-    if (filtroEstado === 'activos') {
-      // Activos = todo lo que NO esta cerrado
-      list = list.filter(t => t.estado !== ESTADOS.COMPLETADO && t.estado !== ESTADOS.CANCELADO)
-    } else if (filtroEstado !== 'todos') {
-      list = list.filter(t => t.estado === filtroEstado)
-    }
     if (filtroTecnico !== 'todos') list = list.filter(t => String(t.tecnicoId) === filtroTecnico)
     if (filtroBusqueda.trim()) {
       const q = filtroBusqueda.toLowerCase()
@@ -132,8 +128,29 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
       const now = new Date()
       list = list.filter(t => dentroDeFecha(t.fecha, filtroFecha, now))
     }
-    return list.sort((a, b) => new Date(b.fecha) - new Date(a.fecha))
-  }, [trabajos, filtroEstado, filtroTecnico, filtroBusqueda, filtroFecha, vista])
+    return list
+  }, [trabajos, filtroTecnico, filtroBusqueda, filtroFecha, vista])
+
+  const filtered = useMemo(() => {
+    let list = baseFiltrado
+    if (filtroEstado === 'activos') {
+      // Activos = todo lo que NO esta cerrado
+      list = list.filter(t => t.estado !== ESTADOS.COMPLETADO && t.estado !== ESTADOS.CANCELADO)
+    } else if (filtroEstado !== 'todos') {
+      list = list.filter(t => t.estado === filtroEstado)
+    }
+    return [...list].sort((a, b) => new Date(b.fecha) - new Date(a.fecha))
+  }, [baseFiltrado, filtroEstado])
+
+  // Conteos por estado para los chips de las pestañas.
+  const conteos = useMemo(() => {
+    const c = { activos: 0, todos: baseFiltrado.length }
+    for (const t of baseFiltrado) {
+      if (t.estado !== ESTADOS.COMPLETADO && t.estado !== ESTADOS.CANCELADO) c.activos++
+      c[t.estado] = (c[t.estado] || 0) + 1
+    }
+    return c
+  }, [baseFiltrado])
 
   // KPIs del encabezado: cuentan sobre la lista FILTRADA (la misma que se ve abajo),
   // para que cambien al aplicar búsqueda/estado/técnico/fecha.
@@ -539,7 +556,9 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
       {/* Tabs + search/filter bar */}
       <div className="tabs" style={{ marginBottom: 12 }}>
         {statesTabs.map(([key, label]) => (
-          <button key={key} className={filtroEstado === key ? 'on' : ''} onClick={() => setFiltroEstado(key)}>{label}</button>
+          <button key={key} className={filtroEstado === key ? 'on' : ''} onClick={() => setFiltroEstado(key)}>
+            {label}{conteos[key] ? <span className="tab-count">{conteos[key]}</span> : null}
+          </button>
         ))}
       </div>
 

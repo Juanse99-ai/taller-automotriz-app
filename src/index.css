@@ -561,6 +561,9 @@ textarea.input{min-height:88px;resize:vertical;padding-top:11px}
 .tabs button:hover{color:var(--text)}
 .tabs button.on{color:var(--primary);border-bottom-color:var(--primary)}
 [data-theme="dark"] .tabs button.on{color:var(--primary);border-bottom-color:var(--primary)}
+/* Contador dentro de una pestaña de estado (chips de resumen) */
+.tab-count{display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;margin-left:6px;padding:0 5px;font-family:var(--mono);font-size:10.5px;font-weight:700;line-height:1;border-radius:999px;background:var(--fill);color:var(--text-3);vertical-align:middle}
+.tabs button.on .tab-count{background:var(--primary);color:#fff}
 
 /* chart bar */
 .chartbar{display:flex;align-items:flex-end;gap:6px;height:140px;padding:0 2px}
