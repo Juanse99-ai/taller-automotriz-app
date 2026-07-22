@@ -666,8 +666,17 @@ export default function PortalCliente() {
   const totalPorPagar = facturasPendientes.reduce((s, t) => s + (t.total || 0), 0)
 
   // Cotizaciones del cliente (presupuestos). Las pendientes se aprueban firmando.
-  const cotizaciones = (datos.cotizaciones || []).slice().sort((a, b) => new Date(b.fecha) - new Date(a.fecha))
-  const cotizPendientes = cotizaciones.filter(c => !c.aprobada)
+  // Solo 'Pendiente' está genuinamente por aprobar. El estado manda: Aprobada/
+  // Facturada/Rechazada ya están resueltas en el taller. 'aprobada_en' solo lo pone
+  // la firma del portal, así que NO puede ser el único criterio (antes, cotizaciones
+  // ya aprobadas en el admin —y hasta ya trabajadas y pagadas— seguían saliendo
+  // "por aprobar" al cliente).
+  const esCotizPendiente = (c) => c.estado === 'Pendiente' && !c.aprobadaEn
+  const todasCotiz = (datos.cotizaciones || []).slice().sort((a, b) => new Date(b.fecha) - new Date(a.fecha))
+  // Mostramos las pendientes + la que el cliente acabe de firmar en esta sesión
+  // (aprobadaEn local) para darle el "Aprobada ✓"; las viejas resueltas se ocultan.
+  const cotizaciones = todasCotiz.filter(c => esCotizPendiente(c) || c.aprobadaEn)
+  const cotizPendientes = cotizaciones.filter(esCotizPendiente)
   // Inspecciones del vehículo en foco (en flota) o todas (cliente normal).
   const inspFoco = esFlota
     ? datos.inspecciones.filter(i => (i.placa || '').toUpperCase() === placaFoco)
