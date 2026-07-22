@@ -851,7 +851,8 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
                       <Button variant="outline" size="sm" type="button" style={{ marginTop: 8 }} onClick={() => setFirmando(true)}>Firmar de nuevo</Button>
                     </div>
                   ) : (
-                    <Button variant="outline" size="sm" type="button" onClick={() => setFirmando(true)}>✍ Firmar recibido</Button>
+                    <Button variant="outline" size="sm" type="button" onClick={() => setFirmando(true)}
+                      icon={<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>}>Firmar recibido</Button>
                   )}
                 </div>
               </div>

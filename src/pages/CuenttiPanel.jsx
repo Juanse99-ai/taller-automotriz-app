@@ -761,8 +761,10 @@ export default function CuenttiPanel({ trabajos, actualizarTrabajo, notify }) {
               <div style={{fontSize:11,color:'var(--text-3)',marginTop:4,display:'flex',justifyContent:'space-between',alignItems:'center'}}>
                 <span>Método de pago</span>
                 <button type="button" onClick={() => setShowConfigIds(s => !s)}
-                  style={{background:'none',border:'none',color:'var(--blue-600)',fontSize:11,cursor:'pointer',padding:0,fontWeight:600}}>
-                  {showConfigIds ? '▼ Cerrar' : '⚙ Encontrar IDs'}
+                  style={{display:'inline-flex',alignItems:'center',gap:4,background:'none',border:'none',color:'var(--blue-600)',fontSize:11,cursor:'pointer',padding:0,fontWeight:600}}>
+                  {showConfigIds
+                    ? <><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg>Cerrar</>
+                    : <><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>Encontrar IDs</>}
                 </button>
               </div>
             </div>
@@ -771,7 +773,7 @@ export default function CuenttiPanel({ trabajos, actualizarTrabajo, notify }) {
           {/* Panel para encontrar los IDs reales de Cuentti */}
           {showConfigIds && (
             <div style={{marginTop:14,padding:'14px 16px',background:'var(--bg-subtle)',border:'1px solid var(--border)',borderRadius:10}}>
-              <div style={{fontSize:13,fontWeight:700,color:'var(--text)',marginBottom:6}}>🔍 Encontrar IDs reales de tu Cuentti</div>
+              <div style={{display:'flex',alignItems:'center',gap:6,fontSize:13,fontWeight:700,color:'var(--text)',marginBottom:6}}><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>Encontrar IDs reales de tu Cuentti</div>
               <div style={{fontSize:12,color:'var(--text-2)',marginBottom:12,lineHeight:1.5}}>
                 Tu Cuentti tiene IDs únicos en su tabla <code className="mono">vent_medio_pago</code>. Hay 2 formas de encontrarlos:
               </div>
@@ -781,8 +783,9 @@ export default function CuenttiPanel({ trabajos, actualizarTrabajo, notify }) {
                 <div style={{fontSize:12.5,fontWeight:700,marginBottom:6}}>Opción 1: Auto-detectar (rápido)</div>
                 <div style={{display:'flex',alignItems:'center',gap:10,flexWrap:'wrap',marginBottom:8}}>
                   <Button type="button" variant="primary" size="sm" onClick={detectarIdsAutomaticamente}
-                    disabled={detectandoMedios}>
-                    {detectandoMedios ? '🔍 Probando 30 endpoints...' : '🔍 Auto-detectar'}
+                    disabled={detectandoMedios}
+                    icon={<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>}>
+                    {detectandoMedios ? 'Probando 30 endpoints…' : 'Auto-detectar'}
                   </Button>
                   <div style={{fontSize:11.5,color:'var(--text-3)',flex:'1 1 200px'}}>
                     Prueba 30+ endpoints comunes hasta encontrar uno que liste tus medios.
@@ -844,8 +847,9 @@ export default function CuenttiPanel({ trabajos, actualizarTrabajo, notify }) {
                         </Button>
                         <Button type="button" variant="primary" size="sm" onClick={() => autoProbarIds(m.key)}
                           disabled={isLoading}
-                          style={{minWidth:80,fontSize:11.5,padding:'5px 10px'}}>
-                          {isLoading && probandoId?.id === 'auto' ? '🔍...' : '🤖 Auto 1-15'}
+                          style={{minWidth:80,fontSize:11.5,padding:'5px 10px'}}
+                          icon={<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>}>
+                          {isLoading && probandoId?.id === 'auto' ? 'Probando…' : 'Auto 1-15'}
                         </Button>
                       </div>
                     )
@@ -864,14 +868,15 @@ export default function CuenttiPanel({ trabajos, actualizarTrabajo, notify }) {
                   />
                   <Button type="button" variant="primary" size="sm" onClick={autoProbarBanco}
                     disabled={probandoId !== null}
-                    style={{minWidth:80,fontSize:11.5,padding:'5px 10px'}}>
-                    🤖 Auto 1-15
+                    style={{minWidth:80,fontSize:11.5,padding:'5px 10px'}}
+                    icon={<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>}>
+                    Auto 1-15
                   </Button>
                 </div>
               </div>
 
               <div style={{fontSize:11.5,color:'var(--text-3)',marginTop:10,padding:'8px 10px',background:'var(--blue-50,#eff6ff)',borderRadius:6,lineHeight:1.5}}>
-                <strong>💡 Recomendado:</strong> click <strong>"🤖 Auto 1-15"</strong> al lado de cada método. La app prueba IDs del 1 al 15 hasta encontrar el correcto, lo guarda y se detiene. Tarda ~30 segundos por método. Cada prueba crea-y-anula una factura test de $1.
+                <strong>Recomendado:</strong> click <strong>"Auto 1-15"</strong> al lado de cada método. La app prueba IDs del 1 al 15 hasta encontrar el correcto, lo guarda y se detiene. Tarda ~30 segundos por método. Cada prueba crea-y-anula una factura test de $1.
               </div>
             </div>
           )}
@@ -1010,7 +1015,7 @@ export default function CuenttiPanel({ trabajos, actualizarTrabajo, notify }) {
               <div className="card__h"><h3>Últimas facturas</h3>{ultimas.length > 0 && <span className="count">{ultimas.length}</span>}</div>
               {ultimas.length === 0 ? (
                 <div className="card__b" style={{ textAlign: 'center', color: 'var(--text-3)', fontSize: 13, padding: '20px 12px' }}>
-                  <div style={{ fontSize: 22, opacity: .35, marginBottom: 4 }}>📄</div>
+                  <div style={{ display: 'flex', justifyContent: 'center', opacity: .35, marginBottom: 6 }}><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div>
                   <div>Sin facturas registradas</div>
                   <div style={{ fontSize: 11, marginTop: 2 }}>Las facturas emitidas aparecen aquí.</div>
                 </div>

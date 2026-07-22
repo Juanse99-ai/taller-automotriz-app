@@ -1392,7 +1392,7 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
                 <div style={{ borderTop: '1px solid var(--border)', marginTop: 14, paddingTop: 16 }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 10, flexWrap: 'wrap' }}>
                     <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--amber-700)', textTransform: 'uppercase', letterSpacing: '.4px' }}>Diario · gasto del administrador (técnico {APORTE_ADMIN_SPLIT * 100}%)</span>
-                    <div className="tabs" style={{ margin: 0 }}>
+                    <div className="segctl" style={{ margin: 0 }}>
                       <button type="button" className={!diarioReparto ? 'on' : ''} onClick={() => setDiarioReparto(false)} style={{ fontSize: 12 }}>Solo este técnico</button>
                       <button type="button" className={diarioReparto ? 'on' : ''} onClick={() => setDiarioReparto(true)} style={{ fontSize: 12 }}>Repartir</button>
                     </div>
@@ -1573,7 +1573,7 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
                   <div style={{ marginBottom: 14, padding: '12px 14px', background: 'var(--bg-subtle)', border: '1px solid var(--border)', borderRadius: 'var(--radius)' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12, flexWrap: 'wrap' }}>
                       <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '.4px' }}>Método de pago</span>
-                      <div className="tabs" style={{ margin: 0 }}>
+                      <div className="segctl" style={{ margin: 0 }}>
                         <button type="button" className={metodoPagoLiq === 'efectivo' ? 'on' : ''} onClick={() => setMetodoPagoLiq('efectivo')} style={{ fontSize: 12.5 }}>Efectivo</button>
                         <button type="button" className={metodoPagoLiq === 'transferencia' ? 'on' : ''} onClick={() => setMetodoPagoLiq('transferencia')} style={{ fontSize: 12.5 }}>Transferencia</button>
                       </div>
@@ -2124,7 +2124,7 @@ function EstadoCuenta({ prestamos, tecnicos, notify }) {
                         ) : (
                           <>
                             <span style={{ fontSize: 11.5, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '.4px' }}>Cuentti</span>
-                            <div className="tabs" style={{ margin: 0 }}>
+                            <div className="segctl" style={{ margin: 0 }}>
                               <button type="button" className={(metodoG[m.id] || 'efectivo') === 'efectivo' ? 'on' : ''} onClick={() => setMetodoG(g => ({ ...g, [m.id]: 'efectivo' }))} style={{ fontSize: 12 }}>Efectivo</button>
                               <button type="button" className={(metodoG[m.id] || 'efectivo') === 'transferencia' ? 'on' : ''} onClick={() => setMetodoG(g => ({ ...g, [m.id]: 'transferencia' }))} style={{ fontSize: 12 }}>Transferencia</button>
                             </div>
