@@ -426,7 +426,7 @@ a,button,[role=button],.navlink,.mob-tab,.icobtn,.tabs button{-webkit-tap-highli
    Relleno pleno del color del rol, borde fino, sombra corta y baja. Un solo
    reflejo muy tenue arriba da relieve, sin el "vidrio": ni brillos fuertes,
    ni glow inferior, ni blur. color-mix adapta el tinte al tema. */
-.btn-primary{background:var(--primary);color:#fff;border-color:transparent;box-shadow:0 1px 2px rgba(15,23,42,.10),0 2px 6px color-mix(in srgb,var(--primary) 20%,transparent),inset 0 1px 0 rgba(255,255,255,.15)}
+.btn-primary{background:var(--primary);color:#fff;border-color:transparent;box-shadow:0 1px 2px rgba(15,23,42,.12)}
 .btn-primary:hover:not(:active){background:color-mix(in srgb,var(--primary) 90%,#000)}
 /* Secundario: superficie limpia con borde fino (ya no vidrio esmerilado) */
 .btn-outline{background:var(--bg-raised);color:var(--text);border-color:var(--border-strong);box-shadow:0 1px 2px rgba(15,23,42,.05)}
@@ -434,9 +434,9 @@ a,button,[role=button],.navlink,.mob-tab,.icobtn,.tabs button{-webkit-tap-highli
 /* Ghost: el más liviano — sin relleno ni sombra hasta el hover */
 .btn-ghost{background:transparent;color:var(--text-2);border-color:transparent;box-shadow:none}
 .btn-ghost:hover:not(:active){background:var(--fill);color:var(--text)}
-.btn-danger{background:var(--red-600);color:#fff;border-color:transparent;box-shadow:0 1px 2px rgba(15,23,42,.10),0 2px 6px color-mix(in srgb,var(--red-600) 20%,transparent),inset 0 1px 0 rgba(255,255,255,.15)}
+.btn-danger{background:var(--red-600);color:#fff;border-color:transparent;box-shadow:0 1px 2px rgba(15,23,42,.12)}
 .btn-danger:hover:not(:active){background:color-mix(in srgb,var(--red-600) 90%,#000)}
-.btn-accent{background:var(--amber-400);color:var(--navy-900);border-color:transparent;box-shadow:0 1px 2px rgba(15,23,42,.10),0 2px 6px color-mix(in srgb,var(--amber-400) 24%,transparent),inset 0 1px 0 rgba(255,255,255,.22)}
+.btn-accent{background:var(--amber-400);color:var(--navy-900);border-color:transparent;box-shadow:0 1px 2px rgba(15,23,42,.12)}
 .btn-accent:hover:not(:active){background:var(--amber-500);color:var(--navy-900)}
 .btn-sm{height:38px;padding:0 16px;font-size:13.5px;gap:6px}
 /* Botón de acción SOLO ícono (cuadrado): para acciones repetidas (editar, PDF,
@@ -687,9 +687,9 @@ textarea.input{min-height:88px;resize:vertical;padding-top:11px}
    ============================================ */
 
 /* alias botones (legacy) */
-.btn-success{background:var(--green-600);color:#fff;border-color:transparent;box-shadow:0 1px 2px rgba(15,23,42,.10),0 2px 6px color-mix(in srgb,var(--green-600) 22%,transparent),inset 0 1px 0 rgba(255,255,255,.15)}
+.btn-success{background:var(--green-600);color:#fff;border-color:transparent;box-shadow:0 1px 2px rgba(15,23,42,.12)}
 .btn-success:hover:not(:active){background:color-mix(in srgb,var(--green-600) 90%,#000)}
-.btn-warning{background:var(--amber-400);color:var(--navy-900);border-color:transparent;box-shadow:0 1px 2px rgba(15,23,42,.10),0 2px 6px color-mix(in srgb,var(--amber-400) 24%,transparent),inset 0 1px 0 rgba(255,255,255,.22)}
+.btn-warning{background:var(--amber-400);color:var(--navy-900);border-color:transparent;box-shadow:0 1px 2px rgba(15,23,42,.12)}
 .btn-warning:hover:not(:active){background:var(--amber-500);color:var(--navy-900)}
 /* Modo oscuro: el borde ya adapta (--border-strong); solo baja la sombra ambiente. */
 [data-theme="dark"] .btn-outline{box-shadow:0 1px 2px rgba(0,0,0,.3)}
