@@ -801,6 +801,14 @@ tbody tr:active{background:var(--fill-2)}
 .ingreso-chk:hover .ingreso-box:not(.on){border-color:var(--primary)}
 .ingreso-chk input:focus-visible + .ingreso-box{outline:2px solid var(--primary);outline-offset:2px}
 @media(max-width:560px){.ingreso-inv-grid{grid-template-columns:repeat(2,1fr)}}
+/* OT en dos paneles: la plata a la izquierda (más ancha), vehículo/contexto a la
+   derecha. Cada columna es un contenedor independiente (alturas independientes).
+   El grid coloca --main en col 1 y --side en col 2 sin importar el orden del DOM. */
+.ot-grid{display:grid;grid-template-columns:1.55fr 1fr;gap:16px;align-items:start;margin-top:16px}
+.ot-col{display:flex;flex-direction:column;gap:16px;min-width:0}
+.ot-col--main{grid-column:1;grid-row:1}
+.ot-col--side{grid-column:2;grid-row:1}
+@media(max-width:900px){.ot-grid{grid-template-columns:1fr}.ot-col--main,.ot-col--side{grid-column:1;grid-row:auto}.ot-col--main{order:-1}}
 /* Variante full-width para muchos ítems en columna angosta (ej. "Cambiar estado"
    del detalle de una OT: 5 estados). Los botones reparten el ancho parejo. */
 .segctl--full{display:flex;width:100%}

@@ -1539,8 +1539,13 @@ function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [], vehiculosHoo
         </div>
         </div>{/* /form-grid-2 */}
 
+        {/* ===== Dos paneles: contexto (derecha) + plata (izquierda) ===== */}
+        <div className="ot-grid">
+        {/* Columna DERECHA — vehículo y contexto (el grid la manda a la derecha) */}
+        <div className="ot-col ot-col--side">
+
         {!form.sinVehiculo && (
-          <div className="card" style={{ marginTop: 16 }}>
+          <div className="card">
             <div className="card__h"><h3>Estado de ingreso del vehículo <span style={{ fontSize: 11, color: 'var(--text-3)', fontWeight: 500, marginLeft: 6 }}>(inventario · combustible · daños)</span></h3></div>
             <div className="card__b">
               <IngresoVehiculo value={form.ingreso} onChange={v => set('ingreso', v)} />
@@ -1620,6 +1625,10 @@ function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [], vehiculosHoo
           </div>
           )}
         </div>
+        </div>{/* /ot-col side */}
+
+        {/* Columna IZQUIERDA — la orden y la plata */}
+        <div className="ot-col ot-col--main">
 
         {/* ITEMS */}
         <div className="card">
@@ -1945,6 +1954,8 @@ function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [], vehiculosHoo
             </div>
           </div>
         </div>
+        </div>{/* /ot-col main */}
+        </div>{/* /ot-grid */}
 
         {/* ACCIONES */}
         <div className="form-actionbar">
