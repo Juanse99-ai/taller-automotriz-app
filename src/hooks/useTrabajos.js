@@ -48,6 +48,8 @@ function normalizar(r) {
     cronoAcumulado: parseInt(r.crono_acumulado ?? r.cronoAcumulado) || 0,
     deleted: r.deleted === true, // borrado suave: la fila sigue en Supabase pero se oculta
     inspeccion: typeof r.inspeccion === 'string' ? JSON.parse(r.inspeccion) : (r.inspeccion || null),
+    // Estado de ingreso: { inventario: string[], combustible: 0-100, estado: text }
+    ingreso: typeof r.ingreso === 'string' ? JSON.parse(r.ingreso) : (r.ingreso || null),
     // Evidencias: ahora vienen del servidor (columna evidencias). Fallback a local.
     evidenciasIngreso: parseEvidencias(r.evidencias) ?? (r.evidenciasIngreso || []),
     evidenciasEntrega: r.evidenciasEntrega || [],
@@ -74,6 +76,7 @@ function firmaTrabajo(t) {
   const items = Array.isArray(t.items) ? t.items.map(i => `${i.nombre}·${i.precio}·${i.cantidad}·${i.esServicio ? 1 : 0}`).join('|') : ''
   const evid = Array.isArray(t.evidenciasIngreso) ? t.evidenciasIngreso.map(e => e.id || e.url || (e.dataUrl || '').slice(0, 24)).join(',') : ''
   const tareas = Array.isArray(t.tareasHechas) ? [...t.tareasHechas].join(',') : ''
+  const ing = t.ingreso ? JSON.stringify(t.ingreso) : ''
   return [
     t.otCodigo, t.estado, t.total, t.pagado, t.tecnicoId, t.manoObra, t.manoObraExtra,
     t.subtotalSinIva, t.totalIva, t.metodoPago, t.observaciones, t.cliente, t.cedula,
@@ -81,7 +84,7 @@ function firmaTrabajo(t) {
     t.telefonoCliente, t.emailCliente, t.cuenttiTransacionId, t.facturadoEn,
     t.cuenttiResolucion, (t.firmaCliente || '').length, t.tipoAceite, t.proximoKm,
     t.proximaVisita, t.notasProximoMant, t.sinVehiculo ? 1 : 0,
-    tareas, t.cronoInicio, t.cronoAcumulado, items, evid,
+    tareas, t.cronoInicio, t.cronoAcumulado, items, evid, ing,
   ].join('~')
 }
 

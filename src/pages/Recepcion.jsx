@@ -4,6 +4,8 @@ import { TECNICOS, ESTADOS } from '../utils/constants'
 import { MARCAS, getModelos } from '../utils/vehiculos'
 import { useClientes } from '../hooks/useClientes'
 import Switch from '../components/Switch'
+import IngresoVehiculo from '../components/IngresoVehiculo'
+import { ingresoVacio } from '../utils/ingreso'
 
 export default function Recepcion({ hook, vehiculosHook, clientesHook, notify }) {
   const { trabajos, agregarTrabajo, puedeCrearOT } = hook
@@ -22,6 +24,7 @@ export default function Recepcion({ hook, vehiculosHook, clientesHook, notify })
     kilometraje: '', tecnicoId: '', observaciones: '', fecha: hoyISO(),
     programar: false,
     evidenciasIngreso: [],
+    ingreso: ingresoVacio(),
   })
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
@@ -94,6 +97,7 @@ export default function Recepcion({ hook, vehiculosHook, clientesHook, notify })
       placa: '', marca: '', modelo: '', ano: new Date().getFullYear(),
       kilometraje: '', tecnicoId: '', observaciones: '', fecha: hoyISO(), programar: false,
       evidenciasIngreso: [],
+      ingreso: ingresoVacio(),
     })
     } finally {
       setEnviando(false)
@@ -157,6 +161,7 @@ export default function Recepcion({ hook, vehiculosHook, clientesHook, notify })
               placa: '', marca: '', modelo: '', ano: new Date().getFullYear(),
               kilometraje: '', tecnicoId: '', observaciones: '', fecha: hoyISO(), programar: false,
               evidenciasIngreso: [],
+              ingreso: ingresoVacio(),
             })
           }}>Cancelar</button>
           <button className="btn btn-primary" disabled={enviando} onClick={handleRecibir}>{enviando ? 'Generando…' : 'Generar OT'}</button>
@@ -271,6 +276,13 @@ export default function Recepcion({ hook, vehiculosHook, clientesHook, notify })
                       <input className="input" type="number" value={form.kilometraje} min="0" placeholder="85.000"
                         onChange={e => set('kilometraje', e.target.value)} />
                     </div>
+                  </div>
+                </div>
+
+                <div className="card">
+                  <div className="card__h"><h3>Estado de ingreso del vehículo</h3></div>
+                  <div className="card__b">
+                    <IngresoVehiculo value={form.ingreso} onChange={v => set('ingreso', v)} />
                   </div>
                 </div>
 

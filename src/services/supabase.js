@@ -126,6 +126,9 @@ export async function upsertTrabajo(trabajo, opts = {}) {
     tareas_hechas: trabajo.tareasHechas || [],
     crono_inicio: trabajo.cronoInicio || null,
     crono_acumulado: trabajo.cronoAcumulado || 0,
+    // Estado de ingreso del vehículo (inventario + combustible + daños). jsonb → se
+    // envía el objeto directo (igual que tareas_hechas), no stringify.
+    ingreso: trabajo.ingreso || null,
   }
   // inspeccion: columna no existe aun en Supabase — se preserva en localStorage
   // Para habilitarla: ALTER TABLE trabajos ADD COLUMN IF NOT EXISTS inspeccion jsonb;

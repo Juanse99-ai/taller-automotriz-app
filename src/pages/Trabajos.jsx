@@ -5,6 +5,8 @@ import { fmt, fmtDate, uid, hoyISO, normalizarDoc, normalizarNombre, fmtTelefono
 import { TECNICOS, ESTADOS, IVA_DEFAULT, DIAS_ESTANCADO, TALLER, COMISION } from '../utils/constants'
 import { loadLogo as loadPdfLogo, drawHeader, drawSectionHeader, drawDataBlock, drawTotalsBox, drawSignatures, drawFooter, tableStylesItems, PDF_LAYOUT, PDF_COLORS } from '../utils/pdfTheme'
 import FichaTecnico from '../components/FichaTecnico'
+import IngresoVehiculo from '../components/IngresoVehiculo'
+import { ingresoVacio, labelInventario, etiquetaCombustible, ingresoTieneAlgo } from '../utils/ingreso'
 import { exportarFichasTecnico } from '../utils/fichaPdf'
 import { MARCAS, getModelos } from '../utils/vehiculos'
 import { useClientes } from '../hooks/useClientes'
@@ -242,6 +244,28 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
       doc.setFont(undefined, 'normal')
       doc.text(obsLines, MARGIN + 3, cursorY + 4.5)
       cursorY += obsHeight + 3
+    }
+
+    // ============= ESTADO DE INGRESO DEL VEHÍCULO =============
+    // Registro de responsabilidad: combustible, daños visibles e inventario recibido.
+    if (ingresoTieneAlgo(t.ingreso)) {
+      const ing = t.ingreso
+      const presentes = (ing.inventario || []).map(labelInventario)
+      const partes = []
+      if (ing.combustible != null) partes.push(`Combustible: ${etiquetaCombustible(ing.combustible)}.`)
+      if (ing.estado && ing.estado.trim()) partes.push(`Danos/estado: ${ing.estado.trim()}.`)
+      partes.push(`Inventario recibido: ${presentes.length ? presentes.join(', ') : 'ninguno marcado'}.`)
+      cursorY = drawSectionHeader(doc, 'Estado de ingreso del vehiculo', cursorY)
+      const inLines = doc.splitTextToSize(partes.join('   '), CONTENT_W - 6)
+      const inH = Math.max(11, inLines.length * 3.8 + 6)
+      doc.setDrawColor(...SLATE_300)
+      doc.setLineWidth(0.2)
+      doc.rect(MARGIN, cursorY, CONTENT_W, inH)
+      doc.setFontSize(8)
+      doc.setTextColor(...NAVY)
+      doc.setFont(undefined, 'normal')
+      doc.text(inLines, MARGIN + 3, cursorY + 4.5)
+      cursorY += inH + 3
     }
 
     // ============= TRABAJOS AUTORIZADOS =============
@@ -957,6 +981,8 @@ function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [], vehiculosHoo
     proximoKm: trabajo?.proximoKm || '',
     proximaVisita: trabajo?.proximaVisita ? trabajo.proximaVisita.slice(0, 10) : '',
     notasProximoMant: trabajo?.notasProximoMant || '',
+    // Estado de ingreso del vehículo (inventario + combustible + daños)
+    ingreso: trabajo?.ingreso || ingresoVacio(),
   })
 
   const [items, setItems] = useState(trabajo?.items || [])
@@ -1493,6 +1519,15 @@ function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [], vehiculosHoo
           </div>
         </div>
         </div>{/* /form-grid-2 */}
+
+        {!form.sinVehiculo && (
+          <div className="card" style={{ marginTop: 16 }}>
+            <div className="card__h"><h3>Estado de ingreso del vehículo <span style={{ fontSize: 11, color: 'var(--text-3)', fontWeight: 500, marginLeft: 6 }}>(inventario · combustible · daños)</span></h3></div>
+            <div className="card__b">
+              <IngresoVehiculo value={form.ingreso} onChange={v => set('ingreso', v)} />
+            </div>
+          </div>
+        )}
 
         {/* HISTORIAL POR PLACA */}
         {form.placa.length >= 6 && (() => {

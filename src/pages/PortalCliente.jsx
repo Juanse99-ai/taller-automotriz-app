@@ -5,6 +5,7 @@ import autoTable from 'jspdf-autotable'
 import { InspeccionDetalle } from './Inspecciones'
 import { ESTADOS, TECNICOS, TALLER } from '../utils/constants'
 import { fmtDate, fmt } from '../utils/helpers'
+import { labelInventario, etiquetaCombustible, ingresoTieneAlgo } from '../utils/ingreso'
 import { Button } from '../components/ui'
 import { drawHeader, drawSectionHeader, drawDataBlock, drawFooter, tableStylesItems, PDF_LAYOUT, PDF_COLORS, SEVERITY_HEAD } from '../utils/pdfTheme'
 
@@ -61,6 +62,9 @@ const SELECT_PORTAL = [
   // Para el botón "Pagar" (Wompi): saber si ya está facturada y si sigue sin pagar.
   // OJO: NO se trae cuentti_id_transacion — ese lo resuelve el webhook en el servidor.
   'pagado', 'facturado_en',
+  // Estado de ingreso (inventario + combustible + daños): el cliente ve/verifica
+  // en qué condición entró su carro. No es dato sensible (es de su propio vehículo).
+  'ingreso',
 ].join(',')
 
 // Consulta directa a Supabase via proxy (funciona desde cualquier dispositivo)
@@ -94,6 +98,7 @@ async function buscarTrabajosPorCedula(cedula) {
       proximaVisita: r.proxima_visita || '',
       notasProximoMant: r.notas_proximo_mant || '',
       inspeccion: typeof r.inspeccion === 'string' ? JSON.parse(r.inspeccion) : (r.inspeccion || null),
+      ingreso: typeof r.ingreso === 'string' ? JSON.parse(r.ingreso) : (r.ingreso || null),
       evidencias: (() => {
         try { const v = r.evidencias; return typeof v === 'string' ? (JSON.parse(v) || []) : (Array.isArray(v) ? v : []) } catch { return [] }
       })(),
@@ -985,6 +990,19 @@ export default function PortalCliente() {
                   </div>
                 )}
               </div>
+
+              {ingresoTieneAlgo(t.ingreso) && (
+                <div style={{margin:'0 20px 14px',padding:'12px 14px',background:'var(--bg-subtle)',borderRadius:12}}>
+                  <div style={{fontSize:11.5,fontWeight:700,color:'var(--text-3)',textTransform:'uppercase',letterSpacing:'.05em',marginBottom:8}}>Cómo entró tu vehículo</div>
+                  {t.ingreso.combustible!=null && <div style={{fontSize:13.5,marginBottom:4}}><span style={{color:'var(--text-3)'}}>Combustible:</span> <strong>{etiquetaCombustible(t.ingreso.combustible)}</strong></div>}
+                  {t.ingreso.estado && t.ingreso.estado.trim() && <div style={{fontSize:13.5,marginBottom:4}}><span style={{color:'var(--text-3)'}}>Estado / daños:</span> {t.ingreso.estado}</div>}
+                  {(t.ingreso.inventario||[]).length>0 && (
+                    <div style={{marginTop:8,display:'flex',flexWrap:'wrap',gap:6}}>
+                      {t.ingreso.inventario.map(k=><span key={k} className="badge badge-n" style={{textTransform:'none',letterSpacing:0}}>{labelInventario(k)}</span>)}
+                    </div>
+                  )}
+                </div>
+              )}
 
               {t.tecnicoId && tecNombre(t.tecnicoId) && (
                 <div style={{margin:'0 20px 12px',display:'flex',alignItems:'center',gap:10}}>

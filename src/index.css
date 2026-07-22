@@ -790,6 +790,14 @@ tbody tr:active{background:var(--fill-2)}
 .segctl button:hover:not(.on){color:var(--text-2)}
 .segctl button.on{color:var(--text);background:color-mix(in srgb,var(--bg-raised) 92%,transparent);-webkit-backdrop-filter:blur(10px) saturate(160%);backdrop-filter:blur(10px) saturate(160%);box-shadow:0 4px 12px rgba(15,23,42,.16),inset 0 1px 1px rgba(255,255,255,.9)}
 [data-theme="dark"] .segctl button.on{background:color-mix(in srgb,var(--bg-raised) 96%,transparent);box-shadow:0 4px 14px rgba(0,0,0,.42),inset 0 1px 1px rgba(255,255,255,.12)}
+/* Checklist de inventario del vehículo (estado de ingreso) */
+.ingreso-inv-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1px 14px}
+.ingreso-chk{display:flex;align-items:center;gap:9px;padding:7px 2px;cursor:pointer;font-size:14px;color:var(--text-2);position:relative;user-select:none}
+.ingreso-box{width:20px;height:20px;border-radius:6px;flex-shrink:0;display:inline-flex;align-items:center;justify-content:center;background:var(--bg-raised);border:1.5px solid var(--border-strong);transition:background .12s,border-color .12s}
+.ingreso-box.on{background:var(--primary);border-color:var(--primary)}
+.ingreso-chk:hover .ingreso-box:not(.on){border-color:var(--primary)}
+.ingreso-chk input:focus-visible + .ingreso-box{outline:2px solid var(--primary);outline-offset:2px}
+@media(max-width:560px){.ingreso-inv-grid{grid-template-columns:repeat(2,1fr)}}
 /* Variante full-width para muchos ítems en columna angosta (ej. "Cambiar estado"
    del detalle de una OT: 5 estados). Los botones reparten el ancho parejo. */
 .segctl--full{display:flex;width:100%}
