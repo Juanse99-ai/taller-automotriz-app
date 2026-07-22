@@ -781,11 +781,15 @@ tbody tr:active{background:var(--fill-2)}
 /* Segmented control iOS: pista gris, thumb blanco con sombrita */
 /* Segmentado tipo iOS: riel periwinkle relleno + pastilla blanca en la opción
    activa (texto navy). No envuelve: si no cabe, hace scroll horizontal limpio. */
-.segctl{display:inline-flex;gap:0;background:var(--seg-track);border:none;border-radius:999px;padding:3px;max-width:100%;overflow-x:auto;scrollbar-width:none}
+/* Segmented control iOS 26 Liquid Glass: track de vidrio gris (recesado) y la
+   pastilla seleccionada es vidrio esmerilado que FLOTA (rim + sombra), mismo
+   lenguaje que los .btn. Track y pastilla adaptan al tema con color-mix. */
+.segctl{display:inline-flex;gap:3px;background:var(--fill);border:none;border-radius:999px;padding:3px;max-width:100%;overflow-x:auto;scrollbar-width:none}
 .segctl::-webkit-scrollbar{display:none}
-.segctl button{flex-shrink:0;padding:7px 16px;font-size:12.5px;font-weight:600;border-radius:999px;border:none;background:none;color:rgba(255,255,255,.9);cursor:pointer;white-space:nowrap;transition:background .2s cubic-bezier(.3,.9,.4,1),color .2s,box-shadow .2s}
-.segctl button:hover{color:#fff}
-.segctl button.on{background:#fff;color:var(--seg-ink);box-shadow:0 1px 3px rgba(0,0,0,.2)}
+.segctl button{flex-shrink:0;display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:8px 16px;font-size:13px;font-weight:600;border-radius:999px;border:none;background:none;color:var(--text-3);cursor:pointer;white-space:nowrap;font-family:var(--font);transition:background .2s cubic-bezier(.3,.9,.4,1),color .2s,box-shadow .2s}
+.segctl button:hover:not(.on){color:var(--text-2)}
+.segctl button.on{color:var(--text);background:color-mix(in srgb,var(--bg-raised) 92%,transparent);-webkit-backdrop-filter:blur(10px) saturate(160%);backdrop-filter:blur(10px) saturate(160%);box-shadow:0 4px 12px rgba(15,23,42,.16),inset 0 1px 1px rgba(255,255,255,.9)}
+[data-theme="dark"] .segctl button.on{background:color-mix(in srgb,var(--bg-raised) 96%,transparent);box-shadow:0 4px 14px rgba(0,0,0,.42),inset 0 1px 1px rgba(255,255,255,.12)}
 /* Variante full-width para muchos ítems en columna angosta (ej. "Cambiar estado"
    del detalle de una OT: 5 estados). Los botones reparten el ancho parejo. */
 .segctl--full{display:flex;width:100%}

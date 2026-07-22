@@ -1079,18 +1079,11 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
     return trabajos.filter(t => totalmenteLiquidado(t))
   }, [trabajos, liquidados, compartidos])
 
-  // ===== Tabs: Comisiones | Estado de cuenta =====
-  const segTabStyle = (active) => ({
-    fontFamily: 'inherit', fontSize: 14, fontWeight: 600, border: 0, cursor: 'pointer',
-    padding: '8px 18px', borderRadius: 7, transition: 'background .15s, color .15s',
-    background: active ? 'var(--bg-raised)' : 'transparent',
-    color: active ? 'var(--text)' : 'var(--text-3)',
-    boxShadow: active ? '0 1px 2px rgba(16,23,37,.10)' : 'none',
-  })
+  // ===== Tabs: Comisiones | Estado de cuenta (segmented control unificado) =====
   const tabsLiq = (
-    <div role="tablist" style={{ display: 'inline-flex', background: 'var(--bg-2, #eceef4)', padding: 4, borderRadius: 10, gap: 4, marginBottom: 22 }}>
-      <button role="tab" aria-selected={vistaLiq === 'comisiones'} style={segTabStyle(vistaLiq === 'comisiones')} onClick={() => setVistaLiq('comisiones')}>Comisiones</button>
-      <button role="tab" aria-selected={vistaLiq === 'cuentas'} style={segTabStyle(vistaLiq === 'cuentas')} onClick={() => setVistaLiq('cuentas')}>Estado de cuenta</button>
+    <div className="segctl" role="tablist" style={{ marginBottom: 22 }}>
+      <button type="button" role="tab" className={vistaLiq === 'comisiones' ? 'on' : ''} aria-selected={vistaLiq === 'comisiones'} onClick={() => setVistaLiq('comisiones')}>Comisiones</button>
+      <button type="button" role="tab" className={vistaLiq === 'cuentas' ? 'on' : ''} aria-selected={vistaLiq === 'cuentas'} onClick={() => setVistaLiq('cuentas')}>Estado de cuenta</button>
     </div>
   )
 
