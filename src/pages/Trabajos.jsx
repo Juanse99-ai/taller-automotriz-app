@@ -1419,10 +1419,14 @@ function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [], vehiculosHoo
             <div className="tec-chips">
               {TECNICOS.filter(t => t.activo !== false || String(t.id) === String(form.tecnicoId)).map(t => {
                 const sel = String(form.tecnicoId) === String(t.id)
+                // Iniciales inline desde t.nombre: tecIniciales() vive en el componente
+                // Trabajos, no en TrabajoForm, así que aquí no está en scope.
+                const _p = (t.nombre || '').trim().split(/\s+/)
+                const ini = (_p.length >= 2 ? _p[0][0] + _p[1][0] : (t.nombre || '?').slice(0, 2)).toUpperCase()
                 return (
                   <button type="button" key={t.id} className={`tec-chip${sel ? ' on' : ''}`} aria-pressed={sel}
                     onClick={() => set('tecnicoId', String(t.id))}>
-                    <span className={`av av-${((parseInt(t.id) || 1) - 1) % 5 + 1}`}>{tecIniciales(t.id)}</span>
+                    <span className={`av av-${((parseInt(t.id) || 1) - 1) % 5 + 1}`}>{ini}</span>
                     <span>{(t.nombre || '').split(' ')[0]}{t.activo === false ? ' (inactivo)' : ''}</span>
                     {sel && <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" style={{ width: 16, height: 16, marginRight: 2 }}><path d="M20 6 9 17l-5-5" /></svg>}
                   </button>
