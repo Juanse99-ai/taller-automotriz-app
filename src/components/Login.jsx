@@ -180,7 +180,7 @@ export default function Login({ onLogin }) {
             {error && (
               <div role="alert" style={{
                 padding: '12px 14px',
-                background: 'var(--red-100)',
+                background: 'var(--soft-red)',
                 border: '1px solid rgba(220,38,38,.32)',
                 color: 'var(--red-700)',
                 borderRadius: 9, fontSize: 13.5, fontWeight: 600,

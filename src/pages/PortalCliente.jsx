@@ -876,7 +876,7 @@ export default function PortalCliente() {
       </div>{/* cierra columna lateral */}
 
       {confirmandoPago && (
-        <div className="card portal-full" style={{ background: 'var(--green-100)', border: '1px solid var(--green-600)' }}>
+        <div className="card portal-full" style={{ background: 'var(--soft-green)', border: '1px solid var(--green-600)' }}>
           <div className="card__b" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <div style={{ width: 22, height: 22, border: '2.5px solid var(--green-600)', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite', flexShrink: 0 }} />
             <div>

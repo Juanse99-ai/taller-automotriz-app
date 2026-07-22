@@ -8,11 +8,14 @@ import { Button, Badge, IconX } from '../components/ui'
 
 const ESTADO_ITEM = { BUENO: 'bueno', SUGERIDO: 'sugerido', URGENTE: 'urgente', NO_APLICA: 'no_aplica' }
 
+// Colores THEME-AWARE: --soft-* es tinte claro en modo claro y translúcido en
+// oscuro; el texto --*-700 se aclara en oscuro. Así el chip se lee en ambos temas
+// (antes eran hex claros fijos → isla clara sobre fondo oscuro).
 const ESTADO_COLORS = {
-  bueno: { bg: '#dcfce7', color: '#166534', icon: '✓', label: 'Buen estado' },
-  sugerido: { bg: '#fef3c7', color: '#92400e', icon: '!', label: 'Reparacion sugerida' },
-  urgente: { bg: '#fee2e2', color: '#991b1b', icon: '✕', label: 'Atencion urgente' },
-  no_aplica: { bg: '#f1f5f9', color: '#64748b', icon: '—', label: 'No aplica' },
+  bueno: { bg: 'var(--soft-green)', color: 'var(--green-700)', icon: '✓', label: 'Buen estado' },
+  sugerido: { bg: 'var(--soft-amber)', color: 'var(--amber-700)', icon: '!', label: 'Reparacion sugerida' },
+  urgente: { bg: 'var(--soft-red)', color: 'var(--red-700)', icon: '✕', label: 'Atencion urgente' },
+  no_aplica: { bg: 'var(--fill)', color: 'var(--text-3)', icon: '—', label: 'No aplica' },
 }
 
 export default function Inspecciones({ trabajos, notify, onVincularInspeccion, inspeccionesHook }) {

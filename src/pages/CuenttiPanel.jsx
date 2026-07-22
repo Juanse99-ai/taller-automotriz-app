@@ -1047,7 +1047,7 @@ export default function CuenttiPanel({ trabajos, actualizarTrabajo, notify }) {
                           </div>
                         </div>
                         {pagoNoEntroCaja && (
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap', padding: '8px 10px', background: 'var(--red-100)', border: '1px solid rgba(220,38,38,.25)', borderRadius: 8 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap', padding: '8px 10px', background: 'var(--soft-red)', border: '1px solid rgba(220,38,38,.25)', borderRadius: 8 }}>
                             <span style={{ fontSize: 11.5, color: 'var(--red-700)', lineHeight: 1.35, flex: 1, minWidth: 150 }}>El pago en {f.metodoPago} no entró a caja. Regístralo en Cuentti y márcalo pagado aquí.</span>
                             <Button variant="outline" size="sm" onClick={() => marcarFacturaPagada(f)}>Marcar pagada</Button>
                           </div>
