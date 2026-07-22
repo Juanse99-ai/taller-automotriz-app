@@ -6,7 +6,8 @@ import { InspeccionDetalle } from './Inspecciones'
 import { ESTADOS, TECNICOS, TALLER } from '../utils/constants'
 import { fmtDate, fmt } from '../utils/helpers'
 import { labelInventario, etiquetaCombustible, ingresoTieneAlgo } from '../utils/ingreso'
-import { Button } from '../components/ui'
+import { Button, IconX } from '../components/ui'
+import SignaturePad from '../components/SignaturePad'
 import { drawHeader, drawSectionHeader, drawDataBlock, drawFooter, tableStylesItems, PDF_LAYOUT, PDF_COLORS, SEVERITY_HEAD } from '../utils/pdfTheme'
 
 // Capitaliza el nombre del cliente que viene en MAYÚSCULAS ("TRANSPORTES
@@ -109,6 +110,39 @@ async function buscarTrabajosPorCedula(cedula) {
   }
 }
 
+// Cotizaciones (presupuestos) del cliente, para aprobar/firmar desde el portal.
+// NO se trae la firma (dataURL grande): solo el estado y la fecha de aprobación.
+async function buscarCotizacionesPorCedula(cedula) {
+  try {
+    const sel = 'id,fecha,cliente,placa,marca,modelo,ano,items,subtotal,iva,total,observaciones,validez_dias,estado,aprobada_en'
+    const url = `/api/supabase?table=cotizaciones&cedula=eq.${encodeURIComponent(cedula)}&select=${sel}&order=fecha.desc`
+    const res = await fetch(url)
+    if (!res.ok) throw new Error('Error consultando cotizaciones')
+    const rows = await res.json()
+    return rows.map(r => ({
+      id: r.id,
+      fecha: r.fecha,
+      cliente: r.cliente,
+      placa: r.placa,
+      marca: r.marca,
+      modelo: r.modelo,
+      ano: r.ano,
+      items: typeof r.items === 'string' ? JSON.parse(r.items) : (r.items || []),
+      subtotal: parseFloat(r.subtotal) || 0,
+      iva: parseFloat(r.iva) || 0,
+      total: parseFloat(r.total) || 0,
+      observaciones: r.observaciones || '',
+      validezDias: parseInt(r.validez_dias) || 0,
+      estado: r.estado || 'Pendiente',
+      aprobada: !!r.aprobada_en,
+      aprobadaEn: r.aprobada_en || null,
+    }))
+  } catch (e) {
+    console.warn('Portal: error buscando cotizaciones', e.message)
+    return []
+  }
+}
+
 // Pagos ya iniciados (persistido en el navegador): mientras el webhook confirma,
 // el botón muestra "Confirmando pago…" en vez de "Pagar" para que el cliente NO
 // pague dos veces (doble cargo real). Se poda solo a los 30 min.
@@ -143,6 +177,9 @@ export default function PortalCliente() {
   const [confirmandoPago, setConfirmandoPago] = useState(false) // volvió del checkout; esperando que el webhook marque pagado
   const [pagosIniciados, setPagosIniciados] = useState(leerPagosIniciados) // { trabajoId: timestamp }
   const [vehSel, setVehSel] = useState(null) // placa del vehículo enfocado (modo flota)
+  const [firmandoCotiz, setFirmandoCotiz] = useState(null) // cotización que el cliente firma para aprobar
+  const [aprobando, setAprobando] = useState(false)
+  const [errorCotiz, setErrorCotiz] = useState('')
   const touchRef = useRef(null) // gesto de swipe en el visor de fotos
   const portalRef = useRef(null) // contenedor para animaciones GSAP
   const detalleRef = useRef(null) // detalle del vehículo (para hacer scroll al elegir uno)
@@ -229,7 +266,10 @@ export default function PortalCliente() {
     setCargando(true)
     setError('')
 
-    const misTrab = await buscarTrabajosPorCedula(cedulaLimpia)
+    const [misTrab, misCotiz] = await Promise.all([
+      buscarTrabajosPorCedula(cedulaLimpia),
+      buscarCotizacionesPorCedula(cedulaLimpia),
+    ])
 
     // Extraer inspecciones embebidas en trabajos
     const misInsp = misTrab
@@ -244,18 +284,45 @@ export default function PortalCliente() {
 
     setCargando(false)
 
-    if (misTrab.length === 0) {
+    if (misTrab.length === 0 && misCotiz.length === 0) {
       setError('No se encontraron registros para este documento. Verifica el numero e intenta de nuevo.')
       setDatos(null)
       setAutenticado(false)
       return
     }
 
-    setDatos({ trabajos: misTrab, inspecciones: misInsp, cedula: cedulaLimpia })
+    setDatos({ trabajos: misTrab, inspecciones: misInsp, cotizaciones: misCotiz, cedula: cedulaLimpia })
     setAutenticado(true)
     // Un pago ya confirmado (trabajo.pagado) deja de estar "por confirmar".
     const yaPagados = misTrab.filter(t => t.pagado).map(t => t.id)
     if (yaPagados.length) quitarPagosIniciados(yaPagados)
+  }
+
+  // El cliente aprueba una cotización firmando desde el portal → PATCH a Supabase
+  // (estado + firma + fecha). Optimista: actualiza la UI al confirmar.
+  const aprobarCotizacion = async (cotiz, firmaDataUrl) => {
+    setAprobando(true)
+    setErrorCotiz('')
+    try {
+      const ahora = new Date().toISOString()
+      const res = await fetch(`/api/supabase?table=cotizaciones&id=eq.${encodeURIComponent(cotiz.id)}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ estado: 'Aprobada', firma_aprobacion: firmaDataUrl, aprobada_en: ahora }),
+      })
+      if (!res.ok) throw new Error(`No se pudo guardar (${res.status})`)
+      setDatos(d => ({
+        ...d,
+        cotizaciones: (d.cotizaciones || []).map(c =>
+          c.id === cotiz.id ? { ...c, aprobada: true, estado: 'Aprobada', aprobadaEn: ahora } : c),
+      }))
+      setFirmandoCotiz(null)
+    } catch (e) {
+      console.warn('Portal: aprobar cotización', e.message)
+      setErrorCotiz('No se pudo aprobar la cotización. Revisa tu conexión e intenta de nuevo.')
+    } finally {
+      setAprobando(false)
+    }
   }
 
   // Si vino con ?c= en URL, autobuscar al montar
@@ -597,6 +664,10 @@ export default function PortalCliente() {
     .filter(t => t.facturadoEn && !t.pagado && (t.total || 0) > 0)
     .sort((a, b) => new Date(b.fecha) - new Date(a.fecha))
   const totalPorPagar = facturasPendientes.reduce((s, t) => s + (t.total || 0), 0)
+
+  // Cotizaciones del cliente (presupuestos). Las pendientes se aprueban firmando.
+  const cotizaciones = (datos.cotizaciones || []).slice().sort((a, b) => new Date(b.fecha) - new Date(a.fecha))
+  const cotizPendientes = cotizaciones.filter(c => !c.aprobada)
   // Inspecciones del vehículo en foco (en flota) o todas (cliente normal).
   const inspFoco = esFlota
     ? datos.inspecciones.filter(i => (i.placa || '').toUpperCase() === placaFoco)
@@ -663,7 +734,7 @@ export default function PortalCliente() {
             </div>
             <button className="btn btn-ghost btn-sm" style={{color:'rgba(255,255,255,.9)',border:'1px solid rgba(255,255,255,.28)'}} onClick={salir}>Salir</button>
           </div>
-          <div style={{fontSize:14,fontWeight:500,color:'#fff',marginBottom:esFlota?12:2}}>Hola, {tituloCliente(datos.trabajos[0]?.cliente)}</div>
+          <div style={{fontSize:14,fontWeight:500,color:'#fff',marginBottom:esFlota?12:2}}>Hola, {tituloCliente(datos.trabajos[0]?.cliente || cotizaciones[0]?.cliente)}</div>
           {esFlota ? (
             <div style={{display:'flex',gap:'12px 28px',flexWrap:'wrap',alignItems:'flex-end'}}>
               {[[vehiculos.length,vehiculos.length===1?'vehículo':'vehículos','#ffffff'],[enProceso,'en el taller','#fbbf24'],[listos,listos===1?'listo para recoger':'listos para recoger','#4ade80']].map(([n,lbl,c],i)=>(
@@ -706,6 +777,46 @@ export default function PortalCliente() {
                   {pagoPorConfirmar(t)
                     ? <button className="btn btn-outline" disabled title="Estamos confirmando tu pago">Confirmando…</button>
                     : <button className="btn btn-primary" disabled={pagando===t.id} onClick={()=>pagarConWompi(t)}>{pagando===t.id?'Abriendo…':'Pagar'}</button>}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Cotizaciones / presupuestos — el cliente aprueba firmando */}
+      {cotizaciones.length > 0 && (
+        <div className="card portal-full" style={{padding:0,overflow:'hidden'}}>
+          <div style={{padding:'15px 20px',borderBottom:'1px solid var(--border)'}}>
+            <h3 style={{margin:0}}>{cotizPendientes.length>0 ? (cotizPendientes.length===1?'Cotización por aprobar':`Cotizaciones por aprobar · ${cotizPendientes.length}`) : 'Cotizaciones'}</h3>
+            {cotizPendientes.length>0 && <div style={{fontSize:12.5,color:'var(--text-3)',marginTop:2}}>Revísala y apruébala firmando desde tu celular.</div>}
+          </div>
+          <div>
+            {cotizaciones.map((c,i)=>(
+              <div key={c.id} style={{padding:'14px 20px',borderTop:i>0?'1px solid var(--border)':'none'}}>
+                <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',gap:12,flexWrap:'wrap'}}>
+                  <div style={{minWidth:0}}>
+                    <span className="mono" style={{fontWeight:700,fontSize:15}}>{c.placa||'—'}</span>
+                    <div style={{fontSize:12.5,color:'var(--text-3)',marginTop:1}}>{[c.marca,c.modelo].filter(Boolean).join(' ')||'Vehículo'} · {fmtDate(c.fecha)}</div>
+                  </div>
+                  <div style={{textAlign:'right'}}>
+                    <div className="mono" style={{fontSize:17,fontWeight:800,color:'var(--green-700)'}}>{fmt(c.total)}</div>
+                    <div style={{fontSize:11,color:'var(--text-4)'}}>IVA incluido</div>
+                  </div>
+                </div>
+                <div style={{marginTop:10,display:'flex',flexDirection:'column',gap:4}}>
+                  {(c.items||[]).slice(0,6).map((it,k)=>(
+                    <div key={k} style={{display:'flex',justifyContent:'space-between',gap:12,fontSize:13.5}}>
+                      <span style={{color:'var(--text-2)',minWidth:0}}>{it.nombre||it.codigo||'Ítem'}{(parseInt(it.cantidad)||1)>1?` × ${parseInt(it.cantidad)}`:''}</span>
+                      <span className="mono" style={{color:'var(--text-3)',whiteSpace:'nowrap'}}>{fmt(Math.round((parseFloat(it.precio)||0)*(parseInt(it.cantidad)||1)))}</span>
+                    </div>
+                  ))}
+                  {(c.items||[]).length>6 && <div style={{fontSize:12.5,color:'var(--text-4)'}}>+ {(c.items||[]).length-6} más…</div>}
+                </div>
+                <div style={{marginTop:12,display:'flex',justifyContent:'flex-end'}}>
+                  {c.aprobada
+                    ? <span className="badge badge-s" style={{textTransform:'none',letterSpacing:0}}>Aprobada ✓{c.aprobadaEn?` · ${fmtDate(c.aprobadaEn)}`:''}</span>
+                    : <Button variant="primary" onClick={()=>{setErrorCotiz('');setFirmandoCotiz(c)}}>Aprobar cotización</Button>}
                 </div>
               </div>
             ))}
@@ -938,6 +1049,28 @@ export default function PortalCliente() {
       </div>
 
       {/* Detalle de un servicio del historial (mini-factura del cliente) */}
+      {/* Modal: firmar para aprobar la cotización */}
+      {firmandoCotiz && (
+        <div onClick={()=>!aprobando&&setFirmandoCotiz(null)} role="presentation"
+          style={{position:'fixed',inset:0,zIndex:1000,background:'rgba(16,23,37,.55)',display:'flex',overflowY:'auto',WebkitOverflowScrolling:'touch',padding:14}}>
+          <div onClick={e=>e.stopPropagation()} role="dialog" aria-label="Aprobar cotización"
+            style={{width:'min(520px,100%)',margin:'auto',background:'var(--bg-raised)',borderRadius:16,boxShadow:'0 24px 60px -12px rgba(16,23,37,.4)'}}>
+            <div style={{padding:'18px 20px 12px',borderBottom:'1px solid var(--border)',display:'flex',justifyContent:'space-between',alignItems:'flex-start',gap:12}}>
+              <div style={{minWidth:0}}>
+                <h3 style={{margin:0}}>Aprobar cotización</h3>
+                <div style={{fontSize:12.5,color:'var(--text-3)',marginTop:3}}>Total <b className="mono">{fmt(firmandoCotiz.total)}</b> · firma abajo para aprobar. Tu firma queda registrada.</div>
+              </div>
+              <button className="icobtn" onClick={()=>!aprobando&&setFirmandoCotiz(null)} aria-label="Cerrar"><IconX/></button>
+            </div>
+            <div style={{padding:'16px 20px 20px'}}>
+              {errorCotiz && <div className="badge badge-d" style={{display:'block',marginBottom:12,padding:'8px 12px',textTransform:'none',letterSpacing:0}}>{errorCotiz}</div>}
+              <SignaturePad onSave={(dataUrl)=>aprobarCotizacion(firmandoCotiz,dataUrl)} onCancel={()=>setFirmandoCotiz(null)} />
+              {aprobando && <div style={{fontSize:13,color:'var(--text-3)',marginTop:8,textAlign:'center'}}>Guardando…</div>}
+            </div>
+          </div>
+        </div>
+      )}
+
       {vistaServicio && (() => {
         const t = vistaServicio
         const items = Array.isArray(t.items) ? t.items : []
