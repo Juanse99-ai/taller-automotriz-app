@@ -207,8 +207,9 @@ export default function Inventario({ notify }) {
           <h2>Inventario</h2>
         </div>
         <div className="actions">
-          <Button variant="outline" size="sm" onClick={() => cargar(true)} disabled={loading || refreshing}>
-            {loading || refreshing ? 'Sincronizando...' : '🔄 Sincronizar Cuentti'}
+          <Button variant="outline" size="sm" onClick={() => cargar(true)} disabled={loading || refreshing}
+            icon={<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>}>
+            {loading || refreshing ? 'Sincronizando…' : 'Sincronizar Cuentti'}
           </Button>
         </div>
       </div>
@@ -284,7 +285,8 @@ export default function Inventario({ notify }) {
             </div>
             {/* Reposición: filtrar a bajo/sin stock + compartir lista */}
             <button type="button" className={`btn btn-sm ${soloReponer ? 'btn-primary' : 'btn-outline'}`} onClick={() => setSoloReponer(v => !v)}>
-              {soloReponer ? '✓ ' : ''}Por reponer ({porReponer.length})
+              {soloReponer && <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>}
+              Por reponer ({porReponer.length})
             </button>
             {soloReponer && porReponer.length > 0 && (
               <button type="button" className="btn btn-sm" onClick={compartirReposicion}

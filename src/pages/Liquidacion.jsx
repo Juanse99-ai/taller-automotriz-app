@@ -1373,11 +1373,11 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
                   const on = aporteForm === k
                   return (
                     <button key={k} type="button" onClick={() => setAporteForm(on ? null : k)}
-                      style={{ fontFamily: 'inherit', fontSize: 13, fontWeight: 600, cursor: 'pointer', padding: '6px 13px', borderRadius: 999,
-                        border: `1px solid ${on ? 'var(--blue-600)' : 'var(--border-strong)'}`,
-                        background: on ? 'var(--blue-600)' : 'var(--bg-raised)', color: on ? '#fff' : 'var(--text-2)',
-                        transition: 'background .12s, color .12s, border-color .12s' }}>
-                      {on ? '✕ ' : '＋ '}{lbl}
+                      className={`btn btn-sm ${on ? 'btn-primary' : 'btn-outline'}`}>
+                      {on
+                        ? <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+                        : <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><path d="M12 5v14M5 12h14"/></svg>}
+                      {lbl}
                     </button>
                   )
                 })}

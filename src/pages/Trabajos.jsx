@@ -767,7 +767,7 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
                           <Button variant="ghost" size="sm" onClick={() => handleEditar(t.id)}>Editar</Button>
                           {t.otCodigo && <Button variant="ghost" size="sm" onClick={() => imprimirOT(t)}>PDF</Button>}
                           {t.estado !== ESTADOS.COMPLETADO && (
-                            <Button variant="ghost" size="sm" style={{ color: 'var(--green-600)' }} onClick={() => handleCompletar(t.id)}>✓</Button>
+                            <Button variant="ghost" size="sm" aria-label="Marcar completado" style={{ color: 'var(--green-600)' }} onClick={() => handleCompletar(t.id)}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg></Button>
                           )}
                           {confirmDel === t.id ? (
                             <>
@@ -1753,7 +1753,7 @@ function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [], vehiculosHoo
                         </td>
                         <td className="text-right text-mono" style={{ fontWeight: 600 }}>{fmt(lineTotal)}</td>
                         <td>
-                          <Button variant="ghost" size="sm" type="button" onClick={() => removeItem(item.id)}>🗑</Button>
+                          <Button variant="ghost" size="sm" type="button" aria-label="Eliminar ítem" onClick={() => removeItem(item.id)}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg></Button>
                         </td>
                       </tr>
                     )

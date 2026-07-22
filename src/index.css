@@ -394,8 +394,8 @@ input,select,textarea{font-family:inherit;font-size:14px;color:inherit}
 .pagehd .actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 
 /* button */
-.btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;height:40px;padding:0 18px;border-radius:11px;font-size:13.5px;font-weight:600;transition:background .12s,transform 140ms var(--ease-out),box-shadow .12s;white-space:nowrap}
-.btn:active{transform:scale(.97)}
+.btn{position:relative;display:inline-flex;align-items:center;justify-content:center;gap:8px;height:44px;padding:0 20px;border-radius:999px;border:1px solid transparent;font-family:var(--font);font-size:15px;font-weight:600;white-space:nowrap;cursor:pointer;-webkit-backdrop-filter:blur(10px) saturate(160%);backdrop-filter:blur(10px) saturate(160%);transition:background .16s,transform 140ms var(--ease-out),box-shadow .16s,filter .16s}
+.btn:active{transform:scale(.96);filter:brightness(.95)}
 .btn:hover:not(:active){transform:translateY(-1px)}
 .btn:focus-visible{outline:2px solid var(--primary);outline-offset:2px}
 .icobtn:focus-visible,.tabs button:focus-visible{outline:2px solid var(--primary);outline-offset:2px;border-radius:8px}
@@ -421,19 +421,25 @@ a,button,[role=button],.navlink,.mob-tab,.icobtn,.tabs button{-webkit-tap-highli
 .m3switch{-webkit-tap-highlight-color:transparent;touch-action:manipulation}
 .m3switch:focus-visible{outline:2px solid var(--primary);outline-offset:2px}
 .m3switch svg{width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:2.2}
-.btn svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:2}
-.btn-primary{background:var(--primary);color:#fff;box-shadow:none}
-.btn-primary:hover{background:var(--primary-hover)}
-/* Secundario iOS: relleno gris del sistema, sin borde */
-.btn-outline{background:var(--fill);color:var(--text-2);border:none;box-shadow:none}
-.btn-outline:hover{background:var(--fill-2);color:var(--text)}
-.btn-ghost{color:var(--text-3);background:transparent}
-.btn-ghost:hover{background:var(--bg-subtle);color:var(--text)}
-.btn-danger{background:var(--red-600);color:#fff;box-shadow:0 1px 2px rgba(220,38,38,.3),0 4px 10px rgba(220,38,38,.15)}
-.btn-danger:hover{background:var(--red-700)}
-.btn-accent{background:var(--amber-400);color:var(--navy-900);box-shadow:0 1px 2px rgba(245,158,11,.35),0 4px 10px rgba(245,158,11,.2)}
-.btn-accent:hover{background:var(--amber-500);color:#fff}
-.btn-sm{height:36px;padding:0 14px;font-size:13px;border-radius:8px}
+.btn svg{width:17px;height:17px;stroke:currentColor;fill:none;stroke-width:2}
+/* === Sistema Liquid Glass (cápsula) — unificado en toda la app ===
+   Vidrio translúcido: el color es el tinte del rol; el borde claro (rim) y los
+   reflejos internos (inset) dan el brillo de vidrio; la sombra hace que flote.
+   color-mix adapta el tinte al tema (light/dark) sin duplicar hex. */
+.btn-primary{background:color-mix(in srgb,var(--primary) 85%,transparent);color:#fff;border-color:rgba(255,255,255,.32);box-shadow:0 8px 20px color-mix(in srgb,var(--primary) 32%,transparent),inset 0 1px 1px rgba(255,255,255,.55),inset 0 -9px 12px -9px rgba(255,255,255,.35)}
+.btn-primary:hover:not(:active){background:color-mix(in srgb,var(--primary) 93%,transparent)}
+/* Secundario: vidrio neutro esmerilado (el look "Get Started") */
+.btn-outline{background:color-mix(in srgb,var(--bg-raised) 62%,transparent);color:var(--text);border-color:rgba(255,255,255,.85);box-shadow:0 8px 20px rgba(15,23,42,.14),inset 0 1px 1px rgba(255,255,255,.95),inset 0 -9px 12px -9px rgba(255,255,255,.6)}
+.btn-outline:hover:not(:active){background:color-mix(in srgb,var(--bg-raised) 80%,transparent)}
+/* Ghost: el miembro más liviano del vidrio (acciones inline / iconos en tabla) */
+.btn-ghost{background:color-mix(in srgb,var(--bg-raised) 28%,transparent);color:var(--text-2);border-color:transparent;box-shadow:0 3px 10px rgba(15,23,42,.10),inset 0 1px 1px rgba(255,255,255,.55)}
+.btn-ghost:hover:not(:active){background:color-mix(in srgb,var(--bg-raised) 55%,transparent);color:var(--text)}
+.btn-danger{background:color-mix(in srgb,var(--red-600) 85%,transparent);color:#fff;border-color:rgba(255,255,255,.30);box-shadow:0 8px 20px color-mix(in srgb,var(--red-600) 30%,transparent),inset 0 1px 1px rgba(255,255,255,.5),inset 0 -9px 12px -9px rgba(255,255,255,.3)}
+.btn-danger:hover:not(:active){background:color-mix(in srgb,var(--red-600) 93%,transparent)}
+.btn-accent{background:color-mix(in srgb,var(--amber-400) 88%,transparent);color:var(--navy-900);border-color:rgba(255,255,255,.4);box-shadow:0 8px 20px color-mix(in srgb,var(--amber-400) 34%,transparent),inset 0 1px 1px rgba(255,255,255,.65),inset 0 -9px 12px -9px rgba(255,255,255,.45)}
+.btn-accent:hover:not(:active){background:color-mix(in srgb,var(--amber-500) 92%,transparent);color:#fff}
+.btn-sm{height:38px;padding:0 16px;font-size:13.5px;gap:6px}
+.btn-sm svg{width:16px;height:16px}
 
 /* card — plana con borde fino, sin sombra (referencia Firecrawl): la separación
    la hace el borde, no la elevación. */
@@ -673,10 +679,15 @@ textarea.input{min-height:88px;resize:vertical;padding-top:11px}
    ============================================ */
 
 /* alias botones (legacy) */
-.btn-success{background:var(--green-600);color:#fff;box-shadow:0 1px 2px rgba(22,163,74,.3),0 4px 10px rgba(22,163,74,.15)}
-.btn-success:hover{background:var(--green-700)}
-.btn-warning{background:var(--amber-400);color:var(--navy-900);box-shadow:0 1px 2px rgba(245,158,11,.35),0 4px 10px rgba(245,158,11,.2)}
-.btn-warning:hover{background:var(--amber-500);color:#fff}
+.btn-success{background:color-mix(in srgb,var(--green-600) 85%,transparent);color:#fff;border-color:rgba(255,255,255,.30);box-shadow:0 8px 20px color-mix(in srgb,var(--green-600) 30%,transparent),inset 0 1px 1px rgba(255,255,255,.5),inset 0 -9px 12px -9px rgba(255,255,255,.3)}
+.btn-success:hover:not(:active){background:color-mix(in srgb,var(--green-600) 93%,transparent)}
+.btn-warning{background:color-mix(in srgb,var(--amber-400) 88%,transparent);color:var(--navy-900);border-color:rgba(255,255,255,.4);box-shadow:0 8px 20px color-mix(in srgb,var(--amber-400) 34%,transparent),inset 0 1px 1px rgba(255,255,255,.65)}
+.btn-warning:hover:not(:active){background:color-mix(in srgb,var(--amber-500) 92%,transparent);color:#fff}
+/* Vidrio en modo oscuro: los reflejos blancos fuertes se apagan; el rim se vuelve
+   una línea de luz tenue y la sombra ambiente se profundiza. */
+[data-theme="dark"] .btn-outline{border-color:rgba(255,255,255,.16);box-shadow:0 8px 22px rgba(0,0,0,.42),inset 0 1px 1px rgba(255,255,255,.14),inset 0 -9px 12px -9px rgba(255,255,255,.07)}
+[data-theme="dark"] .btn-ghost{box-shadow:0 3px 10px rgba(0,0,0,.35),inset 0 1px 1px rgba(255,255,255,.10)}
+[data-theme="dark"] .btn-primary,[data-theme="dark"] .btn-danger,[data-theme="dark"] .btn-accent,[data-theme="dark"] .btn-success,[data-theme="dark"] .btn-warning{border-color:rgba(255,255,255,.22)}
 .btn:disabled,.btn.disabled{opacity:.52;cursor:not-allowed;pointer-events:none}
 /* Controles del visor de fotos (superficie SIEMPRE oscura: no usan tokens de tema) */
 .lb-ctl{display:inline-flex;align-items:center;justify-content:center;border-radius:12px;background:rgba(255,255,255,.13);border:1px solid rgba(255,255,255,.22);color:#fff;cursor:pointer;font-weight:600;transition:background .15s,transform .15s;-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
