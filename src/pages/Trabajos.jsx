@@ -1473,11 +1473,6 @@ function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [], vehiculosHoo
             </div>
           </div>
           <div className="card__b" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 14 }}>
-            {form.sinVehiculo && (
-              <div style={{ gridColumn: '1 / -1', fontSize: 13, color: 'var(--text-3)', padding: '4px 0' }}>
-                Servicio sin vehículo: no se piden placa ni datos del carro. Elige el técnico que lo hizo y agrega los ítems abajo.
-              </div>
-            )}
             <div className="field">
               <label>Placa {!form.sinVehiculo && <span className="req">*</span>}</label>
               <input className="input" value={form.placa} required={!form.sinVehiculo} disabled={form.sinVehiculo} placeholder={form.sinVehiculo ? 'No aplica' : 'ABC123'} style={{ textTransform: 'uppercase' }}
@@ -1609,7 +1604,6 @@ function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [], vehiculosHoo
           <div className="card__b">
             <div className="field">
               <label>Fotos y videos de la orden de trabajo</label>
-              <span className="help">Todas las que necesites: cómo llega el vehículo, durante la reparación, daños, repuestos cambiados y la entrega final. Los videos duran máximo 30 segundos.</span>
               <input type="file" accept="image/*" multiple onChange={e => addFotos('evidenciasIngreso', e.target.files)} />
               <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
                 <label className="btn btn-outline btn-sm" style={{ cursor: subiendoVideo ? 'wait' : 'pointer', margin: 0 }}>
@@ -1840,7 +1834,6 @@ function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [], vehiculosHoo
                   <span className="mo-manual__com-val">{fmt(comisionTecnico)}</span>
                 </div>
               </div>
-              <span className="help">Para servicios sin mano de obra cobrada aparte (ej. cambio de aceite). No se le suma al total del cliente; solo define cuánto se le liquida al técnico.</span>
             </div>
           )}
 
@@ -1859,7 +1852,6 @@ function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [], vehiculosHoo
                   <span className="mo-manual__com-val">{fmt(comisionExtra)}</span>
                 </div>
               </div>
-              <span className="help">Se suma a lo que se le liquida al técnico, sin cobrárselo al cliente (ej. la mano de obra del cambio de aceite). El total de la factura no cambia.</span>
             </div>
           )}
 
