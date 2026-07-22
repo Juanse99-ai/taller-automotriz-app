@@ -1411,6 +1411,27 @@ function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [], vehiculosHoo
       </div>
 
       <form onSubmit={handleSubmit} className="form-stack">
+        {/* ¿QUIÉN ATIENDE? — lo primero de la OT: se asigna el técnico de una.
+           Con solo 3 técnicos, tocar un chip es más rápido que abrir un menú. */}
+        <div className="card">
+          <div className="card__h"><h3>¿Quién atiende esta orden? <span className="req">*</span></h3></div>
+          <div className="card__b">
+            <div className="tec-chips">
+              {TECNICOS.filter(t => t.activo !== false || String(t.id) === String(form.tecnicoId)).map(t => {
+                const sel = String(form.tecnicoId) === String(t.id)
+                return (
+                  <button type="button" key={t.id} className={`tec-chip${sel ? ' on' : ''}`} aria-pressed={sel}
+                    onClick={() => set('tecnicoId', String(t.id))}>
+                    <span className={`av av-${((parseInt(t.id) || 1) - 1) % 5 + 1}`}>{tecIniciales(t.id)}</span>
+                    <span>{(t.nombre || '').split(' ')[0]}{t.activo === false ? ' (inactivo)' : ''}</span>
+                    {sel && <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" style={{ width: 16, height: 16, marginRight: 2 }}><path d="M20 6 9 17l-5-5" /></svg>}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        </div>
+
         {/* CLIENTE + VEHICULO en 2 columnas */}
         <div className="form-grid-2">
         {/* CLIENTE */}
@@ -1520,15 +1541,6 @@ function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [], vehiculosHoo
             <div className="field">
               <label>Kilometraje</label>
               <input className="input" type="number" value={form.kilometraje} min="0" placeholder="45000" disabled={form.sinVehiculo} onChange={e => set('kilometraje', e.target.value)} />
-            </div>
-            <div className="field">
-              <label>Técnico</label>
-              <select className="input" value={form.tecnicoId} onChange={e => set('tecnicoId', e.target.value)}>
-                <option value="">Seleccionar</option>
-                {TECNICOS.filter(t => t.activo !== false || t.id === parseInt(form.tecnicoId)).map(t => (
-                  <option key={t.id} value={t.id}>{t.nombre}{t.activo === false ? ' (inactivo)' : ''}</option>
-                ))}
-              </select>
             </div>
           </div>
         </div>

@@ -445,6 +445,14 @@ a,button,[role=button],.navlink,.mob-tab,.icobtn,.tabs button{-webkit-tap-highli
 .btn-icon.btn-sm{width:38px}
 .btn-icon svg{width:17px;height:17px}
 .btn-sm svg{width:16px;height:16px}
+/* Chips de técnico (asignación arriba de la OT). Con solo 3, tocar > menú. */
+.tec-chips{display:flex;flex-wrap:wrap;gap:10px}
+.tec-chip{display:inline-flex;align-items:center;gap:9px;padding:6px 15px 6px 6px;border-radius:999px;border:1.5px solid var(--border-strong);background:var(--bg-raised);color:var(--text);font-family:var(--font);font-weight:600;font-size:14px;cursor:pointer;transition:border-color .15s,background .15s,color .15s;-webkit-tap-highlight-color:transparent}
+.tec-chip:hover:not(.on){background:var(--bg-subtle)}
+.tec-chip:active{transform:scale(.97)}
+.tec-chip.on{border-color:var(--primary);background:color-mix(in srgb,var(--primary) 10%,var(--bg-raised));color:var(--primary)}
+.tec-chip:focus-visible{outline:2px solid var(--primary);outline-offset:2px}
+.tec-chip .av{width:30px;height:30px;font-size:11px}
 
 /* card — plana con borde fino, sin sombra (referencia Firecrawl): la separación
    la hace el borde, no la elevación. */
