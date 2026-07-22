@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { Button, Badge, IconX } from '../components/ui'
+import { Button, Badge, IconX, IconEdit } from '../components/ui'
 
 const ROLES = [
   { value: 'admin', label: 'Administrador', desc: 'Acceso completo (todas las secciones)' },
@@ -183,7 +183,7 @@ export default function Usuarios({ notify, currentUser }) {
                       </td>
                       <td className="c-muted" data-label="Creado">{u.created_at ? new Date(u.created_at).toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}</td>
                       <td className="td-actions" style={{ textAlign: 'right' }}>
-                        <Button variant="ghost" size="sm" onClick={() => abrirEditar(u)}>Editar</Button>
+                        <Button variant="ghost" size="sm" className="btn-icon" aria-label="Editar" title="Editar" onClick={() => abrirEditar(u)}><IconEdit /></Button>
                         {u.activo
                           ? <Button variant="ghost" size="sm" onClick={() => setConfirmDel(u)} disabled={isMe} style={{ color: isMe ? 'var(--text-3)' : 'var(--red-600)' }}>Desactivar</Button>
                           : <Button variant="ghost" size="sm" onClick={() => reactivar(u)} style={{ color: 'var(--green-600)' }}>Reactivar</Button>

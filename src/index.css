@@ -439,6 +439,11 @@ a,button,[role=button],.navlink,.mob-tab,.icobtn,.tabs button{-webkit-tap-highli
 .btn-accent{background:color-mix(in srgb,var(--amber-400) 88%,transparent);color:var(--navy-900);border-color:rgba(255,255,255,.4);box-shadow:0 8px 20px color-mix(in srgb,var(--amber-400) 34%,transparent),inset 0 1px 1px rgba(255,255,255,.65),inset 0 -9px 12px -9px rgba(255,255,255,.45)}
 .btn-accent:hover:not(:active){background:color-mix(in srgb,var(--amber-500) 92%,transparent);color:#fff}
 .btn-sm{height:38px;padding:0 16px;font-size:13.5px;gap:6px}
+/* Botón de acción SOLO ícono (cuadrado): para acciones repetidas (editar, PDF,
+   eliminar…) que en texto quedan largas. Lleva aria-label + title por claridad. */
+.btn-icon{width:40px;padding:0;flex-shrink:0}
+.btn-icon.btn-sm{width:38px}
+.btn-icon svg{width:17px;height:17px}
 .btn-sm svg{width:16px;height:16px}
 
 /* card — plana con borde fino, sin sombra (referencia Firecrawl): la separación

@@ -17,7 +17,7 @@ import Switch from '../components/Switch'
 import MoneyInput from '../components/MoneyInput'
 import SignaturePad from '../components/SignaturePad'
 import ConfirmDialog from '../components/ConfirmDialog'
-import { Button, Badge, IconX } from '../components/ui'
+import { Button, Badge, IconX, IconEdit, IconTrash, IconPdf, IconPhone, IconChat, IconCheck } from '../components/ui'
 
 // ¿La fecha cae dentro del rango elegido? (hoy / semana = últimos 7 días / mes = mes actual)
 function dentroDeFecha(fecha, modo, now) {
@@ -704,8 +704,8 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
                           <div style={{ fontSize: 11.5, color: 'var(--text-3)' }}>{fmtTelefono(selTrabajo.telefonoCliente)}</div>
                         </div>
                         <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
-                          <a href={`tel:${tel}`} className="btn btn-outline btn-sm" style={{ height: 32, padding: '0 12px' }}>Llamar</a>
-                          <a href={`https://wa.me/${wa}`} target="_blank" rel="noreferrer" className="btn btn-sm" style={{ height: 32, padding: '0 12px', background: 'var(--green-600)', color: '#fff' }}>WhatsApp</a>
+                          <a href={`tel:${tel}`} className="btn btn-outline btn-sm btn-icon" aria-label="Llamar" title="Llamar" style={{ height: 32, width: 32 }}><IconPhone /></a>
+                          <a href={`https://wa.me/${wa}`} target="_blank" rel="noreferrer" className="btn btn-sm btn-icon" aria-label="WhatsApp" title="WhatsApp" style={{ height: 32, width: 32, background: 'var(--green-600)', color: '#fff' }}><IconChat /></a>
                         </div>
                       </div>
                     )
@@ -745,11 +745,11 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
                     </div>
                   )}
                   <Button variant="outline" size="sm" style={{ width: '100%', marginBottom: 8 }} onClick={() => setFichaId(selTrabajo.id)}>Ficha del técnico</Button>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                    <Button variant="outline" size="sm" onClick={() => handleEditar(selTrabajo.id)}>Editar</Button>
-                    {selTrabajo.otCodigo && <Button variant="outline" size="sm" onClick={() => imprimirOT(selTrabajo)}>PDF</Button>}
-                    {selTrabajo.estado !== ESTADOS.COMPLETADO && <Button variant="primary" size="sm" onClick={() => handleCompletar(selTrabajo.id)}>Marcar listo</Button>}
-                    <Button variant="ghost" size="sm" style={{ color: 'var(--red-600)' }} onClick={() => setConfirmCfg({ title: 'Eliminar OT', confirmLabel: 'Eliminar', tone: 'danger', onConfirm: () => handleEliminar(selTrabajo.id) })}>Eliminar</Button>
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                    <Button variant="outline" size="sm" className="btn-icon" aria-label="Editar" title="Editar" onClick={() => handleEditar(selTrabajo.id)}><IconEdit /></Button>
+                    {selTrabajo.otCodigo && <Button variant="outline" size="sm" className="btn-icon" aria-label="Descargar PDF" title="Descargar PDF" onClick={() => imprimirOT(selTrabajo)}><IconPdf /></Button>}
+                    {selTrabajo.estado !== ESTADOS.COMPLETADO && <Button variant="primary" size="sm" className="btn-icon" aria-label="Marcar listo" title="Marcar listo" onClick={() => handleCompletar(selTrabajo.id)}><IconCheck /></Button>}
+                    <Button variant="ghost" size="sm" className="btn-icon" aria-label="Eliminar" title="Eliminar" style={{ color: 'var(--red-600)' }} onClick={() => setConfirmCfg({ title: 'Eliminar OT', confirmLabel: 'Eliminar', tone: 'danger', onConfirm: () => handleEliminar(selTrabajo.id) })}><IconTrash /></Button>
                   </div>
                 </div>
               </div>
@@ -807,8 +807,8 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
                       <td className="c-mono c-muted" data-label="Fecha" style={{ fontSize: 12 }}>{fmtDate(t.fecha)}</td>
                       <td className="c-right td-actions">
                         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 4 }}>
-                          <Button variant="ghost" size="sm" onClick={() => handleEditar(t.id)}>Editar</Button>
-                          {t.otCodigo && <Button variant="ghost" size="sm" onClick={() => imprimirOT(t)}>PDF</Button>}
+                          <Button variant="ghost" size="sm" className="btn-icon" aria-label="Editar" title="Editar" onClick={() => handleEditar(t.id)}><IconEdit /></Button>
+                          {t.otCodigo && <Button variant="ghost" size="sm" className="btn-icon" aria-label="Descargar PDF" title="Descargar PDF" onClick={() => imprimirOT(t)}><IconPdf /></Button>}
                           {t.estado !== ESTADOS.COMPLETADO && (
                             <Button variant="ghost" size="sm" aria-label="Marcar completado" style={{ color: 'var(--green-600)' }} onClick={() => handleCompletar(t.id)}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg></Button>
                           )}
@@ -861,8 +861,8 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
                       <div style={{ fontSize: 11.5, color: 'var(--text-3)' }}>{fmtTelefono(t.telefonoCliente)}</div>
                     </div>
                     <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
-                      <a href={`tel:${tel}`} className="btn btn-outline btn-sm" style={{ height: 32, padding: '0 12px' }}>Llamar</a>
-                      <a href={`https://wa.me/${wa}`} target="_blank" rel="noreferrer" className="btn btn-sm" style={{ height: 32, padding: '0 12px', background: 'var(--green-600)', color: '#fff' }}>WhatsApp</a>
+                      <a href={`tel:${tel}`} className="btn btn-outline btn-sm btn-icon" aria-label="Llamar" title="Llamar" style={{ height: 32, width: 32 }}><IconPhone /></a>
+                      <a href={`https://wa.me/${wa}`} target="_blank" rel="noreferrer" className="btn btn-sm btn-icon" aria-label="WhatsApp" title="WhatsApp" style={{ height: 32, width: 32, background: 'var(--green-600)', color: '#fff' }}><IconChat /></a>
                     </div>
                   </div>
                 )}
