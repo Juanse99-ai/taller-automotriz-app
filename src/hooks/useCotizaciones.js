@@ -87,9 +87,10 @@ export function useCotizaciones() {
 
   useEffect(() => { cargarInicial() }, [cargarInicial])
 
-  // Polling silencioso 15s + focus
+  // Polling silencioso cada 60s (antes 15s: sumaba Fast Origin Transfer) + focus.
+  // Pestaña oculta = no consulta.
   useEffect(() => {
-    const interval = setInterval(() => { sincronizar() }, 15000)
+    const interval = setInterval(() => { if (!document.hidden) sincronizar() }, 60000)
     const handleFocus = () => sincronizar()
     window.addEventListener('focus', handleFocus)
     return () => {

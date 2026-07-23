@@ -150,11 +150,13 @@ export default function App() {
   }, [])
 
   // Pre-cargar inventario de Cuentti en background al iniciar la app y luego
-  // cada 2 minutos. Asi cuando se abre Trabajos/Cotizaciones ya esta fresco.
+  // cada 15 minutos (antes 2: paginaba TODO el inventario por /api/cuentti en cada
+  // ciclo y sumaba Fast Origin Transfer). Con la pestaña oculta no se consulta.
   useEffect(() => {
     if (!user) return
     let active = true
     const sync = () => {
+      if (document.hidden) return
       cargarInventarioCompleto()
         .then(data => {
           if (active && data && data.length > 0) {
@@ -165,7 +167,7 @@ export default function App() {
         .catch(() => { /* ignorar errores de red, seguimos con cache */ })
     }
     sync()
-    const interval = setInterval(sync, 2 * 60 * 1000) // cada 2 min (antes 5)
+    const interval = setInterval(sync, 15 * 60 * 1000) // cada 15 min
     return () => { active = false; clearInterval(interval) }
   }, [user])
 
@@ -196,7 +198,14 @@ export default function App() {
     setSection('dashboard')
   }, [])
 
+  // Candado anti doble-click: el 23-jul-2026 clicks repetidos en "Crear trabajo"
+  // generaron 22 OTs duplicadas (cada click era un agregarTrabajo nuevo). Mientras
+  // hay una creación en vuelo, los demás clicks se ignoran.
+  const creandoDesdeCotRef = useRef(false)
   const handleCrearTrabajoDesdeCotizacion = useCallback(async (cot) => {
+    if (creandoDesdeCotRef.current) return
+    creandoDesdeCotRef.current = true
+    try {
     const data = {
       cedula: cot.cedula || '',
       cliente: cot.cliente || '',
@@ -216,6 +225,9 @@ export default function App() {
     await trabajosHook.agregarTrabajo(data)
     notify('Trabajo creado desde cotizacion', 'success')
     setSection('trabajos')
+    } finally {
+      creandoDesdeCotRef.current = false
+    }
   }, [trabajosHook, notify])
 
   // Si no hay sesion, mostrar login

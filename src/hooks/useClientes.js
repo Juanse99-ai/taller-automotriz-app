@@ -111,7 +111,9 @@ export function useClientes() {
         }
       } catch { /* silent */ }
     }
-    const interval = setInterval(syncClientes, 15000)
+    // Cada 5 min (antes 15s): son ~830 filas (~160 KB) que casi nunca cambian;
+    // a 15s eran ~40 MB/hora de Fast Origin Transfer por pestaña abierta.
+    const interval = setInterval(() => { if (!document.hidden) syncClientes() }, 5 * 60 * 1000)
     const handleFocus = () => syncClientes()
     window.addEventListener('focus', handleFocus)
     return () => { clearInterval(interval); window.removeEventListener('focus', handleFocus) }

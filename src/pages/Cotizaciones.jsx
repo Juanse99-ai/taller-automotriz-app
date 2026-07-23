@@ -19,6 +19,9 @@ export default function Cotizaciones({ notify, trabajos = [], onCrearTrabajo, co
   const [vista, setVista] = useState('lista')
   const [editId, setEditId] = useState(null)
   const [confirmCfg, setConfirmCfg] = useState(null)
+  // Anti doble-click de "Crear trabajo": cada click extra creaba OTRA OT (el
+  // 23-jul-2026 salieron 22 duplicadas). Mientras se crea, el botón se bloquea.
+  const [creandoTrabajoId, setCreandoTrabajoId] = useState(null)
 
   const loadLogo = async () => {
     try {
@@ -358,7 +361,13 @@ export default function Cotizaciones({ notify, trabajos = [], onCrearTrabajo, co
                             </>
                           )}
                           {c.estado === ESTADO_COT.APROBADA && onCrearTrabajo && (
-                            <Button variant="primary" size="sm" onClick={() => onCrearTrabajo(c)}>Crear trabajo</Button>
+                            <Button variant="primary" size="sm" disabled={creandoTrabajoId !== null}
+                              onClick={async () => {
+                                if (creandoTrabajoId) return
+                                setCreandoTrabajoId(c.id)
+                                try { await onCrearTrabajo(c) } finally { setCreandoTrabajoId(null) }
+                              }}>
+                              {creandoTrabajoId === c.id ? 'Creando…' : 'Crear trabajo'}</Button>
                           )}
                           <button type="button" className="icon-btn" title="Descargar PDF" aria-label="Descargar PDF" onClick={() => imprimirCotizacion(c)}>
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
