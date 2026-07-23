@@ -96,6 +96,18 @@ export function useTrabajos() {
   const trabajosRef = useRef(trabajos)
   trabajosRef.current = trabajos
 
+  // Máximo ot_codigo visto en el SERVIDOR, incluyendo OTs borradas (deleted=true).
+  // Las borradas no aparecen en la lista visible, pero su número sigue reservado:
+  // sin esto, borrar las OTs más altas haría retroceder el consecutivo y la
+  // siguiente OT repetiría un código ya usado.
+  const maxOtRemotoRef = useRef(0)
+  const registrarMaxOtRemoto = useCallback((normalized) => {
+    maxOtRemotoRef.current = normalized.reduce((mx, t) => {
+      const m = /OT-(\d+)/.exec(t.otCodigo || '')
+      return m ? Math.max(mx, parseInt(m[1], 10)) : mx
+    }, maxOtRemotoRef.current)
+  }, [])
+
   const nextOtCodigo = useCallback(() => {
     // Deriva el consecutivo del MÁXIMO real ya sincronizado (no solo del contador
     // local): un dispositivo nuevo o con caché limpio ya no arranca en OT-0001 y
@@ -105,7 +117,7 @@ export function useTrabajos() {
       return m ? Math.max(mx, parseInt(m[1], 10)) : mx
     }, 0)
     const local = lsGet(LS_KEYS.OT_CONSECUTIVO, 0) || 0
-    const next = Math.max(local, maxTrabajos) + 1
+    const next = Math.max(local, maxTrabajos, maxOtRemotoRef.current) + 1
     lsSet(LS_KEYS.OT_CONSECUTIVO, next)
     return `OT-${String(next).padStart(4, '0')}`
   }, [])
@@ -184,6 +196,7 @@ export function useTrabajos() {
       servidorRespondioRef.current = true
       setConnectionError(false)
       const normalized = sbData.map(normalizar)
+      registrarMaxOtRemoto(normalized) // incluye borradas: el consecutivo no retrocede
 
       // Detectar trabajos locales sin subir y reintentar
       const local = trabajosRef.current
@@ -245,6 +258,7 @@ export function useTrabajos() {
       servidorRespondioRef.current = true // ya sabemos el máximo real → numerar OT es seguro
       if (sbData.length > 0) {
         const normalized = sbData.map(normalizar)
+        registrarMaxOtRemoto(normalized) // incluye borradas: el consecutivo no retrocede
         const merged = mergeConLocal(normalized)
         setTrabajos(merged)
         lsSet(LS_KEYS.TRABAJOS, merged)
@@ -287,10 +301,22 @@ export function useTrabajos() {
 
   useEffect(() => { cargarInicial() }, [cargarInicial])
 
-  // Polling silencioso cada 15s + re-sync al volver foco
+  // Polling silencioso cada 60s (antes 15s: multiplicaba el Fast Origin Transfer
+  // de Vercel) + re-sync al volver el foco con freno de 30s. Con la pestaña
+  // oculta no se consulta: nadie está mirando y el fetch igual cobraba ancho de banda.
   useEffect(() => {
-    const interval = setInterval(() => { sincronizar() }, 15000)
-    const handleFocus = () => sincronizar()
+    let ultimoSync = 0
+    const tick = () => {
+      if (document.hidden) return
+      ultimoSync = Date.now()
+      sincronizar()
+    }
+    const interval = setInterval(tick, 60000)
+    const handleFocus = () => {
+      if (Date.now() - ultimoSync < 30000) return
+      ultimoSync = Date.now()
+      sincronizar()
+    }
     window.addEventListener('focus', handleFocus)
     return () => {
       clearInterval(interval)

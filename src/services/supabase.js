@@ -62,8 +62,24 @@ async function fetchWithTimeout(url, options = {}) {
 
 // ---------- TRABAJOS ----------
 
+// Columnas de la LISTA de trabajos: todas las que usa la app MENOS `evidencias`
+// (fotos base64: megas). Con select=* esa columna viajaba en cada poll y era el
+// ~98% del Fast Origin Transfer de Vercel (2 GB/día). Las fotos de una OT se
+// cargan al abrirla con fetchEvidenciasTrabajo().
+// OJO: si agregas una columna nueva a la tabla y el front la necesita, súmala aquí.
+const TRABAJOS_COLS = [
+  'id', 'created_at', 'fecha', 'cedula_cliente', 'cliente', 'telefono_cliente',
+  'email_cliente', 'placa', 'marca', 'modelo', 'ano', 'cilindraje', 'kilometraje',
+  'tecnico_id', 'estado', 'observaciones', 'items', 'mano_obra', 'mano_obra_extra',
+  'subtotal_sin_iva', 'total_iva', 'total', 'pagado', 'metodo_pago', 'ot_codigo',
+  'cuentti_id_transacion', 'facturado_en', 'cuentti_resolucion', 'firma_cliente',
+  'tipo_aceite', 'proximo_km', 'proxima_visita', 'notas_proximo_mant',
+  'sin_vehiculo', 'deleted', 'tareas_hechas', 'crono_inicio', 'crono_acumulado',
+  'ingreso',
+].join(',')
+
 export async function fetchTrabajos() {
-  const url = `${baseProxy}&select=*&order=fecha.desc&limit=500`
+  const url = `${baseProxy}&select=${TRABAJOS_COLS}&order=fecha.desc&limit=500`
   const res = await fetchWithTimeout(url)
 
   // Si el proxy devuelve error (502 = Supabase error, 503 = conexion fallida)
@@ -79,6 +95,19 @@ export async function fetchTrabajos() {
   }
 
   return await res.json()
+}
+
+// Trae SOLO las evidencias (fotos/videos) de UNA OT, bajo demanda. La lista
+// general ya no las incluye (ver TRABAJOS_COLS). Devuelve siempre un array.
+export async function fetchEvidenciasTrabajo(id) {
+  if (!id) return []
+  const res = await fetchWithTimeout(`${baseProxy}&id=eq.${encodeURIComponent(id)}&select=id,evidencias&limit=1`)
+  if (!res.ok) throw new Error(`Supabase evidencias error (${res.status})`)
+  const rows = await res.json()
+  const val = rows?.[0]?.evidencias
+  if (!val) return []
+  if (Array.isArray(val)) return val
+  try { const arr = JSON.parse(val); return Array.isArray(arr) ? arr : [] } catch { return [] }
 }
 
 export async function upsertTrabajo(trabajo, opts = {}) {
@@ -102,8 +131,6 @@ export async function upsertTrabajo(trabajo, opts = {}) {
     estado: trabajo.estado || 'Pendiente',
     observaciones: trabajo.observaciones || '',
     items: JSON.stringify(trabajo.items || []),
-    // Evidencias (fotos comprimidas) para que el cliente las vea en su portal
-    evidencias: JSON.stringify(trabajo.evidenciasIngreso || []),
     mano_obra: trabajo.manoObra || 0,
     // M.O. adicional (no facturada): base extra que se le paga al técnico sin
     // cobrarla al cliente. Se persiste para no perderla al re-guardar. En OTs
@@ -136,6 +163,14 @@ export async function upsertTrabajo(trabajo, opts = {}) {
   if (trabajo.facturadoEn) row.facturado_en = trabajo.facturadoEn
   if (trabajo.firmaCliente) row.firma_cliente = trabajo.firmaCliente
   if (trabajo.cuenttiResolucion) row.cuentti_resolucion = trabajo.cuenttiResolucion
+  // Evidencias (fotos base64, para el portal): SOLO viajan si el llamador las tiene
+  // completas (_evidCargadas: el form las trajo con fetchEvidenciasTrabajo, o hay
+  // fotos recién tomadas). Como la lista ya no las trae, mandarlas siempre habría
+  // BORRADO las fotos del servidor en cada guardado hecho desde un estado sin ellas.
+  // El upsert es merge-duplicates: la columna omitida queda intacta en la base.
+  if (trabajo._evidCargadas || (Array.isArray(trabajo.evidenciasIngreso) && trabajo.evidenciasIngreso.length > 0)) {
+    row.evidencias = JSON.stringify(trabajo.evidenciasIngreso || [])
+  }
 
   // Upsert estandar: si existe id → actualiza, si no → inserta
   let lastErr = null
@@ -181,7 +216,10 @@ export async function deleteTrabajo(id) {
 // ---------- COTIZACIONES ----------
 
 export async function fetchCotizaciones() {
-  const res = await fetchWithTimeout(`${proxy('cotizaciones')}&select=*&order=fecha.desc&limit=500`)
+  // Sin firma_aprobacion: es un dataURL (~17 KB por cotización firmada) que no se
+  // muestra en el admin y engordaría cada poll a medida que los clientes firmen.
+  const cols = 'id,fecha,cedula,cliente,telefono_cliente,placa,marca,modelo,items,subtotal,iva,total,observaciones,validez_dias,estado,created_at,ano,cilindraje,aprobada_en'
+  const res = await fetchWithTimeout(`${proxy('cotizaciones')}&select=${cols}&order=fecha.desc&limit=500`)
   if (!res.ok) throw new Error(`Supabase cotizaciones error (${res.status})`)
   return await res.json()
 }

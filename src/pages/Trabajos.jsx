@@ -12,7 +12,7 @@ import { MARCAS, getModelos } from '../utils/vehiculos'
 import { useClientes } from '../hooks/useClientes'
 import { useInventario, formatCacheAge } from '../hooks/useInventario'
 import { lsGet, lsSet, LS_KEYS } from '../services/storage'
-import { subirVideoEvidencia, borrarVideoEvidencia } from '../services/supabase'
+import { subirVideoEvidencia, borrarVideoEvidencia, fetchEvidenciasTrabajo } from '../services/supabase'
 import Switch from '../components/Switch'
 import MoneyInput from '../components/MoneyInput'
 import SignaturePad from '../components/SignaturePad'
@@ -177,7 +177,14 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
 
   const handleEliminar = async (id) => {
     const t = trabajos.find(x => x.id === id)
-    const videos = (t?.evidenciasIngreso || []).filter(e => e?.tipo === 'video')
+    // Las evidencias ya no viajan en la lista: se consultan aquí para poder borrar
+    // los videos del bucket. Si la consulta falla solo quedaría un huérfano (no bloquea).
+    let evid = t?.evidenciasIngreso || []
+    try {
+      const remotas = await fetchEvidenciasTrabajo(id)
+      if (Array.isArray(remotas) && remotas.length) evid = remotas
+    } catch { /* huérfano tolerable */ }
+    const videos = evid.filter(e => e?.tipo === 'video')
     // ELIMINAR primero (soft-delete: deleted=true) y LUEGO borrar los videos del
     // bucket: el endpoint solo borra archivos no referenciados por trabajos activos.
     await eliminarTrabajo(id)
@@ -424,7 +431,10 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
         allTrabajos={trabajos}
         vehiculosHook={vehiculosHook}
         notify={notify}
-        onSave={async (data) => {
+        onSave={async (dataForm) => {
+          // _evidAntes (lista de evidencias del servidor al abrir el form) solo
+          // sirve para el diff de videos de aquí abajo: NO debe persistirse.
+          const { _evidAntes, ...data } = dataForm
           // Helper: registrar/actualizar cliente y vehiculo en BD local
           // (se ejecuta tanto al crear como al editar)
           const sincronizarClienteVehiculo = () => {
@@ -451,7 +461,9 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
           }
 
           if (vista === 'editar') {
-            const videosAntes = [...(trabajo?.evidenciasIngreso || []), ...(trabajo?.evidenciasEntrega || [])].filter(e => e?.tipo === 'video')
+            // Videos que tenía la OT al abrirla: la lista del servidor (_evidAntes)
+            // manda; el estado local ya no trae evidencias en el poll.
+            const videosAntes = (_evidAntes ?? [...(trabajo?.evidenciasIngreso || []), ...(trabajo?.evidenciasEntrega || [])]).filter(e => e?.tipo === 'video')
             const urlsAhora = new Set((data.evidenciasIngreso || []).filter(e => e?.tipo === 'video').map(e => e.url))
             // GUARDAR primero (des-referencia el video), LUEGO borrar del bucket: así
             // el endpoint de borrado (que rechaza archivos aún referenciados) no falla.
@@ -1058,6 +1070,35 @@ function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [], vehiculosHoo
   // trabajo). Si se cancela, o si se quitan antes de guardar, hay que borrarlos del
   // bucket para no dejar huérfanos.
   const videosSesionRef = useRef([])
+
+  // Las fotos ya NO llegan en la lista de trabajos (pesan MB y viajaban en cada
+  // poll: eran el ~98% del Fast Origin Transfer de Vercel). Al abrir una OT
+  // existente se cargan aquí bajo demanda. evidCargadas marca que este formulario
+  // tiene la verdad completa: solo entonces su guardado escribe la columna
+  // evidencias (si no, el upsert la omite y la base conserva las fotos).
+  const evidAntesRef = useRef(null) // lista del servidor al abrir (para diff de videos)
+  const [evidCargadas, setEvidCargadas] = useState(!trabajo?.id) // OT nueva: no hay nada que cargar
+  useEffect(() => {
+    if (!trabajo?.id) return
+    let vivo = true
+    fetchEvidenciasTrabajo(trabajo.id)
+      .then(servidor => {
+        if (!vivo) return
+        evidAntesRef.current = servidor
+        setForm(f => {
+          // Unión: la lista del servidor manda, más lo agregado localmente que aún
+          // no está en ella (fotos tomadas antes de que resolviera esta carga).
+          const clave = (e) => e?.id || e?.url || (e?.dataUrl || '').slice(0, 40)
+          const vistas = new Set(servidor.map(clave))
+          const localesNuevas = (f.evidenciasIngreso || []).filter(e => !vistas.has(clave(e)))
+          return { ...f, evidenciasIngreso: [...servidor, ...localesNuevas] }
+        })
+        setEvidCargadas(true)
+      })
+      .catch(() => { /* sin red: se guarda sin tocar la columna evidencias */ })
+    return () => { vivo = false }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [trabajo?.id])
   const addVideo = async (campo, file) => {
     if (!file) return
     if (!file.type?.startsWith('video/')) { notify?.('Ese archivo no es un video.', 'error'); return }
@@ -1304,7 +1345,12 @@ function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [], vehiculosHoo
   const comisionExtra = Math.round(manoObraExtra * COMISION.TOTAL)
 
   // Guardado real de la OT. skipAviso salta el aviso de M.O.=0 (patrón skipConfirm).
-  const guardar = (skipAviso = false) => {
+  // Candado anti doble-click (el 23-jul-2026 clicks repetidos crearon 22 OTs
+  // duplicadas): mientras el guardado está en vuelo, los demás clicks se ignoran.
+  const guardandoRef = useRef(false)
+  const [guardando, setGuardando] = useState(false)
+  const guardar = async (skipAviso = false) => {
+    if (guardandoRef.current) return
     if ((!form.placa && !form.sinVehiculo) || !form.cliente) return
     // Aviso: OT con valor pero sin mano de obra (ninguna línea "Servicio" ni M.O.
     // manual) → el técnico asignado quedaría con comisión $0, que solo se descubre
@@ -1319,7 +1365,10 @@ function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [], vehiculosHoo
       })
       return
     }
-    onSave({
+    guardandoRef.current = true
+    setGuardando(true)
+    try {
+    await onSave({
       ...form,
       placa: (form.placa || (form.sinVehiculo ? 'SERVICIO' : '')).toUpperCase(),
       ano: parseInt(form.ano) || new Date().getFullYear(),
@@ -1336,6 +1385,11 @@ function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [], vehiculosHoo
       fecha: new Date(form.fecha + 'T12:00:00').toISOString(),
       evidenciasIngreso: form.evidenciasIngreso,
       evidenciasEntrega: form.evidenciasEntrega,
+      // Evidencias completas en este form → el upsert puede escribir la columna.
+      // _evidAntes = lista del servidor al abrir (el padre la usa para el diff de
+      // videos quitados; se descarta antes de persistir).
+      _evidCargadas: evidCargadas,
+      _evidAntes: evidAntesRef.current,
       // Próximo mantenimiento (CRM)
       tipoAceite: form.tipoAceite || null,
       proximoKm: form.proximoKm ? parseInt(form.proximoKm) : null,
@@ -1349,6 +1403,10 @@ function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [], vehiculosHoo
     const urlsFinal = new Set((form.evidenciasIngreso || []).filter(e => e?.tipo === 'video').map(e => e.url))
     videosSesionRef.current.filter(v => !urlsFinal.has(v.url)).forEach(v => borrarVideoEvidencia(v))
     videosSesionRef.current = []
+    } finally {
+      guardandoRef.current = false
+      setGuardando(false)
+    }
   }
 
   const handleSubmit = (e) => {
@@ -1973,7 +2031,7 @@ function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [], vehiculosHoo
           </div>
           <div className="form-actionbar__btns">
             <Button variant="outline" type="button" onClick={cancelar}>Cancelar</Button>
-            <Button variant="primary" type="submit">{isEdit ? 'Actualizar OT' : `Guardar OT · ${fmt(totales.total)}`}</Button>
+            <Button variant="primary" type="submit" disabled={guardando}>{guardando ? 'Guardando…' : isEdit ? 'Actualizar OT' : `Guardar OT · ${fmt(totales.total)}`}</Button>
           </div>
         </div>
       </form>
