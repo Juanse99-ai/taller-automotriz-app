@@ -835,7 +835,7 @@ const tools = [
   },
   {
     name: 'crear_cliente_cuentti',
-    description: 'Crea o actualiza un cliente en Cuentti. Idempotente por cedula. Para actualizar pasa cuenttiId.',
+    description: 'Crea o actualiza un cliente en Cuentti. Idempotente por cedula. Para actualizar pasa cuenttiId: el update lee la ficha existente y SOLO pisa los campos que pases explicitamente (no la reconstruye con defaults). ciudad + departamento (tal como estan en el listado de Cuentti) son necesarios para que una factura electronica FEIC al receptor pase la DIAN.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -844,7 +844,8 @@ const tools = [
         telefono: { type: 'string', default: '' },
         email: { type: 'string', default: '' },
         direccion: { type: 'string', default: '' },
-        ciudad: { type: 'string', default: '' },
+        ciudad: { type: 'string', default: '', description: 'Ciudad del cliente TAL COMO esta en el listado de Cuentti (ej. "Barranquilla"). Junto con departamento, es lo que la DIAN valida del receptor al emitir FE.' },
+        departamento: { type: 'string', default: '', description: 'Departamento del cliente TAL COMO esta en el listado de Cuentti (ej. "Atlantico"). Sin esto la FE al receptor rebota con "Codigo de Departamento del receptor no existe".' },
         // Catalogos LEIDOS del formulario real de Cuentti (Maestro de Contacto,
         // 2026-07-16). Los de antes estaban inventados y corridos: decian 5=NIT
         // cuando el 5 es Cedula de extranjeria, y por eso una empresa con NIT
@@ -864,7 +865,7 @@ const tools = [
     },
     handler: async (args) => {
       const { cedula, nombre, telefono = '', email = '', direccion = '', ciudad = '',
-              tipoIdentificacion, tipoPersona, legalidad = 29, regimenImpuesto = 2,
+              departamento = '', tipoIdentificacion, tipoPersona, legalidad = 29, regimenImpuesto = 2,
               regimen = 2, cuenttiId, confirm } = args
       const ced = String(cedula || '').trim()
       const nom = String(nombre || '').trim()
@@ -884,8 +885,37 @@ const tools = [
       const primer_apellido = partes.length > 1 ? partes[partes.length - 1] : ''
       const segundo_nombre = partes.length > 2 ? partes.slice(1, -1).join(' ') : ''
 
-      const body = {
-        id_cliente: cuenttiId || 0,
+      // UPDATE = leer-mezclar-escribir: la ficha existente es la base y SOLO se
+      // pisan los campos que el llamador paso explicitamente. Antes el update
+      // reconstruia la ficha completa con los defaults del template de creacion,
+      // borrando la configuracion tributaria real (caso Factory Engineering:
+      // legalidad 12 / responsable de IVA habria quedado en 29 / no responsable).
+      let base = null
+      if (cuenttiId) {
+        const data = await cuenttiRequest(`/jServerj4ErpPro/api/token/consultarClienteIdentificacion/${encodeURIComponent(ced)}`).catch(() => null)
+        const items = Array.isArray(data) ? data : (data?.data ? data.data : (data ? [data] : []))
+        base = items.filter(r => r && r.id_cliente && !r.message)
+          .find(r => String(r.id_cliente) === String(cuenttiId)) || null
+        if (!base) return `❌ No encontre la ficha id_cliente=${cuenttiId} con identificacion ${ced} en Cuentti. No actualizo a ciegas: reconstruirla desde cero pisaria su configuracion tributaria.`
+        delete base.error
+      }
+
+      const body = base ? {
+        ...base,
+        id_cliente: cuenttiId,
+        nombre_cliente: nom,
+        ...(args.telefono !== undefined ? { telefono1: telefono } : {}),
+        ...(args.email !== undefined ? { email1: email } : {}),
+        ...(args.direccion !== undefined ? { direccion } : {}),
+        ...(args.ciudad !== undefined ? { ciudad } : {}),
+        ...(args.departamento !== undefined ? { departamento } : {}),
+        ...(args.legalidad !== undefined ? { legalidad: parseInt(legalidad, 10) } : {}),
+        ...(args.regimenImpuesto !== undefined ? { regimenImpuesto: parseInt(regimenImpuesto, 10) } : {}),
+        ...(args.regimen !== undefined ? { regimen: parseInt(regimen, 10) } : {}),
+        ...(args.tipoPersona !== undefined ? { id_tipo_persona: tipoPer } : {}),
+        ...(args.tipoIdentificacion !== undefined ? { id_tipo_identificacion: tipoIdent } : {}),
+      } : {
+        id_cliente: 0,
         genera_bonos: 1,
         es_consumidor_final: '0',
         dias_vencimiento_cartera_cliente: 30,
@@ -917,22 +947,42 @@ const tools = [
         id_tipo_retencion_ventas: 1, id_tipo_retencion_compra: 1,
         lstContactoCliente: [],
         envioSmsCartera: '0', envioSmsProducto: '0',
-        departamento: '', pais: 'Colombia',
+        departamento, pais: 'Colombia',
         regimen: parseInt(regimen, 10),
         id_tipo_identificacion: tipoIdent,
         id_empleado: parseInt(CONFIG.employeeId, 10),
       }
 
       if (!confirm) {
+        if (base) {
+          // Update: mostrar el DIFF real contra la ficha (los params no pasados
+          // NO se aplican, asi que listar los defaults aqui seria engañoso).
+          const difs = Object.keys(body)
+            .filter(k => JSON.stringify(body[k]) !== JSON.stringify(base[k]))
+            .map(k => `- **${k}**: ${JSON.stringify(base[k] ?? null)} → ${JSON.stringify(body[k])}`)
+          return [
+            `## Dry-run: actualizar cliente`,
+            `**Confirm = false** — no se envio nada a Cuentti.`,
+            ``,
+            `**Operacion:** actualizar id_cliente=${cuenttiId} (leer-mezclar-escribir)`,
+            `**Cedula:** ${ced} · **Nombre:** ${nom}`,
+            ``,
+            difs.length ? `**Cambios sobre la ficha actual:**\n${difs.join('\n')}` : '**Sin cambios** (todo lo pasado coincide con la ficha).',
+            ``,
+            `> El resto de la ficha (legalidad, regimenes, cartera, etc.) se conserva tal cual esta en Cuentti.`,
+            ``,
+            `Para ejecutar, llama de nuevo con \`confirm: true\`.`,
+          ].join('\n')
+        }
         return [
-          `## Dry-run: crear/actualizar cliente`,
+          `## Dry-run: crear cliente`,
           `**Confirm = false** — no se envio nada a Cuentti.`,
           ``,
-          `**Operacion:** ${cuenttiId ? `actualizar id_cliente=${cuenttiId}` : 'crear nuevo'}`,
+          `**Operacion:** crear nuevo`,
           `**Cedula:** ${ced}`,
           `**Nombre:** ${nom}`,
           `**Telefono:** ${telefono || '—'} · **Email:** ${email || '—'}`,
-          `**Direccion:** ${direccion || '—'} · **Ciudad:** ${ciudad || '—'}`,
+          `**Direccion:** ${direccion || '—'} · **Ciudad:** ${ciudad || '—'} · **Departamento:** ${departamento || '—'}`,
           `**Tipo persona:** ${CAT_TIPO_PERSONA[tipoPer] || tipoPer}${!tipoPersona ? ' _(deducido del NIT/nombre)_' : ''}`,
           `**Tipo identificacion:** ${CAT_TIPO_IDENT[tipoIdent] || tipoIdent} (id ${tipoIdent})${!tipoIdentificacion ? ' _(deducido del tipo de persona)_' : ''}`,
           `**Legalidad:** ${CAT_LEGALIDAD[legalidad] || legalidad} (id ${legalidad})`,
@@ -942,6 +992,9 @@ const tools = [
           // empresa salen del RUT y el codigo no tiene como saberlos.
           esJuridica && (args.legalidad === undefined || args.regimenImpuesto === undefined)
             ? `\n> ⚠️ **Es una empresa y estos 3 campos van por defecto.** Salen del RUT (casilla 53): 48→regimenImpuesto 1 · 07/09→legalidad 12 · 05→regimen 1 · 47→regimen 2. Si tienes el RUT, pásalos.`
+            : '',
+          !ciudad || !departamento
+            ? `\n> ⚠️ **Sin ciudad/departamento la factura electronica FEIC a este cliente va a rebotar en la DIAN.** Pasalos tal como estan en el listado de Cuentti.`
             : '',
           ``,
           `Para ejecutar, llama de nuevo con \`confirm: true\`.`,
