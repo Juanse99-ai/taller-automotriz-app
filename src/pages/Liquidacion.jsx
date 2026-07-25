@@ -132,6 +132,12 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
   // Ventanas del tecnico seleccionado: minimizables por header
   const [colapso, setColapso] = useState({ trabajos: false, movs: false })
   const toggleColapso = (k) => setColapso(c => ({ ...c, [k]: !c[k] }))
+  // CTA del estado vacío del paso 3 ("Ir al paso 2"): despliega la tabla de
+  // trabajos si estaba colapsada y hace scroll hasta ella.
+  const irAPaso2 = () => {
+    setColapso(c => ({ ...c, trabajos: false }))
+    document.getElementById('liq-paso2')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
   const [movForm, setMovForm] = useState({
     tipo: 'adelanto',
     monto: '',
@@ -1181,6 +1187,15 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
         .liq-aj__txt{ flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
         .liq-aj__val{ min-width:112px; text-align:right; font-weight:700; white-space:nowrap; }
         .liq-grp{ font-size:11px; font-weight:800; letter-spacing:.6px; text-transform:uppercase; color:var(--text-4); padding:0 12px; }
+        /* Estado vacío del paso 3 (sin trabajos marcados): reemplaza TODO el
+           desglose — antes "Mano de obra $0" convivía con ajustes reales
+           (ej. "Deuda $100.000") y parecía un error. Apple HIG: nunca mostrar
+           un cálculo parcial/en cero como si fuera el resultado final. */
+        .liq-empty{ display:flex; flex-direction:column; align-items:center; text-align:center; padding:28px 20px 22px; gap:12px; }
+        .liq-empty__icon{ width:44px; height:44px; border-radius:50%; background:var(--soft-amber); display:flex; align-items:center; justify-content:center; color:var(--amber-700); }
+        .liq-empty h4{ font-size:15px; font-weight:700; color:var(--text); margin:0; }
+        .liq-empty p{ font-size:13.5px; color:var(--text-3); max-width:340px; line-height:1.5; margin:0; }
+        .liq-empty__note{ margin-top:14px; padding-top:14px; border-top:1px solid var(--border); width:100%; max-width:420px; font-size:12.5px; color:var(--text-3); display:flex; align-items:center; gap:8px; justify-content:center; }
       `}</style>
       <div className="pagehd">
         <div>
@@ -1323,7 +1338,7 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
             </div>
           </div>
 
-          <div className="card" style={{ marginTop: 14 }}>
+          <div className="card" style={{ marginTop: 14 }} id="liq-paso2">
             <div className="card__h" style={{ cursor: 'pointer' }} onClick={() => toggleColapso('trabajos')}>
               <h3 style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"
@@ -1444,6 +1459,25 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
               <span title="Referencia para copiar en Cuentti" className="badge badge-i mono">Ref. #{liqRef(nextLiqId(tecData.tecnico.nombre))}</span>
             </div>
             <div className="card__b">
+              {cantSeleccionados === 0 ? (
+                <div className="liq-empty">
+                  <div className="liq-empty__icon">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v5M12 16.5h.01"/></svg>
+                  </div>
+                  <h4>Aún no hay nada que calcular</h4>
+                  <p>Marca los trabajos que vas a pagarle a {tecData.tecnico.nombre.split(' ')[0]} en el <strong>paso 2</strong> — ahí se arma la mano de obra, la comisión y el neto.</p>
+                  <button type="button" className="btn btn-primary btn-sm" onClick={irAPaso2}>Ir al paso 2 ↑</button>
+                  {tecCuenta.saldo !== 0 && (
+                    <div className="liq-empty__note">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M12 2v6M12 22v-6M2 12h6M22 12h-6"/></svg>
+                      {tecCuenta.saldo > 0
+                        ? <>{tecData.tecnico.nombre.split(' ')[0]} tiene <strong className="mono">{fmt(tecCuenta.saldo)}</strong> pendientes en su cuenta — se podrán descontar aquí una vez elijas los trabajos.</>
+                        : <>El taller le debe <strong className="mono">{fmt(-tecCuenta.saldo)}</strong> — se podrá sumar aquí una vez elijas los trabajos.</>}
+                    </div>
+                  )}
+                </div>
+              ) : (
+              <>
               <div className="liq-line"><span>Mano de obra (sin IVA) · {cantSeleccionados} {cantSeleccionados === 1 ? 'OT' : 'OTs'}</span><span className="liq-line__v mono">{fmt(totalSeleccion.manoObra)}</span><span className="liq-slot" aria-hidden="true" /></div>
               <div className="liq-line"><span>Comisión ({COMISION.TOTAL * 100}%)</span><span className="liq-line__v mono" style={{ color: 'var(--green-700)', fontWeight: 700 }}>{fmt(totalSeleccion.comision)}</span><span className="liq-slot" aria-hidden="true" /></div>
 
@@ -1603,16 +1637,9 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
                 </div>
               )}
 
-              {/* NETO — justo debajo de los ajustes que lo formaron */}
-              {cantSeleccionados === 0 ? (
-                /* Estado vacío accionable: mismo lenguaje que los demás avisos
-                   (tinte ámbar semántico + ícono), no una caja gris cualquiera. */
-                <div style={{ marginTop: 24, padding: '12px 14px', background: 'var(--soft-amber)', borderRadius: 'var(--radius)', fontSize: 13, color: 'var(--amber-700)', display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><circle cx="12" cy="12" r="10"/><path d="M12 8v5M12 16.5h.01"/></svg>
-                  <span>Marca al menos un trabajo en el <strong>paso 2</strong> para calcular el pago.</span>
-                </div>
-              ) : (
-              <>
+              {/* NETO — justo debajo de los ajustes que lo formaron. Ya estamos
+                 dentro de la rama "hay selección" del ternario de arriba: el
+                 estado vacío se resuelve al inicio del card__b. */}
                 <div style={{ marginTop: 24, marginBottom: 24 }}>
                   {totalSeleccion.cargosEfectivos !== 0 && (
                     <div className="liq-line"><span>Aportes / descuentos</span><span className="liq-line__v mono" style={{ color: 'var(--amber-700)', fontWeight: 700 }}>{totalSeleccion.cargosEfectivos >= 0 ? '− ' : '+ '}{fmt(Math.abs(totalSeleccion.cargosEfectivos))}</span><span className="liq-slot" aria-hidden="true" /></div>
