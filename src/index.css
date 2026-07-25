@@ -656,21 +656,31 @@ textarea.input{min-height:88px;resize:vertical;padding-top:11px}
 
 /* Liquidación: tabla de selección de trabajos con ancho fijo para que las
    columnas de plata (Mano de obra y Comisión) SIEMPRE se vean sin deslizar.
-   El Cliente (col 3, sin ancho) toma el espacio que sobra y trunca si es largo.
    Solo escritorio: en celular la tabla es tarjetas. Columnas (el asistente por
    pasos juntó fecha+OT+placa en una sola, antes eran 8):
    1 casilla · 2 OT·vehículo · 3 Cliente · 4 Compartido · 5 M.O. · 6 Comisión
+
+   Reparto: todo en % (no px) para que el ancho sobrante se distribuya entre
+   TODAS las columnas. Antes solo Cliente no tenía ancho, así que se tragaba el
+   sobrante entero (en un monitor ancho, ~1200px para un nombre) mientras la
+   fecha quedaba apretada en 110px.
    OJO: con table-layout:fixed manda `width`, no `min-width`. Si cambia el
    número de columnas hay que actualizar estos nth-child o los montos se
    aplastan a 0 y los encabezados se montan unos sobre otros. */
 @media(min-width:601px){
-  .tbl-liq{table-layout:fixed;min-width:660px}
-  .tbl-liq th:nth-child(1),.tbl-liq td:nth-child(1){width:40px}
-  .tbl-liq th:nth-child(2),.tbl-liq td:nth-child(2){width:110px}
-  .tbl-liq th:nth-child(4),.tbl-liq td:nth-child(4){width:126px}
-  .tbl-liq th:nth-child(5),.tbl-liq td:nth-child(5){width:116px}
-  .tbl-liq th:nth-child(6),.tbl-liq td:nth-child(6){width:106px;padding-right:20px}
+  /* min-width calibrado al reparto en %: por debajo de esto la columna de OT no
+     alcanza para "PLACA · fecha" en un renglón ni el selector de compañero cabe,
+     así que la tarjeta desliza en horizontal en vez de aplastar las columnas. */
+  .tbl-liq{table-layout:fixed;min-width:880px}
+  .tbl-liq th:nth-child(1),.tbl-liq td:nth-child(1){width:44px}
+  .tbl-liq th:nth-child(2),.tbl-liq td:nth-child(2){width:17%}
+  .tbl-liq th:nth-child(3),.tbl-liq td:nth-child(3){width:40%}
+  .tbl-liq th:nth-child(4),.tbl-liq td:nth-child(4){width:15%}
+  .tbl-liq th:nth-child(5),.tbl-liq td:nth-child(5){width:15%}
+  .tbl-liq th:nth-child(6),.tbl-liq td:nth-child(6){width:13%;padding-right:20px}
   .tbl-liq td:nth-child(3){white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  /* La fecha/placa nunca debe partirse en dos renglones */
+  .tbl-liq td:nth-child(2){white-space:nowrap}
 }
 
 /* === Lista agrupada iOS (inset grouped, estilo Ajustes) ===
