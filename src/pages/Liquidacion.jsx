@@ -1361,7 +1361,9 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
                         aria-label="Seleccionar todos" style={{ accentColor: 'var(--primary)', cursor: 'pointer' }}
                       />
                     </th>
-                    <th>OT · vehículo</th>
+                    <th>OT</th>
+                    <th>Vehículo</th>
+                    <th>Fecha</th>
                     <th>Cliente</th>
                     <th style={{ textAlign: 'center' }}>Compartido</th>
                     <th className="c-right">Mano de obra</th>
@@ -1380,15 +1382,13 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
                       return (
                         <tr key={t.id} style={{ background: selected ? 'var(--accent-soft)' : undefined, cursor: 'pointer' }} onClick={() => toggleSeleccion(t.id)}>
                           <td className="td-check" data-label="Liquidar" style={{ textAlign: 'center' }}><input type="checkbox" checked={selected} onChange={() => {}} aria-label="Seleccionar trabajo" style={{ accentColor: 'var(--primary)', cursor: 'pointer' }}/></td>
-                          <td data-label="OT">
-                            <div className="mono" style={{ color: 'var(--blue-600)', fontWeight: 700, fontSize: 13.5 }}>{t.otCodigo || t.id}</div>
-                            <div style={{ fontSize: 11.5, color: 'var(--text-3)', marginTop: 1 }}>
-                              {sinVeh
-                                ? <span>Sin vehículo</span>
-                                : <span className="mono" style={{ fontWeight: 700, color: 'var(--text-2)' }}>{t.placa || '—'}</span>}
-                              {' · '}{fechaCorta(t.fecha)}
-                            </div>
+                          <td className="c-mono" data-label="OT" style={{ color: 'var(--blue-600)', fontWeight: 700 }}>{t.otCodigo || t.id}</td>
+                          <td data-label="Vehículo">
+                            {sinVeh
+                              ? <span style={{ color: 'var(--text-3)' }}>Sin vehículo</span>
+                              : <span className="mono" style={{ fontWeight: 700 }}>{t.placa || '—'}</span>}
                           </td>
+                          <td className="c-muted" data-label="Fecha">{fechaCorta(t.fecha)}</td>
                           <td className="c-name">{tituloCliente(t.cliente) || '—'}</td>
                           <td data-label="Compartido" style={{ textAlign: 'center' }} onClick={e => e.stopPropagation()}>
                             <input type="checkbox" checked={esComp} onChange={() => {
