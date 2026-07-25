@@ -1160,18 +1160,27 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
         .liq-roster-row{ display:flex; align-items:center; gap:12px; width:100%; padding:14px 16px; text-align:left; background:transparent; border:none; border-top:1px solid var(--border); cursor:pointer; transition:background .15s var(--ease-out); }
         .liq-roster-row:first-of-type{ border-top:none; }
         .liq-roster-row:hover{ background:var(--bg-subtle); }
-        .liq-neto__row{ display:flex; align-items:baseline; padding:5px 0; font-size:14.5px; color:var(--text-2); }
-        .liq-neto__row .a{ margin-left:auto; }
+        /* ===== Eje único de montos =====
+           Renglones de dinero y fichas de ajuste comparten EXACTAMENTE el mismo
+           inset (12px) y el mismo ancho de valor + hueco de control (28px), así
+           todas las cifras caen en la misma vertical. .mono ya trae tabular-nums,
+           de modo que los dígitos no bailan al cambiar de valor. */
+        .liq-line{ display:flex; align-items:baseline; gap:12px; padding:6px 12px; font-size:14.5px; color:var(--text-2); }
+        .liq-line__v{ margin-left:auto; min-width:112px; text-align:right; white-space:nowrap; }
+        .liq-slot{ width:28px; flex-shrink:0; }     /* espejo del control de las fichas */
+        .liq-neto__tot{ display:flex; align-items:baseline; gap:12px; padding:12px 12px 0; border-top:2px solid var(--border-strong); margin-top:8px; }
         .liq-neto__tot .l{ font-size:12.5px; font-weight:800; letter-spacing:.5px; text-transform:uppercase; color:var(--text); }
-        .liq-neto__tot .v{ margin-left:auto; font-size:30px; font-weight:800; letter-spacing:-.02em; }
-        /* Ajustes: UNA sola lista (aportes, diario y deudas juntos) */
-        .liq-aj{ display:flex; align-items:center; gap:10px; background:var(--bg-subtle); border:1px solid var(--border); border-radius:10px; padding:9px 12px; font-size:13px; }
+        .liq-neto__tot .v{ margin-left:auto; min-width:112px; text-align:right; font-size:30px; font-weight:800; letter-spacing:-.02em; }
+        /* Ajustes: UNA sola lista (aportes, diario y deudas juntos).
+           Estructura común: texto · monto · control, con el control SIEMPRE en el
+           mismo hueco derecho (× para quitar un aporte, casilla para descontar
+           una deuda) — misma anatomía aunque la acción difiera. */
+        .liq-aj{ display:flex; align-items:center; gap:12px; background:var(--bg-subtle); border-radius:10px; padding:10px 12px; font-size:13.5px; }
         .liq-aj + .liq-aj{ margin-top:6px; }
-        .liq-aj.on{ border-color:var(--blue-500); background:var(--soft-blue, rgba(37,99,235,.07)); }
+        .liq-aj.on{ background:color-mix(in srgb, var(--primary) 10%, var(--bg-subtle)); }
         .liq-aj__txt{ flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-        .liq-aj__val{ font-weight:700; color:var(--amber-700); white-space:nowrap; }
-        .liq-addaj{ display:inline-flex; align-items:center; gap:7px; border:1.5px dashed var(--border-strong); background:none; border-radius:999px; padding:7px 15px; font-family:var(--font); font-size:13px; font-weight:700; color:var(--text-2); cursor:pointer; margin-top:10px; transition:border-color .15s, color .15s; }
-        .liq-addaj:hover{ border-color:var(--primary); color:var(--primary); }
+        .liq-aj__val{ min-width:112px; text-align:right; font-weight:700; white-space:nowrap; }
+        .liq-grp{ font-size:11px; font-weight:800; letter-spacing:.6px; text-transform:uppercase; color:var(--text-4); padding:0 12px; }
       `}</style>
       <div className="pagehd">
         <div>
@@ -1431,17 +1440,18 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
           <div className="card" style={{ marginTop: 14 }}>
             <div className="card__h">
               <h3>Paso 3 · Ajustes y pago</h3>
-              <span title="Referencia para copiar en Cuentti" className="mono" style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--blue-600)', background: 'rgba(37,99,235,.10)', padding: '3px 9px', borderRadius: 7, whiteSpace: 'nowrap' }}>Ref. #{liqRef(nextLiqId(tecData.tecnico.nombre))}</span>
+              {/* Insignia del sistema (.badge badge-i), no un estilo suelto */}
+              <span title="Referencia para copiar en Cuentti" className="badge badge-i mono">Ref. #{liqRef(nextLiqId(tecData.tecnico.nombre))}</span>
             </div>
             <div className="card__b">
-              <div className="liq-neto__row"><span>Mano de obra (sin IVA) · {cantSeleccionados} {cantSeleccionados === 1 ? 'OT' : 'OTs'}</span><span className="a mono">{fmt(totalSeleccion.manoObra)}</span></div>
-              <div className="liq-neto__row"><span>Comisión ({COMISION.TOTAL * 100}%)</span><span className="a mono" style={{ color: 'var(--green-700)', fontWeight: 700 }}>{fmt(totalSeleccion.comision)}</span></div>
+              <div className="liq-line"><span>Mano de obra (sin IVA) · {cantSeleccionados} {cantSeleccionados === 1 ? 'OT' : 'OTs'}</span><span className="liq-line__v mono">{fmt(totalSeleccion.manoObra)}</span><span className="liq-slot" aria-hidden="true" /></div>
+              <div className="liq-line"><span>Comisión ({COMISION.TOTAL * 100}%)</span><span className="liq-line__v mono" style={{ color: 'var(--green-700)', fontWeight: 700 }}>{fmt(totalSeleccion.comision)}</span><span className="liq-slot" aria-hidden="true" /></div>
 
               {/* ===== AJUSTES — una sola lista: aportes, diario y deudas juntos ===== */}
-              <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--text-4)', textTransform: 'uppercase', letterSpacing: '.6px', margin: '18px 0 8px' }}>Ajustes de este pago</div>
+              <div className="liq-grp" style={{ margin: '20px 0 8px' }}>Ajustes de este pago</div>
 
               {tecMovs.length === 0 && tecCuenta.deudas.length === 0 && tecCuenta.saldo === 0 && (
-                <p style={{ fontSize: 13, color: 'var(--text-3)', margin: 0 }}>Sin ajustes: se paga la comisión completa.</p>
+                <p style={{ fontSize: 13, color: 'var(--text-3)', margin: 0, padding: '0 12px' }}>Sin ajustes: se paga la comisión completa.</p>
               )}
 
               {/* Aportes y descuentos de este cierre */}
@@ -1451,8 +1461,8 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
                     <strong>{tipoLabel(m.tipo)}</strong>
                     <span style={{ color: 'var(--text-3)' }}> · {fechaCorta(m.fecha)}{m.nota ? ` · ${m.nota}` : ''}</span>
                   </span>
-                  <span className="liq-aj__val">− {fmt(m.monto)}</span>
-                  <Button variant="ghost" size="sm" className="btn-icon" aria-label="Quitar ajuste" title="Quitar" onClick={() => setDialog({
+                  <span className="liq-aj__val mono" style={{ color: 'var(--amber-700)' }}>− {fmt(m.monto)}</span>
+                  <Button variant="ghost" size="sm" className="btn-icon" aria-label="Quitar ajuste" title="Quitar" style={{ width: 28, height: 28, flexShrink: 0 }} onClick={() => setDialog({
                     title: 'Eliminar movimiento',
                     lead: `${tipoLabel(m.tipo)} · ${fmt(m.monto)} · ${fmtDate(m.fecha)}`,
                     confirmLabel: 'Sí, eliminar', tone: 'danger',
@@ -1466,16 +1476,20 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
                 const marcada = !!cuentaSelIds[m.id]
                 return (
                   <label key={m.id} className={`liq-aj${marcada ? ' on' : ''}`} style={{ cursor: 'pointer' }}>
-                    <input type="checkbox" checked={marcada} onChange={() => toggleCuentaSel(m.id)} style={{ width: 15, height: 15, accentColor: 'var(--blue-500)', cursor: 'pointer', flexShrink: 0 }} />
                     <span className="liq-aj__txt">
                       <strong>Deuda</strong>
                       <span style={{ color: 'var(--text-3)' }}> · {fechaCorta(m.fecha)} · {m.nota || 'Préstamo'}</span>
                     </span>
-                    <span className="liq-aj__val" style={{ color: marcada ? 'var(--amber-700)' : 'var(--text-3)' }}>
+                    <span className="liq-aj__val mono" style={{ color: marcada ? 'var(--amber-700)' : 'var(--text-3)' }}>
                       {marcada ? '− ' : ''}{fmt(m.restante)}
                       {m.restante !== Math.round(parseFloat(m.monto) || 0) && (
                         <span style={{ fontWeight: 500, fontSize: 11.5, color: 'var(--text-4)' }}> de {fmt(m.monto)}</span>
                       )}
+                    </span>
+                    {/* El control va en el MISMO hueco derecho que la × de los aportes
+                       (accesorio a la derecha, como una lista de iOS). */}
+                    <span style={{ width: 28, display: 'inline-flex', justifyContent: 'center', flexShrink: 0 }}>
+                      <input type="checkbox" checked={marcada} onChange={() => toggleCuentaSel(m.id)} style={{ width: 17, height: 17, accentColor: 'var(--primary)', cursor: 'pointer' }} />
                     </span>
                   </label>
                 )
@@ -1483,13 +1497,14 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
 
               {/* Monto libre contra su cuenta (o suma, si el taller le debe) */}
               {tecCuenta.saldo !== 0 && (
-                <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-end', gap: 12, marginTop: 10 }}>
-                  <div className="field" style={{ flex: '0 0 190px', margin: 0 }}>
+                /* Campo y su ayuda apilados: al costado quedaban sin alinear entre sí. */
+                <div style={{ marginTop: 12, padding: '0 12px' }}>
+                  <div className="field" style={{ maxWidth: 220, margin: 0 }}>
                     <label>{tecCuenta.saldo > 0 ? 'O descontar un monto' : 'Sumar a este pago'}</label>
                     {/* Escribir a mano desmarca los checkboxes (manda lo escrito) */}
                     <MoneyInput value={cuentaMonto} onChange={(v) => { setCuentaMonto(v); if (tecCuenta.saldo > 0) setCuentaSelIds({}) }} placeholder="0" />
                   </div>
-                  <div style={{ flex: 1, minWidth: 200, fontSize: 12.5, color: 'var(--text-3)' }}>
+                  <p style={{ fontSize: 12.5, color: 'var(--text-3)', margin: '8px 0 0', lineHeight: 1.45 }}>
                     {tecCuenta.saldo > 0 ? (
                       <>Al generar el pago se abona a su Estado de cuenta.
                         {(parseFloat(cuentaMonto) || 0) > 0 && totalSeleccion.descuentoCuenta !== Math.round(parseFloat(cuentaMonto) || 0) && (
@@ -1503,17 +1518,19 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
                         )}
                       </>
                     )}
-                  </div>
+                  </p>
                 </div>
               )}
 
-              {/* Agregar un ajuste nuevo: el formulario aparece SOLO al elegir cuál */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+              {/* Agregar un ajuste nuevo: el formulario aparece SOLO al elegir cuál.
+                 Usa .btn-outline del sistema (antes era un borde punteado propio
+                 que no calzaba con ningún otro botón de la app). */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginTop: 16, padding: '0 12px' }}>
                 {[['adelanto', 'Adelanto o cargo'], ['diario', 'Diario del administrador']].map(([k, lbl]) => {
                   const on = aporteForm === k
                   return (
                     <button key={k} type="button" onClick={() => setAporteForm(on ? null : k)}
-                      className={on ? 'btn btn-sm btn-primary' : 'liq-addaj'}>
+                      className={`btn btn-sm ${on ? 'btn-primary' : 'btn-outline'}`}>
                       {on
                         ? <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
                         : <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><path d="M12 5v14M5 12h14"/></svg>}
@@ -1588,18 +1605,22 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
 
               {/* NETO — justo debajo de los ajustes que lo formaron */}
               {cantSeleccionados === 0 ? (
-                <div style={{ marginTop: 18, padding: '12px 14px', background: 'var(--bg-subtle)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', fontSize: 13, color: 'var(--text-3)' }}>
-                  Marca al menos un trabajo en el <strong>paso 2</strong> para calcular el pago.
+                /* Estado vacío accionable: mismo lenguaje que los demás avisos
+                   (tinte ámbar semántico + ícono), no una caja gris cualquiera. */
+                <div style={{ marginTop: 24, padding: '12px 14px', background: 'var(--soft-amber)', borderRadius: 'var(--radius)', fontSize: 13, color: 'var(--amber-700)', display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><circle cx="12" cy="12" r="10"/><path d="M12 8v5M12 16.5h.01"/></svg>
+                  <span>Marca al menos un trabajo en el <strong>paso 2</strong> para calcular el pago.</span>
                 </div>
               ) : (
               <>
-                <div style={{ marginTop: 18, marginBottom: 16 }}>
+                <div style={{ marginTop: 24, marginBottom: 24 }}>
                   {totalSeleccion.cargosEfectivos !== 0 && (
-                    <div className="liq-neto__row"><span>Aportes / descuentos</span><span className="a mono" style={{ color: 'var(--amber-600)', fontWeight: 700 }}>{totalSeleccion.cargosEfectivos >= 0 ? '− ' : '+ '}{fmt(Math.abs(totalSeleccion.cargosEfectivos))}</span></div>
+                    <div className="liq-line"><span>Aportes / descuentos</span><span className="liq-line__v mono" style={{ color: 'var(--amber-700)', fontWeight: 700 }}>{totalSeleccion.cargosEfectivos >= 0 ? '− ' : '+ '}{fmt(Math.abs(totalSeleccion.cargosEfectivos))}</span><span className="liq-slot" aria-hidden="true" /></div>
                   )}
-                  <div className="liq-neto__tot" style={{ display: 'flex', alignItems: 'baseline', borderTop: '3px double var(--text)', marginTop: 8, paddingTop: 12 }}>
+                  <div className="liq-neto__tot">
                     <span className="l">Neto a pagar</span>
                     <span className="v mono" style={{ color: totalSeleccion.neto >= 0 ? 'var(--green-700)' : 'var(--red-700)' }}>{fmt(totalSeleccion.neto)}</span>
+                    <span className="liq-slot" aria-hidden="true" />
                   </div>
                 </div>
                 {totalSeleccion.cargos > 0 && (
