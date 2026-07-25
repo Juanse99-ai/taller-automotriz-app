@@ -79,6 +79,27 @@ const notaDiario = (base, dias) => {
 // Iniciales del técnico (2 letras) para la referencia legible.
 const iniciales = (nombre) => (nombre || '?').split(' ').filter(Boolean).map(w => w[0]).slice(0, 2).join('').toUpperCase() || 'XX'
 
+// Fecha compacta para la tabla: "24 jul" (el año solo si NO es el actual).
+// es-CO devuelve "24 de jul. de 2026": sobra el "de" y el punto de la
+// abreviatura, y repetir el año en una lista del cierre en curso es ruido.
+const fechaCorta = (iso) => {
+  if (!iso) return '—'
+  const m = typeof iso === 'string' && iso.match(/^(\d{4})-(\d{2})-(\d{2})$/)
+  const d = m ? new Date(+m[1], +m[2] - 1, +m[3]) : new Date(iso)
+  if (isNaN(d.getTime())) return '—'
+  const mes = d.toLocaleDateString('es-CO', { month: 'short' }).replace('.', '')
+  return d.getFullYear() === new Date().getFullYear()
+    ? `${d.getDate()} ${mes}`
+    : `${d.getDate()} ${mes} ${d.getFullYear()}`
+}
+
+// Los nombres llegan de Cuentti EN MAYÚSCULA SOSTENIDA y en una tabla gritan.
+// Se pasan a mayúscula inicial, dejando intactas las siglas jurídicas.
+const tituloCliente = (s) => String(s || '').trim().split(/\s+/).map(w => {
+  if (/\./.test(w) || /^(sas|sa|ltda|cia|eu|s\.a\.s)$/i.test(w)) return w.toUpperCase()
+  return w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()
+}).join(' ')
+
 // Referencia visible de una liquidación (para trazar con Cuentti). Los ids nuevos
 // son legibles (ej. LQ-PB0702 → "PB0702"); los viejos eran un uid aleatorio largo,
 // de esos se muestran los últimos 6. Se le pasa el id del registro.
@@ -1315,6 +1336,8 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
             </div>
             {!colapso.trabajos && (
             <div className="card__b card__b--flush">
+              {/* Los anchos de columna de la tabla viven en .tbl-liq (index.css):
+                 es table-layout:fixed, así que ahí manda `width` (no `min-width`). */}
               {tecTrabajos.length === 0 ? (
                 <div className="empty"><h4>Sin pendientes</h4><p>No hay trabajos pendientes de liquidar.</p></div>
               ) : (
@@ -1329,11 +1352,11 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
                         aria-label="Seleccionar todos" style={{ accentColor: 'var(--primary)', cursor: 'pointer' }}
                       />
                     </th>
-                    <th style={{ whiteSpace: 'nowrap' }}>OT · vehículo</th>
-                    <th style={{ width: '42%' }}>Cliente</th>
-                    <th style={{ textAlign: 'center', width: 130 }}>Compartido</th>
-                    <th className="c-right" style={{ whiteSpace: 'nowrap' }}>Mano de obra</th>
-                    <th className="c-right" style={{ whiteSpace: 'nowrap' }}>Comisión</th>
+                    <th>OT · vehículo</th>
+                    <th>Cliente</th>
+                    <th style={{ textAlign: 'center' }}>Compartido</th>
+                    <th className="c-right">Mano de obra</th>
+                    <th className="c-right">Comisión</th>
                   </tr></thead>
                   <tbody>
                     {tecTrabajos.map(t => {
@@ -1342,16 +1365,22 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
                       const com = esComp ? (mano * COMISION.TOTAL) / 2 : mano * COMISION.TOTAL
                       const selected = !!seleccionados[t.id]
                       const tidAsignado = parseInt(t.tecnicoId)
+                      // "SERVICIO" no es una placa: es el marcador de trabajo sin carro.
+                      // Se muestra como texto, no en mono, para no confundirlo con una real.
+                      const sinVeh = !!t.sinVehiculo || (t.placa || '').trim().toUpperCase() === 'SERVICIO'
                       return (
                         <tr key={t.id} style={{ background: selected ? 'var(--accent-soft)' : undefined, cursor: 'pointer' }} onClick={() => toggleSeleccion(t.id)}>
                           <td className="td-check" data-label="Liquidar" style={{ textAlign: 'center' }}><input type="checkbox" checked={selected} onChange={() => {}} aria-label="Seleccionar trabajo" style={{ accentColor: 'var(--primary)', cursor: 'pointer' }}/></td>
                           <td data-label="OT">
                             <div className="mono" style={{ color: 'var(--blue-600)', fontWeight: 700, fontSize: 13.5 }}>{t.otCodigo || t.id}</div>
                             <div style={{ fontSize: 11.5, color: 'var(--text-3)', marginTop: 1 }}>
-                              <span className="mono" style={{ fontWeight: 700, color: 'var(--text-2)' }}>{t.placa || '—'}</span> · {fmtDate(t.fecha).replace(/ de /g, ' ')}
+                              {sinVeh
+                                ? <span>Sin vehículo</span>
+                                : <span className="mono" style={{ fontWeight: 700, color: 'var(--text-2)' }}>{t.placa || '—'}</span>}
+                              {' · '}{fechaCorta(t.fecha)}
                             </div>
                           </td>
-                          <td className="c-name">{t.cliente || '—'}</td>
+                          <td className="c-name">{tituloCliente(t.cliente) || '—'}</td>
                           <td data-label="Compartido" style={{ textAlign: 'center' }} onClick={e => e.stopPropagation()}>
                             <input type="checkbox" checked={esComp} onChange={() => {
                               const yaLiq = liquidados.some(x => x === t.id || x.startsWith(`${t.id}#`))
@@ -1384,7 +1413,7 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
                           </td>
                           <td className="c-mono c-right" data-label="Comisión" style={{ color: 'var(--green-600)', fontWeight: 600 }}>
                             {fmt(Math.round(com))}
-                            {esComp && <span style={{ display: 'block', fontSize: 10, color: 'var(--text-3)' }}>Compartido</span>}
+                            {esComp && <span style={{ display: 'block', fontSize: 10, color: 'var(--text-3)', fontWeight: 500 }}>la mitad</span>}
                           </td>
                         </tr>
                       )
@@ -1420,7 +1449,7 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
                 <div key={m.id} className="liq-aj">
                   <span className="liq-aj__txt">
                     <strong>{tipoLabel(m.tipo)}</strong>
-                    <span style={{ color: 'var(--text-3)' }}> · {fmtDate(m.fecha)}{m.nota ? ` · ${m.nota}` : ''}</span>
+                    <span style={{ color: 'var(--text-3)' }}> · {fechaCorta(m.fecha)}{m.nota ? ` · ${m.nota}` : ''}</span>
                   </span>
                   <span className="liq-aj__val">− {fmt(m.monto)}</span>
                   <Button variant="ghost" size="sm" className="btn-icon" aria-label="Quitar ajuste" title="Quitar" onClick={() => setDialog({
@@ -1440,7 +1469,7 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
                     <input type="checkbox" checked={marcada} onChange={() => toggleCuentaSel(m.id)} style={{ width: 15, height: 15, accentColor: 'var(--blue-500)', cursor: 'pointer', flexShrink: 0 }} />
                     <span className="liq-aj__txt">
                       <strong>Deuda</strong>
-                      <span style={{ color: 'var(--text-3)' }}> · {fmtDate(m.fecha)} · {m.nota || 'Préstamo'}</span>
+                      <span style={{ color: 'var(--text-3)' }}> · {fechaCorta(m.fecha)} · {m.nota || 'Préstamo'}</span>
                     </span>
                     <span className="liq-aj__val" style={{ color: marcada ? 'var(--amber-700)' : 'var(--text-3)' }}>
                       {marcada ? '− ' : ''}{fmt(m.restante)}

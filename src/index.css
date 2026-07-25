@@ -656,19 +656,21 @@ textarea.input{min-height:88px;resize:vertical;padding-top:11px}
 
 /* Liquidación: tabla de selección de trabajos con ancho fijo para que las
    columnas de plata (Mano de obra y Comisión) SIEMPRE se vean sin deslizar.
-   El Cliente (col 5, sin ancho) toma el espacio que sobra y trunca si es largo.
-   Solo escritorio: en celular la tabla es tarjetas. Columnas:
-   1 casilla · 2 Fecha · 3 OT · 4 Placa · 5 Cliente · 6 Compartido · 7 M.O. · 8 Comisión */
+   El Cliente (col 3, sin ancho) toma el espacio que sobra y trunca si es largo.
+   Solo escritorio: en celular la tabla es tarjetas. Columnas (el asistente por
+   pasos juntó fecha+OT+placa en una sola, antes eran 8):
+   1 casilla · 2 OT·vehículo · 3 Cliente · 4 Compartido · 5 M.O. · 6 Comisión
+   OJO: con table-layout:fixed manda `width`, no `min-width`. Si cambia el
+   número de columnas hay que actualizar estos nth-child o los montos se
+   aplastan a 0 y los encabezados se montan unos sobre otros. */
 @media(min-width:601px){
-  .tbl-liq{table-layout:fixed}
+  .tbl-liq{table-layout:fixed;min-width:660px}
   .tbl-liq th:nth-child(1),.tbl-liq td:nth-child(1){width:40px}
-  .tbl-liq th:nth-child(2),.tbl-liq td:nth-child(2){width:92px}
-  .tbl-liq th:nth-child(3),.tbl-liq td:nth-child(3){width:82px}
-  .tbl-liq th:nth-child(4),.tbl-liq td:nth-child(4){width:78px}
-  .tbl-liq th:nth-child(6),.tbl-liq td:nth-child(6){width:112px}
-  .tbl-liq th:nth-child(7),.tbl-liq td:nth-child(7){width:112px}
-  .tbl-liq th:nth-child(8),.tbl-liq td:nth-child(8){width:104px;padding-right:20px}
-  .tbl-liq td:nth-child(5){white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .tbl-liq th:nth-child(2),.tbl-liq td:nth-child(2){width:110px}
+  .tbl-liq th:nth-child(4),.tbl-liq td:nth-child(4){width:126px}
+  .tbl-liq th:nth-child(5),.tbl-liq td:nth-child(5){width:116px}
+  .tbl-liq th:nth-child(6),.tbl-liq td:nth-child(6){width:106px;padding-right:20px}
+  .tbl-liq td:nth-child(3){white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 }
 
 /* === Lista agrupada iOS (inset grouped, estilo Ajustes) ===
