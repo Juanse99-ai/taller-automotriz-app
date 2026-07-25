@@ -385,7 +385,23 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
     const movs = (prestamosHook.movimientos || []).filter(m =>
       m.tecnicoId === tid || (m.tecnicoId == null && (m.persona || '').trim().toLowerCase() === nombre))
     const saldo = Math.round(movs.reduce((s, m) => s + (m.tipo === 'abono' ? -m.monto : m.monto), 0))
-    const deudas = movs.filter(m => m.tipo === 'prestamo').sort((a, b) => new Date(b.fecha) - new Date(a.fecha))
+    // El libro no amarra cada abono a una deuda puntual, así que aquí se
+    // reparten FIFO (la deuda más vieja primero) SOLO para mostrar: una deuda
+    // que los abonos ya cubrieron no se vuelve a ofrecer para descontar (antes
+    // salía completa aunque el "Debe" neto ya la restaba — parecía deuda doble).
+    // A una cubierta a medias se le muestra solo lo que queda. La suma de los
+    // restantes siempre es igual al saldo cuando debe.
+    let bolsaAbonos = movs.filter(m => m.tipo === 'abono').reduce((s, m) => s + (parseFloat(m.monto) || 0), 0)
+    const deudas = movs.filter(m => m.tipo === 'prestamo')
+      .sort((a, b) => new Date(a.fecha) - new Date(b.fecha))
+      .map(m => {
+        const monto = parseFloat(m.monto) || 0
+        const cubre = Math.min(bolsaAbonos, monto)
+        bolsaAbonos -= cubre
+        return { ...m, restante: Math.round(monto - cubre) }
+      })
+      .filter(m => m.restante > 0)
+      .sort((a, b) => new Date(b.fecha) - new Date(a.fecha))
     return { movs, saldo, deudas }
   }, [prestamosHook.movimientos, tecnicoSel, tecData])
 
@@ -527,7 +543,8 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
   const toggleCuentaSel = (id) => {
     const next = { ...cuentaSelIds, [id]: !cuentaSelIds[id] }
     setCuentaSelIds(next)
-    const suma = tecCuenta.deudas.filter(m => next[m.id]).reduce((s, m) => s + (parseFloat(m.monto) || 0), 0)
+    // Se suma lo que QUEDA de cada deuda (restante tras abonos), no su monto original
+    const suma = tecCuenta.deudas.filter(m => next[m.id]).reduce((s, m) => s + (parseFloat(m.restante ?? m.monto) || 0), 0)
     setCuentaMonto(suma > 0 ? String(Math.round(suma)) : '')
   }
 
@@ -1493,7 +1510,12 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
                                 <input type="checkbox" checked={marcada} onChange={() => toggleCuentaSel(m.id)} style={{ width: 15, height: 15, accentColor: 'var(--blue-500)', cursor: 'pointer', flexShrink: 0 }} />
                                 <span style={{ fontSize: 12, color: 'var(--text-3)', flexShrink: 0 }}>{fmtDate(m.fecha)}</span>
                                 <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.nota || 'Préstamo'}</span>
-                                <span className="mono" style={{ fontWeight: 700 }}>{fmt(m.monto)}</span>
+                                <span className="mono" style={{ fontWeight: 700 }}>
+                                  {fmt(m.restante)}
+                                  {m.restante !== Math.round(parseFloat(m.monto) || 0) && (
+                                    <span style={{ fontWeight: 500, fontSize: 11.5, color: 'var(--text-4)' }}> de {fmt(m.monto)}</span>
+                                  )}
+                                </span>
                               </label>
                             )
                           })}
