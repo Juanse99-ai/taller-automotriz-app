@@ -1123,20 +1123,34 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
     <div>
       <ConfirmDialog cfg={dialog} onClose={() => setDialog(null)} />
       <style>{`
-        .liq-book{ display:grid; grid-template-columns: minmax(280px, 340px) minmax(0, 1fr); gap:22px; align-items:start; }
-        .liq-aside{ position:sticky; top:12px; }
-        .liq-roster-row{ display:flex; align-items:center; gap:12px; width:100%; padding:13px 16px; text-align:left; background:transparent; border:none; border-top:1px solid var(--border); cursor:pointer; transition:background .15s var(--ease-out); }
+        /* ===== Asistente por pasos: 1 técnico → 2 trabajos → 3 pago =====
+           Un solo carril. Cada paso cumplido se encoge a una línea con "Cambiar",
+           así nunca hay tres sitios distintos donde se descuenta plata. */
+        .liq-steps{ display:flex; align-items:center; gap:8px; list-style:none; margin:0 0 20px; padding:0; flex-wrap:wrap; }
+        .liq-step{ display:flex; align-items:center; gap:8px; font-size:13px; font-weight:700; color:var(--text-4); }
+        .liq-step .n{ width:25px; height:25px; border-radius:50%; background:var(--fill); display:flex; align-items:center; justify-content:center; font-size:12px; flex-shrink:0; }
+        .liq-step.on{ color:var(--text); }
+        .liq-step.on .n{ background:var(--primary); color:#fff; }
+        .liq-step.done .n{ background:var(--green-600); color:#fff; }
+        .liq-step__bar{ width:28px; height:2px; border-radius:2px; background:var(--border-strong); flex-shrink:0; }
+        /* Paso 1 ya resuelto: resumen en una línea */
+        .liq-done{ display:flex; align-items:center; gap:12px; padding:13px 16px; }
+        /* Paso 1: tarjetas de técnico, grandes y tocables */
+        .liq-roster-row{ display:flex; align-items:center; gap:12px; width:100%; padding:14px 16px; text-align:left; background:transparent; border:none; border-top:1px solid var(--border); cursor:pointer; transition:background .15s var(--ease-out); }
         .liq-roster-row:first-of-type{ border-top:none; }
         .liq-roster-row:hover{ background:var(--bg-subtle); }
-        .liq-roster-row.on{ background:var(--navy-900); }
-        .liq-sheet-col{ min-width:0; }
-        .liq-empty{ border:1px solid var(--border); border-radius:var(--radius-lg); background:var(--bg-raised); padding:52px 24px; text-align:center; color:var(--text-3); height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; }
-        .liq-empty p{ font-size:14px; max-width:300px; margin:12px auto 0; line-height:1.5; }
         .liq-neto__row{ display:flex; align-items:baseline; padding:5px 0; font-size:14.5px; color:var(--text-2); }
         .liq-neto__row .a{ margin-left:auto; }
         .liq-neto__tot .l{ font-size:12.5px; font-weight:800; letter-spacing:.5px; text-transform:uppercase; color:var(--text); }
-        .liq-neto__tot .v{ margin-left:auto; font-size:26px; font-weight:800; letter-spacing:-.02em; }
-        @media (max-width: 860px){ .liq-book{ grid-template-columns:1fr; } .liq-aside{ position:static; } }
+        .liq-neto__tot .v{ margin-left:auto; font-size:30px; font-weight:800; letter-spacing:-.02em; }
+        /* Ajustes: UNA sola lista (aportes, diario y deudas juntos) */
+        .liq-aj{ display:flex; align-items:center; gap:10px; background:var(--bg-subtle); border:1px solid var(--border); border-radius:10px; padding:9px 12px; font-size:13px; }
+        .liq-aj + .liq-aj{ margin-top:6px; }
+        .liq-aj.on{ border-color:var(--blue-500); background:var(--soft-blue, rgba(37,99,235,.07)); }
+        .liq-aj__txt{ flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+        .liq-aj__val{ font-weight:700; color:var(--amber-700); white-space:nowrap; }
+        .liq-addaj{ display:inline-flex; align-items:center; gap:7px; border:1.5px dashed var(--border-strong); background:none; border-radius:999px; padding:7px 15px; font-family:var(--font); font-size:13px; font-weight:700; color:var(--text-2); cursor:pointer; margin-top:10px; transition:border-color .15s, color .15s; }
+        .liq-addaj:hover{ border-color:var(--primary); color:var(--primary); }
       `}</style>
       <div className="pagehd">
         <div>
@@ -1148,6 +1162,17 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
       </div>
       {tabsLiq}
 
+      {/* Guía de pasos: dónde estoy y qué falta. Un solo carril, sin perderse. */}
+      <ol className="liq-steps">
+        <li className={`liq-step${tecData ? ' done' : ' on'}`}><span className="n">{tecData ? '✓' : '1'}</span> Técnico</li>
+        <li className="liq-step__bar" aria-hidden="true" />
+        <li className={`liq-step${!tecData ? '' : cantSeleccionados > 0 ? ' done' : ' on'}`}><span className="n">{tecData && cantSeleccionados > 0 ? '✓' : '2'}</span> Trabajos</li>
+        <li className="liq-step__bar" aria-hidden="true" />
+        <li className={`liq-step${tecData && cantSeleccionados > 0 ? ' on' : ''}`}><span className="n">3</span> Pago</li>
+      </ol>
+
+      {!tecData ? (
+      <>
       {/* Cierre — cifra editorial dominante + stats secundarias (no tarjeta-espejo) */}
       <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 28, flexWrap: 'wrap', padding: '4px 2px 20px', borderBottom: '1px solid var(--border)', marginBottom: 24 }}>
         <div style={{ minWidth: 0 }}>
@@ -1171,14 +1196,13 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
         </div>
       </div>
 
-      <div className="liq-book" style={{ alignItems: tecData ? 'start' : 'stretch' }}>
-      <aside className="liq-aside">
-      {/* Nómina: técnicos en un solo panel, filas divididas (clic para liquidar) */}
-      <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 12 }}>
-        <h3 style={{ margin: 0 }}>Nómina</h3>
-        <span style={{ fontSize: 13, color: 'var(--text-3)' }}>{resumenTecnicos.filter(t => t.pendientes > 0).length} por liquidar</span>
-      </div>
-      <div style={{ border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', overflow: 'hidden', background: 'var(--bg-raised)' }}>
+      {/* PASO 1 — a quién se le liquida */}
+      <div className="card">
+        <div className="card__h">
+          <h3>Paso 1 · ¿A quién le liquidas?</h3>
+          <span style={{ fontSize: 13, color: 'var(--text-3)' }}>{resumenTecnicos.filter(t => t.pendientes > 0).length} por liquidar</span>
+        </div>
+        <div className="card__b card__b--flush">
         {resumenTecnicos.length === 0 ? (
           <div style={{ padding: '22px', fontSize: 13.5, color: 'var(--text-3)' }}>No hay técnicos con trabajos pendientes de liquidar.</div>
         ) : resumenTecnicos.map((t, i) => {
@@ -1210,10 +1234,11 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
             </button>
           )
         })}
+        </div>
       </div>
 
       {trabajosLiquidados.length > 0 && (
-        <div style={{ marginTop: 10 }}>
+        <div style={{ marginTop: 12 }}>
           <Button
             variant="ghost"
             size="sm"
@@ -1248,36 +1273,39 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
         </div>
       )}
 
-      </aside>
-
-      <main className="liq-sheet-col">
-      {!tecData ? (
-        <div className="liq-empty">
-          <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: .7 }}><path d="M4 4h16v4H4z"/><path d="M4 12h16"/><path d="M4 18h10"/></svg>
-          <p>Selecciona un técnico de la nómina para ver su hoja de pago.</p>
-        </div>
+      </>
       ) : (
-        <>
-          <div style={{ padding: '2px 2px 14px', borderBottom: '1px solid var(--border)', marginBottom: 4 }}>
-            <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '.8px', textTransform: 'uppercase', color: 'var(--text-3)' }}>Hoja de liquidación · cierre actual</div>
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, flexWrap: 'wrap', marginTop: 4 }}>
-              <h2 style={{ margin: 0, fontSize: 26, letterSpacing: '-.02em' }}>{tecData.tecnico.nombre}</h2>
-              <span className="mono" style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--blue-600)', background: 'rgba(37,99,235,.10)', padding: '3px 9px', borderRadius: 7 }}>Ref. #{liqRef(nextLiqId(tecData.tecnico.nombre))}</span>
+      <>
+          {/* PASO 1 HECHO — se encoge a una línea, con "Cambiar" para volver */}
+          <div className="card">
+            <div className="liq-done">
+              <span className="av av-1" style={{ width: 40, height: 40, fontSize: 13, flexShrink: 0 }}>{iniciales(tecData.tecnico.nombre)}</span>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontWeight: 700, fontSize: 15.5 }}>{tecData.tecnico.nombre}</div>
+                <div style={{ fontSize: 12.5, color: 'var(--text-3)', marginTop: 1 }}>
+                  {tecData.tecnico.especialidad || 'Técnico'} · comisión {COMISION.TOTAL * 100}% de la mano de obra
+                  {tecCuenta.saldo > 0 && <> · <strong style={{ color: 'var(--red-600)' }}>debe {fmt(tecCuenta.saldo)}</strong></>}
+                  {tecCuenta.saldo < 0 && <> · <strong style={{ color: 'var(--green-700)' }}>a favor {fmt(-tecCuenta.saldo)}</strong></>}
+                </div>
+              </div>
+              <span title="Referencia para copiar en Cuentti" className="mono" style={{ fontSize: 12, fontWeight: 700, color: 'var(--blue-600)', background: 'rgba(37,99,235,.10)', padding: '3px 9px', borderRadius: 7, flexShrink: 0, whiteSpace: 'nowrap' }}>Ref. #{liqRef(nextLiqId(tecData.tecnico.nombre))}</span>
+              <Button variant="ghost" size="sm" onClick={() => { setTecnicoSel(''); setSeleccionados({}) }}>Cambiar</Button>
             </div>
-            <div style={{ fontSize: 13, color: 'var(--text-3)', marginTop: 3 }}>{tecData.tecnico.especialidad || 'Técnico'} · comisión {COMISION.TOTAL * 100}% de la mano de obra</div>
           </div>
-          <div className="card" style={{ marginTop: 16 }}>
+
+          <div className="card" style={{ marginTop: 14 }}>
             <div className="card__h" style={{ cursor: 'pointer' }} onClick={() => toggleColapso('trabajos')}>
               <h3 style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"
                   style={{ transform: colapso.trabajos ? 'rotate(-90deg)' : 'rotate(0deg)', transition: 'transform 200ms var(--ease-out)', flexShrink: 0, color: 'var(--text-3)' }}>
                   <polyline points="6 9 12 15 18 9"/>
                 </svg>
-                {tecData.tecnico.nombre} — Trabajos pendientes
+                Paso 2 · ¿Qué trabajos le pagas?
               </h3>
               <div style={{ display: 'flex', gap: 8, alignItems: 'center' }} onClick={e => e.stopPropagation()}>
-                {!colapso.trabajos && <span style={{ fontSize: 13, color: 'var(--text-3)' }}>Selecciona los que vas a liquidar</span>}
-                {colapso.trabajos && cantSeleccionados > 0 && <span className="count">{cantSeleccionados} seleccionados</span>}
+                {cantSeleccionados > 0
+                  ? <span className="count">{cantSeleccionados} de {tecTrabajos.length}</span>
+                  : !colapso.trabajos && <span style={{ fontSize: 13, color: 'var(--text-3)' }}>Marca los que vas a liquidar</span>}
                 {!colapso.trabajos && (
                   <Button variant="outline" size="sm" onClick={() => seleccionarTodos(tecTrabajos.map(t => t.id))}>
                     {tecTrabajos.length > 0 && tecTrabajos.every(t => seleccionados[t.id]) ? 'Deseleccionar' : 'Todos'}
@@ -1301,7 +1329,11 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
                         aria-label="Seleccionar todos" style={{ accentColor: 'var(--primary)', cursor: 'pointer' }}
                       />
                     </th>
-                    <th>Fecha</th><th>OT</th><th>Placa</th><th>Cliente</th><th style={{ textAlign: 'center' }}>Compartido</th><th className="c-right">Mano de obra</th><th className="c-right">Comisión</th>
+                    <th style={{ whiteSpace: 'nowrap' }}>OT · vehículo</th>
+                    <th style={{ width: '42%' }}>Cliente</th>
+                    <th style={{ textAlign: 'center', width: 130 }}>Compartido</th>
+                    <th className="c-right" style={{ whiteSpace: 'nowrap' }}>Mano de obra</th>
+                    <th className="c-right" style={{ whiteSpace: 'nowrap' }}>Comisión</th>
                   </tr></thead>
                   <tbody>
                     {tecTrabajos.map(t => {
@@ -1313,9 +1345,12 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
                       return (
                         <tr key={t.id} style={{ background: selected ? 'var(--accent-soft)' : undefined, cursor: 'pointer' }} onClick={() => toggleSeleccion(t.id)}>
                           <td className="td-check" data-label="Liquidar" style={{ textAlign: 'center' }}><input type="checkbox" checked={selected} onChange={() => {}} aria-label="Seleccionar trabajo" style={{ accentColor: 'var(--primary)', cursor: 'pointer' }}/></td>
-                          <td className="c-muted" data-label="Fecha">{fmtDate(t.fecha).replace(/ de /g, ' ')}</td>
-                          <td className="c-mono" data-label="OT" style={{ color: 'var(--blue-600)', fontWeight: 700 }}>{t.otCodigo || t.id}</td>
-                          <td className="c-mono" data-label="Placa" style={{ fontWeight: 700 }}>{t.placa}</td>
+                          <td data-label="OT">
+                            <div className="mono" style={{ color: 'var(--blue-600)', fontWeight: 700, fontSize: 13.5 }}>{t.otCodigo || t.id}</div>
+                            <div style={{ fontSize: 11.5, color: 'var(--text-3)', marginTop: 1 }}>
+                              <span className="mono" style={{ fontWeight: 700, color: 'var(--text-2)' }}>{t.placa || '—'}</span> · {fmtDate(t.fecha).replace(/ de /g, ' ')}
+                            </div>
+                          </td>
                           <td className="c-name">{t.cliente || '—'}</td>
                           <td data-label="Compartido" style={{ textAlign: 'center' }} onClick={e => e.stopPropagation()}>
                             <input type="checkbox" checked={esComp} onChange={() => {
@@ -1361,29 +1396,95 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
             )}
           </div>
 
-          <div className="card" style={{ marginTop: 16 }}>
-            <div className="card__h" style={{ cursor: 'pointer' }} onClick={() => toggleColapso('movs')}>
-              <h3 style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"
-                  style={{ transform: colapso.movs ? 'rotate(-90deg)' : 'rotate(0deg)', transition: 'transform 200ms var(--ease-out)', flexShrink: 0, color: 'var(--text-3)' }}>
-                  <polyline points="6 9 12 15 18 9"/>
-                </svg>
-                Aportes y descuentos — {tecData.tecnico.nombre}
-              </h3>
-              {colapso.movs && tecMovs.length > 0 && (
-                <span className="count">{tecMovs.length} mov · {fmt(totalSeleccion.cargos)}</span>
-              )}
+          {/* PASO 3 — de dónde sale la plata, qué se ajusta y cuánto se paga.
+             Antes esto eran TRES sitios distintos (aportes, cuenta del técnico y
+             resumen); ahora los ajustes son UNA sola lista y el neto va debajo. */}
+          <div className="card" style={{ marginTop: 14 }}>
+            <div className="card__h">
+              <h3>Paso 3 · Ajustes y pago</h3>
+              <span title="Referencia para copiar en Cuentti" className="mono" style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--blue-600)', background: 'rgba(37,99,235,.10)', padding: '3px 9px', borderRadius: 7, whiteSpace: 'nowrap' }}>Ref. #{liqRef(nextLiqId(tecData.tecnico.nombre))}</span>
             </div>
-            {!colapso.movs && (
             <div className="card__b">
-              {/* Acciones compactas: el formulario aparece SOLO al elegir qué agregar (nada de cajas permanentes) */}
+              <div className="liq-neto__row"><span>Mano de obra (sin IVA) · {cantSeleccionados} {cantSeleccionados === 1 ? 'OT' : 'OTs'}</span><span className="a mono">{fmt(totalSeleccion.manoObra)}</span></div>
+              <div className="liq-neto__row"><span>Comisión ({COMISION.TOTAL * 100}%)</span><span className="a mono" style={{ color: 'var(--green-700)', fontWeight: 700 }}>{fmt(totalSeleccion.comision)}</span></div>
+
+              {/* ===== AJUSTES — una sola lista: aportes, diario y deudas juntos ===== */}
+              <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--text-4)', textTransform: 'uppercase', letterSpacing: '.6px', margin: '18px 0 8px' }}>Ajustes de este pago</div>
+
+              {tecMovs.length === 0 && tecCuenta.deudas.length === 0 && tecCuenta.saldo === 0 && (
+                <p style={{ fontSize: 13, color: 'var(--text-3)', margin: 0 }}>Sin ajustes: se paga la comisión completa.</p>
+              )}
+
+              {/* Aportes y descuentos de este cierre */}
+              {tecMovs.map(m => (
+                <div key={m.id} className="liq-aj">
+                  <span className="liq-aj__txt">
+                    <strong>{tipoLabel(m.tipo)}</strong>
+                    <span style={{ color: 'var(--text-3)' }}> · {fmtDate(m.fecha)}{m.nota ? ` · ${m.nota}` : ''}</span>
+                  </span>
+                  <span className="liq-aj__val">− {fmt(m.monto)}</span>
+                  <Button variant="ghost" size="sm" className="btn-icon" aria-label="Quitar ajuste" title="Quitar" onClick={() => setDialog({
+                    title: 'Eliminar movimiento',
+                    lead: `${tipoLabel(m.tipo)} · ${fmt(m.monto)} · ${fmtDate(m.fecha)}`,
+                    confirmLabel: 'Sí, eliminar', tone: 'danger',
+                    onConfirm: () => hookEliminarMov(m.id),
+                  })}><IconX /></Button>
+                </div>
+              ))}
+
+              {/* Deudas del Estado de cuenta: mismas fichas, se marcan para descontar */}
+              {tecCuenta.saldo > 0 && tecCuenta.deudas.map(m => {
+                const marcada = !!cuentaSelIds[m.id]
+                return (
+                  <label key={m.id} className={`liq-aj${marcada ? ' on' : ''}`} style={{ cursor: 'pointer' }}>
+                    <input type="checkbox" checked={marcada} onChange={() => toggleCuentaSel(m.id)} style={{ width: 15, height: 15, accentColor: 'var(--blue-500)', cursor: 'pointer', flexShrink: 0 }} />
+                    <span className="liq-aj__txt">
+                      <strong>Deuda</strong>
+                      <span style={{ color: 'var(--text-3)' }}> · {fmtDate(m.fecha)} · {m.nota || 'Préstamo'}</span>
+                    </span>
+                    <span className="liq-aj__val" style={{ color: marcada ? 'var(--amber-700)' : 'var(--text-3)' }}>
+                      {marcada ? '− ' : ''}{fmt(m.restante)}
+                      {m.restante !== Math.round(parseFloat(m.monto) || 0) && (
+                        <span style={{ fontWeight: 500, fontSize: 11.5, color: 'var(--text-4)' }}> de {fmt(m.monto)}</span>
+                      )}
+                    </span>
+                  </label>
+                )
+              })}
+
+              {/* Monto libre contra su cuenta (o suma, si el taller le debe) */}
+              {tecCuenta.saldo !== 0 && (
+                <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-end', gap: 12, marginTop: 10 }}>
+                  <div className="field" style={{ flex: '0 0 190px', margin: 0 }}>
+                    <label>{tecCuenta.saldo > 0 ? 'O descontar un monto' : 'Sumar a este pago'}</label>
+                    {/* Escribir a mano desmarca los checkboxes (manda lo escrito) */}
+                    <MoneyInput value={cuentaMonto} onChange={(v) => { setCuentaMonto(v); if (tecCuenta.saldo > 0) setCuentaSelIds({}) }} placeholder="0" />
+                  </div>
+                  <div style={{ flex: 1, minWidth: 200, fontSize: 12.5, color: 'var(--text-3)' }}>
+                    {tecCuenta.saldo > 0 ? (
+                      <>Al generar el pago se abona a su Estado de cuenta.
+                        {(parseFloat(cuentaMonto) || 0) > 0 && totalSeleccion.descuentoCuenta !== Math.round(parseFloat(cuentaMonto) || 0) && (
+                          <> Se aplican <strong className="mono">{fmt(totalSeleccion.descuentoCuenta)}</strong> (hasta el saldo y lo que alcance el neto).</>
+                        )}
+                      </>
+                    ) : (
+                      <>El taller le debe {fmt(-tecCuenta.saldo)}. Lo que sumes queda registrado en su cuenta con la referencia del pago.
+                        {(parseFloat(cuentaMonto) || 0) > 0 && totalSeleccion.sumaCuenta !== Math.round(parseFloat(cuentaMonto) || 0) && (
+                          <> Se aplican <strong className="mono">{fmt(totalSeleccion.sumaCuenta)}</strong> (hasta lo que se le debe).</>
+                        )}
+                      </>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Agregar un ajuste nuevo: el formulario aparece SOLO al elegir cuál */}
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '.4px', marginRight: 2 }}>Agregar</span>
                 {[['adelanto', 'Adelanto o cargo'], ['diario', 'Diario del administrador']].map(([k, lbl]) => {
                   const on = aporteForm === k
                   return (
                     <button key={k} type="button" onClick={() => setAporteForm(on ? null : k)}
-                      className={`btn btn-sm ${on ? 'btn-primary' : 'btn-outline'}`}>
+                      className={on ? 'btn btn-sm btn-primary' : 'liq-addaj'}>
                       {on
                         ? <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
                         : <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><path d="M12 5v14M5 12h14"/></svg>}
@@ -1456,119 +1557,14 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
                 </div>
               )}
 
-              {/* Movimientos ya aplicados en este cierre */}
-              {tecMovs.length === 0 ? (
-                <p style={{ fontSize: 13.5, color: 'var(--text-3)', marginTop: 16 }}>Sin aportes ni descuentos registrados en este cierre.</p>
+              {/* NETO — justo debajo de los ajustes que lo formaron */}
+              {cantSeleccionados === 0 ? (
+                <div style={{ marginTop: 18, padding: '12px 14px', background: 'var(--bg-subtle)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', fontSize: 13, color: 'var(--text-3)' }}>
+                  Marca al menos un trabajo en el <strong>paso 2</strong> para calcular el pago.
+                </div>
               ) : (
-                <div style={{ marginTop: 16 }}>
-                  <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '.4px', marginBottom: 8 }}>Movimientos · {tecMovs.length}</div>
-                  <table className="tbl tbl-cards">
-                    <thead><tr><th>Tipo</th><th>Fecha</th><th>Nota</th><th className="c-right">Monto</th><th></th></tr></thead>
-                    <tbody>
-                      {tecMovs.map(m => (
-                        <tr key={m.id}>
-                          <td className="c-name">{tipoLabel(m.tipo)}</td>
-                          <td className="c-muted" data-label="Fecha">{fmtDate(m.fecha)}</td>
-                          <td className="c-muted" data-label="Nota">{m.nota || '—'}</td>
-                          <td className="c-mono c-right" data-label="Monto" style={{ color: 'var(--amber-600)' }}>{fmt(m.monto)}</td>
-                          <td className="td-actions"><Button variant="ghost" size="sm" onClick={() => setDialog({
-                            title: 'Eliminar movimiento',
-                            lead: `${tipoLabel(m.tipo)} · ${fmt(m.monto)} · ${fmtDate(m.fecha)}`,
-                            confirmLabel: 'Sí, eliminar', tone: 'danger',
-                            onConfirm: () => hookEliminarMov(m.id),
-                          })} aria-label="Eliminar movimiento"><IconX /></Button></td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-
-              {/* CUENTA DEL TÉCNICO — deudas del Estado de cuenta para descontar aquí. Plano. */}
-              {(tecCuenta.saldo !== 0 || tecCuenta.deudas.length > 0) && (
-                <div style={{ borderTop: '1px solid var(--border)', marginTop: 16, paddingTop: 16 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap', marginBottom: 10 }}>
-                    <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--blue-600)', textTransform: 'uppercase', letterSpacing: '.4px' }}>Cuenta del técnico · Estado de cuenta</span>
-                    <span className="mono" style={{ fontSize: 13.5, fontWeight: 800, color: tecCuenta.saldo > 0 ? 'var(--red-600)' : 'var(--green-600)' }}>
-                      {tecCuenta.saldo > 0 ? `Debe ${fmt(tecCuenta.saldo)}` : tecCuenta.saldo < 0 ? `A favor ${fmt(-tecCuenta.saldo)}` : 'En $ 0'}
-                    </span>
-                  </div>
-                  {tecCuenta.saldo > 0 ? (
-                    <>
-                      {tecCuenta.deudas.length > 0 && (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 12 }}>
-                          {tecCuenta.deudas.map(m => {
-                            const marcada = !!cuentaSelIds[m.id]
-                            return (
-                              <label key={m.id} style={{
-                                display: 'flex', alignItems: 'center', gap: 9, fontSize: 13, cursor: 'pointer',
-                                padding: '8px 11px', borderRadius: 8,
-                                border: `1px solid ${marcada ? 'var(--blue-500)' : 'var(--border)'}`,
-                                background: marcada ? 'var(--blue-50, #eff6ff)' : 'var(--bg-raised)',
-                                transition: 'border-color .12s, background .12s',
-                              }}>
-                                <input type="checkbox" checked={marcada} onChange={() => toggleCuentaSel(m.id)} style={{ width: 15, height: 15, accentColor: 'var(--blue-500)', cursor: 'pointer', flexShrink: 0 }} />
-                                <span style={{ fontSize: 12, color: 'var(--text-3)', flexShrink: 0 }}>{fmtDate(m.fecha)}</span>
-                                <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.nota || 'Préstamo'}</span>
-                                <span className="mono" style={{ fontWeight: 700 }}>
-                                  {fmt(m.restante)}
-                                  {m.restante !== Math.round(parseFloat(m.monto) || 0) && (
-                                    <span style={{ fontWeight: 500, fontSize: 11.5, color: 'var(--text-4)' }}> de {fmt(m.monto)}</span>
-                                  )}
-                                </span>
-                              </label>
-                            )
-                          })}
-                        </div>
-                      )}
-                      <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-end', gap: 12 }}>
-                        <div className="field" style={{ flex: '0 0 190px' }}>
-                          <label>Descontar en este pago</label>
-                          {/* Escribir a mano desmarca los checkboxes (manda lo escrito) */}
-                          <MoneyInput value={cuentaMonto} onChange={(v) => { setCuentaMonto(v); setCuentaSelIds({}) }} placeholder="0" />
-                        </div>
-                        <div style={{ flex: 1, minWidth: 200, fontSize: 12.5, color: 'var(--text-3)' }}>
-                          Marca deudas o escribe el monto. Al generar el pago se abona a su Estado de cuenta.
-                          {(parseFloat(cuentaMonto) || 0) > 0 && totalSeleccion.descuentoCuenta !== Math.round(parseFloat(cuentaMonto) || 0) && (
-                            <> Se aplican <strong className="mono">{fmt(totalSeleccion.descuentoCuenta)}</strong> (hasta el saldo y lo que alcance el neto).</>
-                          )}
-                        </div>
-                      </div>
-                    </>
-                  ) : tecCuenta.saldo < 0 ? (
-                    <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-end', gap: 12 }}>
-                      <div className="field" style={{ flex: '0 0 190px' }}>
-                        <label>Sumar a este pago</label>
-                        <MoneyInput value={cuentaMonto} onChange={setCuentaMonto} placeholder="0" />
-                      </div>
-                      <div style={{ flex: 1, minWidth: 200, fontSize: 12.5, color: 'var(--text-3)' }}>
-                        El taller le debe {fmt(-tecCuenta.saldo)}. Lo que sumes queda registrado en su cuenta con la referencia del pago.
-                        {(parseFloat(cuentaMonto) || 0) > 0 && totalSeleccion.sumaCuenta !== Math.round(parseFloat(cuentaMonto) || 0) && (
-                          <> Se aplican <strong className="mono">{fmt(totalSeleccion.sumaCuenta)}</strong> (hasta lo que se le debe).</>
-                        )}
-                      </div>
-                    </div>
-                  ) : (
-                    <div style={{ fontSize: 12.5, color: 'var(--text-3)' }}>Sin deuda pendiente por descontar.</div>
-                  )}
-                </div>
-              )}
-            </div>
-            )}
-          </div>
-
-          {cantSeleccionados > 0 && (
-            <div className="card" style={{ marginTop: 16, borderColor: 'rgba(22,163,74,.32)', background: 'rgba(22,163,74,.04)' }}>
-              <div className="card__h" style={{ borderBottomColor: 'rgba(22,163,74,.18)' }}>
-                <h3 style={{ color: 'var(--green-700)' }}>Resumen del pago — {tecData.tecnico.nombre}</h3>
-                <span title="Referencia para copiar en Cuentti" className="mono" style={{ fontSize: 13, fontWeight: 700, color: 'var(--blue-600)', background: 'rgba(37,99,235,.10)', padding: '4px 10px', borderRadius: 8, whiteSpace: 'nowrap' }}>
-                  Ref. #{liqRef(nextLiqId(tecData.tecnico.nombre))}
-                </span>
-              </div>
-              <div className="card__b">
-                <div style={{ marginBottom: 16 }}>
-                  <div className="liq-neto__row"><span>Mano de obra (sin IVA) · {cantSeleccionados} {cantSeleccionados === 1 ? 'OT' : 'OTs'}</span><span className="a mono">{fmt(totalSeleccion.manoObra)}</span></div>
-                  <div className="liq-neto__row"><span>Comisión ({COMISION.TOTAL * 100}%)</span><span className="a mono" style={{ color: 'var(--green-700)', fontWeight: 700 }}>{fmt(totalSeleccion.comision)}</span></div>
+              <>
+                <div style={{ marginTop: 18, marginBottom: 16 }}>
                   {totalSeleccion.cargosEfectivos !== 0 && (
                     <div className="liq-neto__row"><span>Aportes / descuentos</span><span className="a mono" style={{ color: 'var(--amber-600)', fontWeight: 700 }}>{totalSeleccion.cargosEfectivos >= 0 ? '− ' : '+ '}{fmt(Math.abs(totalSeleccion.cargosEfectivos))}</span></div>
                   )}
@@ -1645,15 +1641,14 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
                 )}
                 <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
                   <Button variant="outline" onClick={exportPdfPago}>Exportar PDF</Button>
-                  <Button variant="primary" onClick={pedirPago}>Generar pago</Button>
+                  <Button variant="primary" onClick={pedirPago}>Generar pago · {fmt(totalSeleccion.neto)}</Button>
                 </div>
-              </div>
+              </>
+              )}
             </div>
-          )}
+          </div>
         </>
       )}
-      </main>
-      </div>
 
       <div className="card" style={{ marginTop: 16 }}>
         <div className="card__h">
