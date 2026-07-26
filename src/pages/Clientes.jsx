@@ -983,7 +983,11 @@ export default function Clientes({ clientes, vehiculos, trabajos = [], notify })
           ) : (
             <table
               className={`tbl tbl-cards tbl--sticky tbl--clientes${colResizing ? ' is-resizing' : ''}`}
-              style={{ minWidth: tablaMinWidth }}
+              /* El min-width va por variable y SOLO se aplica en escritorio
+                 (ver index.css): en línea pisaba el `min-width:0` del modo
+                 tarjeta y en el celular las tarjetas se salían de la pantalla
+                 con los valores cortados. */
+              style={{ '--tbl-min': `${tablaMinWidth}px` }}
             >
               <colgroup>
                 {CLIENTES_COLS.map(c => {

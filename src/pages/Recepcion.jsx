@@ -20,7 +20,7 @@ export default function Recepcion({ hook, vehiculosHook, clientesHook, notify })
   const [paso, setPaso] = useState(1) // 1=Cliente, 2=Vehiculo, 3=Fotos, 4=Confirmar
   const [form, setForm] = useState({
     cedula: '', cliente: '', telefonoCliente: '', emailCliente: '', clienteId: '',
-    placa: '', marca: '', modelo: '', ano: new Date().getFullYear(),
+    placa: '', marca: '', modelo: '', ano: '',
     kilometraje: '', tecnicoId: '', observaciones: '', fecha: hoyISO(),
     programar: false,
     evidenciasIngreso: [],
@@ -54,7 +54,7 @@ export default function Recepcion({ hook, vehiculosHook, clientesHook, notify })
     await agregarTrabajo({
       ...form,
       placa: placaNorm,
-      ano: parseInt(form.ano) || new Date().getFullYear(),
+      ano: parseInt(form.ano) || null,
       kilometraje: parseInt(form.kilometraje) || 0,
       tecnicoId: parseInt(form.tecnicoId) || null,
       items: [],
@@ -71,7 +71,7 @@ export default function Recepcion({ hook, vehiculosHook, clientesHook, notify })
         placa: placaNorm,
         marca: form.marca || '',
         modelo: form.modelo || '',
-        ano: parseInt(form.ano) || 0,
+        ano: parseInt(form.ano) || null,
         cedulaPropietario: form.cedula || '',
       })
     }
@@ -94,7 +94,7 @@ export default function Recepcion({ hook, vehiculosHook, clientesHook, notify })
     setPaso(1)
     setForm({
       cedula: '', cliente: '', telefonoCliente: '', emailCliente: '', clienteId: '',
-      placa: '', marca: '', modelo: '', ano: new Date().getFullYear(),
+      placa: '', marca: '', modelo: '', ano: '',
       kilometraje: '', tecnicoId: '', observaciones: '', fecha: hoyISO(), programar: false,
       evidenciasIngreso: [],
       ingreso: ingresoVacio(),
@@ -158,7 +158,7 @@ export default function Recepcion({ hook, vehiculosHook, clientesHook, notify })
             setPaso(1)
             setForm({
               cedula: '', cliente: '', telefonoCliente: '', emailCliente: '', clienteId: '',
-              placa: '', marca: '', modelo: '', ano: new Date().getFullYear(),
+              placa: '', marca: '', modelo: '', ano: '',
               kilometraje: '', tecnicoId: '', observaciones: '', fecha: hoyISO(), programar: false,
               evidenciasIngreso: [],
               ingreso: ingresoVacio(),
@@ -268,7 +268,7 @@ export default function Recepcion({ hook, vehiculosHook, clientesHook, notify })
                     </div>
                     <div className="field">
                       <label>Año</label>
-                      <input className="input" type="number" value={form.ano} min="1980" max="2030"
+                      <input className="input" type="number" value={form.ano} min="1980" max="2030" placeholder="Ej. 2018"
                         onChange={e => set('ano', e.target.value)} />
                     </div>
                     <div className="field">

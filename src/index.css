@@ -638,7 +638,10 @@ textarea.input{min-height:88px;resize:vertical;padding-top:11px}
    nombre (col 2, sin ancho) toma el espacio que sobra; Email trunca si es largo.
    Solo escritorio: en celular la tabla es tarjetas. */
 @media(min-width:601px){
-  .tbl--clientes{table-layout:fixed}
+  /* --tbl-min lo calcula React (suma de los anchos de columna arrastrables) y se
+     aplica SOLO aquí: en línea pisaba el `min-width:0` del modo tarjeta y en el
+     celular las tarjetas se salían de la pantalla con los valores cortados. */
+  .tbl--clientes{table-layout:fixed;min-width:var(--tbl-min,auto)}
   /* Los anchos los define el <colgroup> desde React (arrastrables y guardados en
      localStorage). La columna Nombre no lleva ancho: absorbe el espacio libre y
      así la tabla siempre llena el ancho. Todas las celdas en UNA línea; el texto
@@ -1123,6 +1126,17 @@ tbody tr:active{background:var(--fill-2)}
   .content [style*="grid-template-columns"][style*="repeat(3,1fr)"],
   .content [style*="grid-template-columns"][style*="minmax("]
   { grid-template-columns:1fr !important; gap:10px !important }
+
+  /* Cabecera de tarjeta en celular: el título y su fila de controles se apilan.
+     En horizontal (Inventario: buscador + categorías + "Por reponer") los
+     controles empujaban fuera de pantalla y quedaban cortados a la derecha. */
+  .card__h{flex-wrap:wrap}
+  /* !important porque esos contenedores llevan `flex:1` en estilo inline */
+  .card__h > div:has(> .search),
+  .card__h > div:has(> .segctl){flex:1 0 100%!important;justify-content:flex-start!important}
+  .card__h .search{min-width:0!important;flex:1 0 100%!important}
+  /* El segmented de categorías ya desliza solo; que no fuerce ancho al padre */
+  .card__h .segctl{max-width:100%}
 }
 
 /* KPIs en celular: 2 por fila, no uno por pantallazo.

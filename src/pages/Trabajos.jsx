@@ -989,7 +989,7 @@ function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [], vehiculosHoo
     placa: trabajo?.placa || '',
     marca: trabajo?.marca || '',
     modelo: trabajo?.modelo || '',
-    ano: trabajo?.ano || new Date().getFullYear(),
+    ano: trabajo?.ano || '',
     cilindraje: trabajo?.cilindraje || '',
     kilometraje: trabajo?.kilometraje || '',
     tecnicoId: trabajo?.tecnicoId || '',
@@ -1371,7 +1371,9 @@ function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [], vehiculosHoo
     await onSave({
       ...form,
       placa: (form.placa || (form.sinVehiculo ? 'SERVICIO' : '')).toUpperCase(),
-      ano: parseInt(form.ano) || new Date().getFullYear(),
+      // Sin año escrito se guarda vacío: antes se inventaba el año actual y
+      // toda OT sin dato quedaba como carro 2026.
+      ano: parseInt(form.ano) || null,
       kilometraje: parseInt(form.kilometraje) || 0,
       tecnicoId: parseInt(form.tecnicoId) || null,
       items,
@@ -1590,7 +1592,7 @@ function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [], vehiculosHoo
             </div>
             <div className="field">
               <label>Año</label>
-              <input className="input" type="number" value={form.ano} min="1980" max="2030" disabled={form.sinVehiculo} onChange={e => set('ano', e.target.value)} />
+              <input className="input" type="number" value={form.ano} min="1980" max="2030" placeholder="Ej. 2018" disabled={form.sinVehiculo} onChange={e => set('ano', e.target.value)} />
             </div>
             <div className="field">
               <label>Cilindraje</label>
