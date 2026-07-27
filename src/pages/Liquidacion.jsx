@@ -1216,7 +1216,7 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
       {/* Cierre — cifra editorial dominante + stats secundarias (no tarjeta-espejo) */}
       <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 28, flexWrap: 'wrap', padding: '4px 2px 20px', borderBottom: '1px solid var(--border)', marginBottom: 24 }}>
         <div style={{ minWidth: 0 }}>
-          <div style={{ fontSize: 11.5, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '.8px' }}>Total a pagar · cierre actual</div>
+          <div className="eyebrow">Total a pagar · cierre actual</div>
           <div className="mono" style={{ fontWeight: 800, fontSize: 'clamp(40px, 7vw, 58px)', letterSpacing: '-.03em', lineHeight: 1.02, color: 'var(--green-700)', margin: '7px 0 8px' }}>
             {fmt(totalNomina)}
           </div>
@@ -1229,7 +1229,7 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
         <div style={{ display: 'flex', gap: 26, flexWrap: 'wrap' }}>
           {[['Comisiones', fmt(kpis.comisiones)], ['Mano de obra facturada', fmt(kpis.facturado)], ['Utilidad taller', fmt(kpis.utilidad)]].map(([l, v]) => (
             <div key={l} style={{ textAlign: 'right' }}>
-              <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '.5px' }}>{l}</div>
+              <div className="eyebrow">{l}</div>
               <div className="mono" style={{ fontWeight: 600, fontSize: 18, color: 'var(--text-2)', marginTop: 3 }}>{v}</div>
             </div>
           ))}
@@ -1584,7 +1584,7 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
               {aporteForm === 'diario' && (
                 <div style={{ borderTop: '1px solid var(--border)', marginTop: 14, paddingTop: 16 }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 10, flexWrap: 'wrap' }}>
-                    <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--amber-700)', textTransform: 'uppercase', letterSpacing: '.4px' }}>Diario · gasto del administrador (técnico {APORTE_ADMIN_SPLIT * 100}%)</span>
+                    <span className="eyebrow eyebrow--warn">Diario · gasto del administrador (técnico {APORTE_ADMIN_SPLIT * 100}%)</span>
                     <div className="segctl" style={{ margin: 0 }}>
                       <button type="button" className={!diarioReparto ? 'on' : ''} onClick={() => setDiarioReparto(false)} style={{ fontSize: 12 }}>Solo este técnico</button>
                       <button type="button" className={diarioReparto ? 'on' : ''} onClick={() => setDiarioReparto(true)} style={{ fontSize: 12 }}>Repartir</button>
@@ -1662,7 +1662,7 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
                 {totalSeleccion.neto > 0 && (
                   <div style={{ marginBottom: 14, padding: '12px 14px', background: 'var(--bg-subtle)', border: '1px solid var(--border)', borderRadius: 'var(--radius)' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12, flexWrap: 'wrap' }}>
-                      <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '.4px' }}>Método de pago</span>
+                      <span className="eyebrow">Método de pago</span>
                       <div className="segctl" style={{ margin: 0 }}>
                         <button type="button" className={metodoPagoLiq === 'efectivo' ? 'on' : ''} onClick={() => setMetodoPagoLiq('efectivo')} style={{ fontSize: 12.5 }}>Efectivo</button>
                         <button type="button" className={metodoPagoLiq === 'transferencia' ? 'on' : ''} onClick={() => setMetodoPagoLiq('transferencia')} style={{ fontSize: 12.5 }}>Transferencia</button>

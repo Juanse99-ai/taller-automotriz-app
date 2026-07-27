@@ -476,6 +476,15 @@ a,button,[role=button],.navlink,.mob-tab,.icobtn,.tabs button{-webkit-tap-highli
 .card__b--flush:has(>table){overflow-x:auto;-webkit-overflow-scrolling:touch}
 
 /* badge */
+/* Etiqueta chica en versalitas ("eyebrow"): el rótulo que va encima de una cifra
+   o de un grupo de campos. Es el patrón MÁS repetido de la app (42 copias
+   inline con tamaños y letter-spacing ligeramente distintos cada vez, que es de
+   dónde salen las inconsistencias). Se adopta por página al tocarla.
+   Modificadores de color: .eyebrow--warn (ámbar), .eyebrow--soft (más tenue). */
+.eyebrow{font-size:11px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--text-3)}
+.eyebrow--warn{color:var(--amber-700)}
+.eyebrow--soft{color:var(--text-4)}
+
 .badge{display:inline-flex;align-items:center;padding:3px 10px;border-radius:999px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.4px;white-space:nowrap}
 .badge-s{background:var(--green-100);color:#166534}
 .badge-w{background:var(--amber-100);color:#92400e}
