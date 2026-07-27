@@ -199,7 +199,9 @@ export function useLiquidacion() {
 
   // Polling silencioso 60s + focus
   useEffect(() => {
-    const interval = setInterval(() => { sincronizar() }, 60000)
+    // Pausa con la pestaña oculta: una ventana olvidada en segundo plano seguía
+    // pidiendo cada 60s (mismo criterio que trabajos/clientes/cotizaciones).
+    const interval = setInterval(() => { if (!document.hidden) sincronizar() }, 60000)
     const handleFocus = () => sincronizar()
     window.addEventListener('focus', handleFocus)
     return () => {

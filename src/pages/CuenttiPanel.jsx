@@ -490,7 +490,6 @@ export default function CuenttiPanel({ trabajos, actualizarTrabajo, notify }) {
         setFactError(f => ({ ...f, [trabajo.id]: true }))
         notify('⚠ Cuentti respondió pero no se pudo leer el número de factura. Revisa "Última respuesta" y verifica en Cuentti ANTES de reenviar.', 'error')
       }
-      console.log('Factura result:', result)
     } catch (e) {
       setFacturaResp({ error: e.message, detalle: e.body || e.headers || e.stack })
       // La red falló, PERO la factura pudo haber llegado a Cuentti igual (timeout

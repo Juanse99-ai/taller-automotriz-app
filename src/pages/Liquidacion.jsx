@@ -1,7 +1,7 @@
 import { useState, useMemo, useRef, useEffect } from 'react'
 import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
-import { fmt, fmtDate, uid, hoyISO } from '../utils/helpers'
+import { fmt, fmtDate, uid, hoyISO, tituloCliente } from '../utils/helpers'
 import MoneyInput from '../components/MoneyInput'
 import { COMISION, ESTADOS, PERSONAS_CUENTA } from '../utils/constants'
 import { lsGet, lsSet } from '../services/storage'
@@ -93,12 +93,6 @@ const fechaCorta = (iso) => {
     : `${d.getDate()} ${mes} ${d.getFullYear()}`
 }
 
-// Los nombres llegan de Cuentti EN MAYÚSCULA SOSTENIDA y en una tabla gritan.
-// Se pasan a mayúscula inicial, dejando intactas las siglas jurídicas.
-const tituloCliente = (s) => String(s || '').trim().split(/\s+/).map(w => {
-  if (/\./.test(w) || /^(sas|sa|ltda|cia|eu|s\.a\.s)$/i.test(w)) return w.toUpperCase()
-  return w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()
-}).join(' ')
 
 // Referencia visible de una liquidación (para trazar con Cuentti). Los ids nuevos
 // son legibles (ej. LQ-PB0702 → "PB0702"); los viejos eran un uid aleatorio largo,
@@ -1333,7 +1327,7 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
                   {tecCuenta.saldo < 0 && <> · <strong style={{ color: 'var(--green-700)' }}>a favor {fmt(-tecCuenta.saldo)}</strong></>}
                 </div>
               </div>
-              <span title="Referencia para copiar en Cuentti" className="mono" style={{ fontSize: 12, fontWeight: 700, color: 'var(--blue-600)', background: 'rgba(37,99,235,.10)', padding: '3px 9px', borderRadius: 7, flexShrink: 0, whiteSpace: 'nowrap' }}>Ref. #{liqRef(nextLiqId(tecData.tecnico.nombre))}</span>
+              <span title="Referencia para copiar en Cuentti" className="badge badge-i mono" style={{ flexShrink: 0 }}>Ref. #{liqRef(nextLiqId(tecData.tecnico.nombre))}</span>
               <Button variant="ghost" size="sm" onClick={() => { setTecnicoSel(''); setSeleccionados({}) }}>Cambiar</Button>
             </div>
           </div>

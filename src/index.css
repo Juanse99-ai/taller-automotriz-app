@@ -53,7 +53,9 @@
   --red-50:#fef2f2;--red-200:#fecaca;
   /* Fondo de píldora de color, THEME-AWARE: tinte claro en claro, translúcido en
      oscuro. Va con texto --*-700 (que se aclara en oscuro) sin quedar claro/claro. */
-  --soft-green:#dcfce7;--soft-red:#fee2e2;--soft-amber:#fef3c7;
+  --soft-green:#dcfce7;--soft-red:#fee2e2;--soft-amber:#fef3c7;--soft-blue:#eff6ff;
+  /* Borde a juego del tinte azul (el par de --soft-blue) */
+  --soft-blue-bd:#bfdbfe;
 
   /* slate */
   --slate-50:#f8fafc;--slate-100:#f1f5f9;--slate-200:#e2e8f0;--slate-300:#cbd5e1;
@@ -165,9 +167,14 @@
   --green-50:rgba(74,222,128,.14);--green-200:rgba(74,222,128,.34);
   --amber-50:rgba(251,191,36,.14);--amber-200:rgba(251,191,36,.34);
   --red-50:rgba(252,165,165,.14);--red-200:rgba(252,165,165,.34);
+  /* El azul faltaba: --blue-50/-300 se quedaban en su valor CLARO y dejaban
+     parches ilegibles en oscuro (chips de tipo de aceite en la OT, selector de
+     rol en Usuarios, avisos de Clientes/CRM/Cuentti y uno del portal). */
+  --blue-50:rgba(96,165,250,.14);--blue-100:rgba(96,165,250,.22);--blue-300:rgba(96,165,250,.38);
   /* píldoras de color en oscuro: translúcidas (no el tinte claro que dejaba
      texto claro sobre fondo claro) */
   --soft-green:rgba(74,222,128,.16);--soft-red:rgba(252,165,165,.16);--soft-amber:rgba(251,191,36,.16);
+  --soft-blue:rgba(96,165,250,.16);--soft-blue-bd:rgba(96,165,250,.34);
 }
 
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}

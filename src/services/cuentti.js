@@ -246,7 +246,6 @@ export async function buscarClientePorCedula(cedula) {
     if (!filtered.length) return null
 
     const c = filtered[0]
-    console.log('Cuentti API raw response cliente:', JSON.stringify(c, null, 2))
 
     // Construir nombre: usar nombre_cliente, o concatenar partes individuales
     const nombreCompleto = c.nombre_cliente
@@ -680,7 +679,6 @@ export function buildFacturaPayload(factura) {
 
 export async function enviarFactura(factura) {
   const body = buildFacturaPayload(factura)
-  console.log('Cuentti enviarFactura payload:', JSON.stringify(body, null, 2))
   return cuenttiRequest(CONFIG.paths.facturas.grabarSimple, 'POST', body)
 }
 

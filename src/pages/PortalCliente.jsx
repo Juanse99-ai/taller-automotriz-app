@@ -4,7 +4,7 @@ import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import { InspeccionDetalle } from './Inspecciones'
 import { ESTADOS, TECNICOS, TALLER } from '../utils/constants'
-import { fmtDate, fmt } from '../utils/helpers'
+import { fmtDate, fmt, tituloCliente } from '../utils/helpers'
 import { labelInventario, etiquetaCombustible, ingresoTieneAlgo } from '../utils/ingreso'
 import { Button, IconX } from '../components/ui'
 import SignaturePad from '../components/SignaturePad'
@@ -14,10 +14,6 @@ import { drawHeader, drawSectionHeader, drawDataBlock, drawFooter, tableStylesIt
 // MAJAGUA S.A.S." → "Transportes Majagua S.A.S."). Se muestra COMPLETO, no solo
 // la primera palabra. Las siglas jurídicas (con punto, o SAS/SA/LTDA/CIA/EU) se
 // dejan en mayúscula; el resto va con inicial mayúscula (respeta ñ/tildes).
-const tituloCliente = (s) => String(s || '').trim().split(/\s+/).map(w => {
-  if (/\./.test(w) || /^(sas|sa|ltda|cia|eu)$/i.test(w)) return w.toUpperCase()
-  return w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()
-}).join(' ')
 
 // Una evidencia es video si trae { tipo:'video', url } (las fotos traen dataUrl).
 const esVideoEvid = (f) => f?.tipo === 'video' || (!!f?.url && !f?.dataUrl)

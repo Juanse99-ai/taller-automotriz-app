@@ -87,7 +87,8 @@ export function usePrestamos() {
   useEffect(() => {
     const onFocus = () => sync()
     window.addEventListener('focus', onFocus)
-    const id = setInterval(sync, 60 * 1000)
+    // Pausa con la pestaña oculta (mismo criterio que los demás polls)
+    const id = setInterval(() => { if (!document.hidden) sync() }, 60 * 1000)
     return () => { window.removeEventListener('focus', onFocus); clearInterval(id) }
   }, [sync])
 

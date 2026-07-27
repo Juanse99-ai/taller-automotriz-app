@@ -118,3 +118,14 @@ export function hoyISO() {
   const dd = String(d.getDate()).padStart(2, '0')
   return `${d.getFullYear()}-${mm}-${dd}`
 }
+
+// Los nombres llegan de Cuentti EN MAYÚSCULA SOSTENIDA y así gritan en pantalla.
+// Se pasan a mayúscula inicial dejando intactas las siglas jurídicas y cualquier
+// palabra con punto (S.A.S., Cía.). Vivía duplicado en PortalCliente y
+// Liquidación, y las copias ya habían divergido.
+export function tituloCliente(s) {
+  return String(s || '').trim().split(/\s+/).map(w => {
+    if (/\./.test(w) || /^(sas|sa|ltda|cia|eu)$/i.test(w)) return w.toUpperCase()
+    return w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()
+  }).join(' ')
+}
