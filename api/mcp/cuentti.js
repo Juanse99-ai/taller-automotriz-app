@@ -744,41 +744,79 @@ const tools = [
   },
   {
     name: 'listar_inventario_cuentti',
-    description: 'Lista productos del inventario de Cuentti (paginado, 1000 por pagina). Devuelve nombre, SKU, precio con IVA y existencias.',
+    description: 'Lista o BUSCA productos del inventario de Cuentti. Con `filtro` recorre TODAS las paginas (el inventario son ~3.400 productos en 4 paginas de 1000), asi que no hay que ir pagina por pagina para encontrar algo. Sin `filtro` devuelve una pagina suelta e indica si quedan mas. Devuelve nombre, SKU, precio con IVA y existencias.',
     inputSchema: {
       type: 'object',
       properties: {
-        pagina: { type: 'integer', minimum: 0, default: 0, description: 'Numero de pagina (0 = primera).' },
+        pagina: { type: 'integer', minimum: 0, default: 0, description: 'Numero de pagina (0 = primera). Se ignora si mandas filtro: ese busca en todo el inventario.' },
         limit: { type: 'integer', minimum: 1, maximum: 100, default: 50, description: 'Cuantos mostrar (default 50).' },
-        filtro: { type: 'string', description: 'Filtro opcional (substring sobre nombre/SKU).' },
+        filtro: { type: 'string', description: 'Busca este texto en nombre/SKU/codigo de barras a lo largo de TODAS las paginas.' },
       },
     },
     handler: async ({ pagina = 0, limit = 50, filtro }) => {
-      const path = `/jServerj4ErpPro/com/j4ErpPro/server/vent/factura/consultaProductoPaginadaMovil/${CONFIG.branchId}/${pagina}?tomar_precio_online=0`
-      const data = await cuenttiRequest(path)
-      const items = Array.isArray(data) ? data : (data?.data || [])
-      if (!items.length) return `Pagina ${pagina}: sin productos.`
-      const filtroLow = (filtro || '').trim().toLowerCase()
-      const filtered = filtroLow
-        ? items.filter(p =>
-            (p.nombre || '').toLowerCase().includes(filtroLow) ||
-            (p.sku || '').toLowerCase().includes(filtroLow) ||
-            (p.codigo_barras || '').toLowerCase().includes(filtroLow))
-        : items
-      const slice = filtered.slice(0, limit)
-      const rows = slice.map(p => {
+      // Cuentti pagina de 1000 en 1000; una pagina con MENOS de 1000 es la ultima.
+      const PAGE_SIZE = 1000
+      const MAX_PAGINAS = 25 // freno de seguridad por si la API deja de acortar la ultima
+      const traerPagina = async (n) => {
+        const path = `/jServerj4ErpPro/com/j4ErpPro/server/vent/factura/consultaProductoPaginadaMovil/${CONFIG.branchId}/${n}?tomar_precio_online=0`
+        const data = await cuenttiRequest(path)
+        return Array.isArray(data) ? data : (data?.data || [])
+      }
+      const fila = (p) => {
         const precioSinIva = parseFloat(p.precio_venta || 0)
         const iva = parseFloat(p.valor_impuesto || 0)
         const precioFinal = precioSinIva * (1 + iva / 100)
         return `| ${p.sku || '—'} | ${(p.nombre || '').slice(0, 60)} | ${fmtCOP(precioFinal)} | ${parseFloat(p.existencias || 0)} | ${iva}% |`
-      })
+      }
+      const CABECERA = [`| SKU | Nombre | Precio | Stock | IVA |`, `|---|---|---|---|---|`]
+      const filtroLow = (filtro || '').trim().toLowerCase()
+
+      // ---- CON filtro: recorre TODO el inventario ----
+      // Antes filtraba solo dentro de la pagina pedida, asi que buscar algo que
+      // estuviera en la pagina 2 devolvia "0 resultados" y parecia que el
+      // producto no existia (caso real: REPSOL LEADER NEO 5W20, sku REPLMD0).
+      if (filtroLow) {
+        const encontrados = []
+        let paginas = 0, escaneados = 0
+        for (let n = 0; n < MAX_PAGINAS; n++) {
+          const items = await traerPagina(n)
+          paginas++; escaneados += items.length
+          encontrados.push(...items.filter(p =>
+            (p.nombre || '').toLowerCase().includes(filtroLow) ||
+            (p.sku || '').toLowerCase().includes(filtroLow) ||
+            (p.codigo_barras || '').toLowerCase().includes(filtroLow)))
+          if (items.length < PAGE_SIZE) break // ultima pagina
+        }
+        if (!encontrados.length) {
+          return `## Inventario Cuentti — busqueda "${filtro}"\nSin resultados. Se revisaron **${escaneados}** productos en ${paginas} pagina(s), o sea TODO el inventario: el producto no existe con ese texto en nombre, SKU ni codigo de barras.`
+        }
+        const slice = encontrados.slice(0, limit)
+        return [
+          `## Inventario Cuentti — busqueda "${filtro}"`,
+          `**${encontrados.length}** coincidencia(s) en ${escaneados} productos (${paginas} pagina(s) revisadas) · Mostrando: ${slice.length}`,
+          encontrados.length > slice.length ? `_Hay ${encontrados.length - slice.length} mas: sube \`limit\` para verlas._` : '',
+          ``,
+          ...CABECERA,
+          ...slice.map(fila),
+        ].filter(Boolean).join('\n')
+      }
+
+      // ---- SIN filtro: una pagina, diciendo si quedan mas ----
+      // Antes solo decia "Total en la pagina: 1000", sin pista de cuantas paginas
+      // hay; quien la usaba paraba en la 1 creyendo que ya habia visto todo.
+      const items = await traerPagina(pagina)
+      if (!items.length) return `Pagina ${pagina}: sin productos (te pasaste de la ultima pagina).`
+      const hayMas = items.length === PAGE_SIZE
+      const slice = items.slice(0, limit)
       return [
         `## Inventario Cuentti — pagina ${pagina}`,
-        `Total en la pagina: ${items.length} · Filtrados: ${filtered.length} · Mostrando: ${slice.length}`,
+        `En esta pagina: ${items.length} · Mostrando: ${slice.length}`,
+        hayMas
+          ? `⚠️ **Hay mas paginas.** Esta vino llena (${PAGE_SIZE}): pide \`pagina: ${pagina + 1}\`. Para BUSCAR algo puntual usa \`filtro\`, que revisa el inventario completo de una.`
+          : `✅ Ultima pagina (vino con menos de ${PAGE_SIZE}).`,
         ``,
-        `| SKU | Nombre | Precio | Stock | IVA |`,
-        `|---|---|---|---|---|`,
-        ...rows,
+        ...CABECERA,
+        ...slice.map(fila),
       ].join('\n')
     },
   },
