@@ -1,14 +1,17 @@
 {
-  "mcpServers": {
-    "taller-multias": {
-      "command": "node",
-      "args": ["/Users/juansecp12/Documents/Proyecto App gestion taller GitHub/mcp-taller/index.js"],
-      "env": {}
-    },
-    "cuentti-multias": {
-      "command": "node",
-      "args": ["/Users/juansecp12/Documents/Proyecto App gestion taller GitHub/mcp-cuentti/index.js"],
-      "env": {}
-    }
-  }
+  "_comentario": [
+    "Los conectores de Cuentti y del taller viven AHORA en Vercel (api/mcp/cuentti.js y",
+    "api/mcp/taller.js): se conectan desde claude.ai con OAuth y se actualizan solos en",
+    "cada despliegue.",
+    "",
+    "Aquí había dos servidores locales que apuntaban al clon de iCloud. Se quitaron el",
+    "2026-07-27: ese código estaba congelado en junio y su crear_cliente arrastraba dos",
+    "bugs ya corregidos en el remoto — mandaba el departamento vacío (por eso la factura",
+    "electrónica rebotaba en la DIAN) y al actualizar un cliente le reconstruía la ficha",
+    "en vez de mezclarla, borrándole su configuración tributaria.",
+    "",
+    "No volver a agregar servidores locales apuntando a ~/Documents: ese clon está",
+    "desactualizado y trabajar desde ahí revierte producción."
+  ],
+  "mcpServers": {}
 }
