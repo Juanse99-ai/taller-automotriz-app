@@ -218,6 +218,23 @@ export default function PortalCliente() {
     if (!((t.total || 0) > 0)) { setError('Esta factura no tiene un valor a pagar.'); return }
     setPagando(t.id)
     try {
+      // Última verificación antes de mandar a Wompi: entre que abrió el portal y le
+      // dio clic pudo haber pagado en el taller. Es el único punto donde un error
+      // le cuesta plata al cliente, así que se vuelve a preguntar aunque ya se
+      // preguntó al entrar.
+      const ver = await fetch(`/api/supabase?verificarPagos=${encodeURIComponent(datos.cedula)}`)
+        .then(r => r.json()).catch(() => null)
+      if (ver?.marcados?.includes(t.id)) {
+        setDatos(d => ({ ...d, trabajos: d.trabajos.map(x => x.id === t.id ? { ...x, pagado: true } : x) }))
+        setError('Esta factura ya aparece pagada en el sistema del taller. No es necesario pagarla de nuevo.')
+        setPagando(null); return
+      }
+      const saldoReal = ver?.saldos?.[t.id]
+      if (saldoReal != null && saldoReal < (t.total || 0)) {
+        setDatos(d => ({ ...d, trabajos: d.trabajos.map(x => x.id === t.id ? { ...x, saldoCuentti: saldoReal } : x) }))
+        setError(`Esta factura ya tiene un abono registrado. Solo quedan ${fmt(saldoReal)} por pagar: comunícate con el taller para cancelar ese saldo.`)
+        setPagando(null); return
+      }
       // El servidor decide el monto (firma el total real de la factura); acá NO se
       // manda monto para que no se pueda alterar. Se usa el que devuelve la firma.
       const res = await fetch('/api/cuentti?wompi=firma', {
@@ -262,10 +279,27 @@ export default function PortalCliente() {
     setCargando(true)
     setError('')
 
-    const [misTrab, misCotiz] = await Promise.all([
+    // El estado de pago se contrasta contra Cuentti EN PARALELO con la consulta:
+    // si el cliente pagó en caja o por transferencia, la app no se entera sola y
+    // le seguiría mostrando "Pagar" sobre una factura ya cancelada. El servidor
+    // devuelve cuáles quedaron saldadas (y ya las corrigió en la base) y cuánto
+    // debe cada una, para no cobrar de nuevo lo que tiene abono.
+    const [misTrab, misCotiz, chequeo] = await Promise.all([
       buscarTrabajosPorCedula(cedulaLimpia),
       buscarCotizacionesPorCedula(cedulaLimpia),
+      fetch(`/api/supabase?verificarPagos=${encodeURIComponent(cedulaLimpia)}`)
+        .then(r => r.json())
+        .catch(() => ({ marcados: [], saldos: {} })), // Cuentti caído: se sigue como siempre
     ])
+
+    // La consulta salió en paralelo, así que trae el "pagado" viejo: se aplica aquí
+    // lo que el servidor acaba de confirmar, sin tener que volver a consultar.
+    const saldados = new Set(chequeo?.marcados || [])
+    const saldos = chequeo?.saldos || {}
+    for (const t of misTrab) {
+      if (saldados.has(t.id)) t.pagado = true
+      else if (saldos[t.id] != null) t.saldoCuentti = saldos[t.id]
+    }
 
     // Extraer inspecciones embebidas en trabajos
     const misInsp = misTrab
@@ -659,7 +693,9 @@ export default function PortalCliente() {
   const facturasPendientes = datos.trabajos
     .filter(t => t.facturadoEn && !t.pagado && (t.total || 0) > 0)
     .sort((a, b) => new Date(b.fecha) - new Date(a.fecha))
-  const totalPorPagar = facturasPendientes.reduce((s, t) => s + (t.total || 0), 0)
+  // Cuando Cuentti reporta un saldo menor al total, ese es el que se debe de verdad.
+  const tieneAbono = (t) => t.saldoCuentti != null && t.saldoCuentti < (t.total || 0)
+  const totalPorPagar = facturasPendientes.reduce((s, t) => s + (tieneAbono(t) ? t.saldoCuentti : (t.total || 0)), 0)
 
   // Cotizaciones del cliente (presupuestos). Las pendientes se aprueban firmando.
   // Solo 'Pendiente' está genuinamente por aprobar. El estado manda: Aprobada/
@@ -714,7 +750,9 @@ export default function PortalCliente() {
       </td>
       <td className="td-actions" style={{textAlign:'right'}}>
         {t.facturadoEn && !t.pagado && t.total > 0 && (
-          pagoPorConfirmar(t) ? (
+          tieneAbono(t) ? (
+            <button className="btn btn-outline btn-sm" style={{marginRight:8}} disabled title={`Ya tienes un abono. Saldo pendiente: ${fmt(t.saldoCuentti)}`}>Abonada · falta {fmt(t.saldoCuentti)}</button>
+          ) : pagoPorConfirmar(t) ? (
             <button className="btn btn-outline btn-sm" style={{marginRight:8}} disabled title="Estamos confirmando tu pago">Confirmando pago…</button>
           ) : (
             <button className="btn btn-primary btn-sm" style={{marginRight:8}} disabled={pagando===t.id} onClick={()=>pagarConWompi(t)}>
@@ -778,10 +816,18 @@ export default function PortalCliente() {
                   <div style={{fontSize:12.5,color:'var(--text-3)',marginTop:1}}>{fmtDate(t.fecha)}{t.otCodigo?` · ${t.otCodigo}`:''}</div>
                 </div>
                 <div style={{display:'flex',alignItems:'center',gap:12,flexShrink:0}}>
-                  <span className="mono" style={{fontWeight:700,fontSize:15}}>{fmt(t.total)}</span>
-                  {pagoPorConfirmar(t)
-                    ? <button className="btn btn-outline" disabled title="Estamos confirmando tu pago">Confirmando…</button>
-                    : <button className="btn btn-primary" disabled={pagando===t.id} onClick={()=>pagarConWompi(t)}>{pagando===t.id?'Abriendo…':'Pagar'}</button>}
+                  {/* Con abono, el número grande es lo que FALTA: mostrar el total al lado de
+                      "Abonada" hacía creer que aún debía el millón entero. */}
+                  <div style={{textAlign:'right'}}>
+                    <span className="mono" style={{fontWeight:700,fontSize:15}}>{fmt(tieneAbono(t) ? t.saldoCuentti : t.total)}</span>
+                    {tieneAbono(t) && <div style={{fontSize:11.5,color:'var(--text-3)',marginTop:1}}>de {fmt(t.total)}</div>}
+                  </div>
+                  {/* Pagar en línea cobraría el total otra vez: se remite al taller. */}
+                  {tieneAbono(t)
+                    ? <button className="btn btn-outline" disabled title={`Ya tienes un abono. Saldo pendiente: ${fmt(t.saldoCuentti)}`}>Abonada</button>
+                    : pagoPorConfirmar(t)
+                      ? <button className="btn btn-outline" disabled title="Estamos confirmando tu pago">Confirmando…</button>
+                      : <button className="btn btn-primary" disabled={pagando===t.id} onClick={()=>pagarConWompi(t)}>{pagando===t.id?'Abriendo…':'Pagar'}</button>}
                 </div>
               </div>
             ))}

@@ -83,6 +83,58 @@ export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization')
   if (req.method === 'OPTIONS') { res.status(200).end(); return }
 
+  // Verificación de pagos contra Cuentti (la usa el portal del cliente antes de
+  // ofrecer "Pagar"). PROBLEMA QUE RESUELVE: si el cliente paga directamente en
+  // Cuentti —transferencia, efectivo en caja— la app nunca se entera y le seguía
+  // mostrando el botón de pagar sobre una factura ya cancelada, con riesgo real de
+  // cobrarle dos veces (caso EDWIN DIAZ / FEIC-460).
+  //
+  // Va en el SERVIDOR para no exponer el id de transacción al navegador, y se
+  // AUTO-CORRIGE: cuando Cuentti confirma que no queda saldo, marca pagado=true en
+  // la base, así el arreglo es permanente y no solo cosmético.
+  // Solo marca PAGADO, nunca al revés: un fallo de red jamás puede "despagar" algo.
+  if (req.query.verificarPagos) {
+    const ced = String(req.query.verificarPagos).replace(/[.\-\s]/g, '')
+    if (!ced) { res.status(400).json({ error: 'Falta la cédula' }); return }
+    try {
+      const cols = 'id,cuentti_id_transacion,total'
+      const q = `${SUPABASE_URL}/rest/v1/trabajos?cedula_cliente=eq.${encodeURIComponent(ced)}` +
+        `&pagado=is.false&cuentti_id_transacion=not.is.null&deleted=not.is.true&select=${cols}&limit=20`
+      const rows = await fetch(q, { headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` } })
+        .then(r => r.ok ? r.json() : [])
+        .catch(() => [])
+
+      const marcados = []
+      const saldos = {}
+      for (const t of (Array.isArray(rows) ? rows : [])) {
+        const tx = String(t.cuentti_id_transacion || '').trim()
+        if (!tx) continue
+        try {
+          // Este endpoint del portal de Cuentti no pide token: basta la empresa.
+          const url = `https://transaciones.cuenti.com/jServerj4ErpPro/com/j4ErpPro/server/transacion/consultarTransacionIdExterno/${encodeURIComponent(tx)}`
+          const d = await fetch(url, { headers: { 'X-Auth-Token-empresa': '11464' } }).then(r => r.json())
+          const enc = ((Array.isArray(d) ? d : []).find(x => x.consulta === 'Encabezados') || {}).resultado || []
+          const e = enc[0]
+          if (!e) continue // sin datos: se deja como estaba (nunca se asume pagado)
+          const pendiente = Math.round(Number(e.total_deuda || 0) - Number(e.total_abono || 0))
+          saldos[t.id] = pendiente
+          if (pendiente <= 1) { // ≤1 por el redondeo de centavos de Cuentti
+            await fetch(`${SUPABASE_URL}/rest/v1/trabajos?id=eq.${encodeURIComponent(t.id)}`, {
+              method: 'PATCH',
+              headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json', Prefer: 'return=minimal' },
+              body: JSON.stringify({ pagado: true }),
+            })
+            marcados.push(t.id)
+          }
+        } catch { /* Cuentti caído o lento: se deja como está */ }
+      }
+      res.status(200).json({ ok: true, marcados, saldos })
+    } catch (e) {
+      res.status(200).json({ ok: false, error: e.message, marcados: [], saldos: {} })
+    }
+    return
+  }
+
   // Storage: firma una URL de subida para el bucket "evidencias" (videos que no
   // caben ni en la columna ni en el límite de 4.5MB de una función). El servidor
   // firma con la llave anon; el navegador sube el archivo grande DIRECTO a esa
