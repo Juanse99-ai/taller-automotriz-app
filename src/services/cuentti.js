@@ -640,9 +640,14 @@ export function buildFacturaPayload(factura) {
 
   const tipoDoc = factura.tipoDocumento || 1 // 1=factura, 9=remision, 2=plan separe
 
-  const clienteIdRaw = factura.clienteId ?? factura.cuenttiId
-  const clienteId = parseInt(clienteIdRaw ?? -1, 10)
-  const idCliente = Number.isFinite(clienteId) ? clienteId : -1
+  // OJO: aquí SOLO vale un id que venga de Cuentti (cuenttiId). Antes se aceptaba
+  // `clienteId`, que es el id LOCAL de la app, y Cuentti lo tomaba como suyo:
+  // facturaba al cliente que tuviera ESE número en SU base. Caso real
+  // (2026-07-30): CUANTIAS MENORES tiene id local 301 → Cuentti facturó a su
+  // cliente 301 = MELQUISIDEC SUAREZ; YAN CARLOS (local 663) → DAVID MONTOYA.
+  // Con -1 Cuentti resuelve por NIT, que es lo correcto y está probado.
+  const clienteId = parseInt(factura.cuenttiId ?? -1, 10)
+  const idCliente = Number.isFinite(clienteId) && clienteId > 0 ? clienteId : -1
 
   return {
     tipoDocumento: tipoDoc,
@@ -834,7 +839,9 @@ export async function agregarPagoTransacion(pago) {
     devuelta: parseFloat(pago.devuelta) || 0,
     dinero_entregado: parseFloat(pago.dineroEntregado || pago.valor) || 0,
     es_ingreso: 1,
-    id_cliente: pago.idCliente || 1,
+    // Sin id verificado de Cuentti va -1 (que Cuentti resuelva), no el 1 fijo:
+    // el 1 atribuía el recibo de caja a un cliente cualquiera.
+    id_cliente: pago.idCliente || -1,
     fecha_registro: new Date().toISOString(),
     id_centro_costo: 1,
   }

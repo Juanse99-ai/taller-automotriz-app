@@ -456,7 +456,10 @@ export default function CuenttiPanel({ trabajos, actualizarTrabajo, notify }) {
               valor: payload.total_neto,
               idMedioPago: metodoPago,
               idBanco,
-              idCliente: trabajo.clienteId || trabajo.cuenttiId || 1,
+              // Mismo criterio que buildFacturaPayload: NUNCA el id local de la
+              // app (trabajo.clienteId) — Cuentti lo tomaba como suyo y el recibo
+              // quedaba a nombre de otra persona. Solo un id que venga de Cuentti.
+              idCliente: trabajo.cuenttiId || undefined,
               nota: `OT ${trabajo.otCodigo || trabajo.id}`,
             })
             pagoOk = true

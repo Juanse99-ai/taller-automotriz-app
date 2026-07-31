@@ -35,7 +35,11 @@ export default function Recepcion({ hook, vehiculosHook, clientesHook, notify })
     set('cliente', normalizarNombre(c))
     set('telefonoCliente', fmtTelefono(c.telefono || c.phone || ''))
     set('emailCliente', c.email || c.correo || '')
-    set('clienteId', c.id || '')
+    // El id de CUENTTI, no el local: guardar c.id hacía que al facturar se
+    // mandara el id interno de la app y Cuentti facturara a quien tuviera ese
+    // número en SU base (ver buildFacturaPayload).
+    set('clienteId', '')
+    set('cuenttiId', c.cuenttiId || '')
     setResultados([])
   }
 
