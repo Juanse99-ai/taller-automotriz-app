@@ -310,7 +310,10 @@ export default function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [
     set('cliente', normalizarNombre(c))
     set('telefonoCliente', fmtTelefono(c.telefono || c.phone || ''))
     set('emailCliente', c.email || c.correo || '')
-    set('clienteId', c.id || '')
+    // El id de CUENTTI, no el local (c.id): mandar el id interno de la app hacía
+    // que Cuentti facturara a quien tuviera ESE número en su base.
+    set('clienteId', '')
+    set('cuenttiId', c.cuenttiId || '')
     setResultados([])
     cargarVehiculoDeCliente(ced)
   }
