@@ -310,9 +310,13 @@ function buildFacturaPayload(factura) {
   const consecutivo = factura.resolucion === 'FEIC' ? RESOLUCION_ID.FEIC : RESOLUCION_ID.MAS
   const tipoDoc = factura.tipoDocumento || 1
 
-  const clienteIdRaw = factura.clienteId ?? factura.cuenttiId
-  const clienteId = parseInt(clienteIdRaw ?? -1, 10)
-  const idCliente = Number.isFinite(clienteId) ? clienteId : -1
+  // SOLO un id que venga de Cuentti (cuenttiId). NUNCA `clienteId`, que es el id
+  // interno de la app: Cuentti toma este campo como la verdad y factura a quien
+  // tenga ESE numero en SU base, ignorando nombre y cedula. Sin id confiable va
+  // -1 y Cuentti resuelve por NIT, que es lo correcto. Ver el mismo arreglo en
+  // src/services/cuentti.js (commit cf8f166).
+  const clienteId = parseInt(factura.cuenttiId ?? -1, 10)
+  const idCliente = Number.isFinite(clienteId) && clienteId > 0 ? clienteId : -1
 
   return {
     tipoDocumento: tipoDoc,
