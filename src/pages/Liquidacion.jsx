@@ -110,8 +110,9 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
   const TECNICOS = useTecnicos()
   const {
     movimientos, liquidados, compartidos, historial,
+    loading, connectionError,
     agregarMovimiento: hookAgregarMov, eliminarMovimiento: hookEliminarMov,
-    agregarLiquidados, desliquidarPorTrabajo,
+    agregarLiquidados, desliquidarPorTrabajo, quitarLiquidados, eliminarHistorial,
     toggleCompartido, setCompartidoPartner, agregarHistorial, guardarHistorial,
   } = liquidacionHook
 
@@ -124,6 +125,13 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
   const [seleccionados, setSeleccionados] = useState({})
   const [verHistorial, setVerHistorial] = useState(false)
   const [verLiquidados, setVerLiquidados] = useState(false)
+  const [verSinTecnico, setVerSinTecnico] = useState(false)  // detalle de las OTs huérfanas
+  const [verInactivos, setVerInactivos] = useState(false)    // técnicos sin nada por liquidar
+  // Filtros del historial: 48 pagos en una lista plana no se podían recorrer.
+  const [histTec, setHistTec] = useState('')      // id de técnico | ''
+  const [histMes, setHistMes] = useState('')      // 'YYYY-MM' | ''
+  const [histSinCuentti, setHistSinCuentti] = useState(false)
+  const [compAbierto, setCompAbierto] = useState({}) // trabajoId -> selector de compañero desplegado
   // Ventanas del tecnico seleccionado: minimizables por header
   const [colapso, setColapso] = useState({ trabajos: false, movs: false })
   const toggleColapso = (k) => setColapso(c => ({ ...c, [k]: !c[k] }))
@@ -261,6 +269,26 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
     })
   }
   const toggleDiarioRepTec = (id) => setDiarioRepTec(p => ({ ...p, [id]: !p[id] }))
+
+  const primerNombre = (id) => (TECNICOS.find(x => x.id === parseInt(id))?.nombre || '').split(' ')[0] || '?'
+
+  // En un compartido, quién es el OTRO respecto al técnico que se está liquidando:
+  // si le pagas al asignado, el otro es el compañero, y al revés.
+  const otroTecnico = (t) => {
+    const { partner } = compInfo(t.id)
+    const asignado = parseInt(t.tecnicoId)
+    return parseInt(tecnicoSel) === asignado ? partner : asignado
+  }
+
+  // Marcar/desmarcar compartido avisando si el trabajo ya tiene un pago hecho.
+  const toggleCompartidoSeguro = (trabajoId) => {
+    const yaLiq = liquidados.some(x => x === trabajoId || x.startsWith(`${trabajoId}#`))
+    if (yaLiq) {
+      setDialog({ title: 'Cambiar “Compartido”', lead: 'Este trabajo ya tiene un pago liquidado; cambiarlo puede descuadrar lo pagado.', confirmLabel: 'Cambiar igual', tone: 'danger', onConfirm: () => toggleCompartido(trabajoId) })
+      return
+    }
+    toggleCompartido(trabajoId)
+  }
 
   // compartidos[id] puede ser true (legacy, sin partner) o { partner: tecId }
   const compInfo = (id) => {
@@ -476,6 +504,13 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
 
   const cantSeleccionados = Object.keys(seleccionados).filter(id => seleccionados[id]).length
 
+  // Lo que REALMENTE sale de la caja. El botón y la confirmación mostraban el
+  // neto teórico aunque escribieras un pago parcial: decían "Generar pago
+  // $56.017" mientras le entregabas $30.000. Una sola fuente para los dos.
+  const montoEntregado = (pagoReal === '' || pagoReal == null)
+    ? totalSeleccion.neto
+    : Math.round(parseFloat(pagoReal) || 0)
+
   // Resumen general por tecnico.
   // Inactivos solo aparecen si aun tienen pendientes por liquidar (cierre de cuentas).
   const resumenTecnicos = useMemo(() => {
@@ -513,9 +548,47 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
     () => resumenTecnicos.filter(t => t.pendientes > 0).reduce((s, t) => s + Math.max(0, t.neto), 0),
     [resumenTecnicos])
 
+  // Los que tienen trabajo por pagar van primero y solos: los de 0 OTs pesaban
+  // igual en la lista y no se puede hacer nada con ellos aquí.
+  const tecnicosConPendientes = useMemo(() => resumenTecnicos.filter(t => t.pendientes > 0), [resumenTecnicos])
+  const tecnicosSinPendientes = useMemo(() => resumenTecnicos.filter(t => t.pendientes === 0), [resumenTecnicos])
+
+  // OTs completadas cuyo técnico ya no existe (o nunca se asignó): su comisión
+  // suma en los totales pero NO se le puede pagar a nadie. Antes solo se decía
+  // "6 sin técnico" en rojo, sin forma de ver cuáles ni de arreglarlo.
+  const trabajosSinTecnico = useMemo(
+    () => trabajosPendientes.filter(t => !TECNICOS.some(x => x.id === parseInt(t.tecnicoId))),
+    [trabajosPendientes, TECNICOS])
+
   const historialOrdenado = useMemo(() =>
     [...historial].sort((a, b) => new Date(b.fecha) - new Date(a.fecha)),
   [historial])
+
+  // Meses disponibles para el filtro, del propio historial (sin meses vacíos).
+  const mesesHistorial = useMemo(() => {
+    const set = new Set()
+    historial.forEach(h => { const d = new Date(h.fecha); if (!isNaN(d)) set.add(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`) })
+    return [...set].sort().reverse()
+  }, [historial])
+
+  // 48 pagos en una lista plana no se podían recorrer: ni buscar los de un
+  // técnico, ni los de un mes, ni los que falta registrar en Cuentti (26 hoy).
+  const historialFiltrado = useMemo(() => historialOrdenado.filter(h => {
+    if (histTec && String(h.tecnicoId) !== histTec) return false
+    if (histSinCuentti && h.cuenttiGasto) return false
+    if (histMes) {
+      const d = new Date(h.fecha)
+      if (isNaN(d) || `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}` !== histMes) return false
+    }
+    return true
+  }), [historialOrdenado, histTec, histMes, histSinCuentti])
+
+  const hayFiltroHist = !!(histTec || histMes || histSinCuentti)
+  const sinCuenttiCount = useMemo(() => historial.filter(h => !h.cuenttiGasto).length, [historial])
+  const nombreMes = (ym) => {
+    const [y, m] = ym.split('-')
+    return `${new Date(+y, +m - 1, 1).toLocaleDateString('es-CO', { month: 'long' })} ${y}`
+  }
 
   // Cuenta por técnico: liquidado (sum netos), pagado (sum pagos reales; los
   // registros viejos sin "pagado" se asumen pagados completos) y el saldo del
@@ -694,7 +767,7 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
     const nuevoId = await nextLiqIdSeguro(tecData.tecnico.nombre)
     // Pago real: lo que entregas en efectivo (por defecto el neto).
     const netoCalc = totalSeleccion.neto
-    const pagado = (pagoReal === '' || pagoReal == null) ? netoCalc : Math.round(parseFloat(pagoReal) || 0)
+    const pagado = montoEntregado
 
     const registro = {
       id: nuevoId,
@@ -763,8 +836,14 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
 
     // Compartido: se marca `${id}#${tecnico}` (solo esta mitad). No compartido: id plano.
     // agregarLiquidados FUSIONA con el estado real (no pisa lo de otro dispositivo).
+    // Se ESPERA el resultado: si el servidor no confirmó, estas OTs volverían a
+    // salir como pendientes y se podrían pagar dos veces. Queda en cola y se
+    // reintenta solo, pero hay que avisar para que nadie las vuelva a liquidar.
     const nuevasLiq = ids.map(id => compInfo(id).es ? `${id}#${tecData.tecnico.id}` : id)
-    agregarLiquidados(nuevasLiq)
+    const liqOk = await agregarLiquidados(nuevasLiq)
+    if (!liqOk) {
+      notify('⚠ El pago SÍ quedó guardado, pero la marca de "ya liquidado" no llegó al servidor. Está en cola y se reintenta sola — NO vuelvas a liquidar estas OTs hasta que desaparezcan de la lista.', 'error')
+    }
 
     // Consumir movimientos del tecnico esperando cada borrado, para que un fallo
     // no los resucite en el sync y se descuenten DOBLE.
@@ -797,7 +876,10 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
       }
     }
 
-    setSeleccionados({}); setPagoReal(''); setDiffDestino('debo'); setCuentaMonto(''); setCuentaSelIds({}); setMetodoPagoLiq('efectivo')
+    // Vuelve al paso 1: el asistente se cierra donde empezó, con la lista ya
+    // actualizada. Antes te dejaba en el técnico con el paso 2 vacío ("Sin
+    // pendientes"), que parece un error en vez de un pago cumplido.
+    setSeleccionados({}); setPagoReal(''); setDiffDestino('debo'); setCuentaMonto(''); setCuentaSelIds({}); setMetodoPagoLiq('efectivo'); setTecnicoSel('')
     const difMsg = pagado !== netoCalc ? ` (pagado ${fmt(pagado)}, diferencia a Estado de cuenta)` : ''
     notify(`Pago #${liqRef(nuevoId)} generado: ${fmt(pagado)} para ${tecData.tecnico.nombre}${difMsg} · copia la ref en Cuentti`, 'success')
     // Descargar automáticamente el comprobante del pago recién generado
@@ -812,6 +894,10 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
     if (cantSeleccionados === 0) { notify('Selecciona al menos un trabajo para liquidar', 'error'); return }
     const t = totalSeleccion
     const negativo = t.neto < 0
+    // Lo que de verdad le entregas. Antes el diálogo mostraba SOLO el neto: si
+    // ponías que le dabas $30.000 de $56.017, la última pantalla antes de una
+    // acción irreversible seguía diciendo $56.017 y no mencionaba la deuda.
+    const dif = t.neto - montoEntregado
     setDialog({
       title: 'Revisar antes de pagar',
       body: (
@@ -819,7 +905,7 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
           <DlgRow label="Técnico" value={tecData?.tecnico?.nombre || '—'} />
           <DlgRow label="Trabajos a liquidar" value={`${cantSeleccionados} ${cantSeleccionados === 1 ? 'OT' : 'OTs'}`} />
           <DlgRow label={`Comisión (${COMISION.TOTAL * 100}%)`} value={fmt(t.comision)} />
-          <DlgRow label="Aportes / descuentos" value={`− ${fmt(t.cargosMovsEf)}`} />
+          {t.cargosMovsEf !== 0 && <DlgRow label="Aportes / descuentos" value={`− ${fmt(t.cargosMovsEf)}`} />}
           {t.descuentoCuenta > 0 && <DlgRow label={`Cuenta del técnico (debe ${fmt(tecCuenta.saldo)})`} value={`− ${fmt(t.descuentoCuenta)}`} />}
           {t.sumaCuenta > 0 && <DlgRow label={`Cuenta del técnico (a favor ${fmt(-tecCuenta.saldo)})`} value={`+ ${fmt(t.sumaCuenta)}`} />}
           {tecCuenta.saldo > 0 && t.descuentoCuenta === 0 && (
@@ -827,10 +913,19 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
               Debe {fmt(tecCuenta.saldo)} en su cuenta y no estás descontando nada.
             </div>
           )}
-          <DlgRow label={negativo ? 'Saldo en contra (se arrastra)' : 'Neto a pagar'} value={fmt(t.neto)} total />
+          <DlgRow label={negativo ? 'Saldo en contra (se arrastra)' : 'Neto liquidado'} value={fmt(t.neto)} total={dif === 0} />
+          {dif !== 0 && !negativo && (
+            <>
+              <DlgRow
+                label={dif > 0 ? (diffDestino === 'prestamo' ? 'Abona a su préstamo' : 'Se lo quedas debiendo') : 'Le adelantas de más'}
+                value={`${dif > 0 ? '− ' : '+ '}${fmt(Math.abs(dif))}`}
+              />
+              <DlgRow label={`Le entregas ${metodoPagoLiq === 'transferencia' ? 'por transferencia' : 'en efectivo'}`} value={fmt(montoEntregado)} total />
+            </>
+          )}
         </div>
       ),
-      confirmLabel: negativo ? 'Registrar saldo' : 'Confirmar pago',
+      confirmLabel: negativo ? 'Registrar saldo' : `Confirmar ${fmt(montoEntregado)}`,
       onConfirm: () => generarPago(true),
     })
   }
@@ -1113,6 +1208,73 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
     })
   }
 
+  // ===== ANULAR UN PAGO =====
+  // Antes no había salida: un pago equivocado se quedaba, o se borraban los 48
+  // con "Limpiar historial". Aquí se deshace TODO lo que hizo generarPago:
+  //   1. las OTs vuelven a estar pendientes,
+  //   2. los aportes/diario consumidos se devuelven,
+  //   3. el movimiento del Estado de cuenta se revierte,
+  //   4. se borra el registro del historial.
+  // El gasto de Cuentti NO se toca: la app no anula contabilidad sola. Se avisa
+  // con el número para que se anule allá a mano.
+  const anularPago = async (reg) => {
+    // El servidor manda: si el borrado falla, no se revierte nada (un pago
+    // "anulado" en pantalla pero vivo en la base es exactamente un doble pago).
+    const ok = await eliminarHistorial(reg.id)
+    if (!ok) { notify('No se pudo anular en el servidor. No se revirtió nada — reintenta.', 'error'); return }
+
+    // 1. Devolver las OTs a pendientes — SOLO la parte de este técnico. En un
+    //    compartido, la otra mitad pudo cobrarse en un pago distinto: soltarla
+    //    la volvería a dejar pendiente y se pagaría dos veces.
+    const claves = []
+    for (const id of (reg.trabajosIds || [])) {
+      claves.push(`${id}#${reg.tecnicoId}`)
+      const t = trabajos.find(x => x.id === id)
+      // El id PLANO es del trabajo entero (no compartido) o, por compatibilidad
+      // con datos viejos, del técnico ASIGNADO. Solo se quita si este pago era
+      // justamente esa parte.
+      if (!compInfo(id).es || parseInt(t?.tecnicoId) === reg.tecnicoId) claves.push(id)
+    }
+    quitarLiquidados(claves)
+
+    // 2. Devolver los aportes que se consumieron. La fila 'cuenta' es sintética
+    //    (solo existía para el PDF), no era un movimiento real.
+    ;(reg.movimientos || []).filter(m => m.tipo !== 'cuenta').forEach(m => hookAgregarMov({ ...m }))
+
+    // 3. Revertir lo que tocó el Estado de cuenta. Los movimientos se crearon con
+    //    un id aleatorio que no se guardó, pero SÍ llevan la referencia del pago
+    //    en la nota — por ahí se encuentran.
+    const ref = `#${liqRef(reg.id)}`
+    const delCuenta = (prestamosHook.movimientos || []).filter(m => (m.nota || '').includes(ref))
+    delCuenta.forEach(m => prestamosHook.eliminarMovimiento(m.id))
+
+    // 4. Y el arrastre de saldo negativo, si lo hubo.
+    movimientos.filter(m => (m.nota || '').includes(`Arrastre de ${reg.id}`)).forEach(m => hookEliminarMov(m.id))
+
+    const avisoCuentti = reg.cuenttiGasto
+      ? ` ⚠️ El gasto ${reg.cuenttiGasto} sigue en Cuentti: anúlalo allá a mano.`
+      : ''
+    notify(`Pago #${liqRef(reg.id)} anulado: ${reg.cantidadTrabajos} OT(s) vuelven a pendientes${delCuenta.length ? ' y se revirtió su cuenta' : ''}.${avisoCuentti}`, avisoCuentti ? 'error' : 'success')
+  }
+
+  const pedirAnular = (reg) => setDialog({
+    title: 'Anular este pago',
+    lead: `${reg.tecnico} · ${fmt(reg.pagado != null ? reg.pagado : reg.neto)} · ${reg.cantidadTrabajos} OT(s)`,
+    body: (
+      <div style={{ fontSize: 13, color: 'var(--text-2)', lineHeight: 1.55, marginTop: 6 }}>
+        Se deshace todo: las OTs vuelven a estar pendientes de liquidar, los aportes y descuentos se devuelven, y el movimiento de su Estado de cuenta se revierte.
+        {reg.cuenttiGasto && (
+          <div style={{ marginTop: 10, padding: '9px 12px', background: 'rgba(245,158,11,.09)', border: '1px solid rgba(245,158,11,.28)', borderRadius: 8, fontWeight: 600, color: 'var(--amber-700)' }}>
+            Este pago ya tiene el gasto <strong className="mono">{reg.cuenttiGasto}</strong> registrado en Cuentti. La app no lo toca — anúlalo tú en Cuentti para que la contabilidad cuadre.
+          </div>
+        )}
+      </div>
+    ),
+    confirmLabel: 'Sí, anular el pago',
+    tone: 'danger',
+    onConfirm: () => anularPago(reg),
+  })
+
   // Trabajos totalmente liquidados (ocultos) que aún existen en la lista.
   const trabajosLiquidados = useMemo(() => {
     return trabajos.filter(t => totalmenteLiquidado(t))
@@ -1135,6 +1297,49 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
           </div>
         </div>
         {tabsLiq}
+        {/* "Cuentas por técnico" vivía en la pantalla de Comisiones, donde no
+           ayudaba a pagar y estorbaba. Aquí sí es su sitio: es el resumen de la
+           cuenta de cada técnico. */}
+        {cuentasTecnicos.length > 0 && (
+          <div className="card" style={{ marginBottom: 16 }}>
+            <div className="card__h">
+              <h3>Resumen por técnico</h3>
+            </div>
+            <div className="card__b card__b--flush">
+              <table className="tbl tbl-cards">
+                <thead><tr>
+                  <th>Técnico</th>
+                  <th className="c-right">Liquidado</th>
+                  <th className="c-right">Entregado</th>
+                  <th className="c-right">Falta entregar</th>
+                  <th className="c-right">Su cuenta</th>
+                </tr></thead>
+                <tbody>
+                  {cuentasTecnicos.map((c, i) => {
+                    // Antes las tres cifras iban juntas invitando a una resta que
+                    // NO era válida: liquidado y pagado salen del historial, el
+                    // saldo del libro de préstamos. Ahora la resta está hecha
+                    // (falta entregar) y la cuenta se nombra aparte.
+                    const falta = Math.round(c.liquidado - c.pagado)
+                    return (
+                      <tr key={i}>
+                        <td className="c-name" style={{ fontWeight: 600 }}>{c.nombre}</td>
+                        <td className="c-mono c-right" data-label="Liquidado">{fmt(c.liquidado)}</td>
+                        <td className="c-mono c-right" data-label="Entregado">{fmt(c.pagado)}</td>
+                        <td className="c-mono c-right" data-label="Falta entregar" style={{ fontWeight: falta > 0 ? 700 : 400, color: falta > 0 ? 'var(--amber-700)' : 'var(--text-3)' }}>
+                          {falta > 0 ? fmt(falta) : '—'}
+                        </td>
+                        <td className="c-mono c-right" data-label="Su cuenta" style={{ fontWeight: 700, color: c.saldo > 0 ? 'var(--red-600)' : c.saldo < 0 ? 'var(--green-700)' : 'var(--text-3)' }}>
+                          {c.saldo > 0 ? `Debe ${fmt(c.saldo)}` : c.saldo < 0 ? `A favor ${fmt(-c.saldo)}` : 'Al día'}
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
         <EstadoCuenta prestamos={prestamosHook} tecnicos={TECNICOS} notify={notify} />
       </div>
     )
@@ -1191,16 +1396,34 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
         .liq-empty h4{ font-size:15px; font-weight:700; color:var(--text); margin:0; }
         .liq-empty p{ font-size:13.5px; color:var(--text-3); max-width:340px; line-height:1.5; margin:0; }
         .liq-empty__note{ margin-top:14px; padding-top:14px; border-top:1px solid var(--border); width:100%; max-width:420px; font-size:12.5px; color:var(--text-3); display:flex; align-items:center; gap:8px; justify-content:center; }
+        /* Quién es el dueño de la OT en un compartido (segunda línea de la celda OT) */
+        .c-asignado{ display:block; font-family:var(--sans); font-size:10.5px; font-weight:600; color:var(--text-3); margin-top:1px; letter-spacing:0; }
+        /* Filtros del historial: una sola fila que envuelve, sin caja propia */
+        .liq-filtros{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; padding:0 0 14px; }
+        .liq-filtros .input{ width:auto; height:32px; min-height:32px; font-size:12.5px; padding:2px 9px; }
       `}</style>
       <div className="pagehd">
         <div>
           <h2>Liquidación de comisiones</h2>
         </div>
         <div className="actions">
-          <Button variant="outline" onClick={() => setVerHistorial(!verHistorial)}>{verHistorial ? 'Ocultar historial' : 'Ver historial'}</Button>
+          {/* Mientras liquidas, el historial está oculto: dejar el botón haría
+             que un clic no hiciera nada visible. */}
+          {!tecData && <Button variant="outline" onClick={() => setVerHistorial(!verHistorial)}>{verHistorial ? 'Ocultar historial' : 'Ver historial'}</Button>}
         </div>
       </div>
       {tabsLiq}
+
+      {/* El aviso de "sin conexión" ya lo pone App.jsx para toda la app; repetirlo
+         aquí sería ruido. Lo que faltaba de verdad es que el BOTÓN de pagar se
+         bloquee (ver Paso 3): un pago generado sobre datos viejos del caché es
+         justo como se paga dos veces. El "cargando" sí es propio: sin él la
+         pantalla se veía completa con datos que aún no eran los del servidor. */}
+      {loading && !connectionError && (
+        <div style={{ padding: '10px 15px', marginBottom: 16, borderRadius: 'var(--radius)', background: 'var(--bg-subtle)', border: '1px solid var(--border)', fontSize: 13, color: 'var(--text-3)' }}>
+          Cargando liquidaciones…
+        </div>
+      )}
 
       {/* Guía de pasos: dónde estoy y qué falta. Un solo carril, sin perderse. */}
       <ol className="liq-steps">
@@ -1221,8 +1444,14 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
             {fmt(totalNomina)}
           </div>
           <div style={{ fontSize: 13.5, color: 'var(--text-3)' }}>
-            {resumenTecnicos.filter(t => t.pendientes > 0).length} técnico{resumenTecnicos.filter(t => t.pendientes > 0).length !== 1 ? 's' : ''} · {trabajosPendientes.length} OT{trabajosPendientes.length !== 1 ? 's' : ''} pendiente{trabajosPendientes.length !== 1 ? 's' : ''}
-            {kpis.sinTecnico > 0 && <span style={{ color: 'var(--red-600)', fontWeight: 600 }}> · {kpis.sinTecnico} sin técnico</span>}
+            {tecnicosConPendientes.length} técnico{tecnicosConPendientes.length !== 1 ? 's' : ''} · {trabajosPendientes.length} OT{trabajosPendientes.length !== 1 ? 's' : ''} pendiente{trabajosPendientes.length !== 1 ? 's' : ''}
+            {/* Avisos que se pueden ABRIR: antes eran un número en rojo sin salida. */}
+            {kpis.sinTecnico > 0 && (
+              <> · <button type="button" onClick={() => setVerSinTecnico(v => !v)}
+                style={{ font: 'inherit', fontWeight: 600, color: 'var(--red-600)', background: 'none', border: 'none', padding: 0, cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 3 }}>
+                {kpis.sinTecnico} sin técnico
+              </button></>
+            )}
             {kpis.sinPartner > 0 && <span style={{ color: 'var(--amber-700)', fontWeight: 600 }}> · {kpis.sinPartner} compartido{kpis.sinPartner !== 1 ? 's' : ''} sin compañero</span>}
           </div>
         </div>
@@ -1236,16 +1465,40 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
         </div>
       </div>
 
+      {/* Detalle de las OTs huérfanas: qué son y a qué OT ir a arreglarlas */}
+      {verSinTecnico && trabajosSinTecnico.length > 0 && (
+        <div className="card" style={{ marginBottom: 14, borderColor: 'rgba(220,38,38,.3)' }}>
+          <div className="card__h">
+            <h3 style={{ color: 'var(--red-700)' }}>OTs sin técnico asignado</h3>
+            <Button variant="ghost" size="sm" onClick={() => setVerSinTecnico(false)}>Cerrar</Button>
+          </div>
+          <div className="card__b">
+            <p style={{ fontSize: 13, color: 'var(--text-3)', margin: '0 0 12px', lineHeight: 1.5 }}>
+              Su comisión suma en los totales de arriba pero <strong>no se le puede pagar a nadie</strong>. Ábrelas en Trabajos y asígnales el técnico para que aparezcan en su liquidación.
+            </p>
+            {trabajosSinTecnico.map(t => (
+              <div key={t.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '9px 0', borderTop: '1px solid var(--border)', fontSize: 13 }}>
+                <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  <strong className="mono" style={{ color: 'var(--blue-600)' }}>{t.otCodigo || t.id}</strong>
+                  <span style={{ color: 'var(--text-3)' }}> · {fechaCorta(t.fecha)} · {t.placa || 'Sin vehículo'} · {tituloCliente(t.cliente) || '—'}</span>
+                </span>
+                <span className="mono" style={{ fontWeight: 700, flexShrink: 0 }}>{fmt(moMap[t.id] || 0)}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* PASO 1 — a quién se le liquida */}
       <div className="card">
         <div className="card__h">
           <h3>Paso 1 · ¿A quién le liquidas?</h3>
-          <span style={{ fontSize: 13, color: 'var(--text-3)' }}>{resumenTecnicos.filter(t => t.pendientes > 0).length} por liquidar</span>
+          <span style={{ fontSize: 13, color: 'var(--text-3)' }}>{tecnicosConPendientes.length} por liquidar</span>
         </div>
         <div className="card__b card__b--flush">
         {resumenTecnicos.length === 0 ? (
           <div style={{ padding: '22px', fontSize: 13.5, color: 'var(--text-3)' }}>No hay técnicos con trabajos pendientes de liquidar.</div>
-        ) : resumenTecnicos.map((t, i) => {
+        ) : tecnicosConPendientes.map((t, i) => {
           const activo = tecnicoSel === String(t.id)
           return (
             <button
@@ -1274,6 +1527,23 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
             </button>
           )
         })}
+        {/* Los que no tienen nada por pagar: plegados. Ocupaban una fila entera
+           cada uno para decir "—", compitiendo con quien sí hay que pagar. */}
+        {tecnicosSinPendientes.length > 0 && (
+          <div style={{ borderTop: '1px solid var(--border)' }}>
+            <Button variant="ghost" size="sm" onClick={() => setVerInactivos(v => !v)}
+              style={{ fontSize: 12, padding: '9px 16px', color: 'var(--text-3)', width: '100%', justifyContent: 'flex-start' }}>
+              {verInactivos ? '▾' : '▸'} {tecnicosSinPendientes.length} técnico{tecnicosSinPendientes.length !== 1 ? 's' : ''} sin nada por liquidar
+            </Button>
+            {verInactivos && tecnicosSinPendientes.map(t => (
+              <div key={t.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 16px', borderTop: '1px solid var(--border)', fontSize: 13 }}>
+                <span style={{ flex: 1, minWidth: 0, color: 'var(--text-2)' }}>{t.nombre}</span>
+                {t.saldoCuenta > 0 && <span style={{ fontWeight: 700, color: 'var(--red-600)', fontSize: 12.5 }}>debe {fmt(t.saldoCuenta)}</span>}
+                {t.saldoCuenta < 0 && <span style={{ fontWeight: 700, color: 'var(--green-700)', fontSize: 12.5 }}>a favor {fmt(-t.saldoCuenta)}</span>}
+              </div>
+            ))}
+          </div>
+        )}
         </div>
       </div>
 
@@ -1296,7 +1566,7 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
               ) : trabajosLiquidados.map(t => (
                 <div key={t.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '8px 12px', borderTop: '1px solid var(--border)', fontSize: 12.5 }}>
                   <span style={{ color: 'var(--text-2)', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {fmtDate(t.fecha)} · <strong>{t.placa || '—'}</strong> · {t.cliente || '—'}
+                    {fechaCorta(t.fecha)} · <strong>{t.placa || '—'}</strong> · {t.cliente || '—'}
                   </span>
                   <Button
                     variant="ghost"
@@ -1328,7 +1598,8 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
                   {tecCuenta.saldo < 0 && <> · <strong style={{ color: 'var(--green-700)' }}>a favor {fmt(-tecCuenta.saldo)}</strong></>}
                 </div>
               </div>
-              <span title="Referencia para copiar en Cuentti" className="badge badge-i mono" style={{ flexShrink: 0 }}>Ref. #{liqRef(nextLiqId(tecData.tecnico.nombre))}</span>
+              {/* La referencia sale una sola vez, en el Paso 3 (donde se usa al
+                 registrar en Cuentti). Antes aparecía dos veces en la pantalla. */}
               <Button variant="ghost" size="sm" onClick={() => { setTecnicoSel(''); setSeleccionados({}) }}>Cambiar</Button>
             </div>
           </div>
@@ -1392,38 +1663,69 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
                       return (
                         <tr key={t.id} style={{ background: selected ? 'var(--accent-soft)' : undefined, cursor: 'pointer' }} onClick={() => toggleSeleccion(t.id)}>
                           <td className="td-check" data-label="Liquidar" style={{ textAlign: 'center' }}><input type="checkbox" checked={selected} onChange={() => {}} aria-label="Seleccionar trabajo" style={{ accentColor: 'var(--primary)', cursor: 'pointer' }}/></td>
-                          <td className="c-mono" data-label="OT" style={{ color: 'var(--blue-600)', fontWeight: 700 }}>{t.otCodigo || t.id}</td>
+                          {/* .c-name aquí (no en Cliente): en celular la tarjeta se
+                             encabeza con la OT, que es lo que identifica el trabajo
+                             cuando le pagas a un técnico. */}
+                          <td className="c-mono c-name" data-label="OT" style={{ color: 'var(--blue-600)', fontWeight: 700 }}>
+                            {t.otCodigo || t.id}
+                          </td>
                           <td data-label="Vehículo">
                             {sinVeh
                               ? <span style={{ color: 'var(--text-3)' }}>Sin vehículo</span>
                               : <span className="mono" style={{ fontWeight: 700 }}>{t.placa || '—'}</span>}
                           </td>
                           <td className="c-muted" data-label="Fecha">{fechaCorta(t.fecha)}</td>
-                          <td className="c-name">{tituloCliente(t.cliente) || '—'}</td>
+                          <td data-label="Cliente">{tituloCliente(t.cliente) || '—'}</td>
+                          {/* Compartido: antes era un checkbox + un selector SIEMPRE desplegado
+                             (el control más ancho de la tabla, en el medio, partiendo el eje
+                             de los montos). Ahora es una ficha que dice con quién, y el
+                             selector solo sale si hace falta elegir o cambiar. */}
                           <td data-label="Compartido" style={{ textAlign: 'center' }} onClick={e => e.stopPropagation()}>
-                            <input type="checkbox" checked={esComp} onChange={() => {
-                              const yaLiq = liquidados.some(x => x === t.id || x.startsWith(`${t.id}#`))
-                              if (yaLiq) { setDialog({ title: 'Cambiar “Compartido”', lead: 'Este trabajo ya tiene un pago liquidado; cambiarlo puede descuadrar lo pagado.', confirmLabel: 'Cambiar igual', tone: 'danger', onConfirm: () => toggleCompartido(t.id) }); return }
-                              toggleCompartido(t.id)
-                            }} aria-label="Trabajo compartido"/>
-                            {esComp && (
-                              <select
-                                className="input"
-                                value={partner || ''}
-                                onChange={e => {
-                                  const yaLiq = liquidados.some(x => x.startsWith(`${t.id}#`))
-                                  const nuevoPartner = e.target.value
-                                  if (yaLiq) { setDialog({ title: 'Cambiar compañero', lead: 'Ya hay una mitad liquidada; cambiar el compañero puede descuadrar lo pagado.', confirmLabel: 'Cambiar igual', tone: 'danger', onConfirm: () => setCompartidoPartner(t.id, nuevoPartner) }); return }
-                                  setCompartidoPartner(t.id, nuevoPartner)
-                                }}
-                                style={{ display: 'block', margin: '4px auto 0', width: 110, minHeight: 30, height: 30, fontSize: 12, padding: '2px 8px' }}
-                                aria-label="Compañero del trabajo compartido"
-                              >
-                                <option value="">¿Con quién?</option>
-                                {TECNICOS.filter(x => x.id !== tidAsignado && (x.activo !== false || x.id === partner)).map(x => (
-                                  <option key={x.id} value={x.id}>{x.nombre.split(' ')[0]}</option>
-                                ))}
-                              </select>
+                            {!esComp ? (
+                              <button type="button" title="Este trabajo lo hicieron dos técnicos: el 40% se parte 20/20"
+                                onClick={() => toggleCompartidoSeguro(t.id)}
+                                style={{ font: 'inherit', fontSize: 11.5, color: 'var(--text-4)', background: 'none', border: '1px dashed var(--border-strong)', borderRadius: 999, padding: '3px 11px', cursor: 'pointer' }}>
+                                Compartir
+                              </button>
+                            ) : (
+                              <div style={{ display: 'inline-flex', flexDirection: 'column', gap: 5, alignItems: 'center' }}>
+                                <button type="button" className="badge"
+                                  onClick={() => setCompAbierto(c => ({ ...c, [t.id]: !c[t.id] }))}
+                                  title={partner ? 'Cambiar compañero o quitar' : 'Falta elegir el compañero'}
+                                  style={{ cursor: 'pointer', fontWeight: 700, border: 'none',
+                                    background: partner ? 'var(--soft-blue)' : 'var(--soft-amber)',
+                                    color: partner ? 'var(--blue-600)' : 'var(--amber-700)' }}>
+                                  {/* El OTRO, visto desde el técnico al que le estás
+                                     pagando. Mostrar siempre al "compañero" hacía que
+                                     en la liquidación de Pedro dijera "½ con Pedro". */}
+                                  {partner ? `½ con ${primerNombre(otroTecnico(t))}` : '½ ¿con quién?'}
+                                </button>
+                                {(compAbierto[t.id] || !partner) && (
+                                  <>
+                                    <select
+                                      className="input"
+                                      value={partner || ''}
+                                      onChange={e => {
+                                        const yaLiq = liquidados.some(x => x.startsWith(`${t.id}#`))
+                                        const nuevoPartner = e.target.value
+                                        if (yaLiq) { setDialog({ title: 'Cambiar compañero', lead: 'Ya hay una mitad liquidada; cambiar el compañero puede descuadrar lo pagado.', confirmLabel: 'Cambiar igual', tone: 'danger', onConfirm: () => setCompartidoPartner(t.id, nuevoPartner) }); return }
+                                        setCompartidoPartner(t.id, nuevoPartner)
+                                      }}
+                                      style={{ width: 108, minHeight: 28, height: 28, fontSize: 12, padding: '2px 8px' }}
+                                      aria-label="Compañero del trabajo compartido"
+                                    >
+                                      <option value="">¿Con quién?</option>
+                                      {TECNICOS.filter(x => x.id !== tidAsignado && (x.activo !== false || x.id === partner)).map(x => (
+                                        <option key={x.id} value={x.id}>{x.nombre.split(' ')[0]}</option>
+                                      ))}
+                                    </select>
+                                    <button type="button" onClick={() => toggleCompartidoSeguro(t.id)}
+                                      style={{ font: 'inherit', fontSize: 11, color: 'var(--text-3)', background: 'none', border: 'none', padding: 0, cursor: 'pointer', textDecoration: 'underline' }}>
+                                      Ya no es compartido
+                                    </button>
+                                  </>
+                                )}
+                              </div>
                             )}
                           </td>
                           <td className="c-mono c-right" data-label="Mano de obra" style={mano === 0 ? { color: 'var(--red-600)', fontWeight: 700 } : undefined}>
@@ -1493,7 +1795,7 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
                   <span className="liq-aj__val mono" style={{ color: 'var(--amber-700)' }}>− {fmt(m.monto)}</span>
                   <Button variant="ghost" size="sm" className="btn-icon" aria-label="Quitar ajuste" title="Quitar" style={{ width: 28, height: 28, flexShrink: 0 }} onClick={() => setDialog({
                     title: 'Eliminar movimiento',
-                    lead: `${tipoLabel(m.tipo)} · ${fmt(m.monto)} · ${fmtDate(m.fecha)}`,
+                    lead: `${tipoLabel(m.tipo)} · ${fmt(m.monto)} · ${fechaCorta(m.fecha)}`,
                     confirmLabel: 'Sí, eliminar', tone: 'danger',
                     onConfirm: () => hookEliminarMov(m.id),
                   })}><IconX /></Button>
@@ -1595,8 +1897,12 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
                     <div className="field" style={{ flex: '0 0 110px' }}><label>Días</label><input className="input" type="number" min="0" value={diarioDias} onChange={e => setDiarioDias(e.target.value)} placeholder="Ej. 6" /></div>
                     {!diarioReparto ? (
                       <>
+                        {/* Sin días escritos no se muestra "$0": es un cálculo que
+                           aún no existe, no un resultado. */}
                         <div style={{ flex: 1, minWidth: 130, fontSize: 13.5, color: 'var(--text-3)' }}>
-                          Diario a cargar: <strong style={{ color: 'var(--amber-700)', fontFamily: 'var(--mono)' }}>{fmt((Number(valorDiario) || 0) * (parseInt(diarioDias) || 0))}</strong>
+                          {(parseInt(diarioDias) || 0) > 0
+                            ? <>Diario a cargar: <strong style={{ color: 'var(--amber-700)', fontFamily: 'var(--mono)' }}>{fmt((Number(valorDiario) || 0) * parseInt(diarioDias))}</strong></>
+                            : <>Escribe cuántos días para calcular el cargo.</>}
                         </div>
                         <Button variant="outline" type="button" onClick={agregarDiario}>Agregar diario</Button>
                       </>
@@ -1678,7 +1984,7 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
                       </div>
                     </div>
                     {(() => {
-                      const pagadoNum = pagoReal === '' ? totalSeleccion.neto : Math.round(parseFloat(pagoReal) || 0)
+                      const pagadoNum = montoEntregado
                       const diffNum = totalSeleccion.neto - pagadoNum
                       if (diffNum > 0) return (
                         <div style={{ marginTop: 12 }}>
@@ -1711,9 +2017,22 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
                     })()}
                   </div>
                 )}
+                {/* Sin conexión no se paga: los trabajos, los aportes y el saldo de
+                   su cuenta serían los del caché, y liquidar sobre datos viejos es
+                   exactamente como se termina pagando dos veces. */}
+                {connectionError && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '11px 14px', marginBottom: 12, borderRadius: 9, background: 'var(--soft-red)', border: '1px solid rgba(220,38,38,.28)', fontSize: 13, color: 'var(--red-700)', fontWeight: 600 }}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" style={{ flexShrink: 0 }}><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/></svg>
+                    <span style={{ flex: 1 }}>Sin conexión: estos montos salen de la última copia guardada. Reconéctate antes de pagar.</span>
+                    <Button variant="outline" size="sm" onClick={() => liquidacionHook.recargar()}>Reintentar</Button>
+                  </div>
+                )}
                 <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
                   <Button variant="outline" onClick={exportPdfPago}>Exportar PDF</Button>
-                  <Button variant="primary" onClick={pedirPago}>Generar pago · {fmt(totalSeleccion.neto)}</Button>
+                  {/* El monto del botón es lo que ENTREGAS, no el neto teórico. */}
+                  <Button variant="primary" disabled={connectionError} onClick={pedirPago}>
+                    {connectionError ? 'Sin conexión' : `Generar pago · ${fmt(montoEntregado)}`}
+                  </Button>
                 </div>
               </>
               )}
@@ -1722,34 +2041,9 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
         </>
       )}
 
-      <div className="card" style={{ marginTop: 16 }}>
-        <div className="card__h">
-          <h3>Cuentas por técnico</h3>
-          <span style={{ fontSize: 12.5, color: 'var(--text-3)' }}>Liquidado · Pagado · Saldo</span>
-        </div>
-        <div className="card__b card__b--flush">
-          {cuentasTecnicos.length === 0 ? (
-            <div className="empty"><h4>Sin datos</h4><p>Aún no hay liquidaciones ni saldos que mostrar.</p></div>
-          ) : (
-            <table className="tbl tbl-cards">
-              <thead><tr><th>Técnico</th><th className="c-right">Liquidado</th><th className="c-right">Pagado</th><th className="c-right">Saldo (le debes / te debe)</th></tr></thead>
-              <tbody>
-                {cuentasTecnicos.map((c, i) => (
-                  <tr key={i}>
-                    <td className="c-name" style={{ fontWeight: 600 }}>{c.nombre}</td>
-                    <td className="c-mono c-right" data-label="Liquidado">{fmt(c.liquidado)}</td>
-                    <td className="c-mono c-right" data-label="Pagado">{fmt(c.pagado)}</td>
-                    <td className="c-mono c-right" data-label="Saldo" style={{ fontWeight: 700, color: c.saldo > 0 ? 'var(--amber-700)' : c.saldo < 0 ? 'var(--green-700)' : 'var(--text-3)' }}>
-                      {c.saldo > 0 ? `Te debe ${fmt(c.saldo)}` : c.saldo < 0 ? `Le debes ${fmt(-c.saldo)}` : 'Al día'}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </div>
-      </div>
-
+      {/* El historial solo aparece cuando NO estás liquidando: mientras pagas, el
+         carril queda limpio (técnico → trabajos → pago) y nada más compite. */}
+      {!tecData && (
       <div className="card" style={{ marginTop: 16 }}>
         <div className="card__h">
           <h3>Historial de pagos</h3>
@@ -1764,7 +2058,32 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
               <div className="empty"><h4>Sin pagos</h4><p>No hay pagos registrados.</p></div>
             ) : (
               <>
-                {historialOrdenado.map(reg => (
+                {/* Filtros: 48 pagos en una lista plana no se podían recorrer. */}
+                <div className="liq-filtros">
+                  <select className="input" value={histTec} onChange={e => setHistTec(e.target.value)} aria-label="Filtrar por técnico">
+                    <option value="">Todos los técnicos</option>
+                    {TECNICOS.map(t => <option key={t.id} value={String(t.id)}>{t.nombre.split(' ').slice(0, 2).join(' ')}</option>)}
+                  </select>
+                  <select className="input" value={histMes} onChange={e => setHistMes(e.target.value)} aria-label="Filtrar por mes">
+                    <option value="">Todos los meses</option>
+                    {mesesHistorial.map(m => <option key={m} value={m}>{nombreMes(m)}</option>)}
+                  </select>
+                  {sinCuenttiCount > 0 && (
+                    <button type="button" onClick={() => setHistSinCuentti(v => !v)}
+                      className={`btn btn-sm ${histSinCuentti ? 'btn-primary' : 'btn-outline'}`}>
+                      Sin registrar en Cuentti · {sinCuenttiCount}
+                    </button>
+                  )}
+                  {hayFiltroHist && (
+                    <>
+                      <Button variant="ghost" size="sm" onClick={() => { setHistTec(''); setHistMes(''); setHistSinCuentti(false) }}>Quitar filtros</Button>
+                      <span style={{ fontSize: 12.5, color: 'var(--text-3)', marginLeft: 'auto' }}>{historialFiltrado.length} de {historial.length}</span>
+                    </>
+                  )}
+                </div>
+                {historialFiltrado.length === 0 ? (
+                  <div className="empty"><h4>Sin resultados</h4><p>Ningún pago coincide con estos filtros.</p></div>
+                ) : historialFiltrado.map(reg => (
                   <div key={reg.id} style={{ border: '1px solid var(--border)', borderRadius: 10, padding: 14, marginBottom: 10, background: 'var(--bg-subtle)' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8, marginBottom: 8 }}>
                       <div>
@@ -1775,7 +2094,7 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
                         </button>
                         <Badge tone="info" style={{ marginLeft: 8 }}>{reg.tecnico}</Badge>
                       </div>
-                      <span style={{ fontSize: 13, color: 'var(--text-3)' }}>{fmtDate(reg.fecha)}</span>
+                      <span style={{ fontSize: 13, color: 'var(--text-3)' }}>{fechaCorta(reg.fecha)}</span>
                     </div>
                     <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', alignItems: 'center' }}>
                       <span style={{ fontSize: 13.5 }}><strong>{reg.cantidadTrabajos}</strong> trabajos</span>
@@ -1815,26 +2134,19 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
                           </>
                         )}
                         <Button variant="outline" size="sm" onClick={() => exportPdfHistorial(reg)}>PDF</Button>
+                        {/* Anular: la salida que faltaba. Antes, un pago equivocado
+                           solo se podía quitar borrando los 48 de una vez. */}
+                        <Button variant="ghost" size="sm" style={{ color: 'var(--red-600)' }} onClick={() => pedirAnular(reg)}>Anular</Button>
                       </div>
                     </div>
                   </div>
                 ))}
-                <div style={{ textAlign: 'right', marginTop: 8 }}>
-                  <Button variant="ghost" size="sm" style={{ color: 'var(--red-600)' }} onClick={() => {
-                    if (!historial.length) { notify('No hay historial para borrar', 'info'); return }
-                    setDialog({
-                      title: 'Borrar historial de pagos',
-                      lead: `Esto borra los ${historial.length} pagos del historial y NO se puede deshacer.`,
-                      confirmLabel: 'Borrar todo', tone: 'danger',
-                      onConfirm: () => { guardarHistorial([]); notify('Historial de pagos borrado', 'info') },
-                    })
-                  }}>Limpiar historial</Button>
-                </div>
               </>
             )}
           </div>
         )}
       </div>
+      )}
     </div>
   )
 }

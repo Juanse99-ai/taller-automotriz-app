@@ -690,13 +690,16 @@ textarea.input{min-height:88px;resize:vertical;padding-top:11px}
   /* min-width calibrado al reparto: por debajo de esto la fecha no cabe en un
      renglón ni entra el selector de compañero, así que la tarjeta desliza en
      horizontal en vez de aplastar las columnas. */
-  .tbl-liq{table-layout:fixed;min-width:980px}
+  /* min-width 900 (era 980): con el selector de compañero convertido en ficha,
+     la columna Compartido ya no necesita 110px fijos. Los 980 desbordaban el
+     contenedor (967px) en un portátil de 1280 y sacaban una barra de scroll. */
+  .tbl-liq{table-layout:fixed;min-width:900px}
   .tbl-liq th:nth-child(1),.tbl-liq td:nth-child(1){width:44px}
-  .tbl-liq th:nth-child(2),.tbl-liq td:nth-child(2){width:11%}
+  .tbl-liq th:nth-child(2),.tbl-liq td:nth-child(2){width:12%}
   .tbl-liq th:nth-child(3),.tbl-liq td:nth-child(3){width:11%}
   .tbl-liq th:nth-child(4),.tbl-liq td:nth-child(4){width:9%}
-  .tbl-liq th:nth-child(5),.tbl-liq td:nth-child(5){width:28%}
-  .tbl-liq th:nth-child(6),.tbl-liq td:nth-child(6){width:14%}
+  .tbl-liq th:nth-child(5),.tbl-liq td:nth-child(5){width:29%}
+  .tbl-liq th:nth-child(6),.tbl-liq td:nth-child(6){width:12%}
   .tbl-liq th:nth-child(7),.tbl-liq td:nth-child(7){width:14%}
   .tbl-liq th:nth-child(8),.tbl-liq td:nth-child(8){width:13%;padding-right:20px}
   /* Cliente trunca si es muy largo; OT, placa y fecha nunca se parten */
@@ -919,6 +922,9 @@ tbody tr:active{background:var(--fill-2)}
   .tbl-liq.tbl-cards tbody td.td-check input[type=checkbox]{width:22px;height:22px;flex-shrink:0}
   .tbl-liq.tbl-cards tbody td[data-label="Compartido"]{flex-wrap:wrap;justify-content:space-between}
   .tbl-liq.tbl-cards tbody td[data-label="Compartido"] .input{width:100%!important;margin:6px 0 0!important;flex-basis:100%}
+  /* La OT encabeza la tarjeta: es lo que identifica el trabajo al pagarle a un
+     técnico (antes iba el nombre del cliente, el dato menos útil aquí). */
+  .tbl-liq.tbl-cards tbody td.c-name{font-family:var(--mono);letter-spacing:-.01em}
 }
 .table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;border-radius:var(--radius);border:1px solid var(--border);margin:0 -1px}
 

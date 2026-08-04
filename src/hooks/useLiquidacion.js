@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import {
   fetchMovimientos, upsertMovimiento, deleteMovimiento as sbDeleteMov,
   fetchLiquidacionHistorial, upsertLiquidacionHistorial, deleteAllLiquidacionHistorial,
-  fetchLiquidacionHistorialPorId,
+  fetchLiquidacionHistorialPorId, deleteLiquidacionHistorial,
   fetchLiquidados, upsertLiquidados, deleteLiquidado as sbDeleteLiquidado,
   fetchCompartidos, upsertCompartido, deleteCompartido,
 } from '../services/supabase'
@@ -17,6 +17,10 @@ const MOV_PENDING_KEY = 'movs_tec_pendientes'   // filas completas por confirmar
 const MOV_TOMBS_KEY = 'movs_tec_borrados'       // {id, ts} de borrados por confirmar
 const COMP_PENDING_KEY = 'compartidos_pendientes' // { id: partnerId|0 } por confirmar
 const COMP_TOMBS_KEY = 'compartidos_borrados'
+// LIQUIDADOS también necesita cola: era el ÚNICO de los tres sin ella. Si el
+// upsert fallaba, el sync de 60s reemplazaba el estado local con el del servidor
+// y las OTs recién pagadas volvían a "pendientes" → se podían pagar DOS VECES.
+const LIQ_PENDING_KEY = 'liquidados_pendientes'
 const TOMB_TTL_MS = 15 * 60 * 1000
 const getLS = (k, d) => lsGet(k, d)
 const setLS = (k, v) => lsSet(k, v)
@@ -51,6 +55,8 @@ export function useLiquidacion() {
     cargos: parseFloat(r.cargos) || 0,
     neto: parseFloat(r.neto) || 0,
     pagado: r.pagado == null ? null : (parseFloat(r.pagado) || 0),
+    metodoPago: r.metodo_pago || null,
+    cargosEfectivos: r.cargos_efectivos == null ? null : (parseFloat(r.cargos_efectivos) || 0),
     cuenttiGasto: r.cuentti_gasto || null,
     movimientos: typeof r.movimientos === 'string' ? JSON.parse(r.movimientos) : (r.movimientos || []),
     detalleTrabajo: typeof r.detalle_trabajo === 'string' ? JSON.parse(r.detalle_trabajo) : (r.detalle_trabajo || []),
@@ -84,6 +90,22 @@ export function useLiquidacion() {
     const merged = [...pend, ...norm.filter(m => !tombSet.has(m.id))]
     setMovimientos(merged)
     lsSet(LS_KEYS.MOVIMIENTOS_TECNICOS, merged)
+  }
+
+  // --- Aplicar un snapshot de LIQUIDADOS con pendientes ---
+  // Sin lápidas a propósito: des-liquidar es raro y explícito (lo hace el
+  // usuario), mientras que perder una marca de "ya pagado" es un doble pago.
+  // Ante la duda, la marca SOBREVIVE.
+  const aplicarSyncLiquidados = (sbLiq) => {
+    if (!Array.isArray(sbLiq)) return
+    const serverSet = new Set(sbLiq)
+    // Los que el servidor aún no confirma siguen en cola y se reintentan.
+    const pend = getLS(LIQ_PENDING_KEY, []).filter(id => !serverSet.has(id))
+    setLS(LIQ_PENDING_KEY, pend)
+    if (pend.length) upsertLiquidados(pend)
+    const merged = [...new Set([...sbLiq, ...pend])]
+    setLiquidados(merged)
+    lsSet(LS_KEYS.LIQUIDADOS, merged)
   }
 
   // --- Aplicar un snapshot de COMPARTIDOS con pendientes/lápidas ---
@@ -143,10 +165,7 @@ export function useLiquidacion() {
         setHistorial(norm)
         lsSet(LS_KEYS.LIQUIDACION_HISTORIAL, norm)
       }
-      if (sbLiq && sbLiq.length > 0) {
-        setLiquidados(sbLiq)
-        lsSet(LS_KEYS.LIQUIDADOS, sbLiq)
-      }
+      aplicarSyncLiquidados(sbLiq)
       aplicarSyncCompartidos(sbComp)
       if (sbMovs !== null || sbHist !== null || sbLiq !== null || sbComp !== null) setConnectionError(false)
       return true
@@ -179,8 +198,7 @@ export function useLiquidacion() {
       }
       // Liquidados
       if (sbLiq && sbLiq.length > 0) {
-        setLiquidados(sbLiq)
-        lsSet(LS_KEYS.LIQUIDADOS, sbLiq)
+        aplicarSyncLiquidados(sbLiq)
       } else {
         const cached = lsGet(LS_KEYS.LIQUIDADOS, [])
         if (cached.length > 0 && sbLiq !== null) upsertLiquidados(cached)
@@ -238,20 +256,44 @@ export function useLiquidacion() {
   // sube las claves nuevas. Antes se pasaba [...liquidados, ...nuevas] con el
   // closure viejo y el hook borraba en el servidor lo que faltara → si otro
   // dispositivo liquidó en paralelo, esa OT se "des-liquidaba" y se pagaba DOBLE.
+  // A la cola ANTES del upsert: si la red falla, el sync lo reintenta y la marca
+  // no se pierde. Devuelve si el SERVIDOR confirmó, para que quien paga pueda
+  // avisar cuando quedó solo en cola.
   const agregarLiquidados = useCallback((nuevas) => {
-    if (!nuevas || nuevas.length === 0) return Promise.resolve()
+    if (!nuevas || nuevas.length === 0) return Promise.resolve(true)
+    setLS(LIQ_PENDING_KEY, [...new Set([...getLS(LIQ_PENDING_KEY, []), ...nuevas])])
     setLiquidados(prev => [...new Set([...prev, ...nuevas])])
-    return upsertLiquidados(nuevas)
+    return upsertLiquidados(nuevas).then(ok => {
+      if (ok) setLS(LIQ_PENDING_KEY, getLS(LIQ_PENDING_KEY, []).filter(id => !nuevas.includes(id)))
+      return ok
+    })
   }, [])
 
   // Des-liquidar TODAS las claves de un trabajo (id plano + mitades `${id}#tec`).
   // Cierra sobre `prev` (no sobre un array viejo), así solo borra lo de ESTE
   // trabajo y no lo que otro dispositivo agregó.
   const desliquidarPorTrabajo = useCallback((trabajoId) => {
+    const esDeEste = (x) => x === trabajoId || x.startsWith(`${trabajoId}#`)
+    // Fuera de la cola de pendientes: si no, el sync lo volvería a subir y el
+    // trabajo se "re-liquidaría" solo a los 60 segundos.
+    setLS(LIQ_PENDING_KEY, getLS(LIQ_PENDING_KEY, []).filter(x => !esDeEste(x)))
     setLiquidados(prev => {
-      const esDeEste = (x) => x === trabajoId || x.startsWith(`${trabajoId}#`)
       prev.filter(esDeEste).forEach(id => sbDeleteLiquidado(id))
       return prev.filter(x => !esDeEste(x))
+    })
+  }, [])
+
+  // Quitar EXACTAMENTE estas claves. Lo usa la anulación de un pago: en un
+  // trabajo compartido hay que soltar solo la mitad del técnico que se anula
+  // (`id#tec`) — desliquidarPorTrabajo borra TODAS las claves del trabajo y se
+  // llevaría por delante la mitad que el compañero ya cobró en otro pago.
+  const quitarLiquidados = useCallback((claves) => {
+    if (!claves || claves.length === 0) return
+    const set = new Set(claves)
+    setLS(LIQ_PENDING_KEY, getLS(LIQ_PENDING_KEY, []).filter(x => !set.has(x)))
+    setLiquidados(prev => {
+      prev.filter(x => set.has(x)).forEach(id => sbDeleteLiquidado(id))
+      return prev.filter(x => !set.has(x))
     })
   }, [])
 
@@ -305,11 +347,20 @@ export function useLiquidacion() {
     return res
   }, [])
 
+  // Anular UN pago. Se borra primero en el SERVIDOR: si falla, no se quita de la
+  // lista local (así no queda "anulado" en pantalla y vivo en la base, que es
+  // como se pagaría dos veces). Revertir los movimientos es cosa de quien llama.
+  const eliminarHistorial = useCallback(async (id) => {
+    const ok = await deleteLiquidacionHistorial(id)
+    if (ok) setHistorial(prev => prev.filter(h => h.id !== id))
+    return ok
+  }, [])
+
   return {
     movimientos, liquidados, compartidos, historial,
     loading, connectionError,
     agregarMovimiento, eliminarMovimiento,
-    agregarLiquidados, desliquidarPorTrabajo,
+    agregarLiquidados, desliquidarPorTrabajo, quitarLiquidados, eliminarHistorial,
     toggleCompartido, setCompartidoPartner,
     guardarHistorial, agregarHistorial,
     recargar: cargarDatos,

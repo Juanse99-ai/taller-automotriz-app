@@ -492,6 +492,11 @@ export async function upsertLiquidacionHistorial(reg) {
       cargos: reg.cargos || 0,
       neto: reg.neto || 0,
       pagado: reg.pagado == null ? null : reg.pagado,
+      // Se perdían al guardar: el comprobante re-exportado decía siempre
+      // "efectivo", y sin cargos_efectivos un pago con saldo a favor no podía
+      // explicar por qué el neto salía mayor que la comisión.
+      metodo_pago: reg.metodoPago || null,
+      cargos_efectivos: reg.cargosEfectivos == null ? null : reg.cargosEfectivos,
       cuentti_gasto: reg.cuenttiGasto || null,
       movimientos: JSON.stringify(reg.movimientos || []),
       detalle_trabajo: JSON.stringify(reg.detalleTrabajo || []),
@@ -506,6 +511,19 @@ export async function upsertLiquidacionHistorial(reg) {
   } catch (e) {
     console.warn('Supabase upsertLiquidacionHistorial:', e.message)
     return null
+  }
+}
+
+// Borrar UN pago (anular). Antes solo existía el borrado masivo, así que un pago
+// equivocado no tenía salida: o se dejaba, o se borraban los 48.
+export async function deleteLiquidacionHistorial(id) {
+  try {
+    const res = await fetchWithTimeout(`${proxy('liquidacion_historial')}&id=eq.${encodeURIComponent(id)}`, { method: 'DELETE' })
+    if (!res.ok) throw new Error(await res.text())
+    return true
+  } catch (e) {
+    console.warn('Supabase deleteLiquidacionHistorial:', e.message)
+    return false
   }
 }
 
