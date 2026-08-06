@@ -235,11 +235,15 @@ export function useLiquidacion() {
   useEffect(() => { if (!loading) lsSet(LS_KEYS.LIQUIDACION_HISTORIAL, historial) }, [historial, loading])
 
   // --- Actions ---
+  // Devuelve si el SERVIDOR lo aceptó. Antes se disparaba y se olvidaba: la
+  // pantalla decía "Diario agregado ✓" aunque el guardado fallara, y el
+  // movimiento quedaba solo en este navegador (así se "borraban" los diarios al
+  // cambiar de equipo). Quien llama debe avisar cuando devuelva null.
   const agregarMovimiento = useCallback((mov) => {
     // A la cola COMPLETO antes del upsert; sale solo cuando el servidor lo devuelva.
     setLS(MOV_PENDING_KEY, [...getLS(MOV_PENDING_KEY, []).filter(r => r.id !== mov.id), mov])
     setMovimientos(prev => [...prev.filter(m => m.id !== mov.id), mov])
-    upsertMovimiento(mov)
+    return upsertMovimiento(mov)
   }, [])
 
   const eliminarMovimiento = useCallback((id) => {

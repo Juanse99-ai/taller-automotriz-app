@@ -643,25 +643,32 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
     setCuentaMonto(suma > 0 ? String(Math.round(suma)) : '')
   }
 
+  // Aviso común: el movimiento se ve en pantalla pero el servidor no lo confirmó.
+  // Queda en la cola de reintentos, pero mientras tanto solo existe AQUÍ — si se
+  // liquida desde otro equipo, no se descuenta.
+  const avisarSiNoGuardo = (res, que) => {
+    if (res == null) notify(`⚠ ${que} se ve en pantalla pero NO se guardó en el servidor. Solo existe en este equipo — reintenta o revisa la conexión.`, 'error')
+  }
+
   // Agrega el "diario" como un cargo: monto = valor diario × días (que tú escribes).
-  const agregarDiario = () => {
+  const agregarDiario = async () => {
     const tid = parseInt(tecnicoSel)
     const dias = Math.floor(parseFloat(diarioDias) || 0)
     const monto = Math.round((Number(valorDiario) || 0) * dias)
     if (!tid) { notify('Selecciona un técnico primero', 'error'); return }
     if (dias <= 0) { notify('Escribe cuántos días', 'error'); return }
     if (monto <= 0) { notify('El valor diario debe ser mayor a 0', 'error'); return }
-    hookAgregarMov({
+    setDiarioDias('')
+    notify(`Diario agregado: ${dias} día(s) = ${fmt(monto)}`, 'success')
+    avisarSiNoGuardo(await hookAgregarMov({
       id: `MV-${uid()}`, tecnicoId: tid,
       tipo: 'diario', monto, dias, nota: notaDiario(diarioNota, dias),
       fecha: hoyISO(),
-    })
-    setDiarioDias('')
-    notify(`Diario agregado: ${dias} día(s) = ${fmt(monto)}`, 'success')
+    }), 'El diario')
   }
 
   // Reparte el diario (valor × días) en partes iguales entre los técnicos marcados.
-  const repartirDiario = () => {
+  const repartirDiario = async () => {
     const dias = Math.floor(parseFloat(diarioDias) || 0)
     const total = Math.round((Number(valorDiario) || 0) * dias)
     const ids = Object.keys(diarioRepTec).filter(id => diarioRepTec[id]).map(Number)
@@ -671,14 +678,15 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
     // Reparto EXACTO (allocate): las partes suman el total sin perder pesos por
     // redondeo (antes Math.round(total/n) a todos dejaba 9.999 de 10.000).
     const partes = repartir(total, ids.map(() => 1))
-    ids.forEach((tid, i) => hookAgregarMov({
+    setDiarioDias(''); setDiarioRepTec({})
+    notify(`Diario repartido entre ${ids.length} técnicos (total ${fmt(total)})`, 'success')
+    const res = await Promise.all(ids.map((tid, i) => hookAgregarMov({
       id: `MV-${uid()}`, tecnicoId: tid,
       tipo: 'diario', monto: partes[i], dias,
       nota: `${notaDiario(diarioNota, dias)} ÷ ${ids.length}`,
       fecha: hoyISO(),
-    }))
-    setDiarioDias(''); setDiarioRepTec({})
-    notify(`Diario repartido entre ${ids.length} técnicos (total ${fmt(total)})`, 'success')
+    })))
+    if (res.some(r => r == null)) avisarSiNoGuardo(null, 'Parte del diario repartido')
   }
 
   // Próxima referencia legible para un técnico HOY (iniciales + MMDD, con sufijo
@@ -1535,12 +1543,17 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
               style={{ fontSize: 12, padding: '9px 16px', color: 'var(--text-3)', width: '100%', justifyContent: 'flex-start' }}>
               {verInactivos ? '▾' : '▸'} {tecnicosSinPendientes.length} técnico{tecnicosSinPendientes.length !== 1 ? 's' : ''} sin nada por liquidar
             </Button>
+            {/* Clicables aunque no tengan OTs: si les quedó un aporte o un diario
+               sin consumir, este es el único sitio para llegar a verlo o quitarlo. */}
             {verInactivos && tecnicosSinPendientes.map(t => (
-              <div key={t.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 16px', borderTop: '1px solid var(--border)', fontSize: 13 }}>
+              <button key={t.id} type="button"
+                onClick={() => { setTecnicoSel(String(t.id)); setSeleccionados({}); setColapso({ trabajos: false, movs: false }) }}
+                style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%', padding: '10px 16px', borderTop: '1px solid var(--border)', borderLeft: 'none', borderRight: 'none', borderBottom: 'none', background: 'transparent', font: 'inherit', fontSize: 13, textAlign: 'left', cursor: 'pointer' }}>
                 <span style={{ flex: 1, minWidth: 0, color: 'var(--text-2)' }}>{t.nombre}</span>
+                {t.cargos > 0 && <span style={{ fontWeight: 700, color: 'var(--amber-700)', fontSize: 12.5 }}>{fmt(t.cargos)} en aportes</span>}
                 {t.saldoCuenta > 0 && <span style={{ fontWeight: 700, color: 'var(--red-600)', fontSize: 12.5 }}>debe {fmt(t.saldoCuenta)}</span>}
                 {t.saldoCuenta < 0 && <span style={{ fontWeight: 700, color: 'var(--green-700)', fontSize: 12.5 }}>a favor {fmt(-t.saldoCuenta)}</span>}
-              </div>
+              </button>
             ))}
           </div>
         )}
@@ -1764,6 +1777,29 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
                   <h4>Aún no hay nada que calcular</h4>
                   <p>Marca los trabajos que vas a pagarle a {tecData.tecnico.nombre.split(' ')[0]} en el <strong>paso 2</strong> — ahí se arma la mano de obra, la comisión y el neto.</p>
                   <button type="button" className="btn btn-primary btn-sm" onClick={irAPaso2}>Ir al paso 2 ↑</button>
+                  {/* Un diario o aporte ya cargado quedaba INVISIBLE aquí (la lista
+                     de ajustes vive en la otra rama), y parecía que se había
+                     borrado. Se anuncia, con la opción de quitarlo sin pagar. */}
+                  {tecMovs.length > 0 && (
+                    <div className="liq-empty__note" style={{ flexDirection: 'column', gap: 8 }}>
+                      <div>
+                        Ya tiene <strong className="mono">{fmt(tecMovs.reduce((s, m) => s + (parseFloat(m.monto) || 0), 0))}</strong> en aportes cargados ({tecMovs.map(m => tipoLabel(m.tipo)).join(', ')}) — se descontarán cuando elijas los trabajos.
+                      </div>
+                      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', justifyContent: 'center' }}>
+                        {tecMovs.map(m => (
+                          <Button key={m.id} variant="ghost" size="sm" style={{ fontSize: 11.5, color: 'var(--text-3)' }}
+                            onClick={() => setDialog({
+                              title: 'Eliminar movimiento',
+                              lead: `${tipoLabel(m.tipo)} · ${fmt(m.monto)} · ${fechaCorta(m.fecha)}`,
+                              confirmLabel: 'Sí, eliminar', tone: 'danger',
+                              onConfirm: () => hookEliminarMov(m.id),
+                            })}>
+                            Quitar {tipoLabel(m.tipo)} {fmt(m.monto)}
+                          </Button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                   {tecCuenta.saldo !== 0 && (
                     <div className="liq-empty__note">
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M12 2v6M12 22v-6M2 12h6M22 12h-6"/></svg>
