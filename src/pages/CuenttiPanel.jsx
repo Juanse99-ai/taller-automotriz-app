@@ -14,7 +14,7 @@ import {
   detectarMediosPago,
   probarIdMedioPago,
 } from '../services/cuentti'
-import { RESOLUCIONES } from '../utils/constants'
+import { RESOLUCIONES, SIN_FACTURA } from '../utils/constants'
 import ConfirmDialog from '../components/ConfirmDialog'
 import { Button, Badge } from '../components/ui'
 
@@ -377,11 +377,16 @@ export default function CuenttiPanel({ trabajos, actualizarTrabajo, notify }) {
     // Anti-duplicado: si ya fue facturado, pedir confirmacion explicita
     if (trabajo.cuenttiTransacionId) {
       const fechaFmt = trabajo.facturadoEn ? new Date(trabajo.facturadoEn).toLocaleString('es-CO') : 'fecha desconocida'
+      // Cerrado a mano sin factura: NO hay duplicado que temer, solo hay que
+      // decir por qué estaba fuera de la lista. Facturarlo ahora es legítimo.
+      const cerradoSinFactura = trabajo.cuenttiTransacionId === SIN_FACTURA
       setConfirmCfg({
-        title: 'Reenviar factura',
-        lead: `Ya facturado (Factura # ${trabajo.cuenttiTransacionId}, ${fechaFmt}). Reenviar crea una factura duplicada en Cuentti.`,
-        confirmLabel: 'Reenviar',
-        tone: 'danger',
+        title: cerradoSinFactura ? 'Facturar un trabajo ya cerrado' : 'Reenviar factura',
+        lead: cerradoSinFactura
+          ? `Este trabajo se marcó como cobrado SIN factura en Cuentti (${fechaFmt}), por eso no salía en la lista. Si lo facturas ahora, se emite por primera vez.`
+          : `Ya facturado (Factura # ${trabajo.cuenttiTransacionId}, ${fechaFmt}). Reenviar crea una factura duplicada en Cuentti.`,
+        confirmLabel: cerradoSinFactura ? 'Facturar' : 'Reenviar',
+        tone: cerradoSinFactura ? 'primary' : 'danger',
         onConfirm: () => enviarFacturaTrabajo(trabajo),
       })
       return
@@ -725,9 +730,15 @@ export default function CuenttiPanel({ trabajos, actualizarTrabajo, notify }) {
             <div style={{padding:'10px 14px',background:'rgba(22,163,74,.08)',border:'1px solid rgba(22,163,74,.4)',borderRadius:10,marginBottom:14,display:'flex',alignItems:'center',gap:10}}>
               <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="#16a34a" strokeWidth="2"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
               <div style={{flex:1,fontSize:13}}>
-                <div style={{fontWeight:700,color:'var(--green-700,#15803d)'}}>Factura enviada</div>
+                {/* Cerrado a mano: no decir "Factura enviada · SIN-FACTURA", que
+                   se lee como si existiera un documento con ese número. */}
+                <div style={{fontWeight:700,color:'var(--green-700,#15803d)'}}>
+                  {trabajoFacturaSel.cuenttiTransacionId === SIN_FACTURA ? 'Cobrado sin factura' : 'Factura enviada'}
+                </div>
                 <div style={{color:'var(--text-3)',fontSize:12,marginTop:2}}>
-                  Factura <span className="mono" style={{color:'var(--text)'}}>{trabajoFacturaSel.cuenttiTransacionId}</span>
+                  {trabajoFacturaSel.cuenttiTransacionId === SIN_FACTURA
+                    ? 'Cerrado a mano, sin documento en Cuentti'
+                    : <>Factura <span className="mono" style={{color:'var(--text)'}}>{trabajoFacturaSel.cuenttiTransacionId}</span></>}
                   {trabajoFacturaSel.facturadoEn && ` · ${new Date(trabajoFacturaSel.facturadoEn).toLocaleDateString('es-CO')}`}
                 </div>
               </div>
@@ -1024,9 +1035,10 @@ export default function CuenttiPanel({ trabajos, actualizarTrabajo, notify }) {
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column' }}>
                   {ultimas.map((f, i) => {
+                    const sinFactura = f.cuenttiTransacionId === SIN_FACTURA
                     const tipo = f.cuenttiPrefijo || (f.cuenttiTransacionId?.toString().startsWith('FE') ? 'FEIC' : 'MAS')
-                    const tipoLabel = tipo === 'FEIC' ? 'Electrónica DIAN' : 'Interna'
-                    const num = f.cuenttiTransacionId
+                    const tipoLabel = sinFactura ? 'Sin factura' : (tipo === 'FEIC' ? 'Electrónica DIAN' : 'Interna')
+                    const num = sinFactura ? '—' : f.cuenttiTransacionId
                     // efectivo/transferencia SIN pagar = el pago NO entró a caja (falló al
                     // facturar). Se distingue del crédito, que sí es "pendiente" normal.
                     const pagoNoEntroCaja = !f.pagado && !f.cuenttiPagado && !f.cuenttiAprobado && !!f.metodoPago && f.metodoPago !== 'credito'

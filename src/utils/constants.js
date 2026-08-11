@@ -15,6 +15,13 @@ export const TALLER = {
 // localStorage; se re-exporta aquí para no romper los imports existentes.
 export { TECNICOS } from '../services/tecnicos'
 
+// Marca en `cuentti_id_transacion` de un trabajo que se cobró SIN emitir factura
+// en Cuentti (cerrado a mano). Va en ese campo porque es el que usa el panel de
+// Cuentti para decidir qué falta por facturar: sin nada ahí, el trabajo seguiría
+// ofreciéndose para enviar. Es texto a propósito — que nadie lo confunda con un
+// número de factura real, y que no se intente abrir un documento que no existe.
+export const SIN_FACTURA = 'SIN-FACTURA'
+
 // Comisiones: 40% total, 20% cada tecnico si trabajan juntos
 export const COMISION = {
   TOTAL: 0.40,

@@ -3,6 +3,7 @@ import Fuse from 'fuse.js'
 import { fmtDate, fmtTelefono, fmt } from '../utils/helpers'
 import { TIPOS_IDENTIFICACION, TIPOS_PERSONA, REGIMENES, buscarClientePorCedula, obtenerUrlDocumento } from '../services/cuentti'
 import ConfirmDialog from '../components/ConfirmDialog'
+import { SIN_FACTURA } from '../utils/constants'
 import { Button, Badge } from '../components/ui'
 
 // Quita acentos: "FERNÁNDEZ" → "fernandez"
@@ -210,7 +211,9 @@ export default function Clientes({ clientes, vehiculos, trabajos = [], notify })
 
   // Abrir el PDF/QR de la factura en Cuentti (por id de transacción).
   const verFactura = async (t) => {
-    if (!t.cuenttiTransacionId) { notify('Esta factura no tiene documento en Cuentti', 'error'); return }
+    // 'SIN-FACTURA' marca un trabajo cobrado sin emitir factura: no hay
+    // documento que abrir, y sin este guardia se pediría uno inexistente.
+    if (!t.cuenttiTransacionId || t.cuenttiTransacionId === SIN_FACTURA) { notify('Este trabajo se cobró sin factura en Cuentti; no hay documento que abrir.', 'info'); return }
     setVerFacturaId(t.id)
     try {
       const res = await obtenerUrlDocumento(t.cuenttiTransacionId)
