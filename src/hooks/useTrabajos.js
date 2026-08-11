@@ -148,6 +148,21 @@ export function useTrabajos() {
     () => servidorRespondioRef.current || (trabajosRef.current || []).length > 0,
     [])
 
+  // Ids cuyas fotos ya están confirmadas en Supabase. Solo esas se aligeran al
+  // guardar en el navegador: las que aún no subieron son irreemplazables y se
+  // quedan completas en el caché.
+  const fotosEnServidorRef = useRef(new Set())
+
+  // Lo que se guarda en localStorage NO es lo que se muestra: a las OT cuyas
+  // fotos ya están en el servidor se les quitan del caché (vuelven solas en el
+  // primer sync). Sin esto el caché pesaba 4,6 MB contra un límite de ~5 MB, y
+  // al pasarse ni siquiera se podía iniciar sesión.
+  const aligerarParaCache = useCallback((lista) => lista.map(t =>
+    fotosEnServidorRef.current.has(t.id) && (t.evidenciasIngreso?.length || t.evidenciasEntrega?.length)
+      ? { ...t, evidenciasIngreso: [], evidenciasEntrega: [] }
+      : t
+  ), [])
+
   // Merge inteligente: Supabase es fuente de verdad, pero preservar datos solo-locales
   const mergeConLocal = useCallback((sbNormalized) => {
     const local = trabajosRef.current
@@ -167,7 +182,10 @@ export function useTrabajos() {
         const loc = locById.get(t.id)
         if (loc) return loc
       }
-      if (t.evidenciasIngreso && t.evidenciasIngreso.length) return t
+      // El servidor YA tiene estas fotos: se anota para no volver a guardarlas en
+      // el navegador (ver aligerarParaCache). Son 4,4 MB de los 4,6 del caché y
+      // reventaban el límite de ~5 MB de Safari.
+      if (t.evidenciasIngreso && t.evidenciasIngreso.length) { fotosEnServidorRef.current.add(t.id); return t }
       const loc = locById.get(t.id) || (t.otCodigo && locByOt.get(t.otCodigo))
       const locFotos = loc ? [...(loc.evidenciasIngreso || []), ...(loc.evidenciasEntrega || [])] : []
       return locFotos.length ? { ...t, evidenciasIngreso: locFotos } : t
@@ -220,7 +238,7 @@ export function useTrabajos() {
           const normRetry = sbDataRetry.map(normalizar)
           const merged = mergeConLocal(normRetry)
           setTrabajos(merged)
-          lsSet(LS_KEYS.TRABAJOS, merged)
+          lsSet(LS_KEYS.TRABAJOS, aligerarParaCache(merged))
           return true
         }
       }
@@ -237,7 +255,7 @@ export function useTrabajos() {
           merged.some((n, i) => firmaTrabajo(prev[i]) !== firmaTrabajo(n))
         if (changed) {
           setTrabajos(merged)
-          lsSet(LS_KEYS.TRABAJOS, merged)
+          lsSet(LS_KEYS.TRABAJOS, aligerarParaCache(merged))
         }
       }
       return true
@@ -261,7 +279,7 @@ export function useTrabajos() {
         registrarMaxOtRemoto(normalized) // incluye borradas: el consecutivo no retrocede
         const merged = mergeConLocal(normalized)
         setTrabajos(merged)
-        lsSet(LS_KEYS.TRABAJOS, merged)
+        lsSet(LS_KEYS.TRABAJOS, aligerarParaCache(merged))
       } else {
         // Supabase vacio: intentar seed con datos locales
         const local = trabajosRef.current
@@ -285,7 +303,7 @@ export function useTrabajos() {
               const normRetry = sbDataRetry.map(normalizar)
               const merged = mergeConLocal(normRetry)
               setTrabajos(merged)
-              lsSet(LS_KEYS.TRABAJOS, merged)
+              lsSet(LS_KEYS.TRABAJOS, aligerarParaCache(merged))
             }
           }
         }
@@ -326,7 +344,7 @@ export function useTrabajos() {
 
   // Persistir en localStorage cada cambio
   useEffect(() => {
-    if (!loading) lsSet(LS_KEYS.TRABAJOS, trabajos)
+    if (!loading) lsSet(LS_KEYS.TRABAJOS, aligerarParaCache(trabajos))
   }, [trabajos, loading])
 
   const agregarTrabajo = useCallback(async (data) => {

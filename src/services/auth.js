@@ -1,3 +1,5 @@
+import { lsPurgarCache } from './storage'
+
 const SESSION_KEY = 'taller_session'
 const SESSION_EXPIRY_MS = 24 * 60 * 60 * 1000 // 24 horas
 
@@ -20,7 +22,23 @@ export async function login(usuario, password) {
   if (!res.ok) throw new Error((data && data.error) || 'El servidor no respondió bien. Intenta de nuevo en unos segundos.')
   if (!data || !data.user) throw new Error('El servidor no respondió. Intenta de nuevo en unos segundos.')
   const session = { ...data.user, _loginAt: Date.now() }
-  localStorage.setItem(SESSION_KEY, JSON.stringify(session))
+  // El navegador se llena (el caché de trabajos con fotos pasa de los ~5 MB que
+  // da Safari) y este setItem reventaba: el login se completaba en el servidor
+  // pero moría al guardar la sesión, y salía "The quota has been exceeded" —
+  // nadie podía entrar. El caché es descartable: se libera y se reintenta.
+  try {
+    localStorage.setItem(SESSION_KEY, JSON.stringify(session))
+  } catch {
+    const kb = lsPurgarCache()
+    console.warn(`localStorage lleno: se liberaron ${kb} KB de caché para poder entrar`)
+    try {
+      localStorage.setItem(SESSION_KEY, JSON.stringify(session))
+    } catch {
+      // Ni así cabe (modo privado, o el sitio sin permiso de almacenamiento).
+      // Se entra igual: la sesión vive en memoria hasta cerrar la pestaña.
+      console.warn('No se pudo guardar la sesión; durará solo esta pestaña.')
+    }
+  }
   return session
 }
 
