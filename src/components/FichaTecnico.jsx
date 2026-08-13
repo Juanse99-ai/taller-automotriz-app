@@ -13,6 +13,7 @@
 // =====================================================================
 import { useState, useEffect } from 'react'
 import { imprimirFichaOT } from '../utils/fichaPdf'
+import { cantidadItem, fmtCant } from '../utils/helpers'
 import { Button, IconX } from './ui'
 
 // Segundos → "mm:ss" o "h:mm:ss".
@@ -145,7 +146,7 @@ export default function FichaTecnico({ trabajo: t, tecNombre, onClose, guardar }
                     <label key={it.id || idx} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', border: '1px solid var(--border)', borderRadius: 10, cursor: 'pointer', background: done ? 'var(--accent-soft)' : 'transparent' }}>
                       <input type="checkbox" checked={done} onChange={() => toggleTarea(it.id)} style={{ width: 20, height: 20, accentColor: 'var(--primary)', flexShrink: 0 }} />
                       <span style={{ flex: 1, fontSize: 14.5, fontWeight: 600, textDecoration: done ? 'line-through' : 'none', color: done ? 'var(--text-3)' : 'var(--text)' }}>{it.nombre || 'Ítem'}</span>
-                      {(parseInt(it.cantidad) || 1) > 1 && <span className="mono" style={{ fontSize: 13, color: 'var(--text-3)', flexShrink: 0 }}>x{parseInt(it.cantidad)}</span>}
+                      {cantidadItem(it) !== 1 && <span className="mono" style={{ fontSize: 13, color: 'var(--text-3)', flexShrink: 0 }}>x{fmtCant(it)}</span>}
                     </label>
                   )
                 })}

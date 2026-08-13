@@ -1,3 +1,31 @@
+// Cantidad de una línea de la OT/cotización. ACEPTA DECIMALES: media silicona
+// es 0,5. Regla ÚNICA para toda la app — antes cada pantalla hacía
+// `parseInt(i.cantidad) || 1`, que convertía 0,5 en 1: la app cobraba el tubo
+// entero mientras Cuentti facturaba la mitad (su payload sí usa parseFloat), y
+// los dos totales no cuadraban. Un valor vacío, cero o inválido vale 1.
+export function cantidadItem(i) {
+  // La coma se acepta como separador decimal: en Colombia media unidad se
+  // escribe "0,5", y parseFloat("0,5") daba 0 → la línea se cobraba entera.
+  const crudo = typeof i?.cantidad === 'string' ? i.cantidad.replace(',', '.') : i?.cantidad
+  const n = parseFloat(crudo)
+  // Cero o vacío valen 1 a propósito: es preferible cobrar una unidad a dejar
+  // una línea en $0 sin que nadie se dé cuenta.
+  return Number.isFinite(n) && n > 0 ? n : 1
+}
+
+// Cantidad para MOSTRAR: entera se ve "2", fraccionaria se ve "0,5" (coma, como
+// se escriben los decimales en Colombia). Sin ceros de relleno.
+export function fmtCant(v) {
+  const n = typeof v === 'object' ? cantidadItem(v) : (parseFloat(v) || 0)
+  return Number.isInteger(n) ? String(n) : n.toLocaleString('es-CO', { maximumFractionDigits: 3 })
+}
+
+// Total de una línea en pesos enteros. El peso no usa centavos y una cantidad
+// decimal puede dar fracciones (0,5 × $30.001), así que se redondea aquí.
+export function totalLinea(i) {
+  return Math.round((parseFloat(i?.precio) || 0) * cantidadItem(i))
+}
+
 // Formato moneda colombiana
 export function fmt(n) {
   return new Intl.NumberFormat('es-CO', {

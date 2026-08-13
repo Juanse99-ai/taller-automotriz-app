@@ -1,7 +1,7 @@
 import { useState, useMemo, useRef, useEffect } from 'react'
 import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
-import { fmt, fmtDate, uid, hoyISO, tituloCliente } from '../utils/helpers'
+import { fmt, fmtDate, uid, hoyISO, tituloCliente, cantidadItem } from '../utils/helpers'
 import MoneyInput from '../components/MoneyInput'
 import { COMISION, ESTADOS } from '../utils/constants'
 import { lsGet, lsSet } from '../services/storage'
@@ -24,7 +24,7 @@ const getManoObra = (t) => {
   if (Array.isArray(t?.items) && t.items.length) {
     const suma = t.items.reduce((s, i) => {
       const precio = parseFloat(i?.precio) || 0
-      const cant = parseInt(i?.cantidad) || 1
+      const cant = cantidadItem(i)
       const ivaPct = parseFloat(i?.iva) || 0
       const tipo = (i?.tipo || i?.categoria || '').toString().toLowerCase()
       const esServ = i?.esServicio === true || i?.es_servicio === 1 || tipo.includes('serv')

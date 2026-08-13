@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from 'react'
 import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
-import { fmt, fmtDate } from '../utils/helpers'
+import { fmt, fmtDate, cantidadItem } from '../utils/helpers'
 import { COMISION, ESTADOS } from '../utils/constants'
 import { useTecnicos } from '../services/tecnicos'
 import { manoObraBase, esServicioItem } from '../utils/comision'
@@ -183,7 +183,7 @@ export default function Reportes({ trabajos, loading = false, notify }) {
       (t.items || []).forEach(i => {
         const esServ = esServicioItem(i)
         if (esServ) return
-        const cant = parseInt(i.cantidad) || 1
+        const cant = cantidadItem(i)
         const ivaPct = parseFloat(i.iva) || 0
         const lineaSinIva = (parseFloat(i.precio) || 0) * cant / (1 + ivaPct / 100)
         if (lineaSinIva <= 0) return
@@ -235,7 +235,7 @@ export default function Reportes({ trabajos, loading = false, notify }) {
       (t.items || []).forEach(i => {
         const esServ = esServicioItem(i)
         if (esServ) return
-        const cant = parseInt(i.cantidad) || 1
+        const cant = cantidadItem(i)
         const ivaPct = parseFloat(i.iva) || 0
         const ventaLinea = (parseFloat(i.precio) || 0) * cant / (1 + ivaPct / 100) // sin IVA
         if (ventaLinea <= 0) return

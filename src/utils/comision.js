@@ -1,4 +1,5 @@
 import { COMISION } from './constants'
+import { cantidadItem } from './helpers'
 
 // ¿La línea de una OT es mano de obra (servicio) y no un repuesto? Regla ÚNICA para
 // toda la app: acepta camelCase (esServicio) y snake_case (es_servicio) y el tipo/
@@ -24,7 +25,7 @@ export function manoObraBase(t) {
   if (Array.isArray(t?.items) && t.items.length) {
     const suma = t.items.reduce((s, i) => {
       const precio = parseFloat(i?.precio) || 0
-      const cant = parseInt(i?.cantidad) || 1
+      const cant = cantidadItem(i)
       const ivaPct = parseFloat(i?.iva) || 0
       if (!esServicioItem(i)) return s
       const totalLinea = precio * cant

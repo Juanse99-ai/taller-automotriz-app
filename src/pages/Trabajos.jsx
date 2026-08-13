@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useRef } from 'react'
 import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
-import { fmt, fmtDate, fmtTelefono } from '../utils/helpers'
+import { fmt, fmtDate, fmtTelefono, cantidadItem, fmtCant } from '../utils/helpers'
 import { TECNICOS, ESTADOS, DIAS_ESTANCADO, TALLER } from '../utils/constants'
 import { loadLogo as loadPdfLogo, drawHeader, drawSectionHeader, drawDataBlock, drawTotalsBox, drawSignatures, drawFooter, tableStylesItems, PDF_LAYOUT, PDF_COLORS } from '../utils/pdfTheme'
 import FichaTecnico from '../components/FichaTecnico'
@@ -292,10 +292,10 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
       const itemRows = t.items.map((i, idx) => [
         String(idx + 1),
         i.nombre || '—',
-        String(i.cantidad || 1),
+        fmtCant(i),
         fmt(parseFloat(i.precio) || 0),
         i.iva > 0 ? `${i.iva}%` : '—',
-        fmt((parseFloat(i.precio) || 0) * (parseInt(i.cantidad) || 1)),
+        fmt((parseFloat(i.precio) || 0) * (cantidadItem(i))),
       ])
       const hasSkus = itemSkus.some(s => s)
 
@@ -345,7 +345,7 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
       // mostrada al cliente = solo líneas marcadas Servicio (no la comisión interna).
       let manoObra = 0, repuestos = 0
       ;(t.items || []).forEach(i => {
-        const linea = (parseFloat(i.precio) || 0) * (parseInt(i.cantidad) || 1)
+        const linea = (parseFloat(i.precio) || 0) * (cantidadItem(i))
         if (i.esServicio) manoObra += linea
         else repuestos += linea
       })
@@ -743,7 +743,7 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
                       {(selTrabajo.items || []).slice(0, 8).map((it, i) => (
                         <div key={i} style={{ display: 'flex', justifyContent: 'space-between', gap: 10, fontSize: 12.5, padding: '3px 0' }}>
                           <span style={{ color: 'var(--text-2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{it.nombre || 'Ítem'}</span>
-                          <span className="mono" style={{ color: 'var(--text-3)', flexShrink: 0 }}>{fmt((parseFloat(it.precio) || 0) * (parseInt(it.cantidad) || 1))}</span>
+                          <span className="mono" style={{ color: 'var(--text-3)', flexShrink: 0 }}>{fmt((parseFloat(it.precio) || 0) * (cantidadItem(it)))}</span>
                         </div>
                       ))}
                     </div>
@@ -880,7 +880,7 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
                     {(t.items || []).slice(0, 8).map((it, i) => (
                       <div key={i} style={{ display: 'flex', justifyContent: 'space-between', gap: 10, fontSize: 12.5, padding: '3px 0' }}>
                         <span style={{ color: 'var(--text-2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{it.nombre || 'Ítem'}</span>
-                        <span className="mono" style={{ color: 'var(--text-3)', flexShrink: 0 }}>{fmt((parseFloat(it.precio) || 0) * (parseInt(it.cantidad) || 1))}</span>
+                        <span className="mono" style={{ color: 'var(--text-3)', flexShrink: 0 }}>{fmt((parseFloat(it.precio) || 0) * (cantidadItem(it)))}</span>
                       </div>
                     ))}
                   </div>

@@ -4,7 +4,7 @@ import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import { InspeccionDetalle } from './Inspecciones'
 import { ESTADOS, TECNICOS, TALLER } from '../utils/constants'
-import { fmtDate, fmt, tituloCliente } from '../utils/helpers'
+import { fmtDate, fmt, tituloCliente, cantidadItem, fmtCant } from '../utils/helpers'
 import { labelInventario, etiquetaCombustible, ingresoTieneAlgo } from '../utils/ingreso'
 import { Button, IconX } from '../components/ui'
 import SignaturePad from '../components/SignaturePad'
@@ -858,8 +858,10 @@ export default function PortalCliente() {
                 <div style={{marginTop:10,display:'flex',flexDirection:'column',gap:4}}>
                   {(c.items||[]).slice(0,6).map((it,k)=>(
                     <div key={k} style={{display:'flex',justifyContent:'space-between',gap:12,fontSize:13.5}}>
-                      <span style={{color:'var(--text-2)',minWidth:0}}>{it.nombre||it.codigo||'Ítem'}{(parseInt(it.cantidad)||1)>1?` × ${parseInt(it.cantidad)}`:''}</span>
-                      <span className="mono" style={{color:'var(--text-3)',whiteSpace:'nowrap'}}>{fmt(Math.round((parseFloat(it.precio)||0)*(parseInt(it.cantidad)||1)))}</span>
+                      {/* !== 1 (no > 1): una cantidad de 0,5 hay que MOSTRARLA, es
+                         justo la que explica por qué la línea cuesta la mitad. */}
+                      <span style={{color:'var(--text-2)',minWidth:0}}>{it.nombre||it.codigo||'Ítem'}{cantidadItem(it)!==1?` × ${fmtCant(it)}`:''}</span>
+                      <span className="mono" style={{color:'var(--text-3)',whiteSpace:'nowrap'}}>{fmt(Math.round((parseFloat(it.precio)||0)*(cantidadItem(it))))}</span>
                     </div>
                   ))}
                   {(c.items||[]).length>6 && <div style={{fontSize:12.5,color:'var(--text-4)'}}>+ {(c.items||[]).length-6} más…</div>}
@@ -1125,7 +1127,7 @@ export default function PortalCliente() {
       {vistaServicio && (() => {
         const t = vistaServicio
         const items = Array.isArray(t.items) ? t.items : []
-        const linea = (i) => Math.round((parseFloat(i.precio) || 0) * (parseInt(i.cantidad) || 1))
+        const linea = (i) => Math.round((parseFloat(i.precio) || 0) * (cantidadItem(i)))
         const total = t.total || items.reduce((s, i) => s + linea(i), 0)
         const est = ESTADO_TRABAJO_DISPLAY[t.estado] || {}
         const tieneProx = t.tipoAceite || t.proximoKm || t.proximaVisita || t.notasProximoMant
@@ -1161,7 +1163,7 @@ export default function PortalCliente() {
                           <div style={{fontSize:14,fontWeight:600,lineHeight:1.35}}>{i.nombre || i.codigo || 'Ítem'}</div>
                           <div style={{fontSize:12,color:'var(--text-3)',marginTop:1}}>
                             {i.esServicio ? 'Mano de obra' : 'Repuesto'}
-                            {(parseInt(i.cantidad) || 1) > 1 && <> · {parseInt(i.cantidad)} × {fmt(Math.round(parseFloat(i.precio) || 0))}</>}
+                            {cantidadItem(i) !== 1 && <> · {fmtCant(i)} × {fmt(Math.round(parseFloat(i.precio) || 0))}</>}
                           </div>
                         </div>
                         <div className="mono" style={{fontSize:14,fontWeight:700,whiteSpace:'nowrap'}}>{fmt(linea(i))}</div>

@@ -5,6 +5,7 @@
 // =====================================================================
 import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
+import { fmtCant } from './helpers'
 import { loadLogo, drawHeader, drawSectionHeader, drawDataBlock, drawSignatures, drawFooter, tableStylesItems, PDF_LAYOUT, PDF_COLORS } from './pdfTheme'
 import { fmtDate } from './helpers'
 
@@ -52,7 +53,7 @@ export async function dibujarUnaFicha(doc, t, tecNombre, hechasSet, logoData, es
     autoTable(doc, {
       startY: y,
       head: [['#', 'TAREA / REPUESTO', 'CANT.', 'HECHO']],
-      body: items.map((it, idx) => [String(idx + 1), it.nombre || '—', String(it.cantidad || 1), '']),
+      body: items.map((it, idx) => [String(idx + 1), it.nombre || '—', fmtCant(it), '']),
       ...tableStylesItems,
       columnStyles: {
         0: { halign: 'center', cellWidth: 9, textColor: SLATE_400 },

@@ -5,7 +5,7 @@
 // dos ayudantes de UI (Chevron y ThumbGrid), que no usa nadie más.
 // ============================================================
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
-import { fmt, fmtDate, uid, hoyISO, normalizarDoc, normalizarNombre, fmtTelefono } from '../utils/helpers'
+import { fmt, fmtDate, uid, hoyISO, normalizarDoc, normalizarNombre, fmtTelefono, cantidadItem, fmtCant } from '../utils/helpers'
 import { TECNICOS, ESTADOS, IVA_DEFAULT, COMISION } from '../utils/constants'
 import IngresoVehiculo from '../components/IngresoVehiculo'
 import { ingresoVacio } from '../utils/ingreso'
@@ -367,7 +367,7 @@ export default function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [
     let subtotal = 0, iva = 0, total = 0, manoObra = 0, manoObraBase = 0, repuestos = 0
     items.forEach(i => {
       const precio = parseFloat(i.precio) || 0
-      const cant = parseInt(i.cantidad) || 1
+      const cant = cantidadItem(i)
       const ivaPct = parseFloat(i.iva) || 0
       const lineaTotal = precio * cant
       const lineaBase = ivaPct > 0 ? lineaTotal / (1 + ivaPct / 100) : lineaTotal
@@ -828,7 +828,7 @@ export default function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [
                 </thead>
                 <tbody>
                   {items.map(item => {
-                    const lineTotal = (parseFloat(item.precio) || 0) * (parseInt(item.cantidad) || 1)
+                    const lineTotal = (parseFloat(item.precio) || 0) * (cantidadItem(item))
                     const searchState = itemSearch[item.id]
                     return (
                       <tr key={item.id}>
@@ -934,7 +934,11 @@ export default function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [
                             inputStyle={{ padding: '6px 10px 6px 22px', fontSize: 13, textAlign: 'right' }} />
                         </td>
                         <td>
-                          <input className="form-input" type="number" value={item.cantidad} min="1"
+                          {/* step="any": se puede facturar media silicona (0,5) o un
+                             cuarto de galón. min="1" y el paso entero por defecto
+                             marcaban 0,5 como inválido. */}
+                          <input className="form-input" type="number" value={item.cantidad} min="0" step="any"
+                            title="Acepta decimales: 0,5 = media unidad"
                             onChange={e => updateItem(item.id, 'cantidad', e.target.value)}
                             style={{ padding: '6px 10px', fontSize: 13, textAlign: 'center', width: 60 }} />
                         </td>

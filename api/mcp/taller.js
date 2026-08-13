@@ -125,7 +125,7 @@ function calcularTotales(items) {
   let subtotal = 0, iva = 0, total = 0
   const norm = (items || []).map(i => {
     const precio = parseFloat(i.precio) || 0
-    const cant = parseInt(i.cantidad, 10) || 1
+    const cant = (n => Number.isFinite(n) && n > 0 ? n : 1)(parseFloat(i.cantidad))  // decimales: media silicona = 0,5
     const ivaPct = parseFloat(i.iva ?? 19) || 0
     const lineaTotal = precio * cant
     if (ivaPct > 0) { const base = lineaTotal / (1 + ivaPct / 100); subtotal += base; iva += lineaTotal - base }

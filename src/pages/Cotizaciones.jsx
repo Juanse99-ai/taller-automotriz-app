@@ -1,7 +1,7 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react'
 import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
-import { fmt, fmtDate, uid, hoyISO, normalizarDoc, normalizarNombre, fmtTelefono } from '../utils/helpers'
+import { fmt, fmtDate, uid, hoyISO, normalizarDoc, normalizarNombre, fmtTelefono, cantidadItem, fmtCant } from '../utils/helpers'
 import { TECNICOS, IVA_DEFAULT, TALLER } from '../utils/constants'
 import { loadLogo as loadPdfLogo, drawHeader, drawSectionHeader, drawDataBlock, drawTotalsBox, drawSignatures, drawFooter, tableStylesItems, PDF_LAYOUT, PDF_COLORS } from '../utils/pdfTheme'
 import { MARCAS, getModelos } from '../utils/vehiculos'
@@ -99,10 +99,10 @@ export default function Cotizaciones({ notify, trabajos = [], onCrearTrabajo, co
       const itemRows = c.items.map((i, idx) => [
         String(idx + 1),
         i.nombre || '—',
-        String(i.cantidad || 1),
+        fmtCant(i),
         fmt(parseFloat(i.precio) || 0),
         i.iva > 0 ? `${i.iva}%` : '—',
-        fmt((parseFloat(i.precio) || 0) * (parseInt(i.cantidad) || 1)),
+        fmt((parseFloat(i.precio) || 0) * (cantidadItem(i))),
       ])
 
       autoTable(doc, {
@@ -500,7 +500,7 @@ function CotizacionForm({ cotizacion, trabajos = [], onSave, onCancel }) {
     let subtotal = 0, iva = 0, total = 0
     items.forEach(i => {
       const precio = parseFloat(i.precio) || 0
-      const cant = parseInt(i.cantidad) || 1
+      const cant = cantidadItem(i)
       const ivaPct = parseFloat(i.iva) || 0
       const lineaTotal = precio * cant
       if (ivaPct > 0) {
@@ -650,7 +650,7 @@ function CotizacionForm({ cotizacion, trabajos = [], onSave, onCancel }) {
                 </thead>
                 <tbody>
                   {items.map(item => {
-                    const lineTotal = (parseFloat(item.precio) || 0) * (parseInt(item.cantidad) || 1)
+                    const lineTotal = (parseFloat(item.precio) || 0) * (cantidadItem(item))
                     const search = itemSearch[item.id] || {}
                     return (
                       <tr key={item.id}>
@@ -737,7 +737,9 @@ function CotizacionForm({ cotizacion, trabajos = [], onSave, onCancel }) {
                         </td>
                         <td><MoneyInput className="form-input" value={Math.round(parseFloat(item.precio) || 0)}
                           onChange={v => updateItem(item.id, 'precio', v)} inputStyle={{ padding: '6px 10px 6px 22px', fontSize: 13, textAlign: 'right' }} /></td>
-                        <td><input className="form-input" type="number" value={item.cantidad} min="1"
+                        {/* step="any": acepta media unidad (0,5), igual que la OT. */}
+                        <td><input className="form-input" type="number" value={item.cantidad} min="0" step="any"
+                          title="Acepta decimales: 0,5 = media unidad"
                           onChange={e => updateItem(item.id, 'cantidad', e.target.value)} style={{ padding: '6px 10px', fontSize: 13, textAlign: 'center', width: 60 }} /></td>
                         <td><input className="form-input" type="number" value={item.iva} min="0"
                           onChange={e => updateItem(item.id, 'iva', e.target.value)} style={{ padding: '6px 10px', fontSize: 13, textAlign: 'center', width: 60 }} /></td>
