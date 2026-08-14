@@ -186,7 +186,8 @@ export default function Dashboard({ trabajos = [], onNavigate, user }) {
       {/* ── Welcome row ─────────────────────────────────────────────────── */}
       <div className="pagehd">
         <div>
-          <h2>Hola{user?.nombre ? `, ${user.nombre.split(' ')[0]}` : ''} 👋</h2>
+          <h2>Hola{user?.nombre ? `, ${user.nombre.split(' ')[0]}` : ''}</h2>
+          <p className="sub">{fechaCap}</p>
         </div>
         <div className="actions">
           {onNavigate && (
@@ -227,11 +228,14 @@ export default function Dashboard({ trabajos = [], onNavigate, user }) {
         return (
           <div style={{
             padding: '16px 20px',
-            background: 'rgba(22,163,74,.08)',
-            border: '1px solid rgba(22,163,74,.32)',
+            background: 'var(--soft-green)',
+            border: '1px solid color-mix(in srgb, var(--green-600) 34%, transparent)',
             borderRadius: 12,
             display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap',
           }}>
+            {/* Verde de WhatsApp, no el verde de la app: es la señal de que este
+               recordatorio se atiende por WhatsApp. Fijo a propósito en ambos
+               temas — es color de marca ajena, no un token del sistema. */}
             <div style={{
               width: 42, height: 42, borderRadius: 11, background: '#25D366',
               display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', flexShrink: 0,
@@ -249,7 +253,7 @@ export default function Dashboard({ trabajos = [], onNavigate, user }) {
               </div>
             </div>
             {onNavigate && (
-              <button className="btn btn-primary btn-sm" onClick={() => onNavigate('crm')} style={{ background: '#16a34a' }}>
+              <button className="btn btn-primary btn-sm" onClick={() => onNavigate('crm')} style={{ background: 'var(--green-600)', borderColor: 'var(--green-600)' }}>
                 Abrir CRM <IcArrow />
               </button>
             )}
@@ -261,8 +265,8 @@ export default function Dashboard({ trabajos = [], onNavigate, user }) {
       {estancados.length > 0 && (
         <div style={{
           padding: '16px 20px',
-          background: 'rgba(220,38,38,.08)',
-          border: '1px solid rgba(220,38,38,.32)',
+          background: 'var(--soft-red)',
+          border: '1px solid color-mix(in srgb, var(--red-600) 34%, transparent)',
           borderRadius: 12,
           display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap',
         }}>
@@ -324,11 +328,6 @@ export default function Dashboard({ trabajos = [], onNavigate, user }) {
           </div>
           <div className="kpi-bh__sub">facturado sin pagar</div>
         </div>
-        <div className="kpi-bh__s">
-          <div className="kpi-bh__l">Total OTs</div>
-          <div className="kpi-bh__row"><span className="kpi-bh__v">{trabajos.length}</span></div>
-          <div className="kpi-bh__sub">histórico</div>
-        </div>
       </div>
 
       {/* ── Nudge: vehículos por contactar (mantenimiento) → CRM ──────────── */}
@@ -342,7 +341,7 @@ export default function Dashboard({ trabajos = [], onNavigate, user }) {
             <div style={{ fontSize: 13, color: 'var(--text-3)' }}>Envíales un recordatorio de mantenimiento (cambio de aceite) y hazlos regresar.</div>
           </div>
           {onNavigate && (
-            <Button variant="primary" size="sm" onClick={() => onNavigate('crm')}>Ver recordatorios →</Button>
+            <Button variant="primary" size="sm" onClick={() => onNavigate('crm')}>Ver recordatorios <IcArrow /></Button>
           )}
         </div>
       )}
@@ -366,7 +365,7 @@ export default function Dashboard({ trabajos = [], onNavigate, user }) {
           {urgentes.length === 0 ? (
             <div className="card__b">
               <div className="empty-state">
-                <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="var(--green-600)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ marginBottom: 10, opacity: .85 }}>
+                <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="var(--green-600)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ marginBottom: 10 }}>
                   <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
                   <polyline points="22 4 12 14.01 9 11.01"/>
                 </svg>
@@ -407,7 +406,7 @@ export default function Dashboard({ trabajos = [], onNavigate, user }) {
                               <span className={`av av-${(i % 5) + 1}`}>{initials(tec)}</span>
                               <span style={{ fontSize: 12.5 }}>{tec.split(' ')[0]}</span>
                             </div>
-                          ) : <span style={{ color: 'var(--text-4)', fontSize: 12 }}>—</span>}
+                          ) : <span style={{ color: 'var(--text-3)', fontSize: 13 }}>—</span>}
                         </td>
                         <td>
                           {isVencido
@@ -439,7 +438,7 @@ export default function Dashboard({ trabajos = [], onNavigate, user }) {
           {agenda.length === 0 ? (
             <div className="card__b">
               <div className="empty-state" style={{ padding: '24px 14px' }}>
-                <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="var(--text-3)" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" style={{ marginBottom: 10, opacity: .8 }}>
+                <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="var(--text-3)" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" style={{ marginBottom: 10 }}>
                   <rect x="9" y="2" width="6" height="4" rx="1"/>
                   <path d="M8 4H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-2"/>
                 </svg>
@@ -503,7 +502,7 @@ export default function Dashboard({ trabajos = [], onNavigate, user }) {
           {listos.length === 0 ? (
             <div className="card__b">
               <div className="empty-state" style={{ padding: '24px 14px' }}>
-                <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="var(--text-3)" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" style={{ marginBottom: 10, opacity: .8 }}>
+                <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="var(--text-3)" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" style={{ marginBottom: 10 }}>
                   <path d="M14 16H9m10 0h3v-3.15a1 1 0 0 0-.84-.99L16 11l-2.7-3.6a1 1 0 0 0-.8-.4H5.24a2 2 0 0 0-1.8 1.1l-.8 1.63A6 6 0 0 0 2 12.42V16h2"/>
                   <circle cx="6.5" cy="16.5" r="2.5"/><circle cx="16.5" cy="16.5" r="2.5"/>
                 </svg>
@@ -522,8 +521,8 @@ export default function Dashboard({ trabajos = [], onNavigate, user }) {
                   </div>
                   <div style={{ fontSize: 13, fontWeight: 600 }}>{t.cliente || '—'}</div>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 8 }}>
-                    <span style={{ fontSize: 11, color: 'var(--text-3)' }}>Total</span>
-                    <span className="mono" style={{ fontWeight: 700, fontSize: 13 }}>{fmt(t.total)}</span>
+                    <span style={{ fontSize: 12.5, color: 'var(--text-3)' }}>Total</span>
+                    <span className="mono" style={{ fontWeight: 700, fontSize: 14 }}>{fmt(t.total)}</span>
                   </div>
                   {t.telefonoCliente && (
                     <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>

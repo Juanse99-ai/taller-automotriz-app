@@ -10,14 +10,25 @@ import ConfirmDialog from '../components/ConfirmDialog'
 import { useClientes } from '../hooks/useClientes'
 import { useInventario, formatCacheAge } from '../hooks/useInventario'
 import { lsGet, lsSet, LS_KEYS } from '../services/storage'
-import { Button, Badge } from '../components/ui'
+import { Button, Badge, IconX, IconEdit, IconTrash, IconPdf } from '../components/ui'
 
 const ESTADO_COT = { PENDIENTE: 'Pendiente', APROBADA: 'Aprobada', RECHAZADA: 'Rechazada' }
+
+// Referencia corta y legible. Conviven ids nuevos cortos (COT-0002) con uids
+// aleatorios de 13 chars (COT-mskjp68522nbo) que se partían en dos líneas y no
+// se pueden leer ni dictar por teléfono: de esos mostramos los últimos 6. Mismo
+// criterio que liqRef() en Liquidacion.jsx. El id completo queda en el title.
+const cotRef = (id) => {
+  let s = (id || '').toString().replace(/^COT-/i, '')
+  if (s.length > 11) s = s.slice(-6)
+  return s.toUpperCase()
+}
 
 export default function Cotizaciones({ notify, trabajos = [], onCrearTrabajo, cotizacionesHook }) {
   const { cotizaciones, guardarUna, eliminar: eliminarHook } = cotizacionesHook || {}
   const [vista, setVista] = useState('lista')
   const [editId, setEditId] = useState(null)
+  const [detalleId, setDetalleId] = useState(null)
   const [confirmCfg, setConfirmCfg] = useState(null)
   // Anti doble-click de "Crear trabajo": cada click extra creaba OTRA OT (el
   // 23-jul-2026 salieron 22 duplicadas). Mientras se crea, el botón se bloquea.
@@ -209,6 +220,24 @@ export default function Cotizaciones({ notify, trabajos = [], onCrearTrabajo, co
     valorPendiente: cotizaciones.filter(c => c.estado === ESTADO_COT.PENDIENTE).reduce((s, c) => s + (c.total || 0), 0),
   }), [cotizaciones])
 
+  // Qué cotizaciones ya tienen OT. El vínculo lo deja App.jsx en las
+  // observaciones del trabajo ("Creado desde cotizacion COT-xxx"); es el único
+  // rastro que existe. Sirve para no ofrecer "Crear trabajo" dos veces.
+  const cotsConOT = useMemo(() => {
+    const s = new Set()
+    for (const t of trabajos) {
+      const m = /Creado desde cotizacion\s+(\S+?)\.?(?:\s|$)/i.exec(t.observaciones || '')
+      if (m) s.add(m[1])
+    }
+    return s
+  }, [trabajos])
+
+  const crearTrabajoDesde = async (c) => {
+    if (creandoTrabajoId) return
+    setCreandoTrabajoId(c.id)
+    try { await onCrearTrabajo(c) } finally { setCreandoTrabajoId(null) }
+  }
+
   const aplicarEstado = async (cot, estado) => {
     try {
       await guardarUna({ ...cot, estado })
@@ -222,16 +251,25 @@ export default function Cotizaciones({ notify, trabajos = [], onCrearTrabajo, co
     const cot = cotizaciones.find(c => c.id === id)
     if (!cot) return
     if (String(estado).toLowerCase().includes('rechaz')) {
-      setConfirmCfg({ title: 'Rechazar cotizacion', confirmLabel: 'Rechazar', tone: 'danger', onConfirm: () => aplicarEstado(cot, estado) })
+      // Con el detalle cerrado antes de confirmar, la pantalla no dejaba ni una
+      // pista de QUÉ se está rechazando: hay que decirlo en el diálogo.
+      setConfirmCfg({
+        title: 'Rechazar cotización',
+        lead: `${cot.cliente || 'Sin cliente'}${cot.placa ? ` · ${cot.placa}` : ''} · ${fmt(cot.total || 0)} · Ref. ${cotRef(cot.id)}`,
+        confirmLabel: 'Rechazar', tone: 'danger', onConfirm: () => aplicarEstado(cot, estado),
+      })
       return
     }
     await aplicarEstado(cot, estado)
   }
 
   const eliminar = (id) => {
+    // El nombre del cliente identifica la cotización mucho mejor que el uid al
+    // confirmar; la referencia corta va de apoyo.
+    const cot = cotizaciones.find(c => c.id === id)
     setConfirmCfg({
       title: 'Eliminar cotizacion',
-      lead: `${id} · no se puede deshacer.`,
+      lead: `${cot?.cliente || 'Sin cliente'} · Ref. ${cotRef(id)} · no se puede deshacer.`,
       confirmLabel: 'Eliminar',
       tone: 'danger',
       onConfirm: async () => {
@@ -276,8 +314,11 @@ export default function Cotizaciones({ notify, trabajos = [], onCrearTrabajo, co
     )
   }
 
+  const detalle = detalleId ? cotizaciones.find(c => c.id === detalleId) : null
+
   return (
     <>
+    <style>{ESTILOS}</style>
     <div>
       <div className="pagehd">
         <div><h2>Cotizaciones</h2></div>
@@ -286,34 +327,22 @@ export default function Cotizaciones({ notify, trabajos = [], onCrearTrabajo, co
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,minmax(200px,1fr))', gap: 14, marginBottom: 18 }}>
-        <div className="kpi">
-          <div className="kpi__head">
-            <div className="kpi__ic blue"><svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div>
-            <div className="kpi__lbl">Total</div>
-          </div>
-          <div className="kpi__v">{stats.total}</div>
+      <div className="statline">
+        <div className="statline__i">
+          <span className="eyebrow">Total</span>
+          <span className={`statline__v${stats.total === 0 ? ' is-zero' : ''}`}>{stats.total}</span>
         </div>
-        <div className="kpi">
-          <div className="kpi__head">
-            <div className="kpi__ic amber"><svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
-            <div className="kpi__lbl">Pendientes</div>
-          </div>
-          <div className="kpi__v" style={{ color: 'var(--amber-500)' }}>{stats.pendientes}</div>
+        <div className="statline__i">
+          <span className="eyebrow eyebrow--warn">Pendientes</span>
+          <span className={`statline__v${stats.pendientes === 0 ? ' is-zero' : ''}`}>{stats.pendientes}</span>
         </div>
-        <div className="kpi">
-          <div className="kpi__head">
-            <div className="kpi__ic green"><svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><polyline points="20 6 9 17 4 12"/></svg></div>
-            <div className="kpi__lbl">Aprobadas</div>
-          </div>
-          <div className="kpi__v" style={{ color: 'var(--green-600)' }}>{stats.aprobadas}</div>
+        <div className="statline__i">
+          <span className="eyebrow">Aprobadas</span>
+          <span className={`statline__v${stats.aprobadas === 0 ? ' is-zero' : ''}`}>{stats.aprobadas}</span>
         </div>
-        <div className="kpi">
-          <div className="kpi__head">
-            <div className="kpi__ic blue"><svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg></div>
-            <div className="kpi__lbl">Valor pendiente</div>
-          </div>
-          <div className="kpi__v">{fmt(stats.valorPendiente)}</div>
+        <div className="statline__i">
+          <span className="eyebrow">Valor pendiente</span>
+          <span className={`statline__v${stats.valorPendiente === 0 ? ' is-zero' : ''}`}>{fmt(stats.valorPendiente)}</span>
         </div>
       </div>
 
@@ -328,64 +357,56 @@ export default function Cotizaciones({ notify, trabajos = [], onCrearTrabajo, co
             <table className="tbl tbl-cards">
               <thead>
                 <tr>
-                  <th>ID</th>
+                  <th>Ref.</th>
                   <th>Cliente</th>
                   <th>Placa</th>
                   <th>Vehículo</th>
                   <th>Estado</th>
                   <th className="c-right">Total</th>
                   <th>Fecha</th>
-                  <th>Acciones</th>
+                  <th></th>
+                  <th></th>
                 </tr>
               </thead>
               <tbody>
                 {sorted.map(c => {
                   const bc = c.estado === ESTADO_COT.APROBADA ? 'success'
                     : c.estado === ESTADO_COT.RECHAZADA ? 'danger' : 'warning'
+                  const yaTieneOT = cotsConOT.has(c.id)
                   return (
-                    <tr key={c.id}>
-                      <td className="c-mono" data-label="ID">{c.id}</td>
+                    <tr key={c.id} className="cot-row" onClick={() => setDetalleId(c.id)}>
+                      <td className="c-mono" data-label="Ref." title={c.id}>{cotRef(c.id)}</td>
                       <td className="c-name">{c.cliente || '—'}</td>
                       <td className="c-mono" style={{ fontWeight: 700 }} data-label="Placa">{c.placa || '—'}</td>
                       <td className="c-muted" data-label="Vehículo">{[c.marca, c.modelo, c.ano].filter(Boolean).join(' ') || '—'}</td>
                       <td data-label="Estado"><Badge tone={bc}>{c.estado}</Badge></td>
                       <td className="c-right c-mono" data-label="Total">{fmt(c.total)}</td>
                       <td className="c-muted" data-label="Fecha">{fmtDate(c.fecha)}</td>
-                      <td className="td-actions">
+                      {/* Una sola acción visible: la que toca ahora. Aprobar, rechazar,
+                          PDF, editar y eliminar viven en el detalle o en el menú "⋯",
+                          para que el tacho nunca quede al lado de algo que se usa a diario. */}
+                      <td className="td-actions" onClick={e => e.stopPropagation()}>
                         <div className="actions-cell">
-                          {/* Decisiones = botones con texto. Utilitarias = botones de icono. */}
                           {c.estado === ESTADO_COT.PENDIENTE && (
-                            <>
-                              <Button variant="success" size="sm" onClick={() => cambiarEstado(c.id, ESTADO_COT.APROBADA)}>Aprobar</Button>
-                              <Button variant="outline" size="sm" style={{ color: 'var(--red-600)' }} onClick={() => cambiarEstado(c.id, ESTADO_COT.RECHAZADA)}>Rechazar</Button>
-                            </>
+                            <Button variant="outline" size="sm" onClick={() => setDetalleId(c.id)}>Revisar</Button>
                           )}
-                          {c.estado === ESTADO_COT.APROBADA && onCrearTrabajo && (
+                          {c.estado === ESTADO_COT.APROBADA && onCrearTrabajo && !yaTieneOT && (
                             <Button variant="primary" size="sm" disabled={creandoTrabajoId !== null}
-                              onClick={async () => {
-                                if (creandoTrabajoId) return
-                                setCreandoTrabajoId(c.id)
-                                try { await onCrearTrabajo(c) } finally { setCreandoTrabajoId(null) }
-                              }}>
+                              onClick={() => crearTrabajoDesde(c)}>
                               {creandoTrabajoId === c.id ? 'Creando…' : 'Crear trabajo'}</Button>
                           )}
-                          <button type="button" className="icon-btn" title="Descargar PDF" aria-label="Descargar PDF" onClick={() => imprimirCotizacion(c)}>
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>
-                            </svg>
-                          </button>
-                          <button type="button" className="icon-btn" title="Editar" aria-label="Editar cotización" onClick={() => { setEditId(c.id); setVista('editar') }}>
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                              <path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/>
-                            </svg>
-                          </button>
-                          <button type="button" className="icon-btn icon-btn--danger" title="Eliminar" aria-label="Eliminar cotización" onClick={() => eliminar(c.id)}>
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                              <polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
-                            </svg>
-                          </button>
+                          <MenuFila
+                            etiqueta={`Más acciones de la cotización ${cotRef(c.id)}`}
+                            opciones={[
+                              { label: 'Descargar PDF', icon: <IconPdf />, onSelect: () => imprimirCotizacion(c) },
+                              { label: 'Editar', icon: <IconEdit />, onSelect: () => { setEditId(c.id); setVista('editar') } },
+                              { separador: true },
+                              { label: 'Eliminar', icon: <IconTrash />, peligro: true, onSelect: () => eliminar(c.id) },
+                            ]}
+                          />
                         </div>
                       </td>
+                      <td className="td-chevron" aria-hidden="true">›</td>
                     </tr>
                   )
                 })}
@@ -395,10 +416,236 @@ export default function Cotizaciones({ notify, trabajos = [], onCrearTrabajo, co
         </div>
       </div>
     </div>
+    {detalle && (
+      <DetalleCotizacion
+        cot={detalle}
+        yaTieneOT={cotsConOT.has(detalle.id)}
+        creando={creandoTrabajoId === detalle.id}
+        creandoAlguna={creandoTrabajoId !== null}
+        onClose={() => setDetalleId(null)}
+        onPdf={() => imprimirCotizacion(detalle)}
+        onEditar={() => { setDetalleId(null); setEditId(detalle.id); setVista('editar') }}
+        onAprobar={() => { setDetalleId(null); cambiarEstado(detalle.id, ESTADO_COT.APROBADA) }}
+        onRechazar={() => { setDetalleId(null); cambiarEstado(detalle.id, ESTADO_COT.RECHAZADA) }}
+        onCrearTrabajo={onCrearTrabajo ? () => crearTrabajoDesde(detalle) : null}
+      />
+    )}
     <ConfirmDialog cfg={confirmCfg} onClose={() => setConfirmCfg(null)} />
     </>
   )
 }
+
+// Medidas del menú "⋯". Deben coincidir con .cot-menu del <style> de abajo:
+// se usan para decidir si cabe en pantalla ANTES de pintarlo.
+const ANCHO_MENU = 210
+const ALTO_MENU = 210
+
+// Menú "⋯" de una fila. Va en position:fixed porque el cuerpo de la tarjeta
+// recorta con overflow-x y el desplegable de las últimas filas quedaría cortado.
+// Teclado completo: Escape cierra y devuelve el foco, flechas recorren, Tab sale.
+function MenuFila({ etiqueta, opciones }) {
+  const [abierto, setAbierto] = useState(false)
+  const [pos, setPos] = useState({ top: 0, left: 0 })
+  const btnRef = useRef(null)
+  const menuRef = useRef(null)
+
+  const cerrar = useCallback((devolverFoco) => {
+    setAbierto(false)
+    if (devolverFoco) btnRef.current?.focus()
+  }, [])
+
+  // El menú se alinea al borde derecho del botón, pero se mantiene siempre
+  // dentro de la pantalla: en celular el botón queda a la izquierda de la
+  // tarjeta y alineado a la derecha se salía del viewport. Si no cabe abajo
+  // (última fila), se despliega hacia arriba.
+  const abrir = () => {
+    const r = btnRef.current.getBoundingClientRect()
+    const left = Math.min(Math.max(8, r.right - ANCHO_MENU), window.innerWidth - ANCHO_MENU - 8)
+    const cabeAbajo = r.bottom + 6 + ALTO_MENU <= window.innerHeight
+    setPos(cabeAbajo
+      ? { top: r.bottom + 6, left }
+      : { bottom: window.innerHeight - r.top + 6, left })
+    setAbierto(true)
+  }
+
+  useEffect(() => {
+    if (!abierto) return
+    const items = () => Array.from(menuRef.current?.querySelectorAll('[role="menuitem"]') || [])
+    // preventScroll: enfocar sin mover la página, que además dispararía el
+    // listener de scroll de abajo y cerraría el menú recién abierto.
+    items()[0]?.focus({ preventScroll: true })
+
+    const onKey = (e) => {
+      if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); cerrar(true); return }
+      if (e.key === 'Tab') { cerrar(false); return }
+      const list = items()
+      if (!list.length) return
+      const i = list.indexOf(document.activeElement)
+      if (e.key === 'ArrowDown') { e.preventDefault(); list[(i + 1) % list.length].focus() }
+      else if (e.key === 'ArrowUp') { e.preventDefault(); list[(i - 1 + list.length) % list.length].focus() }
+      else if (e.key === 'Home') { e.preventDefault(); list[0].focus() }
+      else if (e.key === 'End') { e.preventDefault(); list[list.length - 1].focus() }
+    }
+    const fuera = (e) => {
+      if (menuRef.current?.contains(e.target) || btnRef.current?.contains(e.target)) return
+      cerrar(false)
+    }
+    const reposicionar = () => cerrar(false)
+
+    document.addEventListener('keydown', onKey, true)
+    document.addEventListener('click', fuera, true)
+    window.addEventListener('resize', reposicionar)
+    window.addEventListener('scroll', reposicionar, true)
+    return () => {
+      document.removeEventListener('keydown', onKey, true)
+      document.removeEventListener('click', fuera, true)
+      window.removeEventListener('resize', reposicionar)
+      window.removeEventListener('scroll', reposicionar, true)
+    }
+  }, [abierto, cerrar])
+
+  return (
+    <>
+      <button
+        ref={btnRef} type="button" className="icon-btn"
+        aria-label={etiqueta} title="Más acciones"
+        aria-haspopup="menu" aria-expanded={abierto}
+        onClick={() => (abierto ? cerrar(false) : abrir())}
+      >
+        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+          <circle cx="5" cy="12" r="1.9" /><circle cx="12" cy="12" r="1.9" /><circle cx="19" cy="12" r="1.9" />
+        </svg>
+      </button>
+      {abierto && (
+        <div ref={menuRef} className="cot-menu" role="menu" aria-label={etiqueta} style={pos}>
+          {opciones.map((o, i) => o.separador ? (
+            <hr key={`s${i}`} />
+          ) : (
+            <button key={o.label} type="button" role="menuitem"
+              className={o.peligro ? 'peligro' : undefined}
+              onClick={() => { cerrar(false); o.onSelect() }}>
+              {o.icon}<span>{o.label}</span>
+            </button>
+          ))}
+        </div>
+      )}
+    </>
+  )
+}
+
+// Detalle de la cotización: es lo que se abre al tocar la fila. Aquí viven las
+// decisiones (aprobar / rechazar / crear trabajo), con los ítems a la vista, en
+// vez de repartidas en 13 filas de la tabla.
+function DetalleCotizacion({ cot, yaTieneOT, creando, creandoAlguna, onClose, onPdf, onEditar, onAprobar, onRechazar, onCrearTrabajo }) {
+  useEffect(() => {
+    const onKey = (e) => { if (e.key === 'Escape') onClose() }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [onClose])
+
+  const tone = cot.estado === ESTADO_COT.APROBADA ? 'success'
+    : cot.estado === ESTADO_COT.RECHAZADA ? 'danger' : 'warning'
+  const vehiculo = [cot.marca, cot.modelo, cot.ano].filter(Boolean).join(' ')
+  const datos = [
+    { k: 'Cliente', v: cot.cliente || '—' },
+    { k: 'Cédula / NIT', v: cot.cedula || '—' },
+    { k: 'Teléfono', v: cot.telefonoCliente || '—' },
+    { k: 'Placa', v: (cot.placa || '—').toUpperCase() },
+    { k: 'Vehículo', v: vehiculo || '—' },
+    { k: 'Fecha', v: fmtDate(cot.fecha) },
+  ]
+
+  return (
+    <div className="modal-overlay" onClick={onClose} role="presentation">
+      <div className="modal cot-modal" style={{ maxWidth: 640 }} onClick={e => e.stopPropagation()}
+        role="dialog" aria-modal="true" aria-label={`Cotización ${cotRef(cot.id)}`}>
+        <div className="modal__h">
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', minWidth: 0 }}>
+            <span className="mono" title={cot.id} style={{ fontSize: 17, fontWeight: 700, color: 'var(--text)' }}>
+              COT · {cotRef(cot.id)}
+            </span>
+            <Badge tone={tone}>{cot.estado}</Badge>
+            {yaTieneOT && <Badge tone="info">Ya tiene OT</Badge>}
+          </div>
+          <button className="icobtn" onClick={onClose} aria-label="Cerrar" style={{ flexShrink: 0 }}><IconX /></button>
+        </div>
+
+        <div className="modal__b">
+          <div className="cot-dl">
+            {datos.map(d => (
+              <div key={d.k}><span className="eyebrow">{d.k}</span><span>{d.v}</span></div>
+            ))}
+          </div>
+
+          {cot.items?.length > 0 && (
+            <div style={{ marginTop: 20 }}>
+              <div className="eyebrow" style={{ marginBottom: 6 }}>{cot.items.length} {cot.items.length === 1 ? 'ítem' : 'ítems'}</div>
+              <table className="tbl">
+                <tbody>
+                  {cot.items.map((i, idx) => (
+                    <tr key={i.id || idx}>
+                      <td className="c-name">{i.nombre || '—'}</td>
+                      <td className="c-muted" style={{ whiteSpace: 'nowrap' }}>{fmtCant(i)} × {fmt(parseFloat(i.precio) || 0)}</td>
+                      <td className="c-right c-mono">{fmt((parseFloat(i.precio) || 0) * cantidadItem(i))}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          <div className="cot-total">
+            <span className="eyebrow">Total cotizado</span>
+            <span className="mono">{fmt(cot.total)}</span>
+          </div>
+
+          {cot.observaciones && (
+            <p style={{ marginTop: 16, fontSize: 14, color: 'var(--text-2)', lineHeight: 1.5 }}>{cot.observaciones}</p>
+          )}
+        </div>
+
+        <div className="modal__f" style={{ flexWrap: 'wrap' }}>
+          <Button variant="ghost" size="sm" onClick={onPdf}>PDF</Button>
+          <Button variant="ghost" size="sm" onClick={onEditar}>Editar</Button>
+          <span style={{ flex: 1 }} />
+          {cot.estado === ESTADO_COT.PENDIENTE && (
+            <>
+              <Button variant="outline" style={{ color: 'var(--red-600)' }} onClick={onRechazar}>Rechazar</Button>
+              <Button variant="success" onClick={onAprobar}>Aprobar</Button>
+            </>
+          )}
+          {cot.estado === ESTADO_COT.APROBADA && onCrearTrabajo && !yaTieneOT && (
+            <Button variant="primary" disabled={creandoAlguna} onClick={onCrearTrabajo}>
+              {creando ? 'Creando…' : 'Crear trabajo'}
+            </Button>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+const ESTILOS = `
+.cot-row{cursor:pointer}
+.cot-menu{position:fixed;z-index:120;width:210px;padding:6px;border-radius:13px;background:var(--bg-raised);border:1px solid var(--border);box-shadow:var(--shadow-lg)}
+.cot-menu button{display:flex;align-items:center;gap:11px;width:100%;padding:11px 12px;border-radius:9px;background:none;border:none;font:inherit;font-size:14.5px;font-weight:500;color:var(--text);text-align:left}
+.cot-menu button:hover{background:var(--fill)}
+.cot-menu button:focus-visible{outline:2px solid var(--primary);outline-offset:-2px}
+.cot-menu button svg{width:16px;height:16px;flex-shrink:0;color:var(--text-3)}
+.cot-menu button.peligro,.cot-menu button.peligro svg{color:var(--red-600)}
+.cot-menu button.peligro:hover{background:rgba(220,38,38,.09)}
+.cot-menu hr{margin:5px 8px;border:none;border-top:1px solid var(--border)}
+.cot-dl{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:15px 18px}
+.cot-dl>div{display:flex;flex-direction:column;gap:3px;min-width:0}
+.cot-dl>div>span:last-child{font-size:15px;font-weight:600;color:var(--text);overflow-wrap:anywhere}
+/* Con muchos ítems el detalle se desplaza; sin esto hay que bajar hasta el
+   final para encontrar Aprobar/Rechazar, que es justo a lo que se entra. */
+.cot-modal .modal__f{position:sticky;bottom:0;background:var(--bg-raised)}
+.cot-modal .tbl tbody td:first-child{padding-left:0}
+.cot-modal .tbl tbody td:last-child{padding-right:0}
+.cot-total{display:flex;align-items:baseline;justify-content:space-between;gap:14px;margin-top:16px;padding-top:13px;border-top:1px solid var(--border)}
+.cot-total .mono{font-size:22px;font-weight:700;color:var(--text);letter-spacing:-.02em}
+`
 
 function CotizacionForm({ cotizacion, trabajos = [], onSave, onCancel }) {
   const isEdit = !!cotizacion

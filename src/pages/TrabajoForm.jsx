@@ -990,7 +990,7 @@ export default function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [
             <div className="mo-manual">
               <div className="mo-manual__row">
                 <div className="field" style={{ flex: '1 1 220px', minWidth: 0 }}>
-                  <label htmlFor="mo-extra-input">M.O. adicional del técnico <span style={{ fontWeight: 500, color: 'var(--text-3)' }}>(no se factura)</span></label>
+                  <label htmlFor="mo-extra-input">Mano de obra adicional del técnico <span style={{ fontWeight: 500, color: 'var(--text-3)' }}>(no se le cobra al cliente)</span></label>
                   <MoneyInput id="mo-extra-input" value={form.manoObraExtra} onChange={v => set('manoObraExtra', v)} placeholder="0" />
                 </div>
                 <div className="mo-manual__com">

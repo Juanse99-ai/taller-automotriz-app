@@ -21,18 +21,41 @@ const soloDigitos = (s) => (s || '').toString().replace(/\D/g, '')
 // SIEMPRE hay exactamente una columna "flexible" (sin ancho fijo) que absorbe el
 // sobrante. Por defecto es el Nombre (así llena el ancho y muestra los nombres
 // sin scroll); apenas el usuario arrastra el Nombre, este pasa a ancho fijo y el
-// chevron toma el relevo como flexible. Ver colFlex() abajo.
+// chevron toma el relevo como flexible. Ver anchoCol() abajo.
+// Anchos ajustados para que la tabla ENTERA quepa en 1280px con el sidebar
+// abierto (984px útiles): con los valores anteriores sumaba 1056 y "En Cuentti"
+// quedaba fuera de vista por defecto, sin que nadie hubiera arrastrado nada.
+// El Nombre conserva sus 310 y el recorte lo pagan las columnas que truncan
+// igual (email) o que muestran pocos caracteres (cédula, fecha, contadores).
 const CLIENTES_COLS = [
-  { key: 'cedula',   label: 'CC/NIT',        sort: 'cedula',   def: 125, min: 70 },
-  { key: 'nombre',   label: 'Nombre',        sort: 'nombre',   min: 120 }, // sin def → flexible por defecto, pero arrastrable
-  { key: 'telefono', label: 'Teléfono',      sort: 'telefono', def: 125, min: 80 },
-  { key: 'email',    label: 'Email',         sort: 'email',    def: 195, min: 80 },
-  { key: 'veh',      label: 'Vehículos',     sort: 'veh',      def: 90,  min: 60, center: true },
-  { key: 'visita',   label: 'Última visita', sort: 'visita',   def: 116, min: 80 },
-  { key: 'cuentti',  label: 'En Cuentti',    sort: 'cuentti',  def: 118, min: 90 },
+  { key: 'cedula',   label: 'CC/NIT',        sort: 'cedula',   def: 104, min: 70 },
+  // El nombre es el identificador de la fila y nunca baja de 310px: medido contra
+  // la base real, ahí caben completos 9 de cada 10 nombres. Antes la tabla se
+  // encogía al ancho de la pantalla y el nombre —la única columna sin ancho fijo—
+  // pagaba el pato: quedaba en ~120px y salían todos cortados mientras Teléfono y
+  // Email sobraban espacio. Si ya no cabe, la tabla se desliza en vez de aplastarlo.
+  { key: 'nombre',   label: 'Nombre',        sort: 'nombre',   min: 310 }, // sin def → flexible por defecto, pero arrastrable
+  // 124px = un celular de 10 dígitos entero. Un teléfono cortado ("30427537…") no
+  // sirve para llamar, así que esta columna no se recorta por defecto.
+  { key: 'telefono', label: 'Teléfono',      sort: 'telefono', def: 124, min: 80 },
+  // El correo se corta igual por largo, así que no se le da más de lo justo para
+  // reconocerlo; ese espacio rinde más en el Nombre.
+  { key: 'email',    label: 'Email',         sort: 'email',    def: 120, min: 80 },
+  { key: 'veh',      label: 'Vehículos',     sort: 'veh',      def: 72,  min: 60, center: true },
+  { key: 'visita',   label: 'Última visita', sort: 'visita',   def: 100, min: 80 },
+  { key: 'cuentti',  label: 'En Cuentti',    sort: 'cuentti',  def: 104, min: 90 },
   { key: 'chevron',  label: '',              sort: null,       noResize: true }, // sin def; flexible solo cuando el Nombre es fijo
 ]
 const CLIENTES_COL_LS = 'clientes_col_widths_v2'
+const anchosPorDefecto = () =>
+  Object.fromEntries(CLIENTES_COLS.filter(c => c.def != null).map(c => [c.key, c.def]))
+// Ningún ancho puede quedar por debajo del mínimo de su columna.
+const sanearAnchos = (w) => Object.fromEntries(
+  Object.entries(w).map(([k, v]) => {
+    const col = CLIENTES_COLS.find(c => c.key === k)
+    return [k, Math.max(col?.min || 56, Number(v) || 0)]
+  })
+)
 
 export default function Clientes({ clientes, vehiculos, trabajos = [], notify }) {
   const {
@@ -63,8 +86,14 @@ export default function Clientes({ clientes, vehiculos, trabajos = [], notify })
 
   // Anchos de columna arrastrables (persisten en localStorage por navegador).
   const [colWidths, setColWidths] = useState(() => {
-    const base = Object.fromEntries(CLIENTES_COLS.filter(c => c.def != null).map(c => [c.key, c.def]))
-    try { const s = JSON.parse(localStorage.getItem(CLIENTES_COL_LS)); if (s && typeof s === 'object') return { ...base, ...s } } catch { /* usa defaults */ }
+    const base = anchosPorDefecto()
+    try {
+      const s = JSON.parse(localStorage.getItem(CLIENTES_COL_LS))
+      // Los anchos guardados pasan por el mínimo de cada columna: un valor viejo
+      // (o de una versión anterior con mínimos más bajos) no puede dejar el
+      // Nombre ilegible para siempre.
+      if (s && typeof s === 'object') return sanearAnchos({ ...base, ...s })
+    } catch { /* usa defaults */ }
     return base
   })
   const [colResizing, setColResizing] = useState(null)
@@ -91,10 +120,13 @@ export default function Clientes({ clientes, vehiculos, trabajos = [], notify })
     document.addEventListener('mouseup', onUp)
   }
   const resetColWidths = () => {
-    const base = Object.fromEntries(CLIENTES_COLS.filter(c => c.def != null).map(c => [c.key, c.def]))
-    setColWidths(base)
+    setColWidths(anchosPorDefecto())
     try { localStorage.removeItem(CLIENTES_COL_LS) } catch { /* ignore */ }
   }
+  // El botón de restablecer solo aparece cuando hay algo que deshacer: un arrastre
+  // guardado (el Nombre pasa a tener ancho fijo, o alguna columna se salió de su
+  // valor original). Así el usuario lo encuentra justo cuando lo necesita.
+  const anchosTocados = CLIENTES_COLS.some(c => colWidths[c.key] != null && colWidths[c.key] !== c.def)
   // Ancho de cada columna. SIEMPRE hay una flexible (devuelve null = sin ancho):
   // el Nombre por defecto; si el usuario ya lo arrastró, el flexible es el chevron.
   const nombreFijo = colWidths.nombre != null
@@ -104,7 +136,7 @@ export default function Clientes({ clientes, vehiculos, trabajos = [], notify })
     return colWidths[c.key] ?? c.def
   }
   // Ancho mínimo de la tabla: si al ensanchar columnas ya no cabe, hace scroll
-  // horizontal en vez de aplastar (el Nombre nunca baja de 120, el chevron de 30).
+  // horizontal en vez de aplastar (el Nombre nunca baja de 310, el chevron de 30).
   const tablaMinWidth = CLIENTES_COLS.reduce((s, c) =>
     s + (c.key === 'chevron' ? 30 : (colWidths[c.key] ?? c.def ?? c.min ?? 120)), 0)
 
@@ -127,10 +159,10 @@ export default function Clientes({ clientes, vehiculos, trabajos = [], notify })
     else { setSortBy(null); setSortDir('asc') }
   }
   const sortIcon = (col) => {
-    if (sortBy !== col) return <span style={{ opacity: 0.25, fontSize: 9, marginLeft: 4 }}>↕</span>
-    return sortDir === 'asc'
-      ? <span style={{ color: 'var(--blue-600)', fontSize: 10, marginLeft: 4 }}>▲</span>
-      : <span style={{ color: 'var(--blue-600)', fontSize: 10, marginLeft: 4 }}>▼</span>
+    // Sin opacidad: al 0.25 la flecha de "ordenable" era invisible y nadie sabía
+    // que el encabezado se podía clicar.
+    if (sortBy !== col) return <span style={{ color: 'var(--text-4)', fontSize: 11, marginLeft: 5 }}>↕</span>
+    return <span style={{ color: 'var(--primary)', fontSize: 11, marginLeft: 5 }}>{sortDir === 'asc' ? '▲' : '▼'}</span>
   }
 
   // Lista deduplicada (por cedula) con campos pre-normalizados — base para busqueda
@@ -765,9 +797,9 @@ export default function Clientes({ clientes, vehiculos, trabajos = [], notify })
                     {vehiculosCliente.map(v => (
                       <tr key={v.placa}>
                         <td className="c-mono" style={{ fontWeight: 700 }}>{v.placa}</td>
-                        <td>{v.marca || '--'}</td>
-                        <td className="c-muted">{v.modelo || '--'}</td>
-                        <td className="c-mono c-muted">{v.ano || '--'}</td>
+                        <td>{v.marca || '—'}</td>
+                        <td className="c-muted">{v.modelo || '—'}</td>
+                        <td className="c-mono c-muted">{v.ano || '—'}</td>
                         <td style={{textAlign:'center'}}>
                           <Badge tone="i">{(v.historial || []).length}</Badge>
                         </td>
@@ -812,9 +844,9 @@ export default function Clientes({ clientes, vehiculos, trabajos = [], notify })
                     {facturasCliente.map(t => (
                       <tr key={t.id}>
                         <td className="c-muted">{fmtDate(t.facturadoEn || t.fecha)}</td>
-                        <td className="c-mono">{t.otCodigo || '--'}</td>
+                        <td className="c-mono">{t.otCodigo || '—'}</td>
                         <td>
-                          <span className="c-mono" style={{ fontWeight: 700 }}>{t.placa || '--'}</span>
+                          <span className="c-mono" style={{ fontWeight: 700 }}>{t.placa || '—'}</span>
                           {[t.marca, t.modelo].filter(Boolean).length > 0 && (
                             <span className="c-muted"> · {[t.marca, t.modelo].filter(Boolean).join(' ')}</span>
                           )}
@@ -877,49 +909,56 @@ export default function Clientes({ clientes, vehiculos, trabajos = [], notify })
 
       {/* Barra de progreso del sync masivo de telefonos */}
       {syncTel.activo && (
-        <div style={{marginBottom:14,padding:'10px 14px',background:'var(--blue-50,#eff6ff)',border:'1px solid var(--blue-300,#93c5fd)',borderRadius:8}}>
-          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',fontSize:12.5,marginBottom:6}}>
-            <span style={{fontWeight:700,color:'var(--blue-700,#1e40af)'}}>
-              📡 Sincronizando telefonos desde Cuentti
+        <div style={{marginBottom:14,padding:'12px 16px',background:'var(--soft-blue)',border:'1px solid var(--soft-blue-bd)',borderRadius:10}}>
+          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',gap:12,flexWrap:'wrap',fontSize:13.5,marginBottom:8}}>
+            <span style={{fontWeight:700,color:'var(--blue-700)'}}>
+              Verificando clientes en Cuentti…
             </span>
-            <span style={{color:'var(--text-3)',fontSize:11.5}}>
+            <span style={{color:'var(--text-3)',fontSize:12.5}}>
               {syncTel.procesados} de {syncTel.total} · {syncTel.actualizados} actualizados · {syncTel.errores} errores
             </span>
           </div>
-          <div style={{height:6,background:'rgba(0,0,0,0.08)',borderRadius:3,overflow:'hidden'}}>
+          <div style={{height:6,background:'var(--bg-subtle)',border:'1px solid var(--border)',borderRadius:3,overflow:'hidden'}}>
             <div style={{
               height:'100%',
               width:`${syncTel.total > 0 ? (syncTel.procesados / syncTel.total * 100) : 0}%`,
-              background:'var(--blue-600,#2563eb)',
+              background:'var(--primary)',
               transition:'width 0.3s'
             }}/>
           </div>
         </div>
       )}
 
-      <div className="kpi-bh" style={{ marginBottom: 18 }}>
-        <div className="kpi-bh__s">
-          <div className="kpi-bh__l">Total clientes</div>
-          <div className="kpi-bh__row"><span className="kpi-bh__v">{totalClientes}</span></div>
-          <div className="kpi-bh__sub">en la base</div>
+      {/* Franja de cifras en vez de tarjetas iguales: son cuatro conteos del mismo
+          peso, ninguno manda sobre los otros.
+          "Verificados" NO es "% de clientes en Cuentti" (eso engañaba: casi todos
+          están en Cuentti, vinieron de ahí). Es cuántos tienen su id de Cuentti
+          guardado en la app; del resto no sabemos hasta verificar. */}
+      <div className="statline">
+        <div className="statline__i">
+          <span className="eyebrow">Clientes</span>
+          <span className={`statline__v${totalClientes === 0 ? ' is-zero' : ''}`}>{totalClientes}</span>
         </div>
-        {/* NO es "% de clientes en Cuentti" (eso engañaba: casi todos están en
-            Cuentti, vinieron de ahí). Es cuántos tienen su id de Cuentti guardado
-            en la app; del resto no sabemos hasta verificar. */}
-        <div className="kpi-bh__s">
-          <div className="kpi-bh__l">Verificados en Cuentti</div>
-          <div className="kpi-bh__row"><span className="kpi-bh__v">{conCuenttiId}</span></div>
-          <div className="kpi-bh__sub">con id guardado · el resto sin verificar</div>
+        <div className="statline__i">
+          {/* "con id guardado" no es relleno: sin esa aclaración se lee que el
+             resto NO está en Cuentti, y es al revés — casi todos vinieron de ahí,
+             lo que falta es el id vinculado en esta app. */}
+          <span className="eyebrow">Verificados en Cuentti</span>
+          <span className={`statline__v${conCuenttiId === 0 ? ' is-zero' : ''}`}>{conCuenttiId}</span>
+          <span style={{ fontSize: 11.5, color: 'var(--text-3)' }}>con id guardado</span>
         </div>
-        <div className="kpi-bh__s">
-          <div className="kpi-bh__l">Con vehículos</div>
-          <div className="kpi-bh__row"><span className="kpi-bh__v">{conVehiculos}</span></div>
-          <div className="kpi-bh__sub">registrados</div>
+        <div className="statline__i">
+          <span className="eyebrow">Con vehículos</span>
+          <span className={`statline__v${conVehiculos === 0 ? ' is-zero' : ''}`}>{conVehiculos}</span>
+        </div>
+        <div className="statline__i">
+          <span className="eyebrow">Sin teléfono</span>
+          <span className={`statline__v${sinTelefono === 0 ? ' is-zero' : ''}`}>{sinTelefono}</span>
         </div>
       </div>
 
       <div className="card">
-        <div className="card__h" style={{display:'flex',alignItems:'center',gap:12}}>
+        <div className="card__h" style={{display:'flex',alignItems:'center',gap:12,flexWrap:'wrap'}}>
           <h3 style={{flex:'none'}}>Buscar</h3>
           <div style={{flex:1,maxWidth:480,display:'flex',alignItems:'center',gap:9,background:'var(--bg-subtle)',border:'1px solid var(--border)',borderRadius:9,padding:'7px 12px'}}>
             <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="var(--text-4)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{flexShrink:0}}><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
@@ -929,28 +968,30 @@ export default function Clientes({ clientes, vehiculos, trabajos = [], notify })
           <span className="count" style={{ background: clientesFiltrados.length === 0 && busqueda.trim() ? 'var(--soft-red)' : undefined, color: clientesFiltrados.length === 0 && busqueda.trim() ? 'var(--red-700)' : undefined }}>
             {busqueda.trim() ? `${clientesFiltrados.length} de ${totalClientes}` : `${clientesFiltrados.length} clientes`}
           </span>
-          <button
-            type="button"
-            onClick={resetColWidths}
-            title="Restaurar el ancho original de las columnas"
-            style={{ background: 'none', border: 'none', color: 'var(--text-3)', cursor: 'pointer', fontSize: 12, display: 'flex', alignItems: 'center', gap: 4, padding: '4px 6px', borderRadius: 6 }}
-          >
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>
-            Anchos
-          </button>
+          {anchosTocados && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={resetColWidths}
+              title="Devuelve las columnas al ancho original de la tabla"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>
+              Restablecer columnas
+            </Button>
+          )}
         </div>
 
         {/* Banner: encontrado en Cuentti pero NO en local */}
         {busqueda.trim() && clientesFiltrados.length === 0 && resultadoCuentti && (
-          <div style={{padding:'12px 16px',margin:'0 16px 16px',background:'var(--blue-50,#eff6ff)',border:'1px solid var(--blue-300,#93c5fd)',borderRadius:8,display:'flex',alignItems:'center',gap:12,flexWrap:'wrap'}}>
+          <div style={{padding:'13px 16px',margin:'0 16px 16px',background:'var(--soft-blue)',border:'1px solid var(--soft-blue-bd)',borderRadius:10,display:'flex',alignItems:'center',gap:12,flexWrap:'wrap'}}>
             <div style={{flex:1,minWidth:200}}>
-              <div style={{fontSize:12.5,fontWeight:700,color:'var(--blue-700,#1e40af)',marginBottom:2}}>
-                ✓ Encontrado en Cuentti (no en BD local)
+              <div style={{fontSize:13,fontWeight:700,color:'var(--blue-700)',marginBottom:3}}>
+                Encontrado en Cuentti, todavía no está en la app
               </div>
-              <div style={{fontSize:13,fontWeight:600}}>
+              <div style={{fontSize:14.5,fontWeight:700}}>
                 {(resultadoCuentti.nombre || resultadoCuentti.nombre_cliente || '').toString()}
               </div>
-              <div style={{fontSize:11.5,color:'var(--text-3)',marginTop:2}}>
+              <div style={{fontSize:12.5,color:'var(--text-3)',marginTop:3}}>
                 CC <span className="mono">{resultadoCuentti.identificacion || resultadoCuentti.cedula}</span>
                 {(resultadoCuentti.telefono1 || resultadoCuentti.telefono) && <> · Tel <span className="mono">{resultadoCuentti.telefono1 || resultadoCuentti.telefono}</span></>}
                 {resultadoCuentti.email && <> · {resultadoCuentti.email}</>}
@@ -1022,10 +1063,10 @@ export default function Clientes({ clientes, vehiculos, trabajos = [], notify })
               <tbody>
                 {clientesFiltrados.map(c => (
                   <tr key={c.id || c.cedula} style={{cursor:'pointer'}} onClick={() => seleccionar(c)}>
-                    <td className="c-mono" data-label="CC/NIT" style={{fontSize:12.5}}>{c.cedula || '--'}</td>
-                    <td className="c-name" title={c.nombre || ''}>{c.nombre || '--'}</td>
-                    <td className="c-mono" data-label="Teléfono">{fmtTelefono(c.telefono) || '--'}</td>
-                    <td className="c-muted" data-label="Email">{c.email || '--'}</td>
+                    <td className="c-mono" data-label="CC/NIT" style={{fontSize:12.5}}>{c.cedula || '—'}</td>
+                    <td className="c-name" title={c.nombre || ''}>{c.nombre || '—'}</td>
+                    <td className="c-mono" data-label="Teléfono">{fmtTelefono(c.telefono) || '—'}</td>
+                    <td className="c-muted" data-label="Email">{c.email || '—'}</td>
                     <td data-label="Vehículos" style={{textAlign:'center'}}>
                       <Badge tone={(c.vehiculos || []).length > 0 ? 'i' : 'n'}>
                         {(c.vehiculos || []).length}
@@ -1040,7 +1081,7 @@ export default function Clientes({ clientes, vehiculos, trabajos = [], notify })
                         ? <span className="st st--success"><i /> En Cuentti</span>
                         : <span className="st st--neutral"><i /> Sin verificar</span>}
                     </td>
-                    <td className="td-chevron" style={{opacity:.5}}>›</td>
+                    <td className="td-chevron">›</td>
                   </tr>
                 ))}
               </tbody>

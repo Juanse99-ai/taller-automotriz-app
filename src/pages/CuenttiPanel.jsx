@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { fmt } from '../utils/helpers'
 import {
   buscarClientePorCedula,
@@ -38,12 +38,14 @@ function DebugCard({ title, sub, open, onToggle, children }) {
   )
 }
 
-export default function CuenttiPanel({ trabajos, actualizarTrabajo, notify }) {
+export default function CuenttiPanel({ trabajos, actualizarTrabajo, notify, trabajoPreseleccionado }) {
   const [confirmCfg, setConfirmCfg] = useState(null)
   const [verFacturados, setVerFacturados] = useState(false)
   const [testResult, setTestResult] = useState(null)
   const [testing, setTesting] = useState(false)
-  const [facturaId, setFacturaId] = useState('')
+  // El panel se monta de nuevo en cada entrada a la sección, así que basta con
+  // sembrar el estado inicial: no hace falta sincronizar después.
+  const [facturaId, setFacturaId] = useState(trabajoPreseleccionado || '')
   const [facturando, setFacturando] = useState(false)
   const factRef = useRef(new Set()) // facturas EN CURSO (anti doble-clic síncrono; el estado es async y deja pasar 2 clics)
   const [factError, setFactError] = useState({}) // trabajo.id -> true si el último envío falló (reintento con aviso)
@@ -337,6 +339,17 @@ export default function CuenttiPanel({ trabajos, actualizarTrabajo, notify }) {
       setPreviewHeaders(null)
     }
   }
+
+  // Llegando desde el botón "Cobrar" de una OT, el trabajo queda elegido sin pasar
+  // por el <select>, que es quien arma la previsualización. Sin esto, "Enviar a
+  // Cuentti" —que emite una factura real y registra caja— aparecía habilitado y
+  // SIN el resumen de lo que se va a enviar, que es el único control de revisión
+  // que hay antes de una acción irreversible.
+  useEffect(() => {
+    if (trabajoPreseleccionado) refreshPreview(trabajoPreseleccionado, prefijo)
+    // Solo al montar con una OT preseleccionada; después manda el <select>.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const testConexion = async () => {
     setTesting(true)
@@ -748,12 +761,17 @@ export default function CuenttiPanel({ trabajos, actualizarTrabajo, notify }) {
             <div className="field">
               <select className="input" value={facturaId} onChange={e => { const v = e.target.value; setFacturaId(v); refreshPreview(v, prefijo) }}>
                 <option value="">Seleccionar trabajo...</option>
+                {/* El código OT (OT-0134) es lo que el mostrador tiene a la vista;
+                    el id interno no le dice nada a nadie. */}
                 {facturables.map(t => (
                   <option key={t.id} value={t.id}>
-                    {t.cuenttiTransacionId ? '✓ ' : ''}{t.id} — {t.placa} — {t.cliente} — {fmt(t.total)}
+                    {t.cuenttiTransacionId ? '✓ ' : ''}{t.otCodigo || t.id} — {t.placa} — {t.cliente} — {fmt(t.total)}
                   </option>
                 ))}
               </select>
+              <div style={{fontSize:11,color:'var(--text-3)',marginTop:4}}>
+                Trabajo a cobrar
+              </div>
             </div>
             <div className="field">
               <select className="input" value={prefijo} onChange={e => { const v = e.target.value; setPrefijo(v); if (facturaId) refreshPreview(facturaId, v) }}>
@@ -767,8 +785,10 @@ export default function CuenttiPanel({ trabajos, actualizarTrabajo, notify }) {
             </div>
             <div className="field">
               <select className="input" value={metodoPagoKey} onChange={e => setMetodoPagoKeyPersist(e.target.value)}>
+                {/* Sin el "(ID 1)": el número interno de Cuentti solo sirve dentro
+                    del panel "Encontrar IDs", no en la cara del mostrador. */}
                 {METODOS_PAGO.map(m => (
-                  <option key={m.key} value={m.key}>{m.nombre}{m.key !== 'credito' ? ` (ID ${m.id})` : ''}</option>
+                  <option key={m.key} value={m.key}>{m.nombre}</option>
                 ))}
               </select>
               <div style={{fontSize:11,color:'var(--text-3)',marginTop:4,display:'flex',justifyContent:'space-between',alignItems:'center'}}>

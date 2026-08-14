@@ -171,8 +171,21 @@ export default function App() {
     return () => { active = false; clearInterval(interval) }
   }, [user])
 
+  // OT que viene del botón "Cobrar" de Trabajos: llega preseleccionada al panel
+  // de Cuentti para no tener que buscarla otra vez en el selector.
+  const [cobrarTrabajoId, setCobrarTrabajoId] = useState(null)
+
   const navigate = useCallback((s) => {
     setSection(s)
+    setSidebarOpen(false)
+    // El puente solo vale para el salto inmediato: si el usuario se va a otra
+    // sección, la OT deja de estar preseleccionada.
+    if (s !== 'cuentti') setCobrarTrabajoId(null)
+  }, [])
+
+  const irACobrar = useCallback((trabajo) => {
+    setCobrarTrabajoId(trabajo?.id || null)
+    setSection('cuentti')
     setSidebarOpen(false)
   }, [])
 
@@ -254,7 +267,10 @@ export default function App() {
       case 'dashboard':
         return <Dashboard trabajos={trabajosHook.trabajos} loading={trabajosHook.loading} onNavigate={navigate} user={user} />
       case 'trabajos':
-        return <Trabajos hook={trabajosHook} vehiculosHook={vehiculosHook} clientesHook={clientesHook} notify={notify} onAutoFacturar={() => navigate('cuentti')} />
+        {/* onAutoFacturar solo si el rol puede entrar a Cuentti: sin esto, el
+           jefe de taller veía el botón "Cobrar" y aterrizaba en "No tienes
+           acceso a este módulo", sin Cuentti en el menú para volver. */}
+        return <Trabajos hook={trabajosHook} vehiculosHook={vehiculosHook} clientesHook={clientesHook} notify={notify} onAutoFacturar={seccionesPermitidas.includes('cuentti') ? irACobrar : null} />
       case 'recepcion':
         return <Recepcion hook={trabajosHook} vehiculosHook={vehiculosHook} clientesHook={clientesHook} notify={notify} />
       case 'mecanicos':
@@ -278,7 +294,7 @@ export default function App() {
       case 'vehiculos':
         return <Vehiculos vehiculos={vehiculosHook} clientes={clientesHook} trabajos={trabajosHook.trabajos} notify={notify} />
       case 'cuentti':
-        return <CuenttiPanel trabajos={trabajosHook.trabajos} actualizarTrabajo={trabajosHook.actualizarTrabajo} notify={notify} />
+        return <CuenttiPanel trabajos={trabajosHook.trabajos} actualizarTrabajo={trabajosHook.actualizarTrabajo} notify={notify} trabajoPreseleccionado={cobrarTrabajoId} />
       case 'crm':
         return <CRM trabajos={trabajosHook.trabajos} clientes={clientesHook} vehiculos={vehiculosHook} notify={notify} actualizarTrabajo={trabajosHook.actualizarTrabajo} />
       case 'usuarios':

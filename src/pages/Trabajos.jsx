@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useRef } from 'react'
 import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import { fmt, fmtDate, fmtTelefono, cantidadItem, fmtCant } from '../utils/helpers'
-import { TECNICOS, ESTADOS, DIAS_ESTANCADO, TALLER } from '../utils/constants'
+import { TECNICOS, ESTADOS, DIAS_ESTANCADO, TALLER, SIN_FACTURA } from '../utils/constants'
 import { loadLogo as loadPdfLogo, drawHeader, drawSectionHeader, drawDataBlock, drawTotalsBox, drawSignatures, drawFooter, tableStylesItems, PDF_LAYOUT, PDF_COLORS } from '../utils/pdfTheme'
 import FichaTecnico from '../components/FichaTecnico'
 import { labelInventario, etiquetaCombustible, ingresoTieneAlgo } from '../utils/ingreso'
@@ -46,6 +46,32 @@ function tipoServicio(t) {
   const txt = ((t?.items || []).map(i => i?.nombre || '').join(' ') + ' ' + (t?.diagnostico || t?.observaciones || '')).toLowerCase()
   for (const s of SERVICIO_TAGS) if (s.re.test(txt)) return s
   if (t?.tipoAceite && t.tipoAceite !== 'no_aplica') return SERVICIO_TAGS[0]
+  return null
+}
+
+// ¿Ya se le cobró a este cliente? Es la pregunta del mostrador y hasta ahora la
+// ficha de la OT no la contestaba: tocaba entrar a Cuentti a adivinar. Devuelve
+// null cuando todavía no aplica (OT sin terminar), para no llenar de avisos.
+function estadoCobro(t) {
+  if (!t) return null
+  if (t.cuenttiTransacionId === SIN_FACTURA) return { tone: 'success', label: 'Cobrada sin factura' }
+  const facturada = !!(t.cuenttiTransacionId || t.facturadoEn)
+  if (facturada) {
+    // "Por cobrar" y no "Facturada · falta cobrar": la etiqueta larga desbordaba
+    // la celda de estado en celular y sacaba scroll horizontal en toda la página,
+    // y es justo el estado más frecuente.
+    return t.pagado
+      ? { tone: 'success', label: 'Cobrada' }
+      : { tone: 'warning', label: 'Por cobrar' }
+  }
+  // Sin ítems no hay nada que facturar: el panel de Cuentti la descarta, así que
+  // ofrecer "Cobrar" llevaba a un selector vacío y a un error al enviar.
+  if (t.estado === ESTADOS.COMPLETADO) {
+    const facturable = Array.isArray(t.items) && t.items.length > 0
+    return facturable
+      ? { tone: 'neutral', label: 'Sin facturar', porCobrar: true }
+      : { tone: 'neutral', label: 'Sin ítems para facturar' }
+  }
   return null
 }
 
@@ -525,35 +551,24 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
         </div>
       </div>
 
-      {/* KPI cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(200px,1fr))', gap: 14, marginBottom: 18 }}>
-        <div className="kpi">
-          <div className="kpi__head">
-            <div className="kpi__ic blue"><svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg></div>
-            <div className="kpi__lbl">En vista</div>
-          </div>
-          <div className="kpi__v">{stats.total}</div>
+      {/* Cifras de la vista: franja, no cuatro tarjetas iguales (abrían con cuatro
+          ceros gigantes que parecían pérdida de datos). */}
+      <div className="statline">
+        <div className="statline__i">
+          <span className="eyebrow">En vista</span>
+          <span className={`statline__v${stats.total === 0 ? ' is-zero' : ''}`}>{stats.total}</span>
         </div>
-        <div className="kpi">
-          <div className="kpi__head">
-            <div className="kpi__ic green"><svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path d="M5 13l4 4L19 7"/></svg></div>
-            <div className="kpi__lbl">Completados</div>
-          </div>
-          <div className="kpi__v">{stats.comp}</div>
+        <div className="statline__i">
+          <span className="eyebrow">Completados</span>
+          <span className={`statline__v${stats.comp === 0 ? ' is-zero' : ''}`}>{stats.comp}</span>
         </div>
-        <div className="kpi">
-          <div className="kpi__head">
-            <div className="kpi__ic amber"><svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg></div>
-            <div className="kpi__lbl">Pendientes</div>
-          </div>
-          <div className="kpi__v">{stats.pend}</div>
+        <div className="statline__i">
+          <span className="eyebrow">Pendientes</span>
+          <span className={`statline__v${stats.pend === 0 ? ' is-zero' : ''}`}>{stats.pend}</span>
         </div>
-        <div className="kpi">
-          <div className="kpi__head">
-            <div className="kpi__ic blue"><svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path d="M13 10V3L4 14h7v7l9-11h-7z"/></svg></div>
-            <div className="kpi__lbl">En Progreso</div>
-          </div>
-          <div className="kpi__v">{stats.prog}</div>
+        <div className="statline__i">
+          <span className="eyebrow">En progreso</span>
+          <span className={`statline__v${stats.prog === 0 ? ' is-zero' : ''}`}>{stats.prog}</span>
         </div>
       </div>
 
@@ -695,8 +710,15 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
                 <div className="card__b" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                   <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
                     <span className={`badge ${estadoBadge(selTrabajo.estado)}`}>{selTrabajo.estado}</span>
+                    {(() => { const c = estadoCobro(selTrabajo); return c ? <Badge tone={c.tone}>{c.label}</Badge> : null })()}
                     <span style={{ fontSize: 12.5, color: 'var(--text-3)' }}>{fmtDate(selTrabajo.fecha)}</span>
                   </div>
+                  {selTrabajo.cuenttiTransacionId && selTrabajo.cuenttiTransacionId !== SIN_FACTURA && (
+                    <div style={{ fontSize: 12, color: 'var(--text-3)' }}>
+                      Factura <span className="mono" style={{ color: 'var(--text)' }}>{selTrabajo.cuenttiTransacionId}</span>
+                      {selTrabajo.facturadoEn && ` · ${fmtDate(selTrabajo.facturadoEn)}`}
+                    </div>
+                  )}
 
                   {selTrabajo.telefonoCliente && (() => {
                     const tel = String(selTrabajo.telefonoCliente).replace(/\D/g, '')
@@ -747,6 +769,14 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
                         </div>
                       ))}
                     </div>
+                  )}
+                  {/* Puente al cobro: sin esto había que ir a "Cuentti" a mano y
+                      buscar la OT en un selector, y nadie sabía que ahí se cobra. */}
+                  {onAutoFacturar && estadoCobro(selTrabajo)?.porCobrar && (
+                    <Button variant="primary" style={{ width: '100%' }}
+                      onClick={() => { onAutoFacturar(selTrabajo) }}>
+                      Cobrar {fmt(selTrabajo.total)}
+                    </Button>
                   )}
                   <Button variant="outline" size="sm" style={{ width: '100%', marginBottom: 8 }} onClick={() => setFichaId(selTrabajo.id)}>Ficha del técnico</Button>
                   <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
@@ -806,6 +836,9 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
                       <td data-label="Estado">
                         <span className={`badge ${bc}`}>{t.estado}</span>
                         {estancado && <Badge tone="d" style={{ marginLeft: 4, fontSize: 10 }}>{diasSinMover}d</Badge>}
+                        {/* En celular esta tabla ES la ficha: sin este badge no hay
+                            dónde ver si a la OT ya se le cobró. */}
+                        {(() => { const c = estadoCobro(t); return c ? <Badge tone={c.tone} style={{ marginLeft: 4, fontSize: 10 }}>{c.label}</Badge> : null })()}
                       </td>
                       <td className="c-mono c-right" data-label="Total" style={{ fontWeight: 700 }}>{fmt(t.total)}</td>
                       <td className="c-mono c-muted" data-label="Fecha" style={{ fontSize: 12 }}>{fmtDate(t.fecha)}</td>
@@ -815,6 +848,10 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
                           {t.otCodigo && <Button variant="ghost" size="sm" className="btn-icon" aria-label="Descargar PDF" title="Descargar PDF" onClick={() => imprimirOT(t)}><IconPdf /></Button>}
                           {t.estado !== ESTADOS.COMPLETADO && (
                             <Button variant="ghost" size="sm" aria-label="Marcar completado" style={{ color: 'var(--green-600)' }} onClick={() => handleCompletar(t.id)}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg></Button>
+                          )}
+                          {onAutoFacturar && estadoCobro(t)?.porCobrar && (
+                            <Button variant="primary" size="sm" title="Facturar y cobrar en Cuentti"
+                              onClick={() => { onAutoFacturar(t) }}>Cobrar</Button>
                           )}
                           {confirmDel === t.id ? (
                             <>
@@ -856,8 +893,15 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
               <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                 <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
                   <span className={`badge ${estadoBadge(t.estado)}`}>{t.estado}</span>
+                  {(() => { const c = estadoCobro(t); return c ? <Badge tone={c.tone}>{c.label}</Badge> : null })()}
                   <span style={{ fontSize: 12.5, color: 'var(--text-3)' }}>{fmtDate(t.fecha)}</span>
                 </div>
+                {t.cuenttiTransacionId && t.cuenttiTransacionId !== SIN_FACTURA && (
+                  <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: -4 }}>
+                    Factura <span className="mono" style={{ color: 'var(--text)' }}>{t.cuenttiTransacionId}</span>
+                    {t.facturadoEn && ` · ${fmtDate(t.facturadoEn)}`}
+                  </div>
+                )}
                 {tel && (
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, border: '1px solid var(--border)', borderRadius: 10, padding: '10px 12px', background: 'var(--bg-subtle)' }}>
                     <div style={{ minWidth: 0 }}>
@@ -906,7 +950,20 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
               <div className="modal-footer" style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
                 {t.otCodigo && <Button variant="outline" size="sm" onClick={() => imprimirOT(t)}>PDF</Button>}
                 {t.estado !== ESTADOS.COMPLETADO && <Button variant="outline" size="sm" onClick={() => { handleCompletar(t.id); setPreviewId(null) }}>Marcar listo</Button>}
-                <Button variant="primary" size="sm" onClick={() => { setPreviewId(null); handleEditar(t.id) }}>Editar</Button>
+                {(() => {
+                  const porCobrar = !!onAutoFacturar && !!estadoCobro(t)?.porCobrar
+                  return (
+                    <>
+                      <Button variant={porCobrar ? 'outline' : 'primary'} size="sm" onClick={() => { setPreviewId(null); handleEditar(t.id) }}>Editar</Button>
+                      {porCobrar && (
+                        <Button variant="primary" size="sm"
+                          onClick={() => { setPreviewId(null); onAutoFacturar(t) }}>
+                          Cobrar {fmt(t.total)}
+                        </Button>
+                      )}
+                    </>
+                  )
+                })()}
               </div>
             </div>
           </div>

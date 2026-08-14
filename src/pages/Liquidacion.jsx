@@ -1373,7 +1373,46 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
         /* Paso 1: tarjetas de técnico, grandes y tocables */
         .liq-roster-row{ display:flex; align-items:center; gap:12px; width:100%; padding:14px 16px; text-align:left; background:transparent; border:none; border-top:1px solid var(--border); cursor:pointer; transition:background .15s var(--ease-out); }
         .liq-roster-row:first-of-type{ border-top:none; }
-        .liq-roster-row:hover{ background:var(--bg-subtle); }
+        /* El hover se limita a punteros de verdad: en táctil el navegador lo deja
+           "pegado" tras el toque y la fila queda resaltada como si siguiera activa. */
+        @media (hover:hover){ .liq-roster-row:hover{ background:var(--bg-subtle); } }
+        /* En el celular esta fila no respondía: el dedo cae sobre el nombre o el
+           monto (texto seleccionable) y el navegador interpreta el toque como
+           inicio de selección, no como pulsación, así que el clic nunca llegaba
+           al <button>. Se apaga la selección, se declara el gesto como toque
+           simple —el .card__b--flush de móvil es un carril con scroll horizontal
+           y sin esto el toque compite con el paneo— y los hijos, que son puro
+           adorno, dejan de ser blanco: el objetivo del dedo es la fila entera. */
+        .liq-roster-row,.liq-roster-mini{ -webkit-user-select:none; user-select:none; touch-action:manipulation; -webkit-tap-highlight-color:transparent; }
+        .liq-roster-row > *,.liq-roster-mini > *{ pointer-events:none; }
+        /* Sin hover en el taller: el único acuse de recibo del toque es este, y
+           por eso NO puede heredar la transición de .15s — un toque dura ~100ms y
+           el gris apenas empezaba a asomar. Instantáneo al presionar. */
+        .liq-roster-row:active,.liq-roster-mini:active{ background:var(--fill); transition-duration:0s; }
+        /* Aviso de OTs huérfanas: es un enlace de verdad, con blanco suficiente
+           para el dedo (los 44px de alto los da el padding + el interlineado). */
+        .liq-aviso{ display:inline-flex; align-items:center; gap:5px; font:inherit; font-weight:600; color:var(--red-600); background:none; border:none; padding:4px 6px; margin:-4px -2px; cursor:pointer; text-decoration:underline; text-underline-offset:3px; -webkit-user-select:none; user-select:none; touch-action:manipulation; }
+        .liq-aviso:active{ opacity:.6; }
+        /* Trío de cifras del cierre. En pantalla ancha van en columna a la
+           derecha del total. En el celular no caben en fila: "Mano de obra
+           facturada" se partía en dos renglones y "Utilidad taller" quedaba
+           sola y descolgada. Ahí pasan a renglones etiqueta→cifra, que además
+           es como se lee un recibo. */
+        .liq-cifras{ display:flex; gap:26px; flex-wrap:wrap; }
+        /* text-align además de align-items: align-items alinea la CAJA, no el
+           texto de adentro. Cuando "Mano de obra facturada" se parte en dos
+           renglones, sin esto la segunda línea quedaba pegada a la izquierda. */
+        .liq-cifras__i{ display:flex; flex-direction:column; align-items:flex-end; text-align:right; }
+        .liq-cifras__v{ font-weight:600; font-size:18px; color:var(--text-2); margin-top:3px; }
+        /* Hasta 960px, no 560: el drawer de esta app es móvil hasta 960, así que
+           entre 561 y 960 (tablet, celular apaisado) quedaba el layout de
+           escritorio — justo el que partía "Mano de obra facturada" en dos. */
+        @media (max-width:960px){
+          .liq-cifras{ flex-direction:column; gap:0; width:100%; }
+          .liq-cifras__i{ flex-direction:row; align-items:baseline; justify-content:space-between; gap:14px; padding:8px 0; border-top:1px solid var(--border); }
+          .liq-cifras__i .eyebrow{ white-space:nowrap; }
+          .liq-cifras__v{ margin-top:0; font-size:16.5px; white-space:nowrap; }
+        }
         /* ===== Eje único de montos =====
            Renglones de dinero y fichas de ajuste comparten EXACTAMENTE el mismo
            inset (12px) y el mismo ancho de valor + hueco de control (28px), así
@@ -1455,19 +1494,21 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
             {tecnicosConPendientes.length} técnico{tecnicosConPendientes.length !== 1 ? 's' : ''} · {trabajosPendientes.length} OT{trabajosPendientes.length !== 1 ? 's' : ''} pendiente{trabajosPendientes.length !== 1 ? 's' : ''}
             {/* Avisos que se pueden ABRIR: antes eran un número en rojo sin salida. */}
             {kpis.sinTecnico > 0 && (
-              <> · <button type="button" onClick={() => setVerSinTecnico(v => !v)}
-                style={{ font: 'inherit', fontWeight: 600, color: 'var(--red-600)', background: 'none', border: 'none', padding: 0, cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 3 }}>
-                {kpis.sinTecnico} sin técnico
+              <> · <button type="button" className="liq-aviso" onClick={() => setVerSinTecnico(v => !v)} aria-expanded={verSinTecnico}>
+                <span aria-hidden="true">{verSinTecnico ? '▾' : '▸'}</span>
+                {/* "6 sin técnico" a secas no decía que se pudiera abrir ni qué
+                   hacer con ellas; el jefe lo leía como un dato muerto. */}
+                {kpis.sinTecnico} sin técnico · {verSinTecnico ? 'ocultar' : 'ver cuáles'}
               </button></>
             )}
             {kpis.sinPartner > 0 && <span style={{ color: 'var(--amber-700)', fontWeight: 600 }}> · {kpis.sinPartner} compartido{kpis.sinPartner !== 1 ? 's' : ''} sin compañero</span>}
           </div>
         </div>
-        <div style={{ display: 'flex', gap: 26, flexWrap: 'wrap' }}>
+        <div className="liq-cifras">
           {[['Comisiones', fmt(kpis.comisiones)], ['Mano de obra facturada', fmt(kpis.facturado)], ['Utilidad taller', fmt(kpis.utilidad)]].map(([l, v]) => (
-            <div key={l} style={{ textAlign: 'right' }}>
-              <div className="eyebrow">{l}</div>
-              <div className="mono" style={{ fontWeight: 600, fontSize: 18, color: 'var(--text-2)', marginTop: 3 }}>{v}</div>
+            <div className="liq-cifras__i" key={l}>
+              <span className="eyebrow">{l}</span>
+              <span className="mono liq-cifras__v">{v}</span>
             </div>
           ))}
         </div>
@@ -1511,6 +1552,7 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
           return (
             <button
               key={t.id}
+              type="button"
               onClick={() => { setTecnicoSel(activo ? '' : String(t.id)); setSeleccionados({}); setColapso({ trabajos: false, movs: false }) }}
               className={`liq-roster-row${activo ? ' on' : ''}`}
             >
@@ -1545,8 +1587,12 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
             </Button>
             {/* Clicables aunque no tengan OTs: si les quedó un aporte o un diario
                sin consumir, este es el único sitio para llegar a verlo o quitarlo. */}
+            {/* .liq-roster-mini hace exactamente lo mismo que la fila de arriba, así
+               que necesita el MISMO tratamiento táctil: sin él, en el celular la
+               lista de arriba respondía y esta no, y "a veces funciona" es más
+               difícil de reportar que "nunca funciona". */}
             {verInactivos && tecnicosSinPendientes.map(t => (
-              <button key={t.id} type="button"
+              <button key={t.id} type="button" className="liq-roster-mini"
                 onClick={() => { setTecnicoSel(String(t.id)); setSeleccionados({}); setColapso({ trabajos: false, movs: false }) }}
                 style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%', padding: '10px 16px', borderTop: '1px solid var(--border)', borderLeft: 'none', borderRight: 'none', borderBottom: 'none', background: 'transparent', font: 'inherit', fontSize: 13, textAlign: 'left', cursor: 'pointer' }}>
                 <span style={{ flex: 1, minWidth: 0, color: 'var(--text-2)' }}>{t.nombre}</span>

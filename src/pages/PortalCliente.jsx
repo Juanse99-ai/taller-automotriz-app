@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef } from 'react'
-import { gsap } from 'gsap'
 import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import { InspeccionDetalle } from './Inspecciones'
@@ -39,14 +38,31 @@ function MiniEvid({ f }) {
 // ink   = color del rótulo grande de estado; se adapta al tema (no usar el hex vivo, que baja a ~2.8:1).
 const ESTADO_TRABAJO_DISPLAY = {
   [ESTADOS.PENDIENTE]: { label: 'Recibido', color: '#64748b', cls: 'badge-n', ink: 'var(--text)', icon: '1', pct: 15 },
-  [ESTADOS.EN_DIAGNOSTICO]: { label: 'En Diagnostico', color: '#2563eb', cls: 'badge-i', ink: 'var(--blue-600)', icon: '2', pct: 30 },
-  [ESTADOS.ESPERANDO_REPUESTOS]: { label: 'Esperando Repuestos', color: '#d97706', cls: 'badge-w', ink: 'var(--amber-700)', icon: '3', pct: 45 },
-  [ESTADOS.EN_PROGRESO]: { label: 'En Reparacion', color: '#2563eb', cls: 'badge-i', ink: 'var(--blue-600)', icon: '4', pct: 60 },
+  [ESTADOS.EN_DIAGNOSTICO]: { label: 'En diagnóstico', color: '#2563eb', cls: 'badge-i', ink: 'var(--blue-600)', icon: '2', pct: 30 },
+  [ESTADOS.ESPERANDO_REPUESTOS]: { label: 'Esperando repuestos', color: '#d97706', cls: 'badge-w', ink: 'var(--amber-700)', icon: '3', pct: 45 },
+  [ESTADOS.EN_PROGRESO]: { label: 'En reparación', color: '#2563eb', cls: 'badge-i', ink: 'var(--blue-600)', icon: '4', pct: 60 },
   [ESTADOS.EN_PRUEBA]: { label: 'En Prueba', color: '#7c3aed', cls: 'badge-p', ink: 'var(--purple-700)', icon: '5', pct: 80 },
   [ESTADOS.COMPLETADO]: { label: 'Listo para Entrega', color: '#16a34a', cls: 'badge-s', ink: 'var(--green-700)', icon: '6', pct: 100 },
   [ESTADOS.PROGRAMADO]: { label: 'Programado', color: '#64748b', cls: 'badge-n', ink: 'var(--text)', icon: '—', pct: 10 },
   [ESTADOS.CANCELADO]: { label: 'Cancelado', color: '#dc2626', cls: 'badge-d', ink: 'var(--red-700)', icon: '✕', pct: 0 },
 }
+
+// "SERVICIO" es el marcador INTERNO de un trabajo sin carro (venta de mostrador).
+// Al cliente no se le enseña esa jerga —"Placa SERVICIO" parece un error del
+// documento—: se dice "Sin vehículo", igual que en la tabla de Liquidación.
+// Solo cuenta la marca EXPLÍCITA (sinVehiculo) o el marcador SERVICIO — igual que
+// Liquidacion.jsx. Tratar una placa vacía como "sin vehículo" borraba el carro de
+// registros que sí lo tienen: en cotizaciones la placa no es obligatoria, así que
+// una cotización de un Corolla sin placa salía como "Servicio sin vehículo" y
+// perdía marca y modelo, mientras su PDF sí mostraba "Vehículo: Toyota Corolla".
+const esSinVehiculo = (t) => !!t?.sinVehiculo || ['SERVICIO', '—'].includes((t?.placa || '').trim().toUpperCase())
+
+// Un registro solo va SIN vehículo si además no hay marca ni modelo que mostrar:
+// sin placa pero con "Toyota Corolla" hay carro. Mismo criterio que el PDF de
+// cotizaciones (hayVehiculo en Cotizaciones.jsx), para que los dos documentos que
+// recibe el mismo cliente no se contradigan.
+const sinDatosVehiculo = (t) => esSinVehiculo(t) &&
+  !['placa', 'marca', 'modelo'].some(k => (t?.[k] || '').toString().trim() && (t[k] || '').toString().trim().toUpperCase() !== 'SERVICIO')
 
 // Columnas que el portal SÍ necesita. Se piden explícitamente (en vez de SELECT *)
 // para NO exponer datos sensibles del cliente (telefono_cliente, email_cliente,
@@ -56,6 +72,8 @@ const SELECT_PORTAL = [
   'id', 'fecha', 'created_at', 'cedula_cliente', 'cliente', 'placa', 'marca', 'modelo',
   'ano', 'kilometraje', 'tecnico_id', 'estado', 'observaciones', 'items', 'total',
   'ot_codigo', 'tipo_aceite', 'proximo_km', 'proxima_visita', 'notas_proximo_mant', 'evidencias',
+  // Para NO mostrarle al cliente la placa ficticia "SERVICIO" de una venta sin carro.
+  'sin_vehiculo',
   // Para el botón "Pagar" (Wompi): saber si ya está facturada y si sigue sin pagar.
   // OJO: NO se trae cuentti_id_transacion — ese lo resuelve el webhook en el servidor.
   'pagado', 'facturado_en',
@@ -77,6 +95,7 @@ async function buscarTrabajosPorCedula(cedula) {
       cedula: r.cedula_cliente,
       cliente: r.cliente,
       placa: r.placa,
+      sinVehiculo: r.sin_vehiculo === true,
       marca: r.marca,
       modelo: r.modelo,
       ano: r.ano,
@@ -177,7 +196,6 @@ export default function PortalCliente() {
   const [aprobando, setAprobando] = useState(false)
   const [errorCotiz, setErrorCotiz] = useState('')
   const touchRef = useRef(null) // gesto de swipe en el visor de fotos
-  const portalRef = useRef(null) // contenedor para animaciones GSAP
   const detalleRef = useRef(null) // detalle del vehículo (para hacer scroll al elegir uno)
 
   // Swipe horizontal en el visor: izquierda → siguiente, derecha → anterior.
@@ -289,16 +307,20 @@ export default function PortalCliente() {
       buscarCotizacionesPorCedula(cedulaLimpia),
       fetch(`/api/supabase?verificarPagos=${encodeURIComponent(cedulaLimpia)}`)
         .then(r => r.json())
-        .catch(() => ({ marcados: [], saldos: {} })), // Cuentti caído: se sigue como siempre
+        .catch(() => ({ marcados: [], saldos: {}, abonos: {} })), // Cuentti caído: se sigue como siempre
     ])
 
     // La consulta salió en paralelo, así que trae el "pagado" viejo: se aplica aquí
     // lo que el servidor acaba de confirmar, sin tener que volver a consultar.
     const saldados = new Set(chequeo?.marcados || [])
     const saldos = chequeo?.saldos || {}
+    const abonos = chequeo?.abonos || {}
     for (const t of misTrab) {
       if (saldados.has(t.id)) t.pagado = true
-      else if (saldos[t.id] != null) t.saldoCuentti = saldos[t.id]
+      else if (saldos[t.id] != null) {
+        t.saldoCuentti = saldos[t.id]
+        if (abonos[t.id] != null) t.abonoCuentti = abonos[t.id]
+      }
     }
 
     // Extraer inspecciones embebidas en trabajos
@@ -315,7 +337,7 @@ export default function PortalCliente() {
     setCargando(false)
 
     if (misTrab.length === 0 && misCotiz.length === 0) {
-      setError('No se encontraron registros para este documento. Verifica el numero e intenta de nuevo.')
+      setError('No se encontraron registros para este documento. Verifica el número e intenta de nuevo.')
       setDatos(null)
       setAutenticado(false)
       return
@@ -397,59 +419,12 @@ export default function PortalCliente() {
     return () => window.removeEventListener('keydown', onKey)
   }, [galeria])
 
-  // Animaciones (GSAP). Comunican estado, no decoran (Design Principle 4: la
-  // sorpresa es un MOMENTO, no toda la página). Una sola línea de tiempo orquesta
-  // la entrada al abrir el portal y luego cuenta la historia "¿dónde va mi carro?":
-  // secciones en cascada → números de la flota → barras que se llenan → la línea
-  // del avance se dibuja y cada paso aparece. Todo easeOut (sin rebote) y se salta
-  // por completo si el sistema pide menos movimiento.
-  useEffect(() => {
-    if (!autenticado || !datos) return
-    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return
-    const ctx = gsap.context(() => {
-      const tl = gsap.timeline({ defaults: { ease: 'expo.out' } })
-
-      // 1) El momento: las secciones principales suben y aparecen escalonadas.
-      const secciones = Array.from(portalRef.current?.children || [])
-        .filter(el => el.classList?.contains('card') || el.classList?.contains('portal-col'))
-      if (secciones.length) tl.from(secciones, { opacity: 0, y: 22, duration: 0.5, stagger: 0.06 })
-
-      // 2) Números de la flota cuentan hacia arriba (cuántos vehículos, cómo van).
-      gsap.utils.toArray('.fleet-num').forEach((el, i) => {
-        const end = parseFloat(el.dataset.n) || 0
-        const obj = { v: 0 }
-        tl.to(obj, { v: end, duration: 0.7, ease: 'power2.out',
-          onUpdate: () => { el.textContent = String(Math.round(obj.v)) } }, i === 0 ? '-=0.35' : '<')
-      })
-
-      // 3) Tarjetas de vehículo en cascada (el fade lo da la sección; aquí, empuje).
-      tl.from('.veh-card', { y: 16, scale: 0.98, duration: 0.42, stagger: 0.05 }, '-=0.4')
-      gsap.utils.toArray('.bar-fill').forEach((el, i) => {
-        const pct = parseFloat(el.dataset.pct) || 0
-        tl.fromTo(el, { width: '0%' }, { width: pct + '%', duration: 0.6, ease: 'power3.out' }, i === 0 ? '-=0.4' : '<')
-      })
-
-      // 4) Vehículo único: la barra grande se llena y el % cuenta hasta su valor.
-      gsap.utils.toArray('.pct-bar').forEach(el => {
-        const pct = parseFloat(el.dataset.pct) || 0
-        tl.fromTo(el, { width: '0%' }, { width: pct + '%', duration: 0.7 }, '-=0.5')
-      })
-      gsap.utils.toArray('.pct-num').forEach(el => {
-        const end = parseFloat(el.dataset.pct) || 0
-        const obj = { v: 0 }
-        tl.to(obj, { v: end, duration: 0.7, ease: 'power2.out',
-          onUpdate: () => { el.textContent = Math.round(obj.v) + '% completado' } }, '<')
-      })
-
-      // 5) "¿Dónde va mi carro?": la línea del avance se dibuja de arriba a abajo y
-      //    cada paso (punto + rótulo) aparece en secuencia. fromTo (no from) para que
-      //    el estado final sea explícito y determinista.
-      tl.fromTo('.paso-line', { scaleY: 0 }, { scaleY: 1, duration: 0.4, ease: 'power2.out' }, '-=0.45')
-      tl.fromTo('.paso-dot', { scale: 0, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.34, stagger: 0.07 }, '-=0.3')
-      tl.fromTo('.paso-lbl', { opacity: 0, x: -8 }, { opacity: 1, x: 0, duration: 0.34, stagger: 0.07 }, '<')
-    }, portalRef)
-    return () => ctx.revert()
-  }, [autenticado, datos])
+  // La entrada del portal ya NO se anima con JS. Antes una línea de tiempo GSAP de
+  // 3-4s arrancaba las secciones, los pasos del avance y la barra de progreso en
+  // opacity:0: si se interrumpía (pestaña en segundo plano, celular lento, GSAP que
+  // no carga) el cliente se quedaba mirando una caja "Avance del trabajo" en blanco
+  // y un "15% completado" sin barra. Nada que el cliente deba LEER puede depender de
+  // JS para existir, así que el fade de entrada vive en CSS (ver <style> abajo).
 
   const buscar = (e) => {
     e.preventDefault()
@@ -640,7 +615,7 @@ export default function PortalCliente() {
                 </button>
               </form>
               <p style={{fontSize:12,color:'var(--text-4)',textAlign:'center',marginTop:20}}>
-                Su numero de documento es la clave de acceso para ver el estado de sus vehiculos.
+                Su número de documento es la clave de acceso para ver el estado de sus vehículos.
               </p>
             </div>
           </div>
@@ -658,9 +633,9 @@ export default function PortalCliente() {
   const vehiculos = (() => {
     const map = new Map()
     datos.trabajos.forEach(t => {
-      // "SERVICIO" es el marcador de venta directa (sin vehículo): no es un carro.
+      // Una venta de mostrador no es un carro: no entra a la lista de vehículos.
+      if (esSinVehiculo(t)) return
       const placa = (t.placa || '').toUpperCase()
-      if (!placa || placa === 'SERVICIO' || placa === '—') return
       if (!map.has(placa)) map.set(placa, [])
       map.get(placa).push(t)
     })
@@ -724,8 +699,8 @@ export default function PortalCliente() {
 
   // Timeline steps for active work
   const pasos = [
-    {lbl:'Recibido',pct:15},{lbl:'Diagnostico',pct:30},{lbl:'Repuestos',pct:45},
-    {lbl:'Reparacion',pct:60},{lbl:'Prueba',pct:80},{lbl:'Entrega',pct:100},
+    {lbl:'Recibido',pct:15},{lbl:'Diagnóstico',pct:30},{lbl:'Repuestos',pct:45},
+    {lbl:'Reparación',pct:60},{lbl:'Prueba',pct:80},{lbl:'Entrega',pct:100},
   ]
 
   // Una fila del historial. `compact` (modo flota) omite Placa/Vehículo porque ya
@@ -733,8 +708,8 @@ export default function PortalCliente() {
   const filaHist = (t, compact = false) => (
     <tr key={t.id}>
       <td data-label="Fecha" style={{color:'var(--text-3)',fontSize:13}}>{fmtDate(t.fecha)}</td>
-      {!compact && <td className="c-name mono" style={{fontWeight:700}}>{t.placa}</td>}
-      {!compact && <td data-label="Vehiculo" style={{color:'var(--text-3)',fontSize:13}}>{[t.marca,t.modelo].filter(Boolean).join(' ')||'—'}</td>}
+      {!compact && <td className={`c-name${esSinVehiculo(t)?'':' mono'}`} style={{fontWeight:700}}>{esSinVehiculo(t)?'Sin vehículo':t.placa}</td>}
+      {!compact && <td data-label="Vehículo" style={{color:'var(--text-3)',fontSize:13}}>{[t.marca,t.modelo].filter(Boolean).join(' ')||'—'}</td>}
       <td data-label="Estado">
         <span className={`badge ${ESTADO_TRABAJO_DISPLAY[t.estado]?.cls||'badge-n'}`}>
           {ESTADO_TRABAJO_DISPLAY[t.estado]?.label || t.estado}
@@ -751,7 +726,7 @@ export default function PortalCliente() {
       <td className="td-actions" style={{textAlign:'right'}}>
         {t.facturadoEn && !t.pagado && t.total > 0 && (
           tieneAbono(t) ? (
-            <button className="btn btn-outline btn-sm" style={{marginRight:8}} disabled title={`Ya tienes un abono. Saldo pendiente: ${fmt(t.saldoCuentti)}`}>Abonada · falta {fmt(t.saldoCuentti)}</button>
+            <span className="pc-pill" style={{marginRight:8}}>Abonada · falta {fmt(t.saldoCuentti)}</span>
           ) : pagoPorConfirmar(t) ? (
             <button className="btn btn-outline btn-sm" style={{marginRight:8}} disabled title="Estamos confirmando tu pago">Confirmando pago…</button>
           ) : (
@@ -767,7 +742,41 @@ export default function PortalCliente() {
   )
 
   return (
-    <div className="portal-main" ref={portalRef}>
+    <div className="portal-main">
+      <style>{`
+        /* Entrada en CSS, no en JS: aunque el navegador esté ocupado o la pestaña
+           en segundo plano, el contenido termina visible solo. Todo está leído a los
+           400ms como mucho: 300ms de fundido y 100ms de retraso el más tardío.
+           (El primer hijo de .portal-main es este <style>, por eso el hero es el 2.º.) */
+        @keyframes pc-entra { from { opacity: 0; transform: translateY(10px) } to { opacity: 1; transform: none } }
+        .portal-main > .card,
+        .portal-main > .portal-col,
+        .portal-main > .empty { animation: pc-entra .3s ease-out both }
+        .portal-main > *:nth-child(3) { animation-delay: .05s }
+        .portal-main > *:nth-child(n+4) { animation-delay: .1s }
+        @media (prefers-reduced-motion: reduce) {
+          .portal-main > .card,
+          .portal-main > .portal-col,
+          .portal-main > .empty { animation: none }
+        }
+        /* Fila de factura: identificación · plata · acción. En celular se apila
+           para que el saldo y el botón no queden espichados en un renglón. */
+        .pc-fx { display: grid; grid-template-columns: 1fr auto auto; align-items: center; gap: 10px 18px; padding: 14px 20px }
+        .pc-fx__money { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; text-align: right }
+        .pc-fx__saldo { font-size: 20px; font-weight: 800; letter-spacing: -.01em; line-height: 1.1 }
+        .pc-fx__desglose { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 4px 14px; font-size: 12.5px; color: var(--text-3); margin-top: 2px }
+        .pc-fx__cta { text-align: right }
+        .pc-pill { display: inline-block; background: var(--soft-amber); color: var(--amber-700);
+                   font-size: 12.5px; font-weight: 700; padding: 5px 11px; border-radius: 999px; white-space: nowrap }
+        @media (max-width: 560px) {
+          .pc-fx { grid-template-columns: 1fr; gap: 10px }
+          .pc-fx__money { align-items: flex-start; text-align: left }
+          .pc-fx__desglose { justify-content: flex-start }
+          .pc-fx__cta { text-align: left }
+          .pc-fx__cta .btn { width: 100% }
+        }
+      `}</style>
+
       {/* Hero — identidad + resumen de flota */}
       <div className="card portal-full" style={{padding:0,overflow:'hidden'}}>
         <div style={{padding:'22px 26px',background:'var(--navy-900)',color:'#fff'}}>
@@ -782,15 +791,24 @@ export default function PortalCliente() {
             <div style={{display:'flex',gap:'12px 28px',flexWrap:'wrap',alignItems:'flex-end'}}>
               {[[vehiculos.length,vehiculos.length===1?'vehículo':'vehículos','#ffffff'],[enProceso,'en el taller','#fbbf24'],[listos,listos===1?'listo para recoger':'listos para recoger','#4ade80']].map(([n,lbl,c],i)=>(
                 <div key={i} style={{display:'flex',alignItems:'baseline',gap:8}}>
-                  <span className="mono fleet-num" data-n={n} style={{fontSize:27,fontWeight:800,lineHeight:1,color:c}}>{n}</span>
+                  <span className="mono" style={{fontSize:27,fontWeight:800,lineHeight:1,color:c}}>{n}</span>
                   <span style={{fontSize:13,opacity:.92,fontWeight:500}}>{lbl}</span>
                 </div>
               ))}
             </div>
           ) : trabajoActivo ? (
             <>
-              <h2 style={{fontSize:22,fontWeight:700,letterSpacing:'-.01em',marginBottom:4}}>{[trabajoActivo.marca,trabajoActivo.modelo].filter(Boolean).join(' ') || 'Su vehículo'}</h2>
-              <div style={{fontSize:13,opacity:.94,fontWeight:500}}>Placa <span className="mono" style={{fontWeight:700}}>{trabajoActivo.placa}</span>{trabajoActivo.otCodigo && <> · Orden <span className="mono">{trabajoActivo.otCodigo}</span></>}</div>
+              <h2 style={{fontSize:22,fontWeight:700,letterSpacing:'-.01em',marginBottom:4}}>
+                {esSinVehiculo(trabajoActivo)
+                  ? 'Servicio en el taller'
+                  : ([trabajoActivo.marca,trabajoActivo.modelo].filter(Boolean).join(' ') || 'Su vehículo')}
+              </h2>
+              {(!esSinVehiculo(trabajoActivo) || trabajoActivo.otCodigo) && (
+                <div style={{fontSize:13,opacity:.94,fontWeight:500}}>
+                  {!esSinVehiculo(trabajoActivo) && <>Placa <span className="mono" style={{fontWeight:700}}>{trabajoActivo.placa}</span></>}
+                  {trabajoActivo.otCodigo && <>{!esSinVehiculo(trabajoActivo) && ' · '}Orden <span className="mono">{trabajoActivo.otCodigo}</span></>}
+                </div>
+              )}
             </>
           ) : (
             <h2 style={{fontSize:22,fontWeight:700,letterSpacing:'-.01em'}}>Historial de servicios</h2>
@@ -803,34 +821,56 @@ export default function PortalCliente() {
         <div className="card portal-full" style={{padding:0,overflow:'hidden'}}>
           <div style={{padding:'15px 20px',display:'flex',justifyContent:'space-between',alignItems:'center',gap:12,borderBottom:'1px solid var(--border)'}}>
             <h3 style={{margin:0}}>{facturasPendientes.length===1?'Factura por pagar':`Facturas por pagar · ${facturasPendientes.length}`}</h3>
-            <div style={{textAlign:'right'}}>
-              <div style={{fontSize:11,fontWeight:700,color:'var(--text-3)',textTransform:'uppercase',letterSpacing:'.04em'}}>Total</div>
-              <div className="mono" style={{fontSize:18,fontWeight:800}}>{fmt(totalPorPagar)}</div>
-            </div>
+            {/* Con una sola factura el total del encabezado repetiría la cifra de la
+                fila; solo suma cuando hay varias. */}
+            {facturasPendientes.length > 1 && (
+              <div style={{textAlign:'right'}}>
+                <div className="eyebrow">Saldo pendiente total</div>
+                <div className="mono" style={{fontSize:20,fontWeight:800,letterSpacing:'-.01em'}}>{fmt(totalPorPagar)}</div>
+              </div>
+            )}
           </div>
           <div>
-            {facturasPendientes.map((t,i)=>(
-              <div key={t.id} style={{display:'flex',justifyContent:'space-between',alignItems:'center',gap:14,padding:'13px 20px',borderTop:i>0?'1px solid var(--border)':'none'}}>
+            {facturasPendientes.map((t,i)=>{
+              const conAbono = tieneAbono(t)
+              const saldo = conAbono ? t.saldoCuentti : (t.total || 0)
+              // El abono viene TAL CUAL de Cuentti (t.abonoCuentti), no de restar
+              // el total de la app menos el pendiente: son dos fuentes distintas y
+              // basta una diferencia de redondeo —o un ítem agregado a la factura
+              // en el mostrador— para decirle al cliente que abonó una plata que
+              // nunca abonó. Si el dato no llegó, no se muestra el renglón.
+              const abonado = t.abonoCuentti
+              return (
+              <div key={t.id} className="pc-fx" style={{borderTop:i>0?'1px solid var(--border)':'none'}}>
                 <div style={{minWidth:0}}>
-                  <span className="mono" style={{fontWeight:700,fontSize:15}}>{t.placa}</span>
+                  {esSinVehiculo(t)
+                    ? <span style={{fontWeight:700,fontSize:15}}>Servicio sin vehículo</span>
+                    : <span className="mono" style={{fontWeight:700,fontSize:15}}>{t.placa}</span>}
                   <div style={{fontSize:12.5,color:'var(--text-3)',marginTop:1}}>{fmtDate(t.fecha)}{t.otCodigo?` · ${t.otCodigo}`:''}</div>
                 </div>
-                <div style={{display:'flex',alignItems:'center',gap:12,flexShrink:0}}>
-                  {/* Con abono, el número grande es lo que FALTA: mostrar el total al lado de
-                      "Abonada" hacía creer que aún debía el millón entero. */}
-                  <div style={{textAlign:'right'}}>
-                    <span className="mono" style={{fontWeight:700,fontSize:15}}>{fmt(tieneAbono(t) ? t.saldoCuentti : t.total)}</span>
-                    {tieneAbono(t) && <div style={{fontSize:11.5,color:'var(--text-3)',marginTop:1}}>de {fmt(t.total)}</div>}
-                  </div>
-                  {/* Pagar en línea cobraría el total otra vez: se remite al taller. */}
-                  {tieneAbono(t)
-                    ? <button className="btn btn-outline" disabled title={`Ya tienes un abono. Saldo pendiente: ${fmt(t.saldoCuentti)}`}>Abonada</button>
-                    : pagoPorConfirmar(t)
-                      ? <button className="btn btn-outline" disabled title="Estamos confirmando tu pago">Confirmando…</button>
-                      : <button className="btn btn-primary" disabled={pagando===t.id} onClick={()=>pagarConWompi(t)}>{pagando===t.id?'Abriendo…':'Pagar'}</button>}
+                <div className="pc-fx__money">
+                  <span className="eyebrow">Saldo pendiente</span>
+                  <span className="mono pc-fx__saldo">{fmt(saldo)}</span>
+                  {conAbono && (
+                    <div className="pc-fx__desglose">
+                      {abonado != null && <span>Ya abonado <b className="mono">{fmt(abonado)}</b></span>}
+                      <span>Total factura <b className="mono">{fmt(t.total)}</b></span>
+                    </div>
+                  )}
+                </div>
+                <div className="pc-fx__cta">
+                  {/* Con abono, pagar en línea cobraría el TOTAL otra vez: se remite al taller. */}
+                  {conAbono ? (
+                    <>
+                      <span className="pc-pill">Abono registrado</span>
+                      <div style={{fontSize:12,color:'var(--text-3)',marginTop:5}}>El saldo se paga en el taller.</div>
+                    </>
+                  ) : pagoPorConfirmar(t)
+                    ? <button className="btn btn-outline" disabled title="Estamos confirmando tu pago">Confirmando…</button>
+                    : <button className="btn btn-primary" disabled={pagando===t.id} onClick={()=>pagarConWompi(t)}>{pagando===t.id?'Abriendo…':`Pagar ${fmt(saldo)}`}</button>}
                 </div>
               </div>
-            ))}
+            )})}
           </div>
         </div>
       )}
@@ -847,8 +887,16 @@ export default function PortalCliente() {
               <div key={c.id} style={{padding:'14px 20px',borderTop:i>0?'1px solid var(--border)':'none'}}>
                 <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',gap:12,flexWrap:'wrap'}}>
                   <div style={{minWidth:0}}>
-                    <span className="mono" style={{fontWeight:700,fontSize:15}}>{c.placa||'—'}</span>
-                    <div style={{fontSize:12.5,color:'var(--text-3)',marginTop:1}}>{[c.marca,c.modelo].filter(Boolean).join(' ')||'Vehículo'} · {fmtDate(c.fecha)}</div>
+                    {/* En cotizaciones la placa es opcional: el título cae a la
+                       marca/modelo antes de declararla "sin vehículo". */}
+                    {sinDatosVehiculo(c)
+                      ? <span style={{fontWeight:700,fontSize:15}}>Servicio sin vehículo</span>
+                      : esSinVehiculo(c)
+                        ? <span style={{fontWeight:700,fontSize:15}}>{[c.marca,c.modelo].filter(Boolean).join(' ') || 'Vehículo'}</span>
+                        : <span className="mono" style={{fontWeight:700,fontSize:15}}>{c.placa}</span>}
+                    <div style={{fontSize:12.5,color:'var(--text-3)',marginTop:1}}>
+                      {sinDatosVehiculo(c) || esSinVehiculo(c) ? fmtDate(c.fecha) : `${[c.marca,c.modelo].filter(Boolean).join(' ')||'Vehículo'} · ${fmtDate(c.fecha)}`}
+                    </div>
                   </div>
                   <div style={{textAlign:'right'}}>
                     <div className="mono" style={{fontSize:17,fontWeight:800,color:'var(--green-700)'}}>{fmt(c.total)}</div>
@@ -895,7 +943,7 @@ export default function PortalCliente() {
                   <div style={{fontSize:13,color:'var(--text-3)',marginTop:3}}>{[v.marca,v.modelo].filter(Boolean).join(' ')||'Vehículo'}</div>
                   {v.estadoVeh!=='aldia' && (
                     <div style={{height:6,background:'var(--bg-subtle)',borderRadius:99,overflow:'hidden',marginTop:12}}>
-                      <div className="bar-fill" data-pct={pct} style={{height:'100%',width:`${pct}%`,borderRadius:99,background:est.color}}/>
+                      <div style={{height:'100%',width:`${pct}%`,borderRadius:99,background:est.color}}/>
                     </div>
                   )}
                   <div style={{fontSize:12,color:'var(--text-3)',marginTop:v.estadoVeh!=='aldia'?8:12}}>
@@ -926,9 +974,11 @@ export default function PortalCliente() {
               </div>
             </div>
             <div style={{height:8,background:'var(--bg-subtle)',borderRadius:99,overflow:'hidden',marginTop:14}}>
-              <div className="pct-bar" data-pct={ESTADO_TRABAJO_DISPLAY[trabajoActivo.estado]?.pct||0} style={{width:`${ESTADO_TRABAJO_DISPLAY[trabajoActivo.estado]?.pct||0}%`,height:'100%',background:'var(--amber-500)',borderRadius:99,transition:'width .5s ease-out'}}/>
+              {/* El ancho sale del estado, no de una animación: si nada corre, la barra
+                  igual se dibuja llena hasta donde va el trabajo. */}
+              <div style={{width:`${ESTADO_TRABAJO_DISPLAY[trabajoActivo.estado]?.pct||0}%`,height:'100%',background:'var(--amber-500)',borderRadius:99,transition:'width .4s ease-out'}}/>
             </div>
-            <div className="pct-num" data-pct={ESTADO_TRABAJO_DISPLAY[trabajoActivo.estado]?.pct||0} style={{fontSize:11,color:'var(--text-3)',marginTop:6,fontWeight:600}}>{ESTADO_TRABAJO_DISPLAY[trabajoActivo.estado]?.pct||0}% completado</div>
+            <div style={{fontSize:12,color:'var(--text-3)',marginTop:6,fontWeight:600}}>{ESTADO_TRABAJO_DISPLAY[trabajoActivo.estado]?.pct||0}% completado</div>
           </div>
         </div>
       )}
@@ -938,20 +988,20 @@ export default function PortalCliente() {
           <div className="card__h"><h3>Avance del trabajo</h3></div>
           <div className="card__b">
             <div style={{position:'relative',paddingLeft:32}}>
-              <div className="paso-line" style={{position:'absolute',left:11,top:8,bottom:8,width:2,background:'var(--border)',transformOrigin:'top'}}/>
+              <div style={{position:'absolute',left:11,top:8,bottom:8,width:2,background:'var(--border)'}}/>
               {pasos.map((p,k)=>{
                 const currentPct = ESTADO_TRABAJO_DISPLAY[trabajoActivo.estado]?.pct || 0
                 const done = currentPct >= p.pct
                 const active = currentPct >= p.pct - 15 && currentPct < p.pct
                 return (
                   <div key={k} style={{position:'relative',paddingBottom:k<pasos.length-1?20:0}}>
-                    <div className="paso-dot" style={{position:'absolute',left:-26,top:2,width:24,height:24,borderRadius:'50%',
+                    <div style={{position:'absolute',left:-26,top:2,width:24,height:24,borderRadius:'50%',
                       background:done?'var(--green-500)':active?'var(--amber-500)':'var(--bg-raised)',
                       border:!done&&!active?'2px solid var(--border)':'none',
                       display:'flex',alignItems:'center',justifyContent:'center',color:'#fff',fontWeight:800,fontSize:12}}>
                       {done?<svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3"><path d="M5 13l4 4L19 7"/></svg>:active?<span style={{width:8,height:8,borderRadius:'50%',background:'#fff'}}/>:''}
                     </div>
-                    <div className="paso-lbl" style={{fontWeight:active?700:600,fontSize:14,color:!done&&!active?'var(--text-3)':'var(--text)'}}>
+                    <div style={{fontWeight:active?700:600,fontSize:14,color:!done&&!active?'var(--text-3)':'var(--text)'}}>
                       {p.lbl}
                       {active && <span className="badge badge-w" style={{marginLeft:8}}>En curso</span>}
                     </div>
@@ -976,7 +1026,7 @@ export default function PortalCliente() {
       {/* Tecnico asignado */}
       {trabajoActivo && tecNombre(trabajoActivo.tecnicoId) && (
         <div className="card">
-          <div className="card__h"><h3>Tecnico asignado</h3></div>
+          <div className="card__h"><h3>Técnico asignado</h3></div>
           <div className="card__b" style={{display:'flex',gap:14,alignItems:'center'}}>
             <div style={{width:54,height:54,borderRadius:'50%',background:'var(--amber-500)',display:'flex',alignItems:'center',justifyContent:'center',color:'var(--navy-900)',fontWeight:800,fontSize:18,flexShrink:0}}>
               {tecNombre(trabajoActivo.tecnicoId).split(' ').map(x=>x[0]).slice(0,2).join('')}
@@ -1082,7 +1132,7 @@ export default function PortalCliente() {
             <div className="card__b card__b--flush">
               <table className="tbl tbl-cards">
                 <thead>
-                  <tr><th>Fecha</th><th>Placa</th><th>Vehiculo</th><th>Estado</th><th>Fotos</th><th /></tr>
+                  <tr><th>Fecha</th><th>Placa</th><th>Vehículo</th><th>Estado</th><th>Fotos</th><th /></tr>
                 </thead>
                 <tbody>{datos.trabajos.map(t => filaHist(t, false))}</tbody>
               </table>
@@ -1098,7 +1148,7 @@ export default function PortalCliente() {
       )}
 
       <div className="portal-full" style={{textAlign:'center',fontSize:12,color:'var(--text-4)',padding:'8px 0 18px'}}>
-        Multidiagnosticos AS · Sabanalarga, Atlantico
+        Multidiagnosticos AS · Sabanalarga, Atlántico
       </div>
 
       {/* Detalle de un servicio del historial (mini-factura del cliente) */}
@@ -1140,8 +1190,14 @@ export default function PortalCliente() {
               <div style={{padding:'18px 20px 14px',borderBottom:'1px solid var(--border)',display:'flex',justifyContent:'space-between',gap:12,alignItems:'flex-start'}}>
                 <div style={{minWidth:0}}>
                   <div style={{fontSize:12.5,color:'var(--text-3)'}}>{fmtDate(t.fecha)}{t.otCodigo ? ` · ${t.otCodigo}` : ''}</div>
-                  <div className="mono" style={{fontSize:19,fontWeight:800,letterSpacing:'-.01em',marginTop:2}}>{t.placa}</div>
-                  <div style={{fontSize:13,color:'var(--text-3)'}}>{[t.marca,t.modelo,t.ano].filter(Boolean).join(' ') || '—'}</div>
+                  {esSinVehiculo(t) ? (
+                    <div style={{fontSize:19,fontWeight:800,letterSpacing:'-.01em',marginTop:2}}>Servicio sin vehículo</div>
+                  ) : (
+                    <>
+                      <div className="mono" style={{fontSize:19,fontWeight:800,letterSpacing:'-.01em',marginTop:2}}>{t.placa}</div>
+                      <div style={{fontSize:13,color:'var(--text-3)'}}>{[t.marca,t.modelo,t.ano].filter(Boolean).join(' ') || '—'}</div>
+                    </>
+                  )}
                 </div>
                 <div style={{display:'flex',alignItems:'center',gap:8,flexShrink:0}}>
                   <span className={`badge ${est.cls||'badge-n'}`}>{est.label || t.estado}</span>

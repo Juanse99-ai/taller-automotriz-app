@@ -1,4 +1,3 @@
-import { motion, useReducedMotion } from 'motion/react'
 import { useState, useEffect, useRef } from 'react'
 
 const ICONS = {
@@ -139,16 +138,13 @@ const NAV = [
   ]},
 ]
 
-// Animacion del menu: entrada con resorte (spring) escalonada, SOLO en mobile (drawer).
-// En desktop el sidebar es fijo => render directo en 'open' sin animar.
-const navContainer = {
-  open: { transition: { staggerChildren: 0.06, delayChildren: 0.08 } },
-  closed: { transition: { staggerChildren: 0.03, staggerDirection: -1 } },
-}
-const itemSpring = {
-  open: { x: 0, opacity: 1, transition: { type: 'spring', stiffness: 500, damping: 24 } },
-  closed: { x: -28, opacity: 0, transition: { type: 'spring', stiffness: 600, damping: 30 } },
-}
+// SIN animación de entrada por ítem. El menú tenía un stagger con resorte que
+// arrancaba cada grupo en opacity:0 y lo iba mostrando de a uno: en el celular
+// del taller el panel se abría con el logo y el pie pintados y TODO el centro en
+// blanco hasta que terminaba la cadena (y si el navegador pausaba el rAF —pestaña
+// en segundo plano, primer toque— se quedaba en blanco para siempre). Los enlaces
+// son la razón de abrir el menú: se pintan de una. Lo único que se anima es el
+// panel entero, y eso ya lo hace el CSS del drawer.
 
 function useIsMobile() {
   const [mobile, setMobile] = useState(() =>
@@ -174,29 +170,7 @@ export default function Sidebar({ active, onNavigate, isOpen, collapsed, onColla
   const inicial = (user?.nombre || user?.usuario || '?')[0].toUpperCase()
   const rolLabel = user?.rol === 'admin' ? 'Administrador' : 'Jefe de taller'
 
-  // Reproduce la animacion de entrada (stagger con resorte) del menu SOLO cuando
-  // el menu "aparece" por una accion deliberada del menu:
-  //  - mobile: se abre el drawer (isOpen false -> true)
-  //  - desktop: se expande el rail colapsado (collapsed true -> false)
-  // NO se re-anima al navegar entre secciones (molestaba ver el stagger en cada
-  // clic). En la carga inicial tampoco anima (initial=false).
   const isMobile = useIsMobile()
-  const reduce = useReducedMotion()
-  const [animKey, setAnimKey] = useState(0)
-  const prevState = useRef({ isOpen, collapsed, isMobile })
-  const firstRender = useRef(true)
-  useEffect(() => {
-    if (firstRender.current) {
-      firstRender.current = false
-      prevState.current = { isOpen, collapsed, isMobile }
-      return
-    }
-    const p = prevState.current
-    prevState.current = { isOpen, collapsed, isMobile }
-    if (reduce) return
-    const aparecio = isMobile ? (isOpen && !p.isOpen) : (p.collapsed && !collapsed)
-    if (aparecio) setAnimKey(k => k + 1)
-  }, [isOpen, collapsed, isMobile, reduce])
 
   // Hover-para-expandir: en computador, si el rail está colapsado y el cursor se
   // queda encima (~150ms), el menú se expande como overlay (sin mover el contenido)
@@ -236,12 +210,12 @@ export default function Sidebar({ active, onNavigate, isOpen, collapsed, onColla
         </div>
       </div>
 
-      <motion.nav key={animKey} className="sidebar__nav" variants={navContainer} initial={animKey === 0 ? false : 'closed'} animate="open">
+      <nav className="sidebar__nav">
         {NAV.map(g => {
           const visible = g.items.filter(item => allowed.includes(item.key))
           if (!visible.length) return null
           return (
-            <motion.div key={g.group} variants={itemSpring}>
+            <div key={g.group}>
               <div className="sidebar__group">{g.group}</div>
               {visible.map(item => (
                 <a
@@ -258,10 +232,10 @@ export default function Sidebar({ active, onNavigate, isOpen, collapsed, onColla
                   {pillCounts[item.key] > 0 && <span className="pill">{pillCounts[item.key]}</span>}
                 </a>
               ))}
-            </motion.div>
+            </div>
           )
         })}
-      </motion.nav>
+      </nav>
 
       {user && (
         <div className="sidebar__foot">

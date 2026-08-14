@@ -221,33 +221,31 @@ export default function Inventario({ notify }) {
         </div>
       )}
 
-      {/* KPIs — hero "Atención" + 3 mini (rompe simetría 4x igual) */}
-      <div className="kpi-bh" style={{ marginBottom: 18 }}>
-        <div className="kpi-bh__s">
-          <div className="kpi-bh__l">A reponer</div>
+      {/* Cifras del inventario en franja. Se quita la tarjeta "Stock bajo": repetía
+          un número que ya va en el desglose de "A reponer". */}
+      <div className="statline">
+        <div className="statline__i">
+          <span className="eyebrow">A reponer</span>
           {/* Mismo total que el botón "Por reponer" (los tres grupos hay que
               comprarlos), pero el desglose separa los que están en negativo:
               esos no son solo falta de stock, es inventario descuadrado. */}
-          <div className="kpi-bh__row"><span className="kpi-bh__v" style={{ color: 'var(--red-700)' }}>{(stats.sinStock + stats.descuadre + stats.stockBajo).toLocaleString('es-CO')}</span></div>
-          <div className="kpi-bh__sub">
+          <span className={`statline__v${(stats.sinStock + stats.descuadre + stats.stockBajo) === 0 ? ' is-zero' : ''}`} style={{ color: (stats.sinStock + stats.descuadre + stats.stockBajo) > 0 ? 'var(--red-700)' : undefined }}>
+            {(stats.sinStock + stats.descuadre + stats.stockBajo).toLocaleString('es-CO')}
+          </span>
+          <span style={{ fontSize: 11.5, color: 'var(--text-3)' }}>
             {stats.sinStock.toLocaleString('es-CO')} agotados · {stats.stockBajo.toLocaleString('es-CO')} bajo mínimo
             {stats.descuadre > 0 && <> · <strong style={{ color: 'var(--amber-600)' }}>{stats.descuadre.toLocaleString('es-CO')} en negativo</strong></>}
-          </div>
+          </span>
         </div>
-        <div className="kpi-bh__s">
-          <div className="kpi-bh__l">Referencias</div>
-          <div className="kpi-bh__row"><span className="kpi-bh__v">{stats.total.toLocaleString('es-CO')}</span></div>
-          <div className="kpi-bh__sub">total</div>
+        <div className="statline__i">
+          <span className="eyebrow">Referencias</span>
+          <span className={`statline__v${stats.total === 0 ? ' is-zero' : ''}`}>{stats.total.toLocaleString('es-CO')}</span>
+          <span style={{ fontSize: 11.5, color: 'var(--text-3)' }}>en catálogo</span>
         </div>
-        <div className="kpi-bh__s">
-          <div className="kpi-bh__l">Valor inventario</div>
-          <div className="kpi-bh__row"><span className="kpi-bh__v">{fmtCompact(stats.valorTotal)}</span></div>
-          <div className="kpi-bh__sub">{stats.valorCosto > 0 ? `a costo ${fmtCompact(stats.valorCosto)}` : 'venta'}</div>
-        </div>
-        <div className="kpi-bh__s">
-          <div className="kpi-bh__l">Stock bajo</div>
-          <div className="kpi-bh__row"><span className="kpi-bh__v">{stats.stockBajo.toLocaleString('es-CO')}</span></div>
-          <div className="kpi-bh__sub">reponer</div>
+        <div className="statline__i">
+          <span className="eyebrow">Valor inventario</span>
+          <span className={`statline__v${stats.valorTotal === 0 ? ' is-zero' : ''}`}>{fmtCompact(stats.valorTotal)}</span>
+          <span style={{ fontSize: 11.5, color: 'var(--text-3)' }}>{stats.valorCosto > 0 ? `a costo ${fmtCompact(stats.valorCosto)}` : 'a precio de venta'}</span>
         </div>
       </div>
 

@@ -106,6 +106,12 @@ export default async function handler(req, res) {
 
       const marcados = []
       const saldos = {}
+      // Lo ABONADO tal como lo dice Cuentti. Se devuelve aparte a propósito: el
+      // portal lo mostraba restando (total de la app − pendiente de Cuentti), y
+      // esas son dos fuentes distintas — si la factura de Cuentti no vale
+      // exactamente lo mismo que trabajos.total, el cliente leía un abono que
+      // nunca hizo. Aquí el dato es de una sola fuente y no hay que calcularlo.
+      const abonos = {}
       for (const t of (Array.isArray(rows) ? rows : [])) {
         const tx = String(t.cuentti_id_transacion || '').trim()
         if (!tx) continue
@@ -118,6 +124,7 @@ export default async function handler(req, res) {
           if (!e) continue // sin datos: se deja como estaba (nunca se asume pagado)
           const pendiente = Math.round(Number(e.total_deuda || 0) - Number(e.total_abono || 0))
           saldos[t.id] = pendiente
+          abonos[t.id] = Math.round(Number(e.total_abono || 0))
           if (pendiente <= 1) { // ≤1 por el redondeo de centavos de Cuentti
             await fetch(`${SUPABASE_URL}/rest/v1/trabajos?id=eq.${encodeURIComponent(t.id)}`, {
               method: 'PATCH',
@@ -128,9 +135,9 @@ export default async function handler(req, res) {
           }
         } catch { /* Cuentti caído o lento: se deja como está */ }
       }
-      res.status(200).json({ ok: true, marcados, saldos })
+      res.status(200).json({ ok: true, marcados, saldos, abonos })
     } catch (e) {
-      res.status(200).json({ ok: false, error: e.message, marcados: [], saldos: {} })
+      res.status(200).json({ ok: false, error: e.message, marcados: [], saldos: {}, abonos: {} })
     }
     return
   }
