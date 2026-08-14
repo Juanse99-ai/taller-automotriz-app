@@ -2,6 +2,7 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.jsx'
+import { precargarLogo } from './utils/pdfTheme'
 
 // Forzar favicon — elimina TODOS los viejos e inyecta .ico con cache-bust
 ;(() => {
@@ -28,6 +29,11 @@ if (import.meta.env.PROD && 'serviceWorker' in navigator) {
     navigator.serviceWorker.register('/sw.js', { updateViaCache: 'none' }).catch(() => {})
   })
 }
+
+// Deja el logo de los PDF en memoria antes de que nadie pida uno. Sin esto,
+// generar un PDF esperaba la red DESPUES del clic y Safari cancelaba la
+// descarga en silencio. Ver el comentario largo en utils/pdfTheme.js.
+precargarLogo()
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
