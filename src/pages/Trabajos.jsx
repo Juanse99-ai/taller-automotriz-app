@@ -436,6 +436,16 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
     doc.save(`${t.otCodigo || 'OT'}.pdf`)
   }
 
+  // El botón llama por aquí, no a imprimirOT directo. Motivo: imprimirOT es
+  // async y se invocaba sin atrapar el error, así que si algo fallaba la promesa
+  // se rompía en silencio — el usuario apretaba y no pasaba NADA, sin pista
+  // alguna de qué había fallado. Ahora cualquier fallo se ve en pantalla.
+  const descargarOT = (t) => {
+    imprimirOT(t).catch((e) => {
+      notify?.(`No se pudo generar el PDF de ${t.otCodigo || 'la OT'}: ${e?.message || e}`, 'error')
+    })
+  }
+
   const handleEditar = (id) => {
     setEditId(id)
     setVista('editar')
@@ -781,7 +791,7 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
                   <Button variant="outline" size="sm" style={{ width: '100%', marginBottom: 8 }} onClick={() => setFichaId(selTrabajo.id)}>Ficha del técnico</Button>
                   <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                     <Button variant="outline" size="sm" className="btn-icon" aria-label="Editar" title="Editar" onClick={() => handleEditar(selTrabajo.id)}><IconEdit /></Button>
-                    {selTrabajo.otCodigo && <Button variant="outline" size="sm" className="btn-icon" aria-label="Descargar PDF" title="Descargar PDF" onClick={() => imprimirOT(selTrabajo)}><IconPdf /></Button>}
+                    {selTrabajo.otCodigo && <Button variant="outline" size="sm" className="btn-icon" aria-label="Descargar PDF" title="Descargar PDF" onClick={() => descargarOT(selTrabajo)}><IconPdf /></Button>}
                     {selTrabajo.estado !== ESTADOS.COMPLETADO && <Button variant="primary" size="sm" className="btn-icon" aria-label="Marcar listo" title="Marcar listo" onClick={() => handleCompletar(selTrabajo.id)}><IconCheck /></Button>}
                     <Button variant="ghost" size="sm" className="btn-icon" aria-label="Eliminar" title="Eliminar" style={{ color: 'var(--red-600)' }} onClick={() => setConfirmCfg({ title: 'Eliminar OT', confirmLabel: 'Eliminar', tone: 'danger', onConfirm: () => handleEliminar(selTrabajo.id) })}><IconTrash /></Button>
                   </div>
@@ -845,7 +855,7 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
                       <td className="c-right td-actions">
                         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 4 }}>
                           <Button variant="ghost" size="sm" className="btn-icon" aria-label="Editar" title="Editar" onClick={() => handleEditar(t.id)}><IconEdit /></Button>
-                          {t.otCodigo && <Button variant="ghost" size="sm" className="btn-icon" aria-label="Descargar PDF" title="Descargar PDF" onClick={() => imprimirOT(t)}><IconPdf /></Button>}
+                          {t.otCodigo && <Button variant="ghost" size="sm" className="btn-icon" aria-label="Descargar PDF" title="Descargar PDF" onClick={() => descargarOT(t)}><IconPdf /></Button>}
                           {t.estado !== ESTADOS.COMPLETADO && (
                             <Button variant="ghost" size="sm" aria-label="Marcar completado" style={{ color: 'var(--green-600)' }} onClick={() => handleCompletar(t.id)}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg></Button>
                           )}
@@ -948,7 +958,7 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
                 </div>
               </div>
               <div className="modal-footer" style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-                {t.otCodigo && <Button variant="outline" size="sm" onClick={() => imprimirOT(t)}>PDF</Button>}
+                {t.otCodigo && <Button variant="outline" size="sm" onClick={() => descargarOT(t)}>PDF</Button>}
                 {t.estado !== ESTADOS.COMPLETADO && <Button variant="outline" size="sm" onClick={() => { handleCompletar(t.id); setPreviewId(null) }}>Marcar listo</Button>}
                 {(() => {
                   const porCobrar = !!onAutoFacturar && !!estadoCobro(t)?.porCobrar

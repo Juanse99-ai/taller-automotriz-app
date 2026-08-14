@@ -16,9 +16,33 @@
 
 import { TALLER } from './constants'
 
-// Carga /logo.png como dataURL para embeber en el PDF.
-// Devuelve null si falla (el header cae al chip "MDA").
-export async function loadLogo(path = '/logo.png') {
+// El logo se descarga UNA sola vez en toda la sesión y se guarda aquí.
+//
+// No es una optimización, es lo que hace que la descarga funcione en Safari.
+// doc.save() de jsPDF termina en FileSaver.js, que en Safari abre el archivo
+// como una navegación. Safari solo la permite si viene del clic del usuario, y
+// una espera de RED en medio rompe ese vínculo: el bloqueador la cancela sin
+// decir nada. El usuario aprieta el botón y no pasa absolutamente nada.
+//
+// Antes, cada PDF hacía `await loadLogo()` DESPUÉS del clic — un fetch de 549 KB
+// justo en el peor sitio. Con el logo ya en memoria, ese await se resuelve en el
+// mismo tick y la descarga sigue contando como iniciada por el usuario.
+//
+// Se precarga al abrir la app (main.jsx). Si aún no terminó cuando alguien pide
+// un PDF, se espera igual: peor un PDF que no baja en Safari que uno sin logo.
+const logoCache = new Map()
+
+export function loadLogo(path = '/logo.png') {
+  if (!logoCache.has(path)) logoCache.set(path, descargarLogo(path))
+  return logoCache.get(path)
+}
+
+// Arranca la descarga sin bloquear a nadie. Se llama al abrir la app.
+export function precargarLogo(path = '/logo.png') {
+  loadLogo(path).catch(() => {})
+}
+
+async function descargarLogo(path) {
   try {
     const res = await fetch(path)
     if (!res.ok) return null
