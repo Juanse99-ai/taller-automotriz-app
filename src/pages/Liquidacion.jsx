@@ -112,7 +112,7 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
     movimientos, liquidados, compartidos, historial,
     loading, connectionError,
     agregarMovimiento: hookAgregarMov, eliminarMovimiento: hookEliminarMov,
-    agregarLiquidados, desliquidarPorTrabajo, quitarLiquidados, eliminarHistorial,
+    agregarLiquidados, quitarLiquidados, eliminarHistorial,
     toggleCompartido, setCompartidoPartner, agregarHistorial, guardarHistorial,
   } = liquidacionHook
 
@@ -124,7 +124,6 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
   const [tecnicoSel, setTecnicoSel] = useState('')
   const [seleccionados, setSeleccionados] = useState({})
   const [verHistorial, setVerHistorial] = useState(false)
-  const [verLiquidados, setVerLiquidados] = useState(false)
   const [verSinTecnico, setVerSinTecnico] = useState(false)  // detalle de las OTs huérfanas
   const [verInactivos, setVerInactivos] = useState(false)    // técnicos sin nada por liquidar
   // Filtros del historial: 48 pagos en una lista plana no se podían recorrer.
@@ -1220,23 +1219,6 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
     notify('PDF de pago exportado', 'success')
   }
 
-  // Desliquidar UNO solo (reversible: vuelve a aparecer como pendiente). Con
-  // confirmación para no marcarlo por error. (Se quitó el "Desliquidar todos".)
-  const desliquidarUno = (id, t) => {
-    const etiqueta = t ? [t.placa, t.cliente].filter(Boolean).join(' · ') || id : id
-    setDialog({
-      title: 'Desliquidar trabajo',
-      lead: etiqueta,
-      confirmLabel: 'Desliquidar',
-      onConfirm: () => {
-        // Quita el id plano Y las claves por técnico (compartido) de ese trabajo,
-        // sin pisar liquidados de otros trabajos/dispositivos (cierra sobre prev).
-        desliquidarPorTrabajo(id)
-        notify('Trabajo desliquidado', 'info')
-      },
-    })
-  }
-
   // ===== ANULAR UN PAGO =====
   // Antes no había salida: un pago equivocado se quedaba, o se borraban los 48
   // con "Limpiar historial". Aquí se deshace TODO lo que hizo generarPago:
@@ -1303,11 +1285,6 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
     tone: 'danger',
     onConfirm: () => anularPago(reg),
   })
-
-  // Trabajos totalmente liquidados (ocultos) que aún existen en la lista.
-  const trabajosLiquidados = useMemo(() => {
-    return trabajos.filter(t => totalmenteLiquidado(t))
-  }, [trabajos, liquidados, compartidos])
 
   // ===== Tabs: Comisiones | Estado de cuenta (segmented control unificado) =====
   const tabsLiq = (
@@ -1643,41 +1620,11 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
         </div>
       </div>
 
-      {trabajosLiquidados.length > 0 && (
-        <div style={{ marginTop: 12 }}>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setVerLiquidados(v => !v)}
-            style={{ fontSize: 12, padding: '4px 10px', color: 'var(--text-3)' }}
-          >
-            {verLiquidados ? '▾' : '▸'} {trabajosLiquidados.length} trabajos ya liquidados (ocultos)
-          </Button>
-          {verLiquidados && (
-            <div style={{ marginTop: 8, border: '1px solid var(--border)', borderRadius: 10, overflow: 'hidden', maxWidth: 560 }}>
-              {trabajosLiquidados.length === 0 ? (
-                <div style={{ padding: '10px 12px', fontSize: 12.5, color: 'var(--text-3)' }}>
-                  Los {liquidados.length} trabajos liquidados no están en la lista actual.
-                </div>
-              ) : trabajosLiquidados.map(t => (
-                <div key={t.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '8px 12px', borderTop: '1px solid var(--border)', fontSize: 12.5 }}>
-                  <span style={{ color: 'var(--text-2)', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {fechaCorta(t.fecha)} · <strong>{t.placa || '—'}</strong> · {t.cliente || '—'}
-                  </span>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => desliquidarUno(t.id, t)}
-                    style={{ color: 'var(--amber-600)', fontSize: 11.5, padding: '2px 8px', flexShrink: 0 }}
-                  >
-                    Desliquidar
-                  </Button>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
+      {/* Se quitó el desplegable "N trabajos ya liquidados (ocultos)".
+         Era la única forma de des-liquidar, pero hace menos que "Anular" del
+         historial: solo desmarca el trabajo, sin devolver los aportes ni
+         revertir el movimiento de la cuenta. Y ocupaba sitio en la pantalla
+         mostrando 143 trabajos ya resueltos. Ver anularPago(). */}
 
       </>
       ) : (
