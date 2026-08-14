@@ -292,8 +292,17 @@ export function drawDataBlock(doc, items, y, height = 11) {
       fontSize -= 0.5
       doc.setFontSize(fontSize)
     }
+    // Recorte con puntos suspensivos. Tiene que quitar TRES caracteres y poner
+    // dos: así la cadena baja de largo en cada vuelta y el bucle termina.
+    //
+    // Antes quitaba dos y ponía dos, o sea que el largo no bajaba NUNCA. A la
+    // segunda vuelta el texto ya era idéntico al anterior y giraba para siempre,
+    // colgando la pestaña entera sin ningún error. Solo saltaba cuando un valor
+    // no cabía: con 8 columnas el ancho útil es de 14,75 mm y un "Próx. cambio"
+    // como "151.584 km · 14/11/2026" se pasa de largo. Por eso unas OT bajaban
+    // y otras no.
     while (doc.getTextWidth(val) > maxW && val.length > 4) {
-      val = val.slice(0, -2) + '..'
+      val = val.slice(0, -3) + '..'
     }
     doc.text(val, x + 4, y + 8.3)
   })
