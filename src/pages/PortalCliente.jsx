@@ -744,16 +744,20 @@ export default function PortalCliente() {
   return (
     <div className="portal-main">
       <style>{`
-        /* Entrada en CSS, no en JS: aunque el navegador esté ocupado o la pestaña
-           en segundo plano, el contenido termina visible solo. Todo está leído a los
-           400ms como mucho: 300ms de fundido y 100ms de retraso el más tardío.
-           (El primer hijo de .portal-main es este <style>, por eso el hero es el 2.º.) */
-        @keyframes pc-entra { from { opacity: 0; transform: translateY(10px) } to { opacity: 1; transform: none } }
+        /* Entrada en CSS, no en JS: antes el contenido nacía en opacity:0 y lo
+           revelaba un timeline de GSAP en cadena de 3-4s — si se interrumpía, el
+           cliente se quedaba mirando una tarjeta en blanco. Ahora son 300ms y el
+           reposo es visible pase lo que pase. */
+        /* La entrada NO toca la opacidad, solo desliza. Medido: una pestaña en
+           segundo plano congela las animaciones en el fotograma 0, y el navegador
+           pinta ESE fotograma — con opacidad 0 ahí, el contenido desaparece pase
+           lo que pase con el fill-mode. El cliente abre el link desde WhatsApp, se
+           cambia de app mientras carga y vuelve a una tarjeta en blanco. Animando
+           solo transform, lo peor que pasa es que quede 10px más abajo. */
+        @keyframes pc-entra { from { transform: translateY(10px) } to { transform: none } }
         .portal-main > .card,
         .portal-main > .portal-col,
-        .portal-main > .empty { animation: pc-entra .3s ease-out both }
-        .portal-main > *:nth-child(3) { animation-delay: .05s }
-        .portal-main > *:nth-child(n+4) { animation-delay: .1s }
+        .portal-main > .empty { animation: pc-entra .3s ease-out }
         @media (prefers-reduced-motion: reduce) {
           .portal-main > .card,
           .portal-main > .portal-col,
