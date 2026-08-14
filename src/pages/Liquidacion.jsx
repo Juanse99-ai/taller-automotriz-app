@@ -171,8 +171,14 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
   // automático a la cuenta del técnico con la referencia de la liquidación.
   const [cuentaMonto, setCuentaMonto] = useState('')
   const [cuentaSelIds, setCuentaSelIds] = useState({})
+  // Decisión EXPLÍCITA sobre el saldo pendiente del técnico: null | 'no' | 'todo' | 'otro'.
+  // Antes la deuda salía en rojo al lado del neto y descontarla era una casilla
+  // opcional: si no se marcaba, se le pagaba completo a alguien que debía, y
+  // nada avisaba. Ahora el pago no se habilita hasta responder.
+  const [decisionDeuda, setDecisionDeuda] = useState(null)
+  const [verOtrosAjustes, setVerOtrosAjustes] = useState(false)
   const [aporteForm, setAporteForm] = useState(null) // 'diario' | 'adelanto' | null (formulario en línea, a demanda)
-  useEffect(() => { setCuentaMonto(''); setCuentaSelIds({}); setAporteForm(null) }, [tecnicoSel])
+  useEffect(() => { setCuentaMonto(''); setCuentaSelIds({}); setAporteForm(null); setDecisionDeuda(null); setVerOtrosAjustes(false) }, [tecnicoSel])
   const [regCuenttiId, setRegCuenttiId] = useState(null) // id del pago que se está registrando en Cuentti
   const [metodoGasto, setMetodoGasto] = useState({}) // reg.id -> 'efectivo' | 'transferencia'
   const gastoRef = useRef(new Set()) // pagos con registro de gasto EN CURSO (anti doble-clic síncrono)
@@ -503,6 +509,18 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
   }, [tecTrabajos, seleccionados, compartidos, tecMovs, moMap, tecnicoSel, cuentaMonto, tecCuenta])
 
   const cantSeleccionados = Object.keys(seleccionados).filter(id => seleccionados[id]).length
+
+  // Descontar "todo" significa hasta donde alcance: el saldo, o el neto si es menor.
+  const topeDescuento = Math.max(0, Math.min(tecCuenta.saldo, totalSeleccion.comision - totalSeleccion.cargosMovsEf))
+  // Con saldo pendiente NO se puede pagar sin decidir qué hacer con él.
+  const faltaDecidirDeuda = tecCuenta.saldo > 0 && cantSeleccionados > 0 && !decisionDeuda
+  const elegirDeuda = (op) => {
+    setDecisionDeuda(op)
+    setCuentaSelIds({})
+    if (op === 'no') setCuentaMonto('')
+    else if (op === 'todo') setCuentaMonto(String(topeDescuento))
+    // 'otro' deja lo que haya y muestra los controles finos
+  }
 
   // Lo que REALMENTE sale de la caja. El botón y la confirmación mostraban el
   // neto teórico aunque escribieras un pago parcial: decían "Generar pago
@@ -900,6 +918,9 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
   // Abre el diálogo "revisar antes de pagar" (resumen) antes de comprometer el pago.
   const pedirPago = () => {
     if (cantSeleccionados === 0) { notify('Selecciona al menos un trabajo para liquidar', 'error'); return }
+    // Guardia real, no solo el botón deshabilitado: pagar completo a un técnico
+    // con saldo pendiente no puede pasar por olvido.
+    if (faltaDecidirDeuda) { notify(`${tecData?.tecnico?.nombre} tiene un saldo pendiente. Decide si se le descuenta antes de pagar.`, 'error'); return }
     const t = totalSeleccion
     const negativo = t.neto < 0
     // Lo que de verdad le entregas. Antes el diálogo mostraba SOLO el neto: si
@@ -1443,6 +1464,22 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
         .liq-empty h4{ font-size:15px; font-weight:700; color:var(--text); margin:0; }
         .liq-empty p{ font-size:13.5px; color:var(--text-3); max-width:340px; line-height:1.5; margin:0; }
         .liq-empty__note{ margin-top:14px; padding-top:14px; border-top:1px solid var(--border); width:100%; max-width:420px; font-size:12.5px; color:var(--text-3); display:flex; align-items:center; gap:8px; justify-content:center; }
+        /* Decisión sobre el saldo del técnico: no se puede pasar de largo. */
+        .liq-ask{ border:1px solid rgba(146,64,14,.28); background:var(--soft-amber); border-radius:12px;
+          padding:16px 18px; margin:22px 0 0; }
+        .liq-ask p{ margin:0 0 13px; font-size:15.5px; font-weight:600; color:var(--amber-700); line-height:1.45; }
+        .liq-ask__o{ display:flex; gap:8px; flex-wrap:wrap; }
+        .liq-ask__o button{ font:600 15px/1 inherit; padding:11px 16px; border-radius:9px; cursor:pointer;
+          background:var(--bg-raised); border:1px solid rgba(146,64,14,.3); color:var(--amber-700); }
+        .liq-ask__o button.on{ background:var(--amber-700); border-color:var(--amber-700); color:#fff; }
+        /* Lo poco frecuente no ocupa pantalla */
+        .liq-fold{ border-top:1px solid var(--border); margin-top:24px; padding-top:14px; }
+        .liq-fold summary{ cursor:pointer; font-weight:600; font-size:15.5px; color:var(--text-2);
+          list-style:none; display:flex; align-items:center; gap:9px; padding:4px 12px; }
+        .liq-fold summary::-webkit-details-marker{ display:none }
+        .liq-fold summary::before{ content:"▸"; color:var(--text-3); font-size:12px }
+        .liq-fold[open] summary::before{ content:"▾" }
+        .liq-fold__in{ padding-top:10px }
         /* Quién es el dueño de la OT en un compartido (segunda línea de la celda OT) */
         .c-asignado{ display:block; font-family:var(--sans); font-size:10.5px; font-weight:600; color:var(--text-3); margin-top:1px; letter-spacing:0; }
         /* Filtros del historial: una sola fila que envuelve, sin caja propia */
@@ -1860,13 +1897,78 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
               <div className="liq-line"><span>Mano de obra (sin IVA) · {cantSeleccionados} {cantSeleccionados === 1 ? 'OT' : 'OTs'}</span><span className="liq-line__v mono">{fmt(totalSeleccion.manoObra)}</span><span className="liq-slot" aria-hidden="true" /></div>
               <div className="liq-line"><span>Comisión ({COMISION.TOTAL * 100}%)</span><span className="liq-line__v mono" style={{ color: 'var(--green-700)', fontWeight: 700 }}>{fmt(totalSeleccion.comision)}</span><span className="liq-slot" aria-hidden="true" /></div>
 
-              {/* ===== AJUSTES — una sola lista: aportes, diario y deudas juntos ===== */}
-              <div className="liq-grp" style={{ margin: '20px 0 8px' }}>Ajustes de este pago</div>
-
-              {tecMovs.length === 0 && tecCuenta.deudas.length === 0 && tecCuenta.saldo === 0 && (
-                <p style={{ fontSize: 13, color: 'var(--text-3)', margin: 0, padding: '0 12px' }}>Sin ajustes: se paga la comisión completa.</p>
+              {/* Los aportes ya cargados van en el recibo, no en una lista aparte:
+                 son parte de la cuenta, no una decisión pendiente. */}
+              {totalSeleccion.cargosMovsEf !== 0 && (
+                <div className="liq-line"><span>Aportes y descuentos</span><span className="liq-line__v mono" style={{ color: 'var(--amber-700)', fontWeight: 700 }}>− {fmt(totalSeleccion.cargosMovsEf)}</span><span className="liq-slot" aria-hidden="true" /></div>
+              )}
+              {totalSeleccion.descuentoCuenta > 0 && (
+                <div className="liq-line"><span>Abono a su saldo pendiente</span><span className="liq-line__v mono" style={{ color: 'var(--amber-700)', fontWeight: 700 }}>− {fmt(totalSeleccion.descuentoCuenta)}</span><span className="liq-slot" aria-hidden="true" /></div>
+              )}
+              {totalSeleccion.sumaCuenta > 0 && (
+                <div className="liq-line"><span>Saldo a su favor</span><span className="liq-line__v mono" style={{ color: 'var(--green-700)', fontWeight: 700 }}>+ {fmt(totalSeleccion.sumaCuenta)}</span><span className="liq-slot" aria-hidden="true" /></div>
               )}
 
+              {/* DECISIÓN sobre el saldo: bloquea el pago hasta responder. */}
+              {tecCuenta.saldo > 0 && (
+                <div className="liq-ask">
+                  <p>{tecData.tecnico.nombre} tiene un saldo pendiente de <strong className="mono">{fmt(tecCuenta.saldo)}</strong>. ¿Se descuenta de este pago?</p>
+                  <div className="liq-ask__o">
+                    <button type="button" className={decisionDeuda === 'no' ? 'on' : ''} onClick={() => elegirDeuda('no')}>No descontar</button>
+                    <button type="button" className={decisionDeuda === 'todo' ? 'on' : ''} onClick={() => elegirDeuda('todo')}>Descontar {fmt(topeDescuento)}</button>
+                    <button type="button" className={decisionDeuda === 'otro' ? 'on' : ''} onClick={() => elegirDeuda('otro')}>Otro monto</button>
+                  </div>
+                  {decisionDeuda === 'otro' && (
+                    <div style={{ marginTop: 14, paddingTop: 14, borderTop: '1px solid rgba(146,64,14,.18)' }}>
+                      {tecCuenta.deudas.map(m => {
+                        const marcada = !!cuentaSelIds[m.id]
+                        return (
+                          <label key={m.id} className={`liq-aj${marcada ? ' on' : ''}`} style={{ cursor: 'pointer' }}>
+                            <span className="liq-aj__txt">
+                              <strong>Préstamo</strong>
+                              <span style={{ color: 'var(--text-3)' }}> · {fechaCorta(m.fecha)}{m.nota ? ` · ${m.nota}` : ''}</span>
+                            </span>
+                            <span className="liq-aj__val mono" style={{ color: marcada ? 'var(--amber-700)' : 'var(--text-3)' }}>
+                              {marcada ? '− ' : ''}{fmt(m.restante)}
+                              {m.restante !== Math.round(parseFloat(m.monto) || 0) && (
+                                <span style={{ fontWeight: 500, fontSize: 11.5, color: 'var(--text-4)' }}> de {fmt(m.monto)}</span>
+                              )}
+                            </span>
+                            <span style={{ width: 28, display: 'inline-flex', justifyContent: 'center', flexShrink: 0 }}>
+                              <input type="checkbox" checked={marcada} onChange={() => toggleCuentaSel(m.id)} style={{ width: 17, height: 17, accentColor: 'var(--primary)', cursor: 'pointer' }} />
+                            </span>
+                          </label>
+                        )
+                      })}
+                      <div className="field" style={{ maxWidth: 220, margin: '12px 0 0' }}>
+                        <label>O escribir el monto</label>
+                        <MoneyInput value={cuentaMonto} onChange={(v) => { setCuentaMonto(v); setCuentaSelIds({}) }} placeholder="0" />
+                      </div>
+                      <p style={{ fontSize: 12.5, color: 'var(--text-3)', margin: '8px 0 0' }}>
+                        Se aplican <strong className="mono">{fmt(totalSeleccion.descuentoCuenta)}</strong> (hasta el saldo y lo que alcance el neto).
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* El taller le debe: sumar a este pago (caso contrario, sin bloqueo). */}
+              {tecCuenta.saldo < 0 && (
+                <div style={{ marginTop: 18, padding: '0 12px' }}>
+                  <div className="field" style={{ maxWidth: 220, margin: 0 }}>
+                    <label>Sumar a este pago</label>
+                    <MoneyInput value={cuentaMonto} onChange={setCuentaMonto} placeholder="0" />
+                  </div>
+                  <p style={{ fontSize: 12.5, color: 'var(--text-3)', margin: '8px 0 0', lineHeight: 1.45 }}>
+                    El taller le debe {fmt(-tecCuenta.saldo)}. Lo que sumes queda registrado en su cuenta con la referencia del pago.
+                  </p>
+                </div>
+              )}
+
+              {/* Todo lo demás: raro, plegado. */}
+              <details className="liq-fold" open={verOtrosAjustes} onToggle={e => setVerOtrosAjustes(e.currentTarget.open)}>
+                <summary>Otros ajustes{tecMovs.length ? ` · ${tecMovs.length} cargado${tecMovs.length === 1 ? '' : 's'}` : ''}</summary>
+                <div className="liq-fold__in">
               {/* Aportes y descuentos de este cierre */}
               {tecMovs.map(m => (
                 <div key={m.id} className="liq-aj">
@@ -1934,6 +2036,7 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
                   </p>
                 </div>
               )}
+
 
               {/* Agregar un ajuste nuevo: el formulario aparece SOLO al elegir cuál.
                  Usa .btn-outline del sistema (antes era un borde punteado propio
@@ -2020,20 +2123,19 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
                 </div>
               )}
 
-              {/* NETO — justo debajo de los ajustes que lo formaron. Ya estamos
-                 dentro de la rama "hay selección" del ternario de arriba: el
-                 estado vacío se resuelve al inicio del card__b. */}
+                </div>
+              </details>
+
+              {/* NETO. Los renglones que lo forman ya están arriba, en el recibo:
+                 antes se repetía "Aportes / descuentos" aquí abajo otra vez. */}
                 <div style={{ marginTop: 24, marginBottom: 24 }}>
-                  {totalSeleccion.cargosEfectivos !== 0 && (
-                    <div className="liq-line"><span>Aportes / descuentos</span><span className="liq-line__v mono" style={{ color: 'var(--amber-700)', fontWeight: 700 }}>{totalSeleccion.cargosEfectivos >= 0 ? '− ' : '+ '}{fmt(Math.abs(totalSeleccion.cargosEfectivos))}</span><span className="liq-slot" aria-hidden="true" /></div>
-                  )}
                   <div className="liq-neto__tot">
                     <span className="l">Neto a pagar</span>
                     <span className="v mono" style={{ color: totalSeleccion.neto >= 0 ? 'var(--green-700)' : 'var(--red-700)' }}>{fmt(totalSeleccion.neto)}</span>
                     <span className="liq-slot" aria-hidden="true" />
                   </div>
                 </div>
-                {totalSeleccion.cargos > 0 && (
+                {false && (
                   <div style={{ padding: '9px 13px', background: 'rgba(245,158,11,.07)', border: '1px solid rgba(245,158,11,.25)', borderRadius: 9, fontSize: 12.5, color: 'var(--text-2)', marginBottom: 14 }}>
                     {totalSeleccion.cargos !== totalSeleccion.cargosEfectivos ? (
                       <>Cargos <strong>{fmt(totalSeleccion.cargos)}</strong> — descuento real <strong>{fmt(totalSeleccion.cargosEfectivos)}</strong> (el diario se comparte {APORTE_ADMIN_SPLIT * 100}/{100 - APORTE_ADMIN_SPLIT * 100}; el resto completo{totalSeleccion.descuentoCuenta > 0 ? <>, incluye <strong className="mono">{fmt(totalSeleccion.descuentoCuenta)}</strong> de su cuenta</> : null}). Neto = comisión − {fmt(totalSeleccion.cargosEfectivos)}.</>
@@ -2112,8 +2214,14 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
                 <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
                   <Button variant="outline" onClick={exportPdfPago}>Exportar PDF</Button>
                   {/* El monto del botón es lo que ENTREGAS, no el neto teórico. */}
-                  <Button variant="primary" disabled={connectionError} onClick={pedirPago}>
-                    {connectionError ? 'Sin conexión' : `Generar pago · ${fmt(montoEntregado)}`}
+                  <Button variant="primary" disabled={connectionError || faltaDecidirDeuda} onClick={pedirPago}>
+                    {connectionError ? 'Sin conexión'
+                      : faltaDecidirDeuda ? 'Falta decidir el saldo'
+                      /* Si toda la comisión se fue al saldo, la acción NO es pagarle:
+                         "Generar pago · $0" no significa nada para quien lo lee. */
+                      : (montoEntregado === 0 && totalSeleccion.descuentoCuenta > 0)
+                        ? `Aplicar ${fmt(totalSeleccion.descuentoCuenta)} a su saldo`
+                        : `Generar pago · ${fmt(montoEntregado)}`}
                   </Button>
                 </div>
               </>
