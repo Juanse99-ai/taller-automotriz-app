@@ -561,29 +561,13 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
         </div>
       </div>
 
-      {/* Cifras de la vista: franja, no cuatro tarjetas iguales (abrían con cuatro
-          ceros gigantes que parecían pérdida de datos). */}
-      <div className="statline">
-        <div className="statline__i">
-          <span className="eyebrow">En vista</span>
-          <span className={`statline__v${stats.total === 0 ? ' is-zero' : ''}`}>{stats.total}</span>
-        </div>
-        <div className="statline__i">
-          <span className="eyebrow">Completados</span>
-          <span className={`statline__v${stats.comp === 0 ? ' is-zero' : ''}`}>{stats.comp}</span>
-        </div>
-        <div className="statline__i">
-          <span className="eyebrow">Pendientes</span>
-          <span className={`statline__v${stats.pend === 0 ? ' is-zero' : ''}`}>{stats.pend}</span>
-        </div>
-        <div className="statline__i">
-          <span className="eyebrow">En progreso</span>
-          <span className={`statline__v${stats.prog === 0 ? ' is-zero' : ''}`}>{stats.prog}</span>
-        </div>
-      </div>
+      {/* Las pestañas de estado YA traen el conteo de cada una, asi que la franja
+          de cuatro cifras que habia aqui encima decia lo mismo dos veces — y abria
+          con cuatro ceros gigantes que parecian perdida de datos. Se quito.
 
-      {/* Tabs + search/filter bar */}
-      <div className="tabs" style={{ marginBottom: 12 }}>
+          Los filtros pasan de TRES filas apiladas (estado / fecha / buscador) a
+          una sola: antes habia que atravesar tres barras antes de ver un dato. */}
+      <div className="tabs" style={{ marginBottom: 10 }}>
         {statesTabs.map(([key, label]) => (
           <button key={key} className={filtroEstado === key ? 'on' : ''} onClick={() => setFiltroEstado(key)}>
             {label}{conteos[key] ? <span className="tab-count">{conteos[key]}</span> : null}
@@ -591,33 +575,27 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
         ))}
       </div>
 
-      <div className="card" style={{ padding: '12px 16px', marginBottom: 14 }}>
+      <div className="trab-filtros">
         {vista !== 'kanban' && (
-          <div className="segctl" style={{ marginBottom: 10 }}>
+          <div className="segctl" style={{ flexShrink: 0 }}>
             {[['hoy', 'Hoy'], ['semana', 'Semana'], ['mes', 'Mes'], ['todas', 'Todas']].map(([k, l]) => (
               <button key={k} type="button" className={filtroFecha === k ? 'on' : ''} onClick={() => setFiltroFecha(k)}>{l}</button>
             ))}
           </div>
         )}
-        <div className="form-row" style={{ marginBottom: 0 }}>
-          <div className="form-group" style={{ marginBottom: 0, flex: 2 }}>
-            <input className="form-input" placeholder="Buscar placa, cliente, OT..." value={filtroBusqueda}
-              onChange={e => setFiltroBusqueda(e.target.value)} style={{ fontSize: 13 }} />
-          </div>
-          <div className="form-group" style={{ marginBottom: 0 }}>
-            <select className="form-select" value={filtroTecnico} onChange={e => setFiltroTecnico(e.target.value)} style={{ fontSize: 13 }}>
-              <option value="todos">Todos los técnicos</option>
-              {TECNICOS.map(t => <option key={t.id} value={t.id}>{t.nombre}{t.activo === false ? ' (inactivo)' : ''}</option>)}
-            </select>
-          </div>
-          {filtroTecnico !== 'todos' && filtered.length > 0 && (
-            <Button variant="outline" size="sm" title="Un PDF con la ficha de cada OT de este técnico (sin precios)"
-              onClick={() => {
-                const nom = (TECNICOS.find(x => String(x.id) === filtroTecnico)?.nombre || 'tecnico').split(' ')[0]
-                exportarFichasTecnico(filtered, tecNombre, `fichas_${nom}.pdf`)
-              }}>Imprimir fichas ({filtered.length})</Button>
-          )}
-        </div>
+        <input className="input trab-filtros__q" placeholder="Buscar placa, cliente, OT..." value={filtroBusqueda}
+          onChange={e => setFiltroBusqueda(e.target.value)} />
+        <select className="input trab-filtros__tec" value={filtroTecnico} onChange={e => setFiltroTecnico(e.target.value)}>
+          <option value="todos">Todos los tecnicos</option>
+          {TECNICOS.map(t => <option key={t.id} value={t.id}>{t.nombre}{t.activo === false ? ' (inactivo)' : ''}</option>)}
+        </select>
+        {filtroTecnico !== 'todos' && filtered.length > 0 && (
+          <Button variant="outline" size="sm" title="Un PDF con la ficha de cada OT de este tecnico (sin precios)"
+            onClick={() => {
+              const nom = (TECNICOS.find(x => String(x.id) === filtroTecnico)?.nombre || 'tecnico').split(' ')[0]
+              exportarFichasTecnico(filtered, tecNombre, `fichas_${nom}.pdf`)
+            }}>Imprimir fichas ({filtered.length})</Button>
+        )}
       </div>
 
       {/* Vista Kanban */}
@@ -699,7 +677,7 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
                     <span className="r1">
                       <span className="ot">{t.otCodigo || '—'}</span>
                       <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                        {estancado && <Badge tone="d" style={{ fontSize: 9, padding: '1px 6px' }}>{dias}d</Badge>}
+                        {estancado && <Badge tone="d" style={{ fontSize: 12, padding: '1px 6px' }}>{dias}d</Badge>}
                         <span className={`badge ${estadoBadge(t.estado)}`}>{t.estado}</span>
                       </span>
                     </span>
@@ -737,7 +715,7 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
                       <div className="ck-d-cell" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
                         <div style={{ minWidth: 0 }}>
                           <div style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{selTrabajo.cliente || 'Cliente'}</div>
-                          <div style={{ fontSize: 11.5, color: 'var(--text-3)' }}>{fmtTelefono(selTrabajo.telefonoCliente)}</div>
+                          <div style={{ fontSize: 12.5, color: 'var(--text-3)' }}>{fmtTelefono(selTrabajo.telefonoCliente)}</div>
                         </div>
                         <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
                           <a href={`tel:${tel}`} className="btn btn-outline btn-sm btn-icon" aria-label="Llamar" title="Llamar" style={{ height: 32, width: 32 }}><IconPhone /></a>
@@ -754,7 +732,7 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
 
                   {selTrabajo.estado !== ESTADOS.COMPLETADO && selTrabajo.estado !== ESTADOS.CANCELADO && (
                     <div>
-                      <div style={{ fontSize: 10, color: 'var(--text-4)', textTransform: 'uppercase', letterSpacing: '.4px', marginBottom: 6 }}>Cambiar estado</div>
+                      <div style={{ fontSize: 12, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '.4px', marginBottom: 6 }}>Cambiar estado</div>
                       <div className="segctl segctl--full">
                         {[
                           [ESTADOS.PENDIENTE, 'Pendiente'],
@@ -839,16 +817,16 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
                       <td className="c-muted" data-label="Vehículo">{[t.marca, t.modelo].filter(Boolean).join(' ') || '—'}</td>
                       <td data-label="Técnico">
                         <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-                          <span className={`av av-${(parseInt(t.tecnicoId) || 1) % 5 + 1}`} style={{ width: 26, height: 26, fontSize: 10 }}>{tecIniciales(t.tecnicoId)}</span>
+                          <span className={`av av-${(parseInt(t.tecnicoId) || 1) % 5 + 1}`} style={{ width: 26, height: 26, fontSize: 12 }}>{tecIniciales(t.tecnicoId)}</span>
                           <span style={{ fontSize: 12.5 }}>{tecNombre(t.tecnicoId)}</span>
                         </div>
                       </td>
                       <td data-label="Estado">
                         <span className={`badge ${bc}`}>{t.estado}</span>
-                        {estancado && <Badge tone="d" style={{ marginLeft: 4, fontSize: 10 }}>{diasSinMover}d</Badge>}
+                        {estancado && <Badge tone="d" style={{ marginLeft: 4, fontSize: 12 }}>{diasSinMover}d</Badge>}
                         {/* En celular esta tabla ES la ficha: sin este badge no hay
                             dónde ver si a la OT ya se le cobró. */}
-                        {(() => { const c = estadoCobro(t); return c ? <Badge tone={c.tone} style={{ marginLeft: 4, fontSize: 10 }}>{c.label}</Badge> : null })()}
+                        {(() => { const c = estadoCobro(t); return c ? <Badge tone={c.tone} style={{ marginLeft: 4, fontSize: 12 }}>{c.label}</Badge> : null })()}
                       </td>
                       <td className="c-mono c-right" data-label="Total" style={{ fontWeight: 700 }}>{fmt(t.total)}</td>
                       <td className="c-mono c-muted" data-label="Fecha" style={{ fontSize: 12 }}>{fmtDate(t.fecha)}</td>
@@ -916,7 +894,7 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, border: '1px solid var(--border)', borderRadius: 10, padding: '10px 12px', background: 'var(--bg-subtle)' }}>
                     <div style={{ minWidth: 0 }}>
                       <div style={{ fontSize: 12.5, fontWeight: 600 }}>{t.cliente || 'Cliente'}</div>
-                      <div style={{ fontSize: 11.5, color: 'var(--text-3)' }}>{fmtTelefono(t.telefonoCliente)}</div>
+                      <div style={{ fontSize: 12.5, color: 'var(--text-3)' }}>{fmtTelefono(t.telefonoCliente)}</div>
                     </div>
                     <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
                       <a href={`tel:${tel}`} className="btn btn-outline btn-sm btn-icon" aria-label="Llamar" title="Llamar" style={{ height: 32, width: 32 }}><IconPhone /></a>
@@ -925,12 +903,12 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
                   </div>
                 )}
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                  <div style={{ border: '1px solid var(--border)', borderRadius: 10, padding: '9px 12px' }}><div style={{ fontSize: 10, color: 'var(--text-4)', textTransform: 'uppercase', letterSpacing: '.4px' }}>Técnico</div><div style={{ fontSize: 13, fontWeight: 600 }}>{tecNombre(t.tecnicoId)}</div></div>
-                  <div style={{ border: '1px solid var(--border)', borderRadius: 10, padding: '9px 12px' }}><div style={{ fontSize: 10, color: 'var(--text-4)', textTransform: 'uppercase', letterSpacing: '.4px' }}>Total</div><div style={{ fontSize: 13, fontWeight: 600 }}>{fmt(t.total)}</div></div>
+                  <div style={{ border: '1px solid var(--border)', borderRadius: 10, padding: '9px 12px' }}><div style={{ fontSize: 12, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '.4px' }}>Técnico</div><div style={{ fontSize: 13, fontWeight: 600 }}>{tecNombre(t.tecnicoId)}</div></div>
+                  <div style={{ border: '1px solid var(--border)', borderRadius: 10, padding: '9px 12px' }}><div style={{ fontSize: 12, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '.4px' }}>Total</div><div style={{ fontSize: 13, fontWeight: 600 }}>{fmt(t.total)}</div></div>
                 </div>
                 {(t.items || []).length > 0 && (
                   <div style={{ border: '1px solid var(--border)', borderRadius: 10, padding: '9px 12px' }}>
-                    <div style={{ fontSize: 10, color: 'var(--text-4)', textTransform: 'uppercase', letterSpacing: '.4px', marginBottom: 6 }}>Ítems</div>
+                    <div style={{ fontSize: 12, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '.4px', marginBottom: 6 }}>Ítems</div>
                     {(t.items || []).slice(0, 8).map((it, i) => (
                       <div key={i} style={{ display: 'flex', justifyContent: 'space-between', gap: 10, fontSize: 12.5, padding: '3px 0' }}>
                         <span style={{ color: 'var(--text-2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{it.nombre || 'Ítem'}</span>
@@ -941,7 +919,7 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
                 )}
                 {/* Firma del cliente (recibido) */}
                 <div style={{ border: '1px solid var(--border)', borderRadius: 10, padding: '10px 12px' }}>
-                  <div style={{ fontSize: 10, color: 'var(--text-4)', textTransform: 'uppercase', letterSpacing: '.4px', marginBottom: 8 }}>Firma del cliente (recibido)</div>
+                  <div style={{ fontSize: 12, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '.4px', marginBottom: 8 }}>Firma del cliente (recibido)</div>
                   {firmando ? (
                     <SignaturePad initial={t.firmaCliente}
                       onSave={async (dataUrl) => { await actualizarTrabajo(t.id, { firmaCliente: dataUrl }); setFirmando(false); notify('Firma guardada', 'success') }}

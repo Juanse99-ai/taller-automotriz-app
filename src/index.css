@@ -1333,3 +1333,12 @@ tbody tr:active{background:var(--fill-2)}
   .btn{padding:0 16px;font-size:var(--fs-md)}
   .tbl tbody td{padding-top:7px;padding-bottom:7px}
 }
+
+/* === Trabajos: una sola barra de filtros ===
+   Antes eran tres filas apiladas y ocupaban 150px antes del primer dato. Aquí
+   el buscador se estira y el resto se queda en su tamaño. En pantalla angosta
+   envuelve sola, sin media query: el buscador toma la línea entera. */
+.trab-filtros{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.trab-filtros__q{flex:1 1 220px;min-width:0}
+.trab-filtros__tec{flex:0 1 200px}
+.trab-filtros .input{height:var(--ctl-h);font-size:var(--fs-base)}
