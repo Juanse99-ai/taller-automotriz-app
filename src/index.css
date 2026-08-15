@@ -66,17 +66,25 @@
   --purple-500:#7c3aed;
   --purple-700:#6d28d9;
 
-  /* semantic (light mode) — fondo agrupado iOS */
-  --bg:#f2f2f7;
-  --bg-raised:#ffffff;
-  --bg-subtle:#f7f7fa;
-  --bg-side:#0d1b35;
-  --border:#e3e3e8;
-  --border-strong:#cfcfd6;
-  --text:#0f172a;
-  --text-2:#334155;
-  --text-3:#475569;
-  --text-4:#64748b;
+  /* === semánticos (modo claro) ===
+     Gris FRÍO, todo teñido hacia el mismo tono del acento (matiz 262). Sin gris
+     neutro puro y sin blanco puro: una pantalla donde el único color saturado es
+     el estado de la plata (verde/ámbar/rojo). El acento no compite.
+
+     Escena que decide el modo claro por defecto: Juan en el PC del mostrador,
+     puerta del taller abierta, sol de Barranquilla entrando y reflejo en la
+     pantalla. Con esa luz manda el contraste alto, texto oscuro sobre claro.
+     El modo oscuro sigue existiendo para quien lo prefiera. */
+  --bg:oklch(0.972 0.003 262);
+  --bg-raised:oklch(0.995 0.0015 262);
+  --bg-subtle:oklch(0.958 0.004 262);
+  --bg-side:oklch(0.255 0.021 262);
+  --border:oklch(0.898 0.006 262);
+  --border-strong:oklch(0.815 0.009 262);
+  --text:oklch(0.255 0.017 262);
+  --text-2:oklch(0.380 0.013 262);
+  --text-3:oklch(0.495 0.011 262);
+  --text-4:oklch(0.585 0.010 262);
 
   /* materiales iOS: hairline, relleno gris de controles, barra translúcida */
   --separator:rgba(60,60,67,.29);
@@ -91,15 +99,40 @@
 
   /* Azul como color de contraste (referencia Firecrawl, que usa naranja en este
      rol). El navy queda para el logo/marca; el acento vivo de la UI es este. */
-  --primary:#2563eb;
-  --primary-hover:#1d4ed8;
-  --accent:#2563eb;
-  --accent-soft:rgba(37,99,235,.10);  /* tinte: item activo, chips */
-  --accent-soft-2:rgba(37,99,235,.16);
+  /* UN acento, y se usa con avaricia: acción primaria y elemento activo. Nada
+     más. Es azul tinta, no el #2563eb de siempre — ese es el azul por defecto de
+     Tailwind y se reconoce a un kilómetro. Este va más oscuro y con menos croma
+     para que RETROCEDA: en una pantalla de plata, lo único que debe saltar es un
+     saldo en rojo, no un botón. */
+  --primary:oklch(0.470 0.115 262);
+  --primary-hover:oklch(0.405 0.120 262);
+  --accent:var(--primary);
+  --accent-soft:oklch(0.470 0.115 262 / .09);   /* tinte: item activo, chips */
+  --accent-soft-2:oklch(0.470 0.115 262 / .15);
   --danger:var(--red-600);
   --success:var(--green-600);
 
-  --radius-sm:6px;--radius:10px;--radius-lg:14px;--radius-xl:18px;
+  /* Radios chicos: caja de herramienta, no tarjeta de marketing. Varían — más
+     cerrado adentro que afuera — en vez del mismo radio en todo. */
+  --radius-sm:3px;--radius:5px;--radius-lg:7px;--radius-xl:10px;
+
+  /* === DENSIDAD ===
+     Alto de fila y de control. En escritorio entran ~30 trabajos sin scroll;
+     en táctil suben a 44px (ver el bloque @media de abajo). */
+  --row-h:34px;      /* fila de tabla */
+  --ctl-h:32px;      /* botón, input, select */
+  --ctl-h-lg:38px;   /* acción primaria de una pantalla */
+
+  /* === ESCALA TIPOGRÁFICA === fija, razón ~1.15. Nada de clamp: el usuario
+     mira siempre al mismo DPI y un título que encoge dentro de un panel se ve
+     peor, no mejor. Suelo en 12px: por debajo el usuario no lo lee. */
+  --fs-xs:12px;   /* etiqueta de columna, metadato */
+  --fs-sm:13px;   /* texto secundario en fila */
+  --fs-base:14px; /* cuerpo de tabla y formularios */
+  --fs-md:15px;
+  --fs-lg:17px;   /* título de sección */
+  --fs-xl:20px;
+  --fs-2xl:24px;  /* título de pantalla */
 
   --shadow-sm:0 1px 2px rgba(15,23,42,.06),0 1px 1px rgba(15,23,42,.03);
   --shadow:0 2px 6px rgba(15,23,42,.08),0 1px 2px rgba(15,23,42,.04);
@@ -407,7 +440,7 @@ input,select,textarea{font-family:inherit;font-size:14px;color:inherit}
 .pagehd .actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 
 /* button */
-.btn{position:relative;display:inline-flex;align-items:center;justify-content:center;gap:8px;height:44px;padding:0 20px;border-radius:999px;border:1px solid transparent;font-family:var(--font);font-size:15px;font-weight:600;white-space:nowrap;cursor:pointer;transition:background .16s,border-color .16s,transform 140ms var(--ease-out),box-shadow .16s,filter .16s}
+.btn{position:relative;display:inline-flex;align-items:center;justify-content:center;gap:6px;height:var(--ctl-h);padding:0 12px;border-radius:var(--radius);border:1px solid transparent;font-family:var(--font);font-size:var(--fs-base);font-weight:550;white-space:nowrap;cursor:pointer;transition:background .16s,border-color .16s,box-shadow .16s,filter .16s}
 .btn:active{transform:scale(.96);filter:brightness(.95)}
 .btn:hover:not(:active){transform:translateY(-1px)}
 .btn:focus-visible{outline:2px solid var(--primary);outline-offset:2px}
@@ -469,9 +502,9 @@ a,button,[role=button],.navlink,.mob-tab,.icobtn,.tabs button{-webkit-tap-highli
 
 /* card — plana con borde fino, sin sombra (referencia Firecrawl): la separación
    la hace el borde, no la elevación. */
-.card{background:var(--bg-raised);border:1px solid var(--border);border-radius:14px;box-shadow:none}
-.card__h{display:flex;align-items:center;justify-content:space-between;padding:15px 18px 13px;border-bottom:1px solid var(--border);gap:10px}
-.card__h h3{margin:0;font-size:15.5px;font-weight:800;letter-spacing:-.2px;display:flex;align-items:center;gap:9px;color:var(--text)}
+.card{background:var(--bg-raised);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:none}
+.card__h{display:flex;align-items:center;justify-content:space-between;padding:9px 14px;border-bottom:1px solid var(--border);gap:10px}
+.card__h h3{margin:0;font-size:var(--fs-base);font-weight:650;letter-spacing:-.01em;display:flex;align-items:center;gap:8px;color:var(--text)}
 .card-title .count,
 .card__h .count{display:inline-block;flex-shrink:0;width:auto;height:auto;font-family:var(--mono);font-size:11px;font-weight:700;color:var(--text-3);background:var(--bg-subtle);padding:2px 8px;border-radius:999px;border:1px solid var(--border);white-space:nowrap;line-height:1.4}
 .card__h .act{display:flex;gap:6px;align-items:center}
@@ -491,7 +524,7 @@ a,button,[role=button],.navlink,.mob-tab,.icobtn,.tabs button{-webkit-tap-highli
 .eyebrow--warn{color:var(--amber-700)}
 .eyebrow--soft{color:var(--text-4)}
 
-.badge{display:inline-flex;align-items:center;padding:3px 10px;border-radius:999px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.4px;white-space:nowrap}
+.badge{display:inline-flex;align-items:center;padding:1px 7px;border-radius:var(--radius-sm);font-size:var(--fs-xs);font-weight:600;text-transform:none;letter-spacing:0;white-space:nowrap;line-height:1.6}
 .badge-s{background:var(--green-100);color:#166534}
 .badge-w{background:var(--amber-100);color:#92400e}
 .badge-i{background:#dbeafe;color:#1e40af}
@@ -540,11 +573,11 @@ a,button,[role=button],.navlink,.mob-tab,.icobtn,.tabs button{-webkit-tap-highli
 
 /* table (prototipo class) — pulida al estilo iOS: encabezado sin bloque gris,
    separadores hairline (0.5px) y filas que responden al toque. */
-.tbl{width:100%;border-collapse:collapse;font-size:14px}
-.tbl thead th{text-align:left;padding:9px 16px;background:transparent;font-size:12px;font-weight:600;color:var(--text-3);text-transform:none;letter-spacing:0;border-bottom:.5px solid var(--separator);white-space:nowrap}
+.tbl{width:100%;border-collapse:collapse;font-size:var(--fs-base)}
+.tbl thead th{text-align:left;padding:6px 14px;background:transparent;font-size:var(--fs-xs);font-weight:600;color:var(--text-3);text-transform:none;letter-spacing:0;border-bottom:1px solid var(--border-strong);white-space:nowrap}
 /* line-height 1.4 (no el 1.55 del body): en celdas densas, los nombres que
    envuelven a 2 líneas quedaban muy separados ("mucha sangría"). */
-.tbl tbody td{padding:11px 16px;line-height:1.4;border-bottom:.5px solid var(--separator);color:var(--text-2);vertical-align:middle}
+.tbl tbody td{height:var(--row-h);padding:0 14px;line-height:1.35;border-bottom:1px solid var(--border);color:var(--text-2);vertical-align:middle}
 .tbl tbody tr:hover{background:var(--fill)}
 .tbl tbody tr:active{background:var(--fill-2)}
 .tbl tbody tr:last-child td{border-bottom:none}
@@ -555,9 +588,9 @@ a,button,[role=button],.navlink,.mob-tab,.icobtn,.tabs button{-webkit-tap-highli
    la tabla es tarjetas y hay ancho de sobra.) */
 @media(min-width:601px){ .tbl [data-label="Fecha"],.tbl [data-label="OT"]{white-space:nowrap} }
 .tbl .c-name{font-weight:600;color:var(--text)}
-.tbl .c-muted{color:var(--text-3);font-size:12px}
+.tbl .c-muted{color:var(--text-3);font-size:var(--fs-xs)}
 .tbl .c-right{text-align:right}
-.tbl .c-mono{font-family:var(--mono);font-weight:600;font-variant-numeric:tabular-nums}
+.tbl .c-mono{font-family:var(--mono);font-weight:600;font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
 
 /* avatar */
 .av{width:32px;height:32px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-weight:800;font-size:11px;letter-spacing:.3px;flex-shrink:0}
@@ -1290,4 +1323,13 @@ tbody tr:active{background:var(--fill-2)}
   .sidebar.open .sidebar__nav > div{animation:none}
   .skeleton::after{animation:none}
   .rep-chevron,.rep-recoger-icon{transition:none}
+}
+
+/* === Táctil: la densidad de escritorio no aplica al dedo ===
+   Se detecta el puntero grueso (celular/tablet), no el ancho: un iPad en
+   horizontal es ancho y se sigue tocando con el dedo. */
+@media (pointer:coarse){
+  :root{ --ctl-h:44px; --ctl-h-lg:48px; --row-h:52px; }
+  .btn{padding:0 16px;font-size:var(--fs-md)}
+  .tbl tbody td{padding-top:7px;padding-bottom:7px}
 }
