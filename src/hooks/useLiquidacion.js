@@ -273,12 +273,24 @@ export function useLiquidacion() {
     })
   }, [])
 
-  // Quitar EXACTAMENTE estas claves, y solo esas. Lo usa la anulación de un
-  // pago: en un trabajo compartido hay que soltar únicamente la mitad del
-  // técnico que se anula (`id#tec`). Antes existía un desliquidarPorTrabajo que
-  // borraba TODAS las claves del trabajo y se llevaba por delante la mitad que
-  // el compañero ya había cobrado en otro pago; se eliminó al quitar el
-  // desplegable de "trabajos ya liquidados", su último usuario.
+  // Des-liquidar TODAS las claves de un trabajo (id plano + mitades `${id}#tec`).
+  // Cierra sobre `prev` (no sobre un array viejo), así solo borra lo de ESTE
+  // trabajo y no lo que otro dispositivo agregó.
+  const desliquidarPorTrabajo = useCallback((trabajoId) => {
+    const esDeEste = (x) => x === trabajoId || x.startsWith(`${trabajoId}#`)
+    // Fuera de la cola de pendientes: si no, el sync lo volvería a subir y el
+    // trabajo se "re-liquidaría" solo a los 60 segundos.
+    setLS(LIQ_PENDING_KEY, getLS(LIQ_PENDING_KEY, []).filter(x => !esDeEste(x)))
+    setLiquidados(prev => {
+      prev.filter(esDeEste).forEach(id => sbDeleteLiquidado(id))
+      return prev.filter(x => !esDeEste(x))
+    })
+  }, [])
+
+  // Quitar EXACTAMENTE estas claves. Lo usa la anulación de un pago: en un
+  // trabajo compartido hay que soltar solo la mitad del técnico que se anula
+  // (`id#tec`) — desliquidarPorTrabajo borra TODAS las claves del trabajo y se
+  // llevaría por delante la mitad que el compañero ya cobró en otro pago.
   const quitarLiquidados = useCallback((claves) => {
     if (!claves || claves.length === 0) return
     const set = new Set(claves)
@@ -289,12 +301,7 @@ export function useLiquidacion() {
     })
   }, [])
 
-  // `partnerId` opcional: marca compartido Y asigna compañero en UNA sola
-  // escritura. Llamar a toggleCompartido + setCompartidoPartner seguidos lanzaba
-  // dos upsert a la misma fila; si llegaban al revés, el partner se perdía y el
-  // compañero quedaba sin cobrar su mitad. Sin el argumento se comporta igual
-  // que antes (compartido sin compañero).
-  const toggleCompartido = useCallback((trabajoId, partnerId = null) => {
+  const toggleCompartido = useCallback((trabajoId) => {
     setCompartidos(prev => {
       const next = { ...prev }
       if (next[trabajoId]) {
@@ -303,11 +310,10 @@ export function useLiquidacion() {
         setLS(COMP_TOMBS_KEY, [...getLS(COMP_TOMBS_KEY, []).filter(t => t.id !== trabajoId), { id: trabajoId, ts: Date.now() }])
         deleteCompartido(trabajoId)
       } else {
-        const pid = parseInt(partnerId) || 0
-        next[trabajoId] = pid ? { partner: pid } : true
+        next[trabajoId] = true
         setLS(COMP_TOMBS_KEY, getLS(COMP_TOMBS_KEY, []).filter(t => t.id !== trabajoId))
-        setLS(COMP_PENDING_KEY, { ...getLS(COMP_PENDING_KEY, {}), [trabajoId]: pid })
-        upsertCompartido(trabajoId, pid || null)
+        setLS(COMP_PENDING_KEY, { ...getLS(COMP_PENDING_KEY, {}), [trabajoId]: 0 })
+        upsertCompartido(trabajoId)
       }
       return next
     })
@@ -358,7 +364,7 @@ export function useLiquidacion() {
     movimientos, liquidados, compartidos, historial,
     loading, connectionError,
     agregarMovimiento, eliminarMovimiento,
-    agregarLiquidados, quitarLiquidados, eliminarHistorial,
+    agregarLiquidados, desliquidarPorTrabajo, quitarLiquidados, eliminarHistorial,
     toggleCompartido, setCompartidoPartner,
     guardarHistorial, agregarHistorial,
     recargar: cargarDatos,

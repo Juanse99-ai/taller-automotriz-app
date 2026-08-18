@@ -66,25 +66,17 @@
   --purple-500:#7c3aed;
   --purple-700:#6d28d9;
 
-  /* === semánticos (modo claro) ===
-     Gris FRÍO, todo teñido hacia el mismo tono del acento (matiz 262). Sin gris
-     neutro puro y sin blanco puro: una pantalla donde el único color saturado es
-     el estado de la plata (verde/ámbar/rojo). El acento no compite.
-
-     Escena que decide el modo claro por defecto: Juan en el PC del mostrador,
-     puerta del taller abierta, sol de Barranquilla entrando y reflejo en la
-     pantalla. Con esa luz manda el contraste alto, texto oscuro sobre claro.
-     El modo oscuro sigue existiendo para quien lo prefiera. */
-  --bg:oklch(0.972 0.003 262);
-  --bg-raised:oklch(0.995 0.0015 262);
-  --bg-subtle:oklch(0.958 0.004 262);
-  --bg-side:oklch(0.255 0.021 262);
-  --border:oklch(0.898 0.006 262);
-  --border-strong:oklch(0.815 0.009 262);
-  --text:oklch(0.255 0.017 262);
-  --text-2:oklch(0.380 0.013 262);
-  --text-3:oklch(0.495 0.011 262);
-  --text-4:oklch(0.585 0.010 262);
+  /* semantic (light mode) — fondo agrupado iOS */
+  --bg:#f2f2f7;
+  --bg-raised:#ffffff;
+  --bg-subtle:#f7f7fa;
+  --bg-side:#0d1b35;
+  --border:#e3e3e8;
+  --border-strong:#cfcfd6;
+  --text:#0f172a;
+  --text-2:#334155;
+  --text-3:#475569;
+  --text-4:#64748b;
 
   /* materiales iOS: hairline, relleno gris de controles, barra translúcida */
   --separator:rgba(60,60,67,.29);
@@ -99,40 +91,15 @@
 
   /* Azul como color de contraste (referencia Firecrawl, que usa naranja en este
      rol). El navy queda para el logo/marca; el acento vivo de la UI es este. */
-  /* UN acento, y se usa con avaricia: acción primaria y elemento activo. Nada
-     más. Es azul tinta, no el #2563eb de siempre — ese es el azul por defecto de
-     Tailwind y se reconoce a un kilómetro. Este va más oscuro y con menos croma
-     para que RETROCEDA: en una pantalla de plata, lo único que debe saltar es un
-     saldo en rojo, no un botón. */
-  --primary:oklch(0.470 0.115 262);
-  --primary-hover:oklch(0.405 0.120 262);
-  --accent:var(--primary);
-  --accent-soft:oklch(0.470 0.115 262 / .09);   /* tinte: item activo, chips */
-  --accent-soft-2:oklch(0.470 0.115 262 / .15);
+  --primary:#2563eb;
+  --primary-hover:#1d4ed8;
+  --accent:#2563eb;
+  --accent-soft:rgba(37,99,235,.10);  /* tinte: item activo, chips */
+  --accent-soft-2:rgba(37,99,235,.16);
   --danger:var(--red-600);
   --success:var(--green-600);
 
-  /* Radios chicos: caja de herramienta, no tarjeta de marketing. Varían — más
-     cerrado adentro que afuera — en vez del mismo radio en todo. */
-  --radius-sm:3px;--radius:5px;--radius-lg:7px;--radius-xl:10px;
-
-  /* === DENSIDAD ===
-     Alto de fila y de control. En escritorio entran ~30 trabajos sin scroll;
-     en táctil suben a 44px (ver el bloque @media de abajo). */
-  --row-h:34px;      /* fila de tabla */
-  --ctl-h:32px;      /* botón, input, select */
-  --ctl-h-lg:38px;   /* acción primaria de una pantalla */
-
-  /* === ESCALA TIPOGRÁFICA === fija, razón ~1.15. Nada de clamp: el usuario
-     mira siempre al mismo DPI y un título que encoge dentro de un panel se ve
-     peor, no mejor. Suelo en 12px: por debajo el usuario no lo lee. */
-  --fs-xs:12px;   /* etiqueta de columna, metadato */
-  --fs-sm:13px;   /* texto secundario en fila */
-  --fs-base:14px; /* cuerpo de tabla y formularios */
-  --fs-md:15px;
-  --fs-lg:17px;   /* título de sección */
-  --fs-xl:20px;
-  --fs-2xl:24px;  /* título de pantalla */
+  --radius-sm:6px;--radius:10px;--radius-lg:14px;--radius-xl:18px;
 
   --shadow-sm:0 1px 2px rgba(15,23,42,.06),0 1px 1px rgba(15,23,42,.03);
   --shadow:0 2px 6px rgba(15,23,42,.08),0 1px 2px rgba(15,23,42,.04);
@@ -440,7 +407,7 @@ input,select,textarea{font-family:inherit;font-size:14px;color:inherit}
 .pagehd .actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 
 /* button */
-.btn{position:relative;display:inline-flex;align-items:center;justify-content:center;gap:6px;height:var(--ctl-h);padding:0 12px;border-radius:var(--radius);border:1px solid transparent;font-family:var(--font);font-size:var(--fs-base);font-weight:550;white-space:nowrap;cursor:pointer;transition:background .16s,border-color .16s,box-shadow .16s,filter .16s}
+.btn{position:relative;display:inline-flex;align-items:center;justify-content:center;gap:8px;height:44px;padding:0 20px;border-radius:999px;border:1px solid transparent;font-family:var(--font);font-size:15px;font-weight:600;white-space:nowrap;cursor:pointer;transition:background .16s,border-color .16s,transform 140ms var(--ease-out),box-shadow .16s,filter .16s}
 .btn:active{transform:scale(.96);filter:brightness(.95)}
 .btn:hover:not(:active){transform:translateY(-1px)}
 .btn:focus-visible{outline:2px solid var(--primary);outline-offset:2px}
@@ -502,9 +469,9 @@ a,button,[role=button],.navlink,.mob-tab,.icobtn,.tabs button{-webkit-tap-highli
 
 /* card — plana con borde fino, sin sombra (referencia Firecrawl): la separación
    la hace el borde, no la elevación. */
-.card{background:var(--bg-raised);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:none}
-.card__h{display:flex;align-items:center;justify-content:space-between;padding:9px 14px;border-bottom:1px solid var(--border);gap:10px}
-.card__h h3{margin:0;font-size:var(--fs-base);font-weight:650;letter-spacing:-.01em;display:flex;align-items:center;gap:8px;color:var(--text)}
+.card{background:var(--bg-raised);border:1px solid var(--border);border-radius:14px;box-shadow:none}
+.card__h{display:flex;align-items:center;justify-content:space-between;padding:15px 18px 13px;border-bottom:1px solid var(--border);gap:10px}
+.card__h h3{margin:0;font-size:15.5px;font-weight:800;letter-spacing:-.2px;display:flex;align-items:center;gap:9px;color:var(--text)}
 .card-title .count,
 .card__h .count{display:inline-block;flex-shrink:0;width:auto;height:auto;font-family:var(--mono);font-size:11px;font-weight:700;color:var(--text-3);background:var(--bg-subtle);padding:2px 8px;border-radius:999px;border:1px solid var(--border);white-space:nowrap;line-height:1.4}
 .card__h .act{display:flex;gap:6px;align-items:center}
@@ -524,7 +491,7 @@ a,button,[role=button],.navlink,.mob-tab,.icobtn,.tabs button{-webkit-tap-highli
 .eyebrow--warn{color:var(--amber-700)}
 .eyebrow--soft{color:var(--text-4)}
 
-.badge{display:inline-flex;align-items:center;padding:1px 7px;border-radius:var(--radius-sm);font-size:var(--fs-xs);font-weight:600;text-transform:none;letter-spacing:0;white-space:nowrap;line-height:1.6}
+.badge{display:inline-flex;align-items:center;padding:3px 10px;border-radius:999px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.4px;white-space:nowrap}
 .badge-s{background:var(--green-100);color:#166534}
 .badge-w{background:var(--amber-100);color:#92400e}
 .badge-i{background:#dbeafe;color:#1e40af}
@@ -573,11 +540,11 @@ a,button,[role=button],.navlink,.mob-tab,.icobtn,.tabs button{-webkit-tap-highli
 
 /* table (prototipo class) — pulida al estilo iOS: encabezado sin bloque gris,
    separadores hairline (0.5px) y filas que responden al toque. */
-.tbl{width:100%;border-collapse:collapse;font-size:var(--fs-base)}
-.tbl thead th{text-align:left;padding:6px 14px;background:transparent;font-size:var(--fs-xs);font-weight:600;color:var(--text-3);text-transform:none;letter-spacing:0;border-bottom:1px solid var(--border-strong);white-space:nowrap}
+.tbl{width:100%;border-collapse:collapse;font-size:14px}
+.tbl thead th{text-align:left;padding:9px 16px;background:transparent;font-size:12px;font-weight:600;color:var(--text-3);text-transform:none;letter-spacing:0;border-bottom:.5px solid var(--separator);white-space:nowrap}
 /* line-height 1.4 (no el 1.55 del body): en celdas densas, los nombres que
    envuelven a 2 líneas quedaban muy separados ("mucha sangría"). */
-.tbl tbody td{height:var(--row-h);padding:0 14px;line-height:1.35;border-bottom:1px solid var(--border);color:var(--text-2);vertical-align:middle}
+.tbl tbody td{padding:11px 16px;line-height:1.4;border-bottom:.5px solid var(--separator);color:var(--text-2);vertical-align:middle}
 .tbl tbody tr:hover{background:var(--fill)}
 .tbl tbody tr:active{background:var(--fill-2)}
 .tbl tbody tr:last-child td{border-bottom:none}
@@ -588,9 +555,9 @@ a,button,[role=button],.navlink,.mob-tab,.icobtn,.tabs button{-webkit-tap-highli
    la tabla es tarjetas y hay ancho de sobra.) */
 @media(min-width:601px){ .tbl [data-label="Fecha"],.tbl [data-label="OT"]{white-space:nowrap} }
 .tbl .c-name{font-weight:600;color:var(--text)}
-.tbl .c-muted{color:var(--text-3);font-size:var(--fs-xs)}
+.tbl .c-muted{color:var(--text-3);font-size:12px}
 .tbl .c-right{text-align:right}
-.tbl .c-mono{font-family:var(--mono);font-weight:600;font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
+.tbl .c-mono{font-family:var(--mono);font-weight:600;font-variant-numeric:tabular-nums}
 
 /* avatar */
 .av{width:32px;height:32px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-weight:800;font-size:11px;letter-spacing:.3px;flex-shrink:0}
@@ -753,26 +720,18 @@ textarea.input{min-height:88px;resize:vertical;padding-top:11px}
   /* min-width 900 (era 980): con el selector de compañero convertido en ficha,
      la columna Compartido ya no necesita 110px fijos. Los 980 desbordaban el
      contenedor (967px) en un portátil de 1280 y sacaban una barra de scroll. */
-  /* 6 columnas: check · OT · placa-o-cliente · fecha · mano de obra · comisión.
-     Antes eran 8 y necesitaba 900px de ancho mínimo: "Vehículo" y "Cliente" se
-     fundieron en una sola columna (el 59% de las OTs no tiene carro) y
-     "Compartido" bajó a la celda de la OT, que es a lo que pertenece. */
-  .tbl-liq{table-layout:fixed;min-width:720px}
+  .tbl-liq{table-layout:fixed;min-width:900px}
   .tbl-liq th:nth-child(1),.tbl-liq td:nth-child(1){width:44px}
-  .tbl-liq th:nth-child(2),.tbl-liq td:nth-child(2){width:20%}
-  .tbl-liq th:nth-child(3),.tbl-liq td:nth-child(3){width:30%}
-  .tbl-liq th:nth-child(4),.tbl-liq td:nth-child(4){width:11%}
-  .tbl-liq th:nth-child(5),.tbl-liq td:nth-child(5){width:19%}
-  .tbl-liq th:nth-child(6),.tbl-liq td:nth-child(6){width:18%;padding-right:20px}
-  /* La identidad trunca si es larga; OT y fecha nunca se parten. La celda de la
-     OT sí crece hacia abajo: lleva la marca de compartido en su segunda línea. */
-  .tbl-liq td:nth-child(3){white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .tbl-liq td:nth-child(2),.tbl-liq td:nth-child(4){white-space:nowrap}
-  /* La OT es .c-mono para las cifras tabulares, pero .tbl .c-mono alinea a la
-     derecha (es la regla de las columnas de dinero) y aquí eso despegaba el
-     código de su encabezado. La OT es una etiqueta, no un monto. */
-  .tbl-liq th:nth-child(2),.tbl-liq td:nth-child(2){text-align:left}
-  .tbl-liq td:nth-child(2){vertical-align:top;padding-top:11px}
+  .tbl-liq th:nth-child(2),.tbl-liq td:nth-child(2){width:12%}
+  .tbl-liq th:nth-child(3),.tbl-liq td:nth-child(3){width:11%}
+  .tbl-liq th:nth-child(4),.tbl-liq td:nth-child(4){width:9%}
+  .tbl-liq th:nth-child(5),.tbl-liq td:nth-child(5){width:29%}
+  .tbl-liq th:nth-child(6),.tbl-liq td:nth-child(6){width:12%}
+  .tbl-liq th:nth-child(7),.tbl-liq td:nth-child(7){width:14%}
+  .tbl-liq th:nth-child(8),.tbl-liq td:nth-child(8){width:13%;padding-right:20px}
+  /* Cliente trunca si es muy largo; OT, placa y fecha nunca se parten */
+  .tbl-liq td:nth-child(5){white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .tbl-liq td:nth-child(2),.tbl-liq td:nth-child(3),.tbl-liq td:nth-child(4){white-space:nowrap}
 }
 
 /* === Lista agrupada iOS (inset grouped, estilo Ajustes) ===
@@ -853,7 +812,7 @@ tbody tr:active{background:var(--fill-2)}
 /* Cockpit de Trabajos (desktop ≥1200px): lista compacta + panel de detalle */
 .trab-cockpit{display:flex;gap:16px;align-items:flex-start}
 .trab-cockpit__list{flex:1;min-width:0}
-.trab-cockpit__detail{flex:0 0 268px;min-width:0}
+.trab-cockpit__detail{flex:0 0 360px;min-width:0}
 .trab-cklist{max-height:calc(100vh - 250px);overflow-y:auto}
 .trab-ckrow{display:flex;flex-direction:column;gap:4px;width:100%;text-align:left;padding:11px 16px;border:none;border-bottom:1px solid var(--border);background:none;cursor:pointer;transition:background .12s}
 .trab-ckrow:hover{background:var(--bg-subtle)}
@@ -989,51 +948,15 @@ tbody tr:active{background:var(--fill-2)}
   .tbl.tbl-cards tbody td.td-actions{display:block;text-align:left;padding-top:8px;margin-top:4px;border-top:1px solid var(--border)}
   .tbl.tbl-cards tbody td.td-actions::before{display:none}
   .tbl.tbl-cards tbody td.td-actions>div{justify-content:flex-start!important;flex-wrap:wrap}
-  /* === Liquidación en celular: fila táctil de tres líneas ===
-     .tbl-cards convertía cada OT en una tarjeta de pares etiqueta/valor: una
-     sola OT ocupaba la pantalla entera, y un técnico con 4 OTs (el promedio de
-     este taller) obligaba a recorrer cuatro pantallas para marcar cuatro
-     casillas. Misma rejilla que .trab-movil:
-
-       línea 1   [✓] OT · ½ con quién  ...........  COMISIÓN
-       línea 2       placa o cliente  .............  MANO DE OBRA
-       línea 3       fecha
-
-     No se quita ningún campo: la fecha baja de rango en vez de desaparecer. */
-  .tbl.tbl-cards.liq-movil tbody tr{
-    display:grid; grid-template-columns:auto 1fr auto; gap:1px 10px;
-    padding:10px 12px; margin:0 0 6px; align-items:center;
-  }
-  /* height:auto es imprescindible: .tbl tbody td trae height:var(--row-h), que
-     en táctil vale 52px, y la rejilla daría tres filas de 52px. */
-  .tbl.tbl-cards.liq-movil tbody td{display:block;padding:0;text-align:left;
-    height:auto;line-height:1.45;min-width:0;overflow:hidden;
-    text-overflow:ellipsis;white-space:nowrap;border:none}
-  .tbl.tbl-cards.liq-movil tbody td::before{display:none}
-  /* El check manda la fila entera y por eso ocupa las tres líneas de alto:
-     el objetivo del dedo es alto, no un cuadrito de 22px. */
-  .tbl.tbl-cards.liq-movil tbody td.td-check{grid-column:1;grid-row:1 / span 3;
-    display:flex;align-items:center;padding-right:4px}
-  .tbl.tbl-cards.liq-movil tbody td.td-check input[type=checkbox]{width:22px;height:22px;flex-shrink:0}
-  .tbl.tbl-cards.liq-movil tbody td.c-name{grid-column:2;grid-row:1;
-    font-family:var(--mono);letter-spacing:-.01em;font-size:var(--fs-md);font-weight:700;
-    color:var(--blue-600);border:none;margin:0;padding:0;order:0;white-space:normal}
-  /* La marca de compartido cabe en la misma línea de la OT en vez de abrirse
-     un renglón propio: es una etiqueta corta ("½ con Víctor"). */
-  .tbl.tbl-cards.liq-movil tbody td.c-name .liq-comp{display:inline;margin-left:7px}
-  .tbl.tbl-cards.liq-movil tbody td.c-name .liq-comp__edit{display:flex;margin-top:6px}
-  .tbl.tbl-cards.liq-movil tbody td.c-name .liq-comp__edit .input{width:auto;flex:1;min-width:120px}
-  .tbl.tbl-cards.liq-movil tbody td[data-label="Comisión"]{grid-column:3;grid-row:1;text-align:right;
-    font-variant-numeric:tabular-nums;font-weight:700;font-size:var(--fs-md)}
-  .tbl.tbl-cards.liq-movil tbody td[data-label="Placa o cliente"]{grid-column:2;grid-row:2;
-    font-size:var(--fs-base);font-weight:500;color:var(--text-2)}
-  .tbl.tbl-cards.liq-movil tbody td[data-label="Mano de obra"]{grid-column:3;grid-row:2;text-align:right;
-    font-variant-numeric:tabular-nums;font-size:var(--fs-sm);color:var(--text-3)}
-  .tbl.tbl-cards.liq-movil tbody td[data-label="Fecha"]{grid-column:2;grid-row:3;
-    font-size:var(--fs-xs);color:var(--text-3)}
-  /* Las notas al pie de una celda ("la mitad", "sin servicios") son inline aquí:
-     como bloque abrían una cuarta línea dentro de una celda de rejilla. */
-  .tbl.tbl-cards.liq-movil tbody td span[style*="display: block"]{display:inline!important;margin-left:5px}
+  /* Liquidación en celular: el check de liquidar va antes que el título, con
+     área de toque cómoda; el selector de compañero baja a ancho completo. */
+  .tbl-liq.tbl-cards tbody td.td-check{order:-2;justify-content:space-between;text-align:left;padding:2px 0 8px}
+  .tbl-liq.tbl-cards tbody td.td-check input[type=checkbox]{width:22px;height:22px;flex-shrink:0}
+  .tbl-liq.tbl-cards tbody td[data-label="Compartido"]{flex-wrap:wrap;justify-content:space-between}
+  .tbl-liq.tbl-cards tbody td[data-label="Compartido"] .input{width:100%!important;margin:6px 0 0!important;flex-basis:100%}
+  /* La OT encabeza la tarjeta: es lo que identifica el trabajo al pagarle a un
+     técnico (antes iba el nombre del cliente, el dato menos útil aquí). */
+  .tbl-liq.tbl-cards tbody td.c-name{font-family:var(--mono);letter-spacing:-.01em}
 }
 .table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;border-radius:var(--radius);border:1px solid var(--border);margin:0 -1px}
 
@@ -1139,19 +1062,13 @@ tbody tr:active{background:var(--fill-2)}
   /* El stagger de entrada del menu ahora lo hace motion (spring) en Sidebar.jsx. */
   .main{margin-left:0}
   .app.has-collapsed .main{margin-left:0}
-  .topbar{padding:6px 12px;gap:6px;height:auto;min-height:52px;flex-wrap:wrap}
-  /* El separador conservaba flex:1 con la barra envolviendo: se comia todo el
-     resto de la primera linea y empujaba los botones a una segunda, dejando el
-     de salir huerfano en su propio renglon. En movil el buscador ya baja solo
-     (order:10, ancho completo), asi que aqui el separador no hace falta. */
-  .topbar .sp{display:none}
+  .topbar{padding:8px 16px;gap:8px;height:auto;min-height:56px;flex-wrap:wrap}
   .topbar .title h1{font-size:16px}
   .topbar .title p{display:none}
   /* Buscador global: en movil baja a su propia fila completa (antes se ocultaba
      con display:none, dejando al celular sin busqueda). */
   .topbar .search{display:flex;order:10;flex-basis:100%;width:auto;max-width:100%;margin-top:2px}
-  .topbar .icobtn{width:36px;height:36px;flex-shrink:0}
-  .topbar .btn-sm{flex-shrink:0}
+  .topbar .icobtn{width:36px;height:36px}
   .content{padding:18px 14px 44px}
   .pagehd{margin-bottom:16px}
   .pagehd h2{font-size:24px}
@@ -1373,423 +1290,4 @@ tbody tr:active{background:var(--fill-2)}
   .sidebar.open .sidebar__nav > div{animation:none}
   .skeleton::after{animation:none}
   .rep-chevron,.rep-recoger-icon{transition:none}
-}
-
-/* === Táctil: la densidad de escritorio no aplica al dedo ===
-   Se detecta el puntero grueso (celular/tablet), no el ancho: un iPad en
-   horizontal es ancho y se sigue tocando con el dedo. */
-@media (pointer:coarse){
-  :root{ --ctl-h:44px; --ctl-h-lg:48px; --row-h:52px; }
-  .btn{padding:0 16px;font-size:var(--fs-md)}
-  .tbl tbody td{padding-top:7px;padding-bottom:7px}
-}
-
-/* === Trabajos: una sola barra de filtros ===
-   Antes eran tres filas apiladas y ocupaban 150px antes del primer dato. Aquí
-   el buscador se estira y el resto se queda en su tamaño. En pantalla angosta
-   envuelve sola, sin media query: el buscador toma la línea entera. */
-.trab-filtros{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:12px}
-.trab-filtros__q{flex:1 1 220px;min-width:0}
-.trab-filtros__tec{flex:0 1 200px}
-.trab-filtros .input{height:var(--ctl-h);font-size:var(--fs-base)}
-
-/* === Trabajos: tabla densa ===
-   La fila entera es clicable (selecciona y llena el panel de detalle). La
-   seleccion se marca con el tinte del acento, no con un borde de color: un
-   borde lateral desplaza el texto y ensucia la columna. */
-.trab-tabla tbody tr{cursor:pointer}
-.trab-tabla tbody tr.sel{background:var(--accent-soft)}
-.trab-tabla tbody tr.sel:hover{background:var(--accent-soft-2)}
-.trab-tabla .c-ot{font-family:var(--mono);font-weight:650;color:var(--primary);white-space:nowrap}
-/* El cliente se ve ENTERO: es el dato por el que se reconoce la orden y cortarlo
-   con puntos suspensivos ("CENTRO DE ENSE...") lo vuelve inutil. Para que quepa,
-   las otras cinco columnas se aprietan a su ancho justo y el cliente se queda
-   con todo lo que sobra. Si un nombre aun asi no entra, pasa a dos lineas: mejor
-   una fila mas alta de vez en cuando que un nombre ilegible siempre. */
-/* El cliente: entero y en UNA sola linea. La columna se lleva todo el ancho
-   sobrante y nunca parte el nombre. Cuando el mas largo no entra, la tabla
-   desplaza en horizontal — no se corta el nombre ni se estira la fila. */
-.trab-tabla .c-cliente{width:99%;min-width:120px;white-space:nowrap}
-.trab-tabla th:nth-child(1),.trab-tabla td:nth-child(1){width:74px;white-space:nowrap}
-.trab-tabla th:nth-child(2),.trab-tabla td:nth-child(2){width:80px;white-space:nowrap}
-.trab-tabla th:nth-child(4),.trab-tabla td:nth-child(4){width:1%;white-space:nowrap}
-.trab-tabla th:nth-child(5),.trab-tabla td:nth-child(5){width:1%}
-.trab-tabla th:nth-child(6),.trab-tabla td:nth-child(6){width:96px;white-space:nowrap}
-.trab-tabla thead th:last-child,.trab-tabla tbody td:last-child{text-align:right}
-
-/* === Trabajos en celular: fila tactil de dos lineas ===
-   .tbl-cards convierte cada orden en una tarjeta de siete pares etiqueta/valor:
-   una sola orden ocupaba 242px, media pantalla, y arriba del pliegue no se veia
-   ninguna. Aqui la misma tarjeta se reordena en rejilla:
-
-     linea 1   OT  ................................  ESTADO
-     linea 2   placa · cliente  ....................  TOTAL
-     linea 3   vehiculo · tecnico · fecha  (compacto)
-
-   No se quita ningun campo: la tercera linea baja de rango (mas chica, mas
-   gris, siempre en el mismo sitio) en vez de desaparecer.
-
-   El breakpoint y el peso de los selectores IGUALAN a los de .tbl-cards
-   (max-width:600px, `.tbl.tbl-cards ...`): con menos peso estas reglas perdian
-   y la tarjeta seguia saliendo alta. */
-@media(max-width:600px){
-  .tbl.tbl-cards.trab-movil tbody tr{
-    display:grid; grid-template-columns:1fr auto; gap:1px 10px;
-    padding:9px 12px; margin:0 0 6px; align-items:center;
-  }
-  /* height:auto es imprescindible: .tbl tbody td trae height:var(--row-h), que
-     en tactil vale 52px. Sin anularlo la rejilla daba cuatro filas de 52 y la
-     tarjeta seguia midiendo 231px. Aqui cada linea mide lo que mide su texto. */
-  .tbl.tbl-cards.trab-movil tbody td{display:block;padding:0;text-align:left;
-    height:auto;line-height:1.45;min-width:0;overflow:hidden;
-    text-overflow:ellipsis;white-space:nowrap;border:none}
-  .tbl.tbl-cards.trab-movil tbody td::before{display:none}
-
-  .tbl.tbl-cards.trab-movil tbody td[data-label="OT"]{grid-column:1;grid-row:1;
-    font-family:var(--mono);font-weight:650;color:var(--primary);font-size:var(--fs-md)}
-  .tbl.tbl-cards.trab-movil tbody td[data-label="Estado"]{grid-column:2;grid-row:1;text-align:right}
-  .tbl.tbl-cards.trab-movil tbody td[data-label="Placa"]{grid-column:1;grid-row:2;
-    font-weight:600;color:var(--text);font-size:var(--fs-base)}
-  .tbl.tbl-cards.trab-movil tbody td[data-label="Total"]{grid-column:2;grid-row:2;text-align:right;
-    font-variant-numeric:tabular-nums;font-weight:650;color:var(--text);font-size:var(--fs-md)}
-
-  /* Cliente: es el titulo de la tarjeta en .tbl-cards (order:-1, borde abajo).
-     Aqui baja a la linea 3 como contexto, sin borde ni tamanio de titulo. */
-  .tbl.tbl-cards.trab-movil tbody td.c-name{grid-column:1;grid-row:3;
-    font-size:var(--fs-sm);font-weight:500;color:var(--text-2);
-    border:none;margin:0;padding:0;order:0}
-  .tbl.tbl-cards.trab-movil tbody td[data-label="Fecha"]{grid-column:2;grid-row:3;
-    text-align:right;font-size:var(--fs-xs);color:var(--text-3)}
-
-  /* Linea 4: lo que casi nunca se mira, compacto y gris. Sigue visible. */
-  /* Vehiculo y tecnico: UNA celda cada uno. Antes compartian fila y columna y
-     en la rejilla eso los apila encima: se leia "Peu PB 2Pedro Barraza". */
-  .tbl.tbl-cards.trab-movil tbody td[data-label="Vehículo"],
-  .tbl.tbl-cards.trab-movil tbody td[data-label="Técnico"]{
-    grid-row:4; font-size:var(--fs-xs); color:var(--text-3)}
-  .tbl.tbl-cards.trab-movil tbody td[data-label="Vehículo"]{grid-column:1}
-  .tbl.tbl-cards.trab-movil tbody td[data-label="Técnico"]{grid-column:2;text-align:right}
-
-  /* Acciones: renglon propio al pie, alineadas a la derecha. */
-  .tbl.tbl-cards.trab-movil tbody td:last-child{grid-column:1 / -1;grid-row:5;
-    display:flex;justify-content:flex-end;gap:4px;margin-top:2px}
-}
-
-/* === Barra superior en celular: que no se parta en tres renglones ===
-   El bloque .title vive en opacity:0 hasta que haces scroll, pero SIGUE
-   ocupando 141px. Medido en un iPhone de 390px: los hijos de la barra sumaban
-   707px, asi que el boton de salir no cabia en la primera linea y caia solo a
-   un renglon propio, con el buscador en un tercero. En celular el titulo grande
-   ya esta en la pagina, de modo que este sobra. */
-@media(max-width:600px){
-  .topbar .title{display:none}
-  /* La celda de acciones de Trabajos ya no arma su propia fila con borde: en la
-     tarjeta de dos lineas va a la derecha de la ultima linea. */
-  .tbl.tbl-cards.trab-movil tbody td.td-actions{display:flex;justify-content:flex-end;
-    padding-top:0;margin-top:0;border-top:none;text-align:right}
-}
-
-/* === Detalle de una orden: grupos ===
-   Sin tarjetas anidadas: la jerarquia la dan el peso y una linea de separacion.
-   Etiqueta a la izquierda en gris, valor a la derecha; asi la columna de
-   valores se lee en vertical de un vistazo. */
-.det-grupo{margin:12px 0 0;padding-top:10px;border-top:1px solid var(--border)}
-.det-grupo__t{font-size:var(--fs-xs);font-weight:650;color:var(--text-3);margin-bottom:5px}
-.det-fila{display:flex;justify-content:space-between;gap:12px;padding:2px 0;font-size:var(--fs-sm)}
-.det-fila>span:first-child{color:var(--text-3);flex-shrink:0}
-.det-fila>span:last-child{color:var(--text);text-align:right;font-weight:500;min-width:0;overflow-wrap:anywhere}
-
-/* Plegado honesto: la etiqueta y el contador se ven SIEMPRE, abierto o cerrado.
-   Solo se pliega lo que se llena poco (recepcion 44%, mantenimiento 2%). */
-.det-fold{margin-top:12px;padding-top:10px;border-top:1px solid var(--border)}
-.det-fold>summary{display:flex;align-items:center;gap:7px;cursor:pointer;list-style:none;
-  font-size:var(--fs-xs);font-weight:650;color:var(--text-3);padding:2px 0}
-.det-fold>summary::-webkit-details-marker{display:none}
-.det-fold>summary::before{content:"▸";color:var(--text-4);font-size:11px}
-.det-fold[open]>summary::before{content:"▾"}
-.det-fold>summary:hover{color:var(--text-2)}
-.det-fold__n{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--text-3);
-  background:var(--bg-subtle);border:1px solid var(--border);border-radius:999px;padding:0 6px}
-.det-fold__in{padding-top:4px}
-/* El nombre del tecnico partia en dos lineas ("Pedro / Barraza") y estiraba la
-   fila por encima de los 34px, rompiendo la densidad de toda la tabla. */
-.trab-tabla td[data-label="Tecnico"]{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:96px}
-
-/* La lista permite desplazamiento horizontal: es lo que deja mantener el nombre
-   del cliente en una linea sin sacrificar las otras columnas. La fila se queda
-   en 34px pase lo que pase. */
-.trab-cockpit__list{overflow-x:auto}
-.trab-tabla{min-width:520px}
-/* Con el nombre completo en una linea la tabla se pasa de ancho y hay que
-   desplazar en horizontal. El TOTAL es lo que mas se mira, asi que se ancla a la
-   derecha y queda visible siempre, pase lo que pase con el scroll. */
-.trab-tabla th:nth-child(6),.trab-tabla td:nth-child(6){
-  position:sticky;right:0;background:var(--bg-raised);
-  box-shadow:-1px 0 0 var(--border)}
-.trab-tabla tbody tr.sel td:nth-child(6){background:#eef1f8}
-.trab-tabla tbody tr:hover td:nth-child(6){background:var(--bg-subtle)}
-
-/* Recepción · foto de evidencia con su nota. La nota vivía en un paso propio
-   del asistente (que se quitó: 3 fotos en toda la base); aquí sigue siendo el
-   dato que sostiene un reclamo, junto a la miniatura que describe. */
-.rc-foto{display:flex;align-items:center;gap:10px}
-.rc-foto+.rc-foto{margin-top:8px}
-.rc-foto .rc-thumb{width:56px;flex-shrink:0}
-.rc-foto .input{flex:1;min-width:0;height:34px;min-height:34px;font-size:12.5px;padding:2px 9px}
-
-/* Nueva orden · carril de pasos en celular. El carril tiene overflow-x:auto, así
-   que el tercer paso ("Confirmar") quedaba cortado en el borde y parecía roto:
-   con tres pasos cortos caben los tres si se aprietan las cajas y se deja que
-   el separador ceda. Sigue habiendo scroll como red de seguridad. */
-@media(max-width:600px){
-  .rc-stepper{gap:4px;padding:9px 10px}
-  .rc-step{padding:5px 6px;gap:6px;font-size:12.5px}
-  .rc-step__sep{min-width:10px;flex-shrink:1}
-}
-
-/* Cotizaciones · vigencia y vehículo.
-   La app guardaba validez_dias (15 en todas) y nunca lo mostraba: una cotización
-   de 105 días se veía igual que una de 4. */
-.cot-tot{padding:4px 2px 20px;border-bottom:1px solid var(--border);margin-bottom:22px}
-.cot-tot__v{font-weight:800;font-size:clamp(36px,6vw,50px);letter-spacing:-.03em;line-height:1.02;color:var(--amber-700);margin:7px 0 8px}
-.cot-tot__s{font-size:13.5px;color:var(--text-3)}
-.cot-vig{font-size:13px;color:var(--text-3);white-space:nowrap}
-.cot-vig--hoy{color:var(--amber-700);font-weight:700}
-.cot-vig--out{color:var(--red-700);font-weight:700}
-/* Marca y modelo bajo la placa: eran una columna propia vacía la mitad del
-   tiempo. Una sola línea cada uno: al fusionarlas, "Nissan Frontier 2020" se
-   partía en tres renglones y la fila crecía al triple. */
-.cot-veh{display:block;font-size:12px;color:var(--text-3);margin-top:1px;
-  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-/* La tabla medía 1097px en un contenedor de 967 y aparecía scroll horizontal
-   justo sobre la columna de acciones ("Revisar" quedaba cortado). Con anchos
-   fijos cabe entera: el cliente cede (ya viene recortado por palabras) y la
-   referencia no necesita 90px. */
-/* Anchos SOLO en escritorio: por debajo de 600px .tbl-cards convierte la tabla
-   en tarjetas y un table-layout:fixed con anchos en % recortaba los valores
-   ("HGP..." en vez de la placa) y solapaba renglones. */
-@media(min-width:601px){
-  .cot-tabla{table-layout:fixed;min-width:0;width:100%}
-  .cot-tabla th:nth-child(1),.cot-tabla td:nth-child(1){width:64px}
-  .cot-tabla th:nth-child(2),.cot-tabla td:nth-child(2){width:22%}
-  .cot-tabla th:nth-child(3),.cot-tabla td:nth-child(3){width:15%}
-  .cot-tabla th:nth-child(4),.cot-tabla td:nth-child(4){width:96px}
-  .cot-tabla th:nth-child(5),.cot-tabla td:nth-child(5){width:12%}
-  .cot-tabla th:nth-child(6),.cot-tabla td:nth-child(6){width:14%}
-  /* Ancho real, no 1%: con table-layout:fixed el 1% no reserva sitio para el
-     contenido y el botón "Revisar" quedaba cortado contra el borde. */
-  .cot-tabla th:nth-child(7),.cot-tabla td:nth-child(7){width:122px}
-  .cot-tabla th:nth-child(8),.cot-tabla td:nth-child(8){width:30px}
-  .cot-tabla td[data-label="Vehículo"]{white-space:nowrap}
-  .cot-tabla td[data-label="Vehículo"]>span:first-child{display:block;overflow:hidden;text-overflow:ellipsis}
-}
-
-/* === Cotizaciones en celular: fila de tres líneas ===
-   La tarjeta de .tbl-cards pintaba seis pares etiqueta/valor por cotización;
-   con 14 cotizaciones eran 14 pantallas. Misma rejilla que .trab-movil.
-
-     línea 1   cliente  .........................  TOTAL
-     línea 2   ref · vehículo  ..................  ESTADO
-     línea 3   vigencia  ........................  [Revisar]
-*/
-@media(max-width:600px){
-  .tbl.tbl-cards.cot-tabla tbody tr{
-    display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 10px;
-    padding:11px 13px;margin:0 0 6px;align-items:center;
-  }
-  .tbl.tbl-cards.cot-tabla tbody td{display:block;padding:0;text-align:left;
-    height:auto;line-height:1.4;min-width:0;overflow:hidden;
-    text-overflow:ellipsis;white-space:nowrap;border:none}
-  .tbl.tbl-cards.cot-tabla tbody td::before{display:none}
-  .tbl.tbl-cards.cot-tabla tbody td.c-name{grid-column:1;grid-row:1;
-    font-size:var(--fs-md);font-weight:650;color:var(--text);
-    border:none;margin:0;padding:0;order:0}
-  .tbl.tbl-cards.cot-tabla tbody td[data-label="Total"]{grid-column:2;grid-row:1;
-    text-align:right;font-variant-numeric:tabular-nums;font-weight:700;font-size:var(--fs-md)}
-  .tbl.tbl-cards.cot-tabla tbody td[data-label="Vehículo"]{grid-column:1;grid-row:2;
-    font-size:var(--fs-sm);color:var(--text-3)}
-  .tbl.tbl-cards.cot-tabla tbody td[data-label="Vehículo"] .cot-veh{display:inline;margin-left:6px}
-  .tbl.tbl-cards.cot-tabla tbody td[data-label="Ref."]{display:none}
-  .tbl.tbl-cards.cot-tabla tbody td[data-label="Estado"]{grid-column:2;grid-row:2;text-align:right}
-  .tbl.tbl-cards.cot-tabla tbody td[data-label="Vigencia"]{grid-column:1;grid-row:3}
-  .tbl.tbl-cards.cot-tabla tbody td.td-actions{grid-column:2;grid-row:3;
-    display:flex;justify-content:flex-end;gap:4px;margin:0;padding:0;border:none}
-  .tbl.tbl-cards.cot-tabla tbody td.td-actions::before{display:none}
-  .tbl.tbl-cards.cot-tabla tbody td:last-child{grid-column:2;grid-row:1;justify-self:end}
-}
-/* Cliente en la tabla de cotizaciones: una sola línea (recortado por palabras) */
-.cot-cli{white-space:nowrap}
-
-/* Clientes · marca de "sin verificar en Cuentti" junto al nombre.
-   Era una columna de 104px que decía lo mismo en 847 de 850 filas; la
-   información son los 3 que faltan. */
-.cli-sinver{margin-left:8px;font-size:11px;font-weight:700;letter-spacing:.3px;
-  color:var(--amber-700);background:var(--soft-amber);border-radius:999px;padding:1px 7px;white-space:nowrap}
-/* Correo en la columna Contacto: se usa cuando no hay teléfono, y se corta con
-   elipsis en vez de ensanchar la columna. */
-.cli-mail{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text-3);font-size:13px}
-
-/* === Clientes en celular: fila de dos líneas ===
-   Cada cliente era una tarjeta de cuatro pares etiqueta/valor. Con 850 clientes
-   en la base, recorrer la lista en el celular del taller no era posible.
-
-     línea 1   nombre  ...........................  [n vehículos]
-     línea 2   CC/NIT · contacto  ................  última visita
-*/
-@media(max-width:600px){
-  .tbl.tbl-cards.tbl--clientes tbody tr{
-    display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 10px;
-    padding:11px 13px;margin:0 0 6px;align-items:center;
-  }
-  .tbl.tbl-cards.tbl--clientes tbody td{display:block;padding:0;text-align:left;
-    height:auto;line-height:1.4;min-width:0;overflow:hidden;
-    text-overflow:ellipsis;white-space:nowrap;border:none}
-  .tbl.tbl-cards.tbl--clientes tbody td::before{display:none}
-  .tbl.tbl-cards.tbl--clientes tbody td.c-name{grid-column:1;grid-row:1;
-    font-size:var(--fs-md);font-weight:650;color:var(--text);
-    border:none;margin:0;padding:0;order:0;white-space:normal}
-  .tbl.tbl-cards.tbl--clientes tbody td[data-label="Vehículos"]{grid-column:2;grid-row:1;text-align:right}
-  /* CC/NIT y contacto comparten renglón: son los dos datos con que se busca a
-     alguien, y ninguno llena una línea por su cuenta. */
-  .tbl.tbl-cards.tbl--clientes tbody td[data-label="CC/NIT"]{grid-column:1;grid-row:2;
-    font-size:var(--fs-sm);color:var(--text-3)}
-  .tbl.tbl-cards.tbl--clientes tbody td[data-label="Contacto"]{grid-column:1;grid-row:3;
-    font-size:var(--fs-sm);color:var(--text-3)}
-  /* 822 de 850 clientes no tienen ni teléfono ni correo: sin esto, cada tarjeta
-     gastaba un renglón entero en un guion. */
-  .tbl.tbl-cards.tbl--clientes tbody td[data-label="Contacto"]:has(.cli-sindato){display:none}
-  .tbl.tbl-cards.tbl--clientes tbody td[data-label="Contacto"] .cli-mail{display:inline}
-  .tbl.tbl-cards.tbl--clientes tbody td[data-label="Última visita"]{grid-column:2;grid-row:2 / span 2;
-    text-align:right;font-size:var(--fs-xs);color:var(--text-3);align-self:center}
-  .tbl.tbl-cards.tbl--clientes tbody td.td-chevron{display:none}
-}
-
-/* Vehículos · cabecera de una línea y celdas que no se parten */
-.veh-tot{padding:4px 2px 20px;border-bottom:1px solid var(--border);margin-bottom:22px}
-.veh-tot__v{font-weight:800;font-size:clamp(36px,6vw,50px);letter-spacing:-.03em;line-height:1.02;color:var(--text);margin:7px 0 8px}
-.veh-tot__s{font-size:13.5px;color:var(--text-3)}
-.veh-prop{white-space:nowrap}
-.veh-fecha{font-size:12.5px;color:var(--text-3);white-space:nowrap}
-
-/* === Vehículos en celular: fila de dos líneas ===
-   Cada vehículo era una tarjeta de cinco pares etiqueta/valor.
-
-     línea 1   placa  ...........................  [n visitas]
-     línea 2   marca modelo · año  ..............  último servicio
-     línea 3   propietario
-*/
-@media(max-width:600px){
-  .tbl.tbl-cards.veh-tabla tbody tr{
-    display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 10px;
-    padding:11px 13px;margin:0 0 6px;align-items:center;
-  }
-  .tbl.tbl-cards.veh-tabla tbody td{display:block;padding:0;text-align:left;
-    height:auto;line-height:1.4;min-width:0;overflow:hidden;
-    text-overflow:ellipsis;white-space:nowrap;border:none}
-  .tbl.tbl-cards.veh-tabla tbody td::before{display:none}
-  .tbl.tbl-cards.veh-tabla tbody td.c-name{grid-column:1;grid-row:1;
-    font-size:var(--fs-md);border:none;margin:0;padding:0;order:0}
-  .tbl.tbl-cards.veh-tabla tbody td[data-label="Visitas"]{grid-column:2;grid-row:1;text-align:right}
-  .tbl.tbl-cards.veh-tabla tbody td[data-label="Vehículo"]{grid-column:1;grid-row:2;
-    font-size:var(--fs-sm);color:var(--text-2)}
-  .tbl.tbl-cards.veh-tabla tbody td[data-label="Vehículo"]::after{content:'';}
-  /* El año va pegado al modelo en vez de gastar un renglón propio. */
-  .tbl.tbl-cards.veh-tabla tbody td[data-label="Año"]{grid-column:1;grid-row:2;
-    justify-self:end;font-size:var(--fs-sm);color:var(--text-3)}
-  .tbl.tbl-cards.veh-tabla tbody td[data-label="Propietario"]{grid-column:1;grid-row:3;
-    font-size:var(--fs-xs);color:var(--text-3)}
-  .tbl.tbl-cards.veh-tabla tbody td[data-label="Último servicio"]{grid-column:2;grid-row:2 / span 2;
-    text-align:right;align-self:center}
-  .tbl.tbl-cards.veh-tabla tbody td.td-chevron{display:none}
-}
-
-/* Reportes · desglose bajo una cifra de operación. Sustituye a la tarjeta
-   "Completados", que repetía el mismo número que "Total trabajos" salvo cuando
-   hay pendientes — que es justo lo que este renglón nombra. */
-.kpi__sub{font-size:11.5px;color:var(--text-3);margin-top:3px;line-height:1.4}
-
-/* Inspecciones · vacío que enseña. Es la pantalla sin usar de la app (cero
-   registros): el vacío es el único sitio donde se puede explicar para qué sirve. */
-.insp-vacio{display:flex;flex-direction:column;align-items:center;text-align:center;gap:12px;padding:36px 22px 32px}
-.insp-vacio h4{margin:0;font-size:16px;font-weight:700;color:var(--text)}
-.insp-vacio p{margin:0;max-width:52ch;font-size:13.5px;line-height:1.6;color:var(--text-3)}
-
-/* Técnicos · cabecera de una línea (antes: tarjeta grande + dos que repetían
-   datos ya escritos en la misma pantalla) */
-.mec-tot{padding:4px 2px 20px;border-bottom:1px solid var(--border);margin-bottom:22px}
-.mec-tot__v{font-weight:800;font-size:clamp(34px,5.5vw,48px);letter-spacing:-.03em;line-height:1.02;color:var(--text);margin:7px 0 8px}
-.mec-tot__s{font-size:13.5px;color:var(--text-3)}
-
-/* Recordatorios · cabecera de una línea. Tercer caso del mismo patrón corregido
-   (ver Vehículos y Técnicos): tarjeta grande con su desglose dentro + tarjetas
-   pequeñas que repetían ese mismo desglose. */
-.crm-tot{padding:4px 2px 20px;border-bottom:1px solid var(--border);margin-bottom:20px}
-.crm-tot__v{font-weight:800;font-size:clamp(36px,6vw,50px);letter-spacing:-.03em;line-height:1.02;margin:7px 0 8px}
-.crm-tot__s{font-size:13.5px;color:var(--text-3)}
-
-/* === Repuestos: anchos de tabla (solo escritorio) ===
-   Con 8 columnas la tabla medía 1.073px en un contenedor de 952 y aparecía una
-   barra de scroll que dejaba "Estado" fuera de vista. Quitada esa columna
-   quedaba en 968: seguía sin caber por 16px. Con anchos fijos entra entera, y
-   el que cede es el nombre del producto, que ya se envuelve en dos líneas.
-   Por debajo de 601px manda .tbl-cards (tarjetas), así que no se tocan. */
-@media(min-width:601px){
-  .inv-tabla{table-layout:fixed;min-width:0;width:100%}
-  .inv-tabla th:nth-child(1),.inv-tabla td:nth-child(1){width:96px}
-  .inv-tabla th:nth-child(2),.inv-tabla td:nth-child(2){width:auto}
-  .inv-tabla th:nth-child(3),.inv-tabla td:nth-child(3){width:76px}
-  .inv-tabla th:nth-child(4),.inv-tabla td:nth-child(4){width:104px}
-  .inv-tabla th:nth-child(5),.inv-tabla td:nth-child(5){width:104px}
-  .inv-tabla th:nth-child(6),.inv-tabla td:nth-child(6){width:84px}
-  .inv-tabla th:nth-child(7),.inv-tabla td:nth-child(7){width:60px}
-  /* La referencia no se parte: es lo que se copia para pedirle al proveedor. */
-  .inv-tabla td:nth-child(1){white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-}
-
-/* === Repuestos en celular ===
-   La barra de filtros sacaba la página de cuadro: cuatro botones con sus
-   contadores ("Bajo mínimo (1.213)") no caben en 375px y el segctl no envuelve.
-   Aquí se desliza en su propio carril en vez de arrastrar la pantalla entera. */
-/* Fila de búsqueda + filtros de Repuestos. Era un style inline con flex-wrap;
-   pasa a clase para poder darle en celular un carril deslizante propio. */
-.inv-filtros{display:flex;gap:8px;align-items:center;flex-wrap:wrap;min-width:0}
-@media(max-width:600px){
-  .inv-filtros .segctl{overflow-x:auto;scrollbar-width:none;max-width:100%;flex:0 1 auto}
-  .inv-filtros .segctl::-webkit-scrollbar{display:none}
-  .inv-filtros .segctl button{flex-shrink:0}
-
-  /* Cada producto era una tarjeta de seis pares etiqueta/valor; con 3.460 en el
-     catálogo, recorrerla en el celular del mostrador no era posible.
-
-       línea 1   nombre  .........................  STOCK
-       línea 2   referencia  .....................  precio
-       línea 3   costo · utilidad · IVA
-  */
-  .tbl.tbl-cards.inv-tabla tbody tr{
-    display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 10px;
-    padding:11px 13px;margin:0 0 6px;align-items:center;
-  }
-  .tbl.tbl-cards.inv-tabla tbody td{display:block;padding:0;text-align:left;
-    height:auto;line-height:1.4;min-width:0;overflow:hidden;
-    text-overflow:ellipsis;white-space:nowrap;border:none}
-  .tbl.tbl-cards.inv-tabla tbody td::before{display:none}
-  .tbl.tbl-cards.inv-tabla tbody td.c-name{grid-column:1;grid-row:1;
-    font-size:var(--fs-base);font-weight:600;color:var(--text);
-    border:none;margin:0;padding:0;order:0;white-space:normal}
-  .tbl.tbl-cards.inv-tabla tbody td[data-label="Stock"]{grid-column:2;grid-row:1;
-    text-align:right;font-size:var(--fs-md)}
-  .tbl.tbl-cards.inv-tabla tbody td[data-label="Referencia"]{grid-column:1;grid-row:2;
-    font-size:var(--fs-sm);color:var(--text-3)}
-  .tbl.tbl-cards.inv-tabla tbody td[data-label="Precio"]{grid-column:2;grid-row:2;
-    text-align:right;font-weight:700}
-  /* Costo, utilidad e IVA comparten el renglón de abajo: los tres son contexto
-     del precio, no cifras que se busquen por separado. */
-  .tbl.tbl-cards.inv-tabla tbody td[data-label="Costo"],
-  .tbl.tbl-cards.inv-tabla tbody td[data-label="Utilidad"],
-  .tbl.tbl-cards.inv-tabla tbody td[data-label="IVA"]{grid-row:3;
-    font-size:var(--fs-xs);color:var(--text-3);display:inline-block}
-  .tbl.tbl-cards.inv-tabla tbody td[data-label="Costo"]{grid-column:1}
-  .tbl.tbl-cards.inv-tabla tbody td[data-label="Costo"]::after{content:' costo';color:var(--text-4)}
-  .tbl.tbl-cards.inv-tabla tbody td[data-label="Utilidad"]{grid-column:2;text-align:right}
-  .tbl.tbl-cards.inv-tabla tbody td[data-label="IVA"]{display:none}
 }

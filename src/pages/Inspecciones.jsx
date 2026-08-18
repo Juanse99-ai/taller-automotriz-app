@@ -83,34 +83,16 @@ export default function Inspecciones({ trabajos, notify, onVincularInspeccion, i
         </div>
       </div>
 
-      {/* Las cifras solo salen cuando hay algo que contar. Sin inspecciones
-         registradas —que es el estado real hoy— eran dos tarjetas grandes
-         diciendo "0" y "0", esta ultima en rojo: una alarma de nada. */}
-      {stats.total > 0 && (
       <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(200px,1fr))',gap:14,marginBottom:18}}>
         <div className="kpi"><div className="kpi__head"><div className="kpi__ic blue"><svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg></div><div className="kpi__lbl">Total inspecciones</div></div><div className="kpi__v">{stats.total}</div></div>
         <div className="kpi"><div className="kpi__head"><div className="kpi__ic red"><svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></div><div className="kpi__lbl">Con urgentes</div></div><div className="kpi__v" style={{color:'var(--red-600)'}}>{stats.conUrgentes}</div></div>
       </div>
-      )}
 
       <div className="card">
         <div className="card__h"><h3>Historial de inspecciones</h3><span className="count">{sorted.length}</span></div>
         <div className="card__b card__b--flush">
           {sorted.length === 0 ? (
-            /* "No hay inspecciones registradas" repetia el titulo sin decir
-               que es una inspeccion ni por que abrir una. Es la pantalla menos
-               usada de la app (cero registros): el vacio es el unico sitio donde
-               se puede explicar para que sirve. */
-            <div className="insp-vacio">
-              <h4>Todavia no hay ninguna inspeccion</h4>
-              <p>
-                Una inspeccion digital deja por escrito como entrego el cliente el
-                vehiculo: niveles, luces, frenos, llantas y los danos visibles, con
-                lo urgente marcado aparte. Sirve para sustentar un cobro y para
-                responder un reclamo con algo mas que la memoria.
-              </p>
-              <Button variant="primary" onClick={() => setVista('nueva')}>Hacer la primera inspeccion</Button>
-            </div>
+            <div className="empty"><h4>Sin inspecciones</h4><p>No hay inspecciones registradas.</p></div>
           ) : (
             <table className="tbl">
               <thead>

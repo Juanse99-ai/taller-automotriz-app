@@ -1,16 +1,7 @@
 import { useState, useMemo } from 'react'
-import { fmtDate, fmt, clienteCorto } from '../utils/helpers'
+import { fmtDate, fmt } from '../utils/helpers'
 import { ESTADOS } from '../utils/constants'
 import { useTecnicos } from '../services/tecnicos'
-
-// "15 ago 2026" en vez de "15 de ago de 2026", que partia la celda en dos.
-const fechaCortaVeh = (iso) => {
-  if (!iso) return '\u2014'
-  const d = new Date(iso)
-  if (isNaN(d.getTime())) return '\u2014'
-  const mes = d.toLocaleDateString('es-CO', { month: 'short' }).replace('.', '')
-  return `${d.getDate()} ${mes} ${d.getFullYear()}`
-}
 
 export default function Vehiculos({ vehiculos, clientes, trabajos = [], notify }) {
   const {
@@ -196,16 +187,52 @@ export default function Vehiculos({ vehiculos, clientes, trabajos = [], notify }
         </div>
       </div>
 
-      {/* Las dos tarjetas de la derecha ("Con historial 47" y "Marcas únicas 12")
-         repetían dos datos que ya estaban escritos DENTRO de la tarjeta grande:
-         el chip "12 marcas" y la línea "47 con al menos un servicio (98%)". Tres
-         tarjetas para dos datos duplicados. Una sola línea los dice todos. */}
-      <div className="veh-tot">
-        <div className="eyebrow">Vehículos registrados</div>
-        <div className="mono veh-tot__v">{totalVehiculos.toLocaleString('es-CO')}</div>
-        <div className="veh-tot__s">
-          {marcasUnicas} marca{marcasUnicas !== 1 ? 's' : ''}
-          {totalVehiculos > 0 && <> · {conHistorial} con al menos un servicio ({Math.round((conHistorial / totalVehiculos) * 100)}%)</>}
+      {/* KPI hero + 2 mini */}
+      <div className="kpi-grid" style={{ marginBottom: 24 }}>
+        <div className="kpi-hero" style={{ background: 'var(--bg-raised)', border: '1px solid var(--border)', borderRadius: 14, padding: '22px 26px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: 180 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+            <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '.5px' }}>Total vehículos en BD</span>
+            <span style={{ fontFamily: 'var(--mono)', fontSize: 12, fontWeight: 700, color: 'var(--text-3)', background: 'var(--bg-subtle)', padding: '4px 10px', borderRadius: 999 }}>
+              {marcasUnicas} marcas
+            </span>
+          </div>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 14, flexWrap: 'wrap' }}>
+              <div style={{ fontFamily: 'var(--mono)', fontWeight: 700, fontSize: 'clamp(36px, 5.5vw, 56px)', letterSpacing: '-1.2px', lineHeight: 1, color: 'var(--text)' }}>
+                {totalVehiculos.toLocaleString('es-CO')}
+              </div>
+              <div style={{ fontSize: 14.5, color: 'var(--text-2)', fontWeight: 500 }}>
+                placas registradas
+              </div>
+            </div>
+            {totalVehiculos > 0 && (
+              <div style={{ fontSize: 13.5, color: 'var(--text-3)', marginTop: 8, fontWeight: 500 }}>
+                {conHistorial} con al menos un servicio registrado ({Math.round((conHistorial/totalVehiculos)*100)}%)
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateRows: '1fr 1fr', gap: 10 }}>
+          <div className="kpi-mini" style={{ background: 'var(--bg-raised)', border: '1px solid var(--border)', borderRadius: 12, padding: '14px 18px', display: 'flex', alignItems: 'center', gap: 14 }}>
+            <div className="kpi__ic green" style={{ width: 40, height: 40, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="2" width="6" height="4" rx="1"/><path d="M8 4H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-2"/></svg>
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '.4px' }}>Con historial</div>
+              <div style={{ fontFamily: 'var(--mono)', fontWeight: 700, fontSize: 26, color: 'var(--text)', lineHeight: 1.1, marginTop: 2 }}>{conHistorial}</div>
+            </div>
+          </div>
+
+          <div className="kpi-mini" style={{ background: 'var(--bg-raised)', border: '1px solid var(--border)', borderRadius: 12, padding: '14px 18px', display: 'flex', alignItems: 'center', gap: 14 }}>
+            <div className="kpi__ic amber" style={{ width: 40, height: 40, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M20.59 13.41 13.42 20.58a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '.4px' }}>Marcas únicas</div>
+              <div style={{ fontFamily: 'var(--mono)', fontWeight: 700, fontSize: 26, color: 'var(--text)', lineHeight: 1.1, marginTop: 2 }}>{marcasUnicas}</div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -237,14 +264,12 @@ export default function Vehiculos({ vehiculos, clientes, trabajos = [], notify }
             </div>
           ) : (
             <div>
-              <table className="tbl tbl-cards veh-tabla">
+              <table className="tbl tbl-cards">
                 <thead>
                   <tr>
                     <th>Placa</th>
-                    {/* Marca y Modelo eran dos columnas que siempre se leen
-                       juntas ("Chevrolet" / "Aveo"): una sola las dice mejor y
-                       deja de partir el Propietario en dos renglones. */}
-                    <th>Vehículo</th>
+                    <th>Marca</th>
+                    <th>Modelo</th>
                     <th>Año</th>
                     <th>Propietario</th>
                     <th>Visitas</th>
@@ -258,14 +283,13 @@ export default function Vehiculos({ vehiculos, clientes, trabajos = [], notify }
                     return (
                       <tr key={v.placa} style={{ cursor: 'pointer' }} onClick={() => seleccionar(v)}>
                         <td className="c-name" data-label="Placa"><span className="mono" style={{ fontWeight: 700 }}>{v.placa}</span></td>
-                        <td data-label="Vehículo">{[v.marca, v.modelo].filter(Boolean).join(' ') || '—'}</td>
-                        <td data-label="Año">{v.ano || '—'}</td>
-                        <td data-label="Propietario" className="veh-prop" title={nombrePropietario(v.cedulaPropietario)}>{clienteCorto(nombrePropietario(v.cedulaPropietario))}</td>
+                        <td data-label="Marca">{v.marca || '--'}</td>
+                        <td data-label="Modelo">{v.modelo || '--'}</td>
+                        <td data-label="Año">{v.ano || '--'}</td>
+                        <td data-label="Propietario">{nombrePropietario(v.cedulaPropietario)}</td>
                         <td data-label="Visitas"><span className="badge badge-n">{(v.historial || []).length}</span></td>
-                        {/* fmtDate da "15 de ago de 2026" y partia la celda en dos
-                           renglones en toda la tabla. */}
-                        <td data-label="Último servicio" className="veh-fecha">
-                          {fechaCortaVeh(ultimo ? ultimo.fecha : v.fechaUltimoServicio)}
+                        <td data-label="Último servicio" style={{ fontSize: 12, color: 'var(--text-3)' }}>
+                          {ultimo ? fmtDate(ultimo.fecha) : fmtDate(v.fechaUltimoServicio)}
                         </td>
                         <td className="td-chevron">›</td>
                       </tr>

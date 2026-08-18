@@ -117,21 +117,46 @@ export default function Mecanicos({ trabajos, onNavigate, notify }) {
         </div>
       </div>
 
-      {/* "Tecnicos activos 3" repetia el chip "3 tecnicos" que ya esta arriba, y
-         "Trabajos en curso 0" repite el "0 ACTIVOS" que cada una de las tres
-         tarjetas de tecnico ya dice por su cuenta. Tres tarjetas para dos datos
-         que estaban escritos en otro sitio de la misma pantalla. */}
-      <div className="mec-tot">
-        <div className="eyebrow">Comisiones generadas este mes</div>
-        <div className="mono mec-tot__v">{fmt(totalComisionesMes)}</div>
-        <div className="mec-tot__s">
-          {/* Decia "Acumulado por liquidar a tecnicos", y no es eso: son las
-             comisiones que el equipo genero en el mes, casi todas ya pagadas.
-             Lo que queda por liquidar vive en Pago a tecnicos y hoy es otra
-             cifra. Nombrar una plata por lo que no es, en la pantalla del
-             equipo, es justo el error costoso que el diseno debe prevenir. */}
-          {equipoActivo.length} técnico{equipoActivo.length !== 1 ? 's' : ''} activo{equipoActivo.length !== 1 ? 's' : ''}
-          {totalActivos > 0 && <> · {totalActivos} trabajo{totalActivos !== 1 ? 's' : ''} en curso</>}
+      {/* KPI row */}
+      {/* Hero: comisiones del mes (el numero que el dueño revisa) + 2 mini */}
+      <div className="kpi-grid" style={{ marginBottom: 24 }}>
+        <div className="kpi-hero" style={{ background: 'var(--bg-raised)', border: '1px solid var(--border)', borderRadius: 14, padding: '22px 26px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: 180 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+            <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '.5px' }}>Comisiones del mes</span>
+            <span style={{ fontFamily: 'var(--mono)', fontSize: 12, fontWeight: 700, color: 'var(--green-700)', background: 'var(--soft-green)', padding: '4px 10px', borderRadius: 999 }}>
+              {equipoActivo.length} técnico{equipoActivo.length !== 1 ? 's' : ''}
+            </span>
+          </div>
+          <div>
+            <div style={{ fontFamily: 'var(--mono)', fontWeight: 700, fontSize: 'clamp(34px, 5vw, 52px)', letterSpacing: '-1px', lineHeight: 1, color: 'var(--text)' }}>
+              {fmt(totalComisionesMes)}
+            </div>
+            <div style={{ fontSize: 13.5, color: 'var(--text-3)', marginTop: 8, fontWeight: 500 }}>
+              Acumulado por liquidar a técnicos
+            </div>
+          </div>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateRows: '1fr 1fr', gap: 10 }}>
+          <div className="kpi-mini" style={{ background: 'var(--bg-raised)', border: '1px solid var(--border)', borderRadius: 12, padding: '14px 18px', display: 'flex', alignItems: 'center', gap: 14 }}>
+            <div className="kpi__ic blue" style={{ width: 40, height: 40, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '.4px' }}>Técnicos activos</div>
+              <div style={{ fontFamily: 'var(--mono)', fontWeight: 700, fontSize: 26, color: 'var(--text)', lineHeight: 1.1, marginTop: 2 }}>{equipoActivo.length}</div>
+            </div>
+          </div>
+
+          <div className="kpi-mini" style={{ background: 'var(--bg-raised)', border: '1px solid var(--border)', borderRadius: 12, padding: '14px 18px', display: 'flex', alignItems: 'center', gap: 14 }}>
+            <div className="kpi__ic amber" style={{ width: 40, height: 40, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '.4px' }}>Trabajos en curso</div>
+              <div style={{ fontFamily: 'var(--mono)', fontWeight: 700, fontSize: 26, color: 'var(--text)', lineHeight: 1.1, marginTop: 2 }}>{totalActivos}</div>
+            </div>
+          </div>
         </div>
       </div>
 

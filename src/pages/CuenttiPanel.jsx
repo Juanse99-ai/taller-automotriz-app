@@ -1,5 +1,5 @@
-import { useState, useRef, useEffect, useMemo } from 'react'
-import { fmt, tituloCliente } from '../utils/helpers'
+import { useState, useRef, useEffect } from 'react'
+import { fmt } from '../utils/helpers'
 import {
   buscarClientePorCedula,
   cargarInventario,
@@ -7,7 +7,6 @@ import {
   buildFacturaPayload,
   emitirFacturaElectronica,
   agregarPagoTransacion,
-  consultarPendiente,
   obtenerUrlDocumento,
   grabarProductoMovil,
   getCuenttiDebugHeaders,
@@ -469,40 +468,21 @@ export default function CuenttiPanel({ trabajos, actualizarTrabajo, notify, trab
         // caja). Se paga el total EXACTO de la factura (payload.total_neto) para que
         // quede pagada sin saldo por redondeo.
         if (esPagoInmediato) {
-          const datosPago = {
-            idTransacion: txId.toString(),
-            valor: payload.total_neto,
-            idMedioPago: metodoPago,
-            idBanco,
-            // Mismo criterio que buildFacturaPayload: NUNCA el id local de la
-            // app (trabajo.clienteId) — Cuentti lo tomaba como suyo y el recibo
-            // quedaba a nombre de otra persona. Solo un id que venga de Cuentti.
-            idCliente: trabajo.cuenttiId || undefined,
-            nota: `OT ${trabajo.otCodigo || trabajo.id}`,
-          }
-          // La factura ya existe y quedó A CRÉDITO a propósito (solo este paso
-          // genera el recibo de caja). Si se pierde, el cliente aparece en
-          // Cuentti debiendo una plata que YA pagó — le pasó a la OT-0143, que
-          // estuvo 10 días como deuda de $65.000. Un corte de red de un segundo
-          // no puede costar eso, así que se reintenta.
-          //
-          // Antes de cada reintento se consulta el saldo: si el intento anterior
-          // sí entró y solo se perdió la respuesta, el abono ya está aplicado y
-          // repetirlo dejaría la factura pagada dos veces. Ante la duda
-          // (consulta fallida = null), NO se reintenta.
-          for (let intento = 1; intento <= 3 && !pagoOk; intento++) {
-            try {
-              await agregarPagoTransacion(datosPago)
-              pagoOk = true
-            } catch (err) {
-              const pendiente = await consultarPendiente(txId)
-              if (pendiente !== null && pendiente <= 1) { pagoOk = true; break } // sí había entrado
-              if (pendiente === null || intento === 3) {
-                notify(`Factura #${txId} creada, pero el pago NO entró: en Cuentti queda como deuda del cliente. Regístralo en "Pago / Abono".`, 'error')
-                break
-              }
-              await new Promise(r => setTimeout(r, intento * 1200))
-            }
+          try {
+            await agregarPagoTransacion({
+              idTransacion: txId.toString(),
+              valor: payload.total_neto,
+              idMedioPago: metodoPago,
+              idBanco,
+              // Mismo criterio que buildFacturaPayload: NUNCA el id local de la
+              // app (trabajo.clienteId) — Cuentti lo tomaba como suyo y el recibo
+              // quedaba a nombre de otra persona. Solo un id que venga de Cuentti.
+              idCliente: trabajo.cuenttiId || undefined,
+              nota: `OT ${trabajo.otCodigo || trabajo.id}`,
+            })
+            pagoOk = true
+          } catch (err) {
+            notify('Factura creada, pero el pago no entró a caja. Regístralo en "Pago / Abono".', 'error')
           }
         }
         // Marcar trabajo como facturado (anti-duplicado entre dispositivos)
@@ -640,120 +620,23 @@ export default function CuenttiPanel({ trabajos, actualizarTrabajo, notify, trab
     : facturablesAll.filter(t => !t.cuenttiTransacionId)
   const trabajoFacturaSel = trabajos.find(t => t.id === (facturaId || '').trim())
 
-  // ===== CARTERA — lo que la pantalla se llama =====
-  // Esta pantalla se llama "Cobros" en el menú pero abría en "Facturar trabajo",
-  // que hoy tiene UN candidato (157 de los 158 completados ya están facturados).
-  // Lo que de verdad está pendiente son 11 facturas sin pagar por $4.568.000,
-  // con hasta 45 días encima, y no aparecía por ningún lado.
-  const cartera = useMemo(() => {
-    const hoy = new Date(); hoy.setHours(0, 0, 0, 0)
-    return trabajos
-      .filter(t => t.estado === 'Completado' && !t.pagado && !t.cuenttiPagado)
-      .map(t => {
-        const f = new Date(t.fecha)
-        const dias = isNaN(f) ? 0 : Math.max(0, Math.round((hoy - new Date(f.getFullYear(), f.getMonth(), f.getDate())) / 86400000))
-        return { ...t, dias, monto: Math.round(parseFloat(t.total) || 0) }
-      })
-      // La más vieja primero: es la que hay que perseguir, no la más reciente.
-      .sort((a, b) => b.dias - a.dias)
-  }, [trabajos])
-  const totalCartera = cartera.reduce((s, t) => s + t.monto, 0)
-  // Sin factura no hay nada que cobrar todavía: es un paso anterior, no una mora.
-  const carteraSinFactura = cartera.filter(t => !t.cuenttiTransacionId).length
-
   return (
     <div>
-      <style>{`
-        /* Cartera: un renglón por factura por cobrar, la más vieja primero. */
-        .cb-tot{ padding:4px 2px 20px; border-bottom:1px solid var(--border); margin-bottom:22px; }
-        .cb-tot__v{ font-weight:800; font-size:clamp(38px, 6.5vw, 54px); letter-spacing:-.03em; line-height:1.02;
-          color:var(--red-700); margin:7px 0 8px; }
-        .cb-tot__s{ font-size:13.5px; color:var(--text-3); }
-        .cb-r{ display:grid; grid-template-columns:auto minmax(0,1fr) auto auto auto; gap:3px 14px;
-          align-items:center; padding:12px 16px; border-top:1px solid var(--border); }
-        .cb-r:first-of-type{ border-top:none; }
-        .cb-r__ot{ font-weight:700; color:var(--blue-600); white-space:nowrap; }
-        /* El nombre del cliente entero: es a quién hay que llamar. */
-        .cb-r__cli{ font-size:14.5px; font-weight:600; color:var(--text); min-width:0; overflow-wrap:anywhere; }
-        .cb-r__sub{ grid-column:2; font-size:12.5px; color:var(--text-3); }
-        /* Los días son la razón de ser de esta lista: se leen antes que el monto. */
-        .cb-r__d{ font-size:12.5px; font-weight:700; white-space:nowrap; text-align:right; }
-        .cb-r__v{ font-weight:700; font-size:15.5px; white-space:nowrap; text-align:right; min-width:104px; }
-        @media (max-width:600px){
-          /* El cliente ocupa su propio renglón completo: con un nombre de tres
-             palabras compartía línea con el monto y quedaban pegados. */
-          .cb-r{ grid-template-columns:minmax(0,1fr) auto; padding:12px 14px; }
-          .cb-r__ot{ grid-column:1; grid-row:1; font-size:13px; }
-          .cb-r__d{ grid-column:2; grid-row:1; }
-          .cb-r__cli{ grid-column:1 / -1; grid-row:2; }
-          .cb-r__sub{ grid-column:1; grid-row:3; }
-          .cb-r__v{ grid-column:2; grid-row:3; min-width:0; }
-          .cb-r > .btn{ grid-column:1 / -1; grid-row:4; justify-self:start; margin-top:10px; }
-        }
-      `}</style>
       {/* Page header */}
       <div className="pagehd">
         <div>
-          {/* Se llamaba "Cuentti" — el nombre del proveedor de facturación, no el
-             de la tarea. En el menú siempre dijo "Cobros". */}
-          <h2>Cobros</h2>
+          <h2>Cuentti</h2>
+        </div>
+        <div className="actions">
+          {testResult && testResult.clientes?.startsWith('OK') && (
+            <Badge tone="success" style={{ marginRight: 6 }}>● Conexión OK</Badge>
+          )}
+          <Button variant="primary" onClick={testConexion} disabled={testing}>{testing ? 'Probando...' : 'Probar Conexión'}</Button>
         </div>
       </div>
 
-      {/* Lo que hay que cobrar. Es el titular de la pantalla: la acción de
-         facturar (que la encabezaba) tiene hoy un solo candidato. */}
-      <div className="cb-tot">
-        <div className="eyebrow">Por cobrar · facturas sin pago</div>
-        <div className="mono cb-tot__v">{fmt(totalCartera)}</div>
-        <div className="cb-tot__s">
-          {cartera.length === 0
-            ? 'Todo cobrado'
-            : <>{cartera.length} factura{cartera.length !== 1 ? 's' : ''} pendiente{cartera.length !== 1 ? 's' : ''}
-                {cartera[0]?.dias > 0 && <> · la más antigua lleva <strong style={{ color: 'var(--red-700)' }}>{cartera[0].dias} días</strong></>}
-                {carteraSinFactura > 0 && <> · {carteraSinFactura} sin facturar todavía</>}
-              </>}
-        </div>
-      </div>
-
-      {cartera.length > 0 && (
-        <div className="card" style={{ marginBottom: 16 }}>
-          <div className="card__h">
-            <h3>Por cobrar</h3>
-            <span className="count">{cartera.length}</span>
-          </div>
-          <div className="card__b card__b--flush">
-            {cartera.map(t => {
-              // 30 días es el corte que usa el taller para perseguir un crédito.
-              const tono = t.dias >= 30 ? 'var(--red-700)' : t.dias >= 15 ? 'var(--amber-700)' : 'var(--text-3)'
-              return (
-                <div key={t.id} className="cb-r">
-                  <span className="mono cb-r__ot">{t.otCodigo || '—'}</span>
-                  <span className="cb-r__cli">{tituloCliente(t.cliente) || 'Sin cliente'}</span>
-                  <span className="cb-r__d" style={{ color: tono }}>{t.dias} día{t.dias !== 1 ? 's' : ''}</span>
-                  <span className="mono cb-r__v">{fmt(t.monto)}</span>
-                  {t.cuenttiTransacionId ? (
-                    <Button variant="outline" size="sm" onClick={() => marcarFacturaPagada(t)}>Marcar pagada</Button>
-                  ) : (
-                    /* Sin factura no se puede cobrar: la acción es facturarla. */
-                    <Button variant="primary" size="sm" onClick={() => { setFacturaId(t.id); document.getElementById('cb-facturar')?.scrollIntoView({ behavior: 'smooth', block: 'start' }) }}>Facturar</Button>
-                  )}
-                  <span className="cb-r__sub">
-                    {t.cuenttiTransacionId
-                      ? <>Factura {t.cuenttiTransacionId}{t.metodoPago === 'credito' ? ' · a crédito' : ''}</>
-                      : <span style={{ color: 'var(--amber-700)', fontWeight: 600 }}>Sin facturar</span>}
-                  </span>
-                </div>
-              )
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* Step indicator — flow del proceso de facturacion.
-         Solo mientras estás facturando algo: como cabecera permanente anunciaba
-         cinco pasos por delante en una pantalla donde lo normal es no facturar
-         nada (157 de los 158 trabajos completados ya están facturados). */}
-      {(facturaId || facturaResp || emitResp || pagoResp || docResp) && (() => {
+      {/* Step indicator — flow del proceso de facturacion */}
+      {(() => {
         const hasTrabajo = !!facturaId
         const hasFactura = !!facturaResp && !facturaResp.error
         const hasDian = !!emitResp && !emitResp.error
@@ -781,14 +664,69 @@ export default function CuenttiPanel({ trabajos, actualizarTrabajo, notify, trab
         )
       })()}
 
+      {/* Connection banner */}
+      {testResult && (
+        <div className="card" style={{marginBottom:16,borderColor:testResult.clientes?.startsWith('OK')?'var(--green-500)':'var(--red-500)',borderWidth:1,overflow:'hidden'}}>
+          <div style={{padding:'16px 20px',display:'flex',alignItems:'center',gap:14,background:testResult.clientes?.startsWith('OK')?'rgba(22,163,74,.06)':'rgba(220,38,38,.06)'}}>
+            <div style={{width:48,height:48,borderRadius:12,background:testResult.clientes?.startsWith('OK')?'var(--green-600)':'var(--red-600)',display:'flex',alignItems:'center',justifyContent:'center',color:'#fff',flexShrink:0}}>
+              <svg width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">{testResult.clientes?.startsWith('OK')?<path d="M5 13l4 4L19 7"/>:<path d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>}</svg>
+            </div>
+            <div style={{flex:1}}>
+              <div style={{fontWeight:800,fontSize:15,marginBottom:2}}>{testResult.clientes?.startsWith('OK')?'Conectado a Cuentti':'Error de conexión'}</div>
+              <div style={{fontSize:12.5,color:'var(--text-3)'}}>Clientes: {testResult.clientes} · Inventario: {testResult.inventario}</div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Test de conexion - detalle */}
+      {testResult && (
+        <div className="card">
+          <div className="card__h"><h3>Test de Conexión</h3></div>
+          <div className="card__b">
+            <table className="tbl">
+              <thead>
+                <tr><th>Endpoint</th><th>Resultado</th></tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td style={{ fontWeight: 600 }}>Clientes</td>
+                  <td>
+                    <span className={`badge ${testResult.clientes.startsWith('OK') ? 'badge-s' : 'badge-d'}`}>
+                      {testResult.clientes}
+                    </span>
+                  </td>
+                </tr>
+                <tr>
+                  <td style={{ fontWeight: 600 }}>Inventario</td>
+                  <td>
+                    <span className={`badge ${testResult.inventario.startsWith('OK') ? 'badge-s' : 'badge-d'}`}>
+                      {testResult.inventario}
+                    </span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+            {testResult.tokenRaw && (
+              <div style={{ marginTop: 12 }}>
+                <div style={{fontSize:11,color:'var(--text-3)',marginBottom:4}}>Respuesta cruda del token test (para diagnóstico):</div>
+                <pre style={{ background: '#0f172a', color: testResult.tokenRaw.ok ? '#86efac' : '#fca5a5', padding: 12, borderRadius: 8, fontSize: 12, overflowX: 'auto' }}>
+                  {formatJson(testResult.tokenRaw)}
+                </pre>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Facturacion flow + Side panel (2-column layout matching handoff) */}
       <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,2fr) minmax(0,1fr)', gap: 16, alignItems: 'start' }}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 14, minWidth: 0 }}>
 
       {/* Facturacion directa */}
-      <div className="card" id="cb-facturar">
+      <div className="card">
         <div className="card__h">
-          <h3>Facturar trabajo</h3>
+          <h3>Facturar Trabajo</h3>
           {yaFacturadosCount > 0 && (
             <label style={{fontSize:12,color:'var(--text-3)',display:'flex',alignItems:'center',gap:6,cursor:'pointer'}}>
               <input type="checkbox" checked={verFacturados} onChange={e => setVerFacturados(e.target.checked)} />
@@ -1163,71 +1101,6 @@ export default function CuenttiPanel({ trabajos, actualizarTrabajo, notify, trab
         })()}
       </div>
       </div>{/* end 2-column grid */}
-
-      {/* ===== Herramientas de Cuentti =====
-         "Probar conexión" era el botón primario de la pantalla y su tarjeta de
-         diagnóstico (con el JSON crudo del token) salía en el segundo tercio,
-         por encima de facturar. Es instrumental del proveedor, no una tarea del
-         mostrador: vive al pie y solo muestra el resultado si lo pides. */}
-      <div style={{ marginTop: 22, paddingTop: 16, borderTop: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-        <span className="eyebrow">Conexión con Cuentti</span>
-        <Button variant="outline" size="sm" onClick={testConexion} disabled={testing}>{testing ? 'Probando…' : 'Probar conexión'}</Button>
-        {testResult && testResult.clientes?.startsWith('OK') && <Badge tone="success">● Conexión OK</Badge>}
-      </div>
-      {/* Connection banner */}
-      {testResult && (
-        <div className="card" style={{marginBottom:16,borderColor:testResult.clientes?.startsWith('OK')?'var(--green-500)':'var(--red-500)',borderWidth:1,overflow:'hidden'}}>
-          <div style={{padding:'16px 20px',display:'flex',alignItems:'center',gap:14,background:testResult.clientes?.startsWith('OK')?'rgba(22,163,74,.06)':'rgba(220,38,38,.06)'}}>
-            <div style={{width:48,height:48,borderRadius:12,background:testResult.clientes?.startsWith('OK')?'var(--green-600)':'var(--red-600)',display:'flex',alignItems:'center',justifyContent:'center',color:'#fff',flexShrink:0}}>
-              <svg width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">{testResult.clientes?.startsWith('OK')?<path d="M5 13l4 4L19 7"/>:<path d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>}</svg>
-            </div>
-            <div style={{flex:1}}>
-              <div style={{fontWeight:800,fontSize:15,marginBottom:2}}>{testResult.clientes?.startsWith('OK')?'Conectado a Cuentti':'Error de conexión'}</div>
-              <div style={{fontSize:12.5,color:'var(--text-3)'}}>Clientes: {testResult.clientes} · Inventario: {testResult.inventario}</div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Test de conexion - detalle */}
-      {testResult && (
-        <div className="card">
-          <div className="card__h"><h3>Test de Conexión</h3></div>
-          <div className="card__b">
-            <table className="tbl">
-              <thead>
-                <tr><th>Endpoint</th><th>Resultado</th></tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td style={{ fontWeight: 600 }}>Clientes</td>
-                  <td>
-                    <span className={`badge ${testResult.clientes.startsWith('OK') ? 'badge-s' : 'badge-d'}`}>
-                      {testResult.clientes}
-                    </span>
-                  </td>
-                </tr>
-                <tr>
-                  <td style={{ fontWeight: 600 }}>Inventario</td>
-                  <td>
-                    <span className={`badge ${testResult.inventario.startsWith('OK') ? 'badge-s' : 'badge-d'}`}>
-                      {testResult.inventario}
-                    </span>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-            {testResult.tokenRaw && (
-              <div style={{ marginTop: 12 }}>
-                <div style={{fontSize:11,color:'var(--text-3)',marginBottom:4}}>Respuesta cruda del token test (para diagnóstico):</div>
-                <pre style={{ background: '#0f172a', color: testResult.tokenRaw.ok ? '#86efac' : '#fca5a5', padding: 12, borderRadius: 8, fontSize: 12, overflowX: 'auto' }}>
-                  {formatJson(testResult.tokenRaw)}
-                </pre>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
 
       <ConfirmDialog cfg={confirmCfg} onClose={() => setConfirmCfg(null)} />
     </div>

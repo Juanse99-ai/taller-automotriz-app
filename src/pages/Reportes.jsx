@@ -599,22 +599,8 @@ export default function Reportes({ trabajos, loading = false, notify }) {
       </div>
       {/* KPIs de detalle (operación + comisiones) */}
       <div className="rep-ops">
-        {/* "Total trabajos" y "Completados" eran dos tarjetas que muestran el
-            MISMO numero siempre que no queden trabajos sin cerrar en el periodo,
-            que es el caso normal: en el historial del taller solo un mes tiene
-            pendientes. Dos tarjetas para repetir una cifra. Una sola con su
-            desglose ocupa la mitad y, cuando SI hay pendientes —que es lo unico
-            interesante de la comparacion—, los nombra en vez de dejar la resta
-            al lector. */}
-        <div className="kpi">
-          <div className="kpi__head"><div className="kpi__lbl">Trabajos</div></div>
-          <div className="kpi__v">{stats.total}</div>
-          <div className="kpi__sub">
-            {stats.total === stats.completados
-              ? 'todos completados'
-              : <>{stats.completados} completados · <strong style={{ color: 'var(--amber-700)' }}>{stats.total - stats.completados} sin cerrar</strong></>}
-          </div>
-        </div>
+        <div className="kpi"><div className="kpi__head"><div className="kpi__lbl">Total trabajos</div></div><div className="kpi__v">{stats.total}</div></div>
+        <div className="kpi"><div className="kpi__head"><div className="kpi__lbl">Completados</div></div><div className="kpi__v" style={{color:'var(--green-600)'}}>{stats.completados}</div></div>
         <div className="kpi"><div className="kpi__head"><div className="kpi__lbl">Comisiones técnicos</div></div><div className="kpi__v" style={{color:'var(--amber-600)'}}>{fmt(stats.comisiones)}</div></div>
         <div className="kpi"><div className="kpi__head"><div className="kpi__lbl">Ticket promedio <span style={{fontWeight:400,color:'var(--text-3)'}}>c/IVA</span></div></div><div className="kpi__v">{fmt(stats.ticket)}</div></div>
       </div>

@@ -5,7 +5,7 @@ import Toast from './components/Toast'
 import Login from './components/Login'
 // Páginas por demanda (React.lazy): cada una es su propio chunk, así el bundle
 // inicial baja y las libs pesadas (jspdf, gsap) viajan solo con la página que las usa.
-const Hoy = lazy(() => import('./pages/Hoy'))
+const Dashboard = lazy(() => import('./pages/Dashboard'))
 const Trabajos = lazy(() => import('./pages/Trabajos'))
 const Recepcion = lazy(() => import('./pages/Recepcion'))
 const Mecanicos = lazy(() => import('./pages/Mecanicos'))
@@ -63,19 +63,19 @@ class ErrorBoundary extends Component {
 }
 
 const SECTIONS = {
-  dashboard: { title: 'Hoy', subtitle: 'Pendientes del día' },
-  trabajos: { title: 'Órdenes de trabajo', subtitle: 'Historial y estado de cobro' },
-  recepcion: { title: 'Nueva orden', subtitle: 'Recepción de vehículos' },
-  mecanicos: { title: 'Técnicos', subtitle: 'Equipo del taller' },
+  dashboard: { title: 'Dashboard', subtitle: 'Resumen general del taller' },
+  trabajos: { title: 'Trabajos', subtitle: 'Gestión de órdenes de trabajo' },
+  recepcion: { title: 'Recepción', subtitle: 'Recepción de vehículos' },
+  mecanicos: { title: 'Mecánicos', subtitle: 'Equipo de técnicos' },
   cotizaciones: { title: 'Cotizaciones', subtitle: 'Gestionar cotizaciones' },
-  inventario: { title: 'Repuestos', subtitle: 'Inventario de Cuentti' },
-  liquidacion: { title: 'Pago a técnicos', subtitle: 'Comisiones y cuentas' },
+  inventario: { title: 'Inventario', subtitle: 'Productos y repuestos' },
+  liquidacion: { title: 'Liquidación', subtitle: 'Pagos a técnicos' },
   reportes: { title: 'Reportes', subtitle: 'Estadísticas y exportación' },
   inspecciones: { title: 'Inspecciones', subtitle: 'Inspecciones digitales DVI' },
   clientes: { title: 'Clientes', subtitle: 'Gestión de clientes' },
   vehiculos: { title: 'Vehículos', subtitle: 'Historial y seguimiento vehicular' },
-  crm: { title: 'Recordatorios', subtitle: 'Seguimiento y retención de clientes' },
-  cuentti: { title: 'Cobros', subtitle: 'Facturación y registro de pagos' },
+  crm: { title: 'CRM', subtitle: 'Recordatorios y campañas de retención' },
+  cuentti: { title: 'Cuentti', subtitle: 'Integración de facturación' },
   usuarios: { title: 'Usuarios', subtitle: 'Gestión de accesos al sistema' },
 }
 
@@ -265,8 +265,7 @@ export default function App() {
     }
     switch (section) {
       case 'dashboard':
-        // Sigue con la clave 'dashboard' para no romper enlaces ni permisos guardados.
-        return <Hoy trabajos={trabajosHook.trabajos} cotizaciones={cotizacionesHook.cotizaciones} liquidacionHook={liquidacionHook} onNavigate={navigate} user={user} />
+        return <Dashboard trabajos={trabajosHook.trabajos} loading={trabajosHook.loading} onNavigate={navigate} user={user} />
       case 'trabajos':
         {/* onAutoFacturar solo si el rol puede entrar a Cuentti: sin esto, el
            jefe de taller veía el botón "Cobrar" y aterrizaba en "No tienes

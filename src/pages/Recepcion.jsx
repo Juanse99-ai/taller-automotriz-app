@@ -17,12 +17,7 @@ export default function Recepcion({ hook, vehiculosHook, clientesHook, notify })
       .sort((a, b) => new Date(b.fecha) - new Date(a.fecha)),
   [trabajos])
 
-  const [paso, setPaso] = useState(1) // 1=Cliente, 2=Vehiculo+motivo, 3=Confirmar
-  // 97 de las 183 ordenes del taller (53%) son de mostrador: no entra un carro,
-  // se vende un servicio o un repuesto. No habia camino para eso — habia que
-  // inventarle una placa "SERVICIO" a mano al formulario que la pedia como
-  // obligatoria. Con esto, la ficha del vehiculo simplemente no aplica.
-  const [traeVehiculo, setTraeVehiculo] = useState(true)
+  const [paso, setPaso] = useState(1) // 1=Cliente, 2=Vehiculo, 3=Fotos, 4=Confirmar
   const [form, setForm] = useState({
     cedula: '', cliente: '', telefonoCliente: '', emailCliente: '', clienteId: '',
     placa: '', marca: '', modelo: '', ano: '',
@@ -51,19 +46,18 @@ export default function Recepcion({ hook, vehiculosHook, clientesHook, notify })
   const handleRecibir = async (e) => {
     e.preventDefault()
     if (enviando) return // ya se está enviando: ignora el 2º clic (no crear 2 OT)
-    if (!form.cliente) { notify('El cliente es obligatorio', 'error'); return }
-    if (traeVehiculo && !form.placa) { notify('La placa es obligatoria', 'error'); return }
+    if (!form.placa || !form.cliente) {
+      notify('Placa y cliente son obligatorios', 'error')
+      return
+    }
     // No numerar una OT si aún no sabemos el consecutivo real (arrancaría en OT-0001).
     if (!puedeCrearOT()) { notify('Sin conexión con el servidor: no se puede numerar la OT todavía. Reintenta en un momento.', 'error'); return }
-    // "SERVICIO" es el marcador que ya usa el resto de la app para una orden sin
-    // carro (ver esMostrador en Liquidacion). Antes se escribia a mano.
-    const placaNorm = traeVehiculo ? form.placa.toUpperCase() : 'SERVICIO'
+    const placaNorm = form.placa.toUpperCase()
     setEnviando(true)
     try {
     await agregarTrabajo({
       ...form,
       placa: placaNorm,
-      sinVehiculo: !traeVehiculo,
       ano: parseInt(form.ano) || null,
       kilometraje: parseInt(form.kilometraje) || 0,
       tecnicoId: parseInt(form.tecnicoId) || null,
@@ -76,7 +70,7 @@ export default function Recepcion({ hook, vehiculosHook, clientesHook, notify })
     })
 
     // Registrar vehiculo en la tabla de vehiculos (vincula placa con cedula)
-    if (vehiculosHook && placaNorm && traeVehiculo) {
+    if (vehiculosHook && placaNorm) {
       vehiculosHook.agregarVehiculo({
         placa: placaNorm,
         marca: form.marca || '',
@@ -95,14 +89,13 @@ export default function Recepcion({ hook, vehiculosHook, clientesHook, notify })
         email: form.emailCliente || '',
       })
       // Vincular placa al array de vehiculos del cliente
-      if (placaNorm && traeVehiculo) {
+      if (placaNorm) {
         clientesHook.vincularVehiculo(form.cedula, placaNorm)
       }
     }
 
-    notify(traeVehiculo ? 'Vehículo recibido' : 'Orden de mostrador creada', 'success')
+    notify('Vehículo recibido exitosamente', 'success')
     setPaso(1)
-    setTraeVehiculo(true)
     setForm({
       cedula: '', cliente: '', telefonoCliente: '', emailCliente: '', clienteId: '',
       placa: '', marca: '', modelo: '', ano: '',
@@ -162,9 +155,7 @@ export default function Recepcion({ hook, vehiculosHook, clientesHook, notify })
       {/* Page Header */}
       <div className="pagehd">
         <div>
-          {/* Se titulaba "Recibir vehículo" en una pantalla donde el 53% de las
-             órdenes no traen vehículo. El menú siempre dijo "Nueva orden". */}
-          <h2>Nueva orden</h2>
+          <h2>Recibir vehículo</h2>
         </div>
         <div className="actions">
           <button className="btn btn-outline" onClick={() => {
@@ -183,12 +174,7 @@ export default function Recepcion({ hook, vehiculosHook, clientesHook, notify })
 
       {/* Stepper (parche-correcciones-tablet) */}
       <div className="rc-stepper">
-        {/* Se quitó el paso "Fotos". Era un paso obligatorio del carril para algo
-           que en toda la base se usó 3 veces, y además duplicaba exactamente el
-           panel de evidencia de la derecha, que sigue disponible en cualquier
-           paso (el propio código lo ocultaba durante el paso 3 para no mostrar
-           el mismo título dos veces). */}
-        {['Cliente', traeVehiculo ? 'Vehículo' : 'Motivo', 'Confirmar'].map((label, i) => {
+        {['Cliente', 'Vehículo', 'Fotos', 'Confirmar'].map((label, i) => {
           const num = i + 1
           const isActive = paso === num
           const isDone = paso > num
@@ -262,25 +248,6 @@ export default function Recepcion({ hook, vehiculosHook, clientesHook, notify })
             {/* Paso 2: Vehiculo */}
             {paso === 2 && (
               <div id="rc-vehiculo" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-                {/* La pregunta que decide el resto del paso. Va primero porque en
-                   más de la mitad de las órdenes la respuesta es "no" y todo lo
-                   de abajo sobra. */}
-                <div className="card">
-                  <div className="card__b" style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
-                    <span style={{ fontSize: 14.5, fontWeight: 600 }}>¿Entra un vehículo al taller?</span>
-                    <div className="segctl" style={{ margin: 0 }}>
-                      <button type="button" className={traeVehiculo ? 'on' : ''} onClick={() => setTraeVehiculo(true)}>Sí, con placa</button>
-                      <button type="button" className={!traeVehiculo ? 'on' : ''} onClick={() => setTraeVehiculo(false)}>No, es de mostrador</button>
-                    </div>
-                    {!traeVehiculo && (
-                      <span style={{ fontSize: 12.5, color: 'var(--text-3)' }}>
-                        Se registra como servicio de mostrador, sin placa ni estado de ingreso.
-                      </span>
-                    )}
-                  </div>
-                </div>
-
-                {traeVehiculo && (<>
                 <div className="card">
                   <div className="card__h"><h3>Vehículo</h3></div>
                   <div className="card__b" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 14 }}>
@@ -322,11 +289,7 @@ export default function Recepcion({ hook, vehiculosHook, clientesHook, notify })
                     <IngresoVehiculo value={form.ingreso} onChange={v => set('ingreso', v)} />
                   </div>
                 </div>
-                </>)}
 
-                {/* Motivo, técnico y fecha aplican traiga carro o no: vivían
-                   dentro del paso "Vehículo" y en una orden de mostrador eran lo
-                   único que había que llenar. */}
                 <div className="card">
                   <div className="card__h"><h3>Ingreso al taller</h3></div>
                   <div className="card__b" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
@@ -355,35 +318,63 @@ export default function Recepcion({ hook, vehiculosHook, clientesHook, notify })
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                   <button type="button" className="btn btn-outline" onClick={() => setPaso(1)}>Atrás</button>
                   <button type="button" className="btn btn-primary" onClick={() => {
-                    if (traeVehiculo && !form.placa) { notify('La placa es obligatoria', 'error'); return }
+                    if (!form.placa) { notify('La placa es obligatoria', 'error'); return }
                     setPaso(3)
                   }}>Siguiente</button>
                 </div>
               </div>
             )}
 
-            {/* Paso 3: Confirmar */}
+            {/* Paso 3: Fotos */}
             {paso === 3 && (
+              <div className="card" id="rc-fotos">
+                <div className="card__h"><h3>Evidencia fotográfica</h3><span className="count">{form.evidenciasIngreso.length} / {maxPhotos}</span></div>
+                <div className="card__b">
+                  <p style={{ fontSize: 13, color: 'var(--text-3)', marginBottom: 12 }}>
+                    Toma fotos del vehículo: frente, lados y parte trasera para evitar reclamos.
+                  </p>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: 10 }}>
+                    {form.evidenciasIngreso.map(fv => (
+                      <div key={fv.id} style={{ border: '1px solid var(--border-card)', borderRadius: 10, padding: 6 }}>
+                        <div style={{ position: 'relative', aspectRatio: '1', overflow: 'hidden', borderRadius: 8, marginBottom: 6 }}>
+                          <img src={fv.dataUrl} alt={fv.nombre} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                          <button type="button" onClick={() => quitarFoto(fv.id)}
+                            style={{ position: 'absolute', top: 4, right: 4, background: 'rgba(0,0,0,0.6)', color: '#fff', border: 'none', borderRadius: '50%', width: 22, height: 22, cursor: 'pointer', fontSize: 12, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            x
+                          </button>
+                        </div>
+                        <input className="input" placeholder="Nota breve" value={fv.nota} style={{ fontSize: 12 }}
+                          onChange={e => actualizarNotaFoto(fv.id, e.target.value)} />
+                      </div>
+                    ))}
+                    {form.evidenciasIngreso.length < maxPhotos && (
+                      <label style={{ aspectRatio: '1', border: '1.5px dashed var(--border-strong)', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-4)', background: 'var(--bg-subtle)', cursor: 'pointer', fontSize: 24 }}>
+                        +
+                        <input type="file" accept="image/*" multiple onChange={e => addFotosIngreso(e.target.files)} style={{ display: 'none' }} />
+                      </label>
+                    )}
+                  </div>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0 16px 16px' }}>
+                  <button type="button" className="btn btn-outline" onClick={() => setPaso(2)}>Atrás</button>
+                  <button type="button" className="btn btn-primary" onClick={() => setPaso(4)}>Siguiente</button>
+                </div>
+              </div>
+            )}
+
+            {/* Paso 4: Confirmar */}
+            {paso === 4 && (
               <div className="card" id="rc-confirmar">
-                <div className="card__h"><h3>Confirmar</h3></div>
-                {/* En una orden de mostrador el resumen listaba Placa, Vehículo y
-                   Km en blanco: tres renglones vacíos justo donde se revisa
-                   antes de crear. Solo se muestran si hay carro. */}
+                <div className="card__h"><h3>Confirmar Recepcion</h3></div>
                 <div className="card__b" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                   <div><span style={{ fontSize: 13, color: 'var(--text-3)' }}>Cliente:</span> <strong>{form.cliente}</strong></div>
                   <div><span style={{ fontSize: 13, color: 'var(--text-3)' }}>Documento:</span> <strong>{form.cedula || '\u2014'}</strong></div>
-                  {traeVehiculo ? (
-                    <>
-                      <div><span style={{ fontSize: 13, color: 'var(--text-3)' }}>Placa:</span> <strong>{form.placa.toUpperCase()}</strong></div>
-                      <div><span style={{ fontSize: 13, color: 'var(--text-3)' }}>Vehículo:</span> <strong>{[form.marca, form.modelo, form.ano].filter(Boolean).join(' ') || '\u2014'}</strong></div>
-                      {!!form.kilometraje && <div><span style={{ fontSize: 13, color: 'var(--text-3)' }}>Km:</span> <strong>{form.kilometraje}</strong></div>}
-                    </>
-                  ) : (
-                    <div><span style={{ fontSize: 13, color: 'var(--text-3)' }}>Tipo:</span> <strong>Servicio de mostrador</strong></div>
-                  )}
-                  <div><span style={{ fontSize: 13, color: 'var(--text-3)' }}>Técnico:</span> <strong>{tecnicoNombre}</strong></div>
-                  {form.evidenciasIngreso.length > 0 && <div style={{ gridColumn: '1/3' }}><span style={{ fontSize: 13, color: 'var(--text-3)' }}>Fotos:</span> <strong>{form.evidenciasIngreso.length}</strong></div>}
-                  {form.observaciones && <div style={{ gridColumn: '1/3' }}><span style={{ fontSize: 13, color: 'var(--text-3)' }}>Motivo:</span> {form.observaciones}</div>}
+                  <div><span style={{ fontSize: 13, color: 'var(--text-3)' }}>Placa:</span> <strong>{form.placa.toUpperCase()}</strong></div>
+                  <div><span style={{ fontSize: 13, color: 'var(--text-3)' }}>Vehiculo:</span> <strong>{[form.marca, form.modelo, form.ano].filter(Boolean).join(' ')}</strong></div>
+                  <div><span style={{ fontSize: 13, color: 'var(--text-3)' }}>Km:</span> <strong>{form.kilometraje || '\u2014'}</strong></div>
+                  <div><span style={{ fontSize: 13, color: 'var(--text-3)' }}>Tecnico:</span> <strong>{tecnicoNombre}</strong></div>
+                  <div style={{ gridColumn: '1/3' }}><span style={{ fontSize: 13, color: 'var(--text-3)' }}>Fotos:</span> <strong>{form.evidenciasIngreso.length} fotos</strong></div>
+                  {form.observaciones && <div style={{ gridColumn: '1/3' }}><span style={{ fontSize: 13, color: 'var(--text-3)' }}>Obs:</span> {form.observaciones}</div>}
                 </div>
                 <div style={{ padding: '0 16px 16px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
@@ -391,8 +382,8 @@ export default function Recepcion({ hook, vehiculosHook, clientesHook, notify })
                     <span style={{ fontSize: 13, cursor: 'pointer' }} onClick={() => set('programar', !form.programar)}>Programar (genera OT)</span>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <button type="button" className="btn btn-outline" onClick={() => setPaso(2)}>Atrás</button>
-                    <button type="submit" className="btn btn-primary" disabled={enviando}>{enviando ? 'Creando…' : (traeVehiculo ? 'Recibir vehículo' : 'Crear orden')}</button>
+                    <button type="button" className="btn btn-outline" onClick={() => setPaso(3)}>Atrás</button>
+                    <button type="submit" className="btn btn-primary" disabled={enviando}>{enviando ? 'Recibiendo…' : 'Recibir Vehiculo'}</button>
                   </div>
                 </div>
               </div>
@@ -408,10 +399,9 @@ export default function Recepcion({ hook, vehiculosHook, clientesHook, notify })
               fotos, miniaturas + un boton. Antes se pintaban 6 cuadros vacios
               del ancho de la columna (~800px de alto) y por eso el paso 1
               dejaba un hueco enorme al lado.
-              Antes habia ademas un paso 3 dedicado a fotos que pintaba este
-              mismo panel: se quito (3 fotos en toda la base) y este queda como
-              el unico sitio, disponible en cualquier paso. */}
-          {(
+              En el paso 3 se oculta: ese paso ya trae el panel completo (con
+              nota por foto) y se veia el mismo titulo dos veces en pantalla. */}
+          {paso !== 3 && (
           <div className="card">
             <div className="card__h">
               <h3>Evidencia fotográfica</h3>
@@ -431,30 +421,20 @@ export default function Recepcion({ hook, vehiculosHook, clientesHook, notify })
                   <input type="file" accept="image/*" multiple onChange={e => addFotosIngreso(e.target.files)} style={{ display: 'none' }} />
                 </label>
               ) : (
-                <>
-                  {/* La nota por foto vivia en el paso 3, que se quito. Se
-                     conserva aqui: es lo que sostiene un reclamo ("rayon en la
-                     puerta derecha"), y perderla al plegar el paso habria sido
-                     tirar un dato, no simplificar. Solo aparece cuando hay
-                     fotos, que es raro. */}
+                <div className="rc-thumbs">
                   {form.evidenciasIngreso.map(fv => (
-                    <div key={fv.id} className="rc-foto">
-                      <div className="rc-thumb">
-                        <img src={fv.dataUrl} alt={fv.nombre} />
-                        <button type="button" onClick={() => quitarFoto(fv.id)} aria-label={`Quitar ${fv.nombre}`}>×</button>
-                      </div>
-                      <input className="input" placeholder="Nota breve" value={fv.nota}
-                        onChange={e => actualizarNotaFoto(fv.id, e.target.value)} />
+                    <div key={fv.id} className="rc-thumb">
+                      <img src={fv.dataUrl} alt={fv.nombre} />
+                      <button type="button" onClick={() => quitarFoto(fv.id)} aria-label={`Quitar ${fv.nombre}`}>×</button>
                     </div>
                   ))}
                   {form.evidenciasIngreso.length < maxPhotos && (
-                    <label className="rc-drop" style={{ marginTop: 10 }}>
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M5 12h14"/></svg>
-                      <div><strong>Agregar otra foto</strong></div>
+                    <label className="rc-thumb rc-thumb--add" title="Agregar fotos">
+                      <span>+</span>
                       <input type="file" accept="image/*" multiple onChange={e => addFotosIngreso(e.target.files)} style={{ display: 'none' }} />
                     </label>
                   )}
-                </>
+                </div>
               )}
             </div>
           </div>

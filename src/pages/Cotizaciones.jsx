@@ -1,7 +1,7 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react'
 import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
-import { fmt, fmtDate, uid, hoyISO, normalizarDoc, normalizarNombre, fmtTelefono, cantidadItem, fmtCant, clienteCorto } from '../utils/helpers'
+import { fmt, fmtDate, uid, hoyISO, normalizarDoc, normalizarNombre, fmtTelefono, cantidadItem, fmtCant } from '../utils/helpers'
 import { TECNICOS, IVA_DEFAULT, TALLER } from '../utils/constants'
 import { loadLogo as loadPdfLogo, drawHeader, drawSectionHeader, drawDataBlock, drawTotalsBox, drawSignatures, drawFooter, tableStylesItems, PDF_LAYOUT, PDF_COLORS } from '../utils/pdfTheme'
 import { MARCAS, getModelos } from '../utils/vehiculos'
@@ -13,19 +13,6 @@ import { lsGet, lsSet, LS_KEYS } from '../services/storage'
 import { Button, Badge, IconX, IconEdit, IconTrash, IconPdf } from '../components/ui'
 
 const ESTADO_COT = { PENDIENTE: 'Pendiente', APROBADA: 'Aprobada', RECHAZADA: 'Rechazada' }
-
-// Vigencia de una cotización, en palabras. Solo las pendientes vencen: una
-// aprobada o facturada ya no espera respuesta, así que ahí basta la fecha.
-const vigenciaCelda = (c) => {
-  if (c.estado !== ESTADO_COT.PENDIENTE) {
-    return <span className="c-muted">{fmtDate(c.fecha)}</span>
-  }
-  const r = c.restan
-  if (r < 0) return <span className="cot-vig cot-vig--out">Vencida hace {-r} {-r === 1 ? 'día' : 'días'}</span>
-  if (r === 0) return <span className="cot-vig cot-vig--hoy">Vence hoy</span>
-  if (r <= 5) return <span className="cot-vig cot-vig--hoy">Vence en {r} {r === 1 ? 'día' : 'días'}</span>
-  return <span className="cot-vig">Vence en {r} días</span>
-}
 
 // Referencia corta y legible. Conviven ids nuevos cortos (COT-0002) con uids
 // aleatorios de 13 chars (COT-mskjp68522nbo) que se partían en dos líneas y no
@@ -222,38 +209,16 @@ export default function Cotizaciones({ notify, trabajos = [], onCrearTrabajo, co
     doc.save(`${c.id || 'Cotizacion'}.pdf`)
   }
 
-  // Vigencia. La app guarda validezDias (15 en todas) y NUNCA lo usaba: una
-  // cotización de hace 105 días se veía igual que una de hace 4. Hoy 4 de las 7
-  // pendientes están vencidas, una hace 90 días. El dato ya estaba; faltaba
-  // mostrarlo.
-  const conVigencia = useMemo(() => {
-    const hoy = new Date(); hoy.setHours(0, 0, 0, 0)
-    return cotizaciones.map(c => {
-      const f = new Date(c.fecha)
-      const dias = isNaN(f) ? 0 : Math.round((hoy - new Date(f.getFullYear(), f.getMonth(), f.getDate())) / 86400000)
-      const validez = c.validezDias || 15
-      return { ...c, diasDesde: dias, validez, restan: validez - dias }
-    })
-  }, [cotizaciones])
+  const sorted = useMemo(() =>
+    [...cotizaciones].sort((a, b) => new Date(b.fecha) - new Date(a.fecha)),
+  [cotizaciones])
 
-  // Las pendientes primero y las más viejas arriba: son las accionables, y la
-  // que lleva 105 días esperando es la que hay que perseguir o cerrar. El resto
-  // (aprobadas, facturadas) va después, por fecha.
-  const sorted = useMemo(() => {
-    const pend = conVigencia.filter(c => c.estado === ESTADO_COT.PENDIENTE).sort((a, b) => b.diasDesde - a.diasDesde)
-    const resto = conVigencia.filter(c => c.estado !== ESTADO_COT.PENDIENTE).sort((a, b) => new Date(b.fecha) - new Date(a.fecha))
-    return [...pend, ...resto]
-  }, [conVigencia])
-
-  const stats = useMemo(() => {
-    const pend = conVigencia.filter(c => c.estado === ESTADO_COT.PENDIENTE)
-    return {
-      pendientes: pend.length,
-      vencidas: pend.filter(c => c.restan < 0).length,
-      valorPendiente: pend.reduce((s, c) => s + (c.total || 0), 0),
-      valorVencido: pend.filter(c => c.restan < 0).reduce((s, c) => s + (c.total || 0), 0),
-    }
-  }, [conVigencia])
+  const stats = useMemo(() => ({
+    total: cotizaciones.length,
+    pendientes: cotizaciones.filter(c => c.estado === ESTADO_COT.PENDIENTE).length,
+    aprobadas: cotizaciones.filter(c => c.estado === ESTADO_COT.APROBADA).length,
+    valorPendiente: cotizaciones.filter(c => c.estado === ESTADO_COT.PENDIENTE).reduce((s, c) => s + (c.total || 0), 0),
+  }), [cotizaciones])
 
   // Qué cotizaciones ya tienen OT. El vínculo lo deja App.jsx en las
   // observaciones del trabajo ("Creado desde cotizacion COT-xxx"); es el único
@@ -362,17 +327,22 @@ export default function Cotizaciones({ notify, trabajos = [], onCrearTrabajo, co
         </div>
       </div>
 
-      {/* "Total 14" y "Aprobadas 6" no eran accionables aquí: lo que decide qué
-         hacer con esta pantalla es cuánta plata está esperando respuesta y
-         cuánta de esa ya se pasó de su validez. */}
-      <div className="cot-tot">
-        <div className="eyebrow">Esperando respuesta del cliente</div>
-        <div className="mono cot-tot__v">{fmt(stats.valorPendiente)}</div>
-        <div className="cot-tot__s">
-          {stats.pendientes === 0 ? 'Ninguna cotización pendiente' : <>
-            {stats.pendientes} cotización{stats.pendientes !== 1 ? 'es' : ''} pendiente{stats.pendientes !== 1 ? 's' : ''}
-            {stats.vencidas > 0 && <> · <strong style={{ color: 'var(--red-700)' }}>{stats.vencidas} ya vencida{stats.vencidas !== 1 ? 's' : ''}</strong> por {fmt(stats.valorVencido)}</>}
-          </>}
+      <div className="statline">
+        <div className="statline__i">
+          <span className="eyebrow">Total</span>
+          <span className={`statline__v${stats.total === 0 ? ' is-zero' : ''}`}>{stats.total}</span>
+        </div>
+        <div className="statline__i">
+          <span className="eyebrow eyebrow--warn">Pendientes</span>
+          <span className={`statline__v${stats.pendientes === 0 ? ' is-zero' : ''}`}>{stats.pendientes}</span>
+        </div>
+        <div className="statline__i">
+          <span className="eyebrow">Aprobadas</span>
+          <span className={`statline__v${stats.aprobadas === 0 ? ' is-zero' : ''}`}>{stats.aprobadas}</span>
+        </div>
+        <div className="statline__i">
+          <span className="eyebrow">Valor pendiente</span>
+          <span className={`statline__v${stats.valorPendiente === 0 ? ' is-zero' : ''}`}>{fmt(stats.valorPendiente)}</span>
         </div>
       </div>
 
@@ -384,20 +354,16 @@ export default function Cotizaciones({ notify, trabajos = [], onCrearTrabajo, co
               <p>No hay cotizaciones registradas.</p>
             </div>
           ) : (
-            <table className="tbl tbl-cards cot-tabla">
+            <table className="tbl tbl-cards">
               <thead>
                 <tr>
                   <th>Ref.</th>
                   <th>Cliente</th>
-                  {/* Placa y Vehículo eran dos columnas y en las pendientes
-                     estaban vacías más de la mitad de las veces (4 de 7 sin
-                     placa). Una sola dice siempre algo. */}
+                  <th>Placa</th>
                   <th>Vehículo</th>
                   <th>Estado</th>
                   <th className="c-right">Total</th>
-                  {/* Sustituye a "Fecha": la fecha sola no decía si la
-                     cotización sigue en pie. */}
-                  <th>Vigencia</th>
+                  <th>Fecha</th>
                   <th></th>
                   <th></th>
                 </tr>
@@ -410,21 +376,12 @@ export default function Cotizaciones({ notify, trabajos = [], onCrearTrabajo, co
                   return (
                     <tr key={c.id} className="cot-row" onClick={() => setDetalleId(c.id)}>
                       <td className="c-mono" data-label="Ref." title={c.id}>{cotRef(c.id)}</td>
-                      {/* Mismo recorte por palabras que la tabla de Trabajos: los
-                         nombres de empresa ("FLOREZ y SANCHEZ INVERSIONES S. EN C")
-                         partían la fila en tres renglones. El nombre completo sigue
-                         en el detalle y en el title. */}
-                      <td className="c-name cot-cli" title={c.cliente || ''}>{clienteCorto(c.cliente)}</td>
-                      <td data-label="Vehículo">
-                        {c.placa
-                          ? <><span className="mono" style={{ fontWeight: 700 }}>{c.placa}</span>
-                              {[c.marca, c.modelo].filter(Boolean).length > 0 &&
-                                <span className="cot-veh">{[c.marca, c.modelo, c.ano].filter(Boolean).join(' ')}</span>}</>
-                          : <span style={{ color: 'var(--text-3)' }}>Sin vehículo</span>}
-                      </td>
+                      <td className="c-name">{c.cliente || '—'}</td>
+                      <td className="c-mono" style={{ fontWeight: 700 }} data-label="Placa">{c.placa || '—'}</td>
+                      <td className="c-muted" data-label="Vehículo">{[c.marca, c.modelo, c.ano].filter(Boolean).join(' ') || '—'}</td>
                       <td data-label="Estado"><Badge tone={bc}>{c.estado}</Badge></td>
                       <td className="c-right c-mono" data-label="Total">{fmt(c.total)}</td>
-                      <td data-label="Vigencia">{vigenciaCelda(c)}</td>
+                      <td className="c-muted" data-label="Fecha">{fmtDate(c.fecha)}</td>
                       {/* Una sola acción visible: la que toca ahora. Aprobar, rechazar,
                           PDF, editar y eliminar viven en el detalle o en el menú "⋯",
                           para que el tacho nunca quede al lado de algo que se usa a diario. */}

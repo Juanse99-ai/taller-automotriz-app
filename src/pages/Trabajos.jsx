@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useRef } from 'react'
 import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
-import { fmt, fmtDate, fmtTelefono, cantidadItem, fmtCant, clienteCorto } from '../utils/helpers'
+import { fmt, fmtDate, fmtTelefono, cantidadItem, fmtCant } from '../utils/helpers'
 import { TECNICOS, ESTADOS, DIAS_ESTANCADO, TALLER, SIN_FACTURA } from '../utils/constants'
 import { loadLogo as loadPdfLogo, drawHeader, drawSectionHeader, drawDataBlock, drawTotalsBox, drawSignatures, drawFooter, tableStylesItems, PDF_LAYOUT, PDF_COLORS } from '../utils/pdfTheme'
 import FichaTecnico from '../components/FichaTecnico'
@@ -561,13 +561,29 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
         </div>
       </div>
 
-      {/* Las pestañas de estado YA traen el conteo de cada una, asi que la franja
-          de cuatro cifras que habia aqui encima decia lo mismo dos veces — y abria
-          con cuatro ceros gigantes que parecian perdida de datos. Se quito.
+      {/* Cifras de la vista: franja, no cuatro tarjetas iguales (abrían con cuatro
+          ceros gigantes que parecían pérdida de datos). */}
+      <div className="statline">
+        <div className="statline__i">
+          <span className="eyebrow">En vista</span>
+          <span className={`statline__v${stats.total === 0 ? ' is-zero' : ''}`}>{stats.total}</span>
+        </div>
+        <div className="statline__i">
+          <span className="eyebrow">Completados</span>
+          <span className={`statline__v${stats.comp === 0 ? ' is-zero' : ''}`}>{stats.comp}</span>
+        </div>
+        <div className="statline__i">
+          <span className="eyebrow">Pendientes</span>
+          <span className={`statline__v${stats.pend === 0 ? ' is-zero' : ''}`}>{stats.pend}</span>
+        </div>
+        <div className="statline__i">
+          <span className="eyebrow">En progreso</span>
+          <span className={`statline__v${stats.prog === 0 ? ' is-zero' : ''}`}>{stats.prog}</span>
+        </div>
+      </div>
 
-          Los filtros pasan de TRES filas apiladas (estado / fecha / buscador) a
-          una sola: antes habia que atravesar tres barras antes de ver un dato. */}
-      <div className="tabs" style={{ marginBottom: 10 }}>
+      {/* Tabs + search/filter bar */}
+      <div className="tabs" style={{ marginBottom: 12 }}>
         {statesTabs.map(([key, label]) => (
           <button key={key} className={filtroEstado === key ? 'on' : ''} onClick={() => setFiltroEstado(key)}>
             {label}{conteos[key] ? <span className="tab-count">{conteos[key]}</span> : null}
@@ -575,27 +591,33 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
         ))}
       </div>
 
-      <div className="trab-filtros">
+      <div className="card" style={{ padding: '12px 16px', marginBottom: 14 }}>
         {vista !== 'kanban' && (
-          <div className="segctl" style={{ flexShrink: 0 }}>
+          <div className="segctl" style={{ marginBottom: 10 }}>
             {[['hoy', 'Hoy'], ['semana', 'Semana'], ['mes', 'Mes'], ['todas', 'Todas']].map(([k, l]) => (
               <button key={k} type="button" className={filtroFecha === k ? 'on' : ''} onClick={() => setFiltroFecha(k)}>{l}</button>
             ))}
           </div>
         )}
-        <input className="input trab-filtros__q" placeholder="Buscar placa, cliente, OT..." value={filtroBusqueda}
-          onChange={e => setFiltroBusqueda(e.target.value)} />
-        <select className="input trab-filtros__tec" value={filtroTecnico} onChange={e => setFiltroTecnico(e.target.value)}>
-          <option value="todos">Todos los tecnicos</option>
-          {TECNICOS.map(t => <option key={t.id} value={t.id}>{t.nombre}{t.activo === false ? ' (inactivo)' : ''}</option>)}
-        </select>
-        {filtroTecnico !== 'todos' && filtered.length > 0 && (
-          <Button variant="outline" size="sm" title="Un PDF con la ficha de cada OT de este tecnico (sin precios)"
-            onClick={() => {
-              const nom = (TECNICOS.find(x => String(x.id) === filtroTecnico)?.nombre || 'tecnico').split(' ')[0]
-              exportarFichasTecnico(filtered, tecNombre, `fichas_${nom}.pdf`)
-            }}>Imprimir fichas ({filtered.length})</Button>
-        )}
+        <div className="form-row" style={{ marginBottom: 0 }}>
+          <div className="form-group" style={{ marginBottom: 0, flex: 2 }}>
+            <input className="form-input" placeholder="Buscar placa, cliente, OT..." value={filtroBusqueda}
+              onChange={e => setFiltroBusqueda(e.target.value)} style={{ fontSize: 13 }} />
+          </div>
+          <div className="form-group" style={{ marginBottom: 0 }}>
+            <select className="form-select" value={filtroTecnico} onChange={e => setFiltroTecnico(e.target.value)} style={{ fontSize: 13 }}>
+              <option value="todos">Todos los técnicos</option>
+              {TECNICOS.map(t => <option key={t.id} value={t.id}>{t.nombre}{t.activo === false ? ' (inactivo)' : ''}</option>)}
+            </select>
+          </div>
+          {filtroTecnico !== 'todos' && filtered.length > 0 && (
+            <Button variant="outline" size="sm" title="Un PDF con la ficha de cada OT de este técnico (sin precios)"
+              onClick={() => {
+                const nom = (TECNICOS.find(x => String(x.id) === filtroTecnico)?.nombre || 'tecnico').split(' ')[0]
+                exportarFichasTecnico(filtered, tecNombre, `fichas_${nom}.pdf`)
+              }}>Imprimir fichas ({filtered.length})</Button>
+          )}
+        </div>
       </div>
 
       {/* Vista Kanban */}
@@ -668,43 +690,25 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
         <div className="trab-cockpit">
           <div className="card trab-cockpit__list" style={{ padding: 0 }}>
             <div className="card__h"><span style={{ fontWeight: 600, fontSize: 14 }}>{filtered.length} trabajo{filtered.length !== 1 ? 's' : ''}</span></div>
-            {/* Tabla densa: una orden = UNA fila de 34px. Antes cada orden
-                ocupaba tres lineas (OT / placa+cliente / total) y en 1280x800
-                entraban ~10; asi entran ~30. Las seis columnas son los seis
-                datos por los que se reconoce una orden — no se quito ninguno,
-                los tres que estaban apilados ahora estan en su columna, y se
-                sumaron Tecnico y Estado que antes obligaban a abrir el detalle. */}
-            <table className="tbl trab-tabla">
-              <thead>
-                <tr>
-                  <th>OT</th>
-                  <th>Placa</th>
-                  <th>Cliente</th>
-                  <th>Estado</th>
-                  <th>Tecnico</th>
-                  <th className="c-right">Total</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.map(t => {
-                  const dias = t.fecha ? Math.floor((Date.now() - new Date(t.fecha).getTime()) / 86400000) : 0
-                  const estancado = t.estado !== ESTADOS.COMPLETADO && t.estado !== ESTADOS.CANCELADO && dias >= DIAS_ESTANCADO
-                  return (
-                    <tr key={t.id} className={t.id === selId ? 'sel' : ''} onClick={() => setSelId(t.id)}>
-                      <td data-label="OT" className="c-ot">{t.otCodigo || '—'}</td>
-                      <td data-label="Placa"><strong>{t.placa}</strong></td>
-                      <td data-label="Cliente" className="c-cliente" title={t.cliente || ''}>{clienteCorto(t.cliente)}</td>
-                      <td data-label="Estado">
+            <div className="trab-cklist">
+              {filtered.map(t => {
+                const dias = t.fecha ? Math.floor((Date.now() - new Date(t.fecha).getTime()) / 86400000) : 0
+                const estancado = t.estado !== ESTADOS.COMPLETADO && t.estado !== ESTADOS.CANCELADO && dias >= DIAS_ESTANCADO
+                return (
+                  <button key={t.id} type="button" className={`trab-ckrow${t.id === selId ? ' sel' : ''}`} onClick={() => setSelId(t.id)}>
+                    <span className="r1">
+                      <span className="ot">{t.otCodigo || '—'}</span>
+                      <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        {estancado && <Badge tone="d" style={{ fontSize: 9, padding: '1px 6px' }}>{dias}d</Badge>}
                         <span className={`badge ${estadoBadge(t.estado)}`}>{t.estado}</span>
-                        {estancado && <Badge tone="d" style={{ marginLeft: 5 }}>{dias}d</Badge>}
-                      </td>
-                      <td data-label="Tecnico" className="c-muted">{tecNombre(t.tecnicoId) || '—'}</td>
-                      <td data-label="Total" className="c-mono">{fmt(t.total)}</td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
+                      </span>
+                    </span>
+                    <span className="r2"><strong>{t.placa}</strong> · {t.cliente || '—'}</span>
+                    <span className="r3">{fmt(t.total)}</span>
+                  </button>
+                )
+              })}
+            </div>
           </div>
           <aside className="trab-cockpit__detail">
             {selTrabajo ? (
@@ -733,7 +737,7 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
                       <div className="ck-d-cell" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
                         <div style={{ minWidth: 0 }}>
                           <div style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{selTrabajo.cliente || 'Cliente'}</div>
-                          <div style={{ fontSize: 12.5, color: 'var(--text-3)' }}>{fmtTelefono(selTrabajo.telefonoCliente)}</div>
+                          <div style={{ fontSize: 11.5, color: 'var(--text-3)' }}>{fmtTelefono(selTrabajo.telefonoCliente)}</div>
                         </div>
                         <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
                           <a href={`tel:${tel}`} className="btn btn-outline btn-sm btn-icon" aria-label="Llamar" title="Llamar" style={{ height: 32, width: 32 }}><IconPhone /></a>
@@ -750,7 +754,7 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
 
                   {selTrabajo.estado !== ESTADOS.COMPLETADO && selTrabajo.estado !== ESTADOS.CANCELADO && (
                     <div>
-                      <div style={{ fontSize: 12, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '.4px', marginBottom: 6 }}>Cambiar estado</div>
+                      <div style={{ fontSize: 10, color: 'var(--text-4)', textTransform: 'uppercase', letterSpacing: '.4px', marginBottom: 6 }}>Cambiar estado</div>
                       <div className="segctl segctl--full">
                         {[
                           [ESTADOS.PENDIENTE, 'Pendiente'],
@@ -776,76 +780,6 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
                       ))}
                     </div>
                   )}
-                  {/* ===== GRUPOS DEL DETALLE =====
-                      Ordenados por CUANDO se usan en el taller, no por como
-                      estan en la base de datos. Lo que se llena siempre queda
-                      abierto; lo excepcional se pliega, pero con su etiqueta y
-                      su contador a la vista, nunca escondido.
-
-                      Un campo opcional sin valor NO se pinta aqui: esto es la
-                      vista de consulta. En el formulario sigue apareciendo para
-                      poder llenarlo.
-
-                      Porcentajes medidos sobre las 153 ordenes reales. */}
-
-                  {/* VEHICULO — 58% marca/modelo, 88% anio. Antes habia que abrir
-                      el formulario de edicion para ver el kilometraje. */}
-                  {(() => {
-                    const campos = [
-                      ['Marca', selTrabajo.marca], ['Modelo', selTrabajo.modelo],
-                      ['Año', selTrabajo.ano], ['Cilindraje', selTrabajo.cilindraje],
-                      ['Kilometraje', selTrabajo.kilometraje ? `${Number(selTrabajo.kilometraje).toLocaleString('es-CO')} km` : ''],
-                    ].filter(([, v]) => v)
-                    if (!campos.length) return null
-                    return (
-                      <div className="det-grupo">
-                        <div className="det-grupo__t">Vehículo</div>
-                        {campos.map(([k, v]) => (
-                          <div className="det-fila" key={k}><span>{k}</span><span>{v}</span></div>
-                        ))}
-                      </div>
-                    )
-                  })()}
-
-                  {/* RECEPCION — 44%. Plegado: se llena menos de la mitad de las veces. */}
-                  {(ingresoTieneAlgo(selTrabajo.ingreso) || (selTrabajo.evidenciasIngreso || []).length > 0) && (
-                    <details className="det-fold">
-                      <summary>
-                        Recepción
-                        <span className="det-fold__n">
-                          {(selTrabajo.ingreso?.inventario || []).length + ((selTrabajo.evidenciasIngreso || []).length)}
-                        </span>
-                      </summary>
-                      <div className="det-fold__in">
-                        {selTrabajo.ingreso?.combustible != null && (
-                          <div className="det-fila"><span>Combustible</span><span>{etiquetaCombustible(selTrabajo.ingreso.combustible)}</span></div>
-                        )}
-                        {selTrabajo.ingreso?.estado && (
-                          <div className="det-fila"><span>Estado</span><span>{selTrabajo.ingreso.estado}</span></div>
-                        )}
-                        {(selTrabajo.ingreso?.inventario || []).length > 0 && (
-                          <div className="det-fila"><span>Recibido</span>
-                            <span>{selTrabajo.ingreso.inventario.map(labelInventario).join(', ')}</span></div>
-                        )}
-                        {(selTrabajo.evidenciasIngreso || []).length > 0 && (
-                          <div className="det-fila"><span>Fotos</span><span>{selTrabajo.evidenciasIngreso.length}</span></div>
-                        )}
-                      </div>
-                    </details>
-                  )}
-
-                  {/* MANTENIMIENTO — 2%. Casi nunca se llena, asi que va plegado. */}
-                  {(selTrabajo.tipoAceite || selTrabajo.proximoKm || selTrabajo.proximaVisita) && (
-                    <details className="det-fold">
-                      <summary>Próximo mantenimiento</summary>
-                      <div className="det-fold__in">
-                        {selTrabajo.tipoAceite && <div className="det-fila"><span>Aceite</span><span>{selTrabajo.tipoAceite}</span></div>}
-                        {selTrabajo.proximoKm && <div className="det-fila"><span>Próximo km</span><span>{Number(selTrabajo.proximoKm).toLocaleString('es-CO')} km</span></div>}
-                        {selTrabajo.proximaVisita && <div className="det-fila"><span>Próxima visita</span><span>{fmtDate(selTrabajo.proximaVisita)}</span></div>}
-                      </div>
-                    </details>
-                  )}
-
                   {/* Puente al cobro: sin esto había que ir a "Cuentti" a mano y
                       buscar la OT en un selector, y nadie sabía que ahí se cobra. */}
                   {onAutoFacturar && estadoCobro(selTrabajo)?.porCobrar && (
@@ -878,7 +812,7 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
             <span style={{ fontWeight: 600, fontSize: 14 }}>{filtered.length} resultado{filtered.length !== 1 ? 's' : ''}</span>
           </div>
           <div className="card__b card__b--flush">
-            <table className="tbl tbl-cards trab-movil">
+            <table className="tbl tbl-cards">
               <thead>
                 <tr>
                   <th>OT</th>
@@ -905,16 +839,16 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
                       <td className="c-muted" data-label="Vehículo">{[t.marca, t.modelo].filter(Boolean).join(' ') || '—'}</td>
                       <td data-label="Técnico">
                         <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-                          <span className={`av av-${(parseInt(t.tecnicoId) || 1) % 5 + 1}`} style={{ width: 26, height: 26, fontSize: 12 }}>{tecIniciales(t.tecnicoId)}</span>
+                          <span className={`av av-${(parseInt(t.tecnicoId) || 1) % 5 + 1}`} style={{ width: 26, height: 26, fontSize: 10 }}>{tecIniciales(t.tecnicoId)}</span>
                           <span style={{ fontSize: 12.5 }}>{tecNombre(t.tecnicoId)}</span>
                         </div>
                       </td>
                       <td data-label="Estado">
                         <span className={`badge ${bc}`}>{t.estado}</span>
-                        {estancado && <Badge tone="d" style={{ marginLeft: 4, fontSize: 12 }}>{diasSinMover}d</Badge>}
+                        {estancado && <Badge tone="d" style={{ marginLeft: 4, fontSize: 10 }}>{diasSinMover}d</Badge>}
                         {/* En celular esta tabla ES la ficha: sin este badge no hay
                             dónde ver si a la OT ya se le cobró. */}
-                        {(() => { const c = estadoCobro(t); return c ? <Badge tone={c.tone} style={{ marginLeft: 4, fontSize: 12 }}>{c.label}</Badge> : null })()}
+                        {(() => { const c = estadoCobro(t); return c ? <Badge tone={c.tone} style={{ marginLeft: 4, fontSize: 10 }}>{c.label}</Badge> : null })()}
                       </td>
                       <td className="c-mono c-right" data-label="Total" style={{ fontWeight: 700 }}>{fmt(t.total)}</td>
                       <td className="c-mono c-muted" data-label="Fecha" style={{ fontSize: 12 }}>{fmtDate(t.fecha)}</td>
@@ -982,7 +916,7 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, border: '1px solid var(--border)', borderRadius: 10, padding: '10px 12px', background: 'var(--bg-subtle)' }}>
                     <div style={{ minWidth: 0 }}>
                       <div style={{ fontSize: 12.5, fontWeight: 600 }}>{t.cliente || 'Cliente'}</div>
-                      <div style={{ fontSize: 12.5, color: 'var(--text-3)' }}>{fmtTelefono(t.telefonoCliente)}</div>
+                      <div style={{ fontSize: 11.5, color: 'var(--text-3)' }}>{fmtTelefono(t.telefonoCliente)}</div>
                     </div>
                     <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
                       <a href={`tel:${tel}`} className="btn btn-outline btn-sm btn-icon" aria-label="Llamar" title="Llamar" style={{ height: 32, width: 32 }}><IconPhone /></a>
@@ -991,12 +925,12 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
                   </div>
                 )}
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                  <div style={{ border: '1px solid var(--border)', borderRadius: 10, padding: '9px 12px' }}><div style={{ fontSize: 12, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '.4px' }}>Técnico</div><div style={{ fontSize: 13, fontWeight: 600 }}>{tecNombre(t.tecnicoId)}</div></div>
-                  <div style={{ border: '1px solid var(--border)', borderRadius: 10, padding: '9px 12px' }}><div style={{ fontSize: 12, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '.4px' }}>Total</div><div style={{ fontSize: 13, fontWeight: 600 }}>{fmt(t.total)}</div></div>
+                  <div style={{ border: '1px solid var(--border)', borderRadius: 10, padding: '9px 12px' }}><div style={{ fontSize: 10, color: 'var(--text-4)', textTransform: 'uppercase', letterSpacing: '.4px' }}>Técnico</div><div style={{ fontSize: 13, fontWeight: 600 }}>{tecNombre(t.tecnicoId)}</div></div>
+                  <div style={{ border: '1px solid var(--border)', borderRadius: 10, padding: '9px 12px' }}><div style={{ fontSize: 10, color: 'var(--text-4)', textTransform: 'uppercase', letterSpacing: '.4px' }}>Total</div><div style={{ fontSize: 13, fontWeight: 600 }}>{fmt(t.total)}</div></div>
                 </div>
                 {(t.items || []).length > 0 && (
                   <div style={{ border: '1px solid var(--border)', borderRadius: 10, padding: '9px 12px' }}>
-                    <div style={{ fontSize: 12, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '.4px', marginBottom: 6 }}>Ítems</div>
+                    <div style={{ fontSize: 10, color: 'var(--text-4)', textTransform: 'uppercase', letterSpacing: '.4px', marginBottom: 6 }}>Ítems</div>
                     {(t.items || []).slice(0, 8).map((it, i) => (
                       <div key={i} style={{ display: 'flex', justifyContent: 'space-between', gap: 10, fontSize: 12.5, padding: '3px 0' }}>
                         <span style={{ color: 'var(--text-2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{it.nombre || 'Ítem'}</span>
@@ -1007,7 +941,7 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
                 )}
                 {/* Firma del cliente (recibido) */}
                 <div style={{ border: '1px solid var(--border)', borderRadius: 10, padding: '10px 12px' }}>
-                  <div style={{ fontSize: 12, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '.4px', marginBottom: 8 }}>Firma del cliente (recibido)</div>
+                  <div style={{ fontSize: 10, color: 'var(--text-4)', textTransform: 'uppercase', letterSpacing: '.4px', marginBottom: 8 }}>Firma del cliente (recibido)</div>
                   {firmando ? (
                     <SignaturePad initial={t.firmaCliente}
                       onSave={async (dataUrl) => { await actualizarTrabajo(t.id, { firmaCliente: dataUrl }); setFirmando(false); notify('Firma guardada', 'success') }}

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { cargarInventarioCompleto, motivoFalloInventario, esErrorDeToken } from '../services/cuentti'
+import { cargarInventarioCompleto } from '../services/cuentti'
 import { lsGet, lsSet, LS_KEYS } from '../services/storage'
 
 // Edad maxima del cache antes de considerarlo "viejo" y forzar fetch sincronico
@@ -25,9 +25,6 @@ export function useInventario({ autoSyncMs = 0 } = {}) {
   })
   const [refreshing, setRefreshing] = useState(false)
   const [error, setError] = useState(null)
-  // Un token vencido no se arregla reintentando: la UI necesita saberlo para
-  // ofrecer la accion que si sirve en vez de un boton que no puede funcionar.
-  const [errorEsToken, setErrorEsToken] = useState(false)
   const [lastSyncAt, setLastSyncAt] = useState(() => lsGet(LS_KEYS.INVENTARIO_TIMESTAMP, 0))
   const fetchingRef = useRef(false)
 
@@ -44,25 +41,8 @@ export function useInventario({ autoSyncMs = 0 } = {}) {
         lsSet(LS_KEYS.INVENTARIO_TIMESTAMP, now)
         setLastSyncAt(now)
         setError(null)
-        setErrorEsToken(false)
-      } else if (data === null) {
-        // Falló la carga. El motivo importa: Cuentti contesta sus errores con
-        // HTTP 200, y el más frecuente es el token vencido. "Reintenta en un
-        // momento" mandaba a pulsar un botón que nunca iba a funcionar.
-        const motivo = motivoFalloInventario()
-        const esToken = esErrorDeToken(motivo)
-        setErrorEsToken(esToken)
-        // No se afirma que "caducó": Cuentti manda el mismo "Invalid Token" tanto
-        // si el token expiró como si la petición sale sin él. Lo que el usuario
-        // necesita saber es que no es un problema de red y que reintentar no lo
-        // resuelve; el detalle técnico queda en la consola.
-        setError(esToken
-          ? 'Cuentti rechazó la sesión. Es un problema de configuración del servidor, no de conexión: reintentar aquí no lo arregla.'
-          : `No se pudo cargar el inventario desde Cuentti (${motivo}).`)
       } else {
-        // data = [] de verdad: Cuentti respondió bien y no hay productos.
-        setErrorEsToken(false)
-        setError('Cuentti respondió sin productos. Revisa que la sucursal tenga inventario cargado.')
+        setError('Cuentti no devolvió productos. Reintenta en un momento.')
       }
     } catch (e) {
       console.warn('Error refreshing inventario:', e.message)
@@ -101,7 +81,6 @@ export function useInventario({ autoSyncMs = 0 } = {}) {
     loading,
     refreshing,
     error,
-    errorEsToken,
     lastSyncAt,
     cacheAge,
     isStale,

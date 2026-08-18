@@ -108,33 +108,33 @@ const ICONS = {
   ),
 }
 
-// Navegación por TAREA, no por tabla. Antes eran 14 entradas con nombres de la
-// base de datos ("Trabajos", "Vehículos") o del proveedor ("Cuentti", "CRM"):
-// quien entra por primera vez tiene que traducir lo que quiere hacer al nombre
-// interno, y ahí se pierde. En la prueba de usabilidad, cobrar tomó 9 pasos y
-// terminó sin saberse si el cliente ya había pagado, porque el cobro vive
-// detrás del nombre del proveedor de facturación.
-// Arriba las 5 tareas del día; abajo lo que se consulta.
+// Estructura de navegacion en grupos (segun prototipo)
 const NAV = [
-  { group: '', items: [
-    { key: 'dashboard',   label: 'Hoy' },
-    { key: 'recepcion',   label: 'Nueva orden' },
-    { key: 'trabajos',    label: 'Órdenes de trabajo' },
-    { key: 'cuentti',     label: 'Cobros' },
-    { key: 'liquidacion', label: 'Pago a técnicos' },
+  { group: 'Principal', items: [
+    { key: 'dashboard',   label: 'Dashboard' },
   ]},
-  { group: 'Consultar', items: [
-    { key: 'cotizaciones', label: 'Cotizaciones' },
-    { key: 'clientes',     label: 'Clientes' },
-    { key: 'vehiculos',    label: 'Vehículos' },
-    { key: 'inventario',   label: 'Repuestos' },
-    { key: 'reportes',     label: 'Reportes' },
-  ]},
-  { group: 'Más', items: [
+  { group: 'Operación', items: [
+    { key: 'recepcion',    label: 'Recepción' },
+    { key: 'trabajos',     label: 'Trabajos' },
     { key: 'inspecciones', label: 'Inspecciones' },
-    { key: 'mecanicos',    label: 'Técnicos' },
-    { key: 'crm',          label: 'Recordatorios' },
-    { key: 'usuarios',     label: 'Usuarios' },
+    { key: 'mecanicos',    label: 'Mecánicos' },
+  ]},
+  { group: 'Gestión', items: [
+    { key: 'clientes',  label: 'Clientes' },
+    { key: 'vehiculos', label: 'Vehículos' },
+    { key: 'crm',       label: 'CRM' },
+  ]},
+  { group: 'Facturación', items: [
+    { key: 'cotizaciones', label: 'Cotizaciones' },
+    { key: 'inventario',   label: 'Inventario' },
+    { key: 'liquidacion',  label: 'Liquidación' },
+  ]},
+  { group: 'Análisis', items: [
+    { key: 'reportes', label: 'Reportes' },
+    { key: 'cuentti',  label: 'Cuentti' },
+  ]},
+  { group: 'Sistema', items: [
+    { key: 'usuarios', label: 'Usuarios' },
   ]},
 ]
 
