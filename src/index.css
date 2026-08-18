@@ -1682,3 +1682,12 @@ tbody tr:active{background:var(--fill-2)}
   .hd-head,.hd-head__t,.hd-head__right{max-width:100%;min-width:0}
   .hd-head__sub{white-space:normal}
 }
+
+/* --- El boton de menu del topbar desaparece en escritorio ---
+   El rail ya esta siempre visible y se expande al pasar el cursor, asi que ese
+   control no hacia nada util: quedaba solo en la esquina, con un hueco enorme
+   hasta el buscador, y encima parecia "cerrar" algo. En movil sigue, porque
+   ahi el menu SI es un cajon que hay que abrir. */
+@media (min-width:961px){
+  .topbar__menu{display:none}
+}

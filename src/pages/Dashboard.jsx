@@ -307,8 +307,10 @@ export default function Dashboard({ trabajos = [], onNavigate, user }) {
         </div>
       )}
 
-      {/* ── Fila 1: lo que hay que mover hoy · lo que hay que cobrar hoy ─── */}
-      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 16, alignItems: 'start' }}>
+      {/* ── Fila 1: lo que hay que mover hoy · lo que hay que cobrar hoy ───
+          Si no hay cartera, la fila pasa a una sola columna: dejar la rejilla en
+          2fr 1fr sin su segundo hijo abre un hueco de un tercio de pantalla. */}
+      <div style={{ display: 'grid', gridTemplateColumns: stats.porCobrar > 0 ? '2fr 1fr' : '1fr', gap: 16, alignItems: 'start' }}>
 
         {/* Pendientes & urgentes */}
         <div className="hd-card" style={{ minWidth: 0 }}>
@@ -386,7 +388,13 @@ export default function Dashboard({ trabajos = [], onNavigate, user }) {
 
         {/* Por cobrar: sale de la tira de KPI y sube a la tarjeta navy. Es la
             única cifra de esta pantalla sobre la que se actúa el mismo día,
-            así que es la única que lleva navy y botón propio. */}
+            así que es la única que lleva navy y botón propio.
+
+            Y por eso mismo NO se pinta cuando vale cero: el navy está reservado
+            para lo que exige actuar, y un día sin cartera el elemento más
+            gritón de la pantalla estaría diciendo "POR COBRAR $ 0". Nada que
+            cobrar es una buena noticia, no un titular. */}
+        {stats.porCobrar > 0 && (
         <div className="hd-neto" style={{ margin: 0 }}>
           <div className="hd-neto__l">POR COBRAR</div>
           <div className="hd-neto__v">{fmt(stats.porCobrar)}</div>
@@ -411,6 +419,7 @@ export default function Dashboard({ trabajos = [], onNavigate, user }) {
             </button>
           )}
         </div>
+        )}
       </div>
 
       {/* ── Fila 2: histórico · el movimiento del día ─────────────────────── */}
