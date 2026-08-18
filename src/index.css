@@ -1707,3 +1707,9 @@ tbody tr:active{background:var(--fill-2)}
    "Completados", que repetía el mismo número que "Total trabajos" salvo cuando
    hay pendientes — que es justo lo que este renglón nombra. */
 .kpi__sub{font-size:11.5px;color:var(--text-3);margin-top:3px;line-height:1.4}
+
+/* Inspecciones · vacío que enseña. Es la pantalla sin usar de la app (cero
+   registros): el vacío es el único sitio donde se puede explicar para qué sirve. */
+.insp-vacio{display:flex;flex-direction:column;align-items:center;text-align:center;gap:12px;padding:36px 22px 32px}
+.insp-vacio h4{margin:0;font-size:16px;font-weight:700;color:var(--text)}
+.insp-vacio p{margin:0;max-width:52ch;font-size:13.5px;line-height:1.6;color:var(--text-3)}
