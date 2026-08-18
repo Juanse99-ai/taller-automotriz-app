@@ -1640,3 +1640,45 @@ tbody tr:active{background:var(--fill-2)}
 .hd-neto__r span:last-child{font-size:13px;color:#fff;font-variant-numeric:tabular-nums}
 .hd-neto__r--neg span:last-child{color:#fca5a5}
 .hd-neto__sep{height:1px;background:rgba(255,255,255,.12)}
+
+/* --- Pastilla sobre una tira del MISMO tono ---
+   .hd-chip--bad pinta su fondo con --bad-bg; si la tira que la contiene usa
+   ese mismo token, la pastilla desaparece: se lee como texto de color, no
+   como pastilla. Dentro de una tira coloreada se invierte — fondo del color
+   del texto — que es lo unico que da contraste sin salirse de la paleta. */
+.hd-chip--ok-solid{background:var(--ok-fg);color:#fff}
+.hd-chip--warn-solid{background:var(--warn-fg);color:#fff}
+.hd-chip--bad-solid{background:var(--bad-fg);color:#fff}
+.hd-chip--info-solid{background:var(--info-fg);color:#fff}
+
+/* --- Fila de OT en movil ---
+   Las columnas llevan ancho fijo en linea (no se pueden pisar desde una clase
+   sin !important), asi que a 375px la fila medía 887px y la pantalla se iba de
+   lado. Aqui se reordena en tres lineas tactiles: placa + total arriba,
+   cliente y vehiculo debajo, y los estados al pie. Ningun dato se pierde. */
+@media (max-width:960px){
+  .hd-row--ot{flex-wrap:wrap;align-items:center;row-gap:5px;padding:10px 14px;height:auto !important}
+  .hd-row--ot > div{width:auto !important;min-width:0}
+  .hd-row--ot > div:nth-child(1){order:1;flex:none}                       /* placa · OT */
+  .hd-row--ot > div:nth-child(6){order:2;margin-left:auto;font-size:15px} /* total */
+  .hd-row--ot > div:nth-child(2){order:3;flex:1 0 100%}                   /* cliente · vehiculo */
+  .hd-row--ot > div:nth-child(4){order:4}                                 /* estado */
+  .hd-row--ot > div:nth-child(5){order:5}                                 /* cobro */
+  .hd-row--ot > div:nth-child(3){order:6;flex:1;justify-content:flex-start}/* tecnico */
+  .hd-row--ot > div:nth-child(7){order:7;flex:none}                       /* fecha */
+}
+
+/* --- Filtros y pestañas en movil ---
+   .hd-bar es un flex sin wrap: con el segmentado de fecha, el buscador y el
+   selector de tecnico medía 875px y empujaba TODA la pagina a 887px en una
+   ventana de 375. Y .hd-tabs, aunque scrollea por dentro, necesita que se le
+   prohiba crecer o arrastra al padre igual. */
+@media (max-width:960px){
+  .hd-bar{flex-wrap:wrap;row-gap:8px;padding-left:0;padding-right:0}
+  .hd-bar > *{max-width:100%}
+  .hd-find{flex:1 1 100%;width:auto !important}
+  .hd-drop{flex:1 1 auto}
+  .hd-tabs{max-width:100%;min-width:0}
+  .hd-head,.hd-head__t,.hd-head__right{max-width:100%;min-width:0}
+  .hd-head__sub{white-space:normal}
+}
