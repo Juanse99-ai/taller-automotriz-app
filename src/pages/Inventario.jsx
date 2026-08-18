@@ -222,7 +222,14 @@ export default function Inventario({ notify }) {
       )}
 
       {/* Cifras del inventario en franja. Se quita la tarjeta "Stock bajo": repetía
-          un número que ya va en el desglose de "A reponer". */}
+          un número que ya va en el desglose de "A reponer".
+          NO se dibujan cuando la carga falló: con el catálogo vacío por un error
+          de Cuentti, la franja decía "A reponer 0 · 0 agotados", "Referencias 0"
+          y "Valor inventario $0" — tres cifras tranquilizadoras sobre un
+          inventario de 2.537 referencias del que 940 están agotadas y 327 en
+          negativo. Un cero que en realidad es "no sé" es peor que no mostrar
+          nada. */}
+      {!(error && productos.length === 0) && (
       <div className="statline">
         <div className="statline__i">
           <span className="eyebrow">A reponer</span>
@@ -248,6 +255,7 @@ export default function Inventario({ notify }) {
           <span style={{ fontSize: 11.5, color: 'var(--text-3)' }}>{stats.valorCosto > 0 ? `a costo ${fmtCompact(stats.valorCosto)}` : 'a precio de venta'}</span>
         </div>
       </div>
+      )}
 
       {/* Tabla de productos */}
       <div className="card">
@@ -304,7 +312,9 @@ export default function Inventario({ notify }) {
                 <polyline points="3.27 6.96 12 12.01 20.73 6.96"/>
                 <line x1="12" y1="22.08" x2="12" y2="12"/>
               </svg>
-              <p>No se encontraron productos.</p>
+              <p>{error && productos.length === 0
+                ? 'No se pudo cargar el catálogo. Reintenta arriba.'
+                : 'No se encontraron productos.'}</p>
             </div>
           </div>
         ) : (
