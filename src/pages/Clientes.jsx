@@ -28,13 +28,17 @@ const soloDigitos = (s) => (s || '').toString().replace(/\D/g, '')
 // El Nombre conserva sus 310 y el recorte lo pagan las columnas que truncan
 // igual (email) o que muestran pocos caracteres (cédula, fecha, contadores).
 const CLIENTES_COLS = [
-  { key: 'cedula',   label: 'CC/NIT',        sort: 'cedula',   def: 104, min: 70 },
+  // El nombre abre la fila: es lo que se busca y por lo que se reconoce a alguien.
+  // Antes abria la cedula, que sirve para confirmar pero no para reconocer.
   // El nombre es el identificador de la fila y nunca baja de 310px: medido contra
   // la base real, ahí caben completos 9 de cada 10 nombres. Antes la tabla se
   // encogía al ancho de la pantalla y el nombre —la única columna sin ancho fijo—
   // pagaba el pato: quedaba en ~120px y salían todos cortados mientras Teléfono y
   // Email sobraban espacio. Si ya no cabe, la tabla se desliza en vez de aplastarlo.
   { key: 'nombre',   label: 'Nombre',        sort: 'nombre',   min: 310 }, // sin def → flexible por defecto, pero arrastrable
+  // 112px = un NIT de 10 digitos entero. Cortado ("9005259…") no sirve ni para
+  // confirmar, que es lo unico para lo que se usa esta columna.
+  { key: 'cedula',   label: 'CC/NIT',        sort: 'cedula',   def: 112, min: 96 },
   // 124px = un celular de 10 dígitos entero. Un teléfono cortado ("30427537…") no
   // sirve para llamar, así que esta columna no se recorta por defecto.
   { key: 'telefono', label: 'Teléfono',      sort: 'telefono', def: 124, min: 80 },
@@ -42,8 +46,8 @@ const CLIENTES_COLS = [
   // reconocerlo; ese espacio rinde más en el Nombre.
   { key: 'email',    label: 'Email',         sort: 'email',    def: 120, min: 80 },
   { key: 'veh',      label: 'Vehículos',     sort: 'veh',      def: 72,  min: 60, center: true },
-  { key: 'visita',   label: 'Última visita', sort: 'visita',   def: 100, min: 80 },
-  { key: 'cuentti',  label: 'En Cuentti',    sort: 'cuentti',  def: 104, min: 90 },
+  { key: 'visita',   label: 'Última visita', sort: 'visita',   def: 96,  min: 88 },
+  { key: 'cuentti',  label: 'En Cuentti',    sort: 'cuentti',  def: 78,  min: 70 },
   { key: 'chevron',  label: '',              sort: null,       noResize: true }, // sin def; flexible solo cuando el Nombre es fijo
 ]
 const CLIENTES_COL_LS = 'clientes_col_widths_v2'
@@ -887,13 +891,28 @@ export default function Clientes({ clientes, vehiculos, trabajos = [], notify })
   return (
     <>
     <div>
-      <div className="pagehd">
-        <div><h2>Clientes</h2></div>
-        <div className="actions" style={{display:'flex',gap:8,alignItems:'center'}}>
+      {/* De los cuatro conteos, solo "sin telefono" sube a cifra grande: es el
+          unico accionable y es el que explica el boton de verificar. Los otros
+          tres bajan a linea de apoyo — son contexto, no tarea. */}
+      <div className="hd-head">
+        <div className="hd-head__t">
+          <h1>Clientes</h1>
+          <div className="hd-head__sub">
+            {totalClientes} clientes · {conCuenttiId} verificados en Cuentti con id guardado · {conVehiculos} con vehículos
+          </div>
+        </div>
+        <div className="hd-head__sp" />
+        <div className="hd-head__right">
+          {sinTelefono > 0 && (
+            <div className="hd-fig" style={{ '--fg': 'var(--warn-fg-2)' }}>
+              <div className="hd-fig__l" style={{ color: 'var(--warn-fg)' }}>SIN TELÉFONO</div>
+              <div className="hd-fig__v">{sinTelefono}</div>
+            </div>
+          )}
+          <div className="hd-head__div" />
           {sinVerificar > 0 && (
             <Button
               variant="outline"
-              size="sm"
               onClick={sincronizarTelefonosCuentti}
               disabled={syncTel.activo}
               title="Consulta uno por uno en Cuentti: guarda id, teléfono y correo"
@@ -934,29 +953,6 @@ export default function Clientes({ clientes, vehiculos, trabajos = [], notify })
           "Verificados" NO es "% de clientes en Cuentti" (eso engañaba: casi todos
           están en Cuentti, vinieron de ahí). Es cuántos tienen su id de Cuentti
           guardado en la app; del resto no sabemos hasta verificar. */}
-      <div className="statline">
-        <div className="statline__i">
-          <span className="eyebrow">Clientes</span>
-          <span className={`statline__v${totalClientes === 0 ? ' is-zero' : ''}`}>{totalClientes}</span>
-        </div>
-        <div className="statline__i">
-          {/* "con id guardado" no es relleno: sin esa aclaración se lee que el
-             resto NO está en Cuentti, y es al revés — casi todos vinieron de ahí,
-             lo que falta es el id vinculado en esta app. */}
-          <span className="eyebrow">Verificados en Cuentti</span>
-          <span className={`statline__v${conCuenttiId === 0 ? ' is-zero' : ''}`}>{conCuenttiId}</span>
-          <span style={{ fontSize: 11.5, color: 'var(--text-3)' }}>con id guardado</span>
-        </div>
-        <div className="statline__i">
-          <span className="eyebrow">Con vehículos</span>
-          <span className={`statline__v${conVehiculos === 0 ? ' is-zero' : ''}`}>{conVehiculos}</span>
-        </div>
-        <div className="statline__i">
-          <span className="eyebrow">Sin teléfono</span>
-          <span className={`statline__v${sinTelefono === 0 ? ' is-zero' : ''}`}>{sinTelefono}</span>
-        </div>
-      </div>
-
       <div className="card">
         <div className="card__h" style={{display:'flex',alignItems:'center',gap:12,flexWrap:'wrap'}}>
           <h3 style={{flex:'none'}}>Buscar</h3>
@@ -1063,8 +1059,8 @@ export default function Clientes({ clientes, vehiculos, trabajos = [], notify })
               <tbody>
                 {clientesFiltrados.map(c => (
                   <tr key={c.id || c.cedula} style={{cursor:'pointer'}} onClick={() => seleccionar(c)}>
-                    <td className="c-mono" data-label="CC/NIT" style={{fontSize:12.5}}>{c.cedula || '—'}</td>
                     <td className="c-name" title={c.nombre || ''}>{c.nombre || '—'}</td>
+                    <td className="c-mono" data-label="CC/NIT" style={{fontSize:12.5}}>{c.cedula || '—'}</td>
                     <td className="c-mono" data-label="Teléfono">{fmtTelefono(c.telefono) || '—'}</td>
                     <td className="c-muted" data-label="Email">{c.email || '—'}</td>
                     <td data-label="Vehículos" style={{textAlign:'center'}}>
@@ -1077,9 +1073,13 @@ export default function Clientes({ clientes, vehiculos, trabajos = [], notify })
                         gris "Sin verificar" = NO sabemos (no lo hemos consultado). Antes
                         decía "Pendiente" (implicaba que NO estaba) aunque sí estuviera. */}
                     <td data-label="En Cuentti">
-                      {c.cuenttiId
-                        ? <span className="st st--success"><i /> En Cuentti</span>
-                        : <span className="st st--neutral"><i /> Sin verificar</span>}
+                      {/* Punto + Si/No: la etiqueta larga se truncaba a "En Cuentti…"
+                          y "Sin verificar" no cabia nunca. El color ya dice cual es
+                          cual; la palabra solo confirma. */}
+                      <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 6 }}>
+                        <span style={{ width: 7, height: 7, borderRadius: '50%', flex: 'none', background: c.cuenttiId ? 'var(--ok-fg)' : 'var(--warn-fg)' }} />
+                        <span style={{ fontSize: 12, fontWeight: 600, color: c.cuenttiId ? 'var(--ok-fg)' : 'var(--warn-fg)' }}>{c.cuenttiId ? 'Sí' : 'No'}</span>
+                      </span>
                     </td>
                     <td className="td-chevron">›</td>
                   </tr>
