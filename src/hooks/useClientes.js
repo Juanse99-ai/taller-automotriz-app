@@ -257,11 +257,17 @@ export function useClientes() {
     const idx = table.findIndex(c => c.cedula === key)
     if (idx < 0) return null
 
-    const record = { ...table[idx] }
-    if (!record.vehiculos.includes(placaNorm)) {
-      record.vehiculos = [...record.vehiculos, placaNorm]
-    }
+    // Si la placa YA estaba vinculada no hay nada que guardar. Antes se
+    // comprobaba para no duplicarla en el arreglo, pero se llamaba a
+    // persistClientes igual: un POST a Supabase por vinculo ya existente.
+    // App.jsx recorre los ~157 trabajos en cada arranque y llama aqui por
+    // cada uno, asi que eran ~157 escrituras por carga (y otra tanda cada
+    // vez que el polling reemplazaba el arreglo de trabajos). Eso ahogaba
+    // la funcion serverless — los 502 del cierre de caja — y dejaba a la
+    // app leyendo del cache local en vez de la base.
+    if (table[idx].vehiculos.includes(placaNorm)) return table[idx]
 
+    const record = { ...table[idx], vehiculos: [...table[idx].vehiculos, placaNorm] }
     const next = [...table]
     next[idx] = record
     persistClientes(next, record)
