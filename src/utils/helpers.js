@@ -157,3 +157,17 @@ export function tituloCliente(s) {
     return w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()
   }).join(' ')
 }
+
+// Nombre de cliente para una TABLA: primeras palabras y nada mas.
+// Con el nombre entero, uno solo ("FUNDACION AGROAMBIENTAL PARA EL DESARROLLO
+// RURAL - FUNRURAL") obliga a ensanchar la columna y aparece scroll horizontal
+// en toda la tabla. Tres palabras alcanzan para reconocer tanto a una persona
+// (nombre + apellidos) como a una empresa, y el nombre COMPLETO sigue estando en
+// el detalle y en el title al pasar el mouse.
+// Vive aqui porque lo usan varias tablas (Trabajos, Cotizaciones).
+export const MAX_PALABRAS_CLIENTE = 3
+export function clienteCorto(nombre) {
+  const partes = (nombre || '').trim().split(/\s+/).filter(Boolean)
+  if (partes.length <= MAX_PALABRAS_CLIENTE) return nombre || '\u2014'
+  return partes.slice(0, MAX_PALABRAS_CLIENTE).join(' ') + '\u2026'
+}

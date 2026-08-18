@@ -1546,3 +1546,76 @@ tbody tr:active{background:var(--fill-2)}
   .rc-step{padding:5px 6px;gap:6px;font-size:12.5px}
   .rc-step__sep{min-width:10px;flex-shrink:1}
 }
+
+/* Cotizaciones · vigencia y vehículo.
+   La app guardaba validez_dias (15 en todas) y nunca lo mostraba: una cotización
+   de 105 días se veía igual que una de 4. */
+.cot-tot{padding:4px 2px 20px;border-bottom:1px solid var(--border);margin-bottom:22px}
+.cot-tot__v{font-weight:800;font-size:clamp(36px,6vw,50px);letter-spacing:-.03em;line-height:1.02;color:var(--amber-700);margin:7px 0 8px}
+.cot-tot__s{font-size:13.5px;color:var(--text-3)}
+.cot-vig{font-size:13px;color:var(--text-3);white-space:nowrap}
+.cot-vig--hoy{color:var(--amber-700);font-weight:700}
+.cot-vig--out{color:var(--red-700);font-weight:700}
+/* Marca y modelo bajo la placa: eran una columna propia vacía la mitad del
+   tiempo. Una sola línea cada uno: al fusionarlas, "Nissan Frontier 2020" se
+   partía en tres renglones y la fila crecía al triple. */
+.cot-veh{display:block;font-size:12px;color:var(--text-3);margin-top:1px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* La tabla medía 1097px en un contenedor de 967 y aparecía scroll horizontal
+   justo sobre la columna de acciones ("Revisar" quedaba cortado). Con anchos
+   fijos cabe entera: el cliente cede (ya viene recortado por palabras) y la
+   referencia no necesita 90px. */
+/* Anchos SOLO en escritorio: por debajo de 600px .tbl-cards convierte la tabla
+   en tarjetas y un table-layout:fixed con anchos en % recortaba los valores
+   ("HGP..." en vez de la placa) y solapaba renglones. */
+@media(min-width:601px){
+  .cot-tabla{table-layout:fixed;min-width:0;width:100%}
+  .cot-tabla th:nth-child(1),.cot-tabla td:nth-child(1){width:64px}
+  .cot-tabla th:nth-child(2),.cot-tabla td:nth-child(2){width:22%}
+  .cot-tabla th:nth-child(3),.cot-tabla td:nth-child(3){width:15%}
+  .cot-tabla th:nth-child(4),.cot-tabla td:nth-child(4){width:96px}
+  .cot-tabla th:nth-child(5),.cot-tabla td:nth-child(5){width:12%}
+  .cot-tabla th:nth-child(6),.cot-tabla td:nth-child(6){width:14%}
+  /* Ancho real, no 1%: con table-layout:fixed el 1% no reserva sitio para el
+     contenido y el botón "Revisar" quedaba cortado contra el borde. */
+  .cot-tabla th:nth-child(7),.cot-tabla td:nth-child(7){width:122px}
+  .cot-tabla th:nth-child(8),.cot-tabla td:nth-child(8){width:30px}
+  .cot-tabla td[data-label="Vehículo"]{white-space:nowrap}
+  .cot-tabla td[data-label="Vehículo"]>span:first-child{display:block;overflow:hidden;text-overflow:ellipsis}
+}
+
+/* === Cotizaciones en celular: fila de tres líneas ===
+   La tarjeta de .tbl-cards pintaba seis pares etiqueta/valor por cotización;
+   con 14 cotizaciones eran 14 pantallas. Misma rejilla que .trab-movil.
+
+     línea 1   cliente  .........................  TOTAL
+     línea 2   ref · vehículo  ..................  ESTADO
+     línea 3   vigencia  ........................  [Revisar]
+*/
+@media(max-width:600px){
+  .tbl.tbl-cards.cot-tabla tbody tr{
+    display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 10px;
+    padding:11px 13px;margin:0 0 6px;align-items:center;
+  }
+  .tbl.tbl-cards.cot-tabla tbody td{display:block;padding:0;text-align:left;
+    height:auto;line-height:1.4;min-width:0;overflow:hidden;
+    text-overflow:ellipsis;white-space:nowrap;border:none}
+  .tbl.tbl-cards.cot-tabla tbody td::before{display:none}
+  .tbl.tbl-cards.cot-tabla tbody td.c-name{grid-column:1;grid-row:1;
+    font-size:var(--fs-md);font-weight:650;color:var(--text);
+    border:none;margin:0;padding:0;order:0}
+  .tbl.tbl-cards.cot-tabla tbody td[data-label="Total"]{grid-column:2;grid-row:1;
+    text-align:right;font-variant-numeric:tabular-nums;font-weight:700;font-size:var(--fs-md)}
+  .tbl.tbl-cards.cot-tabla tbody td[data-label="Vehículo"]{grid-column:1;grid-row:2;
+    font-size:var(--fs-sm);color:var(--text-3)}
+  .tbl.tbl-cards.cot-tabla tbody td[data-label="Vehículo"] .cot-veh{display:inline;margin-left:6px}
+  .tbl.tbl-cards.cot-tabla tbody td[data-label="Ref."]{display:none}
+  .tbl.tbl-cards.cot-tabla tbody td[data-label="Estado"]{grid-column:2;grid-row:2;text-align:right}
+  .tbl.tbl-cards.cot-tabla tbody td[data-label="Vigencia"]{grid-column:1;grid-row:3}
+  .tbl.tbl-cards.cot-tabla tbody td.td-actions{grid-column:2;grid-row:3;
+    display:flex;justify-content:flex-end;gap:4px;margin:0;padding:0;border:none}
+  .tbl.tbl-cards.cot-tabla tbody td.td-actions::before{display:none}
+  .tbl.tbl-cards.cot-tabla tbody td:last-child{grid-column:2;grid-row:1;justify-self:end}
+}
+/* Cliente en la tabla de cotizaciones: una sola línea (recortado por palabras) */
+.cot-cli{white-space:nowrap}

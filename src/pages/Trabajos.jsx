@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useRef } from 'react'
 import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
-import { fmt, fmtDate, fmtTelefono, cantidadItem, fmtCant } from '../utils/helpers'
+import { fmt, fmtDate, fmtTelefono, cantidadItem, fmtCant, clienteCorto } from '../utils/helpers'
 import { TECNICOS, ESTADOS, DIAS_ESTANCADO, TALLER, SIN_FACTURA } from '../utils/constants'
 import { loadLogo as loadPdfLogo, drawHeader, drawSectionHeader, drawDataBlock, drawTotalsBox, drawSignatures, drawFooter, tableStylesItems, PDF_LAYOUT, PDF_COLORS } from '../utils/pdfTheme'
 import FichaTecnico from '../components/FichaTecnico'
@@ -13,19 +13,6 @@ import SignaturePad from '../components/SignaturePad'
 import ConfirmDialog from '../components/ConfirmDialog'
 import { Button, Badge, IconX, IconEdit, IconTrash, IconPdf, IconPhone, IconChat, IconCheck } from '../components/ui'
 import TrabajoForm from './TrabajoForm'
-
-// Nombre de cliente para la TABLA: primeras palabras y nada mas.
-// Con el nombre entero, uno solo ("FUNDACION AGROAMBIENTAL PARA EL DESARROLLO
-// RURAL - FUNRURAL") obligaba a ensanchar la columna y aparecia scroll
-// horizontal en toda la tabla. Tres palabras alcanzan para reconocer tanto a
-// una persona (nombre + apellidos) como a una empresa, y el nombre COMPLETO
-// sigue estando en el panel de detalle y al pasar el mouse por encima.
-const MAX_PALABRAS_CLIENTE = 3
-function clienteCorto(nombre) {
-  const partes = (nombre || '').trim().split(/\s+/).filter(Boolean)
-  if (partes.length <= MAX_PALABRAS_CLIENTE) return nombre || '—'
-  return partes.slice(0, MAX_PALABRAS_CLIENTE).join(' ') + '…'
-}
 
 // ¿La fecha cae dentro del rango elegido? (hoy / semana = últimos 7 días / mes = mes actual)
 function dentroDeFecha(fecha, modo, now) {
