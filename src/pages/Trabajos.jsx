@@ -14,6 +14,19 @@ import ConfirmDialog from '../components/ConfirmDialog'
 import { Button, Badge, IconX, IconEdit, IconTrash, IconPdf, IconPhone, IconChat, IconCheck } from '../components/ui'
 import TrabajoForm from './TrabajoForm'
 
+// Nombre de cliente para la TABLA: primeras palabras y nada mas.
+// Con el nombre entero, uno solo ("FUNDACION AGROAMBIENTAL PARA EL DESARROLLO
+// RURAL - FUNRURAL") obligaba a ensanchar la columna y aparecia scroll
+// horizontal en toda la tabla. Tres palabras alcanzan para reconocer tanto a
+// una persona (nombre + apellidos) como a una empresa, y el nombre COMPLETO
+// sigue estando en el panel de detalle y al pasar el mouse por encima.
+const MAX_PALABRAS_CLIENTE = 3
+function clienteCorto(nombre) {
+  const partes = (nombre || '').trim().split(/\s+/).filter(Boolean)
+  if (partes.length <= MAX_PALABRAS_CLIENTE) return nombre || '—'
+  return partes.slice(0, MAX_PALABRAS_CLIENTE).join(' ') + '…'
+}
+
 // ¿La fecha cae dentro del rango elegido? (hoy / semana = últimos 7 días / mes = mes actual)
 function dentroDeFecha(fecha, modo, now) {
   if (!fecha) return false
@@ -693,7 +706,7 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
                     <tr key={t.id} className={t.id === selId ? 'sel' : ''} onClick={() => setSelId(t.id)}>
                       <td data-label="OT" className="c-ot">{t.otCodigo || '—'}</td>
                       <td data-label="Placa"><strong>{t.placa}</strong></td>
-                      <td data-label="Cliente" className="c-cliente">{t.cliente || '—'}</td>
+                      <td data-label="Cliente" className="c-cliente" title={t.cliente || ''}>{clienteCorto(t.cliente)}</td>
                       <td data-label="Estado">
                         <span className={`badge ${estadoBadge(t.estado)}`}>{t.estado}</span>
                         {estancado && <Badge tone="d" style={{ marginLeft: 5 }}>{dias}d</Badge>}

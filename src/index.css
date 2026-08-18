@@ -1365,7 +1365,7 @@ tbody tr:active{background:var(--fill-2)}
 /* El cliente: entero y en UNA sola linea. La columna se lleva todo el ancho
    sobrante y nunca parte el nombre. Cuando el mas largo no entra, la tabla
    desplaza en horizontal — no se corta el nombre ni se estira la fila. */
-.trab-tabla .c-cliente{width:99%;min-width:230px;white-space:nowrap}
+.trab-tabla .c-cliente{width:99%;min-width:120px;white-space:nowrap}
 .trab-tabla th:nth-child(1),.trab-tabla td:nth-child(1){width:74px;white-space:nowrap}
 .trab-tabla th:nth-child(2),.trab-tabla td:nth-child(2){width:80px;white-space:nowrap}
 .trab-tabla th:nth-child(4),.trab-tabla td:nth-child(4){width:1%;white-space:nowrap}
@@ -1469,13 +1469,13 @@ tbody tr:active{background:var(--fill-2)}
 .det-fold__in{padding-top:4px}
 /* El nombre del tecnico partia en dos lineas ("Pedro / Barraza") y estiraba la
    fila por encima de los 34px, rompiendo la densidad de toda la tabla. */
-.trab-tabla td[data-label="Tecnico"]{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:112px}
+.trab-tabla td[data-label="Tecnico"]{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:96px}
 
 /* La lista permite desplazamiento horizontal: es lo que deja mantener el nombre
    del cliente en una linea sin sacrificar las otras columnas. La fila se queda
    en 34px pase lo que pase. */
 .trab-cockpit__list{overflow-x:auto}
-.trab-tabla{min-width:640px}
+.trab-tabla{min-width:520px}
 /* Con el nombre completo en una linea la tabla se pasa de ancho y hay que
    desplazar en horizontal. El TOTAL es lo que mas se mira, asi que se ancla a la
    derecha y queda visible siempre, pase lo que pase con el scroll. */
