@@ -95,6 +95,19 @@ const fechaCorta = (iso) => {
 }
 
 
+// ¿Trabajo de mostrador? "SERVICIO" no es una placa: es el marcador de trabajo
+// sin carro. El campo sinVehiculo manda cuando existe.
+const esMostrador = (t) => !!(t?.sinVehiculo ?? t?.sin_vehiculo) || ['', 'SERVICIO'].includes((t?.placa || '').trim().toUpperCase())
+
+// Identidad visible de un trabajo: la placa cuando hay carro, el cliente cuando
+// no. En este taller el 59% de las OTs son de mostrador, así que una columna
+// "Vehículo" quedaba en gris más de la mitad de las veces, y la columna
+// "Cliente" de al lado repetía lo único que quedaba por decir. Una sola columna
+// siempre dice algo útil.
+const identidadTrabajo = (t) => esMostrador(t)
+  ? (tituloCliente(t?.cliente) || 'Sin cliente')
+  : (t?.placa || '').trim().toUpperCase()
+
 // Referencia visible de una liquidación (para trazar con Cuentti). Los ids nuevos
 // son legibles (ej. LQ-PB0702 → "PB0702"); los viejos eran un uid aleatorio largo,
 // de esos se muestran los últimos 6. Se le pasa el id del registro.
@@ -125,21 +138,15 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
   const [seleccionados, setSeleccionados] = useState({})
   const [verHistorial, setVerHistorial] = useState(false)
   const [verSinTecnico, setVerSinTecnico] = useState(false)  // detalle de las OTs huérfanas
-  const [verInactivos, setVerInactivos] = useState(false)    // técnicos sin nada por liquidar
   // Filtros del historial: 48 pagos en una lista plana no se podían recorrer.
   const [histTec, setHistTec] = useState('')      // id de técnico | ''
   const [histMes, setHistMes] = useState('')      // 'YYYY-MM' | ''
   const [histSinCuentti, setHistSinCuentti] = useState(false)
+  const [histAbierto, setHistAbierto] = useState({})  // pagoId -> desglose y acciones desplegados
   const [compAbierto, setCompAbierto] = useState({}) // trabajoId -> selector de compañero desplegado
   // Ventanas del tecnico seleccionado: minimizables por header
   const [colapso, setColapso] = useState({ trabajos: false, movs: false })
   const toggleColapso = (k) => setColapso(c => ({ ...c, [k]: !c[k] }))
-  // CTA del estado vacío del paso 3 ("Ir al paso 2"): despliega la tabla de
-  // trabajos si estaba colapsada y hace scroll hasta ella.
-  const irAPaso2 = () => {
-    setColapso(c => ({ ...c, trabajos: false }))
-    document.getElementById('liq-paso2')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-  }
   const [movForm, setMovForm] = useState({
     tipo: 'adelanto',
     monto: '',
@@ -163,6 +170,9 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
   // Pago real: cuánto le entregas en efectivo (por defecto el neto). Si pagas de
   // menos, la diferencia va al Estado de cuenta según diffDestino.
   const [pagoReal, setPagoReal] = useState('')
+  // Pagar un monto distinto al neto: 1 de 63 pagos. Vive detrás de "Pagar otro
+  // monto" para que el caso normal (entregar el neto) no pida leer nada.
+  const [pagoParcial, setPagoParcial] = useState(false)
   const [diffDestino, setDiffDestino] = useState('debo') // 'debo' | 'prestamo'
   const [metodoPagoLiq, setMetodoPagoLiq] = useState('efectivo') // 'efectivo' | 'transferencia' (cómo se le entrega al técnico)
   // Descuento desde el Estado de cuenta en ESTE pago: se marcan deudas o se
@@ -300,6 +310,55 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
     const c = compartidos[id]
     if (!c) return { es: false, partner: null }
     return { es: true, partner: typeof c === 'object' ? (c.partner || null) : null }
+  }
+
+  // El compañero HABITUAL de cada técnico, contado sobre los compartidos que ya
+  // existen. En el taller la pareja es siempre la misma (98 de 102 compartidos),
+  // así que preguntar "¿con quién?" en un desplegable es una pregunta con una
+  // sola respuesta posible. Con esto, compartir es un clic; cambiar de compañero
+  // sigue estando, pero deja de ser el camino obligatorio.
+  const companeroHabitual = useMemo(() => {
+    const conteo = {}   // tecnicoId -> { companeroId: veces }
+    const anota = (a, b) => { if (!a || !b || a === b) return; conteo[a] = conteo[a] || {}; conteo[a][b] = (conteo[a][b] || 0) + 1 }
+    trabajos.forEach(t => {
+      const c = compartidos[t.id]
+      const partner = c && typeof c === 'object' ? parseInt(c.partner) : 0
+      const asignado = parseInt(t.tecnicoId)
+      if (!partner) return
+      anota(asignado, partner)
+      anota(partner, asignado)
+    })
+    const out = {}
+    TECNICOS.forEach(t => {
+      const c = conteo[t.id]
+      if (c) {
+        out[t.id] = parseInt(Object.entries(c).sort((a, b) => b[1] - a[1])[0][0])
+      } else {
+        // Sin historia de compartidos: si solo queda otro técnico activo, es ese.
+        const otros = TECNICOS.filter(x => x.id !== t.id && x.activo !== false)
+        out[t.id] = otros.length === 1 ? otros[0].id : null
+      }
+    })
+    return out
+  }, [trabajos, compartidos, TECNICOS])
+
+  // Quién sale propuesto al compartir este trabajo. El reparto 20/20 es entre el
+  // técnico ASIGNADO y el compañero, así que el habitual se busca por el
+  // asignado. companeroHabitual nunca devuelve al propio técnico.
+  const companeroSugeridoDe = (t) => companeroHabitual[parseInt(t.tecnicoId)] || null
+
+  // Compartir en un clic: marca el trabajo y le pone el compañero habitual en la
+  // MISMA escritura (ver toggleCompartido en useLiquidacion). Si no hay habitual,
+  // queda compartido sin compañero y la fila pide elegirlo.
+  const compartirRapido = (t) => {
+    const sugerido = companeroSugeridoDe(t)
+    const yaLiq = liquidados.some(x => x === t.id || x.startsWith(`${t.id}#`))
+    const aplicar = () => toggleCompartido(t.id, sugerido)
+    if (yaLiq) {
+      setDialog({ title: 'Marcar como compartido', lead: 'Este trabajo ya tiene un pago liquidado; cambiarlo puede descuadrar lo pagado.', confirmLabel: 'Cambiar igual', tone: 'danger', onConfirm: aplicar })
+      return
+    }
+    aplicar()
   }
 
   // Liquidación de COMPARTIDOS es por técnico: en `liquidados` se guarda
@@ -577,6 +636,14 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
     () => trabajosPendientes.filter(t => !TECNICOS.some(x => x.id === parseInt(t.tecnicoId))),
     [trabajosPendientes, TECNICOS])
 
+  // Las que sí se le pueden pagar a alguien, y lo que valen las huérfanas: casi
+  // siempre son OTs viejas sin mano de obra ($0), no plata parada. Decirlo evita
+  // que un aviso permanente parezca una alarma de dinero.
+  const otsPagables = trabajosPendientes.length - trabajosSinTecnico.length
+  const montoSinTecnico = useMemo(
+    () => Math.round(trabajosSinTecnico.reduce((s, t) => s + (moMap[t.id] || 0) * COMISION.TOTAL, 0)),
+    [trabajosSinTecnico, moMap])
+
   const historialOrdenado = useMemo(() =>
     [...historial].sort((a, b) => new Date(b.fecha) - new Date(a.fecha)),
   [historial])
@@ -601,6 +668,22 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
   }), [historialOrdenado, histTec, histMes, histSinCuentti])
 
   const hayFiltroHist = !!(histTec || histMes || histSinCuentti)
+  // Los pagos salen en tandas del mismo día, y casi siempre en parejas: el mismo
+  // trabajo compartido pagado a los dos técnicos (jul: 34 pagos en 15 días).
+  // Agrupados por fecha, una jornada de liquidación se lee como una jornada y no
+  // como seis fichas sueltas que repiten el mismo monto.
+  const historialPorDia = useMemo(() => {
+    const grupos = []
+    let actual = null
+    historialFiltrado.forEach(reg => {
+      const d = new Date(reg.fecha)
+      const clave = isNaN(d) ? String(reg.fecha) : d.toISOString().slice(0, 10)
+      if (!actual || actual.clave !== clave) { actual = { clave, fecha: reg.fecha, pagos: [], entregado: 0 }; grupos.push(actual) }
+      actual.pagos.push(reg)
+      actual.entregado += (reg.pagado != null ? reg.pagado : (reg.neto || 0))
+    })
+    return grupos
+  }, [historialFiltrado])
   const sinCuenttiCount = useMemo(() => historial.filter(h => !h.cuenttiGasto).length, [historial])
   const nombreMes = (ym) => {
     const [y, m] = ym.split('-')
@@ -904,7 +987,7 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
     // Vuelve al paso 1: el asistente se cierra donde empezó, con la lista ya
     // actualizada. Antes te dejaba en el técnico con el paso 2 vacío ("Sin
     // pendientes"), que parece un error en vez de un pago cumplido.
-    setSeleccionados({}); setPagoReal(''); setDiffDestino('debo'); setCuentaMonto(''); setCuentaSelIds({}); setMetodoPagoLiq('efectivo'); setTecnicoSel('')
+    setSeleccionados({}); setPagoReal(''); setPagoParcial(false); setDiffDestino('debo'); setCuentaMonto(''); setCuentaSelIds({}); setMetodoPagoLiq('efectivo'); setTecnicoSel('')
     const difMsg = pagado !== netoCalc ? ` (pagado ${fmt(pagado)}, diferencia a Estado de cuenta)` : ''
     notify(`Pago #${liqRef(nuevoId)} generado: ${fmt(pagado)} para ${tecData.tecnico.nombre}${difMsg} · copia la ref en Cuentti`, 'success')
     // Descargar automáticamente el comprobante del pago recién generado
@@ -1387,30 +1470,6 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
            por eso NO puede heredar la transición de .15s — un toque dura ~100ms y
            el gris apenas empezaba a asomar. Instantáneo al presionar. */
         .liq-roster-row:active,.liq-roster-mini:active{ background:var(--fill); transition-duration:0s; }
-        /* Aviso de OTs huérfanas: es un enlace de verdad, con blanco suficiente
-           para el dedo (los 44px de alto los da el padding + el interlineado). */
-        .liq-aviso{ display:inline-flex; align-items:center; gap:5px; font:inherit; font-weight:600; color:var(--red-600); background:none; border:none; padding:4px 6px; margin:-4px -2px; cursor:pointer; text-decoration:underline; text-underline-offset:3px; -webkit-user-select:none; user-select:none; touch-action:manipulation; }
-        .liq-aviso:active{ opacity:.6; }
-        /* Trío de cifras del cierre. En pantalla ancha van en columna a la
-           derecha del total. En el celular no caben en fila: "Mano de obra
-           facturada" se partía en dos renglones y "Utilidad taller" quedaba
-           sola y descolgada. Ahí pasan a renglones etiqueta→cifra, que además
-           es como se lee un recibo. */
-        .liq-cifras{ display:flex; gap:26px; flex-wrap:wrap; }
-        /* text-align además de align-items: align-items alinea la CAJA, no el
-           texto de adentro. Cuando "Mano de obra facturada" se parte en dos
-           renglones, sin esto la segunda línea quedaba pegada a la izquierda. */
-        .liq-cifras__i{ display:flex; flex-direction:column; align-items:flex-end; text-align:right; }
-        .liq-cifras__v{ font-weight:600; font-size:18px; color:var(--text-2); margin-top:3px; }
-        /* Hasta 960px, no 560: el drawer de esta app es móvil hasta 960, así que
-           entre 561 y 960 (tablet, celular apaisado) quedaba el layout de
-           escritorio — justo el que partía "Mano de obra facturada" en dos. */
-        @media (max-width:960px){
-          .liq-cifras{ flex-direction:column; gap:0; width:100%; }
-          .liq-cifras__i{ flex-direction:row; align-items:baseline; justify-content:space-between; gap:14px; padding:8px 0; border-top:1px solid var(--border); }
-          .liq-cifras__i .eyebrow{ white-space:nowrap; }
-          .liq-cifras__v{ margin-top:0; font-size:16.5px; white-space:nowrap; }
-        }
         /* ===== Eje único de montos =====
            Renglones de dinero y fichas de ajuste comparten EXACTAMENTE el mismo
            inset (12px) y el mismo ancho de valor + hueco de control (28px), así
@@ -1432,15 +1491,34 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
         .liq-aj__txt{ flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
         .liq-aj__val{ min-width:112px; text-align:right; font-weight:700; white-space:nowrap; }
         .liq-grp{ font-size:11px; font-weight:800; letter-spacing:.6px; text-transform:uppercase; color:var(--text-4); padding:0 12px; }
-        /* Estado vacío del paso 3 (sin trabajos marcados): reemplaza TODO el
-           desglose — antes "Mano de obra $0" convivía con ajustes reales
-           (ej. "Deuda $100.000") y parecía un error. Apple HIG: nunca mostrar
-           un cálculo parcial/en cero como si fuera el resultado final. */
-        .liq-empty{ display:flex; flex-direction:column; align-items:center; text-align:center; padding:28px 20px 22px; gap:12px; }
-        .liq-empty__icon{ width:44px; height:44px; border-radius:50%; background:var(--soft-amber); display:flex; align-items:center; justify-content:center; color:var(--amber-700); }
-        .liq-empty h4{ font-size:15px; font-weight:700; color:var(--text); margin:0; }
-        .liq-empty p{ font-size:13.5px; color:var(--text-3); max-width:340px; line-height:1.5; margin:0; }
-        .liq-empty__note{ margin-top:14px; padding-top:14px; border-top:1px solid var(--border); width:100%; max-width:420px; font-size:12.5px; color:var(--text-3); display:flex; align-items:center; gap:8px; justify-content:center; }
+        /* Paso 3 sin trabajos marcados. NO se muestra el desglose en cero: antes
+           "Mano de obra $0" convivía con ajustes reales (ej. "Deuda $100.000") y
+           parecía un error. Pero tampoco hace falta una portada con ícono y
+           titular: una línea y, debajo, lo único que sí es información aquí
+           (aportes ya cargados y saldo de su cuenta). */
+        .liq-pendiente{ padding:6px 12px 4px; }
+        .liq-pendiente__t{ margin:0; font-size:14.5px; color:var(--text-2); line-height:1.5; }
+        .liq-pendiente__n{ display:flex; align-items:center; gap:8px; flex-wrap:wrap;
+          margin-top:12px; padding-top:12px; border-top:1px solid var(--border); font-size:12.5px; color:var(--text-3); }
+        /* Compartido, ahora dentro de la celda de la OT: es una propiedad de la
+           fila (2 de cada 3 OTs lo son), no una columna que merezca ancho fijo
+           en el medio de la tabla partiendo el eje de los montos. */
+        .liq-comp{ display:block; margin-top:3px; font-family:var(--sans); letter-spacing:0; font-weight:600; }
+        .liq-comp__add{ font:inherit; font-size:11.5px; font-weight:600; color:var(--text-3); background:none;
+          border:none; padding:1px 0; cursor:pointer; text-decoration:underline; text-underline-offset:3px; }
+        .liq-comp__add:hover{ color:var(--primary); }
+        .liq-comp__on{ font:inherit; font-size:11.5px; font-weight:700; border:none; cursor:pointer;
+          border-radius:999px; padding:2px 9px; background:var(--soft-blue); color:var(--blue-600); }
+        .liq-comp__on.falta{ background:var(--soft-amber); color:var(--amber-700); }
+        .liq-comp__edit{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-top:5px; }
+        .liq-comp__edit .input{ width:112px; height:28px; min-height:28px; font-size:12px; padding:2px 8px; }
+        .liq-comp__off{ font:inherit; font-size:11.5px; font-weight:600; color:var(--text-3); background:none;
+          border:none; padding:0; cursor:pointer; text-decoration:underline; text-underline-offset:3px; }
+        /* Cliente en la columna de identidad: puede ser largo, nunca parte la fila */
+        .liq-ident{ display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--text-2); }
+        /* Pagar un monto distinto al neto: 1 de 63 pagos */
+        .liq-parcial__ask{ font:inherit; font-size:12.5px; font-weight:600; color:var(--primary); background:none;
+          border:none; padding:2px 0; cursor:pointer; text-decoration:underline; text-underline-offset:3px; }
         /* Decisión sobre el saldo del técnico: no se puede pasar de largo. */
         .liq-ask{ border:1px solid rgba(146,64,14,.28); background:var(--soft-amber); border-radius:12px;
           padding:16px 18px; margin:22px 0 0; }
@@ -1462,16 +1540,59 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
         /* Filtros del historial: una sola fila que envuelve, sin caja propia */
         .liq-filtros{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; padding:0 0 14px; }
         .liq-filtros .input{ width:auto; height:32px; min-height:32px; font-size:12.5px; padding:2px 9px; }
+        /* OTs sin técnico: aviso sobrio al pie, no una alarma junto al total */
+        .liq-orfanas{ margin-top:14px; border:1px solid var(--border); border-radius:var(--radius); background:var(--bg-raised); overflow:hidden; }
+        .liq-orfanas__h{ display:flex; align-items:center; gap:9px; width:100%; padding:12px 16px; background:none;
+          border:none; font:inherit; font-size:13.5px; font-weight:600; color:var(--text-2); cursor:pointer; text-align:left; }
+        @media (hover:hover){ .liq-orfanas__h:hover{ background:var(--bg-subtle); } }
+        .liq-orfanas__b{ border-top:1px solid var(--border); padding:12px 16px 14px; }
+        .liq-orfanas__b p{ margin:0 0 10px; font-size:12.5px; color:var(--text-3); line-height:1.5; }
+        .liq-orfanas__r{ display:flex; align-items:baseline; gap:10px; padding:7px 0; border-top:1px solid var(--border); font-size:13px; }
+        .liq-orfanas__d{ flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--text-3); }
+        /* Historial: un renglón por pago, agrupados por día. Lo que se busca al
+           recorrerlo es quién, cuánto y si ya está en Cuentti; el desglose y las
+           acciones salen al abrir el renglón. */
+        .liq-hist__alert{ font:inherit; font-size:12.5px; font-weight:700; cursor:pointer;
+          background:var(--soft-amber); color:var(--amber-700); border:1px solid rgba(146,64,14,.24);
+          border-radius:999px; padding:3px 11px; }
+        .liq-hist__dia + .liq-hist__dia{ margin-top:18px; }
+        .liq-hist__diah{ display:flex; align-items:baseline; justify-content:space-between; gap:12px;
+          padding:0 2px 6px; font-size:11.5px; font-weight:800; letter-spacing:.6px; text-transform:uppercase; color:var(--text-4); }
+        .liq-hist__p{ border-top:1px solid var(--border); }
+        .liq-hist__r{ display:flex; align-items:center; gap:10px; width:100%; padding:11px 2px; background:none;
+          border:none; font:inherit; font-size:13.5px; color:var(--text); cursor:pointer; text-align:left; }
+        @media (hover:hover){ .liq-hist__r:hover{ background:var(--bg-subtle); } }
+        .liq-hist__t{ font-weight:600; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+        .liq-hist__n{ font-size:12.5px; color:var(--text-3); flex-shrink:0; }
+        .liq-hist__ok{ font-size:11.5px; font-weight:700; color:var(--green-700); flex-shrink:0; }
+        .liq-hist__falta{ font-size:11.5px; font-weight:700; color:var(--amber-700); flex-shrink:0; }
+        .liq-hist__v{ margin-left:auto; font-weight:700; flex-shrink:0; }
+        .liq-hist__d{ padding:2px 2px 14px; }
+        .liq-hist__cifras{ display:flex; gap:16px; flex-wrap:wrap; align-items:center; font-size:13px; color:var(--text-3); }
+        .liq-hist__ref{ font-size:12px; font-weight:700; color:var(--blue-600); background:rgba(37,99,235,.10);
+          border:1px solid rgba(37,99,235,.2); padding:2px 8px; border-radius:6px; cursor:pointer; }
+        .liq-hist__acc{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-top:12px; }
+        /* En celular los cuatro datos del renglón no caben en una línea y el que
+           cedía era el nombre ("Víctor Padi…"), que es justo lo que identifica
+           el pago. Pasa a rejilla de dos líneas: nombre y monto arriba, el resto
+           debajo. El nombre nunca se corta. */
+        @media (max-width:600px){
+          .liq-hist__r{ display:grid; grid-template-columns:auto 1fr auto; gap:1px 9px; align-items:center; padding:10px 2px; }
+          .liq-hist__r > svg{ grid-column:1; grid-row:1 / span 2; }
+          .liq-hist__t{ grid-column:2; grid-row:1; white-space:normal; }
+          .liq-hist__v{ grid-column:3; grid-row:1; }
+          .liq-hist__n{ grid-column:2; grid-row:2; }
+          .liq-hist__ok,.liq-hist__falta{ grid-column:3; grid-row:2; text-align:right; }
+        }
       `}</style>
       <div className="pagehd">
         <div>
           <h2>Liquidación de comisiones</h2>
         </div>
-        <div className="actions">
-          {/* Mientras liquidas, el historial está oculto: dejar el botón haría
-             que un clic no hiciera nada visible. */}
-          {!tecData && <Button variant="outline" onClick={() => setVerHistorial(!verHistorial)}>{verHistorial ? 'Ocultar historial' : 'Ver historial'}</Button>}
-        </div>
+        {/* El botón de historial vivía aquí Y en la cabecera de su propia
+           tarjeta: dos controles para lo mismo, y el de arriba no decía cuántos
+           pagos hay ni cuántos faltan por registrar en Cuentti. Queda el de la
+           tarjeta, que sí. */}
       </div>
       {tabsLiq}
 
@@ -1497,60 +1618,21 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
 
       {!tecData ? (
       <>
-      {/* Cierre — cifra editorial dominante + stats secundarias (no tarjeta-espejo) */}
-      <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 28, flexWrap: 'wrap', padding: '4px 2px 20px', borderBottom: '1px solid var(--border)', marginBottom: 24 }}>
-        <div style={{ minWidth: 0 }}>
-          <div className="eyebrow">Total a pagar · cierre actual</div>
-          <div className="mono" style={{ fontWeight: 800, fontSize: 'clamp(40px, 7vw, 58px)', letterSpacing: '-.03em', lineHeight: 1.02, color: 'var(--green-700)', margin: '7px 0 8px' }}>
-            {fmt(totalNomina)}
-          </div>
-          <div style={{ fontSize: 13.5, color: 'var(--text-3)' }}>
-            {tecnicosConPendientes.length} técnico{tecnicosConPendientes.length !== 1 ? 's' : ''} · {trabajosPendientes.length} OT{trabajosPendientes.length !== 1 ? 's' : ''} pendiente{trabajosPendientes.length !== 1 ? 's' : ''}
-            {/* Avisos que se pueden ABRIR: antes eran un número en rojo sin salida. */}
-            {kpis.sinTecnico > 0 && (
-              <> · <button type="button" className="liq-aviso" onClick={() => setVerSinTecnico(v => !v)} aria-expanded={verSinTecnico}>
-                <span aria-hidden="true">{verSinTecnico ? '▾' : '▸'}</span>
-                {/* "6 sin técnico" a secas no decía que se pudiera abrir ni qué
-                   hacer con ellas; el jefe lo leía como un dato muerto. */}
-                {kpis.sinTecnico} sin técnico · {verSinTecnico ? 'ocultar' : 'ver cuáles'}
-              </button></>
-            )}
-            {kpis.sinPartner > 0 && <span style={{ color: 'var(--amber-700)', fontWeight: 600 }}> · {kpis.sinPartner} compartido{kpis.sinPartner !== 1 ? 's' : ''} sin compañero</span>}
-          </div>
+      {/* Cierre — una sola cifra: lo que hay que entregar. "Mano de obra
+         facturada" y "Utilidad taller" son contabilidad del cierre, no nómina:
+         viven en Reportes. "Comisiones" repetía este mismo número. */}
+      <div style={{ padding: '4px 2px 20px', borderBottom: '1px solid var(--border)', marginBottom: 24 }}>
+        <div className="eyebrow">Total a pagar · cierre actual</div>
+        <div className="mono" style={{ fontWeight: 800, fontSize: 'clamp(40px, 7vw, 58px)', letterSpacing: '-.03em', lineHeight: 1.02, color: 'var(--green-700)', margin: '7px 0 8px' }}>
+          {fmt(totalNomina)}
         </div>
-        <div className="liq-cifras">
-          {[['Comisiones', fmt(kpis.comisiones)], ['Mano de obra facturada', fmt(kpis.facturado)], ['Utilidad taller', fmt(kpis.utilidad)]].map(([l, v]) => (
-            <div className="liq-cifras__i" key={l}>
-              <span className="eyebrow">{l}</span>
-              <span className="mono liq-cifras__v">{v}</span>
-            </div>
-          ))}
+        <div style={{ fontSize: 13.5, color: 'var(--text-3)' }}>
+          {/* OTs que SÍ se le pueden pagar a alguien. Contar aquí las huérfanas
+             hacía leer "7 OTs pendientes" cuando el trabajo pagable era uno. */}
+          {tecnicosConPendientes.length} técnico{tecnicosConPendientes.length !== 1 ? 's' : ''} · {otsPagables} OT{otsPagables !== 1 ? 's' : ''} por pagar
+          {kpis.sinPartner > 0 && <span style={{ color: 'var(--amber-700)', fontWeight: 600 }}> · {kpis.sinPartner} compartido{kpis.sinPartner !== 1 ? 's' : ''} sin compañero</span>}
         </div>
       </div>
-
-      {/* Detalle de las OTs huérfanas: qué son y a qué OT ir a arreglarlas */}
-      {verSinTecnico && trabajosSinTecnico.length > 0 && (
-        <div className="card" style={{ marginBottom: 14, borderColor: 'rgba(220,38,38,.3)' }}>
-          <div className="card__h">
-            <h3 style={{ color: 'var(--red-700)' }}>OTs sin técnico asignado</h3>
-            <Button variant="ghost" size="sm" onClick={() => setVerSinTecnico(false)}>Cerrar</Button>
-          </div>
-          <div className="card__b">
-            <p style={{ fontSize: 13, color: 'var(--text-3)', margin: '0 0 12px', lineHeight: 1.5 }}>
-              Su comisión suma en los totales de arriba pero <strong>no se le puede pagar a nadie</strong>. Ábrelas en Trabajos y asígnales el técnico para que aparezcan en su liquidación.
-            </p>
-            {trabajosSinTecnico.map(t => (
-              <div key={t.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '9px 0', borderTop: '1px solid var(--border)', fontSize: 13 }}>
-                <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  <strong className="mono" style={{ color: 'var(--blue-600)' }}>{t.otCodigo || t.id}</strong>
-                  <span style={{ color: 'var(--text-3)' }}> · {fechaCorta(t.fecha)} · {t.placa || 'Sin vehículo'} · {tituloCliente(t.cliente) || '—'}</span>
-                </span>
-                <span className="mono" style={{ fontWeight: 700, flexShrink: 0 }}>{fmt(moMap[t.id] || 0)}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
 
       {/* PASO 1 — a quién se le liquida */}
       <div className="card">
@@ -1591,21 +1673,18 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
             </button>
           )
         })}
-        {/* Los que no tienen nada por pagar: plegados. Ocupaban una fila entera
-           cada uno para decir "—", compitiendo con quien sí hay que pagar. */}
+        {/* Los que no tienen nada por pagar van al final, en gris y compactos,
+           pero SIN pliegue: en este taller son 3 técnicos en total y esconder 2
+           de 3 detrás de "ver más" cuesta un clic para no ahorrar nada. Siguen
+           siendo clicables: si a alguno le quedó un aporte o un diario sin
+           consumir, este es el único sitio para llegar a verlo o quitarlo. */}
         {tecnicosSinPendientes.length > 0 && (
           <div style={{ borderTop: '1px solid var(--border)' }}>
-            <Button variant="ghost" size="sm" onClick={() => setVerInactivos(v => !v)}
-              style={{ fontSize: 13.5, padding: '11px 16px', color: 'var(--text-2)', width: '100%', justifyContent: 'flex-start' }}>
-              {verInactivos ? '▾' : '▸'} {tecnicosSinPendientes.length} técnico{tecnicosSinPendientes.length !== 1 ? 's' : ''} sin nada por liquidar
-            </Button>
-            {/* Clicables aunque no tengan OTs: si les quedó un aporte o un diario
-               sin consumir, este es el único sitio para llegar a verlo o quitarlo. */}
             {/* .liq-roster-mini hace exactamente lo mismo que la fila de arriba, así
                que necesita el MISMO tratamiento táctil: sin él, en el celular la
                lista de arriba respondía y esta no, y "a veces funciona" es más
                difícil de reportar que "nunca funciona". */}
-            {verInactivos && tecnicosSinPendientes.map(t => (
+            {tecnicosSinPendientes.map(t => (
               <button key={t.id} type="button" className="liq-roster-mini"
                 onClick={() => { setTecnicoSel(String(t.id)); setSeleccionados({}); setColapso({ trabajos: false, movs: false }) }}
                 style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%', padding: '10px 16px', borderTop: '1px solid var(--border)', borderLeft: 'none', borderRight: 'none', borderBottom: 'none', background: 'transparent', font: 'inherit', fontSize: 13, textAlign: 'left', cursor: 'pointer' }}>
@@ -1625,6 +1704,43 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
          historial: solo desmarca el trabajo, sin devolver los aportes ni
          revertir el movimiento de la cuenta. Y ocupaba sitio en la pantalla
          mostrando 143 trabajos ya resueltos. Ver anularPago(). */}
+
+      {/* OTs sin técnico: pendiente de verdad, pero casi siempre son OTs viejas
+         sin mano de obra. Estaba en rojo dentro de la línea del total, gritando
+         al lado del dinero por una comisión que suele ser $0. Aquí abajo, sobrio
+         y con la salida (asignarles técnico en la OT), que es lo que faltaba. */}
+      {trabajosSinTecnico.length > 0 && (
+        <div className="liq-orfanas">
+          <button type="button" className="liq-orfanas__h" onClick={() => setVerSinTecnico(v => !v)} aria-expanded={verSinTecnico}>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"
+              style={{ transform: verSinTecnico ? 'rotate(0deg)' : 'rotate(-90deg)', transition: 'transform 180ms var(--ease-out)', flexShrink: 0 }}>
+              <polyline points="6 9 12 15 18 9"/>
+            </svg>
+            <span style={{ flex: 1, minWidth: 0 }}>
+              {trabajosSinTecnico.length} OT{trabajosSinTecnico.length !== 1 ? 's' : ''} sin técnico asignado
+            </span>
+            {/* El monto dice si esto es plata parada o papeleo viejo. */}
+            <span className="mono" style={{ fontWeight: 700, color: montoSinTecnico > 0 ? 'var(--amber-700)' : 'var(--text-4)' }}>
+              {montoSinTecnico > 0 ? fmt(montoSinTecnico) : 'sin comisión'}
+            </span>
+          </button>
+          {verSinTecnico && (
+            <div className="liq-orfanas__b">
+              <p>No se le pueden pagar a nadie hasta asignarles técnico. Ábrelas en Órdenes de trabajo.</p>
+              {trabajosSinTecnico.map(t => {
+                const com = Math.round((moMap[t.id] || 0) * COMISION.TOTAL)
+                return (
+                  <div key={t.id} className="liq-orfanas__r">
+                    <span className="mono" style={{ fontWeight: 700, color: 'var(--blue-600)', flexShrink: 0 }}>{t.otCodigo || t.id}</span>
+                    <span className="liq-orfanas__d">{fechaCorta(t.fecha)} · {identidadTrabajo(t)}</span>
+                    <span className="mono" style={{ fontWeight: 700, flexShrink: 0, color: com > 0 ? 'var(--text)' : 'var(--text-4)' }}>{com > 0 ? fmt(com) : '—'}</span>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </div>
+      )}
 
       </>
       ) : (
@@ -1674,7 +1790,7 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
               {tecTrabajos.length === 0 ? (
                 <div className="empty"><h4>Sin pendientes</h4><p>No hay trabajos pendientes de liquidar.</p></div>
               ) : (
-                <table className="tbl tbl-cards tbl-liq">
+                <table className="tbl tbl-cards tbl-liq liq-movil">
                   <thead><tr>
                     <th style={{ width: 40, textAlign: 'center' }}>
                       <input
@@ -1686,10 +1802,11 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
                       />
                     </th>
                     <th>OT</th>
-                    <th>Vehículo</th>
+                    {/* Vehículo + Cliente eran dos columnas débiles: "Sin vehículo"
+                       en el 59% de las OTs y "CUANTIAS MENORES" en el 28%. Una
+                       sola columna con la placa, o el cliente si no hay carro. */}
+                    <th>Placa o cliente</th>
                     <th>Fecha</th>
-                    <th>Cliente</th>
-                    <th style={{ textAlign: 'center' }}>Compartido</th>
                     <th className="c-right">Mano de obra</th>
                     <th className="c-right">Comisión</th>
                   </tr></thead>
@@ -1700,77 +1817,73 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
                       const com = esComp ? (mano * COMISION.TOTAL) / 2 : mano * COMISION.TOTAL
                       const selected = !!seleccionados[t.id]
                       const tidAsignado = parseInt(t.tecnicoId)
-                      // "SERVICIO" no es una placa: es el marcador de trabajo sin carro.
-                      // Se muestra como texto, no en mono, para no confundirlo con una real.
-                      const sinVeh = !!t.sinVehiculo || (t.placa || '').trim().toUpperCase() === 'SERVICIO'
+                      const abierto = !!compAbierto[t.id]
                       return (
                         <tr key={t.id} style={{ background: selected ? 'var(--accent-soft)' : undefined, cursor: 'pointer' }} onClick={() => toggleSeleccion(t.id)}>
                           <td className="td-check" data-label="Liquidar" style={{ textAlign: 'center' }}><input type="checkbox" checked={selected} onChange={() => {}} aria-label="Seleccionar trabajo" style={{ accentColor: 'var(--primary)', cursor: 'pointer' }}/></td>
-                          {/* .c-name aquí (no en Cliente): en celular la tarjeta se
+                          {/* .c-name aquí (no en el cliente): en celular la tarjeta se
                              encabeza con la OT, que es lo que identifica el trabajo
-                             cuando le pagas a un técnico. */}
+                             cuando le pagas a un técnico. Debajo, cuando el trabajo
+                             es compartido, la marca de con quién se parte: dejó de
+                             ser una columna porque es una propiedad de la fila y
+                             porque en 2 de cada 3 OTs de este taller es el caso
+                             normal, no una excepción que merezca una columna. */}
                           <td className="c-mono c-name" data-label="OT" style={{ color: 'var(--blue-600)', fontWeight: 700 }}>
                             {t.otCodigo || t.id}
+                            <span className="liq-comp" onClick={e => e.stopPropagation()}>
+                              {!esComp ? (
+                                <button type="button" className="liq-comp__add"
+                                  title="Este trabajo lo hicieron dos técnicos: el 40% se parte 20/20"
+                                  onClick={() => compartirRapido(t)}>
+                                  {/* El compañero habitual ya viene puesto: en el
+                                     98% de los compartidos es siempre la misma
+                                     pareja, así que preguntarlo era una pregunta
+                                     con una sola respuesta posible. */}
+                                  + Compartir{companeroSugeridoDe(t) ? ` con ${primerNombre(companeroSugeridoDe(t))}` : ''}
+                                </button>
+                              ) : (
+                                <>
+                                  <button type="button" className={`liq-comp__on${partner ? '' : ' falta'}`}
+                                    onClick={() => setCompAbierto(c => ({ ...c, [t.id]: !c[t.id] }))}
+                                    title={partner ? 'Cambiar compañero o quitar' : 'Falta elegir el compañero'}>
+                                    {/* El OTRO, visto desde el técnico al que le estás
+                                       pagando. Mostrar siempre al "compañero" hacía que
+                                       en la liquidación de Pedro dijera "½ con Pedro". */}
+                                    {partner ? `½ con ${primerNombre(otroTecnico(t))}` : '½ ¿con quién?'}
+                                  </button>
+                                  {(abierto || !partner) && (
+                                    <span className="liq-comp__edit">
+                                      <select
+                                        className="input"
+                                        value={partner || ''}
+                                        onChange={e => {
+                                          const yaLiq = liquidados.some(x => x.startsWith(`${t.id}#`))
+                                          const nuevoPartner = e.target.value
+                                          if (yaLiq) { setDialog({ title: 'Cambiar compañero', lead: 'Ya hay una mitad liquidada; cambiar el compañero puede descuadrar lo pagado.', confirmLabel: 'Cambiar igual', tone: 'danger', onConfirm: () => setCompartidoPartner(t.id, nuevoPartner) }); return }
+                                          setCompartidoPartner(t.id, nuevoPartner)
+                                        }}
+                                        aria-label="Compañero del trabajo compartido"
+                                      >
+                                        <option value="">¿Con quién?</option>
+                                        {TECNICOS.filter(x => x.id !== tidAsignado && (x.activo !== false || x.id === partner)).map(x => (
+                                          <option key={x.id} value={x.id}>{x.nombre.split(' ')[0]}</option>
+                                        ))}
+                                      </select>
+                                      <button type="button" className="liq-comp__off" onClick={() => toggleCompartidoSeguro(t.id)}>
+                                        Ya no es compartido
+                                      </button>
+                                    </span>
+                                  )}
+                                </>
+                              )}
+                            </span>
                           </td>
-                          <td data-label="Vehículo">
-                            {sinVeh
-                              ? <span style={{ color: 'var(--text-3)' }}>Sin vehículo</span>
-                              : <span className="mono" style={{ fontWeight: 700 }}>{t.placa || '—'}</span>}
+                          <td data-label="Placa o cliente">
+                            {esMostrador(t)
+                              ? <span className="liq-ident">{identidadTrabajo(t)}</span>
+                              : <span className="mono" style={{ fontWeight: 700 }}>{identidadTrabajo(t) || '—'}</span>}
                           </td>
                           <td className="c-muted" data-label="Fecha">{fechaCorta(t.fecha)}</td>
-                          <td data-label="Cliente">{tituloCliente(t.cliente) || '—'}</td>
-                          {/* Compartido: antes era un checkbox + un selector SIEMPRE desplegado
-                             (el control más ancho de la tabla, en el medio, partiendo el eje
-                             de los montos). Ahora es una ficha que dice con quién, y el
-                             selector solo sale si hace falta elegir o cambiar. */}
-                          <td data-label="Compartido" style={{ textAlign: 'center' }} onClick={e => e.stopPropagation()}>
-                            {!esComp ? (
-                              <button type="button" title="Este trabajo lo hicieron dos técnicos: el 40% se parte 20/20"
-                                onClick={() => toggleCompartidoSeguro(t.id)}
-                                style={{ font: 'inherit', fontSize: 12.5, color: 'var(--text-3)', background: 'none', border: '1px dashed var(--border-strong)', borderRadius: 999, padding: '3px 11px', cursor: 'pointer' }}>
-                                Compartir
-                              </button>
-                            ) : (
-                              <div style={{ display: 'inline-flex', flexDirection: 'column', gap: 5, alignItems: 'center' }}>
-                                <button type="button" className="badge"
-                                  onClick={() => setCompAbierto(c => ({ ...c, [t.id]: !c[t.id] }))}
-                                  title={partner ? 'Cambiar compañero o quitar' : 'Falta elegir el compañero'}
-                                  style={{ cursor: 'pointer', fontWeight: 700, border: 'none',
-                                    background: partner ? 'var(--soft-blue)' : 'var(--soft-amber)',
-                                    color: partner ? 'var(--blue-600)' : 'var(--amber-700)' }}>
-                                  {/* El OTRO, visto desde el técnico al que le estás
-                                     pagando. Mostrar siempre al "compañero" hacía que
-                                     en la liquidación de Pedro dijera "½ con Pedro". */}
-                                  {partner ? `½ con ${primerNombre(otroTecnico(t))}` : '½ ¿con quién?'}
-                                </button>
-                                {(compAbierto[t.id] || !partner) && (
-                                  <>
-                                    <select
-                                      className="input"
-                                      value={partner || ''}
-                                      onChange={e => {
-                                        const yaLiq = liquidados.some(x => x.startsWith(`${t.id}#`))
-                                        const nuevoPartner = e.target.value
-                                        if (yaLiq) { setDialog({ title: 'Cambiar compañero', lead: 'Ya hay una mitad liquidada; cambiar el compañero puede descuadrar lo pagado.', confirmLabel: 'Cambiar igual', tone: 'danger', onConfirm: () => setCompartidoPartner(t.id, nuevoPartner) }); return }
-                                        setCompartidoPartner(t.id, nuevoPartner)
-                                      }}
-                                      style={{ width: 108, minHeight: 28, height: 28, fontSize: 12, padding: '2px 8px' }}
-                                      aria-label="Compañero del trabajo compartido"
-                                    >
-                                      <option value="">¿Con quién?</option>
-                                      {TECNICOS.filter(x => x.id !== tidAsignado && (x.activo !== false || x.id === partner)).map(x => (
-                                        <option key={x.id} value={x.id}>{x.nombre.split(' ')[0]}</option>
-                                      ))}
-                                    </select>
-                                    <button type="button" onClick={() => toggleCompartidoSeguro(t.id)}
-                                      style={{ font: 'inherit', fontSize: 12.5, color: 'var(--text-3)', background: 'none', border: 'none', padding: 0, cursor: 'pointer', textDecoration: 'underline' }}>
-                                      Ya no es compartido
-                                    </button>
-                                  </>
-                                )}
-                              </div>
-                            )}
-                          </td>
                           <td className="c-mono c-right" data-label="Mano de obra" style={mano === 0 ? { color: 'var(--red-600)', fontWeight: 700 } : undefined}>
                             {fmt(mano)}
                             {mano === 0 && <span style={{ display: 'block', fontSize: 12, color: 'var(--red-600)', fontWeight: 600 }}>sin servicios</span>}
@@ -1800,42 +1913,42 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
             </div>
             <div className="card__b">
               {cantSeleccionados === 0 ? (
-                <div className="liq-empty">
-                  <div className="liq-empty__icon">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v5M12 16.5h.01"/></svg>
-                  </div>
-                  <h4>Aún no hay nada que calcular</h4>
-                  <p>Marca los trabajos que vas a pagarle a {tecData.tecnico.nombre.split(' ')[0]} en el <strong>paso 2</strong> — ahí se arma la mano de obra, la comisión y el neto.</p>
-                  <button type="button" className="btn btn-primary btn-sm" onClick={irAPaso2}>Ir al paso 2 ↑</button>
+                /* Sin trabajos marcados no hay recibo: mostrar "Mano de obra $0"
+                   junto a ajustes reales parecería un cálculo hecho. Pero el
+                   estado vacío tampoco necesitaba un ícono, un titular y un botón
+                   que solo hace scroll 80px hacia arriba: ocupaba más alto que el
+                   recibo lleno. Una línea, y debajo lo que sí es información —
+                   los aportes cargados y el saldo de su cuenta. */
+                <div className="liq-pendiente">
+                  <p className="liq-pendiente__t">
+                    Marca arriba los trabajos que vas a pagarle a {tecData.tecnico.nombre.split(' ')[0]}: el recibo se arma solo.
+                  </p>
                   {/* Un diario o aporte ya cargado quedaba INVISIBLE aquí (la lista
                      de ajustes vive en la otra rama), y parecía que se había
                      borrado. Se anuncia, con la opción de quitarlo sin pagar. */}
                   {tecMovs.length > 0 && (
-                    <div className="liq-empty__note" style={{ flexDirection: 'column', gap: 8 }}>
-                      <div>
-                        Ya tiene <strong className="mono">{fmt(tecMovs.reduce((s, m) => s + (parseFloat(m.monto) || 0), 0))}</strong> en aportes cargados ({tecMovs.map(m => tipoLabel(m.tipo)).join(', ')}) — se descontarán cuando elijas los trabajos.
-                      </div>
-                      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', justifyContent: 'center' }}>
-                        {tecMovs.map(m => (
-                          <Button key={m.id} variant="ghost" size="sm" style={{ fontSize: 12.5, color: 'var(--text-3)' }}
-                            onClick={() => setDialog({
-                              title: 'Eliminar movimiento',
-                              lead: `${tipoLabel(m.tipo)} · ${fmt(m.monto)} · ${fechaCorta(m.fecha)}`,
-                              confirmLabel: 'Sí, eliminar', tone: 'danger',
-                              onConfirm: () => hookEliminarMov(m.id),
-                            })}>
-                            Quitar {tipoLabel(m.tipo)} {fmt(m.monto)}
-                          </Button>
-                        ))}
-                      </div>
+                    <div className="liq-pendiente__n">
+                      <span>
+                        Ya tiene <strong className="mono">{fmt(tecMovs.reduce((s, m) => s + (parseFloat(m.monto) || 0), 0))}</strong> en aportes cargados ({tecMovs.map(m => tipoLabel(m.tipo)).join(', ')}) — se descuentan al elegir los trabajos.
+                      </span>
+                      {tecMovs.map(m => (
+                        <Button key={m.id} variant="ghost" size="sm" style={{ fontSize: 12.5, color: 'var(--text-3)' }}
+                          onClick={() => setDialog({
+                            title: 'Eliminar movimiento',
+                            lead: `${tipoLabel(m.tipo)} · ${fmt(m.monto)} · ${fechaCorta(m.fecha)}`,
+                            confirmLabel: 'Sí, eliminar', tone: 'danger',
+                            onConfirm: () => hookEliminarMov(m.id),
+                          })}>
+                          Quitar {tipoLabel(m.tipo)} {fmt(m.monto)}
+                        </Button>
+                      ))}
                     </div>
                   )}
                   {tecCuenta.saldo !== 0 && (
-                    <div className="liq-empty__note">
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M12 2v6M12 22v-6M2 12h6M22 12h-6"/></svg>
+                    <div className="liq-pendiente__n">
                       {tecCuenta.saldo > 0
-                        ? <>{tecData.tecnico.nombre.split(' ')[0]} tiene <strong className="mono">{fmt(tecCuenta.saldo)}</strong> pendientes en su cuenta — se podrán descontar aquí una vez elijas los trabajos.</>
-                        : <>El taller le debe <strong className="mono">{fmt(-tecCuenta.saldo)}</strong> — se podrá sumar aquí una vez elijas los trabajos.</>}
+                        ? <span>{tecData.tecnico.nombre.split(' ')[0]} debe <strong className="mono">{fmt(tecCuenta.saldo)}</strong> en su cuenta — se podrá descontar aquí.</span>
+                        : <span>El taller le debe <strong className="mono">{fmt(-tecCuenta.saldo)}</strong> — se podrá sumar aquí.</span>}
                     </div>
                   )}
                 </div>
@@ -2082,15 +2195,6 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
                     <span className="liq-slot" aria-hidden="true" />
                   </div>
                 </div>
-                {false && (
-                  <div style={{ padding: '9px 13px', background: 'rgba(245,158,11,.07)', border: '1px solid rgba(245,158,11,.25)', borderRadius: 9, fontSize: 12.5, color: 'var(--text-2)', marginBottom: 14 }}>
-                    {totalSeleccion.cargos !== totalSeleccion.cargosEfectivos ? (
-                      <>Cargos <strong>{fmt(totalSeleccion.cargos)}</strong> — descuento real <strong>{fmt(totalSeleccion.cargosEfectivos)}</strong> (el diario se comparte {APORTE_ADMIN_SPLIT * 100}/{100 - APORTE_ADMIN_SPLIT * 100}; el resto completo{totalSeleccion.descuentoCuenta > 0 ? <>, incluye <strong className="mono">{fmt(totalSeleccion.descuentoCuenta)}</strong> de su cuenta</> : null}). Neto = comisión − {fmt(totalSeleccion.cargosEfectivos)}.</>
-                    ) : (
-                      <>Cargos <strong>{fmt(totalSeleccion.cargosEfectivos)}</strong>{totalSeleccion.descuentoCuenta > 0 ? <> (incluye <strong className="mono">{fmt(totalSeleccion.descuentoCuenta)}</strong> de su cuenta)</> : null}. Neto = comisión − {fmt(totalSeleccion.cargosEfectivos)}.</>
-                    )}
-                  </div>
-                )}
                 {totalSeleccion.neto < 0 && (
                   <div style={{ padding: '10px 14px', background: 'rgba(220,38,38,.07)', border: '1px solid rgba(220,38,38,.28)', borderRadius: 9, fontSize: 13, color: 'var(--red-700)', fontWeight: 600, marginBottom: 14 }}>
                     Los cargos superan la comisión. Al generar el pago, la deuda restante se arrastrará como "saldo anterior".
@@ -2105,15 +2209,28 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
                         <button type="button" className={metodoPagoLiq === 'transferencia' ? 'on' : ''} onClick={() => setMetodoPagoLiq('transferencia')} style={{ fontSize: 12.5 }}>Transferencia</button>
                       </div>
                     </div>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-end', gap: 12 }}>
-                      <div className="field" style={{ flex: '0 0 190px' }}>
-                        <label>Pagado {metodoPagoLiq === 'transferencia' ? 'por transferencia' : 'en efectivo'}</label>
-                        <MoneyInput value={pagoReal} onChange={setPagoReal} />
+                    {/* Pagar un monto distinto al neto pasó 1 vez en 63 pagos. El
+                       campo vacío + "déjalo vacío para pagar el neto completo"
+                       obligaba a los otros 62 a leer una instrucción para no
+                       hacer nada. Ahora el neto completo es lo que ocurre si no
+                       tocas nada, y el monto parcial se pide al pedirlo. */}
+                    {!pagoParcial ? (
+                      <button type="button" className="liq-parcial__ask" onClick={() => setPagoParcial(true)}>
+                        Pagar otro monto
+                      </button>
+                    ) : (
+                      <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-end', gap: 12 }}>
+                        <div className="field" style={{ flex: '0 0 190px' }}>
+                          <label>Pagado {metodoPagoLiq === 'transferencia' ? 'por transferencia' : 'en efectivo'}</label>
+                          <MoneyInput value={pagoReal} onChange={setPagoReal} autoFocus />
+                        </div>
+                        <div style={{ flex: 1, minWidth: 180, fontSize: 12.5, color: 'var(--text-3)' }}>
+                          <button type="button" className="liq-parcial__ask" onClick={() => { setPagoParcial(false); setPagoReal('') }}>
+                            Pagar el neto completo ({fmt(totalSeleccion.neto)})
+                          </button>
+                        </div>
                       </div>
-                      <div style={{ flex: 1, minWidth: 180, fontSize: 12.5, color: 'var(--text-3)' }}>
-                        Déjalo vacío para pagar el neto completo (<strong className="mono">{fmt(totalSeleccion.neto)}</strong>).
-                      </div>
-                    </div>
+                    )}
                     {(() => {
                       const pagadoNum = montoEntregado
                       const diffNum = totalSeleccion.neto - pagadoNum
@@ -2184,7 +2301,17 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
       <div className="card" style={{ marginTop: 16 }}>
         <div className="card__h">
           <h3>Historial de pagos</h3>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+            {/* La mitad de los pagos hechos (31 de 63) nunca llegó a Cuentti. Era
+               un chip de filtro escondido dentro del historial cerrado: había que
+               abrirlo para enterarse de que faltaba algo. Ahora lo dice de
+               entrada, y el clic lleva directo a esos pagos. */}
+            {sinCuenttiCount > 0 && (
+              <button type="button" className="liq-hist__alert"
+                onClick={() => { setVerHistorial(true); setHistSinCuentti(true) }}>
+                {sinCuenttiCount} sin registrar en Cuentti
+              </button>
+            )}
             <span className="count">{historial.length} pagos</span>
             <Button variant="outline" size="sm" onClick={() => setVerHistorial(!verHistorial)}>{verHistorial ? 'Ocultar' : 'Ver'}</Button>
           </div>
@@ -2220,62 +2347,83 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
                 </div>
                 {historialFiltrado.length === 0 ? (
                   <div className="empty"><h4>Sin resultados</h4><p>Ningún pago coincide con estos filtros.</p></div>
-                ) : historialFiltrado.map(reg => (
-                  <div key={reg.id} style={{ border: '1px solid var(--border)', borderRadius: 10, padding: 14, marginBottom: 10, background: 'var(--bg-subtle)' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8, marginBottom: 8 }}>
-                      <div>
-                        <button type="button" title="Clic para copiar la referencia" className="mono"
-                          onClick={() => { const r = liqRef(reg.id); navigator.clipboard?.writeText(r); notify(`Referencia ${r} copiada`, 'success') }}
-                          style={{ fontSize: 12, fontWeight: 700, color: 'var(--blue-600)', background: 'rgba(37,99,235,.10)', border: '1px solid rgba(37,99,235,.2)', padding: '2px 8px', borderRadius: 6, cursor: 'pointer' }}>
-                          #{liqRef(reg.id)}
-                        </button>
-                        <Badge tone="info" style={{ marginLeft: 8 }}>{reg.tecnico}</Badge>
-                      </div>
-                      <span style={{ fontSize: 13, color: 'var(--text-3)' }}>{fechaCorta(reg.fecha)}</span>
+                ) : historialPorDia.map(dia => (
+                  <div className="liq-hist__dia" key={dia.clave}>
+                    <div className="liq-hist__diah">
+                      <span>{fechaCorta(dia.fecha)}</span>
+                      <span className="mono">{dia.pagos.length} pago{dia.pagos.length !== 1 ? 's' : ''} · {fmt(dia.entregado)}</span>
                     </div>
-                    <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', alignItems: 'center' }}>
-                      <span style={{ fontSize: 13.5 }}><strong>{reg.cantidadTrabajos}</strong> trabajos</span>
-                      <span style={{ fontSize: 13.5 }}>Mano de obra: <strong className="mono">{fmt(reg.manoObra || 0)}</strong></span>
-                      <span style={{ fontSize: 13.5, color: 'var(--green-600)' }}>Comisión: <strong className="mono">{fmt(reg.comision || 0)}</strong></span>
-                      <span style={{ fontSize: 13.5, color: 'var(--amber-600)' }}>Cargos: <strong className="mono">{fmt(reg.cargos || 0)}</strong></span>
-                      <span style={{ fontSize: 13.5, color: reg.neto >= 0 ? 'var(--green-600)' : 'var(--red-600)', fontWeight: 700 }}>Neto: <strong className="mono">{fmt(reg.neto || 0)}</strong></span>
-                      {reg.pagado != null && reg.pagado !== reg.neto && (
-                        (reg.neto || 0) - reg.pagado > 0 ? (
-                          <span style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--amber-700)' }}>
-                            Pagado: <strong className="mono">{fmt(reg.pagado)}</strong> · Pendiente: <strong className="mono">{fmt((reg.neto || 0) - reg.pagado)}</strong>
-                          </span>
-                        ) : (
-                          <span style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--blue-600)' }}>
-                            Pagado: <strong className="mono">{fmt(reg.pagado)}</strong> · Adelanto: <strong className="mono">{fmt(reg.pagado - (reg.neto || 0))}</strong>
-                          </span>
-                        )
-                      )}
-                      <div style={{ marginLeft: 'auto', display: 'flex', gap: 8, alignItems: 'center' }}>
-                        {reg.cuenttiGasto ? (
-                          <span className="badge" style={{ background: 'var(--soft-green)', color: 'var(--green-700)', fontWeight: 700 }} title="Gasto ya registrado en Cuentti">✓ Cuentti {reg.cuenttiGasto}</span>
-                        ) : (
-                          <>
-                            <select className="input" aria-label="Método de pago" value={metodoGasto[reg.id] || reg.metodoPago || 'efectivo'} onChange={e => setMetodoGasto(m => ({ ...m, [reg.id]: e.target.value }))} style={{ height: 30, minHeight: 30, fontSize: 12, padding: '2px 8px', width: 'auto' }}>
-                              <option value="efectivo">Efectivo</option>
-                              <option value="transferencia">Transferencia</option>
-                              <option value="credito">Crédito (queda debiendo)</option>
-                            </select>
-                            {gastoError[reg.id] && regCuenttiId !== reg.id && (
-                              <Button variant="outline" size="sm" onClick={() => marcarYaRegistradoCuentti(reg)} title="Si ya verificaste en Cuentti que quedó registrado" style={{ color: 'var(--green-700)', borderColor: 'rgba(22,163,74,.35)' }}>
-                                Ya está en Cuentti
-                              </Button>
-                            )}
-                            <Button variant="outline" size="sm" disabled={regCuenttiId === reg.id} onClick={() => pedirRegistrarCuentti(reg)}>
-                              {regCuenttiId === reg.id ? 'Registrando…' : (gastoError[reg.id] ? 'Reintentar' : 'Registrar en Cuentti')}
-                            </Button>
-                          </>
-                        )}
-                        <Button variant="outline" size="sm" onClick={() => exportPdfHistorial(reg)}>PDF</Button>
-                        {/* Anular: la salida que faltaba. Antes, un pago equivocado
-                           solo se podía quitar borrando los 48 de una vez. */}
-                        <Button variant="ghost" size="sm" style={{ color: 'var(--red-600)' }} onClick={() => pedirAnular(reg)}>Anular</Button>
-                      </div>
-                    </div>
+                    {dia.pagos.map(reg => {
+                      const abierto = !!histAbierto[reg.id]
+                      const entregado = reg.pagado != null ? reg.pagado : (reg.neto || 0)
+                      return (
+                        <div className="liq-hist__p" key={reg.id}>
+                          {/* Cada pago era una ficha con 7 cifras en línea, un
+                             selector y tres botones — 63 veces. El renglón dice lo
+                             que se busca al recorrer el historial: quién, cuánto y
+                             si ya está en Cuentti. El desglose y las acciones (que
+                             incluyen anular) salen al abrirlo, no antes. */}
+                          <button type="button" className="liq-hist__r" onClick={() => setHistAbierto(h => ({ ...h, [reg.id]: !h[reg.id] }))} aria-expanded={abierto}>
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"
+                              style={{ transform: abierto ? 'rotate(0deg)' : 'rotate(-90deg)', transition: 'transform 180ms var(--ease-out)', flexShrink: 0, color: 'var(--text-4)' }}>
+                              <polyline points="6 9 12 15 18 9"/>
+                            </svg>
+                            <span className="liq-hist__t">{reg.tecnico || 'Sin técnico'}</span>
+                            <span className="liq-hist__n">{reg.cantidadTrabajos} OT{reg.cantidadTrabajos !== 1 ? 's' : ''}</span>
+                            {/* El estado en Cuentti es la mitad del trabajo que queda
+                               por hacer aquí: 31 de 63 pagos siguen sin registrar. */}
+                            {reg.cuenttiGasto
+                              ? <span className="liq-hist__ok" title={`Gasto ${reg.cuenttiGasto} en Cuentti`}>✓ Cuentti</span>
+                              : <span className="liq-hist__falta">Falta Cuentti</span>}
+                            <span className="mono liq-hist__v">{fmt(entregado)}</span>
+                          </button>
+                          {abierto && (
+                            <div className="liq-hist__d">
+                              <div className="liq-hist__cifras">
+                                <span>Mano de obra <strong className="mono">{fmt(reg.manoObra || 0)}</strong></span>
+                                <span>Comisión <strong className="mono" style={{ color: 'var(--green-700)' }}>{fmt(reg.comision || 0)}</strong></span>
+                                {(reg.cargos || 0) > 0 && <span>Cargos <strong className="mono" style={{ color: 'var(--amber-700)' }}>{fmt(reg.cargos)}</strong></span>}
+                                <span>Neto <strong className="mono">{fmt(reg.neto || 0)}</strong></span>
+                                {reg.pagado != null && reg.pagado !== reg.neto && (
+                                  (reg.neto || 0) - reg.pagado > 0
+                                    ? <span style={{ color: 'var(--amber-700)', fontWeight: 700 }}>Pendiente <strong className="mono">{fmt((reg.neto || 0) - reg.pagado)}</strong></span>
+                                    : <span style={{ color: 'var(--blue-600)', fontWeight: 700 }}>Adelanto <strong className="mono">{fmt(reg.pagado - (reg.neto || 0))}</strong></span>
+                                )}
+                                <button type="button" title="Clic para copiar la referencia" className="mono liq-hist__ref"
+                                  onClick={() => { const r = liqRef(reg.id); navigator.clipboard?.writeText(r); notify(`Referencia ${r} copiada`, 'success') }}>
+                                  #{liqRef(reg.id)}
+                                </button>
+                              </div>
+                              <div className="liq-hist__acc">
+                                {reg.cuenttiGasto ? (
+                                  <span className="badge" style={{ background: 'var(--soft-green)', color: 'var(--green-700)', fontWeight: 700 }} title="Gasto ya registrado en Cuentti">✓ Cuentti {reg.cuenttiGasto}</span>
+                                ) : (
+                                  <>
+                                    <select className="input" aria-label="Método de pago" value={metodoGasto[reg.id] || reg.metodoPago || 'efectivo'} onChange={e => setMetodoGasto(m => ({ ...m, [reg.id]: e.target.value }))} style={{ height: 30, minHeight: 30, fontSize: 12, padding: '2px 8px', width: 'auto' }}>
+                                      <option value="efectivo">Efectivo</option>
+                                      <option value="transferencia">Transferencia</option>
+                                      <option value="credito">Crédito (queda debiendo)</option>
+                                    </select>
+                                    {gastoError[reg.id] && regCuenttiId !== reg.id && (
+                                      <Button variant="outline" size="sm" onClick={() => marcarYaRegistradoCuentti(reg)} title="Si ya verificaste en Cuentti que quedó registrado" style={{ color: 'var(--green-700)', borderColor: 'rgba(22,163,74,.35)' }}>
+                                        Ya está en Cuentti
+                                      </Button>
+                                    )}
+                                    <Button variant="outline" size="sm" disabled={regCuenttiId === reg.id} onClick={() => pedirRegistrarCuentti(reg)}>
+                                      {regCuenttiId === reg.id ? 'Registrando…' : (gastoError[reg.id] ? 'Reintentar' : 'Registrar en Cuentti')}
+                                    </Button>
+                                  </>
+                                )}
+                                <Button variant="outline" size="sm" onClick={() => exportPdfHistorial(reg)}>PDF</Button>
+                                {/* Anular: la salida que faltaba. Antes, un pago equivocado
+                                   solo se podía quitar borrando los 48 de una vez. */}
+                                <Button variant="ghost" size="sm" style={{ color: 'var(--red-600)' }} onClick={() => pedirAnular(reg)}>Anular</Button>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )
+                    })}
                   </div>
                 ))}
               </>

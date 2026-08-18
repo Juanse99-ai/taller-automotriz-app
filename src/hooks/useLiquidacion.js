@@ -289,7 +289,12 @@ export function useLiquidacion() {
     })
   }, [])
 
-  const toggleCompartido = useCallback((trabajoId) => {
+  // `partnerId` opcional: marca compartido Y asigna compañero en UNA sola
+  // escritura. Llamar a toggleCompartido + setCompartidoPartner seguidos lanzaba
+  // dos upsert a la misma fila; si llegaban al revés, el partner se perdía y el
+  // compañero quedaba sin cobrar su mitad. Sin el argumento se comporta igual
+  // que antes (compartido sin compañero).
+  const toggleCompartido = useCallback((trabajoId, partnerId = null) => {
     setCompartidos(prev => {
       const next = { ...prev }
       if (next[trabajoId]) {
@@ -298,10 +303,11 @@ export function useLiquidacion() {
         setLS(COMP_TOMBS_KEY, [...getLS(COMP_TOMBS_KEY, []).filter(t => t.id !== trabajoId), { id: trabajoId, ts: Date.now() }])
         deleteCompartido(trabajoId)
       } else {
-        next[trabajoId] = true
+        const pid = parseInt(partnerId) || 0
+        next[trabajoId] = pid ? { partner: pid } : true
         setLS(COMP_TOMBS_KEY, getLS(COMP_TOMBS_KEY, []).filter(t => t.id !== trabajoId))
-        setLS(COMP_PENDING_KEY, { ...getLS(COMP_PENDING_KEY, {}), [trabajoId]: 0 })
-        upsertCompartido(trabajoId)
+        setLS(COMP_PENDING_KEY, { ...getLS(COMP_PENDING_KEY, {}), [trabajoId]: pid })
+        upsertCompartido(trabajoId, pid || null)
       }
       return next
     })

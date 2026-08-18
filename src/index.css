@@ -753,18 +753,26 @@ textarea.input{min-height:88px;resize:vertical;padding-top:11px}
   /* min-width 900 (era 980): con el selector de compañero convertido en ficha,
      la columna Compartido ya no necesita 110px fijos. Los 980 desbordaban el
      contenedor (967px) en un portátil de 1280 y sacaban una barra de scroll. */
-  .tbl-liq{table-layout:fixed;min-width:900px}
+  /* 6 columnas: check · OT · placa-o-cliente · fecha · mano de obra · comisión.
+     Antes eran 8 y necesitaba 900px de ancho mínimo: "Vehículo" y "Cliente" se
+     fundieron en una sola columna (el 59% de las OTs no tiene carro) y
+     "Compartido" bajó a la celda de la OT, que es a lo que pertenece. */
+  .tbl-liq{table-layout:fixed;min-width:720px}
   .tbl-liq th:nth-child(1),.tbl-liq td:nth-child(1){width:44px}
-  .tbl-liq th:nth-child(2),.tbl-liq td:nth-child(2){width:12%}
-  .tbl-liq th:nth-child(3),.tbl-liq td:nth-child(3){width:11%}
-  .tbl-liq th:nth-child(4),.tbl-liq td:nth-child(4){width:9%}
-  .tbl-liq th:nth-child(5),.tbl-liq td:nth-child(5){width:29%}
-  .tbl-liq th:nth-child(6),.tbl-liq td:nth-child(6){width:12%}
-  .tbl-liq th:nth-child(7),.tbl-liq td:nth-child(7){width:14%}
-  .tbl-liq th:nth-child(8),.tbl-liq td:nth-child(8){width:13%;padding-right:20px}
-  /* Cliente trunca si es muy largo; OT, placa y fecha nunca se parten */
-  .tbl-liq td:nth-child(5){white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .tbl-liq td:nth-child(2),.tbl-liq td:nth-child(3),.tbl-liq td:nth-child(4){white-space:nowrap}
+  .tbl-liq th:nth-child(2),.tbl-liq td:nth-child(2){width:20%}
+  .tbl-liq th:nth-child(3),.tbl-liq td:nth-child(3){width:30%}
+  .tbl-liq th:nth-child(4),.tbl-liq td:nth-child(4){width:11%}
+  .tbl-liq th:nth-child(5),.tbl-liq td:nth-child(5){width:19%}
+  .tbl-liq th:nth-child(6),.tbl-liq td:nth-child(6){width:18%;padding-right:20px}
+  /* La identidad trunca si es larga; OT y fecha nunca se parten. La celda de la
+     OT sí crece hacia abajo: lleva la marca de compartido en su segunda línea. */
+  .tbl-liq td:nth-child(3){white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .tbl-liq td:nth-child(2),.tbl-liq td:nth-child(4){white-space:nowrap}
+  /* La OT es .c-mono para las cifras tabulares, pero .tbl .c-mono alinea a la
+     derecha (es la regla de las columnas de dinero) y aquí eso despegaba el
+     código de su encabezado. La OT es una etiqueta, no un monto. */
+  .tbl-liq th:nth-child(2),.tbl-liq td:nth-child(2){text-align:left}
+  .tbl-liq td:nth-child(2){vertical-align:top;padding-top:11px}
 }
 
 /* === Lista agrupada iOS (inset grouped, estilo Ajustes) ===
@@ -981,15 +989,51 @@ tbody tr:active{background:var(--fill-2)}
   .tbl.tbl-cards tbody td.td-actions{display:block;text-align:left;padding-top:8px;margin-top:4px;border-top:1px solid var(--border)}
   .tbl.tbl-cards tbody td.td-actions::before{display:none}
   .tbl.tbl-cards tbody td.td-actions>div{justify-content:flex-start!important;flex-wrap:wrap}
-  /* Liquidación en celular: el check de liquidar va antes que el título, con
-     área de toque cómoda; el selector de compañero baja a ancho completo. */
-  .tbl-liq.tbl-cards tbody td.td-check{order:-2;justify-content:space-between;text-align:left;padding:2px 0 8px}
-  .tbl-liq.tbl-cards tbody td.td-check input[type=checkbox]{width:22px;height:22px;flex-shrink:0}
-  .tbl-liq.tbl-cards tbody td[data-label="Compartido"]{flex-wrap:wrap;justify-content:space-between}
-  .tbl-liq.tbl-cards tbody td[data-label="Compartido"] .input{width:100%!important;margin:6px 0 0!important;flex-basis:100%}
-  /* La OT encabeza la tarjeta: es lo que identifica el trabajo al pagarle a un
-     técnico (antes iba el nombre del cliente, el dato menos útil aquí). */
-  .tbl-liq.tbl-cards tbody td.c-name{font-family:var(--mono);letter-spacing:-.01em}
+  /* === Liquidación en celular: fila táctil de tres líneas ===
+     .tbl-cards convertía cada OT en una tarjeta de pares etiqueta/valor: una
+     sola OT ocupaba la pantalla entera, y un técnico con 4 OTs (el promedio de
+     este taller) obligaba a recorrer cuatro pantallas para marcar cuatro
+     casillas. Misma rejilla que .trab-movil:
+
+       línea 1   [✓] OT · ½ con quién  ...........  COMISIÓN
+       línea 2       placa o cliente  .............  MANO DE OBRA
+       línea 3       fecha
+
+     No se quita ningún campo: la fecha baja de rango en vez de desaparecer. */
+  .tbl.tbl-cards.liq-movil tbody tr{
+    display:grid; grid-template-columns:auto 1fr auto; gap:1px 10px;
+    padding:10px 12px; margin:0 0 6px; align-items:center;
+  }
+  /* height:auto es imprescindible: .tbl tbody td trae height:var(--row-h), que
+     en táctil vale 52px, y la rejilla daría tres filas de 52px. */
+  .tbl.tbl-cards.liq-movil tbody td{display:block;padding:0;text-align:left;
+    height:auto;line-height:1.45;min-width:0;overflow:hidden;
+    text-overflow:ellipsis;white-space:nowrap;border:none}
+  .tbl.tbl-cards.liq-movil tbody td::before{display:none}
+  /* El check manda la fila entera y por eso ocupa las tres líneas de alto:
+     el objetivo del dedo es alto, no un cuadrito de 22px. */
+  .tbl.tbl-cards.liq-movil tbody td.td-check{grid-column:1;grid-row:1 / span 3;
+    display:flex;align-items:center;padding-right:4px}
+  .tbl.tbl-cards.liq-movil tbody td.td-check input[type=checkbox]{width:22px;height:22px;flex-shrink:0}
+  .tbl.tbl-cards.liq-movil tbody td.c-name{grid-column:2;grid-row:1;
+    font-family:var(--mono);letter-spacing:-.01em;font-size:var(--fs-md);font-weight:700;
+    color:var(--blue-600);border:none;margin:0;padding:0;order:0;white-space:normal}
+  /* La marca de compartido cabe en la misma línea de la OT en vez de abrirse
+     un renglón propio: es una etiqueta corta ("½ con Víctor"). */
+  .tbl.tbl-cards.liq-movil tbody td.c-name .liq-comp{display:inline;margin-left:7px}
+  .tbl.tbl-cards.liq-movil tbody td.c-name .liq-comp__edit{display:flex;margin-top:6px}
+  .tbl.tbl-cards.liq-movil tbody td.c-name .liq-comp__edit .input{width:auto;flex:1;min-width:120px}
+  .tbl.tbl-cards.liq-movil tbody td[data-label="Comisión"]{grid-column:3;grid-row:1;text-align:right;
+    font-variant-numeric:tabular-nums;font-weight:700;font-size:var(--fs-md)}
+  .tbl.tbl-cards.liq-movil tbody td[data-label="Placa o cliente"]{grid-column:2;grid-row:2;
+    font-size:var(--fs-base);font-weight:500;color:var(--text-2)}
+  .tbl.tbl-cards.liq-movil tbody td[data-label="Mano de obra"]{grid-column:3;grid-row:2;text-align:right;
+    font-variant-numeric:tabular-nums;font-size:var(--fs-sm);color:var(--text-3)}
+  .tbl.tbl-cards.liq-movil tbody td[data-label="Fecha"]{grid-column:2;grid-row:3;
+    font-size:var(--fs-xs);color:var(--text-3)}
+  /* Las notas al pie de una celda ("la mitad", "sin servicios") son inline aquí:
+     como bloque abrían una cuarta línea dentro de una celda de rejilla. */
+  .tbl.tbl-cards.liq-movil tbody td span[style*="display: block"]{display:inline!important;margin-left:5px}
 }
 .table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;border-radius:var(--radius);border:1px solid var(--border);margin:0 -1px}
 
