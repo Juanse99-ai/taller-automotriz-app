@@ -713,7 +713,7 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
                   const estancado = t.estado !== ESTADOS.COMPLETADO && t.estado !== ESTADOS.CANCELADO && dias >= DIAS_ESTANCADO
                   const cob = estadoCobro(t)
                   return (
-                    <div key={t.id} className={`hd-row${t.id === selId ? ' on' : ''}`}
+                    <div key={t.id} className={`hd-row hd-row--ot${t.id === selId ? ' on' : ''}`}
                       style={{ height: 40, background: t.id === selId ? undefined : (n % 2 ? '#fcfdfe' : undefined) }}
                       onClick={() => setSelId(t.id)}>
                       {/* La placa manda: es por lo que se reconoce una OT. Cuando el

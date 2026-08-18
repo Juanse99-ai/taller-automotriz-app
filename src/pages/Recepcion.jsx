@@ -7,6 +7,49 @@ import Switch from '../components/Switch'
 import IngresoVehiculo from '../components/IngresoVehiculo'
 import { ingresoVacio } from '../utils/ingreso'
 
+// Iniciales del tecnico para el avatar de 19px de la lista del taller.
+function tecIniciales(id) {
+  const p = (TECNICOS.find(t => t.id === parseInt(id))?.nombre || '').split(' ').filter(Boolean)
+  return ((p[0]?.[0] || '') + (p[1]?.[0] || '')).toUpperCase() || '—'
+}
+
+// El color de la pastilla es semantico y es el mismo que en Ordenes de trabajo:
+// dice en que estado esta el carro, nunca decora.
+function chipEstado(estado) {
+  if (estado === ESTADOS.EN_PROGRESO) return 'info'
+  if (estado === ESTADOS.PENDIENTE) return 'warn'
+  if (estado === ESTADOS.PROGRAMADO) return 'purple'
+  return 'mute'
+}
+
+// Cabecera de seccion: numero del paso + rotulo + filete + apoyo a la derecha.
+// Los cuatro pasos viven en la MISMA tarjeta, asi que el filete es lo unico que
+// los separa: nada de tarjetas dentro de tarjetas.
+function SecHead({ n, titulo, apoyo, apoyoFuerte }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+      <span style={{ fontSize: 9.5, lineHeight: 1, fontWeight: 700, letterSpacing: '1px', whiteSpace: 'nowrap', color: n != null ? 'var(--accent)' : 'var(--text-4)' }}>
+        {n != null ? `${n} · ` : ''}{titulo}
+      </span>
+      <div style={{ flex: 1, height: 1, background: 'var(--head-line)' }} />
+      {apoyo && (
+        <span style={{ fontSize: 10.5, lineHeight: 1, whiteSpace: 'nowrap', fontWeight: apoyoFuerte ? 700 : 400, color: apoyoFuerte ? 'var(--text-2)' : 'var(--text-3)' }}>{apoyo}</span>
+      )}
+    </div>
+  )
+}
+
+// Dato ya capturado que se relee en el paso 4: rotulo arriba, valor abajo.
+// Vacio no se esconde, se dice: raya apagada.
+function Dato({ l, v, mono }) {
+  return (
+    <div style={{ minWidth: 0 }}>
+      <div style={{ fontSize: 9.5, lineHeight: 1, fontWeight: 700, letterSpacing: '.8px', color: 'var(--text-4)' }}>{l}</div>
+      <div className={mono ? 'hd-plate' : ''} style={{ fontSize: 13, lineHeight: 1.25, fontWeight: 700, marginTop: 5, color: v ? 'var(--text)' : 'var(--text-empty)' }}>{v || '—'}</div>
+    </div>
+  )
+}
+
 export default function Recepcion({ hook, vehiculosHook, clientesHook, notify }) {
   const { trabajos, agregarTrabajo, puedeCrearOT } = hook
   const { resultados, buscando, buscarDebounced, setResultados } = useClientes()
@@ -150,369 +193,388 @@ export default function Recepcion({ hook, vehiculosHook, clientesHook, notify })
   }, [trabajos])
   const tecnicoNombre = TECNICOS.find(t => t.id === parseInt(form.tecnicoId))?.nombre || 'Sin asignar'
 
+  // Cortes del panel navy. Se derivan de `pendientes`, que ya existe; no es un
+  // contador nuevo ni una consulta nueva.
+  const nPend = pendientes.filter(t => t.estado === ESTADOS.PENDIENTE).length
+  const nProg = pendientes.length - nPend
+  // La fecha de ingreso arranca en hoy. Se marca como deducida para que nadie
+  // la lea como un dato que alguien escribio.
+  const esHoy = form.fecha === hoyISO()
+  const estadoInicial = form.programar ? ESTADOS.PROGRAMADO : ESTADOS.PENDIENTE
+
+  // Que bloque ya tiene dato. Sale de lo que ya esta en `form`; no hay campo
+  // nuevo ni consulta nueva. El paso 4 no se marca: es la accion, no un dato.
+  const capturado = [!!form.cliente, !!form.placa, form.evidenciasIngreso.length > 0, false]
+  // La tira de arriba ya no esconde nada, asi que un clic lleva a la seccion,
+  // que sigue en pantalla, y mueve la marca de "aqui vas".
+  const SECCIONES = ['rc-cliente', 'rc-vehiculo', 'rc-fotos', 'rc-confirmar']
+  const irASeccion = (num) => {
+    setPaso(num)
+    // Sin 'smooth' a proposito: comprobado en el navegador que el desplazamiento
+    // suave no se ejecutaba y el clic no llevaba a ninguna parte.
+    document.getElementById(SECCIONES[num - 1])?.scrollIntoView({ block: 'start' })
+  }
+
+  const limpiarForm = () => {
+    setPaso(1)
+    setForm({
+      cedula: '', cliente: '', telefonoCliente: '', emailCliente: '', clienteId: '',
+      placa: '', marca: '', modelo: '', ano: '',
+      kilometraje: '', tecnicoId: '', observaciones: '', fecha: hoyISO(), programar: false,
+      evidenciasIngreso: [],
+      ingreso: ingresoVacio(),
+    })
+  }
+
   return (
     <div>
-      {/* Page Header */}
-      <div className="pagehd">
-        <div>
-          <h2>Recibir vehículo</h2>
+      {/* Barra de titulo del handoff. Los tres valores que la pantalla DEDUCE
+          sola (numero de OT reservado, fecha de ingreso = hoy, estado inicial)
+          suben aqui marcados como tales: antes solo se veian abajo, en el
+          resumen del lateral, cuando ya se habia llenado medio formulario. */}
+      <div className="hd-head">
+        <div className="hd-head__t">
+          <h1>Recibir vehículo</h1>
+          <div className="hd-head__sub" style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+            <span>Recepción de vehículos</span>
+            <span style={{ color: 'var(--text-5)' }}>·</span>
+            <span className="hd-mono" style={{ fontWeight: 700, color: 'var(--text-2)' }}>{otNumber}</span>
+            <span>se asigna al guardar</span>
+            <span style={{ color: 'var(--text-5)' }}>·</span>
+            <span>Ingreso {fmtDate(form.fecha)}</span>
+            {esHoy && <span className="hd-chip" style={{ background: 'var(--accent-soft)', color: 'var(--accent)' }}>HOY</span>}
+            <span style={{ color: 'var(--text-5)' }}>·</span>
+            <span>Estado inicial</span>
+            <span className={`hd-chip hd-chip--${form.programar ? 'purple' : 'warn'}`}>{estadoInicial}</span>
+          </div>
         </div>
-        <div className="actions">
-          <button className="btn btn-outline" onClick={() => {
-            setPaso(1)
-            setForm({
-              cedula: '', cliente: '', telefonoCliente: '', emailCliente: '', clienteId: '',
-              placa: '', marca: '', modelo: '', ano: '',
-              kilometraje: '', tecnicoId: '', observaciones: '', fecha: hoyISO(), programar: false,
-              evidenciasIngreso: [],
-              ingreso: ingresoVacio(),
-            })
-          }}>Cancelar</button>
+        <div className="hd-head__sp" />
+        <div className="hd-head__right">
+          <button className="btn btn-outline" onClick={limpiarForm}>Cancelar</button>
           <button className="btn btn-primary" disabled={enviando} onClick={handleRecibir}>{enviando ? 'Generando…' : 'Generar OT'}</button>
         </div>
       </div>
 
-      {/* Stepper (parche-correcciones-tablet) */}
-      <div className="rc-stepper">
-        {['Cliente', 'Vehículo', 'Fotos', 'Confirmar'].map((label, i) => {
+      {/* Indice de los cuatro pasos. Ya no esconde nada — los cuatro bloques
+          estan abajo, en la misma pantalla — asi que ahora sirve para lo que
+          de verdad se pregunta el mostrador: que quedo capturado en cada uno. */}
+      <div className="rc-stepper" style={{ marginTop: 12 }}>
+        {[
+          ['Cliente', form.cliente || 'Busca por documento'],
+          ['Vehículo', form.placa ? form.placa.toUpperCase() : 'Placa y técnico'],
+          ['Fotos', `${form.evidenciasIngreso.length} de ${maxPhotos}`],
+          ['Confirmar', `Queda ${estadoInicial.toLowerCase()}`],
+        ].map(([label, sub], i) => {
           const num = i + 1
           const isActive = paso === num
-          const isDone = paso > num
-          const clickable = num <= paso || isDone
+          // El ✓ dice que ESE bloque ya tiene dato, no por donde paso el mouse:
+          // sin los botones Siguiente, `paso` ya no avanza solo y los pasos 2, 3
+          // y 4 quedaban apagados al 55% y muertos para siempre.
+          const isDone = capturado[i]
           return [
             i > 0 && <span key={`sep-${i}`} className="rc-step__sep" aria-hidden="true" />,
             <a
               key={label}
               className={`rc-step ${isActive ? 'is-active' : ''}`}
-              onClick={(e) => { e.preventDefault(); if (clickable) setPaso(num) }}
-              style={{ cursor: clickable ? 'pointer' : 'default', opacity: clickable ? 1 : 0.55 }}
+              onClick={(e) => { e.preventDefault(); irASeccion(num) }}
+              style={{ cursor: 'pointer', minHeight: 'var(--tap)' }}
             >
-              <span className="rc-step__n">{isDone ? '\u2713' : num}</span>
-              <span className="rc-step__l">{label}</span>
+              <span className="rc-step__n">{isDone ? '✓' : num}</span>
+              <span className="rc-step__l" style={{ minWidth: 0 }}>
+                <span style={{ display: 'block', lineHeight: 1.2 }}>{label}</span>
+                <span className="hd-clip" style={{ display: 'block', maxWidth: 140, fontSize: 10.5, fontWeight: 400, lineHeight: 1.2, color: 'var(--text-4)' }}>{sub}</span>
+              </span>
             </a>,
           ]
         })}
       </div>
 
-      {/* 2-column layout: form + sidebar */}
-      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 16 }}>
-        {/* Left: Form cards */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-          <form onSubmit={handleRecibir}>
-            {/* Paso 1: Cliente */}
-            {paso === 1 && (
-              <div className="card" id="rc-cliente">
-                <div className="card__h"><h3>Cliente</h3></div>
-                <div className="card__b" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
-                  <div className="field" style={{ position: 'relative' }}>
-                    <label>Cédula / NIT<span className="req">*</span></label>
-                    <input className="input" value={form.cedula} placeholder="Buscar por documento..."
-                      onChange={e => { set('cedula', e.target.value); buscarDebounced(e.target.value) }} />
-                    {resultados.length > 0 && (
-                      <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 20, background: 'var(--bg-card)', border: '1px solid var(--border-card)', borderRadius: 8, maxHeight: 200, overflowY: 'auto', boxShadow: 'var(--shadow-md)' }}>
-                        {resultados.map((c, i) => (
-                          <div key={i} onClick={() => seleccionarCliente(c)}
-                            style={{ padding: '10px 14px', cursor: 'pointer', borderBottom: '1px solid var(--border-card)', fontSize: 13 }}>
-                            <strong>{normalizarDoc(c)}</strong> — {normalizarNombre(c)}
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                    {buscando && <span className="text-xs text-muted" style={{ display: 'block', marginTop: 4 }}>Buscando...</span>}
-                  </div>
-                  <div className="field">
-                    <label>Nombre completo<span className="req">*</span></label>
-                    <input className="input" value={form.cliente} placeholder="Ana Torres"
-                      onChange={e => { set('cliente', e.target.value); buscarDebounced(e.target.value) }} />
-                  </div>
-                  <div className="field">
-                    <label>Teléfono<span className="req">*</span></label>
-                    <input className="input" value={form.telefonoCliente} placeholder="300 ..."
-                      onChange={e => set('telefonoCliente', e.target.value)} />
-                  </div>
-                  <div className="field">
-                    <label>Correo</label>
-                    <input className="input" value={form.emailCliente} placeholder="opcional"
-                      onChange={e => set('emailCliente', e.target.value)} />
-                  </div>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '0 16px 16px' }}>
-                  <button type="button" className="btn btn-primary" onClick={() => {
-                    if (!form.cliente) { notify('Nombre del cliente es obligatorio', 'error'); return }
-                    setPaso(2)
-                  }}>Siguiente</button>
-                </div>
-              </div>
-            )}
+      {/* Formulario a la izquierda, taller a la derecha. Es flex con wrap y no
+          grid a proposito: la columna derecha esta topada en 330px (antes era
+          1fr de un 2fr/1fr y en pantalla ancha se comia espacio que necesitan
+          los campos), y por debajo de ~790px baja entera en vez de estrangular
+          el formulario a una sola columna. */}
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 14, alignItems: 'flex-start' }}>
+        {/* Izquierda: los CUATRO pasos, uno debajo del otro, en UNA sola tarjeta.
+            Antes cada paso tapaba a los otros tres y el paso 2 traia ademas tres
+            tarjetas anidadas. */}
+        <form onSubmit={handleRecibir} style={{ flex: '1 1 460px', minWidth: 0 }}>
+          <div className="hd-card" style={{ padding: '16px 18px', gap: 20 }}>
 
-            {/* Paso 2: Vehiculo */}
-            {paso === 2 && (
-              <div id="rc-vehiculo" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-                <div className="card">
-                  <div className="card__h"><h3>Vehículo</h3></div>
-                  <div className="card__b" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 14 }}>
-                    <div className="field">
-                      <label>Placa<span className="req">*</span></label>
-                      <input className="input" value={form.placa} placeholder="ABC123" style={{ textTransform: 'uppercase' }}
-                        onChange={e => set('placa', e.target.value)} />
-                    </div>
-                    <div className="field">
-                      <label>Marca</label>
-                      <select className="input" value={form.marca} onChange={e => { set('marca', e.target.value); set('modelo', '') }}>
-                        <option value="">Seleccionar...</option>
-                        {MARCAS.map(m => <option key={m} value={m}>{m}</option>)}
-                      </select>
-                    </div>
-                    <div className="field">
-                      <label>Modelo</label>
-                      <select className="input" value={form.modelo} onChange={e => set('modelo', e.target.value)} disabled={!form.marca}>
-                        <option value="">Seleccionar...</option>
-                        {modelosRecepcion.map(m => <option key={m} value={m}>{m}</option>)}
-                      </select>
-                    </div>
-                    <div className="field">
-                      <label>Año</label>
-                      <input className="input" type="number" value={form.ano} min="1980" max="2030" placeholder="Ej. 2018"
-                        onChange={e => set('ano', e.target.value)} />
-                    </div>
-                    <div className="field">
-                      <label>Kilometraje</label>
-                      <input className="input" type="number" value={form.kilometraje} min="0" placeholder="85.000"
-                        onChange={e => set('kilometraje', e.target.value)} />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="card">
-                  <div className="card__h"><h3>Estado de ingreso del vehículo</h3></div>
-                  <div className="card__b">
-                    <IngresoVehiculo value={form.ingreso} onChange={v => set('ingreso', v)} />
-                  </div>
-                </div>
-
-                <div className="card">
-                  <div className="card__h"><h3>Ingreso al taller</h3></div>
-                  <div className="card__b" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
-                    <div className="field" style={{ gridColumn: '1 / -1' }}>
-                      <label>Motivo de ingreso / Observaciones<span className="req">*</span></label>
-                      <textarea className="input" value={form.observaciones} placeholder="Daños visibles, síntomas que reporta el cliente, diagnóstico previo..."
-                        onChange={e => set('observaciones', e.target.value)} />
-                    </div>
-                    <div className="field">
-                      <label>Técnico asignado</label>
-                      <select className="input" value={form.tecnicoId} onChange={e => set('tecnicoId', e.target.value)}>
-                        <option value="">Sin asignar</option>
-                        {TECNICOS.filter(t => t.activo !== false || t.id === parseInt(form.tecnicoId)).map(t => (
-                          <option key={t.id} value={t.id}>{t.nombre}{t.activo === false ? ' (inactivo)' : ''}</option>
-                        ))}
-                      </select>
-                    </div>
-                    <div className="field">
-                      <label>Fecha</label>
-                      <input className="input" type="date" value={form.fecha}
-                        onChange={e => set('fecha', e.target.value)} />
-                    </div>
-                  </div>
-                </div>
-
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <button type="button" className="btn btn-outline" onClick={() => setPaso(1)}>Atrás</button>
-                  <button type="button" className="btn btn-primary" onClick={() => {
-                    if (!form.placa) { notify('La placa es obligatoria', 'error'); return }
-                    setPaso(3)
-                  }}>Siguiente</button>
-                </div>
-              </div>
-            )}
-
-            {/* Paso 3: Fotos */}
-            {paso === 3 && (
-              <div className="card" id="rc-fotos">
-                <div className="card__h"><h3>Evidencia fotográfica</h3><span className="count">{form.evidenciasIngreso.length} / {maxPhotos}</span></div>
-                <div className="card__b">
-                  <p style={{ fontSize: 13, color: 'var(--text-3)', marginBottom: 12 }}>
-                    Toma fotos del vehículo: frente, lados y parte trasera para evitar reclamos.
-                  </p>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: 10 }}>
-                    {form.evidenciasIngreso.map(fv => (
-                      <div key={fv.id} style={{ border: '1px solid var(--border-card)', borderRadius: 10, padding: 6 }}>
-                        <div style={{ position: 'relative', aspectRatio: '1', overflow: 'hidden', borderRadius: 8, marginBottom: 6 }}>
-                          <img src={fv.dataUrl} alt={fv.nombre} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                          <button type="button" onClick={() => quitarFoto(fv.id)}
-                            style={{ position: 'absolute', top: 4, right: 4, background: 'rgba(0,0,0,0.6)', color: '#fff', border: 'none', borderRadius: '50%', width: 22, height: 22, cursor: 'pointer', fontSize: 12, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                            x
-                          </button>
+            {/* ---------- 1 · CLIENTE ---------- */}
+            <section id="rc-cliente">
+              <SecHead n={1} titulo="CLIENTE" apoyo="Busca por documento y se llena solo" />
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(158px,1fr))', gap: 10 }}>
+                <div className="field" style={{ position: 'relative' }}>
+                  <label>Cédula / NIT<span className="req">*</span></label>
+                  <input className="input" value={form.cedula} placeholder="Buscar por documento..."
+                    onChange={e => { set('cedula', e.target.value); buscarDebounced(e.target.value) }} />
+                  {resultados.length > 0 && (
+                    <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 20, background: 'var(--bg-raised)', border: '1px solid var(--border)', borderRadius: 12, maxHeight: 230, overflowY: 'auto', boxShadow: 'var(--shadow-md)' }}>
+                      {resultados.map((c, i) => (
+                        <div key={i} onClick={() => seleccionarCliente(c)}
+                          style={{ display: 'flex', alignItems: 'center', gap: 9, minHeight: 'var(--tap)', padding: '8px 14px', cursor: 'pointer', borderBottom: '1px solid var(--row-line)' }}>
+                          <span className="hd-mono" style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--text)' }}>{normalizarDoc(c)}</span>
+                          <span className="hd-clip" style={{ fontSize: 12.5, color: 'var(--text-2)' }}>{normalizarNombre(c)}</span>
                         </div>
-                        <input className="input" placeholder="Nota breve" value={fv.nota} style={{ fontSize: 12 }}
-                          onChange={e => actualizarNotaFoto(fv.id, e.target.value)} />
-                      </div>
-                    ))}
-                    {form.evidenciasIngreso.length < maxPhotos && (
-                      <label style={{ aspectRatio: '1', border: '1.5px dashed var(--border-strong)', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-4)', background: 'var(--bg-subtle)', cursor: 'pointer', fontSize: 24 }}>
-                        +
-                        <input type="file" accept="image/*" multiple onChange={e => addFotosIngreso(e.target.files)} style={{ display: 'none' }} />
-                      </label>
-                    )}
-                  </div>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0 16px 16px' }}>
-                  <button type="button" className="btn btn-outline" onClick={() => setPaso(2)}>Atrás</button>
-                  <button type="button" className="btn btn-primary" onClick={() => setPaso(4)}>Siguiente</button>
-                </div>
-              </div>
-            )}
-
-            {/* Paso 4: Confirmar */}
-            {paso === 4 && (
-              <div className="card" id="rc-confirmar">
-                <div className="card__h"><h3>Confirmar Recepcion</h3></div>
-                <div className="card__b" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                  <div><span style={{ fontSize: 13, color: 'var(--text-3)' }}>Cliente:</span> <strong>{form.cliente}</strong></div>
-                  <div><span style={{ fontSize: 13, color: 'var(--text-3)' }}>Documento:</span> <strong>{form.cedula || '\u2014'}</strong></div>
-                  <div><span style={{ fontSize: 13, color: 'var(--text-3)' }}>Placa:</span> <strong>{form.placa.toUpperCase()}</strong></div>
-                  <div><span style={{ fontSize: 13, color: 'var(--text-3)' }}>Vehiculo:</span> <strong>{[form.marca, form.modelo, form.ano].filter(Boolean).join(' ')}</strong></div>
-                  <div><span style={{ fontSize: 13, color: 'var(--text-3)' }}>Km:</span> <strong>{form.kilometraje || '\u2014'}</strong></div>
-                  <div><span style={{ fontSize: 13, color: 'var(--text-3)' }}>Tecnico:</span> <strong>{tecnicoNombre}</strong></div>
-                  <div style={{ gridColumn: '1/3' }}><span style={{ fontSize: 13, color: 'var(--text-3)' }}>Fotos:</span> <strong>{form.evidenciasIngreso.length} fotos</strong></div>
-                  {form.observaciones && <div style={{ gridColumn: '1/3' }}><span style={{ fontSize: 13, color: 'var(--text-3)' }}>Obs:</span> {form.observaciones}</div>}
-                </div>
-                <div style={{ padding: '0 16px 16px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
-                    <Switch checked={!!form.programar} onChange={v => set('programar', v)} ariaLabel="Programar (genera OT)" />
-                    <span style={{ fontSize: 13, cursor: 'pointer' }} onClick={() => set('programar', !form.programar)}>Programar (genera OT)</span>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <button type="button" className="btn btn-outline" onClick={() => setPaso(3)}>Atrás</button>
-                    <button type="submit" className="btn btn-primary" disabled={enviando}>{enviando ? 'Recibiendo…' : 'Recibir Vehiculo'}</button>
-                  </div>
-                </div>
-              </div>
-            )}
-          </form>
-        </div>
-
-        {/* Right: Sidebar - Evidence + Summary.
-            Sigue al scroll: el formulario de la izquierda crece por paso y antes
-            el resumen quedaba fuera de vista justo cuando se va a confirmar. */}
-        <div className="rc-side">
-          {/* Evidencia: sin fotos es una sola zona compacta para agregar; con
-              fotos, miniaturas + un boton. Antes se pintaban 6 cuadros vacios
-              del ancho de la columna (~800px de alto) y por eso el paso 1
-              dejaba un hueco enorme al lado.
-              En el paso 3 se oculta: ese paso ya trae el panel completo (con
-              nota por foto) y se veia el mismo titulo dos veces en pantalla. */}
-          {paso !== 3 && (
-          <div className="card">
-            <div className="card__h">
-              <h3>Evidencia fotográfica</h3>
-              <span className="count">{form.evidenciasIngreso.length} / {maxPhotos}</span>
-            </div>
-            <div className="card__b">
-              {form.evidenciasIngreso.length === 0 ? (
-                <label className="rc-drop">
-                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
-                    <circle cx="12" cy="13" r="4"/>
-                  </svg>
-                  <div>
-                    <strong>Agregar fotos</strong>
-                    <span>Frente, lados y parte trasera</span>
-                  </div>
-                  <input type="file" accept="image/*" multiple onChange={e => addFotosIngreso(e.target.files)} style={{ display: 'none' }} />
-                </label>
-              ) : (
-                <div className="rc-thumbs">
-                  {form.evidenciasIngreso.map(fv => (
-                    <div key={fv.id} className="rc-thumb">
-                      <img src={fv.dataUrl} alt={fv.nombre} />
-                      <button type="button" onClick={() => quitarFoto(fv.id)} aria-label={`Quitar ${fv.nombre}`}>×</button>
+                      ))}
                     </div>
-                  ))}
-                  {form.evidenciasIngreso.length < maxPhotos && (
-                    <label className="rc-thumb rc-thumb--add" title="Agregar fotos">
-                      <span>+</span>
-                      <input type="file" accept="image/*" multiple onChange={e => addFotosIngreso(e.target.files)} style={{ display: 'none' }} />
-                    </label>
                   )}
+                  {buscando && <span className="help">Buscando...</span>}
+                </div>
+                <div className="field">
+                  <label>Nombre completo<span className="req">*</span></label>
+                  <input className="input" value={form.cliente} placeholder="Ana Torres"
+                    onChange={e => { set('cliente', e.target.value); buscarDebounced(e.target.value) }} />
+                </div>
+                <div className="field">
+                  <label>Teléfono<span className="req">*</span></label>
+                  <input className="input" value={form.telefonoCliente} placeholder="300 ..."
+                    onChange={e => set('telefonoCliente', e.target.value)} />
+                </div>
+                <div className="field">
+                  <label>Correo <span style={{ fontWeight: 400, color: 'var(--text-4)' }}>opcional</span></label>
+                  <input className="input" value={form.emailCliente} placeholder="opcional"
+                    onChange={e => set('emailCliente', e.target.value)} />
+                </div>
+              </div>
+            </section>
+
+            {/* ---------- 2 · VEHÍCULO ---------- */}
+            <section id="rc-vehiculo">
+              <SecHead n={2} titulo="VEHÍCULO" apoyo="La placa es por lo que se busca después" />
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(158px,1fr))', gap: 10 }}>
+                <div className="field">
+                  <label>Placa<span className="req">*</span></label>
+                  {/* La placa manda en toda la app: mono, mas grande y en pastilla. */}
+                  <input className="input" value={form.placa} placeholder="ABC123"
+                    style={{ textTransform: 'uppercase', fontFamily: 'ui-monospace,SFMono-Regular,Menlo,monospace', fontSize: 16, fontWeight: 700, letterSpacing: '1px', borderRadius: 'var(--radius-pill)', borderWidth: 1.5, minHeight: 'var(--tap)' }}
+                    onChange={e => set('placa', e.target.value)} />
+                </div>
+                <div className="field">
+                  <label>Marca</label>
+                  <select className="input" value={form.marca} onChange={e => { set('marca', e.target.value); set('modelo', '') }}>
+                    <option value="">Seleccionar...</option>
+                    {MARCAS.map(m => <option key={m} value={m}>{m}</option>)}
+                  </select>
+                </div>
+                <div className="field">
+                  <label>Modelo</label>
+                  <select className="input" value={form.modelo} onChange={e => set('modelo', e.target.value)} disabled={!form.marca}>
+                    <option value="">Seleccionar...</option>
+                    {modelosRecepcion.map(m => <option key={m} value={m}>{m}</option>)}
+                  </select>
+                </div>
+                <div className="field">
+                  <label>Año</label>
+                  <input className="input" type="number" value={form.ano} min="1980" max="2030" placeholder="Ej. 2018"
+                    onChange={e => set('ano', e.target.value)} />
+                </div>
+                <div className="field">
+                  <label>Kilometraje <span style={{ fontWeight: 400, color: 'var(--text-4)' }}>km</span></label>
+                  <input className="input" type="number" value={form.kilometraje} min="0" placeholder="85.000"
+                    onChange={e => set('kilometraje', e.target.value)} />
+                </div>
+                <div className="field">
+                  <label>Técnico asignado</label>
+                  <select className="input" value={form.tecnicoId} onChange={e => set('tecnicoId', e.target.value)}>
+                    <option value="">Sin asignar</option>
+                    {TECNICOS.filter(t => t.activo !== false || t.id === parseInt(form.tecnicoId)).map(t => (
+                      <option key={t.id} value={t.id}>{t.nombre}{t.activo === false ? ' (inactivo)' : ''}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1.35fr) minmax(0,1fr)', gap: 10, marginTop: 12 }}>
+                <div className="field">
+                  <label>Motivo de ingreso / Observaciones<span className="req">*</span></label>
+                  <textarea className="input" rows={3} style={{ resize: 'vertical' }} value={form.observaciones}
+                    placeholder="Daños visibles, síntomas que reporta el cliente, diagnóstico previo..."
+                    onChange={e => set('observaciones', e.target.value)} />
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10, minWidth: 0 }}>
+                  <div className="field">
+                    <label>
+                      Fecha de ingreso
+                      {esHoy && <span className="hd-chip" style={{ marginLeft: 6, background: 'var(--accent-soft)', color: 'var(--accent)' }}>HOY</span>}
+                    </label>
+                    <input className="input" type="date" value={form.fecha}
+                      onChange={e => set('fecha', e.target.value)} />
+                  </div>
+                  {/* El interruptor que decide el estado inicial estaba al final del
+                      paso 4, a dos pantallas de la fecha que gobierna. Se pone al lado. */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, minHeight: 'var(--tap)', padding: '6px 11px', border: '1px solid var(--border-input)', borderRadius: 10 }}>
+                    <Switch checked={!!form.programar} onChange={v => set('programar', v)} ariaLabel="Programar (genera OT)" />
+                    <span style={{ minWidth: 0, cursor: 'pointer' }} onClick={() => set('programar', !form.programar)}>
+                      <span style={{ display: 'block', fontSize: 12.5, fontWeight: 700, lineHeight: 1.2, color: 'var(--text)' }}>Programar (genera OT)</span>
+                      <span style={{ display: 'block', fontSize: 11, lineHeight: 1.25, color: 'var(--text-3)' }}>Deja el estado en {ESTADOS.PROGRAMADO}</span>
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Estado de ingreso: sub-bloque del mismo paso 2. Antes era una
+                  tarjeta dentro de la tarjeta del paso. */}
+              <div style={{ marginTop: 16 }}>
+                <SecHead titulo="ESTADO DE INGRESO DEL VEHÍCULO" apoyo="Combustible, daños e inventario" />
+                <IngresoVehiculo value={form.ingreso} onChange={v => set('ingreso', v)} />
+              </div>
+            </section>
+
+            {/* ---------- 3 · FOTOS ---------- */}
+            <section id="rc-fotos">
+              <SecHead n={3} titulo="FOTOS DE INGRESO" apoyo={`${form.evidenciasIngreso.length} / ${maxPhotos}`} apoyoFuerte />
+              <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'stretch' }}>
+                {form.evidenciasIngreso.length < maxPhotos && (
+                  <label style={{ flex: '1 1 240px', minWidth: 200, display: 'flex', alignItems: 'center', gap: 11, padding: '12px 14px', border: '1.5px dashed var(--border-strong)', borderRadius: 12, background: 'var(--bg-subtle)', cursor: 'pointer' }}>
+                    <span style={{ width: 38, height: 38, flex: 'none', display: 'grid', placeItems: 'center', borderRadius: 'var(--radius-pill)', background: 'var(--accent-soft)', color: 'var(--accent)' }}>
+                      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M14.5 4h-5L8 6H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-4z" />
+                        <circle cx="12" cy="13" r="3.5" />
+                      </svg>
+                    </span>
+                    <span style={{ minWidth: 0 }}>
+                      <span style={{ display: 'block', fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>Agregar fotos</span>
+                      <span style={{ display: 'block', fontSize: 11.5, lineHeight: 1.35, color: 'var(--text-3)' }}>Sugerido: frente, lados y parte trasera para evitar reclamos.</span>
+                    </span>
+                    <input type="file" accept="image/*" multiple onChange={e => addFotosIngreso(e.target.files)} style={{ display: 'none' }} />
+                  </label>
+                )}
+                {form.evidenciasIngreso.map(fv => (
+                  <div key={fv.id} style={{ width: 146, flex: 'none', border: '1px solid var(--border)', borderRadius: 12, padding: 6, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    <img src={fv.dataUrl} alt={fv.nombre} style={{ width: '100%', height: 78, objectFit: 'cover', borderRadius: 8, display: 'block', background: 'var(--bg-subtle)' }} />
+                    <input className="input" placeholder="Nota breve" value={fv.nota}
+                      style={{ fontSize: 11.5, minHeight: 'var(--tap)', padding: '6px 8px', borderRadius: 7 }}
+                      onChange={e => actualizarNotaFoto(fv.id, e.target.value)} />
+                    {/* Eliminar deja de ser una X de 20px sobre la foto: el jefe de
+                        taller usa el dedo y no hay hover en el que apoyarse. */}
+                    <button type="button" onClick={() => quitarFoto(fv.id)} aria-label={`Quitar ${fv.nombre}`}
+                      style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, minHeight: 'var(--tap)', border: 'none', borderRadius: 8, background: 'var(--bad-bg)', color: 'var(--bad-fg)', fontSize: 11.5, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' }}>
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6M10 11v6M14 11v6" /></svg>
+                      Eliminar
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </section>
+
+            {/* ---------- 4 · CONFIRMAR ---------- */}
+            <section id="rc-confirmar">
+              <SecHead n={4} titulo="CONFIRMAR" apoyo={`${otNumber} · ${estadoInicial}`} apoyoFuerte />
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(150px,1fr))', gap: 12 }}>
+                <Dato l="CLIENTE" v={form.cliente} />
+                <Dato l="DOCUMENTO" v={form.cedula} />
+                <Dato l="PLACA" v={form.placa.toUpperCase()} mono />
+                <Dato l="VEHÍCULO" v={[form.marca, form.modelo, form.ano].filter(Boolean).join(' ')} />
+                <Dato l="KILOMETRAJE" v={form.kilometraje} />
+                <Dato l="TÉCNICO" v={tecnicoNombre} />
+                <Dato l="FOTOS" v={`${form.evidenciasIngreso.length} de ${maxPhotos}`} />
+                <Dato l="FECHA DE INGRESO" v={fmtDate(form.fecha)} />
+              </div>
+              {form.observaciones && (
+                <div style={{ marginTop: 12 }}>
+                  <div style={{ fontSize: 9.5, lineHeight: 1, fontWeight: 700, letterSpacing: '.8px', color: 'var(--text-4)' }}>OBSERVACIONES</div>
+                  <div style={{ fontSize: 12.5, lineHeight: 1.45, marginTop: 5, color: 'var(--text-2)' }}>{form.observaciones}</div>
                 </div>
               )}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 16, flexWrap: 'wrap' }}>
+                <button type="submit" className="btn btn-primary" disabled={enviando}>{enviando ? 'Recibiendo…' : 'Recibir vehículo'}</button>
+                <span style={{ fontSize: 11.5, lineHeight: 1.4, color: 'var(--text-3)' }}>
+                  Se notificará al técnico asignado y quedará registrado el ingreso.
+                </span>
+              </div>
+            </section>
+          </div>
+        </form>
+
+        {/* Derecha: cuanto carro hay adentro y cual. Es lo que se consulta
+            mientras se recibe: si la placa ya esta, no se abre una OT nueva. */}
+        <div className="rc-side" style={{ flex: '1 1 300px', maxWidth: 330, gap: 12 }}>
+          {/* La UNICA cifra en navy de esta pantalla. */}
+          <div className="hd-neto" style={{ margin: 0 }}>
+            <div className="hd-neto__l">VEHÍCULOS EN TALLER</div>
+            <div className="hd-neto__v">{pendientes.length}</div>
+            <div className="hd-neto__rows">
+              <div className="hd-neto__r"><span>Pendientes</span><span>{nPend}</span></div>
+              <div className="hd-neto__r"><span>En progreso</span><span>{nProg}</span></div>
             </div>
           </div>
-          )}
 
-          {/* Summary card */}
-          <div className="card">
-            <div className="card__h"><h3>Resumen</h3></div>
-            <div className="card__b" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
-                <span style={{ color: 'var(--text-3)' }}>OT asignada</span>
-                <span className="mono" style={{ fontWeight: 700 }}>{otNumber}</span>
+          {/* Resumen de lo que va a quedar guardado */}
+          <div className="hd-card" style={{ padding: '13px 15px', gap: 9 }}>
+            <div style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--text)' }}>Resumen</div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, fontSize: 12 }}>
+              <span style={{ color: 'var(--text-3)' }}>OT asignada</span>
+              <span className="hd-mono" style={{ fontSize: 13, fontWeight: 700 }}>{otNumber}</span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, fontSize: 12 }}>
+              <span style={{ color: 'var(--text-3)' }}>Fecha ingreso</span>
+              <span style={{ fontSize: 12.5 }}>{fmtDate(form.fecha)}{esHoy && <span className="hd-chip" style={{ marginLeft: 6, background: 'var(--accent-soft)', color: 'var(--accent)' }}>HOY</span>}</span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, fontSize: 12 }}>
+              <span style={{ color: 'var(--text-3)' }}>Estado inicial</span>
+              <span className={`hd-chip hd-chip--${form.programar ? 'purple' : 'warn'}`}>{estadoInicial}</span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, fontSize: 12 }}>
+              <span style={{ color: 'var(--text-3)' }}>Cliente</span>
+              <span className="hd-clip" style={{ fontSize: 12.5, fontWeight: 700, color: form.cliente ? 'var(--text)' : 'var(--text-empty)' }}>{form.cliente || '—'}</span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, fontSize: 12 }}>
+              <span style={{ color: 'var(--text-3)' }}>Placa</span>
+              <span className="hd-plate" style={{ fontSize: 12.5, color: form.placa ? 'var(--text)' : 'var(--text-empty)' }}>{form.placa ? form.placa.toUpperCase() : '—'}</span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, fontSize: 12 }}>
+              <span style={{ color: 'var(--text-3)' }}>Fotos</span>
+              <span className="hd-n" style={{ fontSize: 12.5, fontWeight: 700 }}>{form.evidenciasIngreso.length} / {maxPhotos}</span>
+            </div>
+          </div>
+
+          {/* Vehiculos en taller: baja del pie de pagina (donde habia que hacer
+              scroll por todo el formulario para verla) al lateral. No pierde
+              ninguna de las seis columnas: la fila es de dos lineas. */}
+          <div className="hd-card hd-card--grow">
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, padding: '12px 14px 10px' }}>
+              <span style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--text)' }}>Vehículos en taller</span>
+              <span className="hd-chip hd-chip--mute" style={{ fontSize: 11 }}>{pendientes.length}</span>
+            </div>
+            <div className="hd-tbl">
+              <div className="hd-tbl__h" style={{ padding: '0 14px' }}>
+                <span style={{ width: 62 }}>PLACA</span>
+                <span style={{ flex: 1, minWidth: 0 }}>CLIENTE · VEHÍCULO</span>
+                <span style={{ width: 62, textAlign: 'right' }}>INGRESO</span>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
-                <span style={{ color: 'var(--text-3)' }}>Fecha ingreso</span>
-                <span className="mono">{fmtDate(form.fecha)}</span>
+              <div className="hd-tbl__b" style={{ maxHeight: 340 }}>
+                {pendientes.length === 0 ? (
+                  <div className="hd-void">
+                    <div className="hd-void__t">Sin vehículos en taller</div>
+                    <div className="hd-void__s">Los que recibas aparecen aquí.</div>
+                  </div>
+                ) : pendientes.map(t => (
+                  <div key={t.id} className="hd-row" style={{ display: 'block', height: 'auto', minHeight: 'var(--tap)', padding: '7px 14px', cursor: 'default' }}>
+                    <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+                      <span className="hd-plate" style={{ width: 62, flex: 'none', fontSize: 12.5 }}>{t.placa || '—'}</span>
+                      <span className="hd-clip" style={{ flex: 1, minWidth: 0, fontSize: 11.5, fontWeight: 700, color: 'var(--text)' }}>{t.cliente || '—'}</span>
+                      <span className="hd-n" style={{ width: 62, flex: 'none', fontSize: 11, whiteSpace: 'nowrap', color: 'var(--text-3)' }}>{fmtDate(t.fecha)}</span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 3, paddingLeft: 68 }}>
+                      <span className="hd-clip" style={{ flex: 1, minWidth: 0, fontSize: 10.5, color: 'var(--text-3)' }}>{[t.marca, t.modelo, t.ano].filter(Boolean).join(' ') || '—'}</span>
+                      <span className={`hd-av av av-${(parseInt(t.tecnicoId) || 1) % 5 + 1}`}>{tecIniciales(t.tecnicoId)}</span>
+                      <span className="hd-clip" style={{ flex: 'none', maxWidth: 84, fontSize: 10.5, color: 'var(--text-2)' }}>{TECNICOS.find(tc => tc.id === parseInt(t.tecnicoId))?.nombre || 'Sin asignar'}</span>
+                      <span className={`hd-chip hd-chip--${chipEstado(t.estado)}`} style={{ flex: 'none', fontSize: 8.5 }}>{t.estado}</span>
+                    </div>
+                  </div>
+                ))}
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
-                <span style={{ color: 'var(--text-3)' }}>Estado inicial</span>
-                <span className="badge badge-warning">{form.programar ? 'Programado' : 'Pendiente'}</span>
-              </div>
-              {form.cliente && (
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
-                  <span style={{ color: 'var(--text-3)' }}>Cliente</span>
-                  <span style={{ fontWeight: 600 }}>{form.cliente}</span>
-                </div>
-              )}
-              {form.placa && (
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
-                  <span style={{ color: 'var(--text-3)' }}>Placa</span>
-                  <span className="mono" style={{ fontWeight: 600 }}>{form.placa.toUpperCase()}</span>
-                </div>
-              )}
-              <div style={{ height: 1, background: 'var(--border)', margin: '4px 0' }} />
-              <div style={{ fontSize: 12, color: 'var(--text-3)', lineHeight: 1.5 }}>
-                Al generar la OT se notificará al técnico asignado y quedará registrado el ingreso del vehículo.
+              <div className="hd-tbl__f" style={{ padding: '0 14px' }}>
+                <span>{pendientes.length} en taller</span>
+                <span className="hd-bar__sp" />
+                <span>{nPend} pend. · {nProg} en prog.</span>
               </div>
             </div>
           </div>
         </div>
       </div>
-
-      {/* Vehiculos en taller */}
-      {pendientes.length > 0 && (
-        <div className="card" style={{ marginTop: 16 }}>
-          <div className="card__h"><h3>Vehiculos en Taller ({pendientes.length})</h3></div>
-          <div className="card__b card__b--flush">
-            <table className="tbl">
-              <thead>
-                <tr>
-                  <th>Placa</th>
-                  <th>Cliente</th>
-                  <th>Vehiculo</th>
-                  <th>Tecnico</th>
-                  <th>Estado</th>
-                  <th>Ingreso</th>
-                </tr>
-              </thead>
-              <tbody>
-                {pendientes.map(t => {
-                  const tecNombre = TECNICOS.find(tc => tc.id === parseInt(t.tecnicoId))?.nombre || 'Sin asignar'
-                  const bc = t.estado === ESTADOS.EN_PROGRESO ? 'badge-info' : 'badge-warning'
-                  return (
-                    <tr key={t.id}>
-                      <td className="c-mono" style={{ fontWeight: 700 }}>{t.placa}</td>
-                      <td>{t.cliente || '\u2014'}</td>
-                      <td style={{ fontSize: 13, color: 'var(--text-3)' }}>{[t.marca, t.modelo, t.ano].filter(Boolean).join(' ') || '\u2014'}</td>
-                      <td style={{ fontSize: 13 }}>{tecNombre}</td>
-                      <td><span className={`badge ${bc}`}>{t.estado}</span></td>
-                      <td style={{ fontSize: 13, color: 'var(--text-3)' }}>{fmtDate(t.fecha)}</td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
     </div>
   )
 }

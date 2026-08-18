@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import { fmt, fmtDate, whatsappLink } from '../utils/helpers'
 import { ESTADOS, TECNICOS, DIAS_ESTANCADO, TALLER } from '../utils/constants'
-import { Button, Badge } from '../components/ui'
+import { Button } from '../components/ui'
 
 // ── Icons ─────────────────────────────────────────────────────────────────────
 const IcAlert = () => (
@@ -69,11 +69,13 @@ function initials(nombre) {
   return nombre.split(' ').map(x => x[0]).slice(0, 2).join('').toUpperCase()
 }
 
-function estadoBadge(estado) {
-  if (estado === ESTADOS.COMPLETADO) return 's'
-  if (estado === ESTADOS.CANCELADO) return 'd'
-  if (estado === ESTADOS.EN_PROGRESO || estado === ESTADOS.EN_PRUEBA) return 'n'
-  return 'w'
+// Tono de la pastilla del estado. Mismo criterio que la insignia anterior,
+// traducido a los modificadores de `.hd-chip` del handoff.
+function chipEstado(estado) {
+  if (estado === ESTADOS.COMPLETADO) return 'ok'
+  if (estado === ESTADOS.CANCELADO) return 'bad'
+  if (estado === ESTADOS.EN_PROGRESO || estado === ESTADOS.EN_PRUEBA) return 'info'
+  return 'warn'
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -181,15 +183,37 @@ export default function Dashboard({ trabajos = [], onNavigate, user }) {
   const totalIngresos = barras.values.reduce((s, v) => s + v, 0)
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
 
-      {/* ── Welcome row ─────────────────────────────────────────────────── */}
-      <div className="pagehd">
-        <div>
-          <h2>Hola{user?.nombre ? `, ${user.nombre.split(' ')[0]}` : ''}</h2>
-          <p className="sub">{fechaCap}</p>
+      {/* ── Barra de título: saludo + los conteos que antes eran tarjetas ──
+         La tira de 4 KPI (unos 200px de alto antes del primer dato real) se
+         fue: "Ingresos del mes" es la cifra grande de la derecha, "Por cobrar"
+         subió a la tarjeta navy —es la única sobre la que se aprieta un botón
+         el mismo día— y los conteos que solo se miran bajaron al subtítulo.
+         Ninguno se perdió: activos, listos y total de trabajos siguen aquí. */}
+      <div className="hd-head">
+        <div className="hd-head__t">
+          <h1>Hola{user?.nombre ? `, ${user.nombre.split(' ')[0]}` : ''}</h1>
+          <div className="hd-head__sub">
+            {fechaCap} · {stats.activos} activo{stats.activos !== 1 ? 's' : ''} en taller
+            {' · '}{stats.listoCount} listo{stats.listoCount !== 1 ? 's' : ''} para entregar
+            {' · '}{trabajos.length} trabajo{trabajos.length !== 1 ? 's' : ''} en el historial
+          </div>
         </div>
-        <div className="actions">
+        <div className="hd-head__sp" />
+        <div className="hd-head__right">
+          <div className="hd-fig">
+            <div className="hd-fig__l">INGRESOS DEL MES</div>
+            <div className="hd-fig__v hd-n">{fmt(stats.ingresosMes)}</div>
+            <div className="hd-fig__s">
+              {(() => {
+                const d = new Date(); const dia = d.getDate()
+                return `Acumulado del 1 al ${dia} de ${d.toLocaleString('es-CO', { month: 'long' })}`
+              })()}
+              {stats.ingresosHoy > 0 && <> · <strong style={{ color: 'var(--text-2)' }}>{fmt(stats.ingresosHoy)} hoy</strong></>}
+            </div>
+          </div>
+          {onNavigate && <div className="hd-head__div" />}
           {onNavigate && (
             <Button variant="primary" onClick={() => onNavigate('recepcion')}>
               <IcPlus /> Recibir vehículo
@@ -226,36 +250,24 @@ export default function Dashboard({ trabajos = [], onNavigate, user }) {
         const total = vencidos.size
         if (total === 0) return null
         return (
-          <div style={{
-            padding: '16px 20px',
-            background: 'var(--soft-green)',
-            border: '1px solid color-mix(in srgb, var(--green-600) 34%, transparent)',
-            borderRadius: 12,
-            display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap',
-          }}>
-            {/* Verde de WhatsApp, no el verde de la app: es la señal de que este
-               recordatorio se atiende por WhatsApp. Fijo a propósito en ambos
-               temas — es color de marca ajena, no un token del sistema. */}
-            <div style={{
-              width: 42, height: 42, borderRadius: 11, background: '#25D366',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', flexShrink: 0,
-            }}>
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>
-              </svg>
-            </div>
+          // Antes: 42px de icono, título en 15.5px y 74px de alto para un aviso
+          // que se lee en dos segundos. Ahora es una tira: pastilla que dice de
+          // qué va, el hecho, el detalle y el botón. Mismo texto, un tercio de
+          // alto, y el color vive en la pastilla y no en una franja.
+          <div className="hd-card" style={{ flexDirection: 'row', alignItems: 'center', gap: 12, padding: '11px 14px', background: 'var(--ok-bg)', borderColor: 'transparent', flexWrap: 'wrap' }}>
+            <span className="hd-chip hd-chip--ok-solid">CRM</span>
             <div style={{ flex: 1, minWidth: 200 }}>
-              <div style={{ fontWeight: 800, fontSize: 15.5, color: 'var(--green-700)' }}>
-                {total} {total === 1 ? 'cliente para contactar' : 'clientes para contactar'} (CRM)
+              <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>
+                {total} {total === 1 ? 'cliente para contactar' : 'clientes para contactar'}
               </div>
-              <div style={{ fontSize: 13.5, color: 'var(--text-2)', marginTop: 3 }}>
+              <div className="hd-sub" style={{ fontSize: 11.5, color: 'var(--text-2)' }}>
                 Vehículos que pasaron su intervalo de mantenimiento. Envíales un WhatsApp para reactivarlos.
               </div>
             </div>
             {onNavigate && (
-              <button className="btn btn-primary btn-sm" onClick={() => onNavigate('crm')} style={{ background: 'var(--green-600)', borderColor: 'var(--green-600)' }}>
+              <Button variant="outline" size="sm" onClick={() => onNavigate('crm')}>
                 Abrir CRM <IcArrow />
-              </button>
+              </Button>
             )}
           </div>
         )
@@ -263,220 +275,156 @@ export default function Dashboard({ trabajos = [], onNavigate, user }) {
 
       {/* ── Alerta de trabajos estancados (>3 dias sin moverse) ───────────── */}
       {estancados.length > 0 && (
-        <div style={{
-          padding: '16px 20px',
-          background: 'var(--soft-red)',
-          border: '1px solid color-mix(in srgb, var(--red-600) 34%, transparent)',
-          borderRadius: 12,
-          display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap',
-        }}>
-          <div style={{
-            width: 42, height: 42, borderRadius: 11, background: 'var(--red-600)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', flexShrink: 0,
-          }}>
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
-          </div>
+        <div className="hd-card" style={{ flexDirection: 'row', alignItems: 'center', gap: 12, padding: '11px 14px', background: 'var(--bad-bg)', borderColor: 'transparent', flexWrap: 'wrap' }}>
+          <span className="hd-chip hd-chip--bad-solid">ESTANCADOS</span>
           <div style={{ flex: 1, minWidth: 200 }}>
-            <div style={{ fontWeight: 800, fontSize: 15.5, color: 'var(--red-700)' }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>
               {estancados.length} {estancados.length === 1 ? 'trabajo estancado' : 'trabajos estancados'}
             </div>
-            <div style={{ fontSize: 13.5, color: 'var(--text-2)', marginTop: 3 }}>
+            <div className="hd-sub" style={{ fontSize: 11.5, color: 'var(--text-2)' }}>
               {estancados.length === 1 ? 'Lleva' : 'Llevan'} más de {DIAS_ESTANCADO} días sin actualizarse. Revísalos para mover el avance o cambiar estado.
             </div>
           </div>
           {onNavigate && (
-            <button className="btn btn-primary btn-sm" onClick={() => onNavigate('trabajos')} style={{ background: 'var(--red-600)' }}>
+            <Button variant="outline" size="sm" onClick={() => onNavigate('trabajos')}>
               Ver estancados <IcArrow />
-            </button>
+            </Button>
           )}
         </div>
       )}
-
-      {/* ── KPIs ─ hero + 3 secundarios (rompe simetría 4x igual) ───────── */}
-      <div className="kpi-bh" style={{ marginBottom: 16 }}>
-        <div className="kpi-bh__s">
-          <div className="kpi-bh__l">Ingresos del mes</div>
-          <div className="kpi-bh__row">
-            <span className="kpi-bh__v">{fmt(stats.ingresosMes)}</span>
-            {stats.ingresosHoy > 0 && <span className="kpi-bh__pill">↑ {fmt(stats.ingresosHoy)} hoy</span>}
-          </div>
-          <div className="kpi-bh__sub">
-            {(() => {
-              const d = new Date(); const dia = d.getDate()
-              return `Acumulado del 1 al ${dia} de ${d.toLocaleString('es-CO', { month: 'long' })}`
-            })()}
-          </div>
-        </div>
-        <div className="kpi-bh__s">
-          <div className="kpi-bh__l">Listos para entregar</div>
-          <div className="kpi-bh__row"><span className="kpi-bh__v">{stats.listoCount}</span></div>
-          <div className="kpi-bh__sub">por entregar</div>
-        </div>
-        <div className="kpi-bh__s">
-          <div className="kpi-bh__l">Activos hoy</div>
-          <div className="kpi-bh__row">
-            <span className="kpi-bh__v">{stats.activos}</span>
-            {estancados.length > 0 && <span className="kpi-bh__pill red">{estancados.length} estancados</span>}
-          </div>
-          <div className="kpi-bh__sub">en taller</div>
-        </div>
-        <div className="kpi-bh__s">
-          <div className="kpi-bh__l">Por cobrar</div>
-          <div className="kpi-bh__row">
-            <span className="kpi-bh__v">{fmt(stats.porCobrar)}</span>
-            {stats.porCobrarCount > 0 && <span className="kpi-bh__pill red">{stats.porCobrarCount} facturas</span>}
-          </div>
-          <div className="kpi-bh__sub">facturado sin pagar</div>
-        </div>
-      </div>
 
       {/* ── Nudge: vehículos por contactar (mantenimiento) → CRM ──────────── */}
       {porContactar > 0 && (
-        <div className="card" style={{ marginBottom: 16, borderColor: 'rgba(37,99,235,.28)', background: 'rgba(37,99,235,.04)', display: 'flex', alignItems: 'center', gap: 14, padding: '14px 18px', flexWrap: 'wrap' }}>
-          <div style={{ width: 40, height: 40, borderRadius: 10, background: 'rgba(37,99,235,.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, color: 'var(--blue-600)' }}>
-            <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
-          </div>
+        <div className="hd-card" style={{ flexDirection: 'row', alignItems: 'center', gap: 12, padding: '11px 14px', background: 'var(--info-bg)', borderColor: 'transparent', flexWrap: 'wrap' }}>
+          <span className="hd-chip hd-chip--info-solid">MANTENIMIENTO</span>
           <div style={{ flex: 1, minWidth: 200 }}>
-            <div style={{ fontWeight: 700 }}>{porContactar} vehículo{porContactar !== 1 ? 's' : ''} sin volver hace 4+ meses</div>
-            <div style={{ fontSize: 13, color: 'var(--text-3)' }}>Envíales un recordatorio de mantenimiento (cambio de aceite) y hazlos regresar.</div>
+            <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>{porContactar} vehículo{porContactar !== 1 ? 's' : ''} sin volver hace 4+ meses</div>
+            <div className="hd-sub" style={{ fontSize: 11.5, color: 'var(--text-2)' }}>Envíales un recordatorio de mantenimiento (cambio de aceite) y hazlos regresar.</div>
           </div>
           {onNavigate && (
-            <Button variant="primary" size="sm" onClick={() => onNavigate('crm')}>Ver recordatorios <IcArrow /></Button>
+            <Button variant="outline" size="sm" onClick={() => onNavigate('crm')}>Ver recordatorios <IcArrow /></Button>
           )}
         </div>
       )}
 
-      {/* ── 2-col: urgentes + agenda ─────────────────────────────────────── */}
-      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 16 }}>
+      {/* ── Fila 1: lo que hay que mover hoy · lo que hay que cobrar hoy ─── */}
+      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 16, alignItems: 'start' }}>
 
         {/* Pendientes & urgentes */}
-        <div className="card">
-          <div className="card__h">
-            <h3>Pendientes &amp; urgentes</h3>
-            <div className="act">
-              <span className="count">{urgentes.length}</span>
-              {onNavigate && (
-                <Button variant="ghost" size="sm" onClick={() => onNavigate('trabajos')}>
-                  Ver todos <IcArrow />
-                </Button>
-              )}
-            </div>
+        <div className="hd-card" style={{ minWidth: 0 }}>
+          <div className="hd-bar">
+            <span style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--text)' }}>Pendientes &amp; urgentes</span>
+            <span className="hd-chip hd-chip--mute" style={{ fontFamily: 'var(--mono)', fontSize: 10.5 }}>{urgentes.length}</span>
+            <span className="hd-bar__sp" />
+            {onNavigate && (
+              <Button variant="ghost" size="sm" onClick={() => onNavigate('trabajos')}>
+                Ver todos <IcArrow />
+              </Button>
+            )}
           </div>
           {urgentes.length === 0 ? (
-            <div className="card__b">
-              <div className="empty-state">
-                <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="var(--green-600)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ marginBottom: 10 }}>
-                  <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
-                  <polyline points="22 4 12 14.01 9 11.01"/>
-                </svg>
-                <h4>Todo al día</h4>
-                <p>No hay trabajos pendientes en este momento.</p>
-              </div>
+            /* Etiqueta seca: el estado vacío no se celebra ni se ilustra. */
+            <div className="hd-void" style={{ padding: '26px 18px' }}>
+              <div className="hd-void__t">Sin trabajos pendientes</div>
             </div>
           ) : (
-            <div className="card__b card__b--flush">
-              <table className="tbl">
-                <thead>
-                  <tr>
-                    <th>Placa</th>
-                    <th>Cliente</th>
-                    <th>Trabajo</th>
-                    <th>Técnico</th>
-                    <th>Estado</th>
-                    <th />
-                  </tr>
-                </thead>
-                <tbody>
-                  {urgentes.map((t, i) => {
-                    const tec = tecNombre(t.tecnicoId)
-                    const isVencido = estancados.some(e => e.id === t.id)
-                    const servicio = t.items?.length > 0
-                      ? (t.items[0].descripcion || t.items[0].nombre || 'Servicio')
-                      : (t.observaciones?.slice(0, 40) || 'Sin descripción')
-                    return (
-                      <tr key={t.id}>
-                        <td className="c-mono">{t.placa || '—'}</td>
-                        <td className="c-name">{t.cliente || '—'}</td>
-                        <td className="c-muted" style={{ maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {servicio}
-                        </td>
-                        <td>
-                          {tec ? (
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                              <span className={`av av-${(i % 5) + 1}`}>{initials(tec)}</span>
-                              <span style={{ fontSize: 12.5 }}>{tec.split(' ')[0]}</span>
-                            </div>
-                          ) : <span style={{ color: 'var(--text-3)', fontSize: 13 }}>—</span>}
-                        </td>
-                        <td>
-                          {isVencido
-                            ? <Badge tone="d">Estancado</Badge>
-                            : <Badge tone={estadoBadge(t.estado)}>{t.estado}</Badge>}
-                        </td>
-                        <td style={{ textAlign: 'right' }}>
-                          {onNavigate && (
-                            <Button variant="ghost" size="sm" onClick={() => onNavigate('trabajos')} title="Ver trabajos">
-                              <IcArrow />
-                            </Button>
-                          )}
-                        </td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
+            <div className="hd-tbl">
+              <div className="hd-tbl__h">
+                <span style={{ width: 84 }}>PLACA</span>
+                <span style={{ flex: 1, minWidth: 0 }}>CLIENTE · TRABAJO</span>
+                <span style={{ width: 104 }}>TÉCNICO</span>
+                <span style={{ width: 96 }}>ESTADO</span>
+                <span style={{ width: 44 }} />
+              </div>
+              <div className="hd-tbl__b">
+                {urgentes.map((t, i) => {
+                  const tec = tecNombre(t.tecnicoId)
+                  const isVencido = estancados.some(e => e.id === t.id)
+                  const servicio = t.items?.length > 0
+                    ? (t.items[0].descripcion || t.items[0].nombre || 'Servicio')
+                    : (t.observaciones?.slice(0, 40) || 'Sin descripción')
+                  // La placa manda, como en Órdenes de trabajo. El trabajo no se
+                  // pierde: baja a segunda línea bajo el cliente. minHeight y no
+                  // height porque en móvil `.hd-row` pasa a alto automático y un
+                  // height inline lo recortaría.
+                  return (
+                    <div key={t.id} className="hd-row" style={{ minHeight: 52, cursor: 'default', flexWrap: 'wrap', rowGap: 6 }}>
+                      <div className="hd-plate" style={{ width: 84, fontSize: 12.5, color: t.placa ? 'var(--text)' : 'var(--text-4)' }}>
+                        {t.placa || 'SERVICIO'}
+                      </div>
+                      <div style={{ flex: 1, minWidth: 150, paddingRight: 10 }}>
+                        <div className="hd-clip" style={{ fontSize: 12.5, lineHeight: 1.15, fontWeight: 700, color: 'var(--text)' }}>{t.cliente || '—'}</div>
+                        <div className="hd-clip hd-sub" style={{ fontSize: 10.5, marginTop: 2 }}>{servicio}</div>
+                      </div>
+                      <div style={{ width: 104, display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
+                        {tec ? (
+                          <>
+                            <span className={`hd-av av av-${(i % 5) + 1}`}>{initials(tec)}</span>
+                            <span className="hd-clip" style={{ fontSize: 11.5, color: 'var(--text-2)' }}>{tec.split(' ')[0]}</span>
+                          </>
+                        ) : <span className="hd-empty" style={{ fontSize: 12 }}>—</span>}
+                      </div>
+                      <div style={{ width: 96 }}>
+                        {isVencido
+                          ? <span className="hd-chip hd-chip--bad">Estancado</span>
+                          : <span className={`hd-chip hd-chip--${chipEstado(t.estado)}`}>{t.estado}</span>}
+                      </div>
+                      <div style={{ width: 44, display: 'flex', justifyContent: 'flex-end' }}>
+                        {onNavigate && (
+                          <Button variant="ghost" className="btn-icon" aria-label="Ver trabajos" title="Ver trabajos" onClick={() => onNavigate('trabajos')}>
+                            <IcArrow />
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
             </div>
           )}
         </div>
 
-        {/* Agenda de hoy */}
-        <div className="card">
-          <div className="card__h">
-            <h3>Ingresados hoy</h3>
-            <span className="count">{agenda.length}</span>
+        {/* Por cobrar: sale de la tira de KPI y sube a la tarjeta navy. Es la
+            única cifra de esta pantalla sobre la que se actúa el mismo día,
+            así que es la única que lleva navy y botón propio. */}
+        <div className="hd-neto" style={{ margin: 0 }}>
+          <div className="hd-neto__l">POR COBRAR</div>
+          <div className="hd-neto__v">{fmt(stats.porCobrar)}</div>
+          <div className="hd-neto__rows">
+            <div className="hd-neto__r">
+              <span>Facturado sin pagar</span>
+              <span>{stats.porCobrarCount} factura{stats.porCobrarCount !== 1 ? 's' : ''}</span>
+            </div>
           </div>
-          {agenda.length === 0 ? (
-            <div className="card__b">
-              <div className="empty-state" style={{ padding: '24px 14px' }}>
-                <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="var(--text-3)" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" style={{ marginBottom: 10 }}>
-                  <rect x="9" y="2" width="6" height="4" rx="1"/>
-                  <path d="M8 4H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-2"/>
-                </svg>
-                <p style={{ fontSize: 13.5 }}>Ningún vehículo ingresado hoy.</p>
-              </div>
-            </div>
-          ) : (
-            <div className="card__b card__b--flush">
-              {agenda.map((t, i) => (
-                <div key={t.id} className="grow" style={{ cursor: 'default' }}>
-                  <span className={`av av-${(i % 5) + 1}`} style={{ fontSize: 11, width: 36, height: 36, flexShrink: 0 }}>
-                    {initials(t.cliente)}
-                  </span>
-                  <div className="tx">
-                    <div className="t">{t.cliente || '—'}</div>
-                    <div className="s"><span className="mono">{t.placa || '—'}</span> · {t.marca || ''} {t.modelo || ''}</div>
-                  </div>
-                </div>
-              ))}
-            </div>
+          {onNavigate && (
+            <button
+              type="button"
+              onClick={() => onNavigate('trabajos')}
+              style={{
+                marginTop: 14, width: '100%', height: 44, border: 'none', borderRadius: 10,
+                background: 'rgba(255,255,255,.12)', color: '#fff', cursor: 'pointer',
+                fontFamily: 'inherit', fontSize: 13, fontWeight: 700,
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
+              }}
+            >
+              Ver cartera <IcArrow />
+            </button>
           )}
         </div>
       </div>
 
-      {/* ── 2-col: chart + listos ────────────────────────────────────────── */}
+      {/* ── Fila 2: histórico · el movimiento del día ─────────────────────── */}
       <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 16, alignItems: 'start' }}>
 
-        {/* Ingresos chart */}
-        <div className="card">
-          <div className="card__h">
-            <h3>Ingresos · últimos 12 meses</h3>
-            <div className="act">
-              <span className="mono" style={{ fontSize: 13, color: 'var(--text-3)', fontWeight: 600 }}>
-                Total: <b style={{ color: 'var(--text)' }}>{fmt(totalIngresos)}</b>
-              </span>
-            </div>
+        {/* Ingresos: últimos 12 meses */}
+        <div className="hd-card" style={{ minWidth: 0 }}>
+          <div className="hd-bar">
+            <span style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--text)' }}>Ingresos · últimos 12 meses</span>
+            <span className="hd-bar__sp" />
+            <span className="hd-bar__n">Total</span>
+            <span className="hd-n hd-strong">{fmt(totalIngresos)}</span>
           </div>
-          <div className="card__b">
+          <div style={{ padding: '2px 18px 14px' }}>
             <div className="chartbar">
               {barras.values.map((b, i) => (
                 <div
@@ -487,130 +435,161 @@ export default function Dashboard({ trabajos = [], onNavigate, user }) {
                 />
               ))}
             </div>
+            {/* Cada rótulo bajo su barra (flex:1), y el mes en curso en acento
+               para que se sepa cuál barra está a medio llenar. */}
             <div className="chart-x">
-              {barras.labels.map(m => <span key={m}>{m}</span>)}
+              {barras.labels.map((m, i) => (
+                <span key={i} style={{ flex: 1, textAlign: 'center', color: i === barras.labels.length - 1 ? 'var(--accent)' : undefined }}>{m}</span>
+              ))}
             </div>
           </div>
         </div>
 
-        {/* Listos para entregar */}
-        <div className="card">
-          <div className="card__h">
-            <h3>Listos para entregar</h3>
-            <span className="count">{stats.listoCount}</span>
-          </div>
-          {listos.length === 0 ? (
-            <div className="card__b">
-              <div className="empty-state" style={{ padding: '24px 14px' }}>
-                <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="var(--text-3)" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" style={{ marginBottom: 10 }}>
-                  <path d="M14 16H9m10 0h3v-3.15a1 1 0 0 0-.84-.99L16 11l-2.7-3.6a1 1 0 0 0-.8-.4H5.24a2 2 0 0 0-1.8 1.1l-.8 1.63A6 6 0 0 0 2 12.42V16h2"/>
-                  <circle cx="6.5" cy="16.5" r="2.5"/><circle cx="16.5" cy="16.5" r="2.5"/>
-                </svg>
-                <p style={{ fontSize: 13.5 }}>No hay vehículos listos por ahora.</p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16, minWidth: 0 }}>
+
+          {/* Ingresados hoy */}
+          <div className="hd-card">
+            <div className="hd-bar">
+              <span style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--text)' }}>Ingresados hoy</span>
+              <span className="hd-chip hd-chip--mute" style={{ fontFamily: 'var(--mono)', fontSize: 10.5 }}>{agenda.length}</span>
+            </div>
+            {agenda.length === 0 ? (
+              <div className="hd-void" style={{ padding: '22px 18px' }}>
+                <div className="hd-void__t">Ningún vehículo ingresado hoy</div>
               </div>
-            </div>
-          ) : (
-            <div className="card__b" style={{ display: 'flex', flexDirection: 'column', gap: 10, padding: 14 }}>
-              {listos.map((t, i) => (
-                <div key={t.id} style={{
-                  padding: 12, borderRadius: 10, background: 'var(--bg-subtle)'
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-                    <span className="mono" style={{ fontWeight: 700 }}>{t.placa || '—'}</span>
-                    <Badge tone="s">Listo</Badge>
-                  </div>
-                  <div style={{ fontSize: 13, fontWeight: 600 }}>{t.cliente || '—'}</div>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 8 }}>
-                    <span style={{ fontSize: 12.5, color: 'var(--text-3)' }}>Total</span>
-                    <span className="mono" style={{ fontWeight: 700, fontSize: 14 }}>{fmt(t.total)}</span>
-                  </div>
-                  {t.telefonoCliente && (
-                    <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
-                      <a
-                        href={whatsappLink(t.telefonoCliente, `Hola ${t.cliente || ''}, su vehículo ${t.placa || ''} ya está listo para entrega en ${TALLER.nombre}. Total ${fmt(t.total)}. ¡Lo esperamos!`)}
-                        target="_blank" rel="noreferrer"
-                        className="btn btn-sm"
-                        style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, textDecoration: 'none', background: 'var(--green-600)', color: '#fff', border: 'none' }}
-                      >
-                        <IcWa /> Avisar listo
-                      </a>
-                      <a
-                        href={`tel:${t.telefonoCliente}`}
-                        className="btn btn-outline btn-sm"
-                        style={{ flex: '0 0 auto', width: 42, padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none' }}
-                        aria-label="Llamar cliente"
-                      >
-                        <IcPhone />
-                      </a>
+            ) : (
+              <div>
+                {agenda.map((t, i) => (
+                  <div key={t.id} className="hd-row" style={{ minHeight: 50, cursor: 'default', gap: 10 }}>
+                    <span className={`av av-${(i % 5) + 1}`} style={{ width: 30, height: 30, fontSize: 11, flex: 'none' }}>
+                      {initials(t.cliente)}
+                    </span>
+                    <div style={{ minWidth: 0 }}>
+                      <div className="hd-clip" style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--text)' }}>{t.cliente || '—'}</div>
+                      <div className="hd-clip hd-sub" style={{ fontSize: 10.5, marginTop: 2 }}>
+                        <span className="hd-mono">{t.placa || '—'}</span> · {[t.marca, t.modelo].filter(Boolean).join(' ') || '—'}
+                      </div>
                     </div>
-                  )}
-                </div>
-              ))}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Listos para entregar. Eran tarjetas dentro de una tarjeta; ahora
+             son filas del mismo contenedor, con los mismos datos y los mismos
+             dos botones (WhatsApp y llamar) a 44px. */}
+          <div className="hd-card">
+            <div className="hd-bar">
+              <span style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--text)' }}>Listos para entregar</span>
+              <span className="hd-chip hd-chip--mute" style={{ fontFamily: 'var(--mono)', fontSize: 10.5 }}>{stats.listoCount}</span>
             </div>
-          )}
+            {listos.length === 0 ? (
+              <div className="hd-void" style={{ padding: '22px 18px' }}>
+                <div className="hd-void__t">No hay vehículos listos por ahora</div>
+              </div>
+            ) : (
+              <div>
+                {listos.map(t => (
+                  <div key={t.id} style={{ padding: '11px 18px', borderTop: '1px solid var(--row-line)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span className="hd-plate">{t.placa || 'SERVICIO'}</span>
+                      <span className="hd-chip hd-chip--ok">Listo</span>
+                      <span className="hd-bar__sp" />
+                      <span className="hd-sub">Total</span>
+                      <span className="hd-n hd-strong">{fmt(t.total)}</span>
+                    </div>
+                    <div className="hd-clip" style={{ fontSize: 12.5, color: 'var(--text-2)', marginTop: 3 }}>{t.cliente || '—'}</div>
+                    {t.telefonoCliente && (
+                      <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+                        <a
+                          href={whatsappLink(t.telefonoCliente, `Hola ${t.cliente || ''}, su vehículo ${t.placa || ''} ya está listo para entrega en ${TALLER.nombre}. Total ${fmt(t.total)}. ¡Lo esperamos!`)}
+                          target="_blank" rel="noreferrer"
+                          className="btn btn-sm"
+                          style={{ flex: 1, height: 44, background: 'var(--green-600)', color: '#fff', border: 'none', textDecoration: 'none' }}
+                        >
+                          <IcWa /> Avisar listo
+                        </a>
+                        <a
+                          href={`tel:${t.telefonoCliente}`}
+                          className="btn btn-outline btn-sm"
+                          style={{ flex: '0 0 auto', width: 44, height: 44, padding: 0, textDecoration: 'none' }}
+                          aria-label="Llamar cliente"
+                        >
+                          <IcPhone />
+                        </a>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
-      {/* ── Estancados alert (si existen) ────────────────────────────────── */}
+      {/* ── Estancados: el detalle de la tira roja de arriba ──────────────── */}
       {estancados.length > 0 && (
-        <div className="card" style={{ borderColor: 'rgba(220,38,38,.32)' }}>
-          <div className="card__h">
-            <h3 style={{ color: 'var(--red-700)' }}>Trabajos estancados</h3>
-            <span style={{
-              fontFamily: 'var(--mono)', fontSize: 12, fontWeight: 700,
-              color: 'var(--red-700)', background: 'var(--soft-red)',
-              padding: '3px 10px', borderRadius: 999
-            }}>{estancados.length}</span>
+        <div className="hd-card">
+          <div className="hd-bar">
+            <span style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--text)' }}>Trabajos estancados</span>
+            <span className="hd-chip hd-chip--bad">{estancados.length}</span>
           </div>
-          <div className="card__b card__b--flush">
-            <table className="tbl">
-              <thead>
-                <tr><th>Placa</th><th>Cliente</th><th>Estado</th><th>Días</th><th>Técnico</th></tr>
-              </thead>
-              <tbody>
-                {estancados.map(t => {
-                  const dias = Math.floor((Date.now() - new Date(t.fecha)) / 86400000)
-                  return (
-                    <tr key={t.id}>
-                      <td className="c-mono">{t.placa || '—'}</td>
-                      <td className="c-name">{t.cliente || '—'}</td>
-                      <td><Badge tone="w">{t.estado}</Badge></td>
-                      <td><Badge tone="d">{dias}d</Badge></td>
-                      <td style={{ fontSize: 12.5 }}>{tecNombre(t.tecnicoId) || '—'}</td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
+          <div className="hd-tbl">
+            <div className="hd-tbl__h">
+              <span style={{ width: 96 }}>PLACA</span>
+              <span style={{ flex: 1, minWidth: 0 }}>CLIENTE</span>
+              <span style={{ width: 120 }}>ESTADO</span>
+              <span style={{ width: 60, textAlign: 'right' }}>DÍAS</span>
+              <span style={{ width: 130, paddingLeft: 14 }}>TÉCNICO</span>
+            </div>
+            <div className="hd-tbl__b">
+              {estancados.map(t => {
+                const dias = Math.floor((Date.now() - new Date(t.fecha)) / 86400000)
+                return (
+                  <div key={t.id} className="hd-row" style={{ cursor: 'default', flexWrap: 'wrap', rowGap: 6 }}>
+                    <div className="hd-plate" style={{ width: 96, fontSize: 12.5, color: t.placa ? 'var(--text)' : 'var(--text-4)' }}>
+                      {t.placa || 'SERVICIO'}
+                    </div>
+                    <div className="hd-clip" style={{ flex: 1, minWidth: 140, paddingRight: 10, fontSize: 12.5, fontWeight: 700, color: 'var(--text)' }}>{t.cliente || '—'}</div>
+                    <div style={{ width: 120 }}><span className="hd-chip hd-chip--warn">{t.estado}</span></div>
+                    {/* Los días son el dato que decide: van en rojo y a la derecha. */}
+                    <div className="hd-n" style={{ width: 60, fontSize: 13, fontWeight: 700, color: 'var(--bad-fg)' }}>{dias}d</div>
+                    <div className="hd-clip" style={{ width: 130, paddingLeft: 14, fontSize: 11.5, color: 'var(--text-2)' }}>
+                      {tecNombre(t.tecnicoId) || <span className="hd-empty">—</span>}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
           </div>
         </div>
       )}
 
       {/* ── Productividad técnicos ───────────────────────────────────────── */}
-      <div className="card">
-        <div className="card__h">
-          <h3>Productividad por técnico</h3>
-          <span className="count">{TECNICOS.length}</span>
+      <div className="hd-card">
+        <div className="hd-bar">
+          <span style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--text)' }}>Productividad por técnico</span>
+          <span className="hd-chip hd-chip--mute" style={{ fontFamily: 'var(--mono)', fontSize: 10.5 }}>{TECNICOS.length}</span>
         </div>
-        <div className="card__b" style={{ display: 'flex', flexDirection: 'column', gap: 14, padding: 16 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14, padding: '2px 18px 16px' }}>
           {porTecnico.map((t, i) => {
             const max = Math.max(...porTecnico.map(x => x.completados), 1)
             const pct = (t.completados / max) * 100
-            const colors = ['var(--blue-600)', 'var(--green-600)', 'var(--amber-500)']
             return (
               <div key={i}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6 }}>
-                  <span style={{ fontWeight: 600, fontSize: 14 }}>{t.nombre}</span>
-                  <span style={{ fontSize: 13, color: 'var(--text-3)' }}>
-                    <span className="mono" style={{ fontWeight: 700, color: 'var(--text)' }}>{t.completados}</span> completados · {fmt(t.ingresos)}
-                  </span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 7 }}>
+                  <span className={`hd-av av av-${(i % 5) + 1}`}>{initials(t.nombre)}</span>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>{t.nombre}</span>
+                  <span className="hd-bar__sp" />
+                  <span className="hd-n hd-strong">{t.completados}</span>
+                  <span style={{ fontSize: 11.5, color: 'var(--text-3)' }}>completados ·</span>
+                  <span className="hd-n hd-strong">{fmt(t.ingresos)}</span>
                 </div>
-                <div style={{ height: 8, background: 'var(--bg-subtle)', borderRadius: 4, overflow: 'hidden', border: '1px solid var(--border)' }}>
-                  <div style={{
-                    width: `${pct}%`, height: '100%',
-                    background: colors[i % colors.length],
-                    borderRadius: 4
-                  }} />
+                {/* Una sola barra de acento: tres colores distintos sugerían tres
+                   categorías que no existen — es la misma magnitud tres veces. */}
+                <div style={{ height: 7, background: 'var(--chip)', borderRadius: 4, overflow: 'hidden' }}>
+                  <div style={{ width: `${pct}%`, height: '100%', background: 'var(--accent)', borderRadius: 4 }} />
                 </div>
               </div>
             )

@@ -8,7 +8,9 @@ import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { fmt, fmtDate, uid, hoyISO, normalizarDoc, normalizarNombre, fmtTelefono, cantidadItem, fmtCant } from '../utils/helpers'
 import { TECNICOS, ESTADOS, IVA_DEFAULT, COMISION } from '../utils/constants'
 import IngresoVehiculo from '../components/IngresoVehiculo'
-import { ingresoVacio } from '../utils/ingreso'
+// INVENTARIO_ITEMS y etiquetaCombustible: solo para el contador del bloque
+// plegado ("3 / 16 · 1/2"), no cambian nada de lo que se guarda.
+import { ingresoVacio, INVENTARIO_ITEMS, etiquetaCombustible, ingresoTieneAlgo } from '../utils/ingreso'
 import { MARCAS, getModelos } from '../utils/vehiculos'
 import { useClientes } from '../hooks/useClientes'
 import { useInventario, formatCacheAge } from '../hooks/useInventario'
@@ -21,6 +23,12 @@ import { Button } from '../components/ui'
 // Opciones de cilindraje del motor (litros): 0.8 a 5.0 en pasos de 0.1
 const CILINDRAJES = Array.from({ length: 43 }, (_, i) => (0.8 + i * 0.1).toFixed(1))
 
+// Título de tarjeta del handoff (13.5px/700). Las clases viejas (.card__h h3)
+// pintan 15.5px/800, que en un formulario de 9 bloques compite con los datos.
+const H3 = { fontSize: 13.5, fontWeight: 700 }
+// Texto de apoyo al lado del título: dice de dónde sale el dato, no lo repite.
+const SUBT = { fontSize: 11.5, fontWeight: 400, color: 'var(--text-3)' }
+
 
 // Chevron para secciones plegables
 function Chevron({ open }) {
@@ -30,6 +38,23 @@ function Chevron({ open }) {
       style={{ flexShrink: 0, color: 'var(--text-3)', transition: 'transform .22s var(--ease)', transform: open ? 'rotate(180deg)' : 'none' }}>
       <polyline points="6 9 12 15 18 9" />
     </svg>
+  )
+}
+
+// Cabecera de un bloque plegable. La regla del handoff: el bloque se cierra
+// para que no ocupe pantalla, pero NUNCA desaparece — el contador dice qué hay
+// dentro sin tener que abrirlo ("3 / 16 · 1/2", "0 archivos", "Sin fecha").
+function PlegHead({ titulo, sub, chip, tono = 'mute', open, onToggle }) {
+  return (
+    <button type="button" className="card__h card__h--toggle" onClick={onToggle}
+      style={{ background: 'none', minHeight: 'var(--tap)', gap: 9 }}>
+      <span style={{ flex: 1, minWidth: 0 }}>
+        <span style={{ display: 'block', fontSize: 13.5, fontWeight: 700, color: 'var(--text)' }}>{titulo}</span>
+        {sub && <span className="hd-sub" style={{ display: 'block', marginTop: 2 }}>{sub}</span>}
+      </span>
+      <span className={`hd-chip hd-chip--${tono}`}>{chip}</span>
+      <Chevron open={open} />
+    </button>
   )
 }
 
@@ -80,8 +105,14 @@ export default function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [
   })
 
   const [items, setItems] = useState(trabajo?.items || [])
-  // Evidencias: abierta por defecto para que el botón de subir fotos sea visible.
-  const [showEvid, setShowEvid] = useState(true)
+  // Bloques que se llenan poco: cerrados, pero con contador visible en la cabecera
+  // (fotos, ítems marcados, fecha), así se sabe qué hay dentro sin abrirlos.
+  const [showEvid, setShowEvid] = useState(false)
+  // Estado de ingreso: cerrado en OT nueva (ahí no hay nada que esconder), pero
+  // ABIERTO si la OT ya trae inventario, combustible o daños escritos. El chip
+  // resume ("5 / 16 · 1/2 · daños") y no puede mostrar el TEXTO de los daños,
+  // que antes se veía sin clics. Mismo criterio que showMant, aquí abajo.
+  const [showIngreso, setShowIngreso] = useState(ingresoTieneAlgo(trabajo?.ingreso))
   const [showHistorial, setShowHistorial] = useState(false) // historial por placa: cerrado por defecto
   const [showMant, setShowMant] = useState(
     !!(trabajo?.tipoAceite || trabajo?.proximoKm || trabajo?.proximaVisita || trabajo?.notasProximoMant)
@@ -517,31 +548,37 @@ export default function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [
 
   return (
     <div>
-      <div className="pagehd">
-        <div>
-          <h2>{isEdit ? 'Editar Trabajo' : 'Nuevo Trabajo'}</h2>
-          {isEdit && trabajo && (
-            <div className="pagehd__meta">
-              {trabajo.otCodigo && <span className="pagehd__ot">{trabajo.otCodigo}</span>}
-              {trabajo.fecha && <><span className="pagehd__sep">·</span><span>Creado {fmtDate(trabajo.fecha)}</span></>}
-              {trabajo.estado && <><span className="pagehd__sep">·</span><span className={`badge ${
-                trabajo.estado === ESTADOS.COMPLETADO ? 'badge-success' :
-                trabajo.estado === ESTADOS.EN_PROGRESO ? 'badge-info' :
-                trabajo.estado === ESTADOS.PENDIENTE ? 'badge-warning' :
-                'badge-neutral'
-              }`}>{trabajo.estado}</span></>}
-            </div>
-          )}
+      {/* Barra de título del handoff: el código de OT, la fecha de creación y el
+         estado bajan al subtítulo, y el técnico —que ocupaba una tarjeta entera
+         para tres chips— entra en la misma barra. Son ~150px de alto ganados
+         antes del primer campo que de verdad se digita. */}
+      <div className="hd-head">
+        <div className="hd-head__t">
+          <h1>{isEdit ? 'Editar Trabajo' : 'Nuevo Trabajo'}</h1>
+          <div className="hd-head__sub">
+            {isEdit && trabajo ? (
+              <>
+                {trabajo.otCodigo && <span className="hd-mono" style={{ fontWeight: 700, color: 'var(--text-2)' }}>{trabajo.otCodigo}</span>}
+                {trabajo.fecha && <> · <span>Creado {fmtDate(trabajo.fecha)}</span></>}
+                {trabajo.estado && <> · <span className={`hd-chip hd-chip--${
+                  trabajo.estado === ESTADOS.COMPLETADO ? 'ok' :
+                  trabajo.estado === ESTADOS.EN_PROGRESO ? 'info' :
+                  trabajo.estado === ESTADOS.PENDIENTE ? 'warn' :
+                  'mute'
+                }`}>{trabajo.estado}</span></>}
+              </>
+            ) : 'Guarda en estado Pendiente'}
+          </div>
         </div>
-        <div className="actions"><Button variant="outline" onClick={cancelar}>Volver</Button></div>
-      </div>
-
-      <form onSubmit={handleSubmit} className="form-stack">
-        {/* ¿QUIÉN ATIENDE? — lo primero de la OT: se asigna el técnico de una.
-           Con solo 3 técnicos, tocar un chip es más rápido que abrir un menú. */}
-        <div className="card">
-          <div className="card__h"><h3>¿Quién atiende esta orden? <span className="req">*</span></h3></div>
-          <div className="card__b">
+        <div className="hd-head__sp" />
+        <div className="hd-head__right">
+          {/* ¿QUIÉN ATIENDE? — sigue siendo lo primero de la OT: se asigna el
+             técnico de una. Con solo 3 técnicos, tocar un chip es más rápido
+             que abrir un menú; lo que sobraba era la tarjeta que los envolvía. */}
+          <div>
+            <div style={{ fontSize: 9.5, lineHeight: 1, fontWeight: 700, letterSpacing: '.9px', textTransform: 'uppercase', color: 'var(--text-4)', marginBottom: 8 }}>
+              ¿Quién atiende esta orden? <span style={{ color: 'var(--bad-fg)' }}>*</span>
+            </div>
             <div className="tec-chips">
               {TECNICOS.filter(t => t.activo !== false || String(t.id) === String(form.tecnicoId)).map(t => {
                 const sel = String(form.tecnicoId) === String(t.id)
@@ -560,13 +597,17 @@ export default function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [
               })}
             </div>
           </div>
+          <div className="hd-head__div" />
+          <Button variant="outline" onClick={cancelar}>Volver</Button>
         </div>
+      </div>
 
+      <form onSubmit={handleSubmit} className="form-stack" style={{ marginTop: 16 }}>
         {/* CLIENTE + VEHICULO en 2 columnas */}
         <div className="form-grid-2">
         {/* CLIENTE */}
         <div className="card">
-          <div className="card__h"><h3>Cliente</h3></div>
+          <div className="card__h"><h3 style={H3}>Cliente <span style={SUBT}>Se busca en Cuentti por documento</span></h3></div>
           <div className="card__b" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
             <div className="field" style={{ position: 'relative' }}>
               <label>Cédula / NIT <span className="req">*</span></label>
@@ -617,8 +658,8 @@ export default function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [
         {/* VEHICULO */}
         <div className="card">
           <div className="card__h" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
-            <h3>Vehículo</h3>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 13, fontWeight: 500, color: 'var(--text-2)' }}>
+            <h3 style={H3}>Vehículo</h3>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, height: 36, padding: '0 13px 0 8px', borderRadius: 'var(--radius-pill)', background: 'var(--chip)', fontSize: 12.5, fontWeight: 600, color: 'var(--text-2)' }}>
               <Switch checked={!!form.sinVehiculo} onChange={v => set('sinVehiculo', v)} ariaLabel="Servicio sin vehículo" />
               <span style={{ cursor: 'pointer' }} onClick={() => set('sinVehiculo', !form.sinVehiculo)}>Servicio sin vehículo (no entra carro)</span>
             </div>
@@ -626,7 +667,10 @@ export default function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [
           <div className="card__b" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 14 }}>
             <div className="field">
               <label>Placa {!form.sinVehiculo && <span className="req">*</span>}</label>
-              <input className="input" value={form.placa} required={!form.sinVehiculo} disabled={form.sinVehiculo} placeholder={form.sinVehiculo ? 'No aplica' : 'ABC123'} style={{ textTransform: 'uppercase' }}
+              {/* La placa es por lo que se reconoce una OT: se digita en grande
+                 y en mono, como en la lista de Órdenes de trabajo. */}
+              <input className="input" value={form.placa} required={!form.sinVehiculo} disabled={form.sinVehiculo} placeholder={form.sinVehiculo ? 'No aplica' : 'ABC123'}
+                style={{ textTransform: 'uppercase', fontFamily: 'ui-monospace,SFMono-Regular,Menlo,monospace', fontSize: 18, fontWeight: 700, letterSpacing: '.5px' }}
                 onChange={e => {
                   const placa = e.target.value.toUpperCase()
                   set('placa', placa)
@@ -678,17 +722,57 @@ export default function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [
 
         {/* ===== Dos paneles: contexto (derecha) + plata (izquierda) ===== */}
         <div className="ot-grid">
-        {/* Columna DERECHA — vehículo y contexto (el grid la manda a la derecha) */}
+        {/* Columna DERECHA — contexto y cierre. Todo lo que se llena poco queda
+           plegado con su contador a la vista, y abajo el TOTAL en navy. */}
         <div className="ot-col ot-col--side">
 
-        {!form.sinVehiculo && (
-          <div className="card">
-            <div className="card__h"><h3>Estado de ingreso del vehículo <span style={{ fontSize: 11, color: 'var(--text-3)', fontWeight: 500, marginLeft: 6 }}>(inventario · combustible · daños)</span></h3></div>
-            <div className="card__b">
-              <IngresoVehiculo value={form.ingreso} onChange={v => set('ingreso', v)} />
+        {/* OBSERVACIONES — sube desde el fondo del formulario: la fecha y el
+           estado se tocan en casi toda OT, así que dejan de estar al final. */}
+        <div className="card">
+          <div className="card__h"><h3 style={H3}>Observaciones</h3></div>
+          <div className="card__b" style={{ display: 'grid', gridTemplateColumns: isEdit ? '1fr 1fr' : '1fr', gap: 14 }}>
+            <div className="field">
+              <label>Fecha {form.fecha === hoyISO() && <span className="hd-chip hd-chip--info" style={{ marginLeft: 4 }}>HOY</span>}</label>
+              <input className="input" type="date" value={form.fecha} onChange={e => set('fecha', e.target.value)} />
+            </div>
+            {isEdit && (
+              <div className="field">
+                <label>Estado</label>
+                <select className="input" value={form.estado} onChange={e => set('estado', e.target.value)}>
+                  {Object.values(ESTADOS).map(e => <option key={e} value={e}>{e}</option>)}
+                </select>
+              </div>
+            )}
+            <div className="field" style={{ gridColumn: '1 / -1' }}>
+              <label>Diagnóstico / Notas</label>
+              <textarea className="input" value={form.observaciones} placeholder="Diagnóstico, notas, recomendaciones..."
+                onChange={e => set('observaciones', e.target.value)} style={{ minHeight: 88, resize: 'vertical' }} />
             </div>
           </div>
-        )}
+        </div>
+
+        {/* ESTADO DE INGRESO — plegado, pero el contador dice qué hay dentro:
+           ítems marcados sobre 16, nivel de tanque y si hay daños escritos. */}
+        {!form.sinVehiculo && (() => {
+          const marcados = (form.ingreso?.inventario || []).length
+          const comb = form.ingreso?.combustible
+          const danos = (form.ingreso?.estado || '').trim() !== ''
+          const chip = `${marcados} / ${INVENTARIO_ITEMS.length}`
+            + (comb != null ? ` · ${etiquetaCombustible(comb)}` : '')
+            + (danos ? ' · daños' : '')
+          return (
+            <div className="card">
+              <PlegHead titulo="Estado de ingreso del vehículo" sub="inventario · combustible · daños"
+                chip={chip} tono={marcados === 0 && comb == null ? 'warn' : 'mute'}
+                open={showIngreso} onToggle={() => setShowIngreso(v => !v)} />
+              {showIngreso && (
+                <div className="card__b">
+                  <IngresoVehiculo value={form.ingreso} onChange={v => set('ingreso', v)} />
+                </div>
+              )}
+            </div>
+          )
+        })()}
 
         {/* HISTORIAL POR PLACA */}
         {form.placa.length >= 6 && (() => {
@@ -697,11 +781,10 @@ export default function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [
           ).sort((a, b) => new Date(b.fecha) - new Date(a.fecha))
           if (!historial.length) return null
           return (
-            <div className="card" style={{ borderColor: 'rgba(37,99,235,.28)', background: 'rgba(37,99,235,.04)' }}>
-              <button type="button" className="card__h card__h--toggle" onClick={() => setShowHistorial(v => !v)} style={{ background: 'none' }}>
-                <h3 style={{ color: 'var(--blue-700)' }}>Historial de {form.placa.toUpperCase()} <span style={{ fontWeight: 500, fontSize: 12.5, color: 'var(--blue-600)' }}>· {historial.length} anteriores</span></h3>
-                <Chevron open={showHistorial} />
-              </button>
+            <div className="card">
+              <PlegHead titulo={`Historial de ${form.placa.toUpperCase()}`} sub="OT anteriores de esta placa"
+                chip={`${historial.length} anteriores`} tono="info"
+                open={showHistorial} onToggle={() => setShowHistorial(v => !v)} />
               {showHistorial && (
                 <div className="table-wrap">
                   <table>
@@ -718,7 +801,7 @@ export default function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [
                       {historial.slice(0, 5).map(h => (
                         <tr key={h.id}>
                           <td className="text-mono text-sm">{h.otCodigo || '—'}</td>
-                          <td><span className={`badge ${h.estado === 'Completado' ? 'badge-success' : 'badge-warning'}`}>{h.estado}</span></td>
+                          <td><span className={`hd-chip hd-chip--${h.estado === 'Completado' ? 'ok' : 'warn'}`}>{h.estado}</span></td>
                           <td className="text-sm">{TECNICOS.find(t => t.id === parseInt(h.tecnicoId))?.nombre || '—'}</td>
                           <td className="text-right text-mono">{fmt(h.total)}</td>
                           <td className="text-sm text-muted">{fmtDate(h.fecha)}</td>
@@ -732,23 +815,75 @@ export default function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [
           )
         })()}
 
+        {/* PROXIMO MANTENIMIENTO (opcional, alimenta CRM) — baja de la columna de
+           la plata: no se toca en la mayoría de OT. El contador muestra la fecha
+           pactada, o "Sin fecha" cuando el bloque sigue vacío. */}
+        <div className="card">
+          <PlegHead titulo="Próximo mantenimiento" sub="opcional · alimenta CRM"
+            chip={form.proximaVisita ? form.proximaVisita.split('-').reverse().join('/') : 'Sin fecha'}
+            tono={form.proximaVisita ? 'ok' : 'mute'}
+            open={showMant} onToggle={() => setShowMant(v => !v)} />
+          {showMant && (
+          <div className="card__b" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(200px,1fr))', gap: 14 }}>
+            <div className="field" style={{ gridColumn: '1 / -1' }}>
+              <label>Tipo de aceite usado en este servicio</label>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                {[
+                  ['', 'Sin especificar'],
+                  ['mineral', 'Mineral / Semisintético (5,000 km)'],
+                  ['sintetico', 'Full sintético (10,000 km)'],
+                  ['no_aplica', 'No se cambió aceite'],
+                ].map(([val, lbl]) => (
+                  <label key={val || 'none'} style={{
+                    flex: '1 1 200px', minHeight: 'var(--tap)',
+                    display: 'flex', alignItems: 'center', gap: 8, padding: '9px 12px',
+                    border: `1.5px solid ${form.tipoAceite === val ? 'var(--accent)' : 'var(--border-input)'}`,
+                    background: form.tipoAceite === val ? 'var(--accent-soft)' : 'var(--bg-raised)',
+                    borderRadius: 10, cursor: 'pointer', fontSize: 12.5, fontWeight: 600,
+                  }}>
+                    <input type="radio" name="tipoAceite" value={val} checked={form.tipoAceite === val}
+                      onChange={() => setTipoAceite(val)} style={{ margin: 0 }} />
+                    {lbl}
+                  </label>
+                ))}
+              </div>
+              <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 6 }}>
+                Si no eliges nada, el CRM detecta el tipo automáticamente leyendo los items facturados.
+              </div>
+            </div>
+            <div className="field">
+              <label>Próximo cambio (km)</label>
+              <input className="input" type="number" value={form.proximoKm}
+                onChange={e => set('proximoKm', e.target.value)}
+                placeholder={form.kilometraje ? `Sugerido: ${(parseInt(form.kilometraje) || 0) + 5000}` : 'Ej: 95000'} />
+            </div>
+            <div className="field">
+              <label>Próxima visita estimada</label>
+              <input className="input" type="date" value={form.proximaVisita} onChange={e => set('proximaVisita', e.target.value)} />
+            </div>
+            <div className="field" style={{ gridColumn: '1 / -1' }}>
+              <label>Notas para el próximo servicio (opcional)</label>
+              <input className="input" value={form.notasProximoMant}
+                onChange={e => set('notasProximoMant', e.target.value)}
+                placeholder="Ej: revisar pastillas, alineación pendiente..." />
+            </div>
+          </div>
+          )}
+        </div>
+
         {/* EVIDENCIAS */}
         <div className="card">
-          <button type="button" className="card__h card__h--toggle" onClick={() => setShowEvid(v => !v)}>
-            <h3>Evidencias del trabajo
-              {form.evidenciasIngreso.length > 0 && (
-                <span className="sec-count">{form.evidenciasIngreso.length}</span>
-              )}
-            </h3>
-            <Chevron open={showEvid} />
-          </button>
+          <PlegHead titulo="Evidencias del trabajo" sub="fotos y videos de la orden"
+            chip={`${form.evidenciasIngreso.length} ${form.evidenciasIngreso.length === 1 ? 'archivo' : 'archivos'}`}
+            tono={form.evidenciasIngreso.length === 0 ? 'warn' : 'ok'}
+            open={showEvid} onToggle={() => setShowEvid(v => !v)} />
           {showEvid && (
           <div className="card__b">
             <div className="field">
               <label>Fotos y videos de la orden de trabajo</label>
               <input type="file" accept="image/*" multiple onChange={e => addFotos('evidenciasIngreso', e.target.files)} />
               <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-                <label className="btn btn-outline btn-sm" style={{ cursor: subiendoVideo ? 'wait' : 'pointer', margin: 0 }}>
+                <label className="btn btn-outline btn-sm" style={{ cursor: subiendoVideo ? 'wait' : 'pointer', margin: 0, minHeight: 'var(--tap)' }}>
                   {subiendoVideo ? 'Subiendo video…' : '+ Agregar video (máx 30s)'}
                   <input type="file" accept="video/*" capture="environment" disabled={subiendoVideo}
                     onChange={e => { const file = e.target.files?.[0]; e.target.value = ''; addVideo('evidenciasIngreso', file) }}
@@ -761,6 +896,29 @@ export default function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [
           </div>
           )}
         </div>
+
+        {/* TOTAL OT — la única cifra en navy de la pantalla, porque es sobre la
+           que se aprieta Guardar. El desglose (M.O., repuestos, subtotal, IVA)
+           queda bajo la lista, junto a las líneas que lo producen. */}
+        <div className="hd-neto" style={{ margin: 0 }}>
+          <div className="hd-neto__l">TOTAL OT</div>
+          <div className="hd-neto__v">{fmt(totales.total)}</div>
+          <div style={{ fontSize: 11.5, lineHeight: 1.4, color: 'rgba(255,255,255,.6)', marginTop: 6 }}>
+            {items.length} {items.length === 1 ? 'línea' : 'líneas'} · {(() => {
+              const t = TECNICOS.find(x => String(x.id) === String(form.tecnicoId))
+              return t ? `técnico ${t.nombre}` : 'sin técnico asignado'
+            })()}
+          </div>
+          <div className="hd-neto__sep" style={{ margin: '14px 0 13px' }} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <Button variant="outline" type="button" onClick={cancelar}
+              style={{ minHeight: 46, background: 'transparent', borderColor: 'rgba(255,255,255,.25)', color: '#fff' }}>Cancelar</Button>
+            <Button variant="primary" type="submit" disabled={guardando}
+              style={{ flex: 1, minHeight: 46, justifyContent: 'center', background: '#fff', borderColor: '#fff', color: 'var(--navy)' }}>
+              {guardando ? 'Guardando…' : isEdit ? 'Actualizar OT' : `Guardar OT · ${fmt(totales.total)}`}
+            </Button>
+          </div>
+        </div>
         </div>{/* /ot-col side */}
 
         {/* Columna IZQUIERDA — la orden y la plata */}
@@ -769,70 +927,63 @@ export default function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [
         {/* ITEMS */}
         <div className="card">
           <div className="card__h" style={{ flexWrap: 'wrap', gap: 8 }}>
-            <h3 style={{ flex: '0 0 auto' }}>Repuestos y Servicios {invLoading
-              ? <span className="count">Cargando...</span>
+            <h3 style={{ ...H3, flex: '0 0 auto' }}>Repuestos y Servicios {invLoading
+              ? <span className="hd-chip hd-chip--mute">Cargando...</span>
               : (invError && inventario.length === 0)
-                ? <button type="button" className="count" onClick={refrescarInventario} style={{ cursor: 'pointer', background: 'rgba(220,38,38,.1)', color: 'var(--red-700,#b91c1c)', border: '1px solid rgba(220,38,38,.3)' }}>⚠ No cargó · Reintentar</button>
-                : <span className="count">{inventario.length} productos</span>
+                ? <button type="button" className="hd-chip hd-chip--bad" onClick={refrescarInventario} style={{ cursor: 'pointer', border: 'none', minHeight: 28 }}>No cargó · Reintentar</button>
+                : <span className="hd-chip hd-chip--mute">{inventario.length} productos</span>
             }</h3>
             {/* Indicador del estado del inventario Cuentti */}
             {!invLoading && (
               <div style={{
-                display: 'flex', alignItems: 'center', gap: 8,
-                fontSize: 11.5, color: 'var(--text-3)',
-                padding: '4px 10px', borderRadius: 999,
-                background: invIsStale ? 'rgba(245,158,11,.12)' : 'rgba(34,197,94,.10)',
-                border: `1px solid ${invIsStale ? 'rgba(245,158,11,.4)' : 'rgba(34,197,94,.3)'}`,
+                display: 'flex', alignItems: 'center', gap: 7,
+                fontSize: 11.5, borderRadius: 'var(--radius-pill)', padding: '5px 10px',
+                background: invIsStale ? 'var(--warn-bg)' : 'var(--ok-bg)',
+                color: invIsStale ? 'var(--warn-fg)' : 'var(--ok-fg)',
               }} title={`Inventario sincronizado con Cuentti ${formatCacheAge(invCacheAge)}${invIsStale ? ' (recomendado refrescar)' : ''}`}>
                 <span style={{
-                  display: 'inline-block', width: 7, height: 7, borderRadius: '50%',
-                  background: invRefreshing ? 'var(--blue-500)' : (invIsStale ? 'var(--amber-500)' : 'var(--green-500)'),
+                  display: 'inline-block', width: 6, height: 6, borderRadius: '50%', background: 'currentColor',
                   animation: invRefreshing ? 'pulse 1s infinite' : 'none',
                 }} />
-                <span style={{ fontWeight: 600 }}>
-                  {invRefreshing ? 'Sincronizando…' : `Cuentti ${formatCacheAge(invCacheAge)}`}
-                </span>
+                <span>{invRefreshing ? 'Sincronizando…' : `Cuentti ${formatCacheAge(invCacheAge)}`}</span>
                 <button type="button"
                   onClick={refrescarInventario}
                   disabled={invRefreshing}
-                  style={{ background: 'none', border: 'none', color: 'var(--blue-600)', cursor: 'pointer', fontWeight: 700, padding: 0, fontSize: 11.5 }}>
-                  ↻ Refrescar
+                  style={{ background: 'none', border: 'none', color: 'var(--accent)', cursor: 'pointer', fontWeight: 700, padding: 0, fontSize: 11.5 }}>
+                  Refrescar
                 </button>
               </div>
             )}
-            <Button variant="outline" size="sm" type="button" onClick={addItem} style={{ marginLeft: 'auto' }}>+ Agregar línea</Button>
+            <Button variant="outline" size="sm" type="button" onClick={addItem} style={{ marginLeft: 'auto', minHeight: 38 }}>+ Agregar línea</Button>
           </div>
           {items.length === 0 ? (
-            <div style={{ padding: '36px 20px', textAlign: 'center', color: 'var(--text-3)', fontSize: 13.5 }}>
-              <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" style={{ marginBottom: 10, opacity: .55 }}>
-                <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
-                <polyline points="3.27 6.96 12 12.01 20.73 6.96"/>
-                <line x1="12" y1="22.08" x2="12" y2="12"/>
-              </svg>
-              <div style={{ fontWeight: 700, color: 'var(--text-2)', fontSize: 14 }}>Sin repuestos ni servicios</div>
-              <div style={{ marginTop: 5, fontSize: 13 }}>Usa el botón <strong>+ Agregar línea</strong> para añadir ítems.</div>
+            /* Vacío seco: una etiqueta, sin ilustración ni frase de ánimo. */
+            <div className="hd-void">
+              <div className="hd-void__t">Sin repuestos ni servicios</div>
+              <div className="hd-void__s">Usa <strong>+ Agregar línea</strong> para añadir ítems.</div>
             </div>
           ) : (
-            <div className="table-wrap">
-              <table>
-                <thead>
-                  <tr>
-                    <th style={{ width: '35%' }}>Descripción</th>
-                    <th style={{ width: '15%' }}>Precio</th>
-                    <th style={{ width: '10%' }}>Cant.</th>
-                    <th style={{ width: '10%' }}>IVA %</th>
-                    <th style={{ width: '10%' }}>Servicio</th>
-                    <th style={{ width: '15%' }} className="text-right">Total</th>
-                    <th style={{ width: '5%' }}></th>
-                  </tr>
-                </thead>
-                <tbody>
+            /* La lista del handoff: cabecera de 28px y filas con anchos fijos en
+               el MISMO orden. El contenedor scrollea en horizontal cuando la
+               pantalla es angosta; ninguna columna se cae. */
+            <div style={{ overflowX: 'auto' }}>
+              <div className="hd-tbl__h" style={{ display: 'flex', minWidth: 570 }}>
+                <span style={{ flex: 1, minWidth: 140 }}>DESCRIPCIÓN</span>
+                <span style={{ width: 96, flexShrink: 0, textAlign: 'right' }}>PRECIO</span>
+                <span style={{ width: 58, flexShrink: 0, textAlign: 'center' }}>CANT.</span>
+                <span style={{ width: 56, flexShrink: 0, textAlign: 'center' }}>IVA %</span>
+                <span style={{ width: 74, flexShrink: 0, textAlign: 'center' }}>SERVICIO</span>
+                <span style={{ width: 96, flexShrink: 0, textAlign: 'right' }}>TOTAL</span>
+                <span style={{ width: 46, flexShrink: 0 }} />
+              </div>
+              <div>
                   {items.map(item => {
                     const lineTotal = (parseFloat(item.precio) || 0) * (cantidadItem(item))
                     const searchState = itemSearch[item.id]
                     return (
-                      <tr key={item.id}>
-                        <td style={{ position: 'relative' }}>
+                      <div className="hd-row" key={item.id}
+                        style={{ minWidth: 570, height: 'auto', minHeight: 60, padding: '8px 18px', alignItems: 'center', cursor: 'default' }}>
+                        <div style={{ flex: 1, minWidth: 140, paddingRight: 12, position: 'relative' }}>
                           <div style={{ position: 'relative' }}>
                             <input className="form-input" value={item.nombre} placeholder={item._bloqueado ? 'Edita la descripción libremente...' : 'Producto, código o referencia...'}
                               autoComplete="off" autoCorrect="off" autoCapitalize="off" spellCheck={false} name={`it-desc-${item.id}`}
@@ -848,18 +999,22 @@ export default function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [
                               onKeyDown={e => {
                                 if (e.key === 'Escape') setItemSearch(prev => ({ ...prev, [item.id]: { ...prev[item.id], show: false } }))
                               }}
-                              style={{ padding: '6px 32px 6px 10px', fontSize: 13 }} />
+                              style={{ padding: '6px 36px 6px 10px', fontSize: 13, fontWeight: 600, minHeight: 38 }} />
                             {invLoading && !item._bloqueado && <span style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', fontSize: 11, color: 'var(--text-3)' }}>...</span>}
                             {item._bloqueado && (
+                              /* Cambiar producto: el emoji 🔄 se cambió por un icono
+                                 de trazo, que sí escala y no depende de la fuente. */
                               <button type="button" onClick={() => cambiarProducto(item.id)}
                                 title={`Cambiar producto (actual: ${item.nombreInventario || item.sku || 'sin SKU'})`}
-                                style={{ position: 'absolute', right: 4, top: '50%', transform: 'translateY(-50%)', background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--blue-600)', fontSize: 11, padding: '2px 6px', borderRadius: 4 }}>
-                                🔄
+                                style={{ position: 'absolute', right: 3, top: '50%', transform: 'translateY(-50%)', width: 30, height: 30, display: 'grid', placeItems: 'center', background: 'var(--chip)', border: 'none', cursor: 'pointer', color: 'var(--accent)', padding: 0, borderRadius: 'var(--radius-pill)' }}>
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                  <path d="M3 12a9 9 0 0 1 15-6.7L21 8M21 3v5h-5" /><path d="M21 12a9 9 0 0 1-15 6.7L3 16M3 21v-5h5" />
+                                </svg>
                               </button>
                             )}
                           </div>
                           {item._bloqueado && item.sku && (
-                            <div style={{ fontSize: 10.5, color: 'var(--text-3)', marginTop: 2, fontFamily: 'var(--mono)' }}>
+                            <div className="hd-sub hd-mono" style={{ marginTop: 3 }}>
                               SKU: {item.sku}{item.nombreInventario && item.nombreInventario !== item.nombre ? ` · ${item.nombreInventario}` : ''}
                             </div>
                           )}
@@ -908,7 +1063,7 @@ export default function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [
                                           <div className="cmd-row__price-lbl">P. venta</div>
                                         </div>
                                         <div className="cmd-row__stock">
-                                          <span className={`badge ${p.esServicio ? 'badge-info' : p.stock > 3 ? 'badge-success' : p.stock > 0 ? 'badge-warning' : 'badge-danger'}`}
+                                          <span className={`hd-chip hd-chip--${p.esServicio ? 'info' : p.stock > 3 ? 'ok' : p.stock > 0 ? 'warn' : 'bad'}`}
                                             style={{ fontFamily: 'var(--mono)', fontSize: 11 }}>
                                             {p.esServicio ? 'Servicio' : `${p.stock} und`}
                                           </span>
@@ -927,43 +1082,47 @@ export default function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [
                               </div>
                             </div>
                           )}
-                        </td>
-                        <td>
+                        </div>
+                        <div style={{ width: 96, flexShrink: 0 }}>
                           <MoneyInput className="form-input" value={Math.round(parseFloat(item.precio) || 0)}
                             onChange={v => updateItem(item.id, 'precio', v)}
-                            inputStyle={{ padding: '6px 10px 6px 22px', fontSize: 13, textAlign: 'right' }} />
-                        </td>
-                        <td>
+                            inputStyle={{ padding: '6px 8px 6px 20px', fontSize: 13, textAlign: 'right', minHeight: 38 }} />
+                        </div>
+                        <div style={{ width: 58, flexShrink: 0, paddingLeft: 6 }}>
                           {/* step="any": se puede facturar media silicona (0,5) o un
                              cuarto de galón. min="1" y el paso entero por defecto
                              marcaban 0,5 como inválido. */}
                           <input className="form-input" type="number" value={item.cantidad} min="0" step="any"
                             title="Acepta decimales: 0,5 = media unidad"
                             onChange={e => updateItem(item.id, 'cantidad', e.target.value)}
-                            style={{ padding: '6px 10px', fontSize: 13, textAlign: 'center', width: 60 }} />
-                        </td>
-                        <td>
+                            style={{ padding: '6px 4px', fontSize: 13, textAlign: 'center', width: '100%', minHeight: 38 }} />
+                        </div>
+                        <div style={{ width: 56, flexShrink: 0, paddingLeft: 6 }}>
                           <input className="form-input" type="number" value={item.iva} min="0"
                             onChange={e => updateItem(item.id, 'iva', e.target.value)}
-                            style={{ padding: '6px 10px', fontSize: 13, textAlign: 'center', width: 60 }} />
-                        </td>
-                        <td style={{ textAlign: 'center' }}>
-                          <input
-                            type="checkbox"
-                            checked={!!item.esServicio}
-                            onChange={e => updateItem(item.id, 'esServicio', e.target.checked)}
+                            style={{ padding: '6px 4px', fontSize: 13, textAlign: 'center', width: '100%', minHeight: 38 }} />
+                        </div>
+                        <div style={{ width: 74, flexShrink: 0, display: 'flex', justifyContent: 'center' }}>
+                          {/* Era una casilla de 13px: imposible de acertar con el dedo.
+                             Ahora es la misma pastilla que se lee en la lista, y de
+                             paso dice qué es la línea sin tener que descifrar un tic. */}
+                          <button type="button" aria-pressed={!!item.esServicio}
                             title="Marcar como mano de obra / servicio"
-                          />
-                        </td>
-                        <td className="text-right text-mono" style={{ fontWeight: 600 }}>{fmt(lineTotal)}</td>
-                        <td>
-                          <Button variant="ghost" size="sm" type="button" aria-label="Eliminar ítem" onClick={() => removeItem(item.id)}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg></Button>
-                        </td>
-                      </tr>
+                            onClick={() => updateItem(item.id, 'esServicio', !item.esServicio)}
+                            className={`hd-chip hd-chip--${item.esServicio ? 'info' : 'mute'}`}
+                            style={{ height: 44, minWidth: 70, border: 'none', cursor: 'pointer', borderRadius: 'var(--radius-pill)' }}>
+                            {item.esServicio ? 'Servicio' : 'Repuesto'}
+                          </button>
+                        </div>
+                        <div className="hd-n hd-strong hd-mono" style={{ width: 96, flexShrink: 0 }}>{fmt(lineTotal)}</div>
+                        <div style={{ width: 46, flexShrink: 0, display: 'flex', justifyContent: 'flex-end' }}>
+                          <Button variant="ghost" size="sm" type="button" aria-label="Eliminar ítem" onClick={() => removeItem(item.id)}
+                            style={{ width: 44, height: 44, padding: 0, borderRadius: 'var(--radius-pill)', background: 'var(--bad-bg)', color: 'var(--bad-fg)' }}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg></Button>
+                        </div>
+                      </div>
                     )
                   })}
-                </tbody>
-              </table>
+              </div>
             </div>
           )}
 
@@ -1001,7 +1160,9 @@ export default function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [
             </div>
           )}
 
-          {/* Totales — totalizer redesigned (M.O./Repuestos breakdown + Total destacado) */}
+          {/* Desglose: M.O., repuestos, subtotal e IVA quedan pegados a las
+             líneas que los producen. El TOTAL sube a la tarjeta navy, que es
+             donde está el botón de guardar. */}
           <div className="ot-totals">
             <div className="ot-totals__group">
               <span className="ot-stat"><span className="ot-stat__lbl">Mano de obra</span><span className="ot-stat__val">{fmt(manoObraEf)}</span></span>
@@ -1010,102 +1171,12 @@ export default function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [
             <div className="ot-totals__group">
               <span className="ot-stat"><span className="ot-stat__lbl">Subtotal</span><span className="ot-stat__val">{fmt(totales.subtotal)}</span></span>
               <span className="ot-stat"><span className="ot-stat__lbl">IVA</span><span className="ot-stat__val">{fmt(totales.iva)}</span></span>
-              <span className="ot-stat ot-stat--big"><span className="ot-stat__lbl">Total</span><span className="ot-stat__val">{fmt(totales.total)}</span></span>
             </div>
           </div>
         </div>
 
-        {/* PROXIMO MANTENIMIENTO (opcional, alimenta CRM) */}
-        <div className="card">
-          <button type="button" className="card__h card__h--toggle" onClick={() => setShowMant(v => !v)}>
-            <h3>Próximo mantenimiento <span style={{ fontSize: 11, color: 'var(--text-3)', fontWeight: 500, marginLeft: 6 }}>(opcional · alimenta CRM)</span></h3>
-            <Chevron open={showMant} />
-          </button>
-          {showMant && (
-          <div className="card__b" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(200px,1fr))', gap: 14 }}>
-            <div className="field" style={{ gridColumn: '1 / -1' }}>
-              <label>Tipo de aceite usado en este servicio</label>
-              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                {[
-                  ['', 'Sin especificar'],
-                  ['mineral', 'Mineral / Semisintético (5,000 km)'],
-                  ['sintetico', 'Full sintético (10,000 km)'],
-                  ['no_aplica', 'No se cambió aceite'],
-                ].map(([val, lbl]) => (
-                  <label key={val || 'none'} style={{
-                    flex: '1 1 200px',
-                    display: 'flex', alignItems: 'center', gap: 8, padding: '9px 12px',
-                    border: `1.5px solid ${form.tipoAceite === val ? 'var(--blue-600)' : 'var(--border)'}`,
-                    background: form.tipoAceite === val ? 'var(--blue-50,#eff6ff)' : 'var(--bg-raised)',
-                    borderRadius: 8, cursor: 'pointer', fontSize: 12.5, fontWeight: 600,
-                  }}>
-                    <input type="radio" name="tipoAceite" value={val} checked={form.tipoAceite === val}
-                      onChange={() => setTipoAceite(val)} style={{ margin: 0 }} />
-                    {lbl}
-                  </label>
-                ))}
-              </div>
-              <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 6 }}>
-                Si no eliges nada, el CRM detecta el tipo automáticamente leyendo los items facturados.
-              </div>
-            </div>
-            <div className="field">
-              <label>Próximo cambio (km)</label>
-              <input className="input" type="number" value={form.proximoKm}
-                onChange={e => set('proximoKm', e.target.value)}
-                placeholder={form.kilometraje ? `Sugerido: ${(parseInt(form.kilometraje) || 0) + 5000}` : 'Ej: 95000'} />
-            </div>
-            <div className="field">
-              <label>Próxima visita estimada</label>
-              <input className="input" type="date" value={form.proximaVisita} onChange={e => set('proximaVisita', e.target.value)} />
-            </div>
-            <div className="field" style={{ gridColumn: '1 / -1' }}>
-              <label>Notas para el próximo servicio (opcional)</label>
-              <input className="input" value={form.notasProximoMant}
-                onChange={e => set('notasProximoMant', e.target.value)}
-                placeholder="Ej: revisar pastillas, alineación pendiente..." />
-            </div>
-          </div>
-          )}
-        </div>
-
-        {/* OBSERVACIONES */}
-        <div className="card">
-          <div className="card__h"><h3>Observaciones</h3></div>
-          <div className="card__b" style={{ display: 'grid', gridTemplateColumns: isEdit ? '1fr 1fr' : '1fr', gap: 14 }}>
-            <div className="field">
-              <label>Fecha</label>
-              <input className="input" type="date" value={form.fecha} onChange={e => set('fecha', e.target.value)} />
-            </div>
-            {isEdit && (
-              <div className="field">
-                <label>Estado</label>
-                <select className="input" value={form.estado} onChange={e => set('estado', e.target.value)}>
-                  {Object.values(ESTADOS).map(e => <option key={e} value={e}>{e}</option>)}
-                </select>
-              </div>
-            )}
-            <div className="field" style={{ gridColumn: '1 / -1' }}>
-              <label>Diagnóstico / Notas</label>
-              <textarea className="input" value={form.observaciones} placeholder="Diagnóstico, notas, recomendaciones..."
-                onChange={e => set('observaciones', e.target.value)} style={{ minHeight: 88, resize: 'vertical' }} />
-            </div>
-          </div>
-        </div>
         </div>{/* /ot-col main */}
         </div>{/* /ot-grid */}
-
-        {/* ACCIONES */}
-        <div className="form-actionbar">
-          <div className="form-actionbar__total">
-            <span className="lbl">Total OT</span>
-            <span className="val">{fmt(totales.total)}</span>
-          </div>
-          <div className="form-actionbar__btns">
-            <Button variant="outline" type="button" onClick={cancelar}>Cancelar</Button>
-            <Button variant="primary" type="submit" disabled={guardando}>{guardando ? 'Guardando…' : isEdit ? 'Actualizar OT' : `Guardar OT · ${fmt(totales.total)}`}</Button>
-          </div>
-        </div>
       </form>
       <ConfirmDialog cfg={confirmCfg} onClose={() => setConfirmCfg(null)} />
     </div>
