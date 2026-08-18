@@ -432,68 +432,21 @@ export default function CRM({ trabajos = [], clientes, vehiculos, notify, actual
         </div>
       </div>
 
-      {/* KPIs — hero "Vencidos" (lo urgente) + 3 mini */}
-      <div className="kpi-grid" style={{ marginBottom: 18 }}>
-        <div className="kpi-hero" style={{
-          background: stats.vencidos > 0 ? 'rgba(220,38,38,.05)' : 'var(--bg-raised)',
-          border: '1px solid',
-          borderColor: stats.vencidos > 0 ? 'rgba(220,38,38,.32)' : 'var(--border)',
-          borderRadius: 14, padding: '22px 26px',
-          display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: 180,
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-            <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '.5px' }}>Vencidos</span>
-            {stats.contactadosHoy > 0 && (
-              <span style={{ fontFamily: 'var(--mono)', fontSize: 12, fontWeight: 700, color: 'var(--green-700)', background: 'var(--soft-green)', padding: '4px 10px', borderRadius: 999 }}>
-                +{stats.contactadosHoy} hoy
-              </span>
-            )}
-          </div>
-          <div>
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: 14, flexWrap: 'wrap' }}>
-              <div style={{ fontFamily: 'var(--mono)', fontWeight: 700, fontSize: 'clamp(36px, 5.5vw, 56px)', letterSpacing: '-1.2px', lineHeight: 1, color: stats.vencidos > 0 ? 'var(--red-700)' : 'var(--text)' }}>
-                {stats.vencidos}
-              </div>
-              <div style={{ fontSize: 14.5, color: 'var(--text-2)', fontWeight: 500 }}>
-                clientes para contactar ahora
-              </div>
-            </div>
-            <div style={{ fontSize: 13.5, color: 'var(--text-3)', marginTop: 8, fontWeight: 500 }}>
-              {stats.estaSemana} más esta semana · {stats.total} en total
-            </div>
-          </div>
+      {/* Las tres tarjetas de la derecha repetian lo que la grande ya decia:
+         "Esta semana" y "Total recordatorios" estaban escritos literalmente en su
+         linea de abajo ("0 mas esta semana · 2 en total"), y "Contactados hoy"
+         ya salia como chip en su esquina. Cuatro tarjetas y 180px de alto para
+         un dato. Es el mismo patron que se corrigio en Vehiculos y en Tecnicos:
+         una tarjeta grande con su desglose dentro, mas tarjetas pequenas que
+         repiten ese desglose. */}
+      <div className="crm-tot">
+        <div className="eyebrow">Clientes para contactar ahora</div>
+        <div className="mono crm-tot__v" style={{ color: stats.vencidos > 0 ? 'var(--red-700)' : 'var(--text)' }}>
+          {stats.vencidos}
         </div>
-
-        <div style={{ display: 'grid', gridTemplateRows: '1fr 1fr 1fr', gap: 10 }}>
-          <div className="kpi-mini" style={{ background: 'var(--bg-raised)', border: '1px solid var(--border)', borderRadius: 12, padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 14 }}>
-            <div className="kpi__ic amber" style={{ width: 38, height: 38, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-            </div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '.4px' }}>Esta semana</div>
-              <div style={{ fontFamily: 'var(--mono)', fontWeight: 700, fontSize: 22, color: 'var(--text)', lineHeight: 1.1, marginTop: 2 }}>{stats.estaSemana}</div>
-            </div>
-          </div>
-
-          <div className="kpi-mini" style={{ background: 'var(--bg-raised)', border: '1px solid var(--border)', borderRadius: 12, padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 14 }}>
-            <div className="kpi__ic blue" style={{ width: 38, height: 38, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
-            </div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '.4px' }}>Total recordatorios</div>
-              <div style={{ fontFamily: 'var(--mono)', fontWeight: 700, fontSize: 22, color: 'var(--text)', lineHeight: 1.1, marginTop: 2 }}>{stats.total}</div>
-            </div>
-          </div>
-
-          <div className="kpi-mini" style={{ background: 'var(--bg-raised)', border: '1px solid var(--border)', borderRadius: 12, padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 14 }}>
-            <div className="kpi__ic green" style={{ width: 38, height: 38, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-            </div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '.4px' }}>Contactados hoy</div>
-              <div style={{ fontFamily: 'var(--mono)', fontWeight: 700, fontSize: 22, color: stats.contactadosHoy > 0 ? 'var(--green-700)' : 'var(--text)', lineHeight: 1.1, marginTop: 2 }}>{stats.contactadosHoy}</div>
-            </div>
-          </div>
+        <div className="crm-tot__s">
+          {stats.estaSemana} más esta semana · {stats.total} recordatorio{stats.total !== 1 ? 's' : ''} en total
+          {stats.contactadosHoy > 0 && <> · <strong style={{ color: 'var(--green-700)' }}>{stats.contactadosHoy} contactado{stats.contactadosHoy !== 1 ? 's' : ''} hoy</strong></>}
         </div>
       </div>
 
