@@ -75,6 +75,20 @@ function estadoCobro(t) {
   return null
 }
 
+// El color de la pastilla es semantico: cada estado tiene el suyo y no se repite
+// para decorar. Vive aqui y no inline para que las 13 pantallas usen el mismo.
+function chipEstado(estado) {
+  if (estado === ESTADOS.COMPLETADO) return 'ok'
+  if (estado === ESTADOS.EN_PROGRESO || estado === ESTADOS.EN_PRUEBA) return 'info'
+  if (estado === ESTADOS.PENDIENTE) return 'warn'
+  if (estado === ESTADOS.EN_DIAGNOSTICO) return 'purple'
+  if (estado === ESTADOS.ESPERANDO_REPUESTOS) return 'orange'
+  return 'mute'
+}
+function chipTono(tone) {
+  return tone === 's' ? 'ok' : tone === 'w' ? 'warn' : tone === 'd' ? 'bad' : tone === 'i' ? 'info' : 'mute'
+}
+
 export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, onAutoFacturar }) {
   const { trabajos, agregarTrabajo, actualizarTrabajo, eliminarTrabajo, puedeCrearOT } = hook
   const [vista, setVista] = useState('lista') // lista | nuevo | editar | kanban
@@ -547,77 +561,71 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
 
   return (
     <div>
-      {/* Page header */}
-      <div className="pagehd">
-        <div>
-          <h2>Órdenes de trabajo</h2>
+      {/* Barra de titulo del handoff: los cuatro contadores que eran tarjetas
+          KPI bajan a linea de apoyo, y la accion queda a la derecha. Ocupaban
+          una franja entera para cuatro numeros que casi siempre son cero. */}
+      <div className="hd-head">
+        <div className="hd-head__t">
+          <h1>Órdenes de trabajo</h1>
+          <div className="hd-head__sub" style={{ display: 'flex', alignItems: 'baseline', gap: 18, flexWrap: 'wrap' }}>
+            {[
+              ['En vista', stats.total, 'var(--text)'],
+              ['Completados', stats.comp, 'var(--ok-fg)'],
+              ['Pendientes', stats.pend, 'var(--text-3)'],
+              ['En progreso', stats.prog, 'var(--text-3)'],
+            ].map(([l, v, c]) => (
+              <span key={l} style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
+                <span style={{ fontSize: 9.5, fontWeight: 700, letterSpacing: '.8px', textTransform: 'uppercase', color: 'var(--text-4)' }}>{l}</span>
+                <span className="hd-n" style={{ fontSize: 15, fontWeight: 700, color: v === 0 ? 'var(--text-4)' : c }}>{v}</span>
+              </span>
+            ))}
+          </div>
         </div>
-        <div className="actions">
-          <div className="segctl">
-            <button type="button" className={vista === 'lista' ? 'on' : ''} onClick={() => setVista('lista')}>Lista</button>
-            <button type="button" className={vista === 'kanban' ? 'on' : ''} onClick={() => setVista('kanban')}>Kanban</button>
+        <div className="hd-head__sp" />
+        <div className="hd-head__right">
+          <div className="hd-seg">
+            <button type="button" className={`hd-seg__i${vista === 'lista' ? ' on' : ''}`} onClick={() => setVista('lista')}>Lista</button>
+            <button type="button" className={`hd-seg__i${vista === 'kanban' ? ' on' : ''}`} onClick={() => setVista('kanban')}>Kanban</button>
           </div>
           <Button variant="primary" onClick={() => setVista('nuevo')}>+ Nueva OT</Button>
         </div>
       </div>
 
-      {/* Cifras de la vista: franja, no cuatro tarjetas iguales (abrían con cuatro
-          ceros gigantes que parecían pérdida de datos). */}
-      <div className="statline">
-        <div className="statline__i">
-          <span className="eyebrow">En vista</span>
-          <span className={`statline__v${stats.total === 0 ? ' is-zero' : ''}`}>{stats.total}</span>
-        </div>
-        <div className="statline__i">
-          <span className="eyebrow">Completados</span>
-          <span className={`statline__v${stats.comp === 0 ? ' is-zero' : ''}`}>{stats.comp}</span>
-        </div>
-        <div className="statline__i">
-          <span className="eyebrow">Pendientes</span>
-          <span className={`statline__v${stats.pend === 0 ? ' is-zero' : ''}`}>{stats.pend}</span>
-        </div>
-        <div className="statline__i">
-          <span className="eyebrow">En progreso</span>
-          <span className={`statline__v${stats.prog === 0 ? ' is-zero' : ''}`}>{stats.prog}</span>
-        </div>
-      </div>
-
-      {/* Tabs + search/filter bar */}
-      <div className="tabs" style={{ marginBottom: 12 }}>
+      {/* Las 9 pestañas de estado, cada una con su contador */}
+      <div className="hd-tabs" style={{ marginTop: 12 }}>
         {statesTabs.map(([key, label]) => (
-          <button key={key} className={filtroEstado === key ? 'on' : ''} onClick={() => setFiltroEstado(key)}>
-            {label}{conteos[key] ? <span className="tab-count">{conteos[key]}</span> : null}
+          <button key={key} type="button" className={`hd-tab${filtroEstado === key ? ' on' : ''}`} onClick={() => setFiltroEstado(key)}>
+            {label}{conteos[key] ? <span className="hd-tab__n">{conteos[key]}</span> : null}
           </button>
         ))}
       </div>
 
-      <div className="card" style={{ padding: '12px 16px', marginBottom: 14 }}>
+      {/* Filtros: rango de fecha, busqueda y tecnico en una sola fila */}
+      <div className="hd-bar" style={{ padding: '0 4px 10px' }}>
         {vista !== 'kanban' && (
-          <div className="segctl" style={{ marginBottom: 10 }}>
+          <div className="hd-seg">
             {[['hoy', 'Hoy'], ['semana', 'Semana'], ['mes', 'Mes'], ['todas', 'Todas']].map(([k, l]) => (
-              <button key={k} type="button" className={filtroFecha === k ? 'on' : ''} onClick={() => setFiltroFecha(k)}>{l}</button>
+              <button key={k} type="button" className={`hd-seg__i${filtroFecha === k ? ' on' : ''}`} onClick={() => setFiltroFecha(k)}>{l}</button>
             ))}
           </div>
         )}
-        <div className="form-row" style={{ marginBottom: 0 }}>
-          <div className="form-group" style={{ marginBottom: 0, flex: 2 }}>
-            <input className="form-input" placeholder="Buscar placa, cliente, OT..." value={filtroBusqueda}
-              onChange={e => setFiltroBusqueda(e.target.value)} style={{ fontSize: 13 }} />
-          </div>
-          <div className="form-group" style={{ marginBottom: 0 }}>
-            <select className="form-select" value={filtroTecnico} onChange={e => setFiltroTecnico(e.target.value)} style={{ fontSize: 13 }}>
-              <option value="todos">Todos los técnicos</option>
-              {TECNICOS.map(t => <option key={t.id} value={t.id}>{t.nombre}{t.activo === false ? ' (inactivo)' : ''}</option>)}
-            </select>
-          </div>
-          {filtroTecnico !== 'todos' && filtered.length > 0 && (
-            <Button variant="outline" size="sm" title="Un PDF con la ficha de cada OT de este técnico (sin precios)"
-              onClick={() => {
-                const nom = (TECNICOS.find(x => String(x.id) === filtroTecnico)?.nombre || 'tecnico').split(' ')[0]
-                exportarFichasTecnico(filtered, tecNombre, `fichas_${nom}.pdf`)
-              }}>Imprimir fichas ({filtered.length})</Button>
-          )}
-        </div>
+        <label className="hd-find" style={{ width: 260 }}>
+          <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
+          <input placeholder="Buscar placa, cliente, OT..." value={filtroBusqueda} onChange={e => setFiltroBusqueda(e.target.value)} />
+        </label>
+        <select className="hd-drop" value={filtroTecnico} onChange={e => setFiltroTecnico(e.target.value)}>
+          <option value="todos">Todos los técnicos</option>
+          {TECNICOS.map(t => <option key={t.id} value={t.id}>{t.nombre}{t.activo === false ? ' (inactivo)' : ''}</option>)}
+        </select>
+        {filtroTecnico !== 'todos' && filtered.length > 0 && (
+          <Button variant="outline" size="sm" title="Un PDF con la ficha de cada OT de este técnico (sin precios)"
+            onClick={() => {
+              const nom = (TECNICOS.find(x => String(x.id) === filtroTecnico)?.nombre || 'tecnico').split(' ')[0]
+              exportarFichasTecnico(filtered, tecNombre, `fichas_${nom}.pdf`)
+            }}>Imprimir fichas ({filtered.length})</Button>
+        )}
+        <div className="hd-bar__sp" />
+        <span className="hd-bar__n"><b style={{ color: 'var(--text)', fontWeight: 700 }}>{filtered.length}</b> trabajos</span>
       </div>
 
       {/* Vista Kanban */}
@@ -688,26 +696,61 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
         </div>
       ) : isWide ? (
         <div className="trab-cockpit">
-          <div className="card trab-cockpit__list" style={{ padding: 0 }}>
-            <div className="card__h"><span style={{ fontWeight: 600, fontSize: 14 }}>{filtered.length} trabajo{filtered.length !== 1 ? 's' : ''}</span></div>
-            <div className="trab-cklist">
-              {filtered.map(t => {
-                const dias = t.fecha ? Math.floor((Date.now() - new Date(t.fecha).getTime()) / 86400000) : 0
-                const estancado = t.estado !== ESTADOS.COMPLETADO && t.estado !== ESTADOS.CANCELADO && dias >= DIAS_ESTANCADO
-                return (
-                  <button key={t.id} type="button" className={`trab-ckrow${t.id === selId ? ' sel' : ''}`} onClick={() => setSelId(t.id)}>
-                    <span className="r1">
-                      <span className="ot">{t.otCodigo || '—'}</span>
-                      <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                        {estancado && <Badge tone="d" style={{ fontSize: 9, padding: '1px 6px' }}>{dias}d</Badge>}
-                        <span className={`badge ${estadoBadge(t.estado)}`}>{t.estado}</span>
-                      </span>
-                    </span>
-                    <span className="r2"><strong>{t.placa}</strong> · {t.cliente || '—'}</span>
-                    <span className="r3">{fmt(t.total)}</span>
-                  </button>
-                )
-              })}
+          <div className="hd-card hd-card--grow trab-cockpit__list" style={{ padding: 0 }}>
+            <div className="hd-tbl">
+              <div className="hd-tbl__h">
+                <span style={{ width: 96 }}>PLACA · OT</span>
+                <span style={{ flex: 1, minWidth: 0 }}>CLIENTE · VEHÍCULO</span>
+                <span style={{ width: 104 }}>TÉCNICO</span>
+                <span style={{ width: 92 }}>ESTADO</span>
+                <span style={{ width: 92 }}>COBRO</span>
+                <span style={{ width: 98, textAlign: 'right' }}>TOTAL</span>
+                <span style={{ width: 74, textAlign: 'right' }}>FECHA</span>
+              </div>
+              <div className="hd-tbl__b">
+                {filtered.map((t, n) => {
+                  const dias = t.fecha ? Math.floor((Date.now() - new Date(t.fecha).getTime()) / 86400000) : 0
+                  const estancado = t.estado !== ESTADOS.COMPLETADO && t.estado !== ESTADOS.CANCELADO && dias >= DIAS_ESTANCADO
+                  const cob = estadoCobro(t)
+                  return (
+                    <div key={t.id} className={`hd-row${t.id === selId ? ' on' : ''}`}
+                      style={{ height: 40, background: t.id === selId ? undefined : (n % 2 ? '#fcfdfe' : undefined) }}
+                      onClick={() => setSelId(t.id)}>
+                      {/* La placa manda: es por lo que se reconoce una OT. Cuando el
+                          servicio no entra carro se dice SERVICIO, no se deja vacio. */}
+                      <div style={{ width: 96, minWidth: 0 }}>
+                        <div className="hd-plate" style={{ fontSize: 12.5, color: t.placa ? 'var(--text)' : 'var(--text-4)', letterSpacing: t.placa ? '.3px' : 0 }}>
+                          {t.placa || 'SERVICIO'}
+                        </div>
+                        <div className="hd-sub">{t.otCodigo || '—'}</div>
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0, paddingRight: 10 }}>
+                        <div className="hd-clip" style={{ fontSize: 12.5, lineHeight: 1.15, fontWeight: 700, color: 'var(--text)' }}>{t.cliente || '—'}</div>
+                        <div className="hd-clip hd-sub" style={{ fontSize: 10.5 }}>{[t.marca, t.modelo].filter(Boolean).join(' ') || '—'}</div>
+                      </div>
+                      <div style={{ width: 104, display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
+                        <span className={`hd-av av av-${(parseInt(t.tecnicoId) || 1) % 5 + 1}`}>{tecIniciales(t.tecnicoId)}</span>
+                        <span className="hd-clip" style={{ fontSize: 11.5, color: 'var(--text-2)' }}>{tecNombre(t.tecnicoId)}</span>
+                      </div>
+                      <div style={{ width: 92 }}>
+                        <span className={`hd-chip hd-chip--${chipEstado(t.estado)}`}>{t.estado}</span>
+                        {estancado && <span className="hd-chip hd-chip--bad" style={{ marginLeft: 4 }}>{dias}d</span>}
+                      </div>
+                      <div style={{ width: 92 }}>
+                        {cob ? <span className={`hd-chip hd-chip--${chipTono(cob.tone)}`}>{cob.label}</span> : <span className="hd-empty" style={{ fontSize: 12 }}>—</span>}
+                      </div>
+                      <div className="hd-n hd-strong" style={{ width: 94 }}>{fmt(t.total)}</div>
+                      <div className="hd-n" style={{ width: 74, fontSize: 12, color: 'var(--text-3)' }}>{fmtDate(t.fecha)}</div>
+                    </div>
+                  )
+                })}
+              </div>
+              <div className="hd-tbl__f">
+                <span>{filtered.length} de {trabajos.length} trabajos</span>
+                <span className="hd-bar__sp" />
+                <span>Total en vista</span>
+                <b>{fmt(filtered.reduce((a, t) => a + (Number(t.total) || 0), 0))}</b>
+              </div>
             </div>
           </div>
           <aside className="trab-cockpit__detail">

@@ -77,7 +77,12 @@ export function fmtDate(iso) {
   // interpreta como medianoche UTC y en Colombia (UTC-5) muestra el día anterior.
   const m = typeof iso === 'string' && iso.match(/^(\d{4})-(\d{2})-(\d{2})$/)
   const d = m ? new Date(+m[1], +m[2] - 1, +m[3]) : new Date(iso)
+  // es-CO devuelve "15 de ago de 2026", que en una celda de tabla parte en dos
+  // lineas y rompe el ritmo de la fila. El sistema de diseno pide dd mmm yyyy en
+  // una sola linea. Se quitan los "de" sobre la salida del locale para no perder
+  // la abreviatura correcta del mes.
   return d.toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' })
+    .replace(/\sde\s/g, ' ').replace(/\./g, '')
 }
 
 // Formato fecha completa

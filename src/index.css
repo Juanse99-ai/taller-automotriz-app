@@ -931,9 +931,9 @@ tbody tr:active{background:var(--fill-2)}
 @keyframes skShimmer{100%{transform:translateX(100%)}}
 .sk-row{display:flex;gap:12px;align-items:center;padding:12px 0;border-bottom:1px solid var(--border)}
 /* Cockpit de Trabajos (desktop ≥1200px): lista compacta + panel de detalle */
-.trab-cockpit{display:flex;gap:16px;align-items:flex-start}
+.trab-cockpit{display:flex;gap:10px;align-items:stretch;flex:1;min-height:0}
 .trab-cockpit__list{flex:1;min-width:0}
-.trab-cockpit__detail{flex:0 0 360px;min-width:0}
+.trab-cockpit__detail{flex:0 0 262px;min-width:0}
 .trab-cklist{max-height:calc(100vh - 250px);overflow-y:auto}
 .trab-ckrow{display:flex;flex-direction:column;gap:4px;width:100%;text-align:left;padding:11px 16px;border:none;border-bottom:1px solid var(--border);background:none;cursor:pointer;transition:background .12s}
 .trab-ckrow:hover{background:var(--bg-subtle)}
@@ -1514,4 +1514,116 @@ tbody tr:active{background:var(--fill-2)}
     backdrop-filter:none;-webkit-backdrop-filter:none;
     padding:0 14px;gap:12px;
   }
+}
+
+/* ============================================================
+   FASE 0b — Patrones compartidos del handoff
+   ------------------------------------------------------------
+   Barra de título, tabla, filtros y fila móvil. Son idénticos en
+   las 13 pantallas del paquete, así que viven aquí una sola vez.
+   Prefijo `hd-` (handoff) para no chocar con las clases viejas
+   mientras conviven pantallas rediseñadas y sin rediseñar.
+   ============================================================ */
+
+/* --- Barra de título: sustituye las tiras de tarjetas KPI ---
+   Izquierda: h1 + subtítulo con los contadores que antes eran tarjetas.
+   Derecha: la cifra que SÍ exige actuar, un divisor, y las acciones. */
+.hd-head{display:flex;align-items:flex-end;gap:26px;padding:0 4px;flex:none}
+.hd-head__t h1{margin:0;font-size:22px;line-height:1.1;font-weight:700;color:var(--text);letter-spacing:-.3px}
+.hd-head__sub{font-size:12.5px;line-height:1.4;color:var(--text-3);margin-top:3px}
+.hd-head__sp{flex:1}
+.hd-head__right{display:flex;align-items:flex-end;gap:20px}
+.hd-head__div{width:1px;height:44px;background:var(--border-strong)}
+/* La cifra grande. `--fg` la pinta cada pantalla según lo que signifique. */
+.hd-fig{text-align:right}
+.hd-fig__l{font-size:9.5px;line-height:1;font-weight:700;letter-spacing:.9px;color:var(--text-4)}
+.hd-fig__v{font-size:26px;line-height:1.05;font-weight:700;color:var(--fg,var(--text));margin-top:4px}
+.hd-fig__s{font-size:11.5px;line-height:1.3;color:var(--text-3);margin-top:3px}
+
+/* --- Tarjeta contenedora (tabla o bloque) --- */
+.hd-card{background:var(--bg-raised);border:1px solid var(--border);border-radius:var(--radius-card);
+  display:flex;flex-direction:column;overflow:hidden;min-height:0}
+.hd-card--grow{flex:1}
+
+/* --- Barra de filtros dentro de la tarjeta --- */
+.hd-bar{flex:none;display:flex;align-items:center;gap:10px;padding:13px 18px 12px}
+.hd-bar__sp{flex:1}
+.hd-bar__n{font-size:12px;color:var(--text-3);white-space:nowrap}
+
+/* Segmentado: riel gris, activo en blanco con la única sombra permitida */
+.hd-seg{display:flex;align-items:center;gap:3px;height:36px;padding:3px;background:var(--chip);border-radius:var(--radius-pill);flex:none}
+.hd-seg__i{height:30px;display:flex;align-items:center;padding:0 15px;border-radius:var(--radius-pill);
+  font-size:12.5px;line-height:1;font-weight:600;color:var(--text-3);white-space:nowrap;cursor:pointer;background:none}
+.hd-seg__i.on{background:var(--bg-raised);color:var(--text);font-weight:700;box-shadow:var(--shadow-seg)}
+
+/* Buscador y desplegable de la barra */
+.hd-find{display:flex;align-items:center;gap:8px;height:36px;padding:0 13px;background:var(--chip);
+  border-radius:var(--radius-pill);flex:none;border:none}
+.hd-find svg{width:15px;height:15px;flex:none;color:var(--text-4);stroke:currentColor;fill:none;stroke-width:2}
+.hd-find input{border:none;background:none;outline:none;font-size:12.5px;color:var(--text);width:100%;font-family:inherit}
+.hd-find input::placeholder{color:var(--text-4)}
+.hd-drop{display:flex;align-items:center;gap:7px;height:36px;padding:0 13px;border:1px solid var(--border-input);
+  border-radius:var(--radius-pill);flex:none;background:var(--bg-raised);font-size:12.5px;color:var(--text);cursor:pointer}
+
+/* --- Pestañas de estado (9 en Trabajos) --- */
+.hd-tabs{display:flex;align-items:center;gap:2px;border-bottom:1px solid var(--border-strong);margin-bottom:10px;
+  overflow-x:auto;scrollbar-width:none;flex:none}
+.hd-tabs::-webkit-scrollbar{display:none}
+.hd-tab{display:flex;align-items:baseline;gap:5px;padding:0 9px;height:32px;line-height:32px;
+  border-bottom:2px solid transparent;margin-bottom:-1px;white-space:nowrap;flex:none;
+  font-size:12px;font-weight:400;color:var(--text-3);cursor:pointer;background:none}
+.hd-tab.on{border-bottom-color:var(--accent);color:var(--text);font-weight:700}
+.hd-tab__n{font-size:10px;font-weight:700;color:var(--text-3);background:var(--chip);padding:3px 5px;border-radius:3px}
+
+/* --- Tabla: cabecera 28px, fila 38px, pie 38px --- */
+.hd-tbl{flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden}
+.hd-tbl__h{flex:none;display:flex;align-items:center;height:28px;padding:0 18px;background:var(--bg-subtle);
+  border-top:1px solid var(--row-line);border-bottom:1.5px solid var(--head-line)}
+.hd-tbl__h span{font-size:9.5px;line-height:1;font-weight:700;letter-spacing:.7px;color:var(--text-4)}
+.hd-tbl__b{flex:1;min-height:0;overflow-y:auto}
+.hd-row{display:flex;align-items:center;height:var(--row-h);padding:0 18px;border-bottom:1px solid var(--row-line);cursor:pointer}
+.hd-row:hover{background:var(--bg-subtle)}
+.hd-row.on{background:var(--accent-soft)}
+.hd-tbl__f{flex:none;display:flex;align-items:center;gap:12px;height:38px;padding:0 18px;
+  border-top:1.5px solid var(--head-line);background:var(--bg-subtle);font-size:12px;color:var(--text-3)}
+.hd-tbl__f b{font-size:13px;font-weight:700;color:var(--text)}
+
+/* Celdas: el número siempre a la derecha y tabular */
+.hd-n{text-align:right;font-variant-numeric:tabular-nums}
+.hd-strong{font-size:13px;font-weight:700;color:var(--text)}
+.hd-mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.hd-plate{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13.5px;font-weight:700;color:var(--text);letter-spacing:.3px}
+.hd-sub{font-size:11px;line-height:1.2;color:var(--text-4)}
+.hd-empty{color:var(--text-empty)}
+.hd-clip{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* --- Pastilla de estado: el color dice qué pasa, nunca decora --- */
+.hd-chip{display:inline-block;font-size:9.5px;line-height:1;font-weight:700;letter-spacing:.4px;
+  white-space:nowrap;padding:4px 6px;border-radius:4px}
+.hd-chip--ok{background:var(--ok-bg);color:var(--ok-fg)}
+.hd-chip--warn{background:var(--warn-bg);color:var(--warn-fg)}
+.hd-chip--bad{background:var(--bad-bg);color:var(--bad-fg)}
+.hd-chip--info{background:var(--info-bg);color:var(--info-fg)}
+.hd-chip--purple{background:var(--purple-bg);color:var(--purple-fg)}
+.hd-chip--orange{background:var(--orange-bg);color:var(--orange-fg)}
+.hd-chip--mute{background:var(--chip);color:var(--text-3)}
+
+/* Avatar de iniciales del técnico */
+.hd-av{width:19px;height:19px;flex:none;border-radius:50%;display:grid;place-items:center;
+  font-size:8.5px;font-weight:700;line-height:1}
+
+/* --- Estado vacío: etiqueta seca, sin ilustración ni celebración --- */
+.hd-void{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:40px 20px}
+.hd-void__t{font-size:13px;font-weight:600;color:var(--text-3)}
+.hd-void__s{font-size:12px;color:var(--text-4)}
+
+/* --- Móvil: la tabla colapsa a filas táctiles --- */
+@media (max-width:960px){
+  .hd-head{flex-direction:column;align-items:stretch;gap:12px;padding:0}
+  .hd-head__right{align-items:center;gap:12px;flex-wrap:wrap}
+  .hd-head__div{display:none}
+  .hd-tbl__h{display:none}          /* el rótulo va dentro de cada fila */
+  .hd-row{height:auto;min-height:var(--row-h-mobile);padding:9px 14px;align-items:flex-start}
+  .hd-seg{width:100%}
+  .hd-seg__i{flex:1;justify-content:center;padding:0 8px}
 }
