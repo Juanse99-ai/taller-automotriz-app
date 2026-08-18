@@ -1702,3 +1702,8 @@ tbody tr:active{background:var(--fill-2)}
     text-align:right;align-self:center}
   .tbl.tbl-cards.veh-tabla tbody td.td-chevron{display:none}
 }
+
+/* Reportes · desglose bajo una cifra de operación. Sustituye a la tarjeta
+   "Completados", que repetía el mismo número que "Total trabajos" salvo cuando
+   hay pendientes — que es justo lo que este renglón nombra. */
+.kpi__sub{font-size:11.5px;color:var(--text-3);margin-top:3px;line-height:1.4}
