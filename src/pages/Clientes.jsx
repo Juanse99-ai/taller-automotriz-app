@@ -28,25 +28,34 @@ const soloDigitos = (s) => (s || '').toString().replace(/\D/g, '')
 // El Nombre conserva sus 310 y el recorte lo pagan las columnas que truncan
 // igual (email) o que muestran pocos caracteres (cédula, fecha, contadores).
 const CLIENTES_COLS = [
-  { key: 'cedula',   label: 'CC/NIT',        sort: 'cedula',   def: 104, min: 70 },
+  // Un NIT colombiano son 9-10 dígitos y a 104px salían cortados ("1043591…").
+  // Una cédula a medias no sirve para buscar ni para facturar; con el espacio
+  // que liberó la fusión de Teléfono+Email, cabe entera.
+  { key: 'cedula',   label: 'CC/NIT',        sort: 'cedula',   def: 122, min: 92 },
   // El nombre es el identificador de la fila y nunca baja de 310px: medido contra
   // la base real, ahí caben completos 9 de cada 10 nombres. Antes la tabla se
   // encogía al ancho de la pantalla y el nombre —la única columna sin ancho fijo—
   // pagaba el pato: quedaba en ~120px y salían todos cortados mientras Teléfono y
   // Email sobraban espacio. Si ya no cabe, la tabla se desliza en vez de aplastarlo.
   { key: 'nombre',   label: 'Nombre',        sort: 'nombre',   min: 310 }, // sin def → flexible por defecto, pero arrastrable
-  // 124px = un celular de 10 dígitos entero. Un teléfono cortado ("30427537…") no
-  // sirve para llamar, así que esta columna no se recorta por defecto.
-  { key: 'telefono', label: 'Teléfono',      sort: 'telefono', def: 124, min: 80 },
-  // El correo se corta igual por largo, así que no se le da más de lo justo para
-  // reconocerlo; ese espacio rinde más en el Nombre.
-  { key: 'email',    label: 'Email',         sort: 'email',    def: 120, min: 80 },
+  // Teléfono y Email eran DOS columnas de 244px combinados para una base donde
+  // 822 de los 850 clientes no tienen teléfono (97%) y 658 no tienen correo
+  // (77%): dos columnas de guiones. Una sola "Contacto" muestra el teléfono si
+  // existe y si no el correo, y por fin dice algo cuando hay algo que decir.
+  // 168px = un celular de 10 dígitos entero: un teléfono cortado ("30427537…")
+  // no sirve para llamar.
+  { key: 'contacto', label: 'Contacto',      sort: 'contacto', def: 168, min: 110 },
   { key: 'veh',      label: 'Vehículos',     sort: 'veh',      def: 72,  min: 60, center: true },
   { key: 'visita',   label: 'Última visita', sort: 'visita',   def: 100, min: 80 },
-  { key: 'cuentti',  label: 'En Cuentti',    sort: 'cuentti',  def: 104, min: 90 },
+  // "En Cuentti" salía verde en 847 de 850 filas: una columna cuyo valor es el
+  // mismo siempre no informa, y ocupaba 104px para repetirse. La información son
+  // los 3 que NO están, y esos se marcan junto al nombre.
+
   { key: 'chevron',  label: '',              sort: null,       noResize: true }, // sin def; flexible solo cuando el Nombre es fijo
 ]
-const CLIENTES_COL_LS = 'clientes_col_widths_v2'
+// v3: cambió el juego de columnas (Teléfono+Email → Contacto, fuera En Cuentti);
+// los anchos guardados de v2 ya no corresponden a estas columnas.
+const CLIENTES_COL_LS = 'clientes_col_widths_v3'
 const anchosPorDefecto = () =>
   Object.fromEntries(CLIENTES_COLS.filter(c => c.def != null).map(c => [c.key, c.def]))
 // Ningún ancho puede quedar por debajo del mínimo de su columna.
@@ -268,8 +277,9 @@ export default function Clientes({ clientes, vehiculos, trabajos = [], notify })
       switch (sortBy) {
         case 'cedula': av = (a.cedula || ''); bv = (b.cedula || ''); break
         case 'nombre': av = _normNombre(a.nombre); bv = _normNombre(b.nombre); break
-        case 'telefono': av = (a.telefono || ''); bv = (b.telefono || ''); break
-        case 'email': av = (a.email || '').toLowerCase(); bv = (b.email || '').toLowerCase(); break
+        // Ordena por lo que se ve: teléfono si hay, si no el correo. Los que no
+        // tienen ninguno quedan juntos al final.
+        case 'contacto': av = (a.telefono || a.email || '~').toLowerCase(); bv = (b.telefono || b.email || '~').toLowerCase(); break
         case 'veh': av = (a.vehiculos || []).length; bv = (b.vehiculos || []).length; break
         case 'visita': av = uvDe(a) ? new Date(uvDe(a)).getTime() : 0; bv = uvDe(b) ? new Date(uvDe(b)).getTime() : 0; break
         case 'cuentti': av = a.cuenttiId ? 1 : 0; bv = b.cuenttiId ? 1 : 0; break
@@ -1064,9 +1074,19 @@ export default function Clientes({ clientes, vehiculos, trabajos = [], notify })
                 {clientesFiltrados.map(c => (
                   <tr key={c.id || c.cedula} style={{cursor:'pointer'}} onClick={() => seleccionar(c)}>
                     <td className="c-mono" data-label="CC/NIT" style={{fontSize:12.5}}>{c.cedula || '—'}</td>
-                    <td className="c-name" title={c.nombre || ''}>{c.nombre || '—'}</td>
-                    <td className="c-mono" data-label="Teléfono">{fmtTelefono(c.telefono) || '—'}</td>
-                    <td className="c-muted" data-label="Email">{c.email || '—'}</td>
+                    <td className="c-name" title={c.nombre || ''}>
+                      {c.nombre || '—'}
+                      {/* Solo la excepción se marca: 847 de 850 están en Cuentti,
+                          así que lo que hay que ver son los que no. */}
+                      {!c.cuenttiId && <span className="cli-sinver" title="Aún no verificado en Cuentti">sin verificar</span>}
+                    </td>
+                    <td data-label="Contacto">
+                      {c.telefono
+                        ? <span className="mono">{fmtTelefono(c.telefono)}</span>
+                        : c.email
+                          ? <span className="cli-mail" title={c.email}>{c.email}</span>
+                          : <span className="cli-sindato" style={{ color: 'var(--text-4)' }}>—</span>}
+                    </td>
                     <td data-label="Vehículos" style={{textAlign:'center'}}>
                       <Badge tone={(c.vehiculos || []).length > 0 ? 'i' : 'n'}>
                         {(c.vehiculos || []).length}
@@ -1076,11 +1096,6 @@ export default function Clientes({ clientes, vehiculos, trabajos = [], notify })
                     {/* "En Cuentti" HONESTO: verde = confirmado (tenemos su id de Cuentti);
                         gris "Sin verificar" = NO sabemos (no lo hemos consultado). Antes
                         decía "Pendiente" (implicaba que NO estaba) aunque sí estuviera. */}
-                    <td data-label="En Cuentti">
-                      {c.cuenttiId
-                        ? <span className="st st--success"><i /> En Cuentti</span>
-                        : <span className="st st--neutral"><i /> Sin verificar</span>}
-                    </td>
                     <td className="td-chevron">›</td>
                   </tr>
                 ))}

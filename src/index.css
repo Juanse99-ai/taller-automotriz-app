@@ -1619,3 +1619,47 @@ tbody tr:active{background:var(--fill-2)}
 }
 /* Cliente en la tabla de cotizaciones: una sola línea (recortado por palabras) */
 .cot-cli{white-space:nowrap}
+
+/* Clientes · marca de "sin verificar en Cuentti" junto al nombre.
+   Era una columna de 104px que decía lo mismo en 847 de 850 filas; la
+   información son los 3 que faltan. */
+.cli-sinver{margin-left:8px;font-size:11px;font-weight:700;letter-spacing:.3px;
+  color:var(--amber-700);background:var(--soft-amber);border-radius:999px;padding:1px 7px;white-space:nowrap}
+/* Correo en la columna Contacto: se usa cuando no hay teléfono, y se corta con
+   elipsis en vez de ensanchar la columna. */
+.cli-mail{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text-3);font-size:13px}
+
+/* === Clientes en celular: fila de dos líneas ===
+   Cada cliente era una tarjeta de cuatro pares etiqueta/valor. Con 850 clientes
+   en la base, recorrer la lista en el celular del taller no era posible.
+
+     línea 1   nombre  ...........................  [n vehículos]
+     línea 2   CC/NIT · contacto  ................  última visita
+*/
+@media(max-width:600px){
+  .tbl.tbl-cards.tbl--clientes tbody tr{
+    display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 10px;
+    padding:11px 13px;margin:0 0 6px;align-items:center;
+  }
+  .tbl.tbl-cards.tbl--clientes tbody td{display:block;padding:0;text-align:left;
+    height:auto;line-height:1.4;min-width:0;overflow:hidden;
+    text-overflow:ellipsis;white-space:nowrap;border:none}
+  .tbl.tbl-cards.tbl--clientes tbody td::before{display:none}
+  .tbl.tbl-cards.tbl--clientes tbody td.c-name{grid-column:1;grid-row:1;
+    font-size:var(--fs-md);font-weight:650;color:var(--text);
+    border:none;margin:0;padding:0;order:0;white-space:normal}
+  .tbl.tbl-cards.tbl--clientes tbody td[data-label="Vehículos"]{grid-column:2;grid-row:1;text-align:right}
+  /* CC/NIT y contacto comparten renglón: son los dos datos con que se busca a
+     alguien, y ninguno llena una línea por su cuenta. */
+  .tbl.tbl-cards.tbl--clientes tbody td[data-label="CC/NIT"]{grid-column:1;grid-row:2;
+    font-size:var(--fs-sm);color:var(--text-3)}
+  .tbl.tbl-cards.tbl--clientes tbody td[data-label="Contacto"]{grid-column:1;grid-row:3;
+    font-size:var(--fs-sm);color:var(--text-3)}
+  /* 822 de 850 clientes no tienen ni teléfono ni correo: sin esto, cada tarjeta
+     gastaba un renglón entero en un guion. */
+  .tbl.tbl-cards.tbl--clientes tbody td[data-label="Contacto"]:has(.cli-sindato){display:none}
+  .tbl.tbl-cards.tbl--clientes tbody td[data-label="Contacto"] .cli-mail{display:inline}
+  .tbl.tbl-cards.tbl--clientes tbody td[data-label="Última visita"]{grid-column:2;grid-row:2 / span 2;
+    text-align:right;font-size:var(--fs-xs);color:var(--text-3);align-self:center}
+  .tbl.tbl-cards.tbl--clientes tbody td.td-chevron{display:none}
+}
