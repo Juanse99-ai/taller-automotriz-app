@@ -16,18 +16,40 @@ import ConfirmDialog from '../components/ConfirmDialog'
 import { Button, Badge, IconX } from '../components/ui'
 import { loadLogo, drawHeader, drawSectionHeader, drawDataBlock, drawSignatures, drawFooter, tableStylesItems, PDF_LAYOUT } from '../utils/pdfTheme'
 
+// Fecha compacta para el libro: "8 ago" (el año solo si NO es el actual).
+// fmtDate daba "08 de ago de 2026" en las 17 filas, todas del mismo año.
+const fechaCorta = (iso) => {
+  if (!iso) return '—'
+  const m = typeof iso === 'string' && iso.match(/^(\d{4})-(\d{2})-(\d{2})/)
+  const d = m ? new Date(+m[1], +m[2] - 1, +m[3]) : new Date(iso)
+  if (isNaN(d.getTime())) return '—'
+  const mes = d.toLocaleDateString('es-CO', { month: 'short' }).replace('.', '')
+  return d.getFullYear() === new Date().getFullYear()
+    ? `${d.getDate()} ${mes}`
+    : `${d.getDate()} ${mes} ${d.getFullYear()}`
+}
+
 export default function EstadoCuenta({ prestamos, tecnicos, notify }) {
   const { movimientos, agregarMovimiento, eliminarMovimiento } = prestamos
   const [form, setForm] = useState({ personaSel: '', personaOtra: '', tipo: 'prestamo', monto: '', fecha: hoyISO(), nota: '', valorDia: '', dias: '' })
   const [sel, setSel] = useState(null)
   const [dlg, setDlg] = useState(null)
   const [verPorDias, setVerPorDias] = useState(false)
+  // El formulario ocupaba media pantalla de forma permanente para ~2 movimientos
+  // por semana. Ahora se abre desde la persona que estás mirando.
+  const [verForm, setVerForm] = useState(false)
+  const formRef = useRef(null)
   const detailRef = useRef(null)
   // Al elegir una cuenta, traer el panel de detalle a la vista: en desktop está
   // arriba-derecha, lejos de la lista de abajo, y sin esto parecía que "no pasa nada".
   useEffect(() => {
     if (sel && detailRef.current) detailRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
   }, [sel])
+  // El formulario sale DEBAJO del libro: al abrirlo desde el botón del cabezal
+  // quedaba fuera de la pantalla y el clic no parecía hacer nada.
+  useEffect(() => {
+    if (verForm && formRef.current) formRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+  }, [verForm])
 
   // ── Registrar un pago a Cuentti (mismo motor que los tecnicos: gasto contra la
   //    cuenta Nomina). La marca "ya registrado" es LOCAL (localStorage) por
@@ -155,10 +177,25 @@ export default function EstadoCuenta({ prestamos, tecnicos, notify }) {
   }, [movimientos, tecnicos])
 
   const totalPorCobrar = cuentas.reduce((s, c) => s + Math.max(0, c.saldo), 0)
+  const conSaldo = cuentas.filter(c => c.saldo !== 0).length
   // Comparación normalizada: la cuenta canónica puede llamarse "Pedro Barraza"
   // aunque el usuario haya escrito "pedro barraza" (el merge agrupa por técnico).
   const mismaPersona = (a, b) => (a || '').trim().toLowerCase() === (b || '').trim().toLowerCase()
   const cuentaSel = cuentas.find(c => mismaPersona(c.persona, sel)) || null
+
+  // Saldo corrido: un libro de cuentas sin saldo por renglón obliga a sumar de
+  // cabeza para responder "¿cuánto debía en esa fecha?". Se acumula del más
+  // viejo al más nuevo y se muestra al revés (movs ya viene del más nuevo).
+  const movsConSaldo = useMemo(() => {
+    if (!cuentaSel) return []
+    const viejoPrimero = [...cuentaSel.movs].reverse()
+    let acum = 0
+    const conSaldoCorrido = viejoPrimero.map(m => {
+      acum += (m.tipo === 'abono' ? -1 : 1) * (parseFloat(m.monto) || 0)
+      return { ...m, saldoDespues: Math.round(acum) }
+    })
+    return conSaldoCorrido.reverse()
+  }, [cuentaSel])
 
   // Personas que existen como opción del select (técnicos + personas fijas).
   const opcionesPersona = useMemo(() => new Set([
@@ -168,6 +205,16 @@ export default function EstadoCuenta({ prestamos, tecnicos, notify }) {
 
   // Elegir una cuenta de la lista: la selecciona Y deja el formulario listo para
   // registrarle un movimiento (si es un tercero no listado, cae a "otra persona").
+  // Al entrar, abrir la cuenta que más debe. El panel derecho recibía con
+  // "Selecciona una cuenta" ocupando el mejor sitio de la pantalla sin decir
+  // nada, y con 3 cuentas abiertas la primera es casi siempre la que se mira.
+  useEffect(() => {
+    if (sel) return
+    const primera = cuentas.find(c => c.saldo !== 0)
+    if (primera) elegirCuenta(primera.persona)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cuentas, sel])
+
   const elegirCuenta = (persona) => {
     setSel(persona)
     if (opcionesPersona.has(persona)) setForm(f => ({ ...f, personaSel: persona, personaOtra: '' }))
@@ -182,6 +229,7 @@ export default function EstadoCuenta({ prestamos, tecnicos, notify }) {
     notify(`${form.tipo === 'abono' ? 'Abono' : 'Préstamo'} de ${fmt(monto)} · ${personaFinal}`, 'success')
     setForm(f => ({ ...f, monto: '', nota: '', valorDia: '', dias: '' }))
     setSel(personaFinal)
+    setVerForm(false)
   }
 
   // Saldar la cuenta: registra el movimiento que deja el saldo en $0.
@@ -250,12 +298,54 @@ export default function EstadoCuenta({ prestamos, tecnicos, notify }) {
         .ec-del{ flex-shrink:0; width:30px; height:30px; border-radius:8px; border:1px solid var(--border); background:var(--bg-raised); color:var(--text-4); cursor:pointer; display:inline-flex; align-items:center; justify-content:center; font-size:13px; transition:border-color .12s, color .12s, background .12s; }
         .ec-del:hover{ border-color:var(--red-600); color:var(--red-600); background:rgba(220,38,38,.06); }
         @media (max-width: 820px){ .ec-book{ grid-template-columns:1fr; } .ec-aside{ position:static; } }
+        /* Titular. "Por cobrar" resume la pantalla entera y vivía como chip gris
+           en la cabecera de una lista secundaria. */
+        .ec-tot{ padding:4px 2px 20px; border-bottom:1px solid var(--border); margin-bottom:22px; }
+        .ec-tot__v{ font-weight:800; font-size:clamp(36px, 6vw, 50px); letter-spacing:-.03em; line-height:1.02;
+          color:var(--amber-700); margin:7px 0 8px; }
+        .ec-tot__s{ font-size:13.5px; color:var(--text-3); }
+        /* Libro: un renglón por movimiento, con el saldo que dejó. */
+        .ec-mov{ display:grid; grid-template-columns:58px minmax(0,1fr) auto auto 30px; gap:4px 12px;
+          align-items:baseline; padding:11px 4px; border-top:1px solid var(--border); }
+        .ec-mov:first-child{ border-top:none; }
+        .ec-mov__f{ font-size:12.5px; color:var(--text-3); white-space:nowrap; }
+        /* La nota es el registro de qué pasó: se envuelve, no se corta. */
+        .ec-mov__n{ font-size:13.5px; color:var(--text-2); min-width:0; overflow-wrap:anywhere; }
+        .ec-mov__n em{ font-style:normal; color:var(--text-4); }
+        .ec-mov__v{ font-weight:700; font-size:15px; white-space:nowrap; text-align:right; }
+        /* Saldo corrido: secundario al movimiento, pero en su propio eje. */
+        .ec-mov__s{ font-size:12.5px; color:var(--text-3); white-space:nowrap; text-align:right; min-width:96px; }
+        .ec-mov__cuentti{ grid-column:2 / -1; display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-top:8px; }
+        @media (max-width:600px){
+          .ec-mov{ grid-template-columns:minmax(0,1fr) auto 30px; }
+          .ec-mov__f{ grid-column:1; grid-row:1; }
+          .ec-mov__n{ grid-column:1; grid-row:2; }
+          .ec-mov__v{ grid-column:2; grid-row:1; }
+          .ec-mov__s{ grid-column:2; grid-row:2; min-width:0; }
+          .ec-mov > .ec-del{ grid-column:3; grid-row:1 / span 2; }
+          .ec-mov__cuentti{ grid-column:1 / -1; }
+        }
       `}</style>
+
+      {/* Lo que el taller tiene prestado y aún no ha recuperado. Es la cifra que
+         resume la pantalla; iba como chip gris dentro de otra tarjeta. */}
+      <div className="ec-tot">
+        <div className="eyebrow">Por cobrar · préstamos y adelantos</div>
+        <div className="mono ec-tot__v">{fmt(totalPorCobrar)}</div>
+        <div className="ec-tot__s">
+          {conSaldo === 0 ? 'Nadie debe nada' : `${conSaldo} persona${conSaldo !== 1 ? 's' : ''} con saldo abierto`}
+        </div>
+      </div>
 
       <div className="ec-book">
       <aside className="ec-aside">
         <div className="card" style={{ boxShadow: 'none', overflow: 'hidden' }}>
-          <div className="card__h"><h3 style={{ margin: 0, fontSize: 15 }}>Cuentas</h3><span className="count">Por cobrar {fmt(totalPorCobrar)}</span></div>
+          <div className="card__h">
+            <h3 style={{ margin: 0, fontSize: 15 }}>Cuentas</h3>
+            {/* Registrar para alguien que aún no está en la lista (un tercero):
+               el formulario conserva su selector de persona. */}
+            <Button variant="ghost" size="sm" onClick={() => setVerForm(true)}>Registrar</Button>
+          </div>
           <div style={{ padding: 0 }}>
             {cuentas.map((c, i) => {
               const on = mismaPersona(sel, c.persona)
@@ -280,8 +370,17 @@ export default function EstadoCuenta({ prestamos, tecnicos, notify }) {
       </aside>
 
       <main style={{ minWidth: 0, display: 'flex', flexDirection: 'column', gap: 16 }}>
-        <div className="card" style={{ boxShadow: 'none', order: 2 }}>
-          <div className="card__h"><h3 style={{ margin: 0, fontSize: 15 }}>Registrar movimiento{cuentaSel ? <span style={{ fontWeight: 500, color: 'var(--text-3)' }}> · {cuentaSel.persona}</span> : ''}</h3></div>
+        {/* El formulario ocupaba media pantalla de forma permanente para ~2
+           movimientos por semana. Se abre desde la persona que estás mirando (o
+           desde "Registrar" en la lista, para un tercero nuevo). Conserva el
+           selector de persona: sin él no se podría registrar a alguien que aún
+           no tiene cuenta. */}
+        {verForm && (
+        <div className="card" ref={formRef} style={{ boxShadow: 'none', order: 2 }}>
+          <div className="card__h">
+            <h3 style={{ margin: 0, fontSize: 15 }}>Registrar movimiento{cuentaSel ? <span style={{ fontWeight: 500, color: 'var(--text-3)' }}> · {cuentaSel.persona}</span> : ''}</h3>
+            <Button variant="ghost" size="sm" onClick={() => setVerForm(false)}>Cancelar</Button>
+          </div>
           <div className="card__b" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             <div className="field">
               <label>Persona</label>
@@ -334,6 +433,7 @@ export default function EstadoCuenta({ prestamos, tecnicos, notify }) {
             })()}
           </div>
         </div>
+        )}
 
         <div className="card" ref={detailRef} style={{ boxShadow: 'none', order: 1 }}>
         {!cuentaSel ? (
@@ -347,40 +447,52 @@ export default function EstadoCuenta({ prestamos, tecnicos, notify }) {
                   {cuentaSel.saldo > 0 ? `Debe ${fmt(cuentaSel.saldo)}` : cuentaSel.saldo < 0 ? `A favor ${fmt(-cuentaSel.saldo)}` : 'Al día'}
                 </span>
               </div>
-              <div style={{ display: 'flex', gap: 8, marginLeft: 'auto' }}>
-                {cuentaSel.saldo !== 0 && <Button variant="primary" size="sm" onClick={() => saldarCuenta(cuentaSel)}>Saldar</Button>}
+              <div style={{ display: 'flex', gap: 8, marginLeft: 'auto', flexWrap: 'wrap' }}>
+                {/* Registrar es lo que se viene a hacer aquí; Saldar escribe un
+                   movimiento por el saldo entero, así que va después y pide
+                   confirmación propia (ver saldarCuenta). */}
+                <Button variant="primary" size="sm" onClick={() => { elegirCuenta(cuentaSel.persona); setVerForm(true) }}>Registrar movimiento</Button>
+                {cuentaSel.saldo !== 0 && <Button variant="outline" size="sm" onClick={() => saldarCuenta(cuentaSel)}>Saldar</Button>}
                 <Button variant="outline" size="sm" onClick={() => exportarPDF(cuentaSel)}>PDF</Button>
               </div>
             </div>
-            {cuentaSel.movs.length === 0 ? (
-              <div className="card__b"><p style={{ fontSize: 13.5, color: 'var(--text-3)' }}>Sin movimientos. Registra un préstamo o abono abajo.</p></div>
+            {movsConSaldo.length === 0 ? (
+              <div className="card__b"><p style={{ fontSize: 13.5, color: 'var(--text-3)' }}>Sin movimientos. Registra un préstamo o un abono.</p></div>
             ) : (
               <div className="card__b" style={{ paddingTop: 4, paddingBottom: 4 }}>
-                {cuentaSel.movs.map((m, i) => {
+                {movsConSaldo.map((m) => {
                   // El boton de Cuentti sale en los ABONOS (pagos) de cuentas que NO son
                   // de un tecnico y que tienen cedula (Nicanor/admin/terceros).
                   const puedeCuentti = m.tipo === 'abono' && !cuentaSel.tecnicoId && !!cedulaDeCuenta(cuentaSel)
                   const doc = gastoDone[m.id]
+                  const esAbono = m.tipo === 'abono'
                   return (
-                  <div key={m.id} style={{ borderTop: i === 0 ? 'none' : '1px solid var(--border)', padding: '10px 4px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-                      <Badge tone={m.tipo === 'abono' ? 'success' : 'warning'}>{m.tipo === 'abono' ? 'Abono' : 'Préstamo'}</Badge>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        {m.nota && <div style={{ fontSize: 13.5, color: 'var(--text-2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.nota}</div>}
-                        <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: m.nota ? 2 : 0 }}>{fmtDate(m.fecha)}</div>
-                      </div>
-                      <span className="mono" style={{ fontWeight: 700, fontSize: 15.5, whiteSpace: 'nowrap', color: m.tipo === 'abono' ? 'var(--green-700)' : 'var(--amber-700)' }}>
-                        {m.tipo === 'abono' ? '− ' : '+ '}{fmt(m.monto)}
-                      </span>
-                      <button type="button" className="ec-del" aria-label="Eliminar movimiento" title="Eliminar" onClick={() => setDlg({
-                        title: 'Eliminar movimiento',
-                        lead: `${m.tipo === 'abono' ? 'Abono' : 'Préstamo'} · ${fmt(m.monto)} · ${fmtDate(m.fecha)}`,
-                        confirmLabel: 'Sí, eliminar', tone: 'danger',
-                        onConfirm: () => eliminarMovimiento(m.id),
-                      })}><IconX /></button>
-                    </div>
+                  <div key={m.id} className="ec-mov">
+                    <span className="ec-mov__f">{fechaCorta(m.fecha)}</span>
+                    {/* Se quitó la insignia "Préstamo"/"Abono": el signo y el
+                       color ya lo dicen, y ocupaba el sitio de la nota. 6 de los
+                       17 movimientos no tienen nota; ahí se nombra el tipo. */}
+                    <span className="ec-mov__n">
+                      {m.nota?.trim() || <em>{esAbono ? 'Abono' : 'Préstamo'}, sin nota</em>}
+                    </span>
+                    <span className="mono ec-mov__v" style={{ color: esAbono ? 'var(--green-700)' : 'var(--amber-700)' }}>
+                      {esAbono ? '− ' : '+ '}{fmt(m.monto)}
+                    </span>
+                    {/* Saldo que dejó este movimiento: sin él había que sumar de
+                       cabeza para saber cuánto debía la persona en esa fecha. */}
+                    <span className="mono ec-mov__s">
+                      {m.saldoDespues > 0 ? `debe ${fmt(m.saldoDespues)}`
+                        : m.saldoDespues < 0 ? `a favor ${fmt(-m.saldoDespues)}`
+                        : 'al día'}
+                    </span>
+                    <button type="button" className="ec-del" aria-label="Eliminar movimiento" title="Eliminar" onClick={() => setDlg({
+                      title: 'Eliminar movimiento',
+                      lead: `${esAbono ? 'Abono' : 'Préstamo'} · ${fmt(m.monto)} · ${fmtDate(m.fecha)}`,
+                      confirmLabel: 'Sí, eliminar', tone: 'danger',
+                      onConfirm: () => eliminarMovimiento(m.id),
+                    })}><IconX /></button>
                     {puedeCuentti && (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 10, flexWrap: 'wrap' }}>
+                      <div className="ec-mov__cuentti">
                         {doc ? (
                           <span className="badge" style={{ background: 'var(--soft-green)', color: 'var(--green-700)', fontWeight: 700 }} title="Gasto ya registrado en Cuentti">✓ Registrado en Cuentti · {doc}</span>
                         ) : (

@@ -690,28 +690,6 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
     return `${new Date(+y, +m - 1, 1).toLocaleDateString('es-CO', { month: 'long' })} ${y}`
   }
 
-  // Cuenta por técnico: liquidado (sum netos), pagado (sum pagos reales; los
-  // registros viejos sin "pagado" se asumen pagados completos) y el saldo del
-  // Estado de cuenta (préstamos − abonos, que ya incluye lo que quedó debiendo).
-  const cuentasTecnicos = useMemo(() => {
-    const map = {}
-    const keyOf = (tid, persona) => tid != null ? `t${tid}` : `p${(persona || '').trim().toLowerCase()}`
-    historial.forEach(h => {
-      const k = keyOf(h.tecnicoId, h.tecnico)
-      if (!map[k]) map[k] = { nombre: h.tecnico, liquidado: 0, pagado: 0, saldo: 0 }
-      map[k].liquidado += h.neto || 0
-      map[k].pagado += (h.pagado == null ? (h.neto || 0) : h.pagado)
-    })
-    ;(prestamosHook.movimientos || []).forEach(m => {
-      const k = keyOf(m.tecnicoId, m.persona)
-      if (!map[k]) map[k] = { nombre: m.persona, liquidado: 0, pagado: 0, saldo: 0 }
-      map[k].saldo += (m.tipo === 'abono' ? -m.monto : m.monto)
-    })
-    return Object.values(map)
-      .filter(c => c.liquidado > 0 || c.pagado > 0 || c.saldo !== 0)
-      .sort((a, b) => b.liquidado - a.liquidado)
-  }, [historial, prestamosHook.movimientos])
-
   // --- ACCIONES ---
   // Adelantos/préstamos/consumos/descuentos van al ESTADO DE CUENTA (libro
   // único): quedan como deuda del técnico y se descuentan cuando tú lo decidas
@@ -1386,49 +1364,13 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
           </div>
         </div>
         {tabsLiq}
-        {/* "Cuentas por técnico" vivía en la pantalla de Comisiones, donde no
-           ayudaba a pagar y estorbaba. Aquí sí es su sitio: es el resumen de la
-           cuenta de cada técnico. */}
-        {cuentasTecnicos.length > 0 && (
-          <div className="card" style={{ marginBottom: 16 }}>
-            <div className="card__h">
-              <h3>Resumen por técnico</h3>
-            </div>
-            <div className="card__b card__b--flush">
-              <table className="tbl tbl-cards">
-                <thead><tr>
-                  <th>Técnico</th>
-                  <th className="c-right">Liquidado</th>
-                  <th className="c-right">Entregado</th>
-                  <th className="c-right">Falta entregar</th>
-                  <th className="c-right">Su cuenta</th>
-                </tr></thead>
-                <tbody>
-                  {cuentasTecnicos.map((c, i) => {
-                    // Antes las tres cifras iban juntas invitando a una resta que
-                    // NO era válida: liquidado y pagado salen del historial, el
-                    // saldo del libro de préstamos. Ahora la resta está hecha
-                    // (falta entregar) y la cuenta se nombra aparte.
-                    const falta = Math.round(c.liquidado - c.pagado)
-                    return (
-                      <tr key={i}>
-                        <td className="c-name" style={{ fontWeight: 600 }}>{c.nombre}</td>
-                        <td className="c-mono c-right" data-label="Liquidado">{fmt(c.liquidado)}</td>
-                        <td className="c-mono c-right" data-label="Entregado">{fmt(c.pagado)}</td>
-                        <td className="c-mono c-right" data-label="Falta entregar" style={{ fontWeight: falta > 0 ? 700 : 400, color: falta > 0 ? 'var(--amber-700)' : 'var(--text-3)' }}>
-                          {falta > 0 ? fmt(falta) : '—'}
-                        </td>
-                        <td className="c-mono c-right" data-label="Su cuenta" style={{ fontWeight: 700, color: c.saldo > 0 ? 'var(--red-600)' : c.saldo < 0 ? 'var(--green-700)' : 'var(--text-3)' }}>
-                          {c.saldo > 0 ? `Debe ${fmt(c.saldo)}` : c.saldo < 0 ? `A favor ${fmt(-c.saldo)}` : 'Al día'}
-                        </td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
+        {/* Se quitó la tabla "Resumen por técnico". Repetía los saldos de la
+           lista de personas que sigue —las mismas 4 filas, los mismos montos, a
+           200px—, "Entregado" era idéntica a "Liquidado" en 3 de sus 4 filas, y
+           su única celda con dato ("Falta entregar $56.000" de Pedro) era un
+           doble conteo: ese saldo ya está abonado en el libro como
+           "Saldo a favor · liquidación #PB260702". Los acumulados históricos por
+           técnico son contabilidad y su sitio es Reportes. */}
         <EstadoCuenta prestamos={prestamosHook} tecnicos={TECNICOS} notify={notify} />
       </div>
     )
