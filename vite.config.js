@@ -11,15 +11,12 @@ export default defineConfig({
   server: {
     port: 3000,
     proxy: {
-      // Cuentti va directo a su servidor (con rewrite del ?path=)
-      '/api/cuentti': {
-        target: 'https://app.cuenti.com',
-        changeOrigin: true,
-        rewrite: (path) => {
-          const url = new URL(path, 'http://localhost')
-          return url.searchParams.get('path') || path
-        },
-      },
+      // Cuentti va al deploy de Vercel, NO directo a app.cuenti.com: el token de
+      // empresa vive como variable de entorno en la funcion serverless, no en el
+      // cliente. Yendo directo, en local toda pantalla que dependa de Cuentti
+      // (Inventario, Cobros, lineas de una OT) responde vacia o 401 — y eso se
+      // confunde con un fallo del rediseño cuando es solo el proxy.
+      '/api/cuentti': { target: 'https://taller-automotriz-app.vercel.app', changeOrigin: true, secure: true },
       // Estas son funciones serverless de Vercel que NO corren bajo Vite dev.
       // En local las mandamos al deploy de Vercel para que login y datos funcionen.
       '/api/auth': { target: 'https://taller-automotriz-app.vercel.app', changeOrigin: true, secure: true },

@@ -202,12 +202,33 @@ export default function Inventario({ notify }) {
 
   return (
     <div>
-      <div className="pagehd">
-        <div>
-          <h2>Inventario</h2>
+      {/* De las tres cifras, "a reponer" encabeza: es la unica que pide comprar
+          algo hoy. "Referencias en catalogo" baja a linea de apoyo — 3.460 es
+          contexto, no tarea. */}
+      <div className="hd-head">
+        <div className="hd-head__t">
+          <h1>Inventario</h1>
+          <div className="hd-head__sub">
+            {stats.total.toLocaleString('es-CO')} referencias en catálogo
+          </div>
         </div>
-        <div className="actions">
-          <Button variant="outline" size="sm" onClick={() => cargar(true)} disabled={loading || refreshing}
+        <div className="hd-head__sp" />
+        <div className="hd-head__right">
+          <div className="hd-fig" style={{ '--fg': 'var(--bad-fg)', textAlign: 'left' }}>
+            <div className="hd-fig__l">A REPONER</div>
+            <div className="hd-fig__v">{(stats.sinStock + stats.descuadre + stats.stockBajo).toLocaleString('es-CO')}</div>
+            <div className="hd-fig__s">
+              {stats.sinStock.toLocaleString('es-CO')} agotados · {stats.stockBajo.toLocaleString('es-CO')} bajo mínimo
+              {stats.descuadre > 0 && <> · <strong style={{ color: 'var(--warn-fg-2)' }}>{stats.descuadre.toLocaleString('es-CO')} en negativo</strong></>}
+            </div>
+          </div>
+          <div className="hd-head__div" />
+          <div className="hd-fig">
+            <div className="hd-fig__l">VALOR INVENTARIO</div>
+            <div className="hd-fig__v">{fmtCompact(stats.valorTotal)}</div>
+            <div className="hd-fig__s">{stats.valorCosto > 0 ? `a costo ${fmtCompact(stats.valorCosto)}` : 'a precio de venta'}</div>
+          </div>
+          <Button variant="primary" onClick={() => cargar(true)} disabled={loading || refreshing}
             icon={<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>}>
             {loading || refreshing ? 'Sincronizando…' : 'Sincronizar Cuentti'}
           </Button>
@@ -220,34 +241,6 @@ export default function Inventario({ notify }) {
           <Button variant="outline" size="sm" onClick={() => cargar(true)} disabled={loading || refreshing}>Reintentar</Button>
         </div>
       )}
-
-      {/* Cifras del inventario en franja. Se quita la tarjeta "Stock bajo": repetía
-          un número que ya va en el desglose de "A reponer". */}
-      <div className="statline">
-        <div className="statline__i">
-          <span className="eyebrow">A reponer</span>
-          {/* Mismo total que el botón "Por reponer" (los tres grupos hay que
-              comprarlos), pero el desglose separa los que están en negativo:
-              esos no son solo falta de stock, es inventario descuadrado. */}
-          <span className={`statline__v${(stats.sinStock + stats.descuadre + stats.stockBajo) === 0 ? ' is-zero' : ''}`} style={{ color: (stats.sinStock + stats.descuadre + stats.stockBajo) > 0 ? 'var(--red-700)' : undefined }}>
-            {(stats.sinStock + stats.descuadre + stats.stockBajo).toLocaleString('es-CO')}
-          </span>
-          <span style={{ fontSize: 11.5, color: 'var(--text-3)' }}>
-            {stats.sinStock.toLocaleString('es-CO')} agotados · {stats.stockBajo.toLocaleString('es-CO')} bajo mínimo
-            {stats.descuadre > 0 && <> · <strong style={{ color: 'var(--amber-600)' }}>{stats.descuadre.toLocaleString('es-CO')} en negativo</strong></>}
-          </span>
-        </div>
-        <div className="statline__i">
-          <span className="eyebrow">Referencias</span>
-          <span className={`statline__v${stats.total === 0 ? ' is-zero' : ''}`}>{stats.total.toLocaleString('es-CO')}</span>
-          <span style={{ fontSize: 11.5, color: 'var(--text-3)' }}>en catálogo</span>
-        </div>
-        <div className="statline__i">
-          <span className="eyebrow">Valor inventario</span>
-          <span className={`statline__v${stats.valorTotal === 0 ? ' is-zero' : ''}`}>{fmtCompact(stats.valorTotal)}</span>
-          <span style={{ fontSize: 11.5, color: 'var(--text-3)' }}>{stats.valorCosto > 0 ? `a costo ${fmtCompact(stats.valorCosto)}` : 'a precio de venta'}</span>
-        </div>
-      </div>
 
       {/* Tabla de productos */}
       <div className="card">
