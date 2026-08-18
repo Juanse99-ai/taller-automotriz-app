@@ -89,7 +89,10 @@ export default function App() {
   const [section, setSection] = useState('dashboard')
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
-    try { return localStorage.getItem('mda:sidebar') === 'collapsed' } catch { return false }
+    // El rail del rediseño vive en 86px y se expande al pasar el cursor, así que
+    // el reposo por defecto es colapsado. Solo queda expandido si el usuario lo
+    // fijó a mano alguna vez.
+    try { return localStorage.getItem('mda:sidebar') !== 'expanded' } catch { return true }
   })
   const [toast, setToast] = useState(null)
   const trabajosHook = useTrabajos()

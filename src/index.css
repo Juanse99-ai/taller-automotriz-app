@@ -183,6 +183,127 @@
   --soft-blue:rgba(96,165,250,.16);--soft-blue-bd:rgba(96,165,250,.34);
 }
 
+/* ============================================================
+   FASE 0 — Tokens del handoff de diseño (design_handoff_app_taller)
+   ------------------------------------------------------------
+   Va DESPUÉS de los bloques de arriba a propósito: misma
+   especificidad, gana el último. Así el sistema nuevo entra en una
+   sola capa revisable en vez de reescribir 190 líneas que aún usan
+   las pantallas sin rediseñar.
+
+   La regla del handoff: gris frío de base, UN acento usado con
+   avaricia, y el resto del color estrictamente semántico.
+   ============================================================ */
+:root{
+  /* Superficies */
+  --bg:#e9edf2;              /* área de contenido (escritorio) */
+  --bg-mobile:#eef1f5;       /* área de contenido (móvil) */
+  --bg-raised:#ffffff;       /* tarjetas, tablas, topbar */
+  --bg-subtle:#f8fafc;       /* cabecera y pie de tabla, campos inertes */
+  --chip:#f1f5f9;            /* pastillas neutras, botones de icono, riel segmentado */
+  --bg-side:#0d1b35;         /* rail lateral, cabecera móvil, tarjeta de cifra fuerte */
+  --navy:#0d1b35;
+
+  /* Bordes — cuatro pesos distintos, no uno solo */
+  --border:#e2e8f0;          /* 1px, tarjeta y topbar */
+  --border-strong:#d7dee7;   /* 1.5px, botón secundario y divisores verticales */
+  --border-input:#dfe5ec;    /* 1px, campos y controles */
+  --row-line:#f4f6f9;        /* 1px, separador entre filas */
+  --head-line:#e8edf3;       /* 1.5px, bajo la cabecera de tabla */
+
+  /* Texto — rampa de 6, cada peldaño con su trabajo */
+  --text:#0f172a;            /* dato principal, títulos, números fuertes */
+  --text-2:#334155;          /* dato secundario, etiquetas de control */
+  --text-3:#475569;          /* subtítulos, unidades, apoyo */
+  --text-4:#64748b;          /* rótulos ALL-CAPS, referencias, metadatos */
+  --text-5:#94a3b8;          /* chevrons, iconos inertes */
+  --text-empty:#b0bac6;      /* valor ausente ("—") que no debe competir */
+
+  /* Acento — ÚNICO en toda la app */
+  --accent:#1D4ED8;
+  --accent-soft:#eff6ff;     /* fondo de acción secundaria con acento */
+  --accent-tint:#e7efff;     /* pastilla de contador sobre acento */
+  --accent-shadow:0 2px 6px rgba(29,78,216,.25);
+  --primary:#1D4ED8;
+  --primary-hover:#1e3a8a;
+  --accent-soft-2:#dbeafe;
+
+  /* Semántico — SOLO para estados reales, nunca decorativo */
+  --ok-bg:#dcfce7;      --ok-fg:#166534;
+  --warn-bg:#fef3c7;    --warn-fg:#92400e;
+  --warn-bg-2:#fffbeb;  --warn-fg-2:#b45309;
+  --bad-bg:#fee2e2;     --bad-fg:#b91c1c;
+  --info-bg:#dbeafe;    --info-fg:#1e40af;
+  --purple-bg:#ede9fe;  --purple-fg:#5b21b6;   /* estado Diagnóstico */
+  --orange-bg:#ffedd5;  --orange-fg:#9a3412;   /* estado Esperando Rep. */
+
+  /* Fila de grupo colapsado (SKU de servicio en Inventario, etc.) */
+  --group-bg:#fbfaf7;   --group-bg-2:#fdf9f0;
+  --group-line:#f0e2c8; --group-fg:#78350f;  --group-fg-2:#7c6444;
+
+  /* Métrica: la densidad es requisito verificable, así que vive en tokens */
+  --row-h:38px;              /* fila de tabla en escritorio */
+  --row-h-mobile:66px;       /* fila táctil en móvil */
+  --rail-w:86px;             /* rail en reposo */
+  --rail-w-open:212px;       /* rail al pasar el cursor */
+  --topbar-h:48px;
+  --tap:44px;                /* objetivo táctil mínimo */
+  --tap-lg:48px;             /* acción principal en móvil */
+
+  --radius-pill:999px;
+  --radius-card:16px;
+  --radius-field:11px;
+
+  /* Solo dos sombras en toda la app */
+  --shadow-seg:0 1px 2px rgba(15,23,42,.1);   /* ítem activo de un segmentado */
+  --shadow-card:none;
+}
+
+/* Oscuro: el handoff solo especifica claro, así que aquí se deriva.
+   Se respetan los arreglos de contraste ya documentados arriba (los -700
+   como texto sobre negro son ilegibles y por eso se aclaran). */
+[data-theme="dark"]{
+  --bg:#0b0b0d;
+  --bg-mobile:#0b0b0d;
+  --bg-raised:#1c1c1e;
+  --bg-subtle:#151517;
+  --chip:#26262a;
+  --border:#2a2a2e;
+  --border-strong:#3a3a40;
+  --border-input:#33333a;
+  --row-line:#232327;
+  --head-line:#2a2a2e;
+
+  --text:#ededee;
+  --text-2:#b0b0b7;
+  --text-3:#8f8f97;
+  --text-4:#92929a;
+  --text-5:#6f6f78;
+  --text-empty:#5a5a62;
+
+  --accent:#4c8dff;
+  --accent-soft:rgba(76,141,255,.16);
+  --accent-tint:rgba(76,141,255,.24);
+  --accent-shadow:0 2px 6px rgba(76,141,255,.28);
+  --primary:#4c8dff;
+  --primary-hover:#6ba1ff;
+
+  /* Pares semánticos: fondo translúcido + texto claro. El par claro/claro
+     del modo día se vuelve ilegible tal cual sobre negro. */
+  --ok-bg:rgba(74,222,128,.16);     --ok-fg:#4ade80;
+  --warn-bg:rgba(251,191,36,.16);   --warn-fg:#fbbf24;
+  --warn-bg-2:rgba(251,191,36,.10); --warn-fg-2:#fcd34d;
+  --bad-bg:rgba(252,165,165,.16);   --bad-fg:#fca5a5;
+  --info-bg:rgba(96,165,250,.16);   --info-fg:#93c5fd;
+  --purple-bg:rgba(196,181,253,.16);--purple-fg:#c4b5fd;
+  --orange-bg:rgba(251,146,60,.16); --orange-fg:#fdba74;
+
+  --group-bg:#1a1a1c;   --group-bg-2:#1f1c17;
+  --group-line:#3d3423; --group-fg:#fcd34d;  --group-fg-2:#a89a7d;
+
+  --shadow-seg:0 1px 2px rgba(0,0,0,.5);
+}
+
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 html{-webkit-text-size-adjust:100%}
 body{font-family:var(--font);background:var(--bg);color:var(--text);-webkit-font-smoothing:antialiased;font-size:15px;line-height:1.55;overflow-x:hidden}
@@ -1290,4 +1411,107 @@ tbody tr:active{background:var(--fill-2)}
   .sidebar.open .sidebar__nav > div{animation:none}
   .skeleton::after{animation:none}
   .rep-chevron,.rep-recoger-icon{transition:none}
+}
+
+/* ============================================================
+   FASE 0 — Chrome del handoff: shell, rail lateral y topbar
+   ------------------------------------------------------------
+   Solo escritorio (>=961px). En móvil el rail sigue siendo el
+   drawer que ya existía: el handoff no lo cambia.
+   ============================================================ */
+@media (min-width:961px){
+  /* El marco: 10px de aire alrededor y 10px entre rail y contenido.
+     El rail deja de ser `fixed` y pasa a hermano flex, como pide el
+     handoff: al expandirse EMPUJA el contenido, no lo tapa. */
+  .app{padding:10px;gap:10px;align-items:flex-start}
+  .main{margin-left:0;flex:1;min-width:0;display:flex;flex-direction:column;gap:10px;align-self:stretch}
+  .content{padding:0;max-width:none;margin:0;flex:1;min-height:0}
+
+  .sidebar{
+    position:sticky;top:10px;left:auto;bottom:auto;
+    height:calc(100vh - 20px);
+    width:var(--rail-w);min-width:var(--rail-w);
+    background:var(--navy);border-right:none;border-radius:26px;
+    padding:12px 0 10px;align-items:center;gap:5px;
+    /* Única transición de toda la app, según el handoff. */
+    transition:width .18s ease;
+  }
+  .sidebar.collapsed{width:var(--rail-w);min-width:var(--rail-w)}
+  .sidebar.hover-expand{width:var(--rail-w-open);min-width:var(--rail-w-open);box-shadow:none;z-index:41}
+
+  /* Marca */
+  .sidebar__brand{flex:none;display:block;padding:0;border-bottom:none;width:auto}
+  .sidebar__brand .logo{width:62px;height:44px;border:none;border-radius:12px;background:#fff;padding:3px}
+  .sidebar__brand .logo img{object-fit:contain}
+  .sidebar__brand .wm{display:none}          /* el nombre ya está en el logo */
+  .sidebar__brand::after{content:'';display:block;width:46px;height:1px;background:rgba(255,255,255,.12);margin:6px auto 3px}
+
+  /* Navegación: sin cabeceras de grupo — el handoff la define como
+     14 ítems planos en orden. Con 86px de ancho un rótulo de grupo
+     no cabe y solo roba altura. */
+  /* scroll propio: con 14 ítems y una pantalla de 800px de alto los tres
+     últimos (Reportes, Cuentti, Usuarios) quedaban cortados y sin forma de
+     alcanzarlos. La barra se oculta para no ensuciar el rail. */
+  .sidebar__nav{flex:1;min-height:0;width:100%;padding:0;display:flex;flex-direction:column;align-items:center;gap:1px;overflow-y:auto;overflow-x:hidden;scrollbar-width:none}
+  .sidebar__nav::-webkit-scrollbar{display:none}
+  .sidebar__group{display:none}
+
+  .navlink{
+    width:70px;flex:none;margin:0;padding:6px 0;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
+    border-radius:16px;background:transparent;position:relative;
+    color:rgba(255,255,255,.62);font-weight:400;
+  }
+  .navlink svg{width:19px;height:19px;stroke-width:2}
+  /* El rótulo SIEMPRE se ve, también en 86px: es lo que distingue este rail
+     de una tira de iconos que hay que adivinar. La regla vieja del rail
+     colapsado lo escondía, y tiene más especificidad, así que se repite. */
+  .navlink span,
+  .sidebar.collapsed .navlink span{
+    max-width:none;font-size:8.5px;line-height:1.15;text-align:center;
+    white-space:nowrap;opacity:1;transition:none;
+  }
+  .navlink:hover{background:rgba(255,255,255,.06);color:#fff}
+  .navlink.active{background:var(--accent);color:#fff;font-weight:700}
+  .navlink.active svg{stroke:#fff}
+
+  /* Contador: pastilla absoluta arriba a la derecha del ítem */
+  .navlink .pill{
+    position:absolute;top:3px;right:5px;margin:0;
+    min-width:16px;height:16px;padding:0 4px;border-radius:8px;
+    background:var(--accent);color:#fff;
+    font-family:var(--font);font-size:9.5px;line-height:16px;font-weight:700;text-align:center;
+  }
+  .sidebar.collapsed .navlink .pill{display:block}
+  .navlink.active .pill{background:rgba(255,255,255,.22)}
+
+  /* Expandido: el ítem pasa de columna a fila */
+  .sidebar.hover-expand .navlink{
+    width:auto;align-self:stretch;flex-direction:row;justify-content:flex-start;
+    gap:11px;padding:9px 13px;margin:0 9px;
+  }
+  .sidebar.hover-expand .navlink span{font-size:12.5px;text-align:left}
+  .sidebar.hover-expand .sidebar__nav{align-items:stretch}
+
+  /* Pie: avatar, nombre y rol centrados bajo un divisor */
+  .sidebar__foot{
+    flex:none;width:100%;padding:0;border-top:none;
+    display:flex;flex-direction:column;align-items:center;gap:2px;
+  }
+  .sidebar__foot::before{content:'';display:block;width:46px;height:1px;background:rgba(255,255,255,.12);margin-bottom:6px}
+  .sidebar__foot .av{width:38px;height:38px;background:var(--accent);font-size:14px;font-weight:700}
+  .sidebar__foot .me,
+  .sidebar.collapsed .sidebar__foot .me{max-width:none;opacity:1;text-align:center}
+  .sidebar__foot .me .n{font-size:8.5px;line-height:1.2;font-weight:600;color:#fff}
+  .sidebar__foot .me .r{font-size:8.5px;line-height:1.2;font-weight:400;color:rgba(255,255,255,.5)}
+  .sidebar.collapsed .sidebar__foot .me{max-width:none;opacity:1}
+  .sidebar__foot .icobtn{display:none}       /* salir vive en el topbar */
+
+  /* Topbar: tarjeta blanca de 48px con radio 16px, todo alineado a la derecha */
+  .topbar{
+    position:static;height:var(--topbar-h);flex:none;
+    background:var(--bg-raised);border:1px solid var(--border);border-radius:var(--radius-card);
+    backdrop-filter:none;-webkit-backdrop-filter:none;
+    padding:0 14px;gap:12px;
+  }
 }
