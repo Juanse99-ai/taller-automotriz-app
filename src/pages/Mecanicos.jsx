@@ -4,7 +4,7 @@ import { COMISION, ESTADOS } from '../utils/constants'
 import { manoObraBase } from '../utils/comision'
 import { useTecnicos, tecnicosActivos, agregarTecnico, actualizarTecnico, setTecnicoActivo, eliminarTecnico } from '../services/tecnicos'
 import ConfirmDialog from '../components/ConfirmDialog'
-import { Button, Badge, IconX } from '../components/ui'
+import { Button, Badge, IconX, IconEdit } from '../components/ui'
 
 const ACTIVOS = [ESTADOS.PENDIENTE, ESTADOS.EN_DIAGNOSTICO, ESTADOS.ESPERANDO_REPUESTOS, ESTADOS.EN_PROGRESO]
 
@@ -101,62 +101,31 @@ export default function Mecanicos({ trabajos, onNavigate, notify }) {
   return (
     <>
     <div>
-      <div className="pagehd">
-        <div>
-          <h2>Equipo técnico</h2>
-        </div>
-        <div className="actions">
-          <div className="segctl">
-            <button type="button" className={!vistaAgenda ? 'on' : ''} onClick={() => setVistaAgenda(false)}>Tarjetas</button>
-            <button type="button" className={vistaAgenda ? 'on' : ''} onClick={() => setVistaAgenda(true)}>Agenda</button>
-          </div>
-          <Button variant="primary" size="sm" onClick={() => setAgregando(true)}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-            Agregar técnico
-          </Button>
-        </div>
-      </div>
-
-      {/* KPI row */}
-      {/* Hero: comisiones del mes (el numero que el dueño revisa) + 2 mini */}
-      <div className="kpi-grid" style={{ marginBottom: 24 }}>
-        <div className="kpi-hero" style={{ background: 'var(--bg-raised)', border: '1px solid var(--border)', borderRadius: 14, padding: '22px 26px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: 180 }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-            <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '.5px' }}>Comisiones del mes</span>
-            <span style={{ fontFamily: 'var(--mono)', fontSize: 12, fontWeight: 700, color: 'var(--green-700)', background: 'var(--soft-green)', padding: '4px 10px', borderRadius: 999 }}>
-              {equipoActivo.length} técnico{equipoActivo.length !== 1 ? 's' : ''}
-            </span>
-          </div>
-          <div>
-            <div style={{ fontFamily: 'var(--mono)', fontWeight: 700, fontSize: 'clamp(34px, 5vw, 52px)', letterSpacing: '-1px', lineHeight: 1, color: 'var(--text)' }}>
-              {fmt(totalComisionesMes)}
-            </div>
-            <div style={{ fontSize: 13.5, color: 'var(--text-3)', marginTop: 8, fontWeight: 500 }}>
-              Acumulado por liquidar a técnicos
-            </div>
+      {/* La comision del mes se queda como cifra grande — es la que el dueño
+          revisa. "Tecnicos activos" y "trabajos en curso" eran dos tarjetas mini
+          de 180px para dos numeros de un digito: bajan a linea de apoyo. */}
+      <div className="hd-head">
+        <div className="hd-head__t">
+          <h1>Equipo técnico</h1>
+          <div className="hd-head__sub">
+            {equipoActivo.length} técnico{equipoActivo.length !== 1 ? 's' : ''} activo{equipoActivo.length !== 1 ? 's' : ''}
+            {' · '}{equipoActivo.reduce((a, t) => a + t.activosCount, 0)} trabajos en curso
+            {' · '}{equipoActivo.reduce((a, t) => a + t.completadosMes, 0)} completados este mes
           </div>
         </div>
-
-        <div style={{ display: 'grid', gridTemplateRows: '1fr 1fr', gap: 10 }}>
-          <div className="kpi-mini" style={{ background: 'var(--bg-raised)', border: '1px solid var(--border)', borderRadius: 12, padding: '14px 18px', display: 'flex', alignItems: 'center', gap: 14 }}>
-            <div className="kpi__ic blue" style={{ width: 40, height: 40, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-            </div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '.4px' }}>Técnicos activos</div>
-              <div style={{ fontFamily: 'var(--mono)', fontWeight: 700, fontSize: 26, color: 'var(--text)', lineHeight: 1.1, marginTop: 2 }}>{equipoActivo.length}</div>
-            </div>
+        <div className="hd-head__sp" />
+        <div className="hd-head__right">
+          <div className="hd-fig">
+            <div className="hd-fig__l">COMISIONES DEL MES</div>
+            <div className="hd-fig__v">{fmt(totalComisionesMes)}</div>
+            <div className="hd-fig__s">Acumulado por liquidar a técnicos</div>
           </div>
-
-          <div className="kpi-mini" style={{ background: 'var(--bg-raised)', border: '1px solid var(--border)', borderRadius: 12, padding: '14px 18px', display: 'flex', alignItems: 'center', gap: 14 }}>
-            <div className="kpi__ic amber" style={{ width: 40, height: 40, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
-            </div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '.4px' }}>Trabajos en curso</div>
-              <div style={{ fontFamily: 'var(--mono)', fontWeight: 700, fontSize: 26, color: 'var(--text)', lineHeight: 1.1, marginTop: 2 }}>{totalActivos}</div>
-            </div>
+          <div className="hd-head__div" />
+          <div className="hd-seg">
+            <button type="button" className={`hd-seg__i${!vistaAgenda ? ' on' : ''}`} onClick={() => setVistaAgenda(false)}>Tarjetas</button>
+            <button type="button" className={`hd-seg__i${vistaAgenda ? ' on' : ''}`} onClick={() => setVistaAgenda(true)}>Agenda</button>
           </div>
+          <Button variant="primary" onClick={() => setAgregando(true)}>+ Agregar técnico</Button>
         </div>
       </div>
 
@@ -164,69 +133,58 @@ export default function Mecanicos({ trabajos, onNavigate, notify }) {
         <AgendaSemanal trabajos={trabajos} onNavigate={onNavigate} tecnicos={TECNICOS} />
       ) : (
         <>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(300px,1fr))', gap: 16 }}>
-          {equipoActivo.map((tec) => (
-            <div key={tec.id} className="card">
-              <div className="card__b" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-                {/* Avatar + nombre + badge */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                  <div
-                    className={`av av-${(tec.idx % 5) + 1}`}
-                    style={{ width: 52, height: 52, fontSize: 16, flexShrink: 0 }}
-                  >
-                    {initials(tec.nombre)}
-                  </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontWeight: 700, fontSize: 15 }}>{tec.nombre}</div>
-                    <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2 }}>
-                      Especialidad · {tec.especialidad}
-                    </div>
-                  </div>
-                  {tec.libre
-                    ? <Badge tone="s">Libre</Badge>
-                    : <Badge tone="i">Ocupado</Badge>
-                  }
-                </div>
-
-                {/* Telefono */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'var(--text-3)' }}>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
-                    <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.41 2 2 0 0 1 3.6 1.23h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.82a16 16 0 0 0 6.29 6.29l.95-.95a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/>
-                  </svg>
-                  <span className="mono">{tec.telefono}</span>
-                </div>
-
-                {/* Stats grid */}
-                <div style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(3,1fr)',
-                  gap: 10,
-                  padding: '12px 0',
-                  borderTop: '1px solid var(--border)',
-                  borderBottom: '1px solid var(--border)',
-                }}>
-                  <div>
-                    <div className="mono" style={{ fontSize: 20, fontWeight: 700 }}>{tec.activosCount}</div>
-                    <div style={{ fontSize: 10.5, color: 'var(--text-3)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5 }}>Activos</div>
-                  </div>
-                  <div>
-                    <div className="mono" style={{ fontSize: 20, fontWeight: 700 }}>{tec.completadosMes}</div>
-                    <div style={{ fontSize: 10.5, color: 'var(--text-3)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5 }}>Este mes</div>
-                  </div>
-                  <div>
-                    <div className="mono" style={{ fontSize: 20, fontWeight: 700, color: 'var(--green-600)' }}>{fmt(tec.comisionMes)}</div>
-                    <div style={{ fontSize: 10.5, color: 'var(--text-3)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5 }}>Comision</div>
-                  </div>
-                </div>
-
-                {/* Actions */}
-                <div style={{ display: 'flex', gap: 8 }}>
-                  <Button variant="outline" size="sm" style={{ flex: 1 }} onClick={() => onNavigate && onNavigate('trabajos')}>Ver trabajos</Button>
-                  <Button variant="outline" size="sm" style={{ flex: 1 }} onClick={() => { setEditando(tec); setEditForm({ nombre: tec.nombre, especialidad: tec.especialidad, telefono: tec.telefono, cedula: tec.cedula || '' }) }}>Editar</Button>
-                </div>
-              </div>
+        {/* Tres tarjetas identicas repetian nueve rotulos (ACTIVOS / ESTE MES /
+            COMISION, tres veces) para nueve numeros. En filas el rotulo se
+            escribe una vez, en la cabecera, y las columnas se comparan de un
+            vistazo — que es lo unico que se hace en esta pantalla. */}
+        <div className="hd-card">
+          <div className="hd-tbl">
+            <div className="hd-tbl__h">
+              <span style={{ flex: 1, minWidth: 0 }}>TÉCNICO</span>
+              <span style={{ width: 92 }}>ESTADO</span>
+              <span style={{ width: 124 }}>TELÉFONO</span>
+              <span style={{ width: 74, textAlign: 'right' }}>ACTIVOS</span>
+              <span style={{ width: 88, textAlign: 'right' }}>ESTE MES</span>
+              <span style={{ width: 130, textAlign: 'right' }}>COMISIÓN</span>
+              <span style={{ width: 190 }} />
             </div>
-          ))}
+            <div className="hd-tbl__b">
+              {equipoActivo.map(tec => (
+                <div key={tec.id} className="hd-row" style={{ height: 62, cursor: 'default' }}>
+                  <div style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <span className={`av av-${(tec.idx % 5) + 1}`} style={{ width: 38, height: 38, fontSize: 13.5, flex: 'none' }}>{initials(tec.nombre)}</span>
+                    <span style={{ minWidth: 0 }}>
+                      <span className="hd-clip" style={{ display: 'block', fontSize: 14.5, fontWeight: 700, color: 'var(--text)' }}>{tec.nombre}</span>
+                      <span className="hd-clip hd-sub" style={{ display: 'block', fontSize: 11.5, marginTop: 2 }}>Especialidad · {tec.especialidad}</span>
+                    </span>
+                  </div>
+                  <div style={{ width: 92 }}>
+                    <span className={`hd-chip hd-chip--${tec.libre ? 'ok' : 'warn'}`}>{tec.libre ? 'LIBRE' : 'OCUPADO'}</span>
+                  </div>
+                  <div className="hd-mono" style={{ width: 124, fontSize: 12.5, color: 'var(--text-3)' }}>{tec.telefono || <span className="hd-empty">—</span>}</div>
+                  {/* ACTIVOS se colorea solo cuando hay carga; en 0 se apaga. */}
+                  <div className="hd-n" style={{ width: 74, fontSize: 15, fontWeight: tec.activosCount > 0 ? 700 : 400, color: tec.activosCount > 0 ? 'var(--warn-fg)' : 'var(--text-empty)' }}>{tec.activosCount}</div>
+                  <div className="hd-n" style={{ width: 88, fontSize: 15, fontWeight: 600, color: 'var(--text)' }}>{tec.completadosMes}</div>
+                  <div className="hd-n" style={{ width: 130, fontSize: 15, fontWeight: 700, color: 'var(--text)' }}>{fmt(tec.comisionMes)}</div>
+                  {/* Ver trabajos se hace a diario; editar un tecnico, una vez al
+                      año. Dejaban de ser dos botones del mismo tamaño. */}
+                  <div style={{ width: 190, display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+                    <Button variant="outline" size="sm" onClick={() => onNavigate && onNavigate('trabajos')}>Ver trabajos</Button>
+                    <Button variant="ghost" size="sm" className="btn-icon" aria-label="Editar técnico" title="Editar técnico"
+                      onClick={() => { setEditando(tec); setEditForm({ nombre: tec.nombre, especialidad: tec.especialidad, telefono: tec.telefono, cedula: tec.cedula || '' }) }}>
+                      <IconEdit />
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="hd-tbl__f">
+              <span>{equipoActivo.length} técnico{equipoActivo.length !== 1 ? 's' : ''}</span>
+              <span className="hd-bar__sp" />
+              <span>Total del mes</span>
+              <b>{fmt(totalComisionesMes)}</b>
+            </div>
+          </div>
         </div>
 
         {/* Inactivos: visibles pero apagados, con reactivación a un clic */}
