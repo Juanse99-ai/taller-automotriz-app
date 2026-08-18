@@ -1095,13 +1095,19 @@ tbody tr:active{background:var(--fill-2)}
   /* El stagger de entrada del menu ahora lo hace motion (spring) en Sidebar.jsx. */
   .main{margin-left:0}
   .app.has-collapsed .main{margin-left:0}
-  .topbar{padding:8px 16px;gap:8px;height:auto;min-height:56px;flex-wrap:wrap}
+  .topbar{padding:6px 12px;gap:6px;height:auto;min-height:52px;flex-wrap:wrap}
+  /* El separador conservaba flex:1 con la barra envolviendo: se comia todo el
+     resto de la primera linea y empujaba los botones a una segunda, dejando el
+     de salir huerfano en su propio renglon. En movil el buscador ya baja solo
+     (order:10, ancho completo), asi que aqui el separador no hace falta. */
+  .topbar .sp{display:none}
   .topbar .title h1{font-size:16px}
   .topbar .title p{display:none}
   /* Buscador global: en movil baja a su propia fila completa (antes se ocultaba
      con display:none, dejando al celular sin busqueda). */
   .topbar .search{display:flex;order:10;flex-basis:100%;width:auto;max-width:100%;margin-top:2px}
-  .topbar .icobtn{width:36px;height:36px}
+  .topbar .icobtn{width:36px;height:36px;flex-shrink:0}
+  .topbar .btn-sm{flex-shrink:0}
   .content{padding:18px 14px 44px}
   .pagehd{margin-bottom:16px}
   .pagehd h2{font-size:24px}
@@ -1354,3 +1360,75 @@ tbody tr:active{background:var(--fill-2)}
 /* El cliente es el unico campo de largo impredecible: se corta el, no la fila. */
 .trab-tabla .c-cliente{max-width:1px;width:99%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .trab-tabla thead th:last-child,.trab-tabla tbody td:last-child{text-align:right}
+
+/* === Trabajos en celular: fila tactil de dos lineas ===
+   .tbl-cards convierte cada orden en una tarjeta de siete pares etiqueta/valor:
+   una sola orden ocupaba 242px, media pantalla, y arriba del pliegue no se veia
+   ninguna. Aqui la misma tarjeta se reordena en rejilla:
+
+     linea 1   OT  ................................  ESTADO
+     linea 2   placa · cliente  ....................  TOTAL
+     linea 3   vehiculo · tecnico · fecha  (compacto)
+
+   No se quita ningun campo: la tercera linea baja de rango (mas chica, mas
+   gris, siempre en el mismo sitio) en vez de desaparecer.
+
+   El breakpoint y el peso de los selectores IGUALAN a los de .tbl-cards
+   (max-width:600px, `.tbl.tbl-cards ...`): con menos peso estas reglas perdian
+   y la tarjeta seguia saliendo alta. */
+@media(max-width:600px){
+  .tbl.tbl-cards.trab-movil tbody tr{
+    display:grid; grid-template-columns:1fr auto; gap:1px 10px;
+    padding:9px 12px; margin:0 0 6px; align-items:center;
+  }
+  /* height:auto es imprescindible: .tbl tbody td trae height:var(--row-h), que
+     en tactil vale 52px. Sin anularlo la rejilla daba cuatro filas de 52 y la
+     tarjeta seguia midiendo 231px. Aqui cada linea mide lo que mide su texto. */
+  .tbl.tbl-cards.trab-movil tbody td{display:block;padding:0;text-align:left;
+    height:auto;line-height:1.45;min-width:0;overflow:hidden;
+    text-overflow:ellipsis;white-space:nowrap;border:none}
+  .tbl.tbl-cards.trab-movil tbody td::before{display:none}
+
+  .tbl.tbl-cards.trab-movil tbody td[data-label="OT"]{grid-column:1;grid-row:1;
+    font-family:var(--mono);font-weight:650;color:var(--primary);font-size:var(--fs-md)}
+  .tbl.tbl-cards.trab-movil tbody td[data-label="Estado"]{grid-column:2;grid-row:1;text-align:right}
+  .tbl.tbl-cards.trab-movil tbody td[data-label="Placa"]{grid-column:1;grid-row:2;
+    font-weight:600;color:var(--text);font-size:var(--fs-base)}
+  .tbl.tbl-cards.trab-movil tbody td[data-label="Total"]{grid-column:2;grid-row:2;text-align:right;
+    font-variant-numeric:tabular-nums;font-weight:650;color:var(--text);font-size:var(--fs-md)}
+
+  /* Cliente: es el titulo de la tarjeta en .tbl-cards (order:-1, borde abajo).
+     Aqui baja a la linea 3 como contexto, sin borde ni tamanio de titulo. */
+  .tbl.tbl-cards.trab-movil tbody td.c-name{grid-column:1;grid-row:3;
+    font-size:var(--fs-sm);font-weight:500;color:var(--text-2);
+    border:none;margin:0;padding:0;order:0}
+  .tbl.tbl-cards.trab-movil tbody td[data-label="Fecha"]{grid-column:2;grid-row:3;
+    text-align:right;font-size:var(--fs-xs);color:var(--text-3)}
+
+  /* Linea 4: lo que casi nunca se mira, compacto y gris. Sigue visible. */
+  /* Vehiculo y tecnico: UNA celda cada uno. Antes compartian fila y columna y
+     en la rejilla eso los apila encima: se leia "Peu PB 2Pedro Barraza". */
+  .tbl.tbl-cards.trab-movil tbody td[data-label="Vehículo"],
+  .tbl.tbl-cards.trab-movil tbody td[data-label="Técnico"]{
+    grid-row:4; font-size:var(--fs-xs); color:var(--text-3)}
+  .tbl.tbl-cards.trab-movil tbody td[data-label="Vehículo"]{grid-column:1}
+  .tbl.tbl-cards.trab-movil tbody td[data-label="Técnico"]{grid-column:2;text-align:right}
+
+  /* Acciones: renglon propio al pie, alineadas a la derecha. */
+  .tbl.tbl-cards.trab-movil tbody td:last-child{grid-column:1 / -1;grid-row:5;
+    display:flex;justify-content:flex-end;gap:4px;margin-top:2px}
+}
+
+/* === Barra superior en celular: que no se parta en tres renglones ===
+   El bloque .title vive en opacity:0 hasta que haces scroll, pero SIGUE
+   ocupando 141px. Medido en un iPhone de 390px: los hijos de la barra sumaban
+   707px, asi que el boton de salir no cabia en la primera linea y caia solo a
+   un renglon propio, con el buscador en un tercero. En celular el titulo grande
+   ya esta en la pagina, de modo que este sobra. */
+@media(max-width:600px){
+  .topbar .title{display:none}
+  /* La celda de acciones de Trabajos ya no arma su propia fila con borde: en la
+     tarjeta de dos lineas va a la derecha de la ultima linea. */
+  .tbl.tbl-cards.trab-movil tbody td.td-actions{display:flex;justify-content:flex-end;
+    padding-top:0;margin-top:0;border-top:none;text-align:right}
+}

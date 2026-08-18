@@ -808,7 +808,7 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
             <span style={{ fontWeight: 600, fontSize: 14 }}>{filtered.length} resultado{filtered.length !== 1 ? 's' : ''}</span>
           </div>
           <div className="card__b card__b--flush">
-            <table className="tbl tbl-cards">
+            <table className="tbl tbl-cards trab-movil">
               <thead>
                 <tr>
                   <th>OT</th>
