@@ -845,7 +845,7 @@ tbody tr:active{background:var(--fill-2)}
 /* Cockpit de Trabajos (desktop ≥1200px): lista compacta + panel de detalle */
 .trab-cockpit{display:flex;gap:16px;align-items:flex-start}
 .trab-cockpit__list{flex:1;min-width:0}
-.trab-cockpit__detail{flex:0 0 360px;min-width:0}
+.trab-cockpit__detail{flex:0 0 300px;min-width:0}
 .trab-cklist{max-height:calc(100vh - 250px);overflow-y:auto}
 .trab-ckrow{display:flex;flex-direction:column;gap:4px;width:100%;text-align:left;padding:11px 16px;border:none;border-bottom:1px solid var(--border);background:none;cursor:pointer;transition:background .12s}
 .trab-ckrow:hover{background:var(--bg-subtle)}
@@ -1357,8 +1357,20 @@ tbody tr:active{background:var(--fill-2)}
 .trab-tabla tbody tr.sel{background:var(--accent-soft)}
 .trab-tabla tbody tr.sel:hover{background:var(--accent-soft-2)}
 .trab-tabla .c-ot{font-family:var(--mono);font-weight:650;color:var(--primary);white-space:nowrap}
-/* El cliente es el unico campo de largo impredecible: se corta el, no la fila. */
-.trab-tabla .c-cliente{max-width:1px;width:99%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* El cliente se ve ENTERO: es el dato por el que se reconoce la orden y cortarlo
+   con puntos suspensivos ("CENTRO DE ENSE...") lo vuelve inutil. Para que quepa,
+   las otras cinco columnas se aprietan a su ancho justo y el cliente se queda
+   con todo lo que sobra. Si un nombre aun asi no entra, pasa a dos lineas: mejor
+   una fila mas alta de vez en cuando que un nombre ilegible siempre. */
+.trab-tabla .c-cliente{width:99%;min-width:230px;white-space:normal;line-height:1.25;word-break:break-word}
+/* Sin min-width la columna se quedaba en 70px y un nombre largo se apilaba en
+   ocho lineas: filas de 281px. Con 230px de piso, casi todos entran en una sola
+   linea y los mas largos usan dos. */
+.trab-tabla th:nth-child(1),.trab-tabla td:nth-child(1){width:74px;white-space:nowrap}
+.trab-tabla th:nth-child(2),.trab-tabla td:nth-child(2){width:80px;white-space:nowrap}
+.trab-tabla th:nth-child(4),.trab-tabla td:nth-child(4){width:1%;white-space:nowrap}
+.trab-tabla th:nth-child(5),.trab-tabla td:nth-child(5){width:1%}
+.trab-tabla th:nth-child(6),.trab-tabla td:nth-child(6){width:96px;white-space:nowrap}
 .trab-tabla thead th:last-child,.trab-tabla tbody td:last-child{text-align:right}
 
 /* === Trabajos en celular: fila tactil de dos lineas ===
@@ -1457,4 +1469,4 @@ tbody tr:active{background:var(--fill-2)}
 .det-fold__in{padding-top:4px}
 /* El nombre del tecnico partia en dos lineas ("Pedro / Barraza") y estiraba la
    fila por encima de los 34px, rompiendo la densidad de toda la tabla. */
-.trab-tabla td[data-label="Tecnico"]{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:130px}
+.trab-tabla td[data-label="Tecnico"]{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:112px}
