@@ -412,88 +412,27 @@ export default function CRM({ trabajos = [], clientes, vehiculos, notify, actual
   // ── Render ─────────────────────────────────────────────────────────────
   return (
     <div>
-      <div className="pagehd">
-        <div>
-          <h2>CRM · Recordatorios</h2>
-        </div>
-        <div className="actions" style={{ flexWrap: 'wrap', gap: 8 }}>
-          {recordatoriosImportar.length > 0 && (
-            <Button variant="outline" size="sm" onClick={() => setShowImportar(true)} style={{ display: 'inline-flex', alignItems: 'center', gap: 7 }}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-              Inactivos ({recordatoriosImportar.length})
-            </Button>
-          )}
-          <Button variant="outline" size="sm" onClick={() => setShowTemplate('aceite_mineral')} style={{ display: 'inline-flex', alignItems: 'center', gap: 7 }}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-            Plantillas
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => setShowConfig(true)}
-            icon={<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>}>Servicios</Button>
-        </div>
-      </div>
-
-      {/* KPIs — hero "Vencidos" (lo urgente) + 3 mini */}
-      <div className="kpi-grid" style={{ marginBottom: 18 }}>
-        <div className="kpi-hero" style={{
-          background: stats.vencidos > 0 ? 'rgba(220,38,38,.05)' : 'var(--bg-raised)',
-          border: '1px solid',
-          borderColor: stats.vencidos > 0 ? 'rgba(220,38,38,.32)' : 'var(--border)',
-          borderRadius: 14, padding: '22px 26px',
-          display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: 180,
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-            <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '.5px' }}>Vencidos</span>
-            {stats.contactadosHoy > 0 && (
-              <span style={{ fontFamily: 'var(--mono)', fontSize: 12, fontWeight: 700, color: 'var(--green-700)', background: 'var(--soft-green)', padding: '4px 10px', borderRadius: 999 }}>
-                +{stats.contactadosHoy} hoy
-              </span>
-            )}
-          </div>
-          <div>
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: 14, flexWrap: 'wrap' }}>
-              <div style={{ fontFamily: 'var(--mono)', fontWeight: 700, fontSize: 'clamp(36px, 5.5vw, 56px)', letterSpacing: '-1.2px', lineHeight: 1, color: stats.vencidos > 0 ? 'var(--red-700)' : 'var(--text)' }}>
-                {stats.vencidos}
-              </div>
-              <div style={{ fontSize: 14.5, color: 'var(--text-2)', fontWeight: 500 }}>
-                clientes para contactar ahora
-              </div>
-            </div>
-            <div style={{ fontSize: 13.5, color: 'var(--text-3)', marginTop: 8, fontWeight: 500 }}>
-              {stats.estaSemana} más esta semana · {stats.total} en total
-            </div>
+      {/* Los cuatro contadores eran una tarjeta hero mas tres mini: ~200px de
+          cromo para cuatro numeros de un digito que ademas se repiten en los
+          filtros de abajo. Bajan a linea de apoyo; lo vencido, que es lo unico
+          accionable, queda como cifra grande. */}
+      <div className="hd-head">
+        <div className="hd-head__t">
+          <h1>CRM · Recordatorios</h1>
+          <div className="hd-head__sub">
+            {stats.total} recordatorio{stats.total !== 1 ? 's' : ''} en total · {stats.estaSemana} esta semana · {stats.contactadosHoy} contactados hoy
           </div>
         </div>
-
-        <div style={{ display: 'grid', gridTemplateRows: '1fr 1fr 1fr', gap: 10 }}>
-          <div className="kpi-mini" style={{ background: 'var(--bg-raised)', border: '1px solid var(--border)', borderRadius: 12, padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 14 }}>
-            <div className="kpi__ic amber" style={{ width: 38, height: 38, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-            </div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '.4px' }}>Esta semana</div>
-              <div style={{ fontFamily: 'var(--mono)', fontWeight: 700, fontSize: 22, color: 'var(--text)', lineHeight: 1.1, marginTop: 2 }}>{stats.estaSemana}</div>
-            </div>
+        <div className="hd-head__sp" />
+        <div className="hd-head__right">
+          <div className="hd-fig" style={{ '--fg': stats.vencidos > 0 ? 'var(--bad-fg)' : 'var(--text)' }}>
+            <div className="hd-fig__l">VENCIDOS</div>
+            <div className="hd-fig__v">{stats.vencidos}</div>
+            <div className="hd-fig__s">clientes para contactar ahora</div>
           </div>
-
-          <div className="kpi-mini" style={{ background: 'var(--bg-raised)', border: '1px solid var(--border)', borderRadius: 12, padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 14 }}>
-            <div className="kpi__ic blue" style={{ width: 38, height: 38, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
-            </div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '.4px' }}>Total recordatorios</div>
-              <div style={{ fontFamily: 'var(--mono)', fontWeight: 700, fontSize: 22, color: 'var(--text)', lineHeight: 1.1, marginTop: 2 }}>{stats.total}</div>
-            </div>
-          </div>
-
-          <div className="kpi-mini" style={{ background: 'var(--bg-raised)', border: '1px solid var(--border)', borderRadius: 12, padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 14 }}>
-            <div className="kpi__ic green" style={{ width: 38, height: 38, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-            </div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '.4px' }}>Contactados hoy</div>
-              <div style={{ fontFamily: 'var(--mono)', fontWeight: 700, fontSize: 22, color: stats.contactadosHoy > 0 ? 'var(--green-700)' : 'var(--text)', lineHeight: 1.1, marginTop: 2 }}>{stats.contactadosHoy}</div>
-            </div>
-          </div>
+          <div className="hd-head__div" />
+          <Button variant="outline" onClick={() => setShowPlantillas(true)}>Plantillas</Button>
+          <Button variant="outline" onClick={() => setShowConfig(true)}>Servicios</Button>
         </div>
       </div>
 
@@ -561,7 +500,11 @@ export default function CRM({ trabajos = [], clientes, vehiculos, notify, actual
               </thead>
               <tbody>
                 {filtrados.slice(0, 100).map((r, i) => {
-                  const urgenteCls = r.diasPendientes > 60 ? 'badge-d' : r.diasPendientes > 0 ? 'badge-w' : r.diasPendientes >= -7 ? 'badge-i' : 'badge-s'
+                  // El color va con la urgencia, no al reves: rojo si ya vencio,
+                  // ambar si vence esta semana, gris cuando todavia hay margen.
+                  // Antes "Faltan 16d" salia en VERDE justo al lado de un boton que
+                  // dice "Contactar": el color decia tranquilo y la accion, hazlo ya.
+                  const urgenteCls = r.diasPendientes > 0 ? 'badge-d' : r.diasPendientes >= -7 ? 'badge-w' : 'badge-n'
                   const urgenteLbl = r.diasPendientes > 60 ? `${r.diasPendientes}d vencido` : r.diasPendientes > 0 ? `${r.diasPendientes}d vencido` : r.diasPendientes >= -7 ? 'Esta semana' : `Faltan ${-r.diasPendientes}d`
                   // Origen visual
                   const origenInfo = r.origenAceite === 'manual' ? { txt: 'manual', color: 'var(--green-600)', tip: 'Tipo de aceite definido por el técnico en la OT' }
