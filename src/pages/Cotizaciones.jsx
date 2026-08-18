@@ -320,29 +320,33 @@ export default function Cotizaciones({ notify, trabajos = [], onCrearTrabajo, co
     <>
     <style>{ESTILOS}</style>
     <div>
-      <div className="pagehd">
-        <div><h2>Cotizaciones</h2></div>
-        <div className="actions">
+      {/* Los cuatro contadores tenian el mismo tamaño, asi que ninguno mandaba.
+          Pendientes y su valor son lo que hay que perseguir: van juntos en un
+          bloque ambar, porque son el mismo hecho contado de dos formas. Total y
+          aprobadas bajan a linea de apoyo — ya estan tambien en los filtros. */}
+      <div className="hd-head">
+        <div className="hd-head__t">
+          <h1>Cotizaciones</h1>
+          <div className="hd-head__sub">
+            {stats.total} en total · {stats.aprobadas} aprobada{stats.aprobadas !== 1 ? 's' : ''}
+          </div>
+        </div>
+        <div className="hd-head__sp" />
+        <div className="hd-head__right">
+          {stats.pendientes > 0 && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '11px 16px', borderRadius: 14, background: 'var(--warn-bg-2)', whiteSpace: 'nowrap' }}>
+              <div>
+                <div style={{ fontSize: 9.5, fontWeight: 600, letterSpacing: '.7px', color: 'var(--warn-fg)' }}>PENDIENTES</div>
+                <div style={{ fontSize: 22, lineHeight: 1.05, fontWeight: 700, color: 'var(--warn-fg)', marginTop: 5 }}>{stats.pendientes}</div>
+              </div>
+              <div style={{ width: 1, height: 34, background: 'rgba(146,64,14,.2)' }} />
+              <div>
+                <div style={{ fontSize: 9.5, fontWeight: 600, letterSpacing: '.7px', color: 'var(--warn-fg)' }}>VALOR PENDIENTE</div>
+                <div className="hd-n" style={{ fontSize: 22, lineHeight: 1.05, fontWeight: 700, color: 'var(--warn-fg)', marginTop: 5 }}>{fmt(stats.valorPendiente)}</div>
+              </div>
+            </div>
+          )}
           <Button variant="primary" onClick={() => setVista('nueva')}>+ Nueva cotizacion</Button>
-        </div>
-      </div>
-
-      <div className="statline">
-        <div className="statline__i">
-          <span className="eyebrow">Total</span>
-          <span className={`statline__v${stats.total === 0 ? ' is-zero' : ''}`}>{stats.total}</span>
-        </div>
-        <div className="statline__i">
-          <span className="eyebrow eyebrow--warn">Pendientes</span>
-          <span className={`statline__v${stats.pendientes === 0 ? ' is-zero' : ''}`}>{stats.pendientes}</span>
-        </div>
-        <div className="statline__i">
-          <span className="eyebrow">Aprobadas</span>
-          <span className={`statline__v${stats.aprobadas === 0 ? ' is-zero' : ''}`}>{stats.aprobadas}</span>
-        </div>
-        <div className="statline__i">
-          <span className="eyebrow">Valor pendiente</span>
-          <span className={`statline__v${stats.valorPendiente === 0 ? ' is-zero' : ''}`}>{fmt(stats.valorPendiente)}</span>
         </div>
       </div>
 
