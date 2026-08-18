@@ -12,10 +12,17 @@ export default function Inventario({ notify }) {
     loading,
     refreshing,
     error,
+    errorEsToken,
     refresh,
   } = useInventario()
   const [busqueda, setBusqueda] = useState('')
-  const [categoriaFiltro, setCategoriaFiltro] = useState('todas')
+  // Antes habia un filtro por categoria (Cat-1..Cat-5) y un boton "Por reponer".
+  // Contra el catalogo real de 3.460 productos, ninguno de los dos partia nada:
+  // 3.366 (97%) son "Cat-1" —y "Cat-1" no es un nombre, es el id sin traducir—
+  // y "Por reponer" filtraba a 2.996, el 87% del catalogo. Filtrar al 87% no es
+  // filtrar. Los grupos que SI parten el inventario son los tres estados de
+  // stock, y el mas grave (negativo) no tenia forma de aislarse.
+  const [grupo, setGrupo] = useState('todos') // todos | negativo | agotado | bajo
   const [soloReponer, setSoloReponer] = useState(false)
   const [, setNowTick] = useState(0)
   useEffect(() => {
@@ -28,13 +35,8 @@ export default function Inventario({ notify }) {
     if (forzar) notify('Inventario actualizado desde Cuentti', 'success')
   }
 
-  const categorias = useMemo(() => {
-    const cats = new Set(productos.map(p => p.categoria || 'General'))
-    return ['todas', ...Array.from(cats).sort()]
-  }, [productos])
-
   // Estado para ordenamiento de columnas
-  // sortBy: 'codigo' | 'nombre' | 'categoria' | 'stock' | 'precio' | 'iva' | 'estado'
+  // sortBy: 'codigo' | 'nombre' | 'stock' | 'precio' | 'iva'
   // sortDir: 'asc' | 'desc' | null (null = sin orden, default por nombre)
   const [sortBy, setSortBy] = useState(null)
   const [sortDir, setSortDir] = useState('asc')
@@ -61,21 +63,19 @@ export default function Inventario({ notify }) {
       : <span style={{ color: 'var(--blue-600)', fontSize: 10 }}>▼</span>
   }
 
-  // Para ordenamiento por estado: priorizar Sin stock > Bajo > OK
-  const estadoRank = (p) => {
-    if (p.esServicio) return 3
-    if (p.stock <= 0) return 0
-    if (p.stock <= STOCK_BAJO_UMBRAL) return 1
-    return 2
-  }
-
   const filtrados = useMemo(() => {
     let list = productos
     if (soloReponer) {
       list = list.filter(p => !p.esServicio && (parseFloat(p.stock) || 0) <= STOCK_BAJO_UMBRAL)
     }
-    if (categoriaFiltro !== 'todas') {
-      list = list.filter(p => p.categoria === categoriaFiltro)
+    if (grupo !== 'todos') {
+      list = list.filter(p => {
+        if (p.esServicio) return false
+        const st = parseFloat(p.stock) || 0
+        if (grupo === 'negativo') return st < 0
+        if (grupo === 'agotado') return st === 0
+        return st > 0 && st <= STOCK_BAJO_UMBRAL // bajo
+      })
     }
     if (busqueda.trim()) {
       // Multi-palabra: cada palabra debe aparecer (en cualquier orden) en
@@ -92,11 +92,9 @@ export default function Inventario({ notify }) {
         switch (sortBy) {
           case 'codigo': av = (a.codigo || '').toString(); bv = (b.codigo || '').toString(); break
           case 'nombre': av = (a.nombre || '').toLowerCase(); bv = (b.nombre || '').toLowerCase(); break
-          case 'categoria': av = (a.categoria || '').toLowerCase(); bv = (b.categoria || '').toLowerCase(); break
           case 'stock': av = parseFloat(a.stock) || 0; bv = parseFloat(b.stock) || 0; break
           case 'precio': av = parseFloat(a.precio) || 0; bv = parseFloat(b.precio) || 0; break
           case 'iva': av = parseFloat(a.iva) || 0; bv = parseFloat(b.iva) || 0; break
-          case 'estado': av = estadoRank(a); bv = estadoRank(b); break
           default: return 0
         }
         if (av < bv) return sortDir === 'asc' ? -1 : 1
@@ -105,7 +103,7 @@ export default function Inventario({ notify }) {
       })
     }
     return list
-  }, [productos, busqueda, categoriaFiltro, sortBy, sortDir, soloReponer])
+  }, [productos, busqueda, grupo, sortBy, sortDir, soloReponer])
 
   // Productos por reponer (bajo o sin stock, sin servicios) — para el botón y la lista
   const porReponer = useMemo(
@@ -135,8 +133,8 @@ export default function Inventario({ notify }) {
     }
   }
 
-  // Volver a la página 1 al cambiar la búsqueda/categoría/reposición
-  useEffect(() => { setPagina(1) }, [busqueda, categoriaFiltro, soloReponer])
+  // Volver a la página 1 al cambiar la búsqueda/grupo/reposición
+  useEffect(() => { setPagina(1) }, [busqueda, grupo, soloReponer])
   const totalPaginas = Math.max(1, Math.ceil(filtrados.length / PAGE_SIZE))
   const paginaActual = Math.min(pagina, totalPaginas)
   const paginados = filtrados.slice((paginaActual - 1) * PAGE_SIZE, paginaActual * PAGE_SIZE)
@@ -169,14 +167,9 @@ export default function Inventario({ notify }) {
   // "Sin stock" sobre el hace pensar que hay que reponerlo. Y un stock NEGATIVO no
   // es lo mismo que uno en cero: significa que se vendio mas de lo registrado, o
   // sea que el inventario esta descuadrado — comprar no lo arregla, cuadrarlo si.
-  const stockState = (p) => {
-    if (p.esServicio) return { tone: 'neutral', lbl: 'Servicio' }
-    const st = parseFloat(p.stock) || 0
-    if (st < 0) return { tone: 'danger', lbl: 'Descuadre' }
-    if (st === 0) return { tone: 'danger', lbl: 'Sin stock' }
-    if (st <= STOCK_BAJO_UMBRAL) return { tone: 'warning', lbl: 'Bajo' }
-    return { tone: 'success', lbl: 'OK' }
-  }
+  // stockState() se fue con la columna "Estado": su etiqueta (OK / Bajo / Sin
+  // stock / Descuadre) la dan ahora el color de la celda de Stock y los filtros
+  // de arriba. El orden por estado sigue existiendo vía estadoRank().
 
   if (loading && productos.length === 0) {
     return (
@@ -217,7 +210,12 @@ export default function Inventario({ notify }) {
       {error && productos.length === 0 && (
         <div style={{ padding: '12px 16px', marginBottom: 16, background: 'rgba(220,38,38,.06)', border: '1px solid rgba(220,38,38,.35)', borderRadius: 10, display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
           <span style={{ fontSize: 13.5, color: 'var(--red-700,#b91c1c)', flex: 1, minWidth: 200 }}>⚠ {error}</span>
-          <Button variant="outline" size="sm" onClick={() => cargar(true)} disabled={loading || refreshing}>Reintentar</Button>
+          {/* Con el token vencido, "Reintentar" era un boton al lado de un
+             mensaje que dice que reintentar no sirve. La accion que si renueva
+             la sesion es volver a cargar la app. */}
+          {errorEsToken
+            ? <Button variant="outline" size="sm" onClick={() => window.location.reload()}>Recargar</Button>
+            : <Button variant="outline" size="sm" onClick={() => cargar(true)} disabled={loading || refreshing}>Reintentar</Button>}
         </div>
       )}
 
@@ -231,17 +229,27 @@ export default function Inventario({ notify }) {
           nada. */}
       {!(error && productos.length === 0) && (
       <div className="statline">
+        {/* La cifra que encabezaba era "A reponer 2.996" — el 87% del catálogo.
+            Un número que abarca a casi todo no dice qué hacer. El que sí exige
+            actuar es el descuadre: 480 productos con stock por debajo de cero
+            significa que se vendió más de lo que había registrado, y eso no se
+            arregla comprando. Los otros dos grupos siguen ahí, debajo. */}
         <div className="statline__i">
-          <span className="eyebrow">A reponer</span>
-          {/* Mismo total que el botón "Por reponer" (los tres grupos hay que
-              comprarlos), pero el desglose separa los que están en negativo:
-              esos no son solo falta de stock, es inventario descuadrado. */}
-          <span className={`statline__v${(stats.sinStock + stats.descuadre + stats.stockBajo) === 0 ? ' is-zero' : ''}`} style={{ color: (stats.sinStock + stats.descuadre + stats.stockBajo) > 0 ? 'var(--red-700)' : undefined }}>
-            {(stats.sinStock + stats.descuadre + stats.stockBajo).toLocaleString('es-CO')}
+          <span className="eyebrow eyebrow--warn">Stock en negativo</span>
+          <span className={`statline__v${stats.descuadre === 0 ? ' is-zero' : ''}`} style={{ color: stats.descuadre > 0 ? 'var(--red-700)' : undefined }}>
+            {stats.descuadre.toLocaleString('es-CO')}
+          </span>
+          <span style={{ fontSize: 11.5, color: 'var(--text-3)' }}>
+            {stats.descuadre > 0 ? 'se vendieron sin existencia' : 'inventario cuadrado'}
+          </span>
+        </div>
+        <div className="statline__i">
+          <span className="eyebrow">Por comprar</span>
+          <span className={`statline__v${(stats.sinStock + stats.stockBajo) === 0 ? ' is-zero' : ''}`}>
+            {(stats.sinStock + stats.stockBajo).toLocaleString('es-CO')}
           </span>
           <span style={{ fontSize: 11.5, color: 'var(--text-3)' }}>
             {stats.sinStock.toLocaleString('es-CO')} agotados · {stats.stockBajo.toLocaleString('es-CO')} bajo mínimo
-            {stats.descuadre > 0 && <> · <strong style={{ color: 'var(--amber-600)' }}>{stats.descuadre.toLocaleString('es-CO')} en negativo</strong></>}
           </span>
         </div>
         <div className="statline__i">
@@ -261,7 +269,7 @@ export default function Inventario({ notify }) {
       <div className="card">
         <div className="card__h" style={{ gap: 12 }}>
           <h3>Productos ({filtrados.length})</h3>
-          <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-end', flexWrap: 'wrap', gap: 8 }}>
+          <div className="inv-filtros" style={{ flex: 1, justifyContent: 'flex-end' }}>
             {/* Búsqueda */}
             {/* Search bar iOS: relleno gris del sistema, sin borde, con botón de
                 limpiar cuando hay texto (antes tocaba borrar a mano). */}
@@ -281,11 +289,21 @@ export default function Inventario({ notify }) {
                 </button>
               )}
             </div>
-            {/* Filtro categorías */}
+            {/* Situación de stock. Reemplaza a los botones Cat-1..Cat-5: eran
+               ids sin traducir y 97% del catálogo caía en el primero, así que
+               tres de los cinco filtraban a 3 y 4 productos. Estos tres grupos
+               sí parten el inventario, y el primero —el descuadre— no tenía
+               forma de aislarse en ningún sitio. */}
             <div className="segctl">
-              {categorias.slice(0, 6).map(c => (
-                <button key={c} className={categoriaFiltro === c ? 'on' : ''} onClick={() => setCategoriaFiltro(c)} style={{ textTransform: 'capitalize' }}>
-                  {c === 'todas' ? 'Todas' : c}
+              {[
+                ['todos', 'Todos', productos.length],
+                ['negativo', 'En negativo', stats.descuadre],
+                ['agotado', 'Agotados', stats.sinStock],
+                ['bajo', 'Bajo mínimo', stats.stockBajo],
+              ].map(([k, lbl, n]) => (
+                <button key={k} className={grupo === k ? 'on' : ''} onClick={() => setGrupo(k)}
+                  title={k === 'negativo' ? 'Stock por debajo de cero: se vendió más de lo que había registrado' : undefined}>
+                  {lbl}{k !== 'todos' && n > 0 ? ` (${n.toLocaleString('es-CO')})` : ''}
                 </button>
               ))}
             </div>
@@ -313,13 +331,15 @@ export default function Inventario({ notify }) {
                 <line x1="12" y1="22.08" x2="12" y2="12"/>
               </svg>
               <p>{error && productos.length === 0
-                ? 'No se pudo cargar el catálogo. Reintenta arriba.'
+                ? (errorEsToken
+                    ? 'El catálogo no se pudo cargar: Cuentti rechazó la sesión.'
+                    : 'No se pudo cargar el catálogo. Reintenta arriba.')
                 : 'No se encontraron productos.'}</p>
             </div>
           </div>
         ) : (
           <div className="card__b card__b--flush">
-            <table className="tbl tbl--center tbl-cards tbl--sticky">
+            <table className="tbl tbl--center tbl-cards tbl--sticky inv-tabla">
               <thead>
                 <tr>
                   <th onClick={() => toggleSort('codigo')} style={{ cursor: 'pointer', userSelect: 'none' }}>
@@ -328,9 +348,11 @@ export default function Inventario({ notify }) {
                   <th onClick={() => toggleSort('nombre')} className="col-left" style={{ cursor: 'pointer', userSelect: 'none' }}>
                     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>Producto {sortIcon('nombre')}</span>
                   </th>
-                  <th onClick={() => toggleSort('categoria')} style={{ cursor: 'pointer', userSelect: 'none' }}>
-                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>Categoría {sortIcon('categoria')}</span>
-                  </th>
+                  {/* Se quitó "Categoría": 3.366 de los 3.460 productos son
+                      "Cat-1" (97%), y "Cat-1" no es un nombre sino el id de
+                      categoría de Cuentti sin traducir. Una columna que dice lo
+                      mismo en 97 de cada 100 filas, con un valor que además no
+                      significa nada para quien lo lee. */}
                   <th onClick={() => toggleSort('stock')} className="c-right" style={{ cursor: 'pointer', userSelect: 'none' }}>
                     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, justifyContent: 'flex-end' }}>Stock {sortIcon('stock')}</span>
                   </th>
@@ -346,14 +368,15 @@ export default function Inventario({ notify }) {
                   <th onClick={() => toggleSort('iva')} className="c-right" style={{ cursor: 'pointer', userSelect: 'none' }}>
                     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, justifyContent: 'flex-end' }}>IVA {sortIcon('iva')}</span>
                   </th>
-                  <th onClick={() => toggleSort('estado')} style={{ cursor: 'pointer', userSelect: 'none' }}>
-                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>Estado {sortIcon('estado')}</span>
-                  </th>
+                  {/* Se quitó "Estado" (OK / Bajo / Sin stock / Servicio): lo
+                      dice ya la columna Stock, que colorea el negativo en rojo y
+                      el bajo en ámbar, y ahora también los filtros de arriba.
+                      Era la columna que empujaba la tabla a 1.073px en un
+                      contenedor de 952 y aparecía tras una barra de scroll. */}
                 </tr>
               </thead>
               <tbody>
                 {paginados.map(p => {
-                  const s = stockState(p)
                   const baseCosto = parseFloat(p.costoBase) || 0
                   const costoIva = baseCosto > 0 ? baseCosto * (1 + (p.iva || 0) / 100) : 0
                   // Utilidad = MARGEN sobre el precio de venta (como Cuentti): (precio − costo) / precio, sin IVA.
@@ -366,7 +389,6 @@ export default function Inventario({ notify }) {
                     <tr key={p.id || p.codigo}>
                       <td className="c-mono" data-label="Referencia" style={{ color: 'var(--text-3)', fontSize: 11.5 }}>{p.codigo}</td>
                       <td className="c-name col-left">{p.nombre}</td>
-                      <td className="c-muted" data-label="Categoría" style={{ textTransform: 'capitalize' }}>{p.categoria}</td>
                       {/* Un servicio no tiene existencias: su "0" en rojo hacia creer
                           que estaba agotado. Se muestra en gris, sin alarma. */}
                       <td className="c-mono c-right" data-label="Stock" style={{
@@ -389,11 +411,6 @@ export default function Inventario({ notify }) {
                             : `${util.toFixed(0)}%`}
                       </td>
                       <td className="c-mono c-right c-muted" data-label="IVA">{p.iva}%</td>
-                      {/* Punto + texto (estilo macOS) en vez de pastilla: el estado
-                          acompaña, no compite con el nombre del producto. */}
-                      <td data-label="Estado">
-                        <span className={`st st--${s.tone}`}><i /> {s.lbl}</span>
-                      </td>
                     </tr>
                   )
                 })}

@@ -426,6 +426,13 @@ export function extraerCostoBase(obj) {
   return 0
 }
 
+// Motivo del ultimo fallo de inventario. Cuentti contesta sus errores con HTTP
+// 200, asi que sin esto la UI no puede distinguir "el catalogo esta vacio" de
+// "se vencio el token" — y son dos cosas que se resuelven distinto.
+let ultimoErrorInventario = null
+export function motivoFalloInventario() { return ultimoErrorInventario }
+export function esErrorDeToken(msg) { return /token/i.test(msg || '') }
+
 export async function cargarInventario(pagina = 0) {
   // Endpoint "Movil": trae el dato REAL y completo de cada producto, incluido el
   // costo de compra (campos precio_compra / costo, sin IVA) — necesario para mostrar
@@ -438,7 +445,20 @@ export async function cargarInventario(pagina = 0) {
   for (let intento = 0; intento < 2; intento++) {
     try {
       const data = await cuenttiRequest(path, 'GET', null, 45000)
+      // Cuentti responde los errores con HTTP 200 y el motivo en el cuerpo
+      // ({type:0, message:"Invalid Token3"}). Sin esta comprobacion, data.data
+      // era undefined, items quedaba en [] y la app lo leia como "no hay
+      // productos": el token vencido se presentaba como un catalogo vacio y el
+      // usuario se quedaba dandole a Reintentar sin saber que tenia que
+      // reconectar. Un error de credenciales tampoco se arregla reintentando,
+      // asi que corta el bucle en vez de gastar el segundo intento.
+      if (data && !Array.isArray(data) && (data.message || data.type === 0)) {
+        const err = new Error(data.message || 'Cuentti devolvio un error')
+        err.cuenttiMessage = data.message || ''
+        throw err
+      }
       const items = Array.isArray(data) ? data : (data?.data || [])
+      ultimoErrorInventario = null
       return items.map(p => {
         const precioSinIva = parseFloat(p.precio_venta || 0)
         const iva = parseFloat(p.valor_impuesto || 0)
@@ -467,7 +487,11 @@ export async function cargarInventario(pagina = 0) {
     }
   }
   console.warn('Cuentti cargarInventario fallo definitivo:', ultimoError?.message)
-  return null // null = fallo (distinto de [] = página vacía/fin). El caller aborta.
+  // null = fallo (distinto de [] = página vacía/fin). El caller aborta.
+  // El motivo viaja aparte para que la UI pueda decir QUE paso: hasta ahora se
+  // perdia aqui y arriba solo se sabia que la lista venia vacia.
+  ultimoErrorInventario = ultimoError?.message || 'Error desconocido'
+  return null
 }
 
 // Buscar producto por SKU o codigo de barras
@@ -533,7 +557,9 @@ export async function cargarInventarioCompleto() {
     // inventario completo en caché que guardar uno parcial (totales errados).
     if (items === null) {
       console.warn('[Inventario] carga abortada por fallo en página', pagina, '— se conserva la caché')
-      return []
+      // null, no []: un fallo y un catálogo vacío no son lo mismo, y el hook
+      // necesita poder decirlo con palabras distintas.
+      return null
     }
     if (!items.length) { seguir = false; break }
     todos.push(...items)
