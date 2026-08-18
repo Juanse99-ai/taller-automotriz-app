@@ -181,72 +181,22 @@ export default function Vehiculos({ vehiculos, clientes, trabajos = [], notify }
   // --- VISTA LISTA ---
   return (
     <div>
-      <div className="pagehd">
-        <div>
-          <h2>Vehículos</h2>
-        </div>
-      </div>
-
-      {/* KPI hero + 2 mini */}
-      <div className="kpi-grid" style={{ marginBottom: 24 }}>
-        <div className="kpi-hero" style={{ background: 'var(--bg-raised)', border: '1px solid var(--border)', borderRadius: 14, padding: '22px 26px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: 180 }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-            <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '.5px' }}>Total vehículos en BD</span>
-            <span style={{ fontFamily: 'var(--mono)', fontSize: 12, fontWeight: 700, color: 'var(--text-3)', background: 'var(--bg-subtle)', padding: '4px 10px', borderRadius: 999 }}>
-              {marcasUnicas} marcas
-            </span>
-          </div>
-          <div>
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: 14, flexWrap: 'wrap' }}>
-              <div style={{ fontFamily: 'var(--mono)', fontWeight: 700, fontSize: 'clamp(36px, 5.5vw, 56px)', letterSpacing: '-1.2px', lineHeight: 1, color: 'var(--text)' }}>
-                {totalVehiculos.toLocaleString('es-CO')}
-              </div>
-              <div style={{ fontSize: 14.5, color: 'var(--text-2)', fontWeight: 500 }}>
-                placas registradas
-              </div>
-            </div>
-            {totalVehiculos > 0 && (
-              <div style={{ fontSize: 13.5, color: 'var(--text-3)', marginTop: 8, fontWeight: 500 }}>
-                {conHistorial} con al menos un servicio registrado ({Math.round((conHistorial/totalVehiculos)*100)}%)
-              </div>
-            )}
+      {/* Las tres cifras eran una tarjeta hero gigante y dos mini: ~180px de alto
+          para tres numeros que no se accionan. Bajan a linea de apoyo, y el
+          buscador sale de su tarjeta propia y sube aqui. */}
+      <div className="hd-head">
+        <div className="hd-head__t">
+          <h1>Vehículos</h1>
+          <div className="hd-head__sub">
+            {totalVehiculos.toLocaleString('es-CO')} placas registradas · {conHistorial} con historial · {marcasUnicas} marcas únicas
           </div>
         </div>
-
-        <div style={{ display: 'grid', gridTemplateRows: '1fr 1fr', gap: 10 }}>
-          <div className="kpi-mini" style={{ background: 'var(--bg-raised)', border: '1px solid var(--border)', borderRadius: 12, padding: '14px 18px', display: 'flex', alignItems: 'center', gap: 14 }}>
-            <div className="kpi__ic green" style={{ width: 40, height: 40, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="2" width="6" height="4" rx="1"/><path d="M8 4H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-2"/></svg>
-            </div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '.4px' }}>Con historial</div>
-              <div style={{ fontFamily: 'var(--mono)', fontWeight: 700, fontSize: 26, color: 'var(--text)', lineHeight: 1.1, marginTop: 2 }}>{conHistorial}</div>
-            </div>
-          </div>
-
-          <div className="kpi-mini" style={{ background: 'var(--bg-raised)', border: '1px solid var(--border)', borderRadius: 12, padding: '14px 18px', display: 'flex', alignItems: 'center', gap: 14 }}>
-            <div className="kpi__ic amber" style={{ width: 40, height: 40, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M20.59 13.41 13.42 20.58a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
-            </div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '.4px' }}>Marcas únicas</div>
-              <div style={{ fontFamily: 'var(--mono)', fontWeight: 700, fontSize: 26, color: 'var(--text)', lineHeight: 1.1, marginTop: 2 }}>{marcasUnicas}</div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Busqueda */}
-      <div className="card" style={{ marginBottom: 16 }}>
-        <div className="card__b" style={{ padding: '12px 16px' }}>
-          <div className="field" style={{ marginBottom: 0 }}>
-            <input
-              className="input"
-              placeholder="Buscar por placa, marca o propietario..."
-              value={busqueda}
-              onChange={e => setBusqueda(e.target.value)}
-            />
-          </div>
+        <div className="hd-head__sp" />
+        <div className="hd-head__right">
+          <label className="hd-find" style={{ width: 330, background: 'var(--bg-raised)', border: '1px solid var(--border-input)' }}>
+            <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
+            <input placeholder="Buscar por placa, marca o propietario..." value={busqueda} onChange={e => setBusqueda(e.target.value)} />
+          </label>
         </div>
       </div>
 
@@ -268,10 +218,10 @@ export default function Vehiculos({ vehiculos, clientes, trabajos = [], notify }
                 <thead>
                   <tr>
                     <th>Placa</th>
+                    <th>Propietario</th>
                     <th>Marca</th>
                     <th>Modelo</th>
                     <th>Año</th>
-                    <th>Propietario</th>
                     <th>Visitas</th>
                     <th>Último servicio</th>
                     <th></th>
@@ -283,11 +233,18 @@ export default function Vehiculos({ vehiculos, clientes, trabajos = [], notify }
                     return (
                       <tr key={v.placa} style={{ cursor: 'pointer' }} onClick={() => seleccionar(v)}>
                         <td className="c-name" data-label="Placa"><span className="mono" style={{ fontWeight: 700 }}>{v.placa}</span></td>
-                        <td data-label="Marca">{v.marca || '--'}</td>
-                        <td data-label="Modelo">{v.modelo || '--'}</td>
-                        <td data-label="Año">{v.ano || '--'}</td>
                         <td data-label="Propietario">{nombrePropietario(v.cedulaPropietario)}</td>
-                        <td data-label="Visitas"><span className="badge badge-n">{(v.historial || []).length}</span></td>
+                        {/* El "--" de ficha incompleta se pinta apagado para que no
+                            compita con los que si tienen dato. */}
+                        <td data-label="Marca" className={v.marca ? undefined : 'hd-empty'}>{v.marca || '—'}</td>
+                        <td data-label="Modelo" className={v.modelo ? undefined : 'hd-empty'}>{v.modelo || '—'}</td>
+                        <td data-label="Año" className={v.ano ? undefined : 'hd-empty'}>{v.ano || '—'}</td>
+                        {/* Visitas en negrita solo cuando hay mas de una: es lo unico
+                            que distingue a un cliente que vuelve. En 0, apagado. */}
+                        <td data-label="Visitas" className="hd-n" style={{
+                          fontWeight: (v.historial || []).length > 1 ? 700 : 400,
+                          color: (v.historial || []).length === 0 ? 'var(--text-empty)' : (v.historial || []).length > 1 ? 'var(--text)' : 'var(--text-3)',
+                        }}>{(v.historial || []).length}</td>
                         <td data-label="Último servicio" style={{ fontSize: 12, color: 'var(--text-3)' }}>
                           {ultimo ? fmtDate(ultimo.fecha) : fmtDate(v.fechaUltimoServicio)}
                         </td>
