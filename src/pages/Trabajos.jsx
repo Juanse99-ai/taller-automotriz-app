@@ -668,25 +668,43 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
         <div className="trab-cockpit">
           <div className="card trab-cockpit__list" style={{ padding: 0 }}>
             <div className="card__h"><span style={{ fontWeight: 600, fontSize: 14 }}>{filtered.length} trabajo{filtered.length !== 1 ? 's' : ''}</span></div>
-            <div className="trab-cklist">
-              {filtered.map(t => {
-                const dias = t.fecha ? Math.floor((Date.now() - new Date(t.fecha).getTime()) / 86400000) : 0
-                const estancado = t.estado !== ESTADOS.COMPLETADO && t.estado !== ESTADOS.CANCELADO && dias >= DIAS_ESTANCADO
-                return (
-                  <button key={t.id} type="button" className={`trab-ckrow${t.id === selId ? ' sel' : ''}`} onClick={() => setSelId(t.id)}>
-                    <span className="r1">
-                      <span className="ot">{t.otCodigo || '—'}</span>
-                      <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                        {estancado && <Badge tone="d" style={{ fontSize: 12, padding: '1px 6px' }}>{dias}d</Badge>}
+            {/* Tabla densa: una orden = UNA fila de 34px. Antes cada orden
+                ocupaba tres lineas (OT / placa+cliente / total) y en 1280x800
+                entraban ~10; asi entran ~30. Las seis columnas son los seis
+                datos por los que se reconoce una orden — no se quito ninguno,
+                los tres que estaban apilados ahora estan en su columna, y se
+                sumaron Tecnico y Estado que antes obligaban a abrir el detalle. */}
+            <table className="tbl trab-tabla">
+              <thead>
+                <tr>
+                  <th>OT</th>
+                  <th>Placa</th>
+                  <th>Cliente</th>
+                  <th>Estado</th>
+                  <th>Tecnico</th>
+                  <th className="c-right">Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map(t => {
+                  const dias = t.fecha ? Math.floor((Date.now() - new Date(t.fecha).getTime()) / 86400000) : 0
+                  const estancado = t.estado !== ESTADOS.COMPLETADO && t.estado !== ESTADOS.CANCELADO && dias >= DIAS_ESTANCADO
+                  return (
+                    <tr key={t.id} className={t.id === selId ? 'sel' : ''} onClick={() => setSelId(t.id)}>
+                      <td data-label="OT" className="c-ot">{t.otCodigo || '—'}</td>
+                      <td data-label="Placa"><strong>{t.placa}</strong></td>
+                      <td data-label="Cliente" className="c-cliente">{t.cliente || '—'}</td>
+                      <td data-label="Estado">
                         <span className={`badge ${estadoBadge(t.estado)}`}>{t.estado}</span>
-                      </span>
-                    </span>
-                    <span className="r2"><strong>{t.placa}</strong> · {t.cliente || '—'}</span>
-                    <span className="r3">{fmt(t.total)}</span>
-                  </button>
-                )
-              })}
-            </div>
+                        {estancado && <Badge tone="d" style={{ marginLeft: 5 }}>{dias}d</Badge>}
+                      </td>
+                      <td data-label="Tecnico" className="c-muted">{tecNombre(t.tecnicoId) || '—'}</td>
+                      <td data-label="Total" className="c-mono">{fmt(t.total)}</td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
           </div>
           <aside className="trab-cockpit__detail">
             {selTrabajo ? (

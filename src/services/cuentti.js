@@ -848,6 +848,27 @@ export async function agregarPagoTransacion(pago) {
   return cuenttiRequest(CONFIG.paths.facturas.agregarPago, 'POST', body)
 }
 
+// ¿Cuánto queda debiendo una factura en Cuentti? Devuelve null si no se pudo
+// saber (Cuentti caído, respuesta rara): null NO significa "sin deuda", y quien
+// llame tiene que tratarlo como "no sé", nunca como "ya está pagada".
+//
+// Existe para poder reintentar el registro de un pago SIN riesgo de cobrarlo
+// dos veces: si la primera llamada entró pero se perdió la respuesta, aquí se
+// ve el abono ya aplicado y el reintento se cancela.
+export async function consultarPendiente(idTransacion) {
+  if (!idTransacion) return null
+  try {
+    const path = `/jServerj4ErpPro/com/j4ErpPro/server/transacion/consultarTransacionIdExterno/${encodeURIComponent(idTransacion)}`
+    const d = await cuenttiRequest(path)
+    const enc = ((Array.isArray(d) ? d : []).find(x => x.consulta === 'Encabezados') || {}).resultado || []
+    const e = enc[0]
+    if (!e) return null
+    return Math.round(Number(e.total_deuda || 0) - Number(e.total_abono || 0))
+  } catch {
+    return null
+  }
+}
+
 // Obtener URL del documento/factura (QR/PDF)
 export async function obtenerUrlDocumento(idTransacion) {
   if (!idTransacion) return null

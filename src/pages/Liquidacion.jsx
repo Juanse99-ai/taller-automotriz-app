@@ -1555,12 +1555,12 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
       {/* PASO 1 — a quién se le liquida */}
       <div className="card">
         <div className="card__h">
-          <h3>Paso 1 · ¿A quién le liquidas?</h3>
+          <h3>Paso 1 · Técnico</h3>
           <span style={{ fontSize: 13, color: 'var(--text-3)' }}>{tecnicosConPendientes.length} por liquidar</span>
         </div>
         <div className="card__b card__b--flush">
         {resumenTecnicos.length === 0 ? (
-          <div style={{ padding: '22px', fontSize: 13.5, color: 'var(--text-3)' }}>No hay técnicos con trabajos pendientes de liquidar.</div>
+          <div style={{ padding: '22px', fontSize: 14.5, color: 'var(--text-2)' }}>No hay técnicos con trabajos pendientes de liquidar.</div>
         ) : tecnicosConPendientes.map((t, i) => {
           const activo = tecnicoSel === String(t.id)
           return (
@@ -1576,7 +1576,7 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontWeight: 700, fontSize: 14.5, color: activo ? '#fff' : 'var(--text)', display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'wrap' }}>
                   {t.nombre.split(' ').slice(0, 2).join(' ')}
-                  {t.activo === false && <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.4px', color: activo ? '#c6d2ea' : 'var(--text-3)', border: `1px solid ${activo ? 'rgba(255,255,255,.3)' : 'var(--border-strong)'}`, borderRadius: 999, padding: '1px 7px' }}>Inactivo</span>}
+                  {t.activo === false && <span style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.4px', color: activo ? '#c6d2ea' : 'var(--text-3)', border: `1px solid ${activo ? 'rgba(255,255,255,.3)' : 'var(--border-strong)'}`, borderRadius: 999, padding: '1px 7px' }}>Inactivo</span>}
                 </div>
                 <div style={{ fontSize: 12, color: activo ? '#9fb0d0' : 'var(--text-3)', marginTop: 1 }}>
                   {t.pendientes} OT{t.pendientes !== 1 ? 's' : ''}{t.especialidad ? ` · ${t.especialidad}` : ''}
@@ -1586,7 +1586,7 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
               </div>
               <div style={{ textAlign: 'right', flexShrink: 0 }}>
                 <div className="mono" style={{ fontSize: 16.5, fontWeight: 700, color: activo ? '#fff' : (t.neto > 0 ? 'var(--green-700)' : 'var(--text-3)'), lineHeight: 1.1 }}>{t.pendientes > 0 ? fmt(t.neto) : '—'}</div>
-                <div style={{ fontSize: 10.5, color: activo ? '#9fb0d0' : 'var(--text-3)', marginTop: 1 }}>{t.pendientes > 0 ? 'neto' : 'sin pendientes'}</div>
+                <div style={{ fontSize: 12, color: activo ? '#9fb0d0' : 'var(--text-3)', marginTop: 1 }}>{t.pendientes > 0 ? 'neto' : 'sin pendientes'}</div>
               </div>
             </button>
           )
@@ -1596,7 +1596,7 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
         {tecnicosSinPendientes.length > 0 && (
           <div style={{ borderTop: '1px solid var(--border)' }}>
             <Button variant="ghost" size="sm" onClick={() => setVerInactivos(v => !v)}
-              style={{ fontSize: 12, padding: '9px 16px', color: 'var(--text-3)', width: '100%', justifyContent: 'flex-start' }}>
+              style={{ fontSize: 13.5, padding: '11px 16px', color: 'var(--text-2)', width: '100%', justifyContent: 'flex-start' }}>
               {verInactivos ? '▾' : '▸'} {tecnicosSinPendientes.length} técnico{tecnicosSinPendientes.length !== 1 ? 's' : ''} sin nada por liquidar
             </Button>
             {/* Clicables aunque no tengan OTs: si les quedó un aporte o un diario
@@ -1654,12 +1654,12 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
                   style={{ transform: colapso.trabajos ? 'rotate(-90deg)' : 'rotate(0deg)', transition: 'transform 200ms var(--ease-out)', flexShrink: 0, color: 'var(--text-3)' }}>
                   <polyline points="6 9 12 15 18 9"/>
                 </svg>
-                Paso 2 · ¿Qué trabajos le pagas?
+                Paso 2 · Trabajos por liquidar
               </h3>
               <div style={{ display: 'flex', gap: 8, alignItems: 'center' }} onClick={e => e.stopPropagation()}>
                 {cantSeleccionados > 0
                   ? <span className="count">{cantSeleccionados} de {tecTrabajos.length}</span>
-                  : !colapso.trabajos && <span style={{ fontSize: 13, color: 'var(--text-3)' }}>Marca los que vas a liquidar</span>}
+                  : !colapso.trabajos && <span style={{ fontSize: 13.5, color: 'var(--text-2)' }}>Seleccione los trabajos a liquidar</span>}
                 {!colapso.trabajos && (
                   <Button variant="outline" size="sm" onClick={() => seleccionarTodos(tecTrabajos.map(t => t.id))}>
                     {tecTrabajos.length > 0 && tecTrabajos.every(t => seleccionados[t.id]) ? 'Deseleccionar' : 'Todos'}
@@ -1727,7 +1727,7 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
                             {!esComp ? (
                               <button type="button" title="Este trabajo lo hicieron dos técnicos: el 40% se parte 20/20"
                                 onClick={() => toggleCompartidoSeguro(t.id)}
-                                style={{ font: 'inherit', fontSize: 11.5, color: 'var(--text-4)', background: 'none', border: '1px dashed var(--border-strong)', borderRadius: 999, padding: '3px 11px', cursor: 'pointer' }}>
+                                style={{ font: 'inherit', fontSize: 12.5, color: 'var(--text-3)', background: 'none', border: '1px dashed var(--border-strong)', borderRadius: 999, padding: '3px 11px', cursor: 'pointer' }}>
                                 Compartir
                               </button>
                             ) : (
@@ -1763,7 +1763,7 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
                                       ))}
                                     </select>
                                     <button type="button" onClick={() => toggleCompartidoSeguro(t.id)}
-                                      style={{ font: 'inherit', fontSize: 11, color: 'var(--text-3)', background: 'none', border: 'none', padding: 0, cursor: 'pointer', textDecoration: 'underline' }}>
+                                      style={{ font: 'inherit', fontSize: 12.5, color: 'var(--text-3)', background: 'none', border: 'none', padding: 0, cursor: 'pointer', textDecoration: 'underline' }}>
                                       Ya no es compartido
                                     </button>
                                   </>
@@ -1773,11 +1773,11 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
                           </td>
                           <td className="c-mono c-right" data-label="Mano de obra" style={mano === 0 ? { color: 'var(--red-600)', fontWeight: 700 } : undefined}>
                             {fmt(mano)}
-                            {mano === 0 && <span style={{ display: 'block', fontSize: 10, color: 'var(--red-600)', fontWeight: 600 }}>sin servicios</span>}
+                            {mano === 0 && <span style={{ display: 'block', fontSize: 12, color: 'var(--red-600)', fontWeight: 600 }}>sin servicios</span>}
                           </td>
                           <td className="c-mono c-right" data-label="Comisión" style={{ color: 'var(--green-600)', fontWeight: 600 }}>
                             {fmt(Math.round(com))}
-                            {esComp && <span style={{ display: 'block', fontSize: 10, color: 'var(--text-3)', fontWeight: 500 }}>la mitad</span>}
+                            {esComp && <span style={{ display: 'block', fontSize: 12, color: 'var(--text-3)', fontWeight: 500 }}>la mitad</span>}
                           </td>
                         </tr>
                       )
@@ -1817,7 +1817,7 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
                       </div>
                       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', justifyContent: 'center' }}>
                         {tecMovs.map(m => (
-                          <Button key={m.id} variant="ghost" size="sm" style={{ fontSize: 11.5, color: 'var(--text-3)' }}
+                          <Button key={m.id} variant="ghost" size="sm" style={{ fontSize: 12.5, color: 'var(--text-3)' }}
                             onClick={() => setDialog({
                               title: 'Eliminar movimiento',
                               lead: `${tipoLabel(m.tipo)} · ${fmt(m.monto)} · ${fechaCorta(m.fecha)}`,
@@ -1878,7 +1878,7 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
                             <span className="liq-aj__val mono" style={{ color: marcada ? 'var(--amber-700)' : 'var(--text-3)' }}>
                               {marcada ? '− ' : ''}{fmt(m.restante)}
                               {m.restante !== Math.round(parseFloat(m.monto) || 0) && (
-                                <span style={{ fontWeight: 500, fontSize: 11.5, color: 'var(--text-4)' }}> de {fmt(m.monto)}</span>
+                                <span style={{ fontWeight: 500, fontSize: 12.5, color: 'var(--text-3)' }}> de {fmt(m.monto)}</span>
                               )}
                             </span>
                             <span style={{ width: 28, display: 'inline-flex', justifyContent: 'center', flexShrink: 0 }}>
@@ -1945,7 +1945,7 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
                     <span className="liq-aj__val mono" style={{ color: marcada ? 'var(--amber-700)' : 'var(--text-3)' }}>
                       {marcada ? '− ' : ''}{fmt(m.restante)}
                       {m.restante !== Math.round(parseFloat(m.monto) || 0) && (
-                        <span style={{ fontWeight: 500, fontSize: 11.5, color: 'var(--text-4)' }}> de {fmt(m.monto)}</span>
+                        <span style={{ fontWeight: 500, fontSize: 12.5, color: 'var(--text-3)' }}> de {fmt(m.monto)}</span>
                       )}
                     </span>
                     {/* El control va en el MISMO hueco derecho que la × de los aportes

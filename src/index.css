@@ -1342,3 +1342,15 @@ tbody tr:active{background:var(--fill-2)}
 .trab-filtros__q{flex:1 1 220px;min-width:0}
 .trab-filtros__tec{flex:0 1 200px}
 .trab-filtros .input{height:var(--ctl-h);font-size:var(--fs-base)}
+
+/* === Trabajos: tabla densa ===
+   La fila entera es clicable (selecciona y llena el panel de detalle). La
+   seleccion se marca con el tinte del acento, no con un borde de color: un
+   borde lateral desplaza el texto y ensucia la columna. */
+.trab-tabla tbody tr{cursor:pointer}
+.trab-tabla tbody tr.sel{background:var(--accent-soft)}
+.trab-tabla tbody tr.sel:hover{background:var(--accent-soft-2)}
+.trab-tabla .c-ot{font-family:var(--mono);font-weight:650;color:var(--primary);white-space:nowrap}
+/* El cliente es el unico campo de largo impredecible: se corta el, no la fila. */
+.trab-tabla .c-cliente{max-width:1px;width:99%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.trab-tabla thead th:last-child,.trab-tabla tbody td:last-child{text-align:right}

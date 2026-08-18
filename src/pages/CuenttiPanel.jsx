@@ -7,6 +7,7 @@ import {
   buildFacturaPayload,
   emitirFacturaElectronica,
   agregarPagoTransacion,
+  consultarPendiente,
   obtenerUrlDocumento,
   grabarProductoMovil,
   getCuenttiDebugHeaders,
@@ -468,21 +469,40 @@ export default function CuenttiPanel({ trabajos, actualizarTrabajo, notify, trab
         // caja). Se paga el total EXACTO de la factura (payload.total_neto) para que
         // quede pagada sin saldo por redondeo.
         if (esPagoInmediato) {
-          try {
-            await agregarPagoTransacion({
-              idTransacion: txId.toString(),
-              valor: payload.total_neto,
-              idMedioPago: metodoPago,
-              idBanco,
-              // Mismo criterio que buildFacturaPayload: NUNCA el id local de la
-              // app (trabajo.clienteId) — Cuentti lo tomaba como suyo y el recibo
-              // quedaba a nombre de otra persona. Solo un id que venga de Cuentti.
-              idCliente: trabajo.cuenttiId || undefined,
-              nota: `OT ${trabajo.otCodigo || trabajo.id}`,
-            })
-            pagoOk = true
-          } catch (err) {
-            notify('Factura creada, pero el pago no entró a caja. Regístralo en "Pago / Abono".', 'error')
+          const datosPago = {
+            idTransacion: txId.toString(),
+            valor: payload.total_neto,
+            idMedioPago: metodoPago,
+            idBanco,
+            // Mismo criterio que buildFacturaPayload: NUNCA el id local de la
+            // app (trabajo.clienteId) — Cuentti lo tomaba como suyo y el recibo
+            // quedaba a nombre de otra persona. Solo un id que venga de Cuentti.
+            idCliente: trabajo.cuenttiId || undefined,
+            nota: `OT ${trabajo.otCodigo || trabajo.id}`,
+          }
+          // La factura ya existe y quedó A CRÉDITO a propósito (solo este paso
+          // genera el recibo de caja). Si se pierde, el cliente aparece en
+          // Cuentti debiendo una plata que YA pagó — le pasó a la OT-0143, que
+          // estuvo 10 días como deuda de $65.000. Un corte de red de un segundo
+          // no puede costar eso, así que se reintenta.
+          //
+          // Antes de cada reintento se consulta el saldo: si el intento anterior
+          // sí entró y solo se perdió la respuesta, el abono ya está aplicado y
+          // repetirlo dejaría la factura pagada dos veces. Ante la duda
+          // (consulta fallida = null), NO se reintenta.
+          for (let intento = 1; intento <= 3 && !pagoOk; intento++) {
+            try {
+              await agregarPagoTransacion(datosPago)
+              pagoOk = true
+            } catch (err) {
+              const pendiente = await consultarPendiente(txId)
+              if (pendiente !== null && pendiente <= 1) { pagoOk = true; break } // sí había entrado
+              if (pendiente === null || intento === 3) {
+                notify(`Factura #${txId} creada, pero el pago NO entró: en Cuentti queda como deuda del cliente. Regístralo en "Pago / Abono".`, 'error')
+                break
+              }
+              await new Promise(r => setTimeout(r, intento * 1200))
+            }
           }
         }
         // Marcar trabajo como facturado (anti-duplicado entre dispositivos)
