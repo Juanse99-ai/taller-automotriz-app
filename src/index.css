@@ -1432,3 +1432,29 @@ tbody tr:active{background:var(--fill-2)}
   .tbl.tbl-cards.trab-movil tbody td.td-actions{display:flex;justify-content:flex-end;
     padding-top:0;margin-top:0;border-top:none;text-align:right}
 }
+
+/* === Detalle de una orden: grupos ===
+   Sin tarjetas anidadas: la jerarquia la dan el peso y una linea de separacion.
+   Etiqueta a la izquierda en gris, valor a la derecha; asi la columna de
+   valores se lee en vertical de un vistazo. */
+.det-grupo{margin:12px 0 0;padding-top:10px;border-top:1px solid var(--border)}
+.det-grupo__t{font-size:var(--fs-xs);font-weight:650;color:var(--text-3);margin-bottom:5px}
+.det-fila{display:flex;justify-content:space-between;gap:12px;padding:2px 0;font-size:var(--fs-sm)}
+.det-fila>span:first-child{color:var(--text-3);flex-shrink:0}
+.det-fila>span:last-child{color:var(--text);text-align:right;font-weight:500;min-width:0;overflow-wrap:anywhere}
+
+/* Plegado honesto: la etiqueta y el contador se ven SIEMPRE, abierto o cerrado.
+   Solo se pliega lo que se llena poco (recepcion 44%, mantenimiento 2%). */
+.det-fold{margin-top:12px;padding-top:10px;border-top:1px solid var(--border)}
+.det-fold>summary{display:flex;align-items:center;gap:7px;cursor:pointer;list-style:none;
+  font-size:var(--fs-xs);font-weight:650;color:var(--text-3);padding:2px 0}
+.det-fold>summary::-webkit-details-marker{display:none}
+.det-fold>summary::before{content:"▸";color:var(--text-4);font-size:11px}
+.det-fold[open]>summary::before{content:"▾"}
+.det-fold>summary:hover{color:var(--text-2)}
+.det-fold__n{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--text-3);
+  background:var(--bg-subtle);border:1px solid var(--border);border-radius:999px;padding:0 6px}
+.det-fold__in{padding-top:4px}
+/* El nombre del tecnico partia en dos lineas ("Pedro / Barraza") y estiraba la
+   fila por encima de los 34px, rompiendo la densidad de toda la tabla. */
+.trab-tabla td[data-label="Tecnico"]{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:130px}

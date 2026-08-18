@@ -776,6 +776,76 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
                       ))}
                     </div>
                   )}
+                  {/* ===== GRUPOS DEL DETALLE =====
+                      Ordenados por CUANDO se usan en el taller, no por como
+                      estan en la base de datos. Lo que se llena siempre queda
+                      abierto; lo excepcional se pliega, pero con su etiqueta y
+                      su contador a la vista, nunca escondido.
+
+                      Un campo opcional sin valor NO se pinta aqui: esto es la
+                      vista de consulta. En el formulario sigue apareciendo para
+                      poder llenarlo.
+
+                      Porcentajes medidos sobre las 153 ordenes reales. */}
+
+                  {/* VEHICULO — 58% marca/modelo, 88% anio. Antes habia que abrir
+                      el formulario de edicion para ver el kilometraje. */}
+                  {(() => {
+                    const campos = [
+                      ['Marca', selTrabajo.marca], ['Modelo', selTrabajo.modelo],
+                      ['Año', selTrabajo.ano], ['Cilindraje', selTrabajo.cilindraje],
+                      ['Kilometraje', selTrabajo.kilometraje ? `${Number(selTrabajo.kilometraje).toLocaleString('es-CO')} km` : ''],
+                    ].filter(([, v]) => v)
+                    if (!campos.length) return null
+                    return (
+                      <div className="det-grupo">
+                        <div className="det-grupo__t">Vehículo</div>
+                        {campos.map(([k, v]) => (
+                          <div className="det-fila" key={k}><span>{k}</span><span>{v}</span></div>
+                        ))}
+                      </div>
+                    )
+                  })()}
+
+                  {/* RECEPCION — 44%. Plegado: se llena menos de la mitad de las veces. */}
+                  {(ingresoTieneAlgo(selTrabajo.ingreso) || (selTrabajo.evidenciasIngreso || []).length > 0) && (
+                    <details className="det-fold">
+                      <summary>
+                        Recepción
+                        <span className="det-fold__n">
+                          {(selTrabajo.ingreso?.inventario || []).length + ((selTrabajo.evidenciasIngreso || []).length)}
+                        </span>
+                      </summary>
+                      <div className="det-fold__in">
+                        {selTrabajo.ingreso?.combustible != null && (
+                          <div className="det-fila"><span>Combustible</span><span>{etiquetaCombustible(selTrabajo.ingreso.combustible)}</span></div>
+                        )}
+                        {selTrabajo.ingreso?.estado && (
+                          <div className="det-fila"><span>Estado</span><span>{selTrabajo.ingreso.estado}</span></div>
+                        )}
+                        {(selTrabajo.ingreso?.inventario || []).length > 0 && (
+                          <div className="det-fila"><span>Recibido</span>
+                            <span>{selTrabajo.ingreso.inventario.map(labelInventario).join(', ')}</span></div>
+                        )}
+                        {(selTrabajo.evidenciasIngreso || []).length > 0 && (
+                          <div className="det-fila"><span>Fotos</span><span>{selTrabajo.evidenciasIngreso.length}</span></div>
+                        )}
+                      </div>
+                    </details>
+                  )}
+
+                  {/* MANTENIMIENTO — 2%. Casi nunca se llena, asi que va plegado. */}
+                  {(selTrabajo.tipoAceite || selTrabajo.proximoKm || selTrabajo.proximaVisita) && (
+                    <details className="det-fold">
+                      <summary>Próximo mantenimiento</summary>
+                      <div className="det-fold__in">
+                        {selTrabajo.tipoAceite && <div className="det-fila"><span>Aceite</span><span>{selTrabajo.tipoAceite}</span></div>}
+                        {selTrabajo.proximoKm && <div className="det-fila"><span>Próximo km</span><span>{Number(selTrabajo.proximoKm).toLocaleString('es-CO')} km</span></div>}
+                        {selTrabajo.proximaVisita && <div className="det-fila"><span>Próxima visita</span><span>{fmtDate(selTrabajo.proximaVisita)}</span></div>}
+                      </div>
+                    </details>
+                  )}
+
                   {/* Puente al cobro: sin esto había que ir a "Cuentti" a mano y
                       buscar la OT en un selector, y nadie sabía que ahí se cobra. */}
                   {onAutoFacturar && estadoCobro(selTrabajo)?.porCobrar && (
