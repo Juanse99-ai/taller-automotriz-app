@@ -1528,3 +1528,21 @@ tbody tr:active{background:var(--fill-2)}
   box-shadow:-1px 0 0 var(--border)}
 .trab-tabla tbody tr.sel td:nth-child(6){background:#eef1f8}
 .trab-tabla tbody tr:hover td:nth-child(6){background:var(--bg-subtle)}
+
+/* Recepción · foto de evidencia con su nota. La nota vivía en un paso propio
+   del asistente (que se quitó: 3 fotos en toda la base); aquí sigue siendo el
+   dato que sostiene un reclamo, junto a la miniatura que describe. */
+.rc-foto{display:flex;align-items:center;gap:10px}
+.rc-foto+.rc-foto{margin-top:8px}
+.rc-foto .rc-thumb{width:56px;flex-shrink:0}
+.rc-foto .input{flex:1;min-width:0;height:34px;min-height:34px;font-size:12.5px;padding:2px 9px}
+
+/* Nueva orden · carril de pasos en celular. El carril tiene overflow-x:auto, así
+   que el tercer paso ("Confirmar") quedaba cortado en el borde y parecía roto:
+   con tres pasos cortos caben los tres si se aprietan las cajas y se deja que
+   el separador ceda. Sigue habiendo scroll como red de seguridad. */
+@media(max-width:600px){
+  .rc-stepper{gap:4px;padding:9px 10px}
+  .rc-step{padding:5px 6px;gap:6px;font-size:12.5px}
+  .rc-step__sep{min-width:10px;flex-shrink:1}
+}
