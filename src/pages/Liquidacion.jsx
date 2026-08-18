@@ -1290,21 +1290,20 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
 
   // ===== Tabs: Comisiones | Estado de cuenta (segmented control unificado) =====
   const tabsLiq = (
-    <div className="segctl" role="tablist" style={{ marginBottom: 22 }}>
-      <button type="button" role="tab" className={vistaLiq === 'comisiones' ? 'on' : ''} aria-selected={vistaLiq === 'comisiones'} onClick={() => setVistaLiq('comisiones')}>Comisiones</button>
-      <button type="button" role="tab" className={vistaLiq === 'cuentas' ? 'on' : ''} aria-selected={vistaLiq === 'cuentas'} onClick={() => setVistaLiq('cuentas')}>Estado de cuenta</button>
+    <div className="hd-seg" role="tablist">
+      <button type="button" role="tab" className={`hd-seg__i${vistaLiq === 'comisiones' ? ' on' : ''}`} aria-selected={vistaLiq === 'comisiones'} onClick={() => setVistaLiq('comisiones')}>Comisiones</button>
+      <button type="button" role="tab" className={`hd-seg__i${vistaLiq === 'cuentas' ? ' on' : ''}`} aria-selected={vistaLiq === 'cuentas'} onClick={() => setVistaLiq('cuentas')}>Estado de cuenta</button>
     </div>
   )
 
   if (vistaLiq === 'cuentas') {
     return (
       <div>
-        <div className="pagehd">
-          <div>
-            <h2>Estado de cuenta · préstamos</h2>
-          </div>
+        <div className="hd-head">
+          <div className="hd-head__t"><h1>Estado de cuenta · préstamos</h1></div>
+          <div className="hd-head__sp" />
+          <div className="hd-head__right">{tabsLiq}</div>
         </div>
-        {tabsLiq}
         {/* "Cuentas por técnico" vivía en la pantalla de Comisiones, donde no
            ayudaba a pagar y estorbaba. Aquí sí es su sitio: es el resumen de la
            cuenta de cada técnico. */}
@@ -1449,17 +1448,18 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
         .liq-filtros{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; padding:0 0 14px; }
         .liq-filtros .input{ width:auto; height:32px; min-height:32px; font-size:12.5px; padding:2px 9px; }
       `}</style>
-      <div className="pagehd">
-        <div>
-          <h2>Liquidación de comisiones</h2>
-        </div>
-        <div className="actions">
-          {/* Mientras liquidas, el historial está oculto: dejar el botón haría
-             que un clic no hiciera nada visible. */}
+      {/* Solo titulo, pestañas y accion: la cifra de cierre ya la encabeza el
+          bloque de abajo, con su desglose. Duplicarla aqui la ponia dos veces en
+          la misma pantalla — y con distinto conteo de OT, que es peor que no
+          ponerla. */}
+      <div className="hd-head">
+        <div className="hd-head__t"><h1>Liquidación de comisiones</h1></div>
+        <div className="hd-head__sp" />
+        <div className="hd-head__right">
+          {tabsLiq}
           {!tecData && <Button variant="outline" onClick={() => setVerHistorial(!verHistorial)}>{verHistorial ? 'Ocultar historial' : 'Ver historial'}</Button>}
         </div>
       </div>
-      {tabsLiq}
 
       {/* El aviso de "sin conexión" ya lo pone App.jsx para toda la app; repetirlo
          aquí sería ruido. Lo que faltaba de verdad es que el BOTÓN de pagar se
@@ -2023,14 +2023,22 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
               {/* NETO — justo debajo de los ajustes que lo formaron. Ya estamos
                  dentro de la rama "hay selección" del ternario de arriba: el
                  estado vacío se resuelve al inicio del card__b. */}
-                <div style={{ marginTop: 24, marginBottom: 24 }}>
-                  {totalSeleccion.cargosEfectivos !== 0 && (
-                    <div className="liq-line"><span>Aportes / descuentos</span><span className="liq-line__v mono" style={{ color: 'var(--amber-700)', fontWeight: 700 }}>{totalSeleccion.cargosEfectivos >= 0 ? '− ' : '+ '}{fmt(Math.abs(totalSeleccion.cargosEfectivos))}</span><span className="liq-slot" aria-hidden="true" /></div>
-                  )}
-                  <div className="liq-neto__tot">
-                    <span className="l">Neto a pagar</span>
-                    <span className="v mono" style={{ color: totalSeleccion.neto >= 0 ? 'var(--green-700)' : 'var(--red-700)' }}>{fmt(totalSeleccion.neto)}</span>
-                    <span className="liq-slot" aria-hidden="true" />
+                {/* El neto y lo que lo forma, juntos. Antes la comision, los
+                    descuentos y el neto eran tres lineas del mismo peso: habia que
+                    reconstruir la resta con la vista para saber por que se paga eso. */}
+                <div className="hd-neto">
+                  <div className="hd-neto__l">NETO A PAGAR HOY</div>
+                  <div className="hd-neto__v">{fmt(totalSeleccion.neto)}</div>
+                  <div className="hd-neto__rows">
+                    <div className="hd-neto__r"><span>Comisión de lo marcado</span><span>{fmt(totalSeleccion.comision)}</span></div>
+                    {totalSeleccion.cargosEfectivos !== 0 && (
+                      <div className={`hd-neto__r${totalSeleccion.cargosEfectivos >= 0 ? ' hd-neto__r--neg' : ''}`}>
+                        <span>{totalSeleccion.cargosEfectivos >= 0 ? 'Menos aportes y descuentos' : 'Más ajustes a favor'}</span>
+                        <span>{totalSeleccion.cargosEfectivos >= 0 ? '− ' : '+ '}{fmt(Math.abs(totalSeleccion.cargosEfectivos))}</span>
+                      </div>
+                    )}
+                    <div className="hd-neto__sep" />
+                    <div className="hd-neto__r"><span>{cantSeleccionados} trabajo{cantSeleccionados !== 1 ? 's' : ''} marcado{cantSeleccionados !== 1 ? 's' : ''}</span><span>{fmt(totalSeleccion.manoObra)} mano de obra</span></div>
                   </div>
                 </div>
                 {totalSeleccion.cargos > 0 && (

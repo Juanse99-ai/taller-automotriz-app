@@ -1627,3 +1627,16 @@ tbody tr:active{background:var(--fill-2)}
   .hd-seg{width:100%}
   .hd-seg__i{flex:1;justify-content:center;padding:0 8px}
 }
+
+/* --- Tarjeta navy del neto (Liquidación, Cuentti, Dashboard) ---
+   El handoff reserva el navy para UNA cifra por pantalla: aquella sobre la
+   que se aprieta un botón. Aquí es lo que se le entrega al técnico hoy. */
+.hd-neto{background:var(--navy);border-radius:18px;padding:16px 17px;margin:16px 0}
+.hd-neto__l{font-size:10px;line-height:1;font-weight:600;letter-spacing:.9px;color:rgba(255,255,255,.55)}
+.hd-neto__v{font-size:32px;line-height:1.05;font-weight:700;color:#fff;margin-top:8px;font-variant-numeric:tabular-nums}
+.hd-neto__rows{display:flex;flex-direction:column;gap:8px;margin-top:13px}
+.hd-neto__r{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.hd-neto__r span:first-child{font-size:12px;color:rgba(255,255,255,.6)}
+.hd-neto__r span:last-child{font-size:13px;color:#fff;font-variant-numeric:tabular-nums}
+.hd-neto__r--neg span:last-child{color:#fca5a5}
+.hd-neto__sep{height:1px;background:rgba(255,255,255,.12)}
