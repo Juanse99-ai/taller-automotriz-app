@@ -55,12 +55,12 @@ export default function Hoy({ trabajos = [], cotizaciones = [], liquidacionHook,
   return (
     <div>
       <style>{`
-        /* Bloque dominante: UNA cifra manda. No cuatro tarjetas iguales. */
-        .hoy-lead{padding:2px 2px 24px;border-bottom:1px solid var(--border);margin-bottom:6px}
-        .hoy-lead__v{font-family:var(--mono);font-variant-numeric:tabular-nums;font-weight:800;
-          font-size:clamp(38px,6vw,54px);line-height:1.02;letter-spacing:-.035em;margin:9px 0 7px}
-        .hoy-lead__d{color:var(--text-2);font-size:15.5px}
-        /* Renglones tranquilos: lo secundario baja de rango, no compite. */
+        /* Sin cifra gigante. Antes esto abria con un numero enorme y estadisticas
+           debajo — el patron "hero metric", el mas reconocible de las interfaces
+           generadas por IA, y ademas informa en vez de resolver.
+           Ahora TODO pendiente es un renglon accionable del mismo tipo: que hay
+           que hacer, cuanta plata mueve y por donde se resuelve. La lista se
+           vacia a medida que se atiende. */
         .hoy-r{display:flex;align-items:center;gap:16px;padding:16px 2px;
           border-bottom:1px solid var(--border);width:100%;background:none;border-left:0;
           border-right:0;border-top:0;text-align:left;cursor:pointer;font:inherit}
@@ -68,7 +68,12 @@ export default function Hoy({ trabajos = [], cotizaciones = [], liquidacionHook,
         .hoy-r__t{font-weight:600;font-size:16.5px;color:var(--text)}
         .hoy-r__s{color:var(--text-3);font-size:14px;margin-top:1px}
         .hoy-r__m{font-family:var(--mono);font-variant-numeric:tabular-nums;font-weight:650;
-          font-size:17.5px;white-space:nowrap;text-align:right}
+          font-size:16px;white-space:nowrap;text-align:right}
+        /* El pendiente que mas pesa: se marca con el peso del texto y con su
+           boton, no agrandando la cifra al triple. */
+        .hoy-r--top .hoy-r__t{font-weight:700}
+        .hoy-r--top .hoy-r__m{font-weight:750}
+        .hoy-r__go{flex-shrink:0}
         .hoy-ok{padding:40px 20px;text-align:center}
         .hoy-ok h3{font-size:19px;font-weight:700;margin:0 0 6px}
         .hoy-ok p{color:var(--text-3);font-size:15px;margin:0}
@@ -88,21 +93,19 @@ export default function Hoy({ trabajos = [], cotizaciones = [], liquidacionHook,
         </div>
       ) : (
         <>
-          {/* Lo de mayor impacto va grande y solo. */}
-          {cobros.n > 0 && (
-            <div className="hoy-lead">
-              <div className="eyebrow">Por cobrar</div>
-              <div className="hoy-lead__v" style={{ color: 'var(--amber-700)' }}>{fmt(cobros.total)}</div>
-              <div className="hoy-lead__d">
-                {cobros.n} {cobros.n === 1 ? 'factura emitida pendiente' : 'facturas emitidas pendientes'} de ingreso a caja.
-              </div>
-              <div style={{ marginTop: 18 }}>
-                <Button variant="primary" onClick={() => onNavigate('cuentti')}>Ver cobros</Button>
-              </div>
-            </div>
-          )}
-
-          <div style={{ borderTop: cobros.n > 0 ? 'none' : '1px solid var(--border)' }}>
+          <div style={{ borderTop: '1px solid var(--border)' }}>
+            {cobros.n > 0 && (
+              <button type="button" className="hoy-r hoy-r--top" onClick={() => onNavigate('cuentti')}>
+                <span style={{ flex: 1, minWidth: 0 }}>
+                  <span className="hoy-r__t" style={{ display: 'block' }}>
+                    {cobros.n} {cobros.n === 1 ? 'factura por cobrar' : 'facturas por cobrar'}
+                  </span>
+                  <span className="hoy-r__s" style={{ display: 'block' }}>Emitidas y pendientes de ingreso a caja</span>
+                </span>
+                <span className="hoy-r__m" style={{ color: 'var(--amber-700)' }}>{fmt(cobros.total)}</span>
+                <span style={{ color: 'var(--text-3)', fontSize: 20 }}>›</span>
+              </button>
+            )}
             {porPagar.tecnicos > 0 && porPagar.total > 0 && (
               <button type="button" className="hoy-r" onClick={() => onNavigate('liquidacion')}>
                 <span style={{ flex: 1, minWidth: 0 }}>
