@@ -2370,3 +2370,287 @@ tbody tr:active{background:var(--fill-2)}
      extendia (comprobado con elementFromPoint). */
   .rc-fuel__seg{height:var(--tap) !important;padding:14px 0 !important;background-clip:content-box !important}
 }
+
+/* ============================================================
+   FASE 1 — Tablero (Kanban) del handoff
+   El tablero viejo eran seis columnas de 300px con scroll lateral: para ver
+   "Completado" habia que arrastrar la barra. El mockup las reparte a lo ancho
+   (~186px) y tine cada una al 2-3% del tono de su estado, para reconocerla sin
+   leer el rotulo. Cancelado deja de ser columna y baja a pastilla con contador.
+   ============================================================ */
+.kb{display:flex;gap:8px;min-height:0;flex:1}
+.kb-col{flex:1;min-width:0;display:flex;flex-direction:column;background:var(--kb-bg);
+  border:1px solid var(--kb-bd);border-radius:14px;overflow:hidden}
+.kb-col--warn   {--kb-bg:#fffdf8;--kb-bd:#f0e6d4;--kb-cbg:#fef3c7;--kb-cfg:#92400e;--kb-dot:#f59e0b}
+.kb-col--purple {--kb-bg:#fcfbff;--kb-bd:#e7e3f5;--kb-cbg:#ede9fe;--kb-cfg:#5b21b6;--kb-dot:#8b5cf6}
+.kb-col--info   {--kb-bg:#f9fbff;--kb-bd:#dfe8f7;--kb-cbg:#dbeafe;--kb-cfg:#1e40af;--kb-dot:#1D4ED8}
+.kb-col--orange {--kb-bg:#fffcf8;--kb-bd:#f5e6d8;--kb-cbg:#ffedd5;--kb-cfg:#9a3412;--kb-dot:#ea7317}
+.kb-col--neutral{--kb-bg:#fbfcfd;--kb-bd:#e6ebf1;--kb-cbg:#f1f5f9;--kb-cfg:#475569;--kb-dot:#94a3b8}
+.kb-col--ok     {--kb-bg:#f9fdfa;--kb-bd:#dbeee2;--kb-cbg:#dcfce7;--kb-cfg:#166534;--kb-dot:#22c55e}
+/* En oscuro el tinte del 2% desaparece: se sustituye por el mismo tono al 8%
+   sobre el fondo elevado, que es lo que conserva la lectura por color. */
+[data-theme="dark"] .kb-col{background:color-mix(in srgb,var(--kb-dot) 7%,var(--bg-raised));
+  border-color:color-mix(in srgb,var(--kb-dot) 22%,var(--border))}
+[data-theme="dark"] .kb-col__n{background:color-mix(in srgb,var(--kb-dot) 24%,transparent);color:#fff}
+
+.kb-col__h{flex:none;padding:11px 12px 10px}
+.kb-col__r{display:flex;align-items:center;gap:7px}
+.kb-col__dot{width:7px;height:7px;flex:none;border-radius:50%;background:var(--kb-dot)}
+.kb-col__t{flex:1;min-width:0;font-size:11px;line-height:1.2;font-weight:700;letter-spacing:.4px;
+  text-transform:uppercase;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.kb-col__n{flex:none;font-size:11px;line-height:1;font-weight:700;padding:5px 8px;
+  border-radius:var(--radius-pill);background:var(--kb-cbg);color:var(--kb-cfg)}
+.kb-col__money{font-size:11.5px;line-height:1;font-weight:600;color:var(--text-3);margin-top:7px}
+.kb-col__b{flex:1;min-height:0;padding:0 8px 8px;display:flex;flex-direction:column;gap:7px;
+  overflow-y:auto;scrollbar-width:none}
+.kb-col__b::-webkit-scrollbar{display:none}
+.kb-col.drop{outline:2px dashed var(--accent);outline-offset:-2px}
+
+.kb-card{flex:none;background:var(--bg-raised);border:1px solid #e6ebf1;border-radius:11px;
+  padding:9px 10px;cursor:pointer;text-align:left;width:100%;font:inherit;
+  transition:border-color .12s,box-shadow .12s}
+[data-theme="dark"] .kb-card{border-color:var(--border)}
+.kb-card:hover{border-color:var(--border-strong);box-shadow:var(--shadow-sm)}
+.kb-card__top{display:flex;align-items:center;gap:6px}
+.kb-card__placa{flex:1;min-width:0;font-family:var(--mono);font-size:13px;line-height:1;font-weight:700;
+  letter-spacing:.3px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.kb-card__placa.sin{color:var(--text-4);letter-spacing:0}
+/* La antiguedad se dice con color, no con un numero mas: ambar a los 4 dias en
+   el mismo estado, rojo a los 5. Es lo que se busca en un tablero. */
+.kb-card__alert{width:7px;height:7px;flex:none;border-radius:50%}
+.kb-card__cli{font-size:11.5px;line-height:1.3;font-weight:600;color:var(--text-2);margin-top:5px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.kb-card__veh{font-size:10.5px;line-height:1.3;color:var(--text-4);margin-top:2px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.kb-card__foot{display:flex;align-items:center;gap:6px;margin-top:8px;padding-top:7px;border-top:1px solid var(--row-line)}
+.kb-card__foot .av{width:21px;height:21px;font-size:8.5px;flex:none}
+.kb-card__dias{flex:1;min-width:0;font-size:10px;line-height:1;color:var(--text-4);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.kb-card__total{flex:none;font-size:11.5px;line-height:1;font-weight:700;color:var(--text);white-space:nowrap}
+.kb-more{flex:none;display:flex;align-items:center;justify-content:center;height:32px;border-radius:10px;
+  background:rgba(15,23,42,.04);font-size:11px;font-weight:600;color:var(--text-3);border:0;cursor:pointer;width:100%}
+[data-theme="dark"] .kb-more{background:rgba(255,255,255,.06)}
+.kb-void{flex:none;display:flex;align-items:center;justify-content:center;height:36px;
+  font-size:11px;color:var(--text-5)}
+
+/* Movil: seis columnas no se manejan con el dedo. Se ve una a la vez, se elige
+   por pastilla y se navega por nombre a la anterior y la siguiente. */
+.kb-chips{display:flex;gap:6px;overflow-x:auto;padding:0 0 10px;scrollbar-width:none}
+.kb-chips::-webkit-scrollbar{display:none}
+.kb-chip{flex:none;height:42px;display:flex;align-items:center;gap:7px;padding:0 12px;border-radius:12px;
+  background:var(--bg-raised);border:1px solid var(--border);white-space:nowrap;cursor:pointer;
+  font-size:12.5px;font-weight:600;color:var(--text-2)}
+.kb-chip.on{background:var(--navy);border-color:var(--navy);color:#fff;font-weight:700}
+.kb-chip__n{font-size:10.5px;line-height:1;font-weight:700;padding:4px 6px;border-radius:var(--radius-pill);
+  background:var(--kb-cbg);color:var(--kb-cfg)}
+.kb-chip.on .kb-chip__n{background:rgba(255,255,255,.16);color:#fff}
+.kb-uno__h{display:flex;align-items:baseline;gap:9px;padding:3px 2px 10px}
+.kb-uno__t{font-size:15px;line-height:1.2;font-weight:700;color:var(--text)}
+.kb-uno__s{font-size:12px;line-height:1.2;color:var(--text-3)}
+.kb-uno__b{display:flex;flex-direction:column;gap:8px}
+.kb-uno .kb-card{border-radius:15px;padding:11px 13px}
+.kb-uno .kb-card__placa{font-size:17px;letter-spacing:.4px}
+.kb-uno .kb-card__cli{font-size:13px}
+.kb-uno .kb-card__foot .av{width:26px;height:26px;font-size:10px}
+.kb-uno .kb-card__dias{font-size:11.5px}
+.kb-uno .kb-card__total{font-size:14px}
+.kb-mover{display:flex;align-items:center;gap:7px;margin-top:10px}
+.kb-mover__go{flex:1;height:46px;display:flex;align-items:center;justify-content:center;gap:7px;
+  border:0;border-radius:12px;background:var(--accent);color:#fff;font-size:13px;font-weight:700;cursor:pointer}
+.kb-nav{display:flex;align-items:center;gap:8px;padding-top:10px}
+.kb-nav button{flex:1;height:var(--tap);display:flex;align-items:center;justify-content:center;gap:8px;
+  border:1px solid var(--border);border-radius:12px;background:var(--bg-raised);
+  font-size:12.5px;font-weight:700;color:var(--text-2);cursor:pointer}
+.kb-nav button:disabled{opacity:.4;cursor:default}
+.kb-mover__mas{width:46px;height:46px;flex:none;display:grid;place-items:center;border:0;border-radius:12px;
+  background:var(--chip);color:var(--text-3);cursor:pointer}
+/* Cancelados: pastilla de cabecera del tablero, no columna. */
+.trab-cancel{height:36px;display:flex;align-items:center;gap:8px;padding:0 14px;background:var(--bg-raised);
+  border:1.5px solid var(--border-strong);border-radius:var(--radius-pill);font-size:12.5px;font-weight:700;
+  color:var(--text-2);white-space:nowrap;cursor:pointer}
+.trab-cancel>span{font-size:11px;font-weight:700;color:var(--text-3);background:var(--chip);
+  padding:5px 8px;border-radius:var(--radius-pill)}
+
+/* ============================================================
+   FASE 1 — Portal Cliente (publico, sin login)
+   Entrada: pantalla navy completa. El cliente llega por un enlace de WhatsApp
+   y lo unico que tiene que hacer es escribir su documento; el resto sobra. El
+   telefono del taller deja de ser texto al pie y pasa a boton de llamar.
+   ============================================================ */
+.pc-in{min-height:100dvh;background:var(--navy);display:flex;flex-direction:column;padding:0 22px 26px}
+.pc-in__mid{flex:1;min-height:0;display:flex;flex-direction:column;justify-content:center}
+.pc-in__logo{width:96px;height:70px;object-fit:contain;background:#fff;border-radius:16px;padding:6px;align-self:center}
+.pc-in__marca{font-size:21px;line-height:1.2;font-weight:700;color:#fff;text-align:center;margin-top:20px}
+.pc-in__sub{font-size:13.5px;line-height:1.4;color:rgba(255,255,255,.6);text-align:center;margin-top:6px}
+.pc-in__form{margin-top:34px;display:flex;flex-direction:column}
+.pc-in__lab{font-size:12px;line-height:1;font-weight:600;letter-spacing:.3px;color:rgba(255,255,255,.7)}
+.pc-in__campo{height:60px;margin-top:9px;padding:0 18px;border:0;border-radius:16px;background:#fff;
+  font-family:var(--mono);font-size:21px;font-weight:700;letter-spacing:.5px;color:var(--text);width:100%}
+.pc-in__campo:focus{outline:2px solid var(--accent);outline-offset:2px}
+.pc-in__error{margin-top:11px;padding:11px 14px;border-radius:12px;background:rgba(220,38,38,.18);
+  color:#fecaca;font-size:13px;line-height:1.4}
+.pc-in__go{height:56px;margin-top:11px;border:0;border-radius:16px;background:var(--accent);color:#fff;
+  font-size:15.5px;font-weight:700;cursor:pointer}
+.pc-in__go:disabled{opacity:.7;cursor:default}
+.pc-in__pie{flex:none;display:flex;flex-direction:column;gap:12px}
+.pc-in__tel{height:52px;display:flex;align-items:center;justify-content:center;gap:10px;
+  border:1.5px solid rgba(255,255,255,.22);border-radius:15px;font-size:14.5px;font-weight:700;color:#fff}
+.pc-in__tel:hover{color:#fff;background:rgba(255,255,255,.06)}
+.pc-in__ciudad{font-size:11.5px;line-height:1.4;color:rgba(255,255,255,.45);text-align:center}
+@media (min-width:720px){
+  .pc-in{padding:0 0 40px}
+  .pc-in__mid,.pc-in__pie{width:100%;max-width:420px;margin:0 auto}
+}
+
+/* Cabecera del portal: navy a ancho completo. Antes era una tarjeta redondeada
+   dentro del gris, y repetia el nombre del cliente y el titulo de la seccion
+   gastando 300px. Ahora dice de que carro se habla y en que va. */
+.pc-top{background:var(--navy);color:#fff}
+.pc-top__in{max-width:1080px;margin:0 auto;padding:16px 16px 20px}
+.pc-top__r{display:flex;align-items:center;gap:10px}
+.pc-top__logo{width:34px;height:26px;flex:none;object-fit:contain;background:#fff;border-radius:8px;padding:2px}
+.pc-top__marca{flex:1;min-width:0;font-size:12.5px;font-weight:600;color:rgba(255,255,255,.75);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pc-top__tel{display:none;align-items:center;gap:8px;height:36px;padding:0 15px;
+  border:1.5px solid rgba(255,255,255,.22);border-radius:var(--radius-pill);
+  font-size:12.5px;font-weight:700;color:#fff;white-space:nowrap}
+.pc-top__tel:hover{color:#fff;background:rgba(255,255,255,.06)}
+.pc-top__salir{background:none;border:0;padding:8px 4px;font-size:12.5px;font-weight:600;
+  color:rgba(255,255,255,.55);cursor:pointer;min-height:var(--tap)}
+.pc-top__hola{font-size:13px;line-height:1.3;color:rgba(255,255,255,.6);margin-top:15px}
+.pc-top__veh{font-size:24px;line-height:1.15;font-weight:700;color:#fff;margin-top:4px;text-wrap:balance}
+.pc-top__meta{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-top:8px;
+  font-size:12.5px;color:rgba(255,255,255,.6)}
+.pc-top__placa{font-family:var(--mono);font-size:14px;font-weight:700;letter-spacing:.4px;color:#fff;
+  background:rgba(255,255,255,.14);padding:7px 10px;border-radius:8px}
+.pc-top__flota{display:flex;gap:8px 22px;flex-wrap:wrap;margin-top:12px;font-size:12.5px;color:rgba(255,255,255,.6)}
+.pc-top__flota b{font-size:17px;font-weight:700}
+@media (min-width:720px){
+  .pc-top__in{padding:18px 40px 26px}
+  .pc-top__tel{display:flex}
+  .pc-top__marca{flex:none}
+  .pc-top__r>.pc-top__marca+.pc-top__tel{margin-left:auto}
+  .pc-top__veh{font-size:30px}
+}
+
+/* Historial de servicios: una fila por servicio, no una tarjeta de cuatro
+   renglones etiqueta-valor. La placa manda; el numero de OT y el total suben
+   desde el detalle porque sin ellos dos servicios del mismo carro el mismo dia
+   se ven identicos. */
+.pc-servs{display:flex;flex-direction:column}
+.pc-serv{display:flex;align-items:center;gap:11px;padding:12px 15px;border-bottom:1px solid var(--row-line);
+  cursor:pointer;background:none;border-left:0;border-right:0;border-top:0;width:100%;text-align:left}
+.pc-serv:last-child{border-bottom:0}
+.pc-serv:hover{background:var(--bg-subtle)}
+.pc-serv__l{flex:1;min-width:0}
+.pc-serv__id{display:flex;align-items:baseline;gap:9px}
+.pc-serv__placa{font-family:var(--mono);font-size:16px;line-height:1;font-weight:700;letter-spacing:.4px;color:var(--text)}
+.pc-serv__placa.sin{color:var(--text-4);letter-spacing:.5px;font-size:13px}
+.pc-serv__ot{font-family:var(--mono);font-size:12px;line-height:1.2;color:var(--text-4)}
+.pc-serv__meta{font-size:12.5px;line-height:1.3;color:var(--text-3);margin-top:5px}
+.pc-serv__chips{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-top:7px}
+.pc-serv__pag{font-size:10px;line-height:1;font-weight:700;letter-spacing:.5px;color:var(--ok-fg)}
+.pc-serv__fotos{display:inline-flex;align-items:center;gap:4px;min-height:var(--tap);padding:0 6px;
+  border:0;background:none;font-size:11.5px;color:var(--text-4);cursor:pointer}
+.pc-serv__r{flex:none;display:flex;align-items:center;gap:9px}
+.pc-serv__total{font-size:15px;line-height:1;font-weight:700;color:var(--text);white-space:nowrap}
+.pc-serv__chev{color:var(--text-5);flex:none}
+@media (max-width:960px){
+  /* El objetivo tactil de la fila entera ya pasa de 44px; el de fotos se sube
+     sin engordar la fila usando solo altura minima. */
+  .pc-serv{padding:12px 14px}
+}
+
+/* Estado + avance del portal, en una sola tarjeta con la linea de tiempo
+   acostada. Antes eran dos tarjetas y el timeline vertical se comia media
+   pantalla para decir lo mismo que la barra. */
+.pc-avance__veh{font-size:12.5px;color:var(--text-3);margin-bottom:10px}
+.pc-avance__veh .mono{font-weight:700;color:var(--text)}
+.pc-avance__top{display:flex;align-items:flex-end;justify-content:space-between;gap:12px}
+.pc-avance__lab{font-size:10px;line-height:1;font-weight:700;letter-spacing:.9px;text-transform:uppercase;color:var(--text-4)}
+.pc-avance__est{font-size:20px;line-height:1.15;font-weight:700;color:var(--text);margin-top:5px}
+.pc-avance__pct{font-size:22px;line-height:1;font-weight:700;color:var(--accent)}
+.pc-avance__bar{height:9px;border-radius:var(--radius-pill);background:var(--chip);overflow:hidden;margin-top:12px}
+.pc-avance__bar>span{display:block;height:9px;border-radius:var(--radius-pill);background:var(--accent);transition:width .4s ease-out}
+.pc-avance__pasos{display:flex;align-items:flex-start;margin-top:14px}
+.pc-paso{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;gap:6px}
+.pc-paso__dot{width:22px;height:22px;display:grid;place-items:center;border-radius:50%;
+  background:var(--bg-raised);border:2px solid var(--border-input);color:#fff}
+.pc-paso.done .pc-paso__dot{background:var(--accent);border-color:var(--accent)}
+.pc-paso.now .pc-paso__dot{border-color:var(--accent)}
+.pc-paso__lbl{font-size:9.5px;line-height:1.2;color:var(--text-5);text-align:center}
+.pc-paso.done .pc-paso__lbl{color:var(--text);font-weight:700}
+.pc-paso.now .pc-paso__lbl{color:var(--accent);font-weight:700}
+@media (min-width:720px){
+  .pc-paso__lbl{font-size:11.5px}
+  .pc-paso__dot{width:26px;height:26px}
+}
+.pc-serv__chips .badge{font-size:10px;padding:5px 8px;letter-spacing:.4px}
+
+/* Observaciones del tecnico + quien es, en la misma tarjeta. */
+.pc-obs__t{font-size:14px;line-height:1;font-weight:700;color:var(--text)}
+.pc-obs__p{margin:9px 0 0;font-size:12.5px;line-height:1.55;color:var(--text-2);text-wrap:pretty}
+.pc-obs__tec{display:flex;align-items:center;gap:11px}
+.pc-obs__tec.sep{margin-top:12px;padding-top:11px;border-top:1px solid var(--row-line)}
+.pc-obs__av{width:36px;height:36px;flex:none;display:grid;place-items:center;border-radius:50%;
+  background:var(--info-bg);color:var(--info-fg);font-size:13px;font-weight:700}
+.pc-obs__nom{display:block;font-size:13.5px;line-height:1.2;font-weight:700;color:var(--text)}
+.pc-obs__rol{display:block;font-size:11.5px;line-height:1.3;color:var(--text-4);margin-top:2px}
+/* Seis rotulos de paso en 375px: "Diagnóstico" se montaba encima de
+   "Repuestos". Se aprieta la letra en el celular, no se corta el nombre. */
+@media (max-width:420px){
+  .pc-paso__lbl{font-size:8.5px;letter-spacing:-.2px}
+}
+
+/* Inspeccion en el portal: los tres cortes en bloques de color semantico y los
+   hallazgos urgentes con su nota. Antes era una fila con tres pastillas de
+   numeros sueltos y un porcentaje que no decia que hacer. */
+.pc-insp__h{display:flex;align-items:center;gap:9px}
+.pc-insp__t{font-size:13.5px;line-height:1;font-weight:700;color:var(--text)}
+.pc-insp__sp{flex:1}
+.pc-insp__fecha{font-size:11.5px;line-height:1;color:var(--text-4)}
+.pc-insp__cortes{display:flex;gap:7px;margin-top:11px}
+.pc-corte{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:9px 6px;
+  border-radius:11px;font-size:10.5px;line-height:1.2;text-align:center}
+.pc-corte b{font-size:18px;line-height:1.05;font-weight:700}
+.pc-corte--bad{background:var(--bad-bg)}
+.pc-corte--bad b{color:var(--bad-fg)} .pc-corte--bad{color:#7f1d1d}
+.pc-corte--warn{background:var(--warn-bg-2)}
+.pc-corte--warn b{color:var(--warn-fg)} .pc-corte--warn{color:#78350f}
+.pc-corte--ok{background:#f0fdf4}
+.pc-corte--ok b{color:var(--ok-fg)} .pc-corte--ok{color:#14532d}
+[data-theme="dark"] .pc-corte--ok{background:rgba(22,163,74,.16);color:#86efac}
+.pc-insp__hall{display:flex;flex-direction:column;gap:8px;margin-top:12px}
+.pc-hall{display:flex;align-items:flex-start;gap:9px}
+.pc-hall__ic{width:20px;height:20px;flex:none;display:grid;place-items:center;border-radius:50%;
+  background:var(--bad-bg);color:var(--bad-fg);margin-top:1px}
+.pc-hall__b{flex:1;min-width:0}
+.pc-hall__n{display:block;font-size:13px;line-height:1.3;font-weight:600;color:var(--text)}
+.pc-hall__nota{display:block;font-size:11.5px;line-height:1.4;color:var(--text-4);margin-top:2px;text-wrap:pretty}
+.pc-insp__acc{display:flex;align-items:center;gap:8px;margin-top:12px}
+.pc-insp__ver{flex:1;height:46px;border:0;border-radius:13px;background:var(--accent-soft);
+  font-size:13.5px;font-weight:700;color:var(--accent);cursor:pointer}
+.pc-insp__pdf{width:46px;height:46px;flex:none;display:grid;place-items:center;border:0;border-radius:13px;
+  background:var(--chip);color:var(--text-3);cursor:pointer}
+.pc-insp__viejas{margin-top:12px;padding-top:10px;border-top:1px solid var(--row-line);
+  display:flex;flex-direction:column}
+.pc-insp__vieja{display:flex;align-items:center;gap:10px;min-height:var(--tap);cursor:pointer}
+.pc-insp__vfecha{flex:none;font-size:12px;color:var(--text-4)}
+.pc-insp__vveh{flex:1;min-width:0;font-size:12.5px;color:var(--text-3);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pc-insp__vn{flex:none;display:flex;gap:4px}
+
+/* Pie del portal: llamar al taller. */
+.pc-pie{display:flex;flex-direction:column;align-items:center;gap:10px;padding:6px 0 22px}
+.pc-pie__tel{width:100%;max-width:420px;height:48px;display:flex;align-items:center;justify-content:center;gap:9px;
+  border-radius:13px;background:var(--accent);color:#fff;font-size:14px;font-weight:700}
+.pc-pie__tel:hover{color:#fff;filter:brightness(1.06)}
+.pc-pie__dir{font-size:12px;line-height:1.4;color:var(--text-4);text-align:center}
+
+/* Portal en escritorio: la columna lateral solo existe si tiene algo dentro
+   (fotos, inspecciones). Cuando el trabajo no las tiene, quedaba media pantalla
+   en blanco a la derecha y el contenido apretado en la izquierda. */
+@media (min-width:900px){
+  .portal-main > .portal-col:empty{display:none}
+  .portal-main:has(> .portal-col:empty){grid-template-columns:1fr}
+}

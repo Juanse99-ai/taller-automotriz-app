@@ -579,46 +579,40 @@ export default function PortalCliente() {
     )
   }
 
-  // Vista login por cedula
+  // Vista login por cedula. Pantalla navy completa: el cliente llega por un
+  // enlace de WhatsApp y lo unico que tiene que hacer es escribir su documento,
+  // asi que nada mas compite. El telefono del taller deja de ser texto al pie y
+  // pasa a ser boton de llamar: es la otra cosa que un cliente perdido quiere.
   if (!autenticado) {
     return (
-      <div style={{minHeight:'100vh',display:'flex',alignItems:'center',justifyContent:'center',background:'var(--bg)',padding:20}}>
-        <div style={{width:'100%',maxWidth:420}}>
-          <div className="card" style={{padding:0,overflow:'hidden'}}>
-            <div style={{padding:'28px 32px 22px',background:'var(--navy-900)',color:'#fff',textAlign:'center'}}>
-              <img src="/logo.png" alt="MDA" style={{width:50,height:50,objectFit:'contain',borderRadius:12,background:'#fff',padding:4,marginBottom:12}}/>
-              <h1 style={{fontSize:20,fontWeight:800,margin:'0 0 4px',letterSpacing:'.02em'}}>Multidiagnosticos AS</h1>
-              <p style={{fontSize:13,opacity:.92,fontWeight:500,margin:0}}>Seguimiento en línea de su vehículo</p>
-            </div>
-            <div style={{padding:'24px 32px 28px'}}>
-              <form onSubmit={buscar} style={{display:'flex',flexDirection:'column',gap:16}}>
-                <div className="field">
-                  <label>Número de cédula o NIT</label>
-                  <input
-                    className="input"
-                    value={cedula}
-                    onChange={e => setCedula(e.target.value)}
-                    placeholder="Ej: 1234567890"
-                    inputMode="numeric"
-                    autoComplete="off"
-                    style={{fontSize:16,padding:'14px 16px',textAlign:'center'}}
-                    autoFocus
-                  />
-                </div>
-                {error && (
-                  <div style={{background:'var(--red-50,#fef2f2)',color:'var(--red-700,#991b1b)',padding:'10px 14px',borderRadius:8,fontSize:13}}>
-                    {error}
-                  </div>
-                )}
-                <button type="submit" className="btn btn-primary" style={{width:'100%',padding:'14px',fontSize:15}} disabled={cargando}>
-                  {cargando ? 'Consultando...' : 'Consultar Estado'}
-                </button>
-              </form>
-              <p style={{fontSize:12,color:'var(--text-4)',textAlign:'center',marginTop:20}}>
-                Su número de documento es la clave de acceso para ver el estado de sus vehículos.
-              </p>
-            </div>
-          </div>
+      <div className="pc-in">
+        <div className="pc-in__mid">
+          <img src="/logo.png" alt={TALLER.nombre} className="pc-in__logo" />
+          <div className="pc-in__marca">Multidiagnósticos AS</div>
+          <div className="pc-in__sub">Seguimiento en línea de tu vehículo</div>
+          <form onSubmit={buscar} className="pc-in__form">
+            <label className="pc-in__lab" htmlFor="pc-cedula">Tu número de cédula o NIT</label>
+            <input
+              id="pc-cedula"
+              className="pc-in__campo"
+              value={cedula}
+              onChange={e => setCedula(e.target.value)}
+              inputMode="numeric"
+              autoComplete="off"
+              autoFocus
+            />
+            {error && <div className="pc-in__error">{error}</div>}
+            <button type="submit" className="pc-in__go" disabled={cargando}>
+              {cargando ? 'Consultando...' : 'Ver estado de mi vehículo'}
+            </button>
+          </form>
+        </div>
+        <div className="pc-in__pie">
+          <a className="pc-in__tel" href={`tel:${TALLER.celular.replace(/\s/g, '')}`}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2z" /></svg>
+            {TALLER.celular}
+          </a>
+          <div className="pc-in__ciudad">{TALLER.ciudad}</div>
         </div>
       </div>
     )
@@ -703,45 +697,113 @@ export default function PortalCliente() {
     {lbl:'Reparación',pct:60},{lbl:'Prueba',pct:80},{lbl:'Entrega',pct:100},
   ]
 
-  // Una fila del historial. `compact` (modo flota) omite Placa/Vehículo porque ya
-  // están en el encabezado del grupo del vehículo.
-  const filaHist = (t, compact = false) => (
-    <tr key={t.id}>
-      <td data-label="Fecha" style={{color:'var(--text-3)',fontSize:13}}>{fmtDate(t.fecha)}</td>
-      {!compact && <td className={`c-name${esSinVehiculo(t)?'':' mono'}`} style={{fontWeight:700}}>{esSinVehiculo(t)?'Sin vehículo':t.placa}</td>}
-      {!compact && <td data-label="Vehículo" style={{color:'var(--text-3)',fontSize:13}}>{[t.marca,t.modelo].filter(Boolean).join(' ')||'—'}</td>}
-      <td data-label="Estado">
-        <span className={`badge ${ESTADO_TRABAJO_DISPLAY[t.estado]?.cls||'badge-n'}`}>
-          {ESTADO_TRABAJO_DISPLAY[t.estado]?.label || t.estado}
-        </span>
-      </td>
-      <td data-label="Fotos">
-        {t.evidencias?.length > 0 ? (
-          <button className="btn btn-ghost btn-sm" onClick={()=>{setGaleria(t.evidencias);setGalIdx(0)}} style={{gap:5}}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
-            {t.evidencias.length}
-          </button>
-        ) : <span style={{color:'var(--text-4)'}}>—</span>}
-      </td>
-      <td className="td-actions" style={{textAlign:'right'}}>
-        {t.facturadoEn && !t.pagado && t.total > 0 && (
-          tieneAbono(t) ? (
-            <span className="pc-pill" style={{marginRight:8}}>Abonada · falta {fmt(t.saldoCuentti)}</span>
-          ) : pagoPorConfirmar(t) ? (
-            <button className="btn btn-outline btn-sm" style={{marginRight:8}} disabled title="Estamos confirmando tu pago">Confirmando pago…</button>
-          ) : (
-            <button className="btn btn-primary btn-sm" style={{marginRight:8}} disabled={pagando===t.id} onClick={()=>pagarConWompi(t)}>
-              {pagando===t.id ? 'Abriendo…' : `Pagar ${fmt(t.total)}`}
-            </button>
-          )
-        )}
-        {t.pagado && <span className="badge" style={{background:'var(--soft-green)',color:'var(--green-700)',fontWeight:700,marginRight:8}}>Pagado ✓</span>}
-        <button className="btn btn-outline btn-sm" onClick={()=>setVistaServicio(t)}>Ver detalle</button>
-      </td>
-    </tr>
-  )
+  // Una fila del historial. Antes cada servicio era una tarjeta con cuatro
+  // renglones etiqueta-valor (Fecha / Vehículo / Estado / Fotos): 250px para
+  // cuatro datos, y dos servicios del mismo carro el mismo día se veían
+  // IDÉNTICOS. Ahora la placa manda, y suben desde el detalle el número de OT
+  // (sin él no se distinguen) y el total. `compact` omite la placa en modo
+  // flota porque ya está en el encabezado del grupo.
+  const filaHist = (t, compact = false) => {
+    const porPagar = t.facturadoEn && !t.pagado && t.total > 0
+    return (
+      <div key={t.id} className="pc-serv" role="button" tabIndex={0}
+        onClick={() => setVistaServicio(t)}
+        onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setVistaServicio(t) } }}>
+        <div className="pc-serv__l">
+          <div className="pc-serv__id">
+            {!compact && (
+              <span className={`pc-serv__placa${esSinVehiculo(t) ? ' sin' : ''}`}>
+                {esSinVehiculo(t) ? 'SERVICIO' : t.placa}
+              </span>
+            )}
+            {t.otCodigo && <span className="pc-serv__ot">{t.otCodigo}</span>}
+          </div>
+          <div className="pc-serv__meta">
+            {fmtDate(t.fecha)}{compact ? '' : ` · ${[t.marca, t.modelo].filter(Boolean).join(' ') || 'Sin ficha'}`}
+          </div>
+          <div className="pc-serv__chips">
+            <span className={`badge ${ESTADO_TRABAJO_DISPLAY[t.estado]?.cls || 'badge-n'}`}>
+              {ESTADO_TRABAJO_DISPLAY[t.estado]?.label || t.estado}
+            </span>
+            {t.pagado && <span className="pc-serv__pag">PAGADO</span>}
+            {t.evidencias?.length > 0 && (
+              <button type="button" className="pc-serv__fotos"
+                onClick={e => { e.stopPropagation(); setGaleria(t.evidencias); setGalIdx(0) }}
+                aria-label={`Ver ${t.evidencias.length} fotos`}>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" /><path d="m21 15-5-5L5 21" /></svg>
+                {t.evidencias.length}
+              </button>
+            )}
+            {porPagar && (
+              <span onClick={e => e.stopPropagation()}>
+                {tieneAbono(t) ? (
+                  <span className="pc-pill">Abonada · falta {fmt(t.saldoCuentti)}</span>
+                ) : pagoPorConfirmar(t) ? (
+                  <button type="button" className="btn btn-outline btn-sm" disabled title="Estamos confirmando tu pago">Confirmando pago…</button>
+                ) : (
+                  <button type="button" className="btn btn-primary btn-sm" disabled={pagando === t.id} onClick={() => pagarConWompi(t)}>
+                    {pagando === t.id ? 'Abriendo…' : `Pagar ${fmt(t.total)}`}
+                  </button>
+                )}
+              </span>
+            )}
+          </div>
+        </div>
+        <div className="pc-serv__r">
+          <span className="pc-serv__total">{fmt(t.total)}</span>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="pc-serv__chev"><path d="m9 18 6-6-6-6" /></svg>
+        </div>
+      </div>
+    )
+  }
+
+  // Lo primero que pregunta el cliente: de que carro estamos hablando y en que
+  // va. Eso es la cabecera; el saludo y la marca bajan a linea de apoyo.
+  const cabCliente = tituloCliente(datos.trabajos[0]?.cliente || cotizaciones[0]?.cliente)
+  const cabVeh = trabajoActivo
+    ? (esSinVehiculo(trabajoActivo) ? 'Servicio en el taller'
+       : ([trabajoActivo.marca, trabajoActivo.modelo].filter(Boolean).join(' ') || 'Su vehículo'))
+    : 'Sin vehículos en el taller'
 
   return (
+    <>
+    <header className="pc-top">
+      <div className="pc-top__in">
+        <div className="pc-top__r">
+          <img src="/logo.png" alt={TALLER.nombre} className="pc-top__logo" />
+          <span className="pc-top__marca">Multidiagnósticos AS</span>
+          <a className="pc-top__tel" href={`tel:${TALLER.celular.replace(/\s/g, '')}`}>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2z" /></svg>
+            {TALLER.celular}
+          </a>
+          <button type="button" className="pc-top__salir" onClick={salir}>Salir</button>
+        </div>
+        <div className="pc-top__hola">Hola, {cabCliente}</div>
+        <div className="pc-top__veh">{cabVeh}</div>
+        {trabajoActivo ? (
+          <div className="pc-top__meta">
+            {!esSinVehiculo(trabajoActivo) && <span className="pc-top__placa">{trabajoActivo.placa}</span>}
+            <span>
+              {trabajoActivo.otCodigo ? `Orden ${trabajoActivo.otCodigo}` : ''}
+              {trabajoActivo.otCodigo && trabajoActivo.fecha ? ' · ' : ''}
+              {trabajoActivo.fecha ? `ingresó ${fmtDate(trabajoActivo.fecha)}` : ''}
+            </span>
+          </div>
+        ) : datos.trabajos.length > 0 ? (
+          <div className="pc-top__meta"><span>Último servicio {fmtDate(datos.trabajos[0].fecha)}</span></div>
+        ) : null}
+        {/* En flota el resumen de la flota se queda: es lo que una empresa mira. */}
+        {esFlota && (
+          <div className="pc-top__flota">
+            {[[vehiculos.length, vehiculos.length === 1 ? 'vehículo' : 'vehículos', '#fff'],
+              [enProceso, 'en el taller', '#fbbf24'],
+              [listos, listos === 1 ? 'listo para recoger' : 'listos para recoger', '#4ade80']].map(([n, lbl, c], i) => (
+              <span key={i}><b style={{ color: c }}>{n}</b> {lbl}</span>
+            ))}
+          </div>
+        )}
+      </div>
+    </header>
     <div className="portal-main">
       <style>{`
         /* Entrada en CSS, no en JS: antes el contenido nacía en opacity:0 y lo
@@ -780,45 +842,6 @@ export default function PortalCliente() {
           .pc-fx__cta .btn { width: 100% }
         }
       `}</style>
-
-      {/* Hero — identidad + resumen de flota */}
-      <div className="card portal-full" style={{padding:0,overflow:'hidden'}}>
-        <div style={{padding:'22px 26px',background:'var(--navy-900)',color:'#fff'}}>
-          <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:10}}>
-            <div style={{display:'flex',alignItems:'center',gap:10,fontSize:11,fontWeight:700,letterSpacing:'.08em',textTransform:'uppercase',color:'#fff'}}>
-              <img src="/logo.png" alt="MDA" style={{width:20,height:20,objectFit:'contain',borderRadius:4}}/> Multidiagnosticos AS
-            </div>
-            <button className="btn btn-ghost btn-sm" style={{color:'rgba(255,255,255,.9)',border:'1px solid rgba(255,255,255,.28)'}} onClick={salir}>Salir</button>
-          </div>
-          <div style={{fontSize:14,fontWeight:500,color:'#fff',marginBottom:esFlota?12:2}}>Hola, {tituloCliente(datos.trabajos[0]?.cliente || cotizaciones[0]?.cliente)}</div>
-          {esFlota ? (
-            <div style={{display:'flex',gap:'12px 28px',flexWrap:'wrap',alignItems:'flex-end'}}>
-              {[[vehiculos.length,vehiculos.length===1?'vehículo':'vehículos','#ffffff'],[enProceso,'en el taller','#fbbf24'],[listos,listos===1?'listo para recoger':'listos para recoger','#4ade80']].map(([n,lbl,c],i)=>(
-                <div key={i} style={{display:'flex',alignItems:'baseline',gap:8}}>
-                  <span className="mono" style={{fontSize:27,fontWeight:800,lineHeight:1,color:c}}>{n}</span>
-                  <span style={{fontSize:13,opacity:.92,fontWeight:500}}>{lbl}</span>
-                </div>
-              ))}
-            </div>
-          ) : trabajoActivo ? (
-            <>
-              <h2 style={{fontSize:22,fontWeight:700,letterSpacing:'-.01em',marginBottom:4}}>
-                {esSinVehiculo(trabajoActivo)
-                  ? 'Servicio en el taller'
-                  : ([trabajoActivo.marca,trabajoActivo.modelo].filter(Boolean).join(' ') || 'Su vehículo')}
-              </h2>
-              {(!esSinVehiculo(trabajoActivo) || trabajoActivo.otCodigo) && (
-                <div style={{fontSize:13,opacity:.94,fontWeight:500}}>
-                  {!esSinVehiculo(trabajoActivo) && <>Placa <span className="mono" style={{fontWeight:700}}>{trabajoActivo.placa}</span></>}
-                  {trabajoActivo.otCodigo && <>{!esSinVehiculo(trabajoActivo) && ' · '}Orden <span className="mono">{trabajoActivo.otCodigo}</span></>}
-                </div>
-              )}
-            </>
-          ) : (
-            <h2 style={{fontSize:22,fontWeight:700,letterSpacing:'-.01em'}}>Historial de servicios</h2>
-          )}
-        </div>
-      </div>
 
       {/* Facturas por pagar — arriba y visible (es la acción de plata) */}
       {facturasPendientes.length > 0 && (
@@ -962,87 +985,76 @@ export default function PortalCliente() {
 
       {/* Detalle del vehículo en foco: avance + observaciones */}
       <div className="portal-col" ref={detalleRef}>
-      {/* Estado + progreso */}
-      {trabajoActivo && (
-        <div className="card">
-          <div className="card__b">
-            {esFlota && <div style={{fontSize:12.5,color:'var(--text-3)',marginBottom:10}}>Vehículo <span className="mono" style={{fontWeight:700,color:'var(--text)'}}>{trabajoActivo.placa}</span>{trabajoActivo.otCodigo && <> · Orden <span className="mono">{trabajoActivo.otCodigo}</span></>}</div>}
-            <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-end',gap:12,flexWrap:'wrap'}}>
-              <div>
-                <div style={{fontSize:11,fontWeight:700,color:'var(--text-3)',letterSpacing:'.06em',textTransform:'uppercase',marginBottom:4}}>Estado actual</div>
-                <div style={{fontSize:19,fontWeight:800,color:ESTADO_TRABAJO_DISPLAY[trabajoActivo.estado]?.ink||'var(--text)'}}>{ESTADO_TRABAJO_DISPLAY[trabajoActivo.estado]?.label || trabajoActivo.estado}</div>
+      {/* Estado + avance en UNA tarjeta. Eran dos: la de arriba decía el
+          porcentaje y la de abajo lo repetía paso por paso en vertical,
+          gastando media pantalla. La linea de tiempo se acuesta: seis puntos
+          caben de sobra en 390px y se lee de un golpe donde va el carro. */}
+      {trabajoActivo && (() => {
+        const pct = ESTADO_TRABAJO_DISPLAY[trabajoActivo.estado]?.pct || 0
+        return (
+          <div className="card pc-avance">
+            <div className="card__b">
+              {esFlota && (
+                <div className="pc-avance__veh">
+                  Vehículo <span className="mono">{trabajoActivo.placa}</span>
+                  {trabajoActivo.otCodigo && <> · Orden <span className="mono">{trabajoActivo.otCodigo}</span></>}
+                </div>
+              )}
+              <div className="pc-avance__top">
+                <div>
+                  <div className="pc-avance__lab">Estado actual</div>
+                  <div className="pc-avance__est">{ESTADO_TRABAJO_DISPLAY[trabajoActivo.estado]?.label || trabajoActivo.estado}</div>
+                </div>
+                <div className="pc-avance__pct">{pct}%</div>
               </div>
-              <div style={{textAlign:'right'}}>
-                <div style={{fontSize:11,fontWeight:700,color:'var(--text-3)',letterSpacing:'.06em',textTransform:'uppercase',marginBottom:4}}>Ingreso</div>
-                <div style={{fontSize:15,fontWeight:700}}>{fmtDate(trabajoActivo.fecha)}</div>
+              <div className="pc-avance__bar"><span style={{ width: `${pct}%` }} /></div>
+              <div className="pc-avance__pasos">
+                {pasos.map((p, k) => {
+                  const done = pct >= p.pct
+                  const active = pct >= p.pct - 15 && pct < p.pct
+                  return (
+                    <div key={k} className={`pc-paso${done ? ' done' : active ? ' now' : ''}`}>
+                      <span className="pc-paso__dot">
+                        {done && <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.4" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>}
+                      </span>
+                      <span className="pc-paso__lbl">{p.lbl}</span>
+                    </div>
+                  )
+                })}
               </div>
-            </div>
-            <div style={{height:8,background:'var(--bg-subtle)',borderRadius:99,overflow:'hidden',marginTop:14}}>
-              {/* El ancho sale del estado, no de una animación: si nada corre, la barra
-                  igual se dibuja llena hasta donde va el trabajo. */}
-              <div style={{width:`${ESTADO_TRABAJO_DISPLAY[trabajoActivo.estado]?.pct||0}%`,height:'100%',background:'var(--amber-500)',borderRadius:99,transition:'width .4s ease-out'}}/>
-            </div>
-            <div style={{fontSize:12,color:'var(--text-3)',marginTop:6,fontWeight:600}}>{ESTADO_TRABAJO_DISPLAY[trabajoActivo.estado]?.pct||0}% completado</div>
-          </div>
-        </div>
-      )}
-      {/* Timeline de avance */}
-      {trabajoActivo && (
-        <div className="card">
-          <div className="card__h"><h3>Avance del trabajo</h3></div>
-          <div className="card__b">
-            <div style={{position:'relative',paddingLeft:32}}>
-              <div style={{position:'absolute',left:11,top:8,bottom:8,width:2,background:'var(--border)'}}/>
-              {pasos.map((p,k)=>{
-                const currentPct = ESTADO_TRABAJO_DISPLAY[trabajoActivo.estado]?.pct || 0
-                const done = currentPct >= p.pct
-                const active = currentPct >= p.pct - 15 && currentPct < p.pct
-                return (
-                  <div key={k} style={{position:'relative',paddingBottom:k<pasos.length-1?20:0}}>
-                    <div style={{position:'absolute',left:-26,top:2,width:24,height:24,borderRadius:'50%',
-                      background:done?'var(--green-500)':active?'var(--amber-500)':'var(--bg-raised)',
-                      border:!done&&!active?'2px solid var(--border)':'none',
-                      display:'flex',alignItems:'center',justifyContent:'center',color:'#fff',fontWeight:800,fontSize:12}}>
-                      {done?<svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3"><path d="M5 13l4 4L19 7"/></svg>:active?<span style={{width:8,height:8,borderRadius:'50%',background:'#fff'}}/>:''}
-                    </div>
-                    <div style={{fontWeight:active?700:600,fontSize:14,color:!done&&!active?'var(--text-3)':'var(--text)'}}>
-                      {p.lbl}
-                      {active && <span className="badge badge-w" style={{marginLeft:8}}>En curso</span>}
-                    </div>
-                  </div>
-                )
-              })}
             </div>
           </div>
-        </div>
-      )}
+        )
+      })()}
 
-      {/* Observaciones */}
-      {trabajoActivo?.observaciones && (
-        <div className="card" style={{padding:'16px 20px',background:'var(--bg-subtle)',border:'1px solid var(--border)'}}>
-          <div style={{fontSize:12,fontWeight:700,color:'var(--text-3)',textTransform:'uppercase',letterSpacing:'.04em',marginBottom:6}}>Observaciones</div>
-          <div style={{fontSize:13.5,color:'var(--text)',lineHeight:1.55}}>{trabajoActivo.observaciones}</div>
+      {/* Observaciones del tecnico + quien es. El mockup las junta: son la
+          misma pregunta del cliente, "quien lo esta viendo y que dice". */}
+      {trabajoActivo && (trabajoActivo.observaciones || tecNombre(trabajoActivo.tecnicoId)) && (
+        <div className="card pc-obs">
+          <div className="card__b">
+            {trabajoActivo.observaciones && (
+              <>
+                <div className="pc-obs__t">Observaciones del técnico</div>
+                <p className="pc-obs__p">{trabajoActivo.observaciones}</p>
+              </>
+            )}
+            {tecNombre(trabajoActivo.tecnicoId) && (
+              <div className={`pc-obs__tec${trabajoActivo.observaciones ? ' sep' : ''}`}>
+                <span className="pc-obs__av">
+                  {tecNombre(trabajoActivo.tecnicoId).split(' ').map(x => x[0]).slice(0, 2).join('')}
+                </span>
+                <span>
+                  <span className="pc-obs__nom">{tecNombre(trabajoActivo.tecnicoId)}</span>
+                  <span className="pc-obs__rol">Tu técnico asignado</span>
+                </span>
+              </div>
+            )}
+          </div>
         </div>
       )}
       </div>
 
       <div className="portal-col">
-      {/* Tecnico asignado */}
-      {trabajoActivo && tecNombre(trabajoActivo.tecnicoId) && (
-        <div className="card">
-          <div className="card__h"><h3>Técnico asignado</h3></div>
-          <div className="card__b" style={{display:'flex',gap:14,alignItems:'center'}}>
-            <div style={{width:54,height:54,borderRadius:'50%',background:'var(--amber-500)',display:'flex',alignItems:'center',justifyContent:'center',color:'var(--navy-900)',fontWeight:800,fontSize:18,flexShrink:0}}>
-              {tecNombre(trabajoActivo.tecnicoId).split(' ').map(x=>x[0]).slice(0,2).join('')}
-            </div>
-            <div style={{flex:1}}>
-              <div style={{fontWeight:700,fontSize:15}}>{tecNombre(trabajoActivo.tecnicoId)}</div>
-              <div style={{fontSize:12.5,color:'var(--text-3)'}}>Multidiagnosticos AS</div>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Fotos del trabajo activo */}
       {trabajoActivo?.evidencias?.length > 0 && (
         <div className="card">
@@ -1058,43 +1070,80 @@ export default function PortalCliente() {
         </div>
       )}
 
-      {/* Inspecciones del vehículo en foco */}
-      {inspFoco.length > 0 && (
-        <div className="card">
-          <div className="card__h"><h3>Inspecciones</h3><span className="count">{inspFoco.length}</span></div>
-          <div className="card__b" style={{display:'flex',flexDirection:'column',gap:0}}>
-            {inspFoco.map((insp, idx) => {
-              const items = insp.items || []
-              const urgentes = items.filter(i => i.estado === 'urgente').length
-              const sugeridos = items.filter(i => i.estado === 'sugerido').length
-              const buenos = items.filter(i => i.estado === 'bueno').length
-              const total = items.filter(i => i.estado !== 'no_aplica').length
-              const pct = total > 0 ? Math.round((buenos / total) * 100) : 0
-
-              return (
-                <div key={insp.id || idx} style={{padding:'14px 0',borderBottom:idx<inspFoco.length-1?'1px solid var(--border)':'none'}}>
-                  <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',flexWrap:'wrap',gap:8}}>
-                    <div>
-                      <div style={{fontWeight:700,fontSize:14}}>{insp.placa} <span style={{color:'var(--text-3)',fontWeight:400,fontSize:13}}>— {insp.vehiculo || ''}</span></div>
-                      <div style={{fontSize:12.5,color:'var(--text-3)',marginTop:2}}>{fmtDate(insp.fecha)}</div>
+      {/* Inspecciones. La ultima se abre con los tres cortes en bloques de
+          color (urgentes / sugeridos / en buen estado) y los hallazgos urgentes
+          con su nota: es lo segundo que pregunta el cliente despues de "¿en que
+          va?". Las anteriores quedan como filas, con su fecha y sus cortes. */}
+      {inspFoco.length > 0 && (() => {
+        const cortes = (insp) => {
+          const items = insp.items || []
+          return {
+            urgentes: items.filter(i => i.estado === 'urgente'),
+            sugeridos: items.filter(i => i.estado === 'sugerido'),
+            buenos: items.filter(i => i.estado === 'bueno'),
+          }
+        }
+        const [ultima, ...viejas] = inspFoco
+        const c = cortes(ultima)
+        return (
+          <div className="card pc-insp">
+            <div className="card__b">
+              <div className="pc-insp__h">
+                <span className="pc-insp__t">Inspección {ultima.placa}</span>
+                <span className="pc-insp__sp" />
+                <span className="pc-insp__fecha">{fmtDate(ultima.fecha)}</span>
+              </div>
+              <div className="pc-insp__cortes">
+                <span className="pc-corte pc-corte--bad"><b>{c.urgentes.length}</b>urgentes</span>
+                <span className="pc-corte pc-corte--warn"><b>{c.sugeridos.length}</b>sugeridos</span>
+                <span className="pc-corte pc-corte--ok"><b>{c.buenos.length}</b>en buen estado</span>
+              </div>
+              {c.urgentes.length > 0 && (
+                <div className="pc-insp__hall">
+                  {c.urgentes.slice(0, 2).map((i, k) => (
+                    <div key={k} className="pc-hall">
+                      <span className="pc-hall__ic">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><path d="M18 6 6 18M6 6l12 12" /></svg>
+                      </span>
+                      <span className="pc-hall__b">
+                        <span className="pc-hall__n">{i.categoria ? `${i.categoria} · ` : ''}{i.nombre}</span>
+                        {i.comentario && <span className="pc-hall__nota">{i.comentario}</span>}
+                      </span>
                     </div>
-                    <div style={{display:'flex',alignItems:'center',gap:10}}>
-                      <div style={{display:'flex',gap:4}}>
-                        {buenos > 0 && <span className="badge badge-s">{buenos}</span>}
-                        {sugeridos > 0 && <span className="badge badge-w">{sugeridos}</span>}
-                        {urgentes > 0 && <span className="badge badge-d">{urgentes}</span>}
-                      </div>
-                      <span style={{fontWeight:700,fontSize:13,color:pct>=80?'var(--green-600)':pct>=50?'var(--amber-600)':'var(--red-600)'}}>{pct}%</span>
-                      <button className="btn btn-outline btn-sm" onClick={() => setVistaInspeccion(insp)}>Ver</button>
-                      <button className="btn btn-ghost btn-sm" onClick={() => descargarPDF(insp)}>PDF</button>
-                    </div>
-                  </div>
+                  ))}
                 </div>
-              )
-            })}
+              )}
+              <div className="pc-insp__acc">
+                <button type="button" className="pc-insp__ver" onClick={() => setVistaInspeccion(ultima)}>Ver la inspección completa</button>
+                <button type="button" className="pc-insp__pdf" onClick={() => descargarPDF(ultima)} aria-label="Descargar inspección en PDF">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3v12M7 10l5 5 5-5M4 19h16" /></svg>
+                </button>
+              </div>
+              {viejas.length > 0 && (
+                <div className="pc-insp__viejas">
+                  {viejas.map((insp, idx) => {
+                    const v = cortes(insp)
+                    return (
+                      <div key={insp.id || idx} className="pc-insp__vieja" role="button" tabIndex={0}
+                        onClick={() => setVistaInspeccion(insp)}
+                        onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setVistaInspeccion(insp) } }}>
+                        <span className="pc-insp__vfecha">{fmtDate(insp.fecha)}</span>
+                        <span className="pc-insp__vveh">{insp.vehiculo || insp.placa}</span>
+                        <span className="pc-insp__vn">
+                          {v.urgentes.length > 0 && <span className="badge badge-d">{v.urgentes.length}</span>}
+                          {v.sugeridos.length > 0 && <span className="badge badge-w">{v.sugeridos.length}</span>}
+                          {v.buenos.length > 0 && <span className="badge badge-s">{v.buenos.length}</span>}
+                        </span>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="pc-serv__chev"><path d="m9 18 6-6-6-6" /></svg>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
           </div>
-        </div>
-      )}
+        )
+      })()}
 
       </div>{/* cierra columna lateral */}
 
@@ -1123,9 +1172,7 @@ export default function PortalCliente() {
                     <span style={{fontSize:13,color:'var(--text-3)'}}>{[v.marca,v.modelo].filter(Boolean).join(' ')}</span>
                     <span style={{fontSize:12.5,color:'var(--text-4)',marginLeft:'auto'}}>{v.trabajos.length} {v.trabajos.length===1?'servicio':'servicios'}</span>
                   </div>
-                  <table className="tbl tbl-cards">
-                    <tbody>{v.trabajos.map(t => filaHist(t, true))}</tbody>
-                  </table>
+                  <div className="pc-servs">{v.trabajos.map(t => filaHist(t, true))}</div>
                 </div>
               ))}
             </div>
@@ -1134,12 +1181,7 @@ export default function PortalCliente() {
           <div className="card portal-full">
             <div className="card__h"><h3>Historial de servicios</h3><span className="count">{datos.trabajos.length}</span></div>
             <div className="card__b card__b--flush">
-              <table className="tbl tbl-cards">
-                <thead>
-                  <tr><th>Fecha</th><th>Placa</th><th>Vehículo</th><th>Estado</th><th>Fotos</th><th /></tr>
-                </thead>
-                <tbody>{datos.trabajos.map(t => filaHist(t, false))}</tbody>
-              </table>
+              <div className="pc-servs">{datos.trabajos.map(t => filaHist(t, false))}</div>
             </div>
           </div>
         )
@@ -1151,8 +1193,15 @@ export default function PortalCliente() {
         </div>
       )}
 
-      <div className="portal-full" style={{textAlign:'center',fontSize:12,color:'var(--text-4)',padding:'8px 0 18px'}}>
-        Multidiagnosticos AS · Sabanalarga, Atlántico
+      {/* Barra de abajo: llamar al taller. Era una linea de texto gris al pie
+          con el nombre y la ciudad; el telefono ni siquiera estaba. Es lo que
+          hace un cliente cuando la pantalla no le resuelve la duda. */}
+      <div className="portal-full pc-pie">
+        <a className="pc-pie__tel" href={`tel:${TALLER.celular.replace(/\s/g, '')}`}>
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2z" /></svg>
+          Llamar al taller
+        </a>
+        <div className="pc-pie__dir">{TALLER.nombre} · {TALLER.ciudad}</div>
       </div>
 
       {/* Detalle de un servicio del historial (mini-factura del cliente) */}
@@ -1334,5 +1383,6 @@ export default function PortalCliente() {
         </div>
       )}
     </div>
+    </>
   )
 }
