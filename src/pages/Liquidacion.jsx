@@ -1475,6 +1475,17 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
         }
         /* Rótulo del carril: en el diseño el título del Paso 3 NO es cabecera de
            tarjeta, encabeza la columna entera. */
+        /* Metodo de pago: seccion plana con un filete, no una tarjeta dentro de
+           otra tarjeta. Devuelve 28px de ancho util a un carril de 322px. */
+        .liq-medio{ margin:18px 0 14px; padding-top:16px; border-top:1px solid var(--border); }
+        .liq-medio__head{ display:flex; flex-direction:column; align-items:flex-start; gap:8px; margin-bottom:14px; }
+        .liq-medio__head .segctl{ margin:0; width:100%; }
+        .liq-medio__campo{ display:flex; flex-direction:column; gap:8px; }
+        .liq-medio__campo .field{ max-width:200px; margin:0; }
+        .liq-medio__ayuda{ font-size:12.5px; color:var(--text-3); line-height:1.45; }
+        /* A 1500px sobra sitio de sobra a la derecha: el carril donde se decide
+           un pago no tiene por que seguir en 322px. */
+        @media (min-width:1500px){ .liq-work__side{ width:376px; } }
         .liq-side__head{ display:flex; align-items:center; gap:10px; padding:0 4px; min-height:26px; }
         .liq-side__head .t{ font-size:14px; font-weight:700; color:var(--text); }
         .liq-ref{ font-size:11px; font-weight:600; letter-spacing:.3px; color:var(--accent); background:var(--accent-soft); padding:6px 10px; border-radius:var(--radius-pill); white-space:nowrap; }
@@ -2186,20 +2197,20 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
                   </div>
                 )}
                 {totalSeleccion.neto > 0 && (
-                  <div style={{ marginBottom: 14, padding: '12px 14px', background: 'var(--bg-subtle)', border: '1px solid var(--border)', borderRadius: 'var(--radius)' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12, flexWrap: 'wrap' }}>
+                  <div className="liq-medio">
+                    <div className="liq-medio__head">
                       <span className="eyebrow">Método de pago</span>
                       <div className="segctl" style={{ margin: 0 }}>
                         <button type="button" className={metodoPagoLiq === 'efectivo' ? 'on' : ''} onClick={() => setMetodoPagoLiq('efectivo')} style={{ fontSize: 12.5 }}>Efectivo</button>
                         <button type="button" className={metodoPagoLiq === 'transferencia' ? 'on' : ''} onClick={() => setMetodoPagoLiq('transferencia')} style={{ fontSize: 12.5 }}>Transferencia</button>
                       </div>
                     </div>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-end', gap: 12 }}>
-                      <div className="field" style={{ flex: '0 0 190px' }}>
+                    <div className="liq-medio__campo">
+                      <div className="field">
                         <label>Pagado {metodoPagoLiq === 'transferencia' ? 'por transferencia' : 'en efectivo'}</label>
                         <MoneyInput value={pagoReal} onChange={setPagoReal} />
                       </div>
-                      <div style={{ flex: 1, minWidth: 180, fontSize: 12.5, color: 'var(--text-3)' }}>
+                      <div className="liq-medio__ayuda">
                         Déjalo vacío para pagar el neto completo (<strong className="mono">{fmt(totalSeleccion.neto)}</strong>).
                       </div>
                     </div>

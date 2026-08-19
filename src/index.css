@@ -1427,6 +1427,18 @@ tbody tr:active{background:var(--fill-2)}
   .main{margin-left:0;flex:1;min-width:0;display:flex;flex-direction:column;gap:10px;align-self:stretch}
   .content{padding:0;max-width:none;margin:0;flex:1;min-height:0}
 
+  /* El rail ya es hermano flex: el contenido arranca donde el rail termina.
+     Estas dos reglas son del drawer viejo y, con especificidad 0-2-1, le
+     ganaban a `.main{margin-left:0}` (0-1-0) — las media queries no suman
+     especificidad. Reservaban un hueco muerto del ancho del rail: 72px
+     recogido, 240px abierto. Es el espacio vacio que se veia a la izquierda. */
+  .app.has-collapsed .main,
+  .sidebar.hover-expand ~ .main{margin-left:0}
+  /* Sin margen que animar, el ancho del rail es el unico motor del movimiento:
+     el contenido lo sigue por flex, en el mismo gesto y a la misma velocidad.
+     Antes el rail abria en .18s y el contenido se corria en .38s. */
+  .main{transition:none}
+
   .sidebar{
     position:sticky;top:10px;left:auto;bottom:auto;
     height:calc(100vh - 20px);
@@ -1434,7 +1446,7 @@ tbody tr:active{background:var(--fill-2)}
     background:var(--navy);border-right:none;border-radius:26px;
     padding:12px 0 10px;align-items:center;gap:5px;
     /* Única transición de toda la app, según el handoff. */
-    transition:width .18s ease;
+    transition:width .2s var(--ease-drawer);
   }
   .sidebar.collapsed{width:var(--rail-w);min-width:var(--rail-w)}
   .sidebar.hover-expand{width:var(--rail-w-open);min-width:var(--rail-w-open);box-shadow:none;z-index:41}
@@ -3044,4 +3056,17 @@ tbody tr:active{background:var(--fill-2)}
   .usr__acc{flex:1;justify-content:center}
   .usr-new .ec-form__c{flex:1 1 100% !important;width:auto !important}
   .usr-new .ec-form__go{width:100%}
+}
+
+/* ============================================================
+   Movimiento reducido — reafirmado al final
+   ------------------------------------------------------------
+   El bloque de escritorio (min-width:961px) define la transicion
+   del rail DESPUES del bloque de prefers-reduced-motion, y con la
+   misma especificidad (0-1-0) ganaba por orden: en computador la
+   preferencia del sistema quedaba ignorada. Se repite aqui, al
+   final, donde ninguna regla posterior la puede pisar.
+   ============================================================ */
+@media (prefers-reduced-motion: reduce){
+  .sidebar,.main{transition:none}
 }
