@@ -342,6 +342,8 @@ export default function App() {
         user={user}
         onLogout={handleLogout}
         trabajos={trabajosHook.trabajos}
+        cotizaciones={cotizacionesHook.cotizaciones}
+        liquidados={liquidacionHook.liquidados}
       />
       <div className="main">
         <TopBar

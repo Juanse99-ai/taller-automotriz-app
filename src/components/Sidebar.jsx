@@ -159,7 +159,7 @@ function useIsMobile() {
   return mobile
 }
 
-export default function Sidebar({ active, onNavigate, isOpen, collapsed, onCollapse, seccionesPermitidas, user, onLogout, trabajos = [] }) {
+export default function Sidebar({ active, onNavigate, isOpen, collapsed, onCollapse, seccionesPermitidas, user, onLogout, trabajos = [], cotizaciones = [], liquidados = [] }) {
   const allowed = seccionesPermitidas || []
 
   // Pill rojo en Trabajos: pendientes + en progreso (alerta de carga del taller)
@@ -167,12 +167,23 @@ export default function Sidebar({ active, onNavigate, isOpen, collapsed, onColla
   const enProgreso = trabajos.filter(t => t.estado === 'En Progreso' || t.estado === 'Esperando Repuestos' || t.estado === 'En Prueba').length
   // Cuentti: facturado sin pagar. Sale de los mismos trabajos que ya recibe el
   // rail, asi que no cuesta datos nuevos — y es la cifra que el dueño persigue.
-  // (Los contadores de Cotizaciones y Liquidacion que trae el mockup exigirian
-  // pasarle mas hooks al rail; quedan pendientes.)
   const porCobrar = trabajos.filter(t => t.cuenttiTransacionId && !t.pagado).length
+  // Cotizaciones: las que estan por aprobar.
+  const cotizPendientes = cotizaciones.filter(c => c.estado === 'Pendiente').length
+  // Liquidacion: cuantos tecnicos tienen trabajo terminado sin liquidar. No es
+  // la plata (esa la calcula la pantalla con los compartidos y los descuentos):
+  // es a cuantas personas hay que pagarles, que es lo que el rail debe avisar.
+  const tecnicosPorLiquidar = new Set(
+    trabajos
+      .filter(t => t.estado === 'Completado' && t.tecnicoId &&
+        !liquidados.some(x => x === t.id || String(x).startsWith(`${t.id}#`)))
+      .map(t => String(t.tecnicoId))
+  ).size
   const pillCounts = {
     trabajos: pendientes + enProgreso || 0,
     cuentti: porCobrar || 0,
+    cotizaciones: cotizPendientes || 0,
+    liquidacion: tecnicosPorLiquidar || 0,
   }
 
   const inicial = (user?.nombre || user?.usuario || '?')[0].toUpperCase()
