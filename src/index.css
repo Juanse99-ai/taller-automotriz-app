@@ -1691,3 +1691,63 @@ tbody tr:active{background:var(--fill-2)}
 @media (min-width:961px){
   .topbar__menu{display:none}
 }
+
+/* --- Tarjeta movil de Ordenes de trabajo ---
+   La tarjeta generica pinta un par etiqueta/valor por celda: con 9 columnas son
+   ~8 lineas por OT, una pantalla entera por registro, y hay que hacer scroll
+   para ver dos. El handoff pide filas de 2-3 lineas. Aqui se recompone:
+
+     linea 1   PLACA .......................... TOTAL
+     linea 2   cliente · vehiculo
+     linea 3   [estado] [cobro]   tecnico        fecha
+
+   No se pierde ningun dato: los mismos 8 campos siguen, solo cambian de sitio.
+   Las demas tablas conservan el par etiqueta/valor. */
+@media(max-width:600px){
+  .tbl.tbl-cards--ot tbody tr{
+    /* La regla generica de arriba pone flex-direction:column (una celda por
+       linea). Aqui se vuelve a fila para poder componer las 3 lineas. */
+    display:flex;flex-direction:row;flex-wrap:wrap;align-items:baseline;
+    row-gap:3px;column-gap:8px;padding:11px 14px;
+  }
+  .tbl.tbl-cards--ot tbody td{padding:0;border:none;display:block;text-align:left;flex:none}
+  .tbl.tbl-cards--ot tbody td::before{display:none}   /* sin rotulo por celda */
+
+  /* linea 1: placa · OT ................................. total */
+  .tbl.tbl-cards--ot tbody td.td-placa{
+    order:1;font-size:17px;line-height:1.15;font-weight:700;color:var(--text);letter-spacing:.4px;
+  }
+  .tbl.tbl-cards--ot tbody td.td-ot{order:2;font-size:12px;color:var(--text-4);font-weight:400}
+  .tbl.tbl-cards--ot tbody td[data-label="Total"]{
+    order:3;margin-left:auto;text-align:right;
+    font-size:17px;line-height:1.15;font-weight:700;color:var(--text);font-variant-numeric:tabular-nums;
+  }
+  /* linea 2: cliente, solo. Los nombres largos son la norma aqui
+     ("CENTRO DE ENSEÑANZA AUTOMOVILISTICA A PRUEBA S.A.S.") */
+  .tbl.tbl-cards--ot tbody td.c-name{
+    order:4;flex:1 0 100%;display:block;
+    font-size:13.5px;line-height:1.25;font-weight:700;color:var(--text);
+    padding:0;margin:0;border:none;text-align:left;
+  }
+  /* linea 3: vehiculo ................................... fecha */
+  .tbl.tbl-cards--ot tbody td[data-label="Vehículo"]{
+    order:5;flex:1;min-width:0;font-size:12px;color:var(--text-4);
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  }
+  .tbl.tbl-cards--ot tbody td[data-label="Fecha"]{
+    order:6;margin-left:auto;font-size:11.5px;color:var(--text-4);white-space:nowrap;
+  }
+  /* linea 4: estados ................................... tecnico */
+  .tbl.tbl-cards--ot tbody td[data-label="Estado"]{
+    order:7;display:flex;flex-wrap:wrap;gap:5px;align-items:center;margin-top:5px;
+  }
+  .tbl.tbl-cards--ot tbody td[data-label="Técnico"]{
+    order:8;margin-left:auto;margin-top:5px;font-size:12px;color:var(--text-3);
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:45%;
+  }
+  .tbl.tbl-cards--ot tbody td[data-label="Técnico"] > div{flex-wrap:nowrap}
+  /* las acciones cierran la tarjeta, con objetivos de 44px */
+  .tbl.tbl-cards--ot tbody td.td-actions{order:9;flex:1 0 100%;margin-top:8px}
+  .tbl.tbl-cards--ot tbody td.td-actions > div{justify-content:flex-start;gap:8px}
+  .tbl.tbl-cards--ot tbody td.td-actions .btn{min-height:44px}
+}

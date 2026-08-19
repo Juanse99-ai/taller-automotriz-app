@@ -855,11 +855,11 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
             <span style={{ fontWeight: 600, fontSize: 14 }}>{filtered.length} resultado{filtered.length !== 1 ? 's' : ''}</span>
           </div>
           <div className="card__b card__b--flush">
-            <table className="tbl tbl-cards">
+            <table className="tbl tbl-cards tbl-cards--ot">
               <thead>
                 <tr>
-                  <th>OT</th>
                   <th>Placa</th>
+                  <th>OT</th>
                   <th>Cliente</th>
                   <th>Vehículo</th>
                   <th>Técnico</th>
@@ -876,8 +876,8 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
                   const estancado = t.estado !== ESTADOS.COMPLETADO && t.estado !== ESTADOS.CANCELADO && diasSinMover >= DIAS_ESTANCADO
                   return (
                     <tr key={t.id} style={estancado ? { background: 'rgba(220,38,38,.06)', boxShadow: 'inset 0 0 0 1px rgba(220,38,38,.18)' } : {}}>
-                      <td className="c-mono" data-label="OT" style={{ color: 'var(--blue-600)', fontWeight: 700 }}>{t.otCodigo || '—'}</td>
-                      <td className="c-mono" data-label="Placa" style={{ fontWeight: 700 }}>{t.placa}</td>
+                      <td className="c-mono td-placa" data-label="Placa" style={{ fontWeight: 700 }}>{t.placa || 'SERVICIO'}</td>
+                      <td className="c-mono td-ot" data-label="OT" style={{ color: 'var(--blue-600)', fontWeight: 700 }}>{t.otCodigo || '—'}</td>
                       <td className="c-name">{t.cliente || '—'}</td>
                       <td className="c-muted" data-label="Vehículo">{[t.marca, t.modelo].filter(Boolean).join(' ') || '—'}</td>
                       <td data-label="Técnico">
