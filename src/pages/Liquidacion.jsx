@@ -1297,58 +1297,48 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
   )
 
   if (vistaLiq === 'cuentas') {
-    return (
-      <div>
-        <div className="hd-head">
-          <div className="hd-head__t"><h1>Estado de cuenta · préstamos</h1></div>
-          <div className="hd-head__sp" />
-          <div className="hd-head__right">{tabsLiq}</div>
-        </div>
-        {/* "Cuentas por técnico" vivía en la pantalla de Comisiones, donde no
-           ayudaba a pagar y estorbaba. Aquí sí es su sitio: es el resumen de la
-           cuenta de cada técnico. */}
-        {cuentasTecnicos.length > 0 && (
-          <div className="card" style={{ marginBottom: 16 }}>
-            <div className="card__h">
-              <h3>Resumen por técnico</h3>
-            </div>
-            <div className="card__b card__b--flush">
-              <table className="tbl tbl-cards">
-                <thead><tr>
-                  <th>Técnico</th>
-                  <th className="c-right">Liquidado</th>
-                  <th className="c-right">Entregado</th>
-                  <th className="c-right">Falta entregar</th>
-                  <th className="c-right">Su cuenta</th>
-                </tr></thead>
-                <tbody>
-                  {cuentasTecnicos.map((c, i) => {
-                    // Antes las tres cifras iban juntas invitando a una resta que
-                    // NO era válida: liquidado y pagado salen del historial, el
-                    // saldo del libro de préstamos. Ahora la resta está hecha
-                    // (falta entregar) y la cuenta se nombra aparte.
-                    const falta = Math.round(c.liquidado - c.pagado)
-                    return (
-                      <tr key={i}>
-                        <td className="c-name" style={{ fontWeight: 600 }}>{c.nombre}</td>
-                        <td className="c-mono c-right" data-label="Liquidado">{fmt(c.liquidado)}</td>
-                        <td className="c-mono c-right" data-label="Entregado">{fmt(c.pagado)}</td>
-                        <td className="c-mono c-right" data-label="Falta entregar" style={{ fontWeight: falta > 0 ? 700 : 400, color: falta > 0 ? 'var(--amber-700)' : 'var(--text-3)' }}>
-                          {falta > 0 ? fmt(falta) : '—'}
-                        </td>
-                        <td className="c-mono c-right" data-label="Su cuenta" style={{ fontWeight: 700, color: c.saldo > 0 ? 'var(--red-600)' : c.saldo < 0 ? 'var(--green-700)' : 'var(--text-3)' }}>
-                          {c.saldo > 0 ? `Debe ${fmt(c.saldo)}` : c.saldo < 0 ? `A favor ${fmt(-c.saldo)}` : 'Al día'}
-                        </td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
-            </div>
+    // La barra de titulo y las dos columnas las arma EstadoCuenta: es quien
+    // tiene el saldo por cobrar y los cortes de las cuentas. Aqui solo se le
+    // pasan el conmutador y el resumen por tecnico, que sale de esta pantalla.
+    const resumenTecnicos = cuentasTecnicos.length > 0 ? (
+      <details className="ec-resumen">
+        <summary>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="m9 18 6-6-6-6" /></svg>
+          <span className="ec-resumen__t">Liquidado y entregado por técnico</span>
+          <span className="ec-aside__n">{cuentasTecnicos.length}</span>
+          <span className="ec-resumen__s">no es el libro de préstamos: es lo que ya se le pagó de comisiones</span>
+        </summary>
+        <div className="ec-resumen__b">
+          <div className="ec-resumen__cab">
+            <span style={{ flex: 1, minWidth: 0 }}>TÉCNICO</span>
+            <span style={{ width: 112, textAlign: 'right' }}>LIQUIDADO</span>
+            <span style={{ width: 112, textAlign: 'right' }}>ENTREGADO</span>
+            <span style={{ width: 118, textAlign: 'right' }}>FALTA ENTREGAR</span>
+            <span style={{ width: 124, textAlign: 'right' }}>SU CUENTA</span>
           </div>
-        )}
-        <EstadoCuenta prestamos={prestamosHook} tecnicos={TECNICOS} notify={notify} />
-      </div>
+          {cuentasTecnicos.map((c, i) => {
+            // Antes las tres cifras iban juntas invitando a una resta que NO era
+            // valida: liquidado y pagado salen del historial, el saldo del libro
+            // de prestamos. La resta ya esta hecha y la cuenta se nombra aparte.
+            const falta = Math.round(c.liquidado - c.pagado)
+            return (
+              <div key={i} className="ec-resumen__row">
+                <span className="ec-resumen__n">{c.nombre}</span>
+                <span className="ec-resumen__v">{fmt(c.liquidado)}</span>
+                <span className="ec-resumen__v">{fmt(c.pagado)}</span>
+                <span className={`ec-resumen__v${falta > 0 ? ' warn' : ''}`}>{falta > 0 ? fmt(falta) : <span className="hd-empty">—</span>}</span>
+                <span className={`ec-resumen__v${c.saldo > 0 ? ' bad' : c.saldo < 0 ? ' ok' : ''}`}>
+                  {c.saldo > 0 ? `Debe ${fmt(c.saldo)}` : c.saldo < 0 ? `A favor ${fmt(-c.saldo)}` : 'Al día'}
+                </span>
+              </div>
+            )
+          })}
+        </div>
+      </details>
+    ) : null
+    return (
+      <EstadoCuenta prestamos={prestamosHook} tecnicos={TECNICOS} notify={notify}
+        tabs={tabsLiq} resumen={resumenTecnicos} />
     )
   }
 

@@ -16,7 +16,7 @@ import ConfirmDialog from '../components/ConfirmDialog'
 import { Button, Badge, IconX } from '../components/ui'
 import { loadLogo, drawHeader, drawSectionHeader, drawDataBlock, drawSignatures, drawFooter, tableStylesItems, PDF_LAYOUT } from '../utils/pdfTheme'
 
-export default function EstadoCuenta({ prestamos, tecnicos, notify }) {
+export default function EstadoCuenta({ prestamos, tecnicos, notify, tabs = null, resumen = null }) {
   const { movimientos, agregarMovimiento, eliminarMovimiento } = prestamos
   const [form, setForm] = useState({ personaSel: '', personaOtra: '', tipo: 'prestamo', monto: '', fecha: hoyISO(), nota: '', valorDia: '', dias: '' })
   const [sel, setSel] = useState(null)
@@ -155,6 +155,39 @@ export default function EstadoCuenta({ prestamos, tecnicos, notify }) {
   }, [movimientos, tecnicos])
 
   const totalPorCobrar = cuentas.reduce((s, c) => s + Math.max(0, c.saldo), 0)
+  // Cortes de la cabecera: cuantas cuentas hay abiertas, cuantas a favor y
+  // cuantas al dia. Salen de la misma lista, no cuestan una consulta.
+  const cortes = useMemo(() => ({
+    abiertas: cuentas.filter(c => c.saldo > 0).length,
+    aFavor: cuentas.filter(c => c.saldo < 0).length,
+    alDia: cuentas.filter(c => c.saldo === 0 && c.movs.length > 0).length,
+  }), [cuentas])
+  // Saldo corrido por movimiento. NO es un dato nuevo: se calcula sumando de lo
+  // mas viejo a lo mas nuevo. Sin el no se puede auditar la cuenta hacia atras.
+  const conSaldo = (movs) => {
+    let acc = 0
+    const viejoPrimero = [...movs].sort((a, b) => new Date(a.fecha) - new Date(b.fecha))
+    const saldos = viejoPrimero.map(m => {
+      acc += m.tipo === 'abono' ? -m.monto : m.monto
+      return { id: m.id, saldo: acc }
+    })
+    const porId = Object.fromEntries(saldos.map(x => [x.id, x.saldo]))
+    return movs.map(m => ({ ...m, saldoCorrido: porId[m.id] ?? 0 }))
+  }
+  // Dias del prestamo mas viejo sin saldar: es el numero que dice si hay que
+  // insistir. Solo aplica cuando la cuenta debe.
+  const diasMasAntiguo = (c) => {
+    if (!c || c.saldo <= 0) return 0
+    const prestamos = c.movs.filter(m => m.tipo !== 'abono' && m.fecha)
+    if (!prestamos.length) return 0
+    const viejo = prestamos.reduce((a, b) => (new Date(a.fecha) < new Date(b.fecha) ? a : b))
+    return Math.max(0, Math.floor((Date.now() - new Date(viejo.fecha).getTime()) / 86400000))
+  }
+  const abiertaDesde = (c) => {
+    if (!c || !c.movs.length) return ''
+    const viejo = c.movs.reduce((a, b) => (new Date(a.fecha) < new Date(b.fecha) ? a : b))
+    return viejo.fecha ? fmtDate(viejo.fecha) : ''
+  }
   // Comparación normalizada: la cuenta canónica puede llamarse "Pedro Barraza"
   // aunque el usuario haya escrito "pedro barraza" (el merge agrupa por técnico).
   const mismaPersona = (a, b) => (a || '').trim().toLowerCase() === (b || '').trim().toLowerCase()
@@ -237,175 +270,264 @@ export default function EstadoCuenta({ prestamos, tecnicos, notify }) {
     notify('PDF del estado de cuenta exportado', 'success')
   }
 
+  const movsSel = cuentaSel ? conSaldo(cuentaSel.movs) : []
+  const dias = diasMasAntiguo(cuentaSel)
+
   return (
-    <div>
+    <div className="ec">
       <ConfirmDialog cfg={dlg} onClose={() => setDlg(null)} />
-      <style>{`
-        .ec-book{ display:grid; grid-template-columns: minmax(280px, 340px) minmax(0, 1fr); gap:20px; align-items:start; }
-        .ec-aside{ position:sticky; top:12px; }
-        .ec-row{ display:flex; align-items:center; gap:12px; width:100%; padding:12px 16px; text-align:left; background:transparent; border:none; border-top:1px solid var(--border); cursor:pointer; transition:background .15s var(--ease-out); }
-        .ec-row:first-of-type{ border-top:none; }
-        .ec-row:hover{ background:var(--bg-subtle); }
-        .ec-row.on{ background:var(--navy-900); }
-        .ec-del{ flex-shrink:0; width:30px; height:30px; border-radius:8px; border:1px solid var(--border); background:var(--bg-raised); color:var(--text-4); cursor:pointer; display:inline-flex; align-items:center; justify-content:center; font-size:13px; transition:border-color .12s, color .12s, background .12s; }
-        .ec-del:hover{ border-color:var(--red-600); color:var(--red-600); background:rgba(220,38,38,.06); }
-        @media (max-width: 820px){ .ec-book{ grid-template-columns:1fr; } .ec-aside{ position:static; } }
-      `}</style>
+
+      {/* Barra de titulo. "Por cobrar" es el numero por el que existe esta
+          pestaña, asi que sube a cifra de cabecera con su divisor. */}
+      <div className="hd-head ec-head">
+        <div className="hd-head__t">
+          <h1>Liquidación</h1>
+          <div className="hd-head__sub">
+            {cortes.abiertas} {cortes.abiertas === 1 ? 'cuenta abierta' : 'cuentas abiertas'}
+            {cortes.aFavor > 0 && ` · ${cortes.aFavor} a favor`}
+            {cortes.alDia > 0 && ` · ${cortes.alDia} al día`}
+          </div>
+        </div>
+        <div className="hd-head__sp" />
+        <div className="hd-head__right">
+          {tabs}
+          <div className="ec-fig">
+            <div className="ec-fig__l">POR COBRAR</div>
+            <div className="ec-fig__v">{fmt(totalPorCobrar)}</div>
+          </div>
+          <div className="hd-head__div" />
+          {cuentaSel && <Button variant="outline" size="sm" onClick={() => exportarPDF(cuentaSel)}>PDF</Button>}
+        </div>
+      </div>
 
       <div className="ec-book">
-      <aside className="ec-aside">
-        <div className="card" style={{ boxShadow: 'none', overflow: 'hidden' }}>
-          <div className="card__h"><h3 style={{ margin: 0, fontSize: 15 }}>Cuentas</h3><span className="count">Por cobrar {fmt(totalPorCobrar)}</span></div>
-          <div style={{ padding: 0 }}>
+        {/* Columna de cuentas. El saldo manda: rojo si debe, verde a favor,
+            gris al dia. El nombre pesa 700 solo en quien debe. */}
+        <aside className={`ec-aside${cuentaSel ? ' ec-aside--sel' : ''}`}>
+          <div className="hd-card" style={{ padding: 0, overflow: 'hidden' }}>
+            <div className="ec-aside__h">
+              <span className="ec-aside__t">Cuentas</span>
+              <span className="ec-aside__n">{cuentas.length}</span>
+              <span className="hd-bar__sp" />
+              <span className="ec-aside__s">saldo a hoy</span>
+            </div>
             {cuentas.map((c, i) => {
               const on = mismaPersona(sel, c.persona)
+              const debe = c.saldo > 0, favor = c.saldo < 0
               return (
                 <button key={c.persona} type="button" className={`ec-row${on ? ' on' : ''}`} onClick={() => elegirCuenta(c.persona)}>
-                  <span className={`av av-${(i % 5) + 1}`} style={{ width: 34, height: 34, fontSize: 12, flexShrink: 0 }}>
+                  <span className={`av av-${(i % 5) + 1} ec-row__av`}>
                     {(c.persona || '?').split(' ').map(x => x[0]).slice(0, 2).join('')}
                   </span>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontWeight: 700, fontSize: 14, color: on ? '#fff' : 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.persona}</div>
-                    {c.rol && <div style={{ fontSize: 11.5, color: on ? '#9fb0d0' : 'var(--text-3)' }}>{c.rol}</div>}
-                  </div>
-                  <div className="mono" style={{ textAlign: 'right', flexShrink: 0, fontSize: 13, fontWeight: 700, whiteSpace: 'nowrap',
-                    color: on ? '#fff' : (c.saldo > 0 ? 'var(--amber-700)' : c.saldo < 0 ? 'var(--green-700)' : 'var(--text-4)') }}>
-                    {c.saldo > 0 ? fmt(c.saldo) : c.saldo < 0 ? `a favor ${fmt(-c.saldo)}` : '—'}
-                  </div>
+                  <span className="ec-row__b">
+                    <span className={`ec-row__n${debe ? ' debe' : ''}`}>{c.persona}</span>
+                    <span className="ec-row__m">{c.rol || (c.movs.length ? `${c.movs.length} movimiento${c.movs.length === 1 ? '' : 's'}` : 'sin movimientos')}</span>
+                  </span>
+                  <span className="ec-row__r">
+                    <span className={`ec-row__s${debe ? ' debe' : favor ? ' favor' : ''}`}>
+                      {debe ? fmt(c.saldo) : favor ? fmt(-c.saldo) : '$ 0'}
+                    </span>
+                    <span className={`ec-row__e${debe ? ' debe' : favor ? ' favor' : ''}`}>
+                      {debe ? 'DEBE' : favor ? 'A FAVOR' : 'AL DÍA'}
+                    </span>
+                  </span>
                 </button>
               )
             })}
+            <div className="ec-aside__f">
+              <span>Por cobrar</span>
+              <span className="ec-aside__ft">{fmt(totalPorCobrar)}</span>
+            </div>
           </div>
-        </div>
-      </aside>
+        </aside>
 
-      <main style={{ minWidth: 0, display: 'flex', flexDirection: 'column', gap: 16 }}>
-        <div className="card" style={{ boxShadow: 'none', order: 2 }}>
-          <div className="card__h"><h3 style={{ margin: 0, fontSize: 15 }}>Registrar movimiento{cuentaSel ? <span style={{ fontWeight: 500, color: 'var(--text-3)' }}> · {cuentaSel.persona}</span> : ''}</h3></div>
-          <div className="card__b" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            <div className="field">
-              <label>Persona</label>
-              <select className="input" value={form.personaSel} onChange={e => { const v = e.target.value; setForm(f => ({ ...f, personaSel: v })); if (v && v !== '__otra') setSel(v) }}>
-                <option value="">Seleccionar…</option>
-                {tecnicos.filter(t => !t.eliminado).map(t => <option key={t.id} value={t.nombre}>{t.nombre}</option>)}
-                {PERSONAS_CUENTA.map(p => <option key={p.nombre} value={p.nombre}>{p.nombre}{p.rol ? ` (${p.rol})` : ''}</option>)}
-                <option value="__otra">Otra persona (tercero)…</option>
-              </select>
-            </div>
-            {form.personaSel === '__otra' && (
-              <div className="field">
-                <label>Nombre de la persona</label>
-                <input className="input" value={form.personaOtra} onChange={e => setForm(f => ({ ...f, personaOtra: e.target.value }))} placeholder="Ej. Administrador, proveedor…" />
+        <main className={`ec-main${cuentaSel ? ' ec-main--sel' : ''}`}>
+          {!cuentaSel ? (
+            <div className="hd-card"><div className="hd-void">Elige una cuenta para ver sus movimientos</div></div>
+          ) : (
+            <>
+              {/* Banda de la cuenta: DEBE grande, y al lado los cuatro cortes.
+                  "Mas antiguo" sale de la fecha del prestamo mas viejo sin
+                  saldar; es el que dice si hay que insistir. */}
+              <div className="hd-card ec-band">
+                <button type="button" className="ec-band__back" onClick={() => setSel(null)} aria-label="Volver a las cuentas">
+                  <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5M12 19l-7-7 7-7" /></svg>
+                </button>
+                <span className={`av av-${(cuentas.findIndex(c => mismaPersona(c.persona, sel)) % 5) + 1} ec-band__av`}>
+                  {(cuentaSel.persona || '?').split(' ').map(x => x[0]).slice(0, 2).join('')}
+                </span>
+                <div className="ec-band__id">
+                  <div className="ec-band__n">{cuentaSel.persona}</div>
+                  <div className="ec-band__s">
+                    {cuentaSel.rol || (cuentaSel.tecnicoId != null ? 'Técnico' : 'Cuenta')}
+                    {abiertaDesde(cuentaSel) && ` · cuenta abierta desde ${abiertaDesde(cuentaSel)}`}
+                  </div>
+                </div>
+                <div className="ec-band__sp" />
+                <div className="ec-band__debe">
+                  <div className="ec-fig__l">{cuentaSel.saldo < 0 ? 'A FAVOR' : 'DEBE'}</div>
+                  <div className={`ec-band__debe-v${cuentaSel.saldo > 0 ? ' debe' : cuentaSel.saldo < 0 ? ' favor' : ''}`}>
+                    {fmt(Math.abs(cuentaSel.saldo))}
+                  </div>
+                </div>
+                <div className="hd-head__div" />
+                <div className="ec-band__grid">
+                  <div><div className="ec-band__gl">PRESTADO</div><div className="ec-band__gv">{fmt(cuentaSel.prestado)}</div></div>
+                  <div><div className="ec-band__gl">ABONADO</div><div className="ec-band__gv ok">{fmt(cuentaSel.abonado)}</div></div>
+                  <div><div className="ec-band__gl">MOVIMIENTOS</div><div className="ec-band__gv">{cuentaSel.movs.length}</div></div>
+                  <div><div className="ec-band__gl">MÁS ANTIGUO</div><div className={`ec-band__gv${dias > 0 ? ' warn' : ''}`}>{dias > 0 ? `${dias} días` : '—'}</div></div>
+                </div>
+                {cuentaSel.saldo !== 0 && (
+                  <Button variant="outline" onClick={() => saldarCuenta(cuentaSel)} className="ec-band__saldar">Saldar la cuenta</Button>
+                )}
               </div>
-            )}
-            <div className="field">
-              <label>Tipo de movimiento</label>
-              <div className="segctl segctl--full">
-                <button type="button" className={form.tipo === 'prestamo' ? 'on' : ''} onClick={() => setForm(f => ({ ...f, tipo: 'prestamo' }))}>Préstamo</button>
-                <button type="button" className={form.tipo === 'abono' ? 'on' : ''} onClick={() => setForm(f => ({ ...f, tipo: 'abono' }))}>Abono / descuento</button>
+
+              {/* Movimientos, con el saldo corrido despues de cada uno. */}
+              <div className="hd-card" style={{ padding: 0, overflow: 'hidden' }}>
+                <div className="ec-movs__h">
+                  <span className="ec-aside__t">Movimientos de {cuentaSel.persona}</span>
+                  <span className="ec-aside__n">{cuentaSel.movs.length}</span>
+                </div>
+                {cuentaSel.movs.length === 0 ? (
+                  <div className="hd-void">Sin movimientos</div>
+                ) : (
+                  <>
+                    <div className="ec-movs__cab">
+                      <span style={{ width: 88 }}>FECHA</span>
+                      <span style={{ width: 92 }}>TIPO</span>
+                      <span style={{ width: 112, textAlign: 'right' }}>MONTO</span>
+                      <span style={{ flex: 1, minWidth: 0, paddingLeft: 18 }}>NOTA</span>
+                      <span style={{ width: 96, textAlign: 'right' }}>SALDO</span>
+                      <span style={{ width: 34 }} />
+                    </div>
+                    <div className="ec-movs__b">
+                      {movsSel.map(m => {
+                        const abono = m.tipo === 'abono'
+                        const puedeCuentti = abono && !cuentaSel.tecnicoId && !!cedulaDeCuenta(cuentaSel)
+                        const doc = gastoDone[m.id]
+                        return (
+                          <div key={m.id} className="ec-mov">
+                            <div className="ec-mov__r">
+                              <span className="ec-mov__f">{fmtDate(m.fecha)}</span>
+                              <span style={{ width: 92 }}>
+                                <span className={`hd-chip hd-chip--${abono ? 'ok' : 'warn'}`}>{abono ? 'ABONO' : 'PRÉSTAMO'}</span>
+                              </span>
+                              <span className={`ec-mov__m${abono ? ' ok' : ''}`}>{abono ? '− ' : '+ '}{fmt(m.monto)}</span>
+                              <span className="ec-mov__nota">{m.nota || <span className="hd-empty">—</span>}</span>
+                              <span className="ec-mov__saldo">{fmt(m.saldoCorrido)}</span>
+                              <span className="ec-mov__del">
+                                <button type="button" className="ec-del" aria-label="Eliminar movimiento" title="Eliminar" onClick={() => setDlg({
+                                  title: 'Eliminar movimiento',
+                                  lead: `${abono ? 'Abono' : 'Préstamo'} · ${fmt(m.monto)} · ${fmtDate(m.fecha)}`,
+                                  confirmLabel: 'Sí, eliminar', tone: 'danger',
+                                  onConfirm: () => eliminarMovimiento(m.id),
+                                })}><IconX /></button>
+                              </span>
+                            </div>
+                            {puedeCuentti && (
+                              <div className="ec-mov__cuentti">
+                                {doc ? (
+                                  <span className="hd-chip hd-chip--ok" title="Gasto ya registrado en Cuentti">Registrado en Cuentti · {doc}</span>
+                                ) : (
+                                  <>
+                                    <span className="ec-mov__cl">CUENTTI</span>
+                                    <div className="segctl" style={{ margin: 0 }}>
+                                      <button type="button" className={(metodoG[m.id] || 'efectivo') === 'efectivo' ? 'on' : ''} onClick={() => setMetodoG(g => ({ ...g, [m.id]: 'efectivo' }))}>Efectivo</button>
+                                      <button type="button" className={(metodoG[m.id] || 'efectivo') === 'transferencia' ? 'on' : ''} onClick={() => setMetodoG(g => ({ ...g, [m.id]: 'transferencia' }))}>Transferencia</button>
+                                    </div>
+                                    <Button variant="outline" size="sm" style={{ marginLeft: 'auto' }} disabled={gastoReg === m.id} onClick={() => pedirRegistrarGastoEC(m, cuentaSel)}>
+                                      {gastoReg === m.id ? 'Registrando…' : (gastoErr[m.id] ? 'Reintentar' : 'Registrar en Cuentti')}
+                                    </Button>
+                                  </>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        )
+                      })}
+                    </div>
+                    <div className="ec-movs__f">
+                      <span className="hd-bar__sp">{cuentaSel.movs.length} movimientos · {fmt(cuentaSel.prestado)} prestado, {fmt(cuentaSel.abonado)} abonado</span>
+                      <span className={`ec-movs__ft${cuentaSel.saldo > 0 ? ' debe' : cuentaSel.saldo < 0 ? ' favor' : ''}`}>
+                        {cuentaSel.saldo > 0 ? `Debe ${fmt(cuentaSel.saldo)}` : cuentaSel.saldo < 0 ? `A favor ${fmt(-cuentaSel.saldo)}` : 'Al día'}
+                      </span>
+                    </div>
+                  </>
+                )}
               </div>
-              <p style={{ margin: '7px 2px 0', fontSize: 12.5, fontWeight: 600, color: form.tipo === 'prestamo' ? 'var(--amber-700)' : 'var(--green-700)' }}>
-                {form.tipo === 'prestamo' ? 'Sube lo que debe (+)' : 'Baja lo que debe (−)'}
-              </p>
+            </>
+          )}
+
+          {/* Registrar movimiento: deja de pesar lo mismo que el saldo y baja al
+              pie, en una fila. El monto es el unico con borde de acento. */}
+          <div className="hd-card ec-form">
+            <div className="ec-form__h">
+              <span className="ec-aside__t">Registrar movimiento</span>
+              <span className="ec-form__hs">
+                {cuentaSel ? cuentaSel.persona : 'elige la persona'} · hoy {fmtDate(hoyISO())}
+              </span>
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-              <div className="field"><label>Monto</label><MoneyInput value={form.monto} onChange={v => setForm(f => ({ ...f, monto: v, valorDia: '', dias: '' }))} placeholder="0" /></div>
-              <div className="field"><label>Fecha</label><input className="input" type="date" value={form.fecha} onChange={e => setForm(f => ({ ...f, fecha: e.target.value }))} /></div>
-            </div>
-            {(verPorDias || (parseFloat(form.valorDia) || 0) > 0 || (parseInt(form.dias) || 0) > 0) ? (
-              <div className="field">
-                <label>Por días <span style={{ fontWeight: 500, color: 'var(--text-3)' }}>(pagos/cargos diarios)</span></label>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                  <MoneyInput value={form.valorDia} onChange={v => setDia({ valorDia: v })} placeholder="Valor/día" style={{ flex: '1 1 120px', minWidth: 0 }} />
-                  <span style={{ color: 'var(--text-3)', fontWeight: 700 }}>×</span>
-                  <input className="input" type="number" min="0" value={form.dias} onChange={e => setDia({ dias: e.target.value })} placeholder="Días" style={{ width: 84 }} />
-                  {(parseFloat(form.valorDia) || 0) > 0 && (parseInt(form.dias) || 0) > 0 && (
-                    <span style={{ fontSize: 12.5, color: 'var(--text-2)' }}>= <strong style={{ fontVariantNumeric: 'tabular-nums' }}>{fmt((parseFloat(form.valorDia) || 0) * (parseInt(form.dias) || 0))}</strong></span>
-                  )}
+            <div className="ec-form__r">
+              <div className="ec-form__c ec-form__c--tipo">
+                <div className="ec-form__l">TIPO</div>
+                <div className="hd-seg">
+                  <button type="button" className={`hd-seg__i${form.tipo === 'prestamo' ? ' on' : ''}`} onClick={() => setForm(f => ({ ...f, tipo: 'prestamo' }))}>Préstamo</button>
+                  <button type="button" className={`hd-seg__i${form.tipo === 'abono' ? ' on' : ''}`} onClick={() => setForm(f => ({ ...f, tipo: 'abono' }))}>Abono</button>
                 </div>
               </div>
-            ) : (
-              <button type="button" onClick={() => setVerPorDias(true)} style={{ background: 'transparent', border: 0, color: 'var(--primary)', fontFamily: 'inherit', fontWeight: 600, fontSize: 13.5, cursor: 'pointer', padding: '2px 0', marginBottom: 4 }}>＋ calcular por días</button>
-            )}
-            <div className="field"><label>Nota</label><input className="input" value={form.nota} onChange={e => setForm(f => ({ ...f, nota: e.target.value }))} placeholder="Concepto, referencia…" /></div>
-            {(() => {
-              const hayMonto = (parseFloat(form.monto) || 0) > 0 || ((parseFloat(form.valorDia) || 0) > 0 && (parseInt(form.dias) || 0) > 0)
-              return <Button variant="primary" type="button" onClick={guardar} disabled={!hayMonto} style={{ opacity: hayMonto ? 1 : 0.5, cursor: hayMonto ? 'pointer' : 'not-allowed' }}>Registrar</Button>
-            })()}
-          </div>
-        </div>
-
-        <div className="card" ref={detailRef} style={{ boxShadow: 'none', order: 1 }}>
-        {!cuentaSel ? (
-          <div className="card__b"><div className="empty"><h4>Selecciona una cuenta</h4><p>Elige una persona de la lista para ver su estado de cuenta.</p></div></div>
-        ) : (
-          <>
-            <div className="card__h" style={{ flexWrap: 'wrap', gap: 10, alignItems: 'flex-start' }}>
-              <div>
-                <h3 style={{ margin: 0 }}>{cuentaSel.persona}</h3>
-                <span style={{ display: 'block', marginTop: 4, fontSize: 13, fontWeight: 700, color: cuentaSel.saldo > 0 ? 'var(--amber-700)' : cuentaSel.saldo < 0 ? 'var(--green-700)' : 'var(--text-3)' }}>
-                  {cuentaSel.saldo > 0 ? `Debe ${fmt(cuentaSel.saldo)}` : cuentaSel.saldo < 0 ? `A favor ${fmt(-cuentaSel.saldo)}` : 'Al día'}
-                </span>
+              <div className="ec-form__c ec-form__c--persona">
+                <div className="ec-form__l">PERSONA</div>
+                <select className="hd-drop" value={form.personaSel} onChange={e => { const v = e.target.value; setForm(f => ({ ...f, personaSel: v })); if (v && v !== '__otra') setSel(v) }}>
+                  <option value="">Seleccionar…</option>
+                  {tecnicos.filter(t => !t.eliminado).map(t => <option key={t.id} value={t.nombre}>{t.nombre}</option>)}
+                  {PERSONAS_CUENTA.map(p => <option key={p.nombre} value={p.nombre}>{p.nombre}{p.rol ? ` (${p.rol})` : ''}</option>)}
+                  <option value="__otra">Otra persona (tercero)…</option>
+                </select>
               </div>
-              <div style={{ display: 'flex', gap: 8, marginLeft: 'auto' }}>
-                {cuentaSel.saldo !== 0 && <Button variant="primary" size="sm" onClick={() => saldarCuenta(cuentaSel)}>Saldar</Button>}
-                <Button variant="outline" size="sm" onClick={() => exportarPDF(cuentaSel)}>PDF</Button>
+              {form.personaSel === '__otra' && (
+                <div className="ec-form__c ec-form__c--persona">
+                  <div className="ec-form__l">NOMBRE</div>
+                  <input className="hd-drop" value={form.personaOtra} onChange={e => setForm(f => ({ ...f, personaOtra: e.target.value }))} placeholder="Ej. Administrador, proveedor…" />
+                </div>
+              )}
+              <div className="ec-form__c ec-form__c--monto">
+                <div className="ec-form__l">MONTO <span className="req">*</span></div>
+                <MoneyInput value={form.monto} onChange={v => setForm(f => ({ ...f, monto: v, valorDia: '', dias: '' }))} placeholder="0" className="ec-monto" />
               </div>
+              <div className="ec-form__c ec-form__c--fecha">
+                <div className="ec-form__l">FECHA</div>
+                <input className="hd-drop" type="date" value={form.fecha} onChange={e => setForm(f => ({ ...f, fecha: e.target.value }))} />
+              </div>
+              <div className="ec-form__c ec-form__c--nota">
+                <div className="ec-form__l">NOTA</div>
+                <input className="hd-drop" value={form.nota} onChange={e => setForm(f => ({ ...f, nota: e.target.value }))} placeholder="Concepto, referencia…" />
+              </div>
+              {(() => {
+                const hayMonto = (parseFloat(form.monto) || 0) > 0 || ((parseFloat(form.valorDia) || 0) > 0 && (parseInt(form.dias) || 0) > 0)
+                return <Button variant="primary" type="button" onClick={guardar} disabled={!hayMonto} className="ec-form__go">Registrar</Button>
+              })()}
             </div>
-            {cuentaSel.movs.length === 0 ? (
-              <div className="card__b"><p style={{ fontSize: 13.5, color: 'var(--text-3)' }}>Sin movimientos. Registra un préstamo o abono abajo.</p></div>
-            ) : (
-              <div className="card__b" style={{ paddingTop: 4, paddingBottom: 4 }}>
-                {cuentaSel.movs.map((m, i) => {
-                  // El boton de Cuentti sale en los ABONOS (pagos) de cuentas que NO son
-                  // de un tecnico y que tienen cedula (Nicanor/admin/terceros).
-                  const puedeCuentti = m.tipo === 'abono' && !cuentaSel.tecnicoId && !!cedulaDeCuenta(cuentaSel)
-                  const doc = gastoDone[m.id]
-                  return (
-                  <div key={m.id} style={{ borderTop: i === 0 ? 'none' : '1px solid var(--border)', padding: '10px 4px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-                      <Badge tone={m.tipo === 'abono' ? 'success' : 'warning'}>{m.tipo === 'abono' ? 'Abono' : 'Préstamo'}</Badge>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        {m.nota && <div style={{ fontSize: 13.5, color: 'var(--text-2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.nota}</div>}
-                        <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: m.nota ? 2 : 0 }}>{fmtDate(m.fecha)}</div>
-                      </div>
-                      <span className="mono" style={{ fontWeight: 700, fontSize: 15.5, whiteSpace: 'nowrap', color: m.tipo === 'abono' ? 'var(--green-700)' : 'var(--amber-700)' }}>
-                        {m.tipo === 'abono' ? '− ' : '+ '}{fmt(m.monto)}
-                      </span>
-                      <button type="button" className="ec-del" aria-label="Eliminar movimiento" title="Eliminar" onClick={() => setDlg({
-                        title: 'Eliminar movimiento',
-                        lead: `${m.tipo === 'abono' ? 'Abono' : 'Préstamo'} · ${fmt(m.monto)} · ${fmtDate(m.fecha)}`,
-                        confirmLabel: 'Sí, eliminar', tone: 'danger',
-                        onConfirm: () => eliminarMovimiento(m.id),
-                      })}><IconX /></button>
-                    </div>
-                    {puedeCuentti && (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 10, flexWrap: 'wrap' }}>
-                        {doc ? (
-                          <span className="badge" style={{ background: 'var(--soft-green)', color: 'var(--green-700)', fontWeight: 700 }} title="Gasto ya registrado en Cuentti">✓ Registrado en Cuentti · {doc}</span>
-                        ) : (
-                          <>
-                            <span style={{ fontSize: 11.5, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '.4px' }}>Cuentti</span>
-                            <div className="segctl" style={{ margin: 0 }}>
-                              <button type="button" className={(metodoG[m.id] || 'efectivo') === 'efectivo' ? 'on' : ''} onClick={() => setMetodoG(g => ({ ...g, [m.id]: 'efectivo' }))} style={{ fontSize: 12 }}>Efectivo</button>
-                              <button type="button" className={(metodoG[m.id] || 'efectivo') === 'transferencia' ? 'on' : ''} onClick={() => setMetodoG(g => ({ ...g, [m.id]: 'transferencia' }))} style={{ fontSize: 12 }}>Transferencia</button>
-                            </div>
-                            <Button variant="outline" size="sm" style={{ marginLeft: 'auto' }} disabled={gastoReg === m.id} onClick={() => pedirRegistrarGastoEC(m, cuentaSel)}>
-                              {gastoReg === m.id ? 'Registrando…' : (gastoErr[m.id] ? 'Reintentar' : 'Registrar en Cuentti')}
-                            </Button>
-                          </>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                  )
-                })}
+            {/* "Por dias" es una calculadora del monto, no una vista: vive aqui,
+                recogida bajo su etiqueta, y solo se abre si se usa. */}
+            {(verPorDias || (parseFloat(form.valorDia) || 0) > 0 || (parseInt(form.dias) || 0) > 0) ? (
+              <div className="ec-dias">
+                <span className="ec-form__l">POR DÍAS</span>
+                <MoneyInput value={form.valorDia} onChange={v => setDia({ valorDia: v })} placeholder="Valor/día" style={{ flex: '1 1 120px', minWidth: 0 }} />
+                <span className="ec-dias__x">×</span>
+                <input className="hd-drop" type="number" min="0" value={form.dias} onChange={e => setDia({ dias: e.target.value })} placeholder="Días" style={{ width: 90 }} />
+                {(parseFloat(form.valorDia) || 0) > 0 && (parseInt(form.dias) || 0) > 0 && (
+                  <span className="ec-dias__eq">= <b>{fmt((parseFloat(form.valorDia) || 0) * (parseInt(form.dias) || 0))}</b></span>
+                )}
               </div>
+            ) : (
+              <button type="button" className="ec-dias__abrir" onClick={() => setVerPorDias(true)}>Calcular por días</button>
             )}
-          </>
-        )}
-      </div>
-      </main>
+          </div>
+
+          {/* Resumen por tecnico: no es el libro de prestamos sino lo liquidado
+              y entregado. Se conserva, recogido bajo su etiqueta y contador. */}
+          {resumen}
+        </main>
       </div>
     </div>
   )
