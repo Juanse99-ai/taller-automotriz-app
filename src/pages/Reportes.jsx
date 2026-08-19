@@ -54,6 +54,7 @@ export default function Reportes({ trabajos, loading = false, notify }) {
   })
   // Preset activo (para resaltar el botón). null = rango personalizado.
   const [presetActivo, setPresetActivo] = useState('mes')
+  const [verRango, setVerRango] = useState(false) // el rango DESDE/HASTA vive tras su pastilla
 
   // Tarjetas plegables: cada sección de detalle se puede recoger para dejar la
   // pantalla en el resumen (KPIs) sin scrollear nueve tarjetas. `colapso[id]===true`
@@ -94,6 +95,9 @@ export default function Reportes({ trabajos, loading = false, notify }) {
       {aside && <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>{aside}</div>}
     </div>
   )
+  // Una seccion recogida tiene que poder descartarse sin abrirla: bajo su
+  // titulo va una linea que dice QUE hay dentro, no solo su nombre.
+  const dentro = (id, texto) => (colapso[id] && texto ? <div className="rep-dentro">{texto}</div> : null)
 
   // Inventario de Cuentti (mismo cache compartido) para costo y stock de repuestos.
   const { inventario } = useInventario()
@@ -485,78 +489,70 @@ export default function Reportes({ trabajos, loading = false, notify }) {
   const netoLabel = netoConfiable ? 'Aporte al taller' : 'Margen antes de repuestos'
   // No hay nada que exportar si el rango es inválido o no cae ninguna OT.
   const sinDatos = rangoInvalido || stats.total === 0
-  const netoColor = netoConfiable ? (stats.neto >= 0 ? 'var(--green-600)' : 'var(--red-600)') : 'var(--text)'
 
   return (
     <div>
-      <div className="pagehd">
-        <div>
-          <h2>Reportes</h2>
-          <p className="pagehd__sub" style={{ margin: '2px 0 0', fontSize: 13, color: 'var(--text-3)' }}>{rangoTexto}</p>
+      {/* Barra de titulo: los presets pasan de seis botones de 44px a un
+          segmentado, y el rango DESDE/HASTA a una pastilla con el rango
+          escrito. Los dos campos siguen ahi, dentro. */}
+      <div className="hd-head rep-head">
+        <div className="hd-head__t">
+          <h1>Reportes</h1>
+          <div className="hd-head__sub">{stats.total} trabajos · {stats.completados} completados</div>
         </div>
-        <div className="actions" style={{ flexWrap: 'wrap', gap: 8 }}>
-          <Button variant="outline" size="sm" onClick={toggleTodas} aria-pressed={todasColapsadas}>
-            <svg className="rep-recoger-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
-              style={{ transform: todasColapsadas ? 'rotate(0deg)' : 'rotate(180deg)' }}>
-              <polyline points="4 14 10 14 10 20"/><polyline points="20 10 14 10 14 4"/><line x1="14" y1="10" x2="21" y2="3"/><line x1="3" y1="21" x2="10" y2="14"/>
+        <div className="hd-head__sp" />
+        <div className="hd-head__right">
+          <div className="hd-seg rep-presets">
+            {PRESETS.map(([k, l]) => (
+              <button key={k} type="button" aria-pressed={presetActivo === k}
+                className={`hd-seg__i${presetActivo === k ? ' on' : ''}`}
+                onClick={() => { aplicarPreset(k); setVerRango(false) }}>{l}</button>
+            ))}
+          </div>
+          <button type="button" className={`rep-rango${verRango ? ' on' : ''}`} onClick={() => setVerRango(v => !v)}
+            aria-expanded={verRango}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="17" rx="2" /><path d="M8 2v4M16 2v4M3 10h18" /></svg>
+            {fmtDate(rango.desde)} – {fmtDate(rango.hasta)}
+          </button>
+          <button type="button" className="rep-ico" onClick={toggleTodas} aria-pressed={todasColapsadas}
+            title={todasColapsadas ? 'Expandir todas las secciones' : 'Recoger todas las secciones'}>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"
+              style={{ transform: todasColapsadas ? 'none' : 'rotate(180deg)' }}>
+              <path d="M4 8V5a1 1 0 0 1 1-1h3M16 4h3a1 1 0 0 1 1 1v3M20 16v3a1 1 0 0 1-1 1h-3M8 20H5a1 1 0 0 1-1-1v-3" />
             </svg>
-            {todasColapsadas ? 'Expandir' : 'Recoger'}
-          </Button>
-          <Button variant="outline" size="sm" onClick={exportarCSV} disabled={sinDatos} title={sinDatos ? 'No hay datos para exportar en este rango' : undefined}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/></svg>
-            CSV
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => exportarResumen()} disabled={sinDatos} title={sinDatos ? 'No hay datos para exportar en este rango' : undefined}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-            PDF
+          </button>
+          <button type="button" className="rep-ico" onClick={() => exportarResumen()} disabled={sinDatos}
+            title={sinDatos ? 'No hay datos para exportar en este rango' : 'Exportar el resumen en PDF'}>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /></svg>
+          </button>
+          <Button variant="primary" onClick={exportarCSV} disabled={sinDatos}
+            title={sinDatos ? 'No hay datos para exportar en este rango' : undefined}
+            icon={<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3v12M7 10l5 5 5-5M4 19h16" /></svg>}>
+            Exportar CSV
           </Button>
         </div>
       </div>
 
-      {/* Filtros rapidos + custom */}
-      <div className="card" style={{ marginBottom: 16 }}>
-        <div className="card__b" style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '.5px' }}>Periodo rápido</span>
-            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-              {PRESETS.map(([k, l]) => {
-                const on = presetActivo === k
-                return (
-                  <Button key={k} type="button"
-                    variant={on ? 'primary' : 'outline'} size="sm"
-                    aria-pressed={on}
-                    onClick={() => aplicarPreset(k)}
-                    style={{ padding: '10px 14px', fontSize: 12.5, minHeight: 44 }}>
-                    {l}
-                  </Button>
-                )
-              })}
-            </div>
-          </div>
-          <div className="filtro-sep" style={{ width: 1, height: 36, background: 'var(--border)', margin: '0 6px' }} />
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '.5px' }}>Personalizado</span>
-            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-              <input className="input" type="date" aria-label="Fecha desde" value={rango.desde} onChange={e => setFecha('desde', e.target.value)} style={{ width: 160, fontSize: 16 }} />
-              <span style={{ color: 'var(--text-3)', fontSize: 12 }}>→</span>
-              <input className="input" type="date" aria-label="Fecha hasta" value={rango.hasta} onChange={e => setFecha('hasta', e.target.value)} style={{ width: 160, fontSize: 16 }} />
-            </div>
-          </div>
+      {verRango && (
+        <div className="rep-rango__b">
+          <span className="ec-form__l">DESDE</span>
+          <input className="hd-drop" type="date" aria-label="Fecha desde" value={rango.desde} onChange={e => setFecha('desde', e.target.value)} />
+          <span className="ec-form__l">HASTA</span>
+          <input className="hd-drop" type="date" aria-label="Fecha hasta" value={rango.hasta} onChange={e => setFecha('hasta', e.target.value)} />
+          <span className="hd-bar__sp" />
+          <span className="rep-rango__n">{rangoTexto}</span>
         </div>
-        {rangoInvalido && (
-          <div className="card__b" style={{ paddingTop: 0, display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-            <span className="aviso-ambar" style={{ fontSize: 13, fontWeight: 600 }}>
-              El rango está invertido: “desde” ({fmtDate(rango.desde)}) es posterior a “hasta” ({fmtDate(rango.hasta)}).
-            </span>
-            <Button variant="warning" size="sm" onClick={corregirRango}>Corregir</Button>
-          </div>
-        )}
-        {topeAlcanzado && !rangoInvalido && (
-          <div className="card__b aviso-ambar" style={{ paddingTop: 0, fontSize: 12.5 }}>
-            Mostrando las últimas {MAX_TRABAJOS} OT. Un historial más largo puede quedar por fuera de este total.
-          </div>
-        )}
-      </div>
+      )}
+
+      {rangoInvalido && (
+        <div className="rep-aviso">
+          <span>El rango está invertido: “desde” ({fmtDate(rango.desde)}) es posterior a “hasta” ({fmtDate(rango.hasta)}).</span>
+          <Button variant="warning" size="sm" onClick={corregirRango}>Corregir</Button>
+        </div>
+      )}
+      {topeAlcanzado && !rangoInvalido && (
+        <div className="rep-aviso">Mostrando las últimas {MAX_TRABAJOS} OT. Un historial más largo puede quedar por fuera de este total.</div>
+      )}
 
       {/* Estados de carga y vacío ------------------------------------------------ */}
       {loading && trabajos.length === 0 ? (
@@ -586,131 +582,96 @@ export default function Reportes({ trabajos, loading = false, notify }) {
         </div>
       ) : (
         <>
-      {/* KPIs de dinero (anclas grandes: lo facturado y lo que le aporta al taller) */}
-      <div className="rep-money">
-        <div className="kpi"><div className="kpi__head"><div className="kpi__lbl">Facturado <span style={{fontWeight:400,color:'var(--text-3)'}}>c/IVA</span></div></div><div className="kpi__v">{fmt(stats.facturado)}</div></div>
-        <div className="kpi">
-          <div className="kpi__head"><div className="kpi__lbl">{netoLabel}</div></div>
-          <div className="kpi__v" style={{color:netoColor}}>{fmt(stats.neto)}</div>
-          {netoSinCosto && <span className="badge badge-w" style={{marginTop:6,alignSelf:'flex-start'}}>sin costo de repuestos</span>}
-          {netoParcial && <div className="aviso-ambar" style={{fontSize:12,marginTop:5,fontWeight:600}}>costo cubre {stats.coberturaMargen}%, el real es algo menor</div>}
-          {netoIncompletoVerde && <div style={{fontSize:12,marginTop:5,color:'var(--text-3)'}}>costo cubre {stats.coberturaMargen}%, el real es algo menor</div>}
+      {/* Banda de cifras: las dos que mandan salen de la grilla de seis KPIs
+          iguales y pasan a 27px, con la formula pegada al margen (no suelta
+          debajo) y los otros cuatro en una rejilla 2x2 al lado. */}
+      <div className="hd-card rep-band">
+        <div className="rep-band__c">
+          <div className="ec-fig__l">FACTURADO (C/IVA)</div>
+          <div className="rep-band__v">{fmt(stats.facturado)}</div>
         </div>
-      </div>
-      {/* KPIs de detalle (operación + comisiones) */}
-      <div className="rep-ops">
-        <div className="kpi"><div className="kpi__head"><div className="kpi__lbl">Total trabajos</div></div><div className="kpi__v">{stats.total}</div></div>
-        <div className="kpi"><div className="kpi__head"><div className="kpi__lbl">Completados</div></div><div className="kpi__v" style={{color:'var(--green-600)'}}>{stats.completados}</div></div>
-        <div className="kpi"><div className="kpi__head"><div className="kpi__lbl">Comisiones técnicos</div></div><div className="kpi__v" style={{color:'var(--amber-600)'}}>{fmt(stats.comisiones)}</div></div>
-        <div className="kpi"><div className="kpi__head"><div className="kpi__lbl">Ticket promedio <span style={{fontWeight:400,color:'var(--text-3)'}}>c/IVA</span></div></div><div className="kpi__v">{fmt(stats.ticket)}</div></div>
-      </div>
-      <p style={{fontSize:12.5,color:'var(--text-3)',margin:'0 2px 18px',lineHeight:1.5}}>
-        <strong style={{color:'var(--text-2)'}}>{netoLabel}</strong> = ventas sin IVA − comisiones − costo de repuestos, antes de gastos fijos e IVA.
-      </p>
-
-      {/* Ingresos: repuestos vs mano de obra (SIN IVA) */}
-      <div className="card" style={{ marginBottom: 16 }}>
-        {cabezal('ingresos', 'Ingresos: repuestos vs mano de obra', <span style={{fontSize:12,color:'var(--text-3)'}}>sin IVA</span>)}
-        {!colapso.ingresos && (
-        <div className="card__b" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-          {(() => {
-            const rep = Math.round(stats.repVentaSinIva), mo = stats.moBase, tot = rep + mo
-            if (tot <= 0) return <p className="text-sm text-muted" style={{margin:0}}>Sin ventas registradas en el periodo.</p>
-            const pRep = Math.round(rep / tot * 100)
-            return (
-              <>
-                <div style={{ display: 'flex', height: 14, borderRadius: 7, overflow: 'hidden', border: '1px solid var(--border)' }}>
-                  <div style={{ width: `${pRep}%`, background: 'var(--blue-500)' }} />
-                  <div style={{ width: `${100 - pRep}%`, background: 'var(--amber-500)' }} />
-                </div>
-                <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap', fontSize: 13 }}>
-                  <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}><span style={{ width: 10, height: 10, borderRadius: 3, background: 'var(--blue-500)' }} />Repuestos <strong className="mono">{fmt(rep)}</strong> <span style={{ color: 'var(--text-3)' }}>({pRep}%)</span></span>
-                  <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}><span style={{ width: 10, height: 10, borderRadius: 3, background: 'var(--amber-500)' }} />Mano de obra <strong className="mono">{fmt(mo)}</strong> <span style={{ color: 'var(--text-3)' }}>({100 - pRep}%)</span></span>
-                </div>
-              </>
-            )
-          })()}
+        <div className="rep-band__div" />
+        <div className="rep-band__c rep-band__c--margen">
+          <div className="ec-fig__l rep-band__la">{netoLabel.toUpperCase()}</div>
+          <div className="rep-band__r">
+            <span className="rep-band__v rep-band__v--acc">{fmt(stats.facturado ? stats.neto : 0)}</span>
+            {stats.facturado > 0 && (
+              <span className={`hd-chip hd-chip--${stats.neto >= 0 ? 'ok' : 'bad'}`}>
+                {Math.round(stats.neto / stats.facturado * 100)}% de lo facturado
+              </span>
+            )}
+            {netoSinCosto && <span className="hd-chip hd-chip--warn">sin costo de repuestos</span>}
+          </div>
+          {/* La formula se conserva palabra por palabra: es lo que hace
+              entendible la cifra. */}
+          <div className="rep-band__f">
+            {netoLabel} = ventas sin IVA − comisiones − costo de repuestos, antes de gastos fijos e IVA.
+          </div>
+          {(netoParcial || netoIncompletoVerde) && (
+            <div className="rep-band__f">El costo cubre {stats.coberturaMargen}% de las ventas de repuestos; el real es algo menor.</div>
+          )}
         </div>
-        )}
+        <div className="rep-band__div" />
+        <div className="rep-band__kpis">
+          <div><div className="ec-band__gl">TOTAL TRABAJOS</div><div className="rep-band__kv">{stats.total}</div></div>
+          <div><div className="ec-band__gl">COMPLETADOS</div><div className="rep-band__kv ok">{stats.completados}</div></div>
+          <div><div className="ec-band__gl">COMISIONES TÉCNICOS</div><div className="rep-band__kv">{fmt(stats.comisiones)}</div></div>
+          <div><div className="ec-band__gl">TICKET PROM. (C/IVA)</div><div className="rep-band__kv">{fmt(stats.ticket)}</div></div>
+        </div>
       </div>
 
-      {/* Utilidad por mano de obra (margen casi puro; repuestos requieren costo Cuentti) */}
-      <div className="card" style={{ marginBottom: 16 }}>
-        {cabezal('utilidad', 'Utilidad por mano de obra')}
-        {!colapso.utilidad && (<>
-        <div className="card__b" style={{ display: 'flex', gap: 14, flexWrap: 'wrap' }}>
-          <div style={{ flex: '1 1 160px' }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '.5px', marginBottom: 4 }}>Mano de obra (sin IVA)</div>
-            <div className="mono" style={{ fontSize: 22, fontWeight: 800 }}>{fmt(stats.moBase)}</div>
-          </div>
-          <div style={{ flex: '1 1 160px' }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '.5px', marginBottom: 4 }}>Comisiones técnicos</div>
-            <div className="mono" style={{ fontSize: 22, fontWeight: 800, color: 'var(--amber-600)' }}>−{fmt(stats.comisiones)}</div>
-          </div>
-          <div style={{ flex: '1 1 160px' }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '.5px', marginBottom: 4 }}>Utilidad taller</div>
-            <div className="mono" style={{ fontSize: 22, fontWeight: 800, color: 'var(--green-600)' }}>{fmt(stats.utilidadMO)}</div>
-          </div>
-        </div>
-        <div className="card__b" style={{ paddingTop: 0, fontSize: 12, color: 'var(--text-3)' }}>
-          El técnico se lleva el {Math.round(COMISION.TOTAL * 100)}% de la mano de obra; el resto queda al taller.
-        </div>
-        </>)}
-      </div>
+      <div className="rep-book">
+      <div className="rep-col">
 
-      {/* Margen de repuestos (cruza venta con costo de Cuentti) */}
-      {stats.repVentaSinIva > 0 && (
-        <div className="card" style={{ marginBottom: 16 }}>
-          {cabezal('margen', 'Margen de repuestos', stats.coberturaMargen > 0 ? <span style={{fontSize:12,color:'var(--text-3)',fontWeight:600}}>margen {stats.margenPct}%</span> : null)}
-          {!colapso.margen && (<>
-          {!stats.inventarioListo ? (
-            <div className="card__b"><p className="text-sm text-muted">Sincronizando inventario de Cuentti… vuelve en un momento para ver el margen.</p></div>
-          ) : stats.coberturaMargen === 0 ? (
-            <div className="card__b"><p className="text-sm text-muted">Cuentti no devolvió el costo de estos repuestos; no se puede calcular el margen.</p></div>
-          ) : (
+      {/* Las tres secciones de ingresos eran tres bloques plegables que
+          contestaban la MISMA pregunta. Ahora es una: de donde sale el margen.
+          Los tres numeros y sus porcentajes quedan completos. */}
+      <div className="hd-card rep-marg">
+        {(() => {
+          const rep = Math.round(stats.repVentaSinIva), mo = Math.round(stats.moBase), tot = rep + mo
+          if (tot <= 0) return <div className="hd-void">Sin ventas registradas en el periodo</div>
+          const pRep = Math.round(rep / tot * 100)
+          return (
             <>
-              <div className="card__b" style={{ display: 'flex', gap: 14, flexWrap: 'wrap' }}>
-                <div style={{ flex: '1 1 160px' }}>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '.5px', marginBottom: 4 }}>Venta con costo conocido (sin IVA)</div>
-                  <div className="mono" style={{ fontSize: 22, fontWeight: 800 }}>{fmt(Math.round(stats.repVentaConCosto))}</div>
+              <div className="rep-marg__h">
+                <span className="ec-aside__t">De dónde sale el margen</span>
+                <span className="rep-marg__hs">sin IVA · {fmt(tot)}</span>
+              </div>
+              <div className="rep-marg__bar">
+                <span style={{ width: `${pRep}%`, background: 'var(--accent)' }} />
+                <span style={{ width: `${100 - pRep}%`, background: '#93b4f7' }} />
+              </div>
+              <div className="rep-marg__cols">
+                <div className="rep-marg__c">
+                  <div className="rep-marg__cl"><span className="rep-marg__dot" style={{ background: 'var(--accent)' }} />REPUESTOS</div>
+                  <div className="rep-marg__cv">{fmt(rep)}</div>
+                  <div className="rep-marg__cn">
+                    {stats.coberturaMargen > 0
+                      ? `Margen de repuestos ${fmt(Math.round(stats.margenRep))} · ${stats.margenPct}%`
+                      : 'Cuentti no devolvió el costo: sin margen calculable'}
+                  </div>
                 </div>
-                <div style={{ flex: '1 1 160px' }}>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '.5px', marginBottom: 4 }}>Costo (Cuentti)</div>
-                  <div className="mono" style={{ fontSize: 22, fontWeight: 800, color: 'var(--amber-600)' }}>−{fmt(Math.round(stats.repCosto))}</div>
+                <div className="rep-marg__c">
+                  <div className="rep-marg__cl"><span className="rep-marg__dot" style={{ background: '#93b4f7' }} />MANO DE OBRA</div>
+                  <div className="rep-marg__cv">{fmt(mo)}</div>
+                  <div className="rep-marg__cn">
+                    Utilidad por mano de obra {fmt(stats.utilidadMO)} · {mo > 0 ? Math.round(stats.utilidadMO / mo * 100) : 0}%
+                    {' · '}el técnico se lleva el {Math.round(COMISION.TOTAL * 100)}%
+                  </div>
                 </div>
-                <div style={{ flex: '1 1 160px' }}>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '.5px', marginBottom: 4 }}>Margen ({stats.margenPct}%)</div>
-                  <div className="mono" style={{ fontSize: 22, fontWeight: 800, color: 'var(--green-600)' }}>{fmt(Math.round(stats.margenRep))}</div>
+                <div className="rep-marg__c">
+                  <div className="rep-marg__cl">COSTO DE REPUESTOS</div>
+                  <div className="rep-marg__cv">{fmt(Math.round(stats.repCosto))}</div>
+                  <div className="rep-marg__cn">
+                    Lo que se pagó al proveedor
+                    {stats.coberturaMargen > 0 && stats.coberturaMargen < 100 && ` · cubre ${stats.coberturaMargen}% de la venta`}
+                  </div>
                 </div>
               </div>
-              {stats.coberturaMargen < 100 && (
-                <div className="card__b" style={{ paddingTop: 0, fontSize: 12, color: 'var(--text-3)' }}>
-                  Calculado sobre el {stats.coberturaMargen}% de las ventas de repuestos (los que cruzan con el inventario de Cuentti). El costo es el actual, no el del momento de la venta.
-                </div>
-              )}
-              {stats.topMargen.length > 0 && (
-                <div className="card__b card__b--flush">
-                  <table className="tbl tbl-cards">
-                    <thead><tr><th>Repuesto</th><th className="c-right">Cant.</th><th className="c-right">Venta</th><th className="c-right">Costo</th><th className="c-right">Margen</th></tr></thead>
-                    <tbody>
-                      {stats.topMargen.map((m, i) => (
-                        <tr key={i}>
-                          <td className="c-name" title={m.nombre}>{m.nombre}</td>
-                          <td className="c-mono c-right" data-label="Cant.">{m.vendidas}</td>
-                          <td className="c-mono c-right" data-label="Venta">{fmt(Math.round(m.venta))}</td>
-                          <td className="c-mono c-right" data-label="Costo" style={{ color: 'var(--text-3)' }}>{fmt(Math.round(m.costo))}</td>
-                          <td className="c-mono c-right" data-label="Margen" style={{ fontWeight: 700, color: m.margen >= 0 ? 'var(--green-600)' : 'var(--red-600)' }}>{fmt(Math.round(m.margen))} <span style={{ fontSize: 11, color: 'var(--text-3)' }}>{m.pct}%</span></td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
             </>
-          )}
-          </>)}
-        </div>
-      )}
+          )
+        })()}
+      </div>
 
       {/* Repuestos más vendidos */}
       <div className="card" style={{ marginBottom: 16 }}>
@@ -741,10 +702,51 @@ export default function Reportes({ trabajos, loading = false, notify }) {
         ))}
       </div>
 
+      </div>{/* cierra la columna izquierda */}
+
+      <div className="rep-col rep-col--side">
+      {/* Technician ranking */}
+      <div className="card" style={{marginBottom:16}}>
+        {cabezal('equipo', 'Rendimiento del equipo')}
+        {!colapso.equipo && (
+        <div className="card__b card__b--flush">
+          <table className="tbl tbl-cards">
+            <thead><tr><th>Mecánico</th><th className="c-right">Trabajos</th><th className="c-right">Mano de obra</th><th style={{width:'25%'}}/></tr></thead>
+            <tbody>
+              {stats.porTecnico.map((t,i)=>{
+                const maxFact = Math.max(...stats.porTecnico.map(x=>x.facturado),1)
+                const pct = Math.round((t.facturado/maxFact)*100)
+                return (
+                  <tr key={t.id}>
+                    <td className="c-name"><div style={{display:'flex',alignItems:'center',gap:10}}>
+                      <span className={`av av-${(i%5)+1}`}>{t.sinAsignar ? '—' : t.nombre.split(' ').map(x=>x[0]).slice(0,2).join('')}</span>
+                      <span style={{fontWeight:600}}>{t.nombre}{t.inactivo && <span className="aviso-ambar" style={{marginLeft:6,fontSize:11,fontWeight:600}}>· Inactivo</span>}</span>
+                    </div></td>
+                    <td className="c-mono c-right" data-label="Trabajos" style={{fontWeight:700}}>{t.cantidad}</td>
+                    <td className="c-mono c-right" data-label="Mano de obra" style={{fontWeight:700,color:t.facturado>0?'var(--green-600)':'var(--text-3)'}}>{fmt(t.facturado)}</td>
+                    <td className="td-bar">
+                      <div style={{height:6,background:'var(--bg-subtle)',borderRadius:3,overflow:'hidden',border:'1px solid var(--border)'}}>
+                        <div style={{width:`${pct}%`,height:'100%',background:'var(--blue-500)'}}/>
+                      </div>
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
+        )}
+      </div>
+
+      {/* Consulta: cuatro secciones recogidas. Cada una dice QUE hay
+          dentro, no solo su nombre: la regla es que una seccion recogida
+          se pueda descartar sin abrirla. */}
+      <div className="rep-consulta">CONSULTA · 4 SECCIONES RECOGIDAS</div>
       {/* Rotación de inventario (vendidas en el rango vs stock actual de Cuentti) */}
       {stats.inventarioListo && stats.rotacion.length > 0 && (
         <div className="card" style={{ marginBottom: 16 }}>
           {cabezal('rotacion', 'Rotación de inventario', <span className="count">{stats.rotacion.length}</span>)}
+        {dentro('rotacion', `${stats.rotacion.length} referencias con venta en el periodo · stock actual de Cuentti al lado de lo vendido`)}
           {!colapso.rotacion && (
           <div className="card__b card__b--flush">
             <table className="tbl tbl-cards">
@@ -781,6 +783,7 @@ export default function Reportes({ trabajos, loading = false, notify }) {
       {stats.topClientes.length > 0 && (
         <div className="card" style={{marginBottom:16}}>
           {cabezal('clientes', 'Top clientes', <span className="count">{stats.topClientes.length}</span>)}
+        {dentro('clientes', stats.topClientes[0] ? `${stats.topClientes[0].cliente} encabeza con ${fmt(stats.topClientes[0].total)} en ${stats.topClientes[0].cantidad} trabajos` : 'Sin clientes facturados en el periodo')}
           {!colapso.clientes && (
           <div className="card__b card__b--flush">
             <table className="tbl tbl-cards">
@@ -809,43 +812,11 @@ export default function Reportes({ trabajos, loading = false, notify }) {
         </div>
       )}
 
-      {/* Technician ranking */}
-      <div className="card" style={{marginBottom:16}}>
-        {cabezal('equipo', 'Rendimiento del equipo')}
-        {!colapso.equipo && (
-        <div className="card__b card__b--flush">
-          <table className="tbl tbl-cards">
-            <thead><tr><th>Mecánico</th><th className="c-right">Trabajos</th><th className="c-right">Mano de obra</th><th style={{width:'25%'}}/></tr></thead>
-            <tbody>
-              {stats.porTecnico.map((t,i)=>{
-                const maxFact = Math.max(...stats.porTecnico.map(x=>x.facturado),1)
-                const pct = Math.round((t.facturado/maxFact)*100)
-                return (
-                  <tr key={t.id}>
-                    <td className="c-name"><div style={{display:'flex',alignItems:'center',gap:10}}>
-                      <span className={`av av-${(i%5)+1}`}>{t.sinAsignar ? '—' : t.nombre.split(' ').map(x=>x[0]).slice(0,2).join('')}</span>
-                      <span style={{fontWeight:600}}>{t.nombre}{t.inactivo && <span className="aviso-ambar" style={{marginLeft:6,fontSize:11,fontWeight:600}}>· Inactivo</span>}</span>
-                    </div></td>
-                    <td className="c-mono c-right" data-label="Trabajos" style={{fontWeight:700}}>{t.cantidad}</td>
-                    <td className="c-mono c-right" data-label="Mano de obra" style={{fontWeight:700,color:t.facturado>0?'var(--green-600)':'var(--text-3)'}}>{fmt(t.facturado)}</td>
-                    <td className="td-bar">
-                      <div style={{height:6,background:'var(--bg-subtle)',borderRadius:3,overflow:'hidden',border:'1px solid var(--border)'}}>
-                        <div style={{width:`${pct}%`,height:'100%',background:'var(--blue-500)'}}/>
-                      </div>
-                    </td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
-        </div>
-        )}
-      </div>
-
       {/* Top vehicles */}
       {stats.topVehiculos.length > 0 && (
         <div className="card">
           {cabezal('vehiculos', 'Vehículos frecuentes', <span className="count">{stats.topVehiculos.length}</span>)}
+        {dentro('vehiculos', stats.topVehiculos[0] ? `${stats.topVehiculos[0].placa} con ${stats.topVehiculos[0].visitas} visitas · ${stats.topVehiculos.length} placas en el periodo` : 'Sin placas repetidas en el periodo')}
           {!colapso.vehiculos && (
           <div className="card__b card__b--flush">
             <table className="tbl tbl-cards">
@@ -869,6 +840,7 @@ export default function Reportes({ trabajos, loading = false, notify }) {
       {/* Distribución por estado — al final: cuando todo está Completado aporta poco */}
       <div className="card">
         {cabezal('estado', 'Distribución por estado')}
+        {dentro('estado', `${stats.completados} completados · ${stats.total - stats.completados} sin cerrar · ${stats.porEstado.length} estados`)}
         {!colapso.estado && (() => {
           const activos = stats.porEstado.filter(e => e.cantidad > 0)
           const colors = {'Completado':'var(--green-500)','Cancelado':'var(--red-500)','En Progreso':'var(--blue-500)','Pendiente':'var(--amber-400)','En Diagnostico':'var(--blue-400)','Esperando Repuestos':'var(--amber-500)','En Prueba':'var(--purple-500,#7c3aed)','Programado':'var(--slate-400)'}
@@ -902,6 +874,9 @@ export default function Reportes({ trabajos, loading = false, notify }) {
           )
         })()}
       </div>
+      </div>{/* cierra la columna lateral */}
+      </div>{/* cierra rep-book */}
+
         </>
       )}
     </div>
