@@ -353,12 +353,16 @@ export default function Cotizaciones({ notify, trabajos = [], onCrearTrabajo, co
       <div className="card">
         <div className="card__h"><h3>Cotizaciones</h3><span className="count">{sorted.length}</span></div>
         <div className="card__b card__b--flush">
+          {/* tbl-cards--cot: en celular la fila se recompone en 3 lineas
+              (ref+placa · total / cliente / estado + vehiculo·fecha + acciones)
+              en vez de 7 pares etiqueta/valor apilados. Las clases td-* son solo
+              anclajes de CSS: ningun dato cambia de contenido ni de orden. */}
           {sorted.length === 0 ? (
             <div style={{ padding: 32, textAlign: 'center', color: 'var(--slate-400)' }}>
               <p>No hay cotizaciones registradas.</p>
             </div>
           ) : (
-            <table className="tbl tbl-cards">
+            <table className="tbl tbl-cards tbl-cards--cot">
               <thead>
                 <tr>
                   <th>Ref.</th>
@@ -379,13 +383,13 @@ export default function Cotizaciones({ notify, trabajos = [], onCrearTrabajo, co
                   const yaTieneOT = cotsConOT.has(c.id)
                   return (
                     <tr key={c.id} className="cot-row" onClick={() => setDetalleId(c.id)}>
-                      <td className="c-mono" data-label="Ref." title={c.id}>{cotRef(c.id)}</td>
+                      <td className="c-mono td-ref" data-label="Ref." title={c.id}>{cotRef(c.id)}</td>
                       <td className="c-name">{c.cliente || '—'}</td>
-                      <td className="c-mono" style={{ fontWeight: 700 }} data-label="Placa">{c.placa || '—'}</td>
-                      <td className="c-muted" data-label="Vehículo">{[c.marca, c.modelo, c.ano].filter(Boolean).join(' ') || '—'}</td>
-                      <td data-label="Estado"><Badge tone={bc}>{c.estado}</Badge></td>
-                      <td className="c-right c-mono" data-label="Total">{fmt(c.total)}</td>
-                      <td className="c-muted" data-label="Fecha">{fmtDate(c.fecha)}</td>
+                      <td className="c-mono td-placa" style={{ fontWeight: 700 }} data-label="Placa">{c.placa || '—'}</td>
+                      <td className="c-muted td-veh" data-label="Vehículo">{[c.marca, c.modelo, c.ano].filter(Boolean).join(' ') || '—'}</td>
+                      <td className="td-estado" data-label="Estado"><Badge tone={bc}>{c.estado}</Badge></td>
+                      <td className="c-right c-mono td-total" data-label="Total">{fmt(c.total)}</td>
+                      <td className="c-muted td-fecha" data-label="Fecha">{fmtDate(c.fecha)}</td>
                       {/* Una sola acción visible: la que toca ahora. Aprobar, rechazar,
                           PDF, editar y eliminar viven en el detalle o en el menú "⋯",
                           para que el tacho nunca quede al lado de algo que se usa a diario. */}

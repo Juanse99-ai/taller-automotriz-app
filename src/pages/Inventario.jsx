@@ -302,7 +302,7 @@ export default function Inventario({ notify }) {
           </div>
         ) : (
           <div className="card__b card__b--flush">
-            <table className="tbl tbl--center tbl-cards tbl--sticky">
+            <table className="tbl tbl--center tbl-cards tbl-cards--inv tbl--sticky">
               <thead>
                 <tr>
                   <th onClick={() => toggleSort('codigo')} style={{ cursor: 'pointer', userSelect: 'none' }}>
@@ -347,22 +347,22 @@ export default function Inventario({ notify }) {
                   const utilRota = util != null && util < -100
                   return (
                     <tr key={p.id || p.codigo}>
-                      <td className="c-mono" data-label="Referencia" style={{ color: 'var(--text-3)', fontSize: 11.5 }}>{p.codigo}</td>
+                      <td className="c-mono td-ref" data-label="Referencia" style={{ color: 'var(--text-3)', fontSize: 11.5 }}>{p.codigo}</td>
                       <td className="c-name col-left">{p.nombre}</td>
-                      <td className="c-muted" data-label="Categoría" style={{ textTransform: 'capitalize' }}>{p.categoria}</td>
+                      <td className="c-muted td-cat" data-label="Categoría" style={{ textTransform: 'capitalize' }}>{p.categoria}</td>
                       {/* Un servicio no tiene existencias: su "0" en rojo hacia creer
                           que estaba agotado. Se muestra en gris, sin alarma. */}
-                      <td className="c-mono c-right" data-label="Stock" style={{
+                      <td className={`c-mono c-right td-stock td-stock--${s.tone}`} data-label="Stock" style={{
                         fontWeight: p.esServicio ? 500 : 700,
                         color: p.esServicio ? 'var(--text-4)'
                           : p.stock <= 0 ? 'var(--red-600)'
                           : p.stock <= STOCK_BAJO_UMBRAL ? 'var(--amber-500)' : 'var(--text)',
                       }}>{p.esServicio ? '—' : p.stock}</td>
-                      <td className="c-mono c-right" data-label="Costo" style={{ fontWeight: 600, color: 'var(--text-2)' }}>
+                      <td className="c-mono c-right td-costo" data-label="Costo" style={{ fontWeight: 600, color: 'var(--text-2)' }}>
                         {costoIva > 0 ? fmt(costoIva) : '—'}
                       </td>
-                      <td className="c-mono c-right" data-label="Precio" style={{ fontWeight: 700 }}>{fmt(p.precio)}</td>
-                      <td className="c-mono c-right" data-label="Utilidad" style={{
+                      <td className="c-mono c-right td-precio" data-label="Precio" style={{ fontWeight: 700 }}>{fmt(p.precio)}</td>
+                      <td className="c-mono c-right td-util" data-label="Utilidad" style={{
                         fontWeight: 700,
                         color: util == null ? 'var(--text-4)' : utilRota ? 'var(--amber-600)' : util < 0 ? 'var(--red-600)' : util < 15 ? 'var(--amber-600)' : 'var(--green-600)',
                       }}>
@@ -371,10 +371,10 @@ export default function Inventario({ notify }) {
                             ? <span title={`Costo ${fmt(baseCosto)} y precio ${fmt(p.precioBase)}: revisar el producto en Cuentti`}>Revisar</span>
                             : `${util.toFixed(0)}%`}
                       </td>
-                      <td className="c-mono c-right c-muted" data-label="IVA">{p.iva}%</td>
+                      <td className="c-mono c-right c-muted td-iva" data-label="IVA">{p.iva}%</td>
                       {/* Punto + texto (estilo macOS) en vez de pastilla: el estado
                           acompaña, no compite con el nombre del producto. */}
-                      <td data-label="Estado">
+                      <td className="td-estado" data-label="Estado">
                         <span className={`st st--${s.tone}`}><i /> {s.lbl}</span>
                       </td>
                     </tr>

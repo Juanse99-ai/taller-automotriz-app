@@ -214,7 +214,7 @@ export default function Vehiculos({ vehiculos, clientes, trabajos = [], notify }
             </div>
           ) : (
             <div>
-              <table className="tbl tbl-cards">
+              <table className="tbl tbl-cards tbl-cards--veh">
                 <thead>
                   <tr>
                     <th>Placa</th>
@@ -232,20 +232,20 @@ export default function Vehiculos({ vehiculos, clientes, trabajos = [], notify }
                     const ultimo = ultimoServicio(v)
                     return (
                       <tr key={v.placa} style={{ cursor: 'pointer' }} onClick={() => seleccionar(v)}>
-                        <td className="c-name" data-label="Placa"><span className="mono" style={{ fontWeight: 700 }}>{v.placa}</span></td>
-                        <td data-label="Propietario">{nombrePropietario(v.cedulaPropietario)}</td>
+                        <td className="c-name td-placa" data-label="Placa"><span className="mono" style={{ fontWeight: 700 }}>{v.placa}</span></td>
+                        <td className="td-dueno" data-label="Propietario">{nombrePropietario(v.cedulaPropietario)}</td>
                         {/* El "--" de ficha incompleta se pinta apagado para que no
                             compita con los que si tienen dato. */}
-                        <td data-label="Marca" className={v.marca ? undefined : 'hd-empty'}>{v.marca || '—'}</td>
-                        <td data-label="Modelo" className={v.modelo ? undefined : 'hd-empty'}>{v.modelo || '—'}</td>
-                        <td data-label="Año" className={v.ano ? undefined : 'hd-empty'}>{v.ano || '—'}</td>
+                        <td data-label="Marca" className={v.marca ? 'td-marca' : 'td-marca hd-empty'}>{v.marca || '—'}</td>
+                        <td data-label="Modelo" className={v.modelo ? 'td-modelo' : 'td-modelo hd-empty'}>{v.modelo || '—'}</td>
+                        <td data-label="Año" className={v.ano ? 'td-ano' : 'td-ano hd-empty'}>{v.ano || '—'}</td>
                         {/* Visitas en negrita solo cuando hay mas de una: es lo unico
                             que distingue a un cliente que vuelve. En 0, apagado. */}
-                        <td data-label="Visitas" className="hd-n" style={{
+                        <td data-label="Visitas" className="hd-n td-visitas" style={{
                           fontWeight: (v.historial || []).length > 1 ? 700 : 400,
                           color: (v.historial || []).length === 0 ? 'var(--text-empty)' : (v.historial || []).length > 1 ? 'var(--text)' : 'var(--text-3)',
                         }}>{(v.historial || []).length}</td>
-                        <td data-label="Último servicio" style={{ fontSize: 12, color: 'var(--text-3)' }}>
+                        <td data-label="Último servicio" className={ultimo || v.fechaUltimoServicio ? 'td-serv' : 'td-serv hd-empty'} style={{ fontSize: 12, color: 'var(--text-3)' }}>
                           {ultimo ? fmtDate(ultimo.fecha) : fmtDate(v.fechaUltimoServicio)}
                         </td>
                         <td className="td-chevron">›</td>

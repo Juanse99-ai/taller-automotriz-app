@@ -1022,7 +1022,7 @@ export default function Clientes({ clientes, vehiculos, trabajos = [], notify })
             </div>
           ) : (
             <table
-              className={`tbl tbl-cards tbl--sticky tbl--clientes${colResizing ? ' is-resizing' : ''}`}
+              className={`tbl tbl-cards tbl-cards--clientes tbl--sticky tbl--clientes${colResizing ? ' is-resizing' : ''}`}
               /* El min-width va por variable y SOLO se aplica en escritorio
                  (ver index.css): en línea pisaba el `min-width:0` del modo
                  tarjeta y en el celular las tarjetas se salían de la pantalla
@@ -1060,19 +1060,34 @@ export default function Clientes({ clientes, vehiculos, trabajos = [], notify })
                 {clientesFiltrados.map(c => (
                   <tr key={c.id || c.cedula} style={{cursor:'pointer'}} onClick={() => seleccionar(c)}>
                     <td className="c-name" title={c.nombre || ''}>{c.nombre || '—'}</td>
-                    <td className="c-mono" data-label="CC/NIT" style={{fontSize:12.5}}>{c.cedula || '—'}</td>
-                    <td className="c-mono" data-label="Teléfono">{fmtTelefono(c.telefono) || '—'}</td>
-                    <td className="c-muted" data-label="Email">{c.email || '—'}</td>
-                    <td data-label="Vehículos" style={{textAlign:'center'}}>
+                    <td className="c-mono td-cc" data-label="CC/NIT" style={{fontSize:12.5}}>{c.cedula || '—'}</td>
+                    {/* En celular esta celda deja de ser texto y se vuelve el BOTÓN DE
+                        LLAMAR de 44px (ver .tbl-cards--clientes en index.css). Si no hay
+                        número no hay botón: la celda se queda como "Teléfono —" en la
+                        línea gris, que es lo mismo que muestra hoy. */}
+                    <td className="c-mono td-tel" data-label="Teléfono">
+                      {fmtTelefono(c.telefono)
+                        ? <a
+                            className="tel-call"
+                            href={`tel:${fmtTelefono(c.telefono)}`}
+                            aria-label={`Llamar al ${fmtTelefono(c.telefono)}`}
+                            /* La fila entera abre el detalle; sin esto, tocar "llamar"
+                               además cambiaría de pantalla por debajo del marcador. */
+                            onClick={e => e.stopPropagation()}
+                          >{fmtTelefono(c.telefono)}</a>
+                        : '—'}
+                    </td>
+                    <td className="c-muted td-email" data-label="Email">{c.email || '—'}</td>
+                    <td data-label="Vehículos" className="td-vehs" style={{textAlign:'center'}}>
                       <Badge tone={(c.vehiculos || []).length > 0 ? 'i' : 'n'}>
                         {(c.vehiculos || []).length}
                       </Badge>
                     </td>
-                    <td className="c-muted" data-label="Última visita">{uvDe(c) ? fmtDate(uvDe(c)).replace(/ de /g, ' ') : '—'}</td>
+                    <td className="c-muted td-visita" data-label="Última visita">{uvDe(c) ? fmtDate(uvDe(c)).replace(/ de /g, ' ') : '—'}</td>
                     {/* "En Cuentti" HONESTO: verde = confirmado (tenemos su id de Cuentti);
                         gris "Sin verificar" = NO sabemos (no lo hemos consultado). Antes
                         decía "Pendiente" (implicaba que NO estaba) aunque sí estuviera. */}
-                    <td data-label="En Cuentti">
+                    <td className="td-cuentti" data-label="En Cuentti">
                       {/* Punto + Si/No: la etiqueta larga se truncaba a "En Cuentti…"
                           y "Sin verificar" no cabia nunca. El color ya dice cual es
                           cual; la palabra solo confirma. */}

@@ -1690,7 +1690,7 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
               {tecTrabajos.length === 0 ? (
                 <div className="empty"><h4>Sin pendientes</h4><p>No hay trabajos pendientes de liquidar.</p></div>
               ) : (
-                <table className="tbl tbl-cards tbl-liq">
+                <table className="tbl tbl-cards tbl-liq tbl-cards--liq">
                   <thead><tr>
                     <th style={{ width: 40, textAlign: 'center' }}>
                       <input
@@ -1725,7 +1725,7 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
                           {/* .c-name aquí (no en Cliente): en celular la tarjeta se
                              encabeza con la OT, que es lo que identifica el trabajo
                              cuando le pagas a un técnico. */}
-                          <td className="c-mono c-name" data-label="OT" style={{ color: 'var(--blue-600)', fontWeight: 700 }}>
+                          <td className="c-mono c-name td-ot" data-label="OT" style={{ color: 'var(--blue-600)', fontWeight: 700 }}>
                             {t.otCodigo || t.id}
                           </td>
                           <td data-label="Vehículo">
@@ -1739,7 +1739,7 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
                              (el control más ancho de la tabla, en el medio, partiendo el eje
                              de los montos). Ahora es una ficha que dice con quién, y el
                              selector solo sale si hace falta elegir o cambiar. */}
-                          <td data-label="Compartido" style={{ textAlign: 'center' }} onClick={e => e.stopPropagation()}>
+                          <td className="td-comp" data-label="Compartido" style={{ textAlign: 'center' }} onClick={e => e.stopPropagation()}>
                             {!esComp ? (
                               <button type="button" title="Este trabajo lo hicieron dos técnicos: el 40% se parte 20/20"
                                 onClick={() => toggleCompartidoSeguro(t.id)}

@@ -1785,3 +1785,547 @@ tbody tr:active{background:var(--fill-2)}
 @media (max-width:960px){
   .hd-drop,.hd-find{min-height:var(--tap)}
 }
+
+
+/* ============================================================
+   Tarjetas de movil, una por tabla
+   ------------------------------------------------------------
+   A <=600px la tabla se vuelve tarjeta. La regla generica pinta un par
+   etiqueta/valor por celda: con 7-9 columnas son 234-316px por registro, o sea
+   una pantalla entera por fila. Aqui cada tabla recompone sus datos en 3-4
+   lineas, conservando TODOS los campos: los 3-4 de identidad arriba y el resto
+   en la linea gris de apoyo.
+
+   Cada bloque esta acotado a su clase modificadora para no afectar a las demas.
+   OJO al leerlos: la regla generica pone flex-direction:column en la fila, asi
+   que todos tienen que devolverla a row (o usar grid) o todo se sigue apilando.
+   ============================================================ */
+
+/* --- CLIENTES en celular: la fila de la tabla se vuelve una tarjeta de 3 líneas
+   (~81px) en vez de los 7 pares etiqueta/valor apilados (~300px). Rejilla de 3
+   columnas: la línea gris de apoyo carga DOS renglones de datos sin desbordar,
+   y el teléfono deja de ser texto para volverse botón de llamar de 44px.
+   Va DESPUÉS del bloque genérico .tbl-cards (misma especificidad). */
+@media(max-width:600px){
+  .tbl.tbl-cards--clientes tbody tr{
+    /* La regla genérica de arriba pone flex-direction:column (una celda por
+       línea); sin este display:grid todo se sigue apilando. */
+    display:grid;grid-template-columns:auto auto minmax(0,1fr);
+    align-items:baseline;column-gap:9px;row-gap:3px;padding:11px 14px;
+  }
+  .tbl.tbl-cards--clientes tbody td{padding:0;border:none;display:block;text-align:left;min-width:0}
+  .tbl.tbl-cards--clientes tbody td::before{display:none}   /* sin rótulo por celda */
+
+  /* línea 1 — nombre. 13.5px y no 17px como en OT: aquí el identificador es un
+     nombre de hasta ~35 caracteres y a 17px se parte en tres renglones. */
+  .tbl.tbl-cards--clientes tbody td.c-name{
+    grid-column:1/-1;grid-row:1;
+    font-size:13.5px;line-height:1.25;font-weight:600;color:var(--text);
+    padding:0;margin:0;border:none;text-align:left;
+  }
+
+  /* línea 2 — CC/NIT · vehículos · última visita */
+  .tbl.tbl-cards--clientes tbody td.td-cc{
+    grid-column:1;grid-row:2;color:var(--text-4);font-weight:400;font-variant-numeric:tabular-nums;
+  }
+  .tbl.tbl-cards--clientes tbody td.td-vehs{
+    grid-column:2;grid-row:2;display:flex;justify-content:flex-start;align-items:baseline;gap:4px;
+  }
+  .tbl.tbl-cards--clientes tbody td.td-vehs::after{content:'veh.'}
+  /* El chip azul pesa demasiado en una línea de apoyo: se aplana a texto. */
+  .tbl.tbl-cards--clientes tbody td.td-vehs .badge{
+    background:none;padding:0;border-radius:0;letter-spacing:0;text-transform:none;
+    font-size:11.5px;font-weight:700;color:var(--text-3);
+  }
+  /* La fecha nunca se parte: es la tercera columna (1fr) y con nowrap empuja el
+     ancho en vez de apilarse letra por letra si la tarjeta se estrecha. */
+  .tbl.tbl-cards--clientes tbody td.td-visita{grid-column:3;grid-row:2;white-space:nowrap}
+
+  /* línea 3 — En Cuentti · teléfono (cuando no hay número) · correo */
+  .tbl.tbl-cards--clientes tbody td.td-cuentti{
+    grid-column:1;grid-row:3;display:flex;justify-content:flex-start;
+  }
+  /* Sin número no hay botón (lo pide el handoff): la celda se queda en la línea
+     gris con su rótulo, "Teléfono —", que es justo lo que muestra hoy. */
+  .tbl.tbl-cards--clientes tbody td.td-tel:not(:has(.tel-call)){grid-column:2;grid-row:3}
+  .tbl.tbl-cards--clientes tbody td.td-email{
+    grid-column:3;grid-row:3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  }
+  /* Con botón, el teléfono baja a la línea 4 y deja libre la columna 2: el
+     correo la ocupa para no truncarse en la primera palabra. */
+  .tbl.tbl-cards--clientes tbody tr:has(.tel-call) td.td-email{grid-column:2/-1}
+  /* Un "—" suelto no dice nada: estas dos conservan su rótulo. */
+  .tbl.tbl-cards--clientes tbody td.td-tel:not(:has(.tel-call))::before,
+  .tbl.tbl-cards--clientes tbody td.td-email::before{
+    display:inline;content:attr(data-label) ' ';color:var(--text-4);
+    font-size:inherit;font-weight:inherit;
+  }
+  .tbl.tbl-cards--clientes tbody td.td-vehs,
+  .tbl.tbl-cards--clientes tbody td.td-visita,
+  .tbl.tbl-cards--clientes tbody td.td-email,
+  .tbl.tbl-cards--clientes tbody td.td-tel{font-size:11.5px;line-height:1.35;color:var(--text-4)}
+
+  /* línea 4 — botón de llamar, renglón propio. NO va flotando a la derecha de
+     las tres líneas: reservarle 140px deja la línea de apoyo en ~137px a 360px
+     y ahí "15 ago 2026" se apila letra por letra (fila de 238px). Con renglón
+     propio la tarjeta mide 81px sin teléfono y ~134px con él, a cualquier ancho.
+     Solo 28 de 850 clientes tienen número, así que el alto extra casi no sale. */
+  .tbl.tbl-cards--clientes tbody td.td-tel:has(.tel-call){
+    grid-column:1/-1;grid-row:4;align-self:start;margin-top:6px;
+  }
+  .tbl.tbl-cards--clientes .tel-call{
+    display:inline-flex;align-items:center;justify-content:center;gap:6px;
+    min-height:var(--tap);padding:0 12px;border-radius:12px;
+    background:var(--soft-blue);border:1px solid var(--soft-blue-bd);color:var(--primary);
+    font-size:12.5px;font-weight:700;font-variant-numeric:tabular-nums;
+    /* max-width:100% (no 120px): un número de 10 dígitos + icono mide ~131px y
+       con 120px se cortaba el último dígito, que es lo único que hay que leer. */
+    white-space:nowrap;max-width:100%;overflow:hidden;
+  }
+  /* El resaltado táctil global es transparente: sin esto el botón no acusa el toque. */
+  .tbl.tbl-cards--clientes .tel-call:active{background:var(--soft-blue-bd)}
+  .tbl.tbl-cards--clientes .tel-call:focus-visible{outline:2px solid var(--primary);outline-offset:2px}
+  /* El icono va en CSS (máscara) y no en el JSX para que la celda de escritorio
+     siga siendo el número pelado, sin icono. */
+  .tbl.tbl-cards--clientes .tel-call::before{
+    content:'';width:15px;height:15px;flex:none;background:currentColor;
+    -webkit-mask:var(--ico-tel) center/15px no-repeat;mask:var(--ico-tel) center/15px no-repeat;
+    --ico-tel:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'><path d='M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2z'/></svg>");
+  }
+}
+/* En escritorio la celda sigue siendo el número pelado y la fila entera abre el
+   detalle: el enlace tel: queda inerte, así el clic sobre el número hace lo
+   mismo que antes del rediseño (abrir el cliente) en vez de marcar. */
+@media not all and (max-width:600px){
+  .tbl.tbl-cards--clientes .tel-call{pointer-events:none}
+}
+
+/* --- Vehículos en móvil: placa + ficha, dueño, y una línea de historia ---
+   Va DESPUÉS del bloque genérico .tbl-cards: misma especificidad, gana el último. */
+@media(max-width:600px){
+  /* position:relative + padding-right reservan el carril del chevron. Si el
+     chevron viaja dentro del flex, un marca+modelo largos lo empujan de renglón
+     y la fila pasa de 76px a 96px (medido con "Mercedes-Benz CLIO II/MEGANE/…"):
+     flexbox ENVUELVE antes de encoger, así que max-width no lo evita.
+     El reset de flex-direction:row es obligatorio: el genérico deja column. */
+  .tbl.tbl-cards--veh tbody tr{
+    display:flex;flex-direction:row;flex-wrap:wrap;align-items:baseline;
+    row-gap:2px;column-gap:5px;padding:9px 32px 9px 14px;
+    min-height:var(--row-h-mobile);position:relative;
+  }
+  .tbl.tbl-cards--veh tbody td{padding:0;border:none;display:block;text-align:left;flex:none;min-width:0}
+  .tbl.tbl-cards--veh tbody td::before{display:none}   /* sin rótulo por celda */
+
+  /* línea 1: PLACA  marca modelo año ......................... › */
+  /* white-space:nowrap porque el genérico deja overflow-wrap:anywhere y la
+     placa —la clave del registro— no puede partirse a mitad de palabra. */
+  .tbl.tbl-cards--veh tbody td.c-name.td-placa{
+    order:1;font-size:17px;line-height:1.15;font-weight:700;letter-spacing:.4px;
+    color:var(--text);padding:0;margin:0 3px 0 0;border:none;white-space:nowrap;
+  }
+  /* las tres celdas de la ficha se leen como una sola cadena: el column-gap de
+     5px hace de espacio entre palabras */
+  .tbl.tbl-cards--veh tbody td.td-marca,
+  .tbl.tbl-cards--veh tbody td.td-modelo,
+  .tbl.tbl-cards--veh tbody td.td-ano{
+    font-size:12px;line-height:1.2;color:var(--text-3);
+    flex:0 1 auto;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  }
+  /* 28%: con placa de 7 caracteres + año, la ficha entera cabe en la línea 1 a
+     390px. Por encima de ~30% "Mercedes-Benz CLIO II/…" tira el año de renglón. */
+  .tbl.tbl-cards--veh tbody td.td-marca{order:2;max-width:28%}
+  .tbl.tbl-cards--veh tbody td.td-modelo{order:3;max-width:28%}
+  .tbl.tbl-cards--veh tbody td.td-ano{order:4;flex-shrink:0}
+  /* el "—" de un dato ausente no es un dato: se colapsa para que la ficha lea
+     "Chevrolet Aveo 2012" o "2026", no "— — 2026" */
+  .tbl.tbl-cards--veh tbody td.td-marca.hd-empty,
+  .tbl.tbl-cards--veh tbody td.td-modelo.hd-empty,
+  .tbl.tbl-cards--veh tbody td.td-ano.hd-empty{display:none}
+  /* ...salvo que falten las tres: entonces el hueco se nombra una sola vez */
+  .tbl.tbl-cards--veh tbody tr:has(td.td-marca.hd-empty):has(td.td-modelo.hd-empty):has(td.td-ano.hd-empty) td.td-marca{
+    display:block;font-size:0;max-width:none;
+  }
+  .tbl.tbl-cards--veh tbody tr:has(td.td-marca.hd-empty):has(td.td-modelo.hd-empty):has(td.td-ano.hd-empty) td.td-marca::after{
+    content:'ficha incompleta';font-size:11.5px;color:var(--text-empty);
+  }
+  /* el chevron vuelve (el genérico lo oculta): la fila entera navega al detalle
+     y en táctil no hay hover que lo anuncie. Absoluto = no compite por el ancho. */
+  .tbl.tbl-cards--veh tbody td.td-chevron{
+    display:block;position:absolute;right:12px;top:9px;
+    font-size:15px;line-height:20px;color:var(--text-5);
+  }
+
+  /* línea 2: propietario */
+  .tbl.tbl-cards--veh tbody td.td-dueno{
+    order:6;flex:1 0 100%;margin-top:3px;
+    font-size:12.5px;line-height:1.25;font-weight:600;color:var(--text-2);
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  }
+
+  /* línea 3: último servicio · Visitas n */
+  .tbl.tbl-cards--veh tbody td.td-serv{
+    order:7;line-height:1.2;white-space:nowrap;
+    /* tamaño y color viven en style= inline para la tabla de escritorio, así que
+       aquí hace falta !important para bajarlos a metadato */
+    font-size:11.5px!important;color:var(--text-3)!important;
+  }
+  .tbl.tbl-cards--veh tbody td.td-serv.hd-empty{color:var(--text-empty)!important}
+  .tbl.tbl-cards--veh tbody td.td-visitas{
+    order:8;font-size:11.5px;line-height:1.2;white-space:nowrap;
+    font-variant-numeric:tabular-nums;
+  }
+  /* un entero suelto no se lee: el rótulo de la columna se queda, en línea.
+     El ::before NO hereda del style= inline: index.css:1036 le fija color, peso
+     y 12px explícitos sobre el propio pseudoelemento, y eso gana a la herencia.
+     Hay que redeclararlos aquí o el rótulo sale más grande que el número. */
+  .tbl.tbl-cards--veh tbody td.td-visitas::before{
+    display:inline;content:'· ' attr(data-label) ' ';
+    font-size:11.5px;font-weight:400;color:var(--text-3);
+  }
+}
+
+@media(max-width:600px){
+/* Cotizaciones en celular: 4 lineas por fila en vez de 7 pares etiqueta/valor.
+       linea 1   ref  placa ..................... total
+       linea 2   cliente
+       linea 3   [estado]  vehiculo · fecha
+       linea 4   ......................... [Revisar] [⋯]
+     Los 7 campos siguen en pantalla; solo cambian de sitio.
+     Las acciones NO caben en la linea 3: a 375px la pastilla + fecha + boton +
+     gaps ya suman 314px de los ~313 utiles, y el vehiculo quedaba aplastado a
+     12px (un "…" suelto). Por eso cierran la tarjeta en su propia linea. */
+  .tbl.tbl-cards--cot tbody tr{
+    /* La regla generica pone flex-direction:column; sin este reset todo se
+       sigue apilando aunque se pida wrap. */
+    display:flex;flex-direction:row;flex-wrap:wrap;align-items:center;
+    row-gap:4px;column-gap:8px;padding:11px 14px;
+  }
+  .tbl.tbl-cards--cot tbody td{
+    padding:0;border:none;display:block;text-align:left;flex:none;min-width:0;
+  }
+  .tbl.tbl-cards--cot tbody td::before{display:none}   /* sin rotulo por celda */
+
+  /* linea 1: la ref es lo unico unico (hay 2 cotizaciones distintas con la misma
+     placa y el mismo cliente), por eso va primero y en color de marca. */
+  .tbl.tbl-cards--cot tbody td.td-ref{
+    order:1;font-size:14px;line-height:1.2;font-weight:700;color:var(--primary);letter-spacing:.2px;
+  }
+  .tbl.tbl-cards--cot tbody td.td-placa{
+    order:2;font-size:14px;line-height:1.2;font-weight:700;color:var(--text);letter-spacing:.4px;
+  }
+  .tbl.tbl-cards--cot tbody td.td-total{
+    order:3;margin-left:auto;text-align:right;
+    font-size:16px;line-height:1.15;font-weight:700;color:var(--text);
+    font-variant-numeric:tabular-nums;white-space:nowrap;
+  }
+  /* linea 2: cliente solo. Razones sociales largas ("FACTORY ENGINEERING
+     LOGISTICS SAS") caben en una linea con puntos suspensivos. El min-width:0
+     es lo que evita que un nombre sin espacios empuje scroll horizontal. */
+  .tbl.tbl-cards--cot tbody td.c-name{
+    order:4;flex:1 0 100%;display:block;min-width:0;
+    font-size:13.5px;line-height:1.3;font-weight:600;color:var(--text);
+    padding:0;margin:0;border:none;text-align:left;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  }
+  /* linea 3: contexto. display:flex en la pastilla para que no arrastre el
+     interlineado del <td> en bloque. */
+  .tbl.tbl-cards--cot tbody td.td-estado{
+    order:5;display:flex;align-items:center;margin-top:2px;
+  }
+  .tbl.tbl-cards--cot tbody td.td-veh{
+    order:6;flex:1;min-width:0;margin-top:2px;
+    font-size:11.5px;line-height:1.2;color:var(--text-3);
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  }
+  /* El separador "·" reemplaza al rotulo: une vehiculo y fecha en una sola
+     frase legible sin perder ninguno de los dos valores. */
+  .tbl.tbl-cards--cot tbody td.td-fecha{
+    order:7;margin-top:2px;font-size:11.5px;line-height:1.2;color:var(--text-3);white-space:nowrap;
+  }
+  .tbl.tbl-cards--cot tbody td.td-fecha::before{
+    content:"·";display:inline;margin-right:5px;color:var(--text-4);font-size:inherit;font-weight:400;
+  }
+  /* linea 4: la accion del momento, a la derecha (zona del pulgar) y siempre en
+     el mismo sitio, lleve "Revisar", "Crear trabajo" o solo el "⋯".
+     Objetivos de 44px: el bloque <=768px baja .icon-btn a 36px y estira los
+     .btn con flex:1 1 auto; aqui se revierte. */
+  .tbl.tbl-cards--cot tbody td.td-actions{
+    order:8;flex:1 0 100%;display:flex;justify-content:flex-end;
+    margin:2px 0 0;padding:0;border-top:none;
+  }
+  .tbl.tbl-cards--cot tbody td.td-actions .actions-cell{
+    flex-wrap:nowrap;gap:7px;align-items:center;
+  }
+  .tbl.tbl-cards--cot tbody td.td-actions .btn{
+    flex:0 0 auto;min-height:var(--tap);padding:0 15px;white-space:nowrap;font-size:12.5px;
+  }
+  .tbl.tbl-cards--cot tbody td.td-actions .icon-btn{
+    flex:none;width:var(--tap);height:var(--tap);
+  }
+}
+
+/* --- Tarjeta movil de CRM ---
+   7 columnas = 7 pares etiqueta/valor por recordatorio. Aqui se recompone en
+   la tarjeta del handoff: identidad arriba con la urgencia al lado, placa y
+   servicio en medio, y el resto (frecuencia, visita, canales) en gris.
+   Los selectores llevan .tbl-cards ADEMAS del modificador: la regla generica
+   de arriba es .tbl.tbl-cards (misma especificidad), y sin el tercer gancho
+   este bloque solo ganaria por orden de aparicion en el archivo. */
+@media(max-width:600px){
+  .tbl.tbl-cards.tbl-cards--crm tbody tr{
+    /* la regla generica pone flex-direction:column; sin volver a row+wrap todo
+       se sigue apilando aunque se pida wrap */
+    display:flex;flex-direction:row;flex-wrap:wrap;align-items:flex-start;
+    column-gap:9px;row-gap:0;padding:12px 14px;
+  }
+  .tbl.tbl-cards.tbl-cards--crm tbody td{
+    padding:0;border:none;display:block;text-align:left;flex:none;
+    min-width:0;overflow-wrap:anywhere;
+  }
+  .tbl.tbl-cards.tbl-cards--crm tbody td::before{display:none}   /* sin rotulo por celda */
+
+  /* linea 1: cliente + CC ................. pastilla de urgencia
+     flex-basis 0 (no auto): el flex reparte las lineas con el tamano
+     hipotetico ANTES de encoger, y con basis:auto el nombre medía ~240px,
+     asi que la pastilla se caia sola a la linea de abajo. */
+  .tbl.tbl-cards.tbl-cards--crm tbody td.c-name{
+    order:1;flex:1 1 0;min-width:0;display:block;text-align:left;
+    font-size:17px;line-height:1.2;font-weight:700;color:var(--text);
+    padding:0;margin:0;border:none;                            /* quita el filo generico */
+  }
+  /* la cedula es linea secundaria: no hereda el 700 del nombre */
+  .tbl.tbl-cards.tbl-cards--crm tbody td.c-name .c-mono{font-weight:500}
+  .tbl.tbl-cards.tbl-cards--crm tbody td.td-urgencia{
+    order:2;margin-left:auto;flex:none;padding-top:1px;white-space:nowrap;
+  }
+
+  /* linea 2: el filo separa identidad de vehiculo, como en el mockup */
+  .tbl.tbl-cards.tbl-cards--crm tbody td.td-vehiculo{
+    order:3;flex:1 0 100%;display:flex;align-items:baseline;gap:9px;
+    justify-content:flex-start;      /* el generico trae space-between: mandaba el modelo al filo derecho */
+    margin-top:10px;padding-top:10px;border-top:1px solid var(--border);
+  }
+  .tbl.tbl-cards.tbl-cards--crm tbody td.td-vehiculo .c-mono{font-size:14px;letter-spacing:.3px;color:var(--text)}
+
+  /* linea 3: servicio y frecuencia a la izquierda, visita a la derecha
+     (mismo basis:0 que el nombre: con un servicio largo la fecha se caia) */
+  .tbl.tbl-cards.tbl-cards--crm tbody td.td-servicio{order:4;flex:1 1 0;min-width:0;margin-top:7px}
+  .tbl.tbl-cards.tbl-cards--crm tbody td.td-visita{
+    order:5;flex:none;margin-left:auto;margin-top:7px;text-align:right;
+    font-size:12px;line-height:1.35;color:var(--text-4);white-space:nowrap;
+    font-variant-numeric:tabular-nums;
+  }
+
+  /* linea 4: canales, contactos previos y resultado del ultimo contacto */
+  .tbl.tbl-cards.tbl-cards--crm tbody td.td-contacto{order:6;flex:1 0 100%;margin-top:6px}
+  /* el div interno trae flex-direction:column y gap:2 en linea: en la tarjeta va en fila */
+  .tbl.tbl-cards.tbl-cards--crm tbody td.td-contacto > div{
+    flex-direction:row!important;flex-wrap:wrap;align-items:center;gap:8px!important;
+  }
+
+  /* la accion cierra la tarjeta: ancho completo y 48px, no los 38 de .btn-sm */
+  .tbl.tbl-cards.tbl-cards--crm tbody td.td-actions{
+    order:7;flex:1 0 100%;display:block;margin-top:11px;padding-top:0;border-top:none;
+  }
+  .tbl.tbl-cards.tbl-cards--crm tbody td.td-actions .btn{width:100%;min-height:var(--tap-lg);font-size:14px}
+
+  /* --- Clientes inactivos (tabla del modal) ---
+     4 columnas apiladas eran ~130px por cliente en una lista de 163. */
+  .tbl.tbl-cards.tbl-cards--inactivos tbody tr{
+    display:flex;flex-direction:row;flex-wrap:wrap;align-items:flex-start;
+    column-gap:9px;row-gap:0;padding:11px 14px;
+  }
+  .tbl.tbl-cards.tbl-cards--inactivos tbody td{
+    padding:0;border:none;display:block;text-align:left;flex:none;
+    min-width:0;overflow-wrap:anywhere;
+  }
+  .tbl.tbl-cards.tbl-cards--inactivos tbody td::before{display:none}
+  .tbl.tbl-cards.tbl-cards--inactivos tbody td.c-name{
+    order:1;flex:1 1 0;min-width:0;padding:0;margin:0;border:none;
+    font-size:13px;line-height:1.25;color:var(--text);
+  }
+  .tbl.tbl-cards.tbl-cards--inactivos tbody td.c-name .c-mono{font-weight:500}
+  .tbl.tbl-cards.tbl-cards--inactivos tbody td.td-tel{
+    order:2;margin-left:auto;text-align:right;white-space:nowrap;
+    color:var(--text-2);font-variant-numeric:tabular-nums;
+  }
+  .tbl.tbl-cards.tbl-cards--inactivos tbody td.td-email{order:3;flex:1 0 100%;margin-top:5px;overflow-wrap:anywhere}
+  .tbl.tbl-cards.tbl-cards--inactivos tbody td.td-actions{
+    order:4;flex:1 0 100%;display:block;margin-top:9px;padding-top:0;border-top:none;
+  }
+  /* el grupo viene inline-flex con gap:6 en linea; aqui reparte el ancho a 44px */
+  .tbl.tbl-cards.tbl-cards--inactivos tbody td.td-actions > div{
+    display:flex!important;gap:8px!important;width:100%;white-space:nowrap;
+  }
+  .tbl.tbl-cards.tbl-cards--inactivos tbody td.td-actions .btn{flex:1 1 auto;min-height:var(--tap)}
+}
+
+@media(max-width:600px){
+  /* Hoja continua en vez de tarjetas sueltas: los 10px de margen y los 2 bordes
+     por fila costaban una de las 5 filas visibles. El fondo blanco y el redondeo
+     ya los pone la .card que envuelve la tabla. */
+  .tbl.tbl-cards--inv tbody tr{
+    /* La regla generica pone flex-direction:column (una celda por renglon): sin
+       este reset todo se sigue apilando aunque se pida wrap. */
+    display:flex;flex-direction:row;flex-wrap:wrap;align-items:baseline;
+    row-gap:3px;column-gap:7px;padding:9px 12px;margin:0;
+    border:none;border-bottom:1px solid var(--border);border-radius:0;
+  }
+  .tbl.tbl-cards--inv tbody tr:last-child{border-bottom:none}
+  .tbl.tbl-cards--inv tbody td{
+    padding:0;border:none;display:block;text-align:left;flex:none;white-space:nowrap;
+  }
+  .tbl.tbl-cards--inv tbody td::before{display:none}   /* sin rotulo por celda */
+
+  /* Salto de linea forzado. Con un nombre corto ("Bolsa") las celdas de la linea
+     2 caben al lado del precio y la fila entera se aplana en un solo renglon; el
+     pseudo-elemento del contenedor SI cuenta como item flex, mide 0 y parte. */
+  .tbl.tbl-cards--inv tbody tr::after{content:'';order:4;flex:1 0 100%;height:0}
+
+  /* linea 1: nombre ......................... estado   precio.
+     flex-basis:0 (no auto) es lo que mantiene el precio arriba a la derecha: con
+     base automatica un nombre de 48 caracteres ocupa el renglon el solo y empuja
+     el precio a una linea propia. */
+  .tbl.tbl-cards--inv tbody td.c-name{
+    order:1;flex:1 1 0;min-width:0;white-space:normal;
+    font-size:13.5px;line-height:1.25;font-weight:600;color:var(--text);
+    padding:0;margin:0;border:none;text-align:left;
+  }
+  .tbl.tbl-cards--inv tbody td.td-estado{order:2;margin-left:auto}
+  .tbl.tbl-cards--inv tbody td.td-estado .st{font-size:11px;gap:5px}
+  .tbl.tbl-cards--inv tbody td.td-precio{
+    order:3;text-align:right;
+    font-size:15px;line-height:1.2;color:var(--text);font-variant-numeric:tabular-nums;
+  }
+
+  /* linea 2 izquierda: referencia · categoria · Costo X · IVA Y.
+     Costo e IVA reusan su data-label como prefijo: "$ 12.495" suelto se lee como
+     un segundo precio, y "19%" al lado de la utilidad se confunde con ella. */
+  .tbl.tbl-cards--inv tbody td.td-ref{order:5}
+  .tbl.tbl-cards--inv tbody td.td-cat{order:6;max-width:26%;overflow:hidden;text-overflow:ellipsis}
+  .tbl.tbl-cards--inv tbody td.td-costo{order:7}
+  .tbl.tbl-cards--inv tbody td.td-iva{order:8}
+  .tbl.tbl-cards--inv tbody td.td-ref,
+  .tbl.tbl-cards--inv tbody td.td-cat,
+  .tbl.tbl-cards--inv tbody td.td-costo,
+  .tbl.tbl-cards--inv tbody td.td-iva{
+    /* !important: estas celdas traen color y grosor en linea (los de escritorio)
+       y sin esto el costo sale en negrita oscura, como un segundo precio. */
+    font-size:11px !important;line-height:1.25;font-weight:400 !important;color:var(--text-4) !important;
+  }
+  .tbl.tbl-cards--inv tbody td.td-costo::before,
+  .tbl.tbl-cards--inv tbody td.td-iva::before{
+    display:inline;content:attr(data-label);margin-right:3px;
+    font-size:11px;font-weight:400;color:var(--text-4);
+  }
+
+  /* linea 2 derecha: utilidad y stock, pegados al borde y bajo el precio. Si la
+     linea gris no cabe (SKU y categoria largos) bajan los dos juntos a un tercer
+     renglon, alineados a la derecha: degrada sin desordenarse. */
+  .tbl.tbl-cards--inv tbody td.td-util{
+    order:9;margin-left:auto;align-self:center;font-size:11.5px;line-height:1;text-align:right;
+  }
+  /* Pastilla de stock: el tono sale de stockState(), el mismo que ya pinta el
+     numero (rojo en 0 o negativo, ambar bajo el umbral, neutra si esta bien). */
+  .tbl.tbl-cards--inv tbody td.td-stock{
+    order:10;align-self:center;min-width:30px;text-align:center;
+    padding:5px 7px;border-radius:8px;background:var(--chip);
+    font-size:13px;line-height:1;font-variant-numeric:tabular-nums;
+  }
+  /* El color en linea (--red-600 / --amber-500) esta pensado sobre fondo blanco:
+     sobre la pastilla teñida no llega a AA, y en oscuro menos. El par -bg/-fg de
+     la paleta si contrasta en los dos temas. */
+  .tbl.tbl-cards--inv tbody td.td-stock--danger{background:var(--bad-bg);color:var(--bad-fg) !important}
+  .tbl.tbl-cards--inv tbody td.td-stock--warning{background:var(--warn-bg);color:var(--warn-fg) !important}
+  .tbl.tbl-cards--inv tbody td.td-stock--neutral{background:transparent}   /* servicio: sin existencias */
+}
+@media(max-width:600px){
+  .tbl.tbl-liq.tbl-cards--liq tbody tr{
+    position:relative;                                   /* ancla del carril de la casilla */
+    display:flex;flex-direction:row;flex-wrap:wrap;align-items:baseline;
+    row-gap:3px;column-gap:8px;padding:11px 14px 12px 48px;
+  }
+  .tbl.tbl-liq.tbl-cards--liq tbody td{padding:0;border:none;display:block;text-align:left;flex:none;min-width:0}
+  .tbl.tbl-liq.tbl-cards--liq tbody td::before{display:none}   /* sin rótulo por celda */
+
+  /* La casilla: carril de 48px de ancho por TODO el alto de la tarjeta (>=85px).
+     Fuera del flujo para no gastar una línea; la fila entera ya alterna la
+     selección, así que el objetivo real es 48 × 85px.
+     Va como FLEX centrado, no grid: la regla vieja de index.css:1074 deja vivo
+     un justify-content:space-between que, en un grid de una sola pista, pegaba
+     la casilla al borde izquierdo del carril en vez de centrarla. */
+  .tbl.tbl-liq.tbl-cards--liq tbody td.td-check{
+    position:absolute;left:0;top:0;bottom:0;width:48px;padding:0;text-align:center;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .tbl.tbl-liq.tbl-cards--liq tbody td.td-check input[type=checkbox]{width:24px;height:24px}
+
+  /* línea 1: OT · vehículo · fecha .................. comisión (+ "la mitad") */
+  .tbl.tbl-liq.tbl-cards--liq tbody td.c-name.td-ot{
+    order:1;font-family:var(--mono);font-size:15px;line-height:1.15;letter-spacing:-.01em;
+    padding:0;margin:0;border:none;
+  }
+  /* Esta celda es la PLACA (o "Sin vehículo"), no marca/modelo: son ~6
+     caracteres, así que la línea 1 no compite por ancho con la comisión. */
+  .tbl.tbl-liq.tbl-cards--liq tbody td[data-label="Vehículo"]{order:2;font-size:12px;color:var(--text-3)}
+  .tbl.tbl-liq.tbl-cards--liq tbody td.c-muted[data-label="Fecha"]{
+    order:3;font-size:12px;color:var(--text-4);white-space:nowrap;
+  }
+  .tbl.tbl-liq.tbl-cards--liq tbody td.c-muted[data-label="Fecha"]::before{
+    display:inline;content:"·";margin-right:5px;   /* separador, no rótulo: una fecha se reconoce sola */
+  }
+  .tbl.tbl-liq.tbl-cards--liq tbody td[data-label="Comisión"]{
+    order:4;margin-left:auto;text-align:right;white-space:nowrap;
+    font-size:15px;line-height:1.15;font-variant-numeric:tabular-nums;
+  }
+
+  /* línea 2: cliente. Envuelve en vez de recortar: "CENTRO DE ENSEÑANZA
+     AUTOMOVILISTICA A PRUEBA S.A.S." es un nombre normal en esta base. */
+  .tbl.tbl-liq.tbl-cards--liq tbody td[data-label="Cliente"]{
+    order:5;flex:1 0 100%;font-size:12.5px;line-height:1.3;color:var(--text);overflow-wrap:anywhere;
+  }
+
+  /* línea 3: [½ con X | Compartir] ......... Mano de obra $ 180.000 */
+  .tbl.tbl-liq.tbl-cards--liq tbody td.td-comp{
+    order:6;display:flex;flex-wrap:wrap;justify-content:flex-start;align-items:center;
+    gap:5px;margin-top:3px;
+  }
+  .tbl.tbl-liq.tbl-cards--liq tbody td.td-comp > div{
+    flex:1;min-width:0;align-items:flex-start !important;   /* el align-items:center va inline en el JSX */
+  }
+  /* La pastilla mide ~24px: se le estira el área de toque a ~45px con un ::after
+     invisible en vez de engordarla, para que la tarjeta siga en ~85px.
+     El recuadro es ASIMÉTRICO a propósito: 4px hacia arriba (cabe en el row-gap,
+     no invade la línea del cliente) y 18px hacia abajo, que caen en el padding
+     inferior de la tarjeta y en el hueco entre tarjetas — espacio muerto.
+     Un recuadro centrado de 44px se comía la línea del cliente por arriba.
+     En la pastilla ½ solo se aplica con :only-child, es decir SOLO plegada: si
+     el selector está desplegado, el ::after tapaba el borde superior del select
+     (la separación real es de 11px y el sobrante era de ~10,7px) y el toque
+     abría la pastilla en vez de el desplegable. */
+  .tbl.tbl-liq.tbl-cards--liq tbody td.td-comp > button,
+  .tbl.tbl-liq.tbl-cards--liq tbody td.td-comp > div > .badge:only-child{position:relative}
+  .tbl.tbl-liq.tbl-cards--liq tbody td.td-comp > button::after,
+  .tbl.tbl-liq.tbl-cards--liq tbody td.td-comp > div > .badge:only-child::after{
+    content:"";position:absolute;left:0;right:0;top:-4px;bottom:-18px;
+  }
+  /* El selector de compañero y "Ya no es compartido" solo salen desplegados: ahí
+     sí caben 44px reales. El alto del select va inline en el JSX, de ahí el
+     !important. (El ancho y el margen del select los sigue poniendo la regla
+     vieja de index.css:1077, que NO queda muerta.) */
+  .tbl.tbl-liq.tbl-cards--liq tbody td.td-comp .input{min-height:var(--tap) !important;height:auto !important}
+  /* :not(.badge), no :last-child: plegada, la pastilla ½ es el ÚLTIMO hijo del
+     div y se llevaba estos 44px, que es justo lo que el ::after evita. */
+  .tbl.tbl-liq.tbl-cards--liq tbody td.td-comp > div > button:not(.badge){
+    min-height:var(--tap);display:inline-flex;align-items:center;
+  }
+  /* Mano de obra conserva su rótulo (es el único valor que sin él se confunde con
+     la comisión) y se alinea a la derecha, bajo ella: una sola columna de dinero. */
+  .tbl.tbl-liq.tbl-cards--liq tbody td[data-label="Mano de obra"]{
+    order:7;margin-left:auto;margin-top:3px;text-align:right;white-space:nowrap;
+    font-size:11.5px;font-weight:400;color:var(--text-3);font-variant-numeric:tabular-nums;
+  }
+  .tbl.tbl-liq.tbl-cards--liq tbody td[data-label="Mano de obra"]::before{
+    display:inline;margin-right:4px;font-size:11.5px;font-weight:400;color:var(--text-4);
+  }
+}
