@@ -86,6 +86,13 @@ export default function Vehiculos({ vehiculos, clientes, trabajos = [], notify }
     )
   }, [vehiculosList, busqueda, clientesTable])
 
+  // Cifra del pie de la tabla. No filtra ni cambia nada: cuenta las filas que
+  // ya se estan pintando con "—" en Ultimo servicio, con ese mismo criterio.
+  const sinServicio = useMemo(
+    () => vehiculosFiltrados.filter(v => !ultimoServicio(v) && !v.fechaUltimoServicio).length,
+    [vehiculosFiltrados],
+  )
+
   const seleccionar = (vehiculo) => setVehiculoSeleccionado(vehiculo)
   const volver = () => setVehiculoSeleccionado(null)
 
@@ -200,34 +207,33 @@ export default function Vehiculos({ vehiculos, clientes, trabajos = [], notify }
         </div>
       </div>
 
-      {/* Tabla */}
-      <div className="card">
-        {/* El titulo ya lo pone la barra de arriba: repetirlo aqui dejaba
-            "Vehiculos" escrito dos veces a 40px de distancia. Queda el conteo,
-            que es lo unico que esta cabecera aportaba. */}
-        <div className="card__h"><span className="hd-bar__n">{vehiculosFiltrados.length} vehículos</span></div>
-        <div className="card__b" style={{ padding: 0 }}>
-          {vehiculosFiltrados.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: 40, color: 'var(--text-3)' }}>
-              <svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" style={{ marginBottom: 12, opacity: .8 }}>
-                <path d="M14 16H9m10 0h3v-3.15a1 1 0 0 0-.84-.99L16 11l-2.7-3.6a1 1 0 0 0-.8-.4H5.24a2 2 0 0 0-1.8 1.1l-.8 1.63A6 6 0 0 0 2 12.42V16h2"/>
-                <circle cx="6.5" cy="16.5" r="2.5"/><circle cx="16.5" cy="16.5" r="2.5"/>
-              </svg>
-              <p>No se encontraron vehículos</p>
-            </div>
-          ) : (
-            <div>
+      {/* Tabla
+          El mockup abre la tarjeta DIRECTO en la banda de rotulos: no hay
+          cabecera con titulo (ya esta arriba, a 40px) ni el conteo suelto.
+          El conteo baja al pie, que es donde el diseño lo pone junto al unico
+          dato que la lista no puede mostrar fila a fila. */}
+      <div className="hd-card" style={{ marginTop: 10 }}>
+        {vehiculosFiltrados.length === 0 ? (
+          <div className="hd-void">
+            <div className="hd-void__t">No se encontraron vehículos</div>
+          </div>
+        ) : (
+          <>
+            <div className="veh-scroll">
               <table className="tbl tbl-cards tbl-cards--veh">
                 <thead>
                   <tr>
-                    <th>Placa</th>
+                    {/* 114 = 96 de columna + los 18 de sangría de la tarjeta;
+                        40 = 22 del chevron + los 18 del otro lado. Con eso las
+                        ocho columnas caen donde el mockup las pone. */}
+                    <th style={{ width: 114 }}>Placa</th>
                     <th>Propietario</th>
-                    <th>Marca</th>
-                    <th>Modelo</th>
-                    <th>Año</th>
-                    <th>Visitas</th>
-                    <th>Último servicio</th>
-                    <th></th>
+                    <th style={{ width: 104 }}>Marca</th>
+                    <th style={{ width: 104 }}>Modelo</th>
+                    <th className="hd-n" style={{ width: 56 }}>Año</th>
+                    <th className="hd-n" style={{ width: 66 }}>Visitas</th>
+                    <th className="hd-n" style={{ width: 118 }}>Último servicio</th>
+                    <th style={{ width: 40 }}></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -235,32 +241,110 @@ export default function Vehiculos({ vehiculos, clientes, trabajos = [], notify }
                     const ultimo = ultimoServicio(v)
                     return (
                       <tr key={v.placa} style={{ cursor: 'pointer' }} onClick={() => seleccionar(v)}>
-                        <td className="c-name td-placa" data-label="Placa"><span className="mono" style={{ fontWeight: 700 }}>{v.placa}</span></td>
+                        <td className="c-name td-placa" data-label="Placa">{v.placa}</td>
                         <td className="td-dueno" data-label="Propietario">{nombrePropietario(v.cedulaPropietario)}</td>
                         {/* El "--" de ficha incompleta se pinta apagado para que no
                             compita con los que si tienen dato. */}
                         <td data-label="Marca" className={v.marca ? 'td-marca' : 'td-marca hd-empty'}>{v.marca || '—'}</td>
                         <td data-label="Modelo" className={v.modelo ? 'td-modelo' : 'td-modelo hd-empty'}>{v.modelo || '—'}</td>
-                        <td data-label="Año" className={v.ano ? 'td-ano' : 'td-ano hd-empty'}>{v.ano || '—'}</td>
+                        <td data-label="Año" className={v.ano ? 'hd-n td-ano' : 'hd-n td-ano hd-empty'}>{v.ano || '—'}</td>
                         {/* Visitas en negrita solo cuando hay mas de una: es lo unico
                             que distingue a un cliente que vuelve. En 0, apagado. */}
                         <td data-label="Visitas" className="hd-n td-visitas" style={{
                           fontWeight: (v.historial || []).length > 1 ? 700 : 400,
                           color: (v.historial || []).length === 0 ? 'var(--text-empty)' : (v.historial || []).length > 1 ? 'var(--text)' : 'var(--text-3)',
                         }}>{(v.historial || []).length}</td>
-                        <td data-label="Último servicio" className={ultimo || v.fechaUltimoServicio ? 'td-serv' : 'td-serv hd-empty'} style={{ fontSize: 12, color: 'var(--text-3)' }}>
+                        {/* El tamaño y el color viven en la hoja de abajo, no aqui:
+                            un color inline le ganaba a .hd-empty y el "—" salia
+                            igual de oscuro que una fecha real. */}
+                        <td data-label="Último servicio" className={ultimo || v.fechaUltimoServicio ? 'hd-n td-serv' : 'hd-n td-serv hd-empty'}>
                           {ultimo ? fmtDate(ultimo.fecha) : fmtDate(v.fechaUltimoServicio)}
                         </td>
-                        <td className="td-chevron">›</td>
+                        <td className="td-chevron">
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6" /></svg>
+                        </td>
                       </tr>
                     )
                   })}
                 </tbody>
               </table>
             </div>
-          )}
-        </div>
+            {/* Pie: el conteo que estaba en la cabecera de la tarjeta, y a la
+                derecha lo unico que la lista no deja ver de un vistazo: cuantas
+                placas nunca han pasado por el taller. */}
+            <div className="hd-tbl__f">
+              <span>{vehiculosFiltrados.length.toLocaleString('es-CO')} vehículo{vehiculosFiltrados.length === 1 ? '' : 's'}</span>
+              <span className="hd-bar__sp" />
+              <span>Sin servicio registrado</span>
+              <b>{sinServicio.toLocaleString('es-CO')}</b>
+            </div>
+          </>
+        )}
       </div>
+
+      {/* Maquetacion de ESTA tabla. No va en index.css porque solo la usa
+          Vehiculos; si se quiere mover, el bloque esta listo tal cual. */}
+      <style>{`
+        /* Las siete columnas fijas suman 602px. Entre 601 y ~830px de area util
+           no caben: la tabla scrollea DENTRO de su tarjeta, nunca empuja la
+           pagina de lado (min-width:0 es lo que impide que estire la tarjeta). */
+        .veh-scroll{min-width:0;overflow-x:auto;-webkit-overflow-scrolling:touch}
+
+        /* La placa es un codigo: monoespaciada en las dos vistas. */
+        .tbl.tbl-cards--veh tbody td.td-placa{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+        .tbl.tbl-cards--veh tbody td.td-chevron svg{display:block}
+
+        @media(min-width:601px){
+          .tbl.tbl-cards--veh{table-layout:fixed;font-size:12.5px}
+
+          /* Banda de rotulos de 30px: gris, versalitas de 9.5px, y la linea de
+             1.5px que separa el rotulo del dato. Sin ella los titulos de columna
+             se leian como una fila mas. */
+          .tbl.tbl-cards--veh thead th{
+            height:30px;padding:0;background:var(--bg-subtle);
+            font-size:9.5px;line-height:1;font-weight:700;letter-spacing:.7px;
+            color:var(--text-4);text-transform:uppercase;white-space:nowrap;
+            border-bottom:1.5px solid var(--head-line);
+          }
+          .tbl.tbl-cards--veh thead th.hd-n{text-align:right}
+
+          /* Fila de 38px con separador de 1px del color del handoff
+             (el generico usaba el gris iOS, que raya la tabla). */
+          .tbl.tbl-cards--veh tbody tr{height:var(--row-h)}
+          .tbl.tbl-cards--veh tbody tr:hover{background:var(--bg-subtle)}
+          /* Sin relleno entre columnas: el mockup las pega y deja que el
+             propietario —el unico campo largo— se corte con puntos suspensivos.
+             La sangria de 18px la ponen la primera y la ultima. */
+          .tbl.tbl-cards--veh tbody td{
+            padding:0;line-height:1.2;border-bottom:1px solid var(--row-line);
+            white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+          }
+          .tbl.tbl-cards--veh tbody tr:last-child td{border-bottom:none}
+          .tbl.tbl-cards--veh thead th:first-child,
+          .tbl.tbl-cards--veh tbody td:first-child{padding-left:18px}
+          .tbl.tbl-cards--veh thead th:last-child,
+          .tbl.tbl-cards--veh tbody td:last-child{padding-right:18px}
+
+          .tbl.tbl-cards--veh tbody td.td-placa{
+            font-size:13.5px;font-weight:700;letter-spacing:.3px;color:var(--text);
+          }
+          .tbl.tbl-cards--veh tbody td.td-dueno{font-weight:600;color:var(--text-2);padding-right:14px}
+          .tbl.tbl-cards--veh tbody td.td-visitas{font-size:13px}
+          .tbl.tbl-cards--veh tbody td.td-serv{font-size:12.5px;color:var(--text-3)}
+          .tbl.tbl-cards--veh tbody td.td-serv.hd-empty{color:var(--text-empty)}
+          .tbl.tbl-cards--veh tbody td.td-chevron{width:auto;padding-left:0;color:var(--text-5)}
+          .tbl.tbl-cards--veh tbody td.td-chevron svg{margin-left:auto}
+        }
+
+        /* Movil: el diseño es UNA hoja blanca con las filas separadas por una
+           linea, no una tarjeta por vehiculo dentro de otra tarjeta. */
+        @media(max-width:600px){
+          .tbl.tbl-cards--veh tbody tr{
+            border:none;border-bottom:1px solid var(--row-line);border-radius:0;margin:0;
+          }
+          .tbl.tbl-cards--veh tbody tr:last-child{border-bottom:none}
+        }
+      `}</style>
     </div>
   )
 }

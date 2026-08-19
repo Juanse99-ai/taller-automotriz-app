@@ -1360,13 +1360,20 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
         /* ===== Asistente por pasos: 1 técnico → 2 trabajos → 3 pago =====
            Un solo carril. Cada paso cumplido se encoge a una línea con "Cambiar",
            así nunca hay tres sitios distintos donde se descuenta plata. */
-        .liq-steps{ display:flex; align-items:center; gap:8px; list-style:none; margin:0 0 20px; padding:0; flex-wrap:wrap; }
-        .liq-step{ display:flex; align-items:center; gap:8px; font-size:13px; font-weight:700; color:var(--text-4); }
-        .liq-step .n{ width:25px; height:25px; border-radius:50%; background:var(--fill); display:flex; align-items:center; justify-content:center; font-size:12px; flex-shrink:0; }
-        .liq-step.on{ color:var(--text); }
-        .liq-step.on .n{ background:var(--primary); color:#fff; }
-        .liq-step.done .n{ background:var(--green-600); color:#fff; }
-        .liq-step__bar{ width:28px; height:2px; border-radius:2px; background:var(--border-strong); flex-shrink:0; }
+        /* Pastillas, no barras: la guía viaja en la MISMA fila del título (como
+           el resto de la app pone su segmentado ahí), y cada paso es una cápsula
+           con su número — el hecho en verde, el actual en azul. */
+        .liq-steps{ display:flex; align-items:center; gap:7px; list-style:none; margin:0; padding:0; flex-wrap:wrap; }
+        .liq-step{ display:flex; align-items:center; gap:7px; height:34px; padding:0 13px 0 7px; border-radius:var(--radius-pill); background:var(--chip); font-size:12px; font-weight:400; color:var(--text-4); white-space:nowrap; }
+        .liq-step .n{ width:20px; height:20px; border-radius:50%; background:var(--border); color:var(--text-4); display:grid; place-items:center; font-size:11px; font-weight:700; line-height:1; flex-shrink:0; }
+        .liq-step.done{ color:var(--text); }
+        .liq-step.done .n{ background:var(--ok-bg); color:var(--ok-fg); }
+        .liq-step.on{ background:var(--accent-soft); color:var(--text); font-weight:700; }
+        .liq-step.on .n{ background:var(--accent); color:#fff; }
+        @media (max-width:960px){
+          .liq-steps{ width:100%; gap:6px; }
+          .liq-step{ flex:1; justify-content:center; height:var(--tap); padding:0 8px; }
+        }
         /* Paso 1 ya resuelto: resumen en una línea */
         .liq-done{ display:flex; align-items:center; gap:12px; padding:13px 16px; }
         /* Paso 1: tarjetas de técnico, grandes y tocables */
@@ -1447,16 +1454,151 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
         /* Filtros del historial: una sola fila que envuelve, sin caja propia */
         .liq-filtros{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; padding:0 0 14px; }
         .liq-filtros .input{ width:auto; height:32px; min-height:32px; font-size:12.5px; padding:2px 9px; }
+
+        /* ===== Mesa de trabajo: la lista a la izquierda, el pago a la derecha =====
+           Antes eran tres tarjetas apiladas: para saber cuánto ibas a pagarle al
+           técnico había que bajar. Ahora el neto y el botón viven en el carril
+           derecho, a la vista desde el primer clic. En el celular vuelve a ser
+           una sola columna (mismo orden de lectura). */
+        .liq-work{ display:flex; align-items:flex-start; gap:10px; }
+        .liq-work__main{ flex:1; min-width:0; display:flex; flex-direction:column; gap:10px; }
+        .liq-work__side{ width:322px; flex:none; display:flex; flex-direction:column; gap:10px; }
+        @media (min-width:961px) and (max-width:1199px){ .liq-work__side{ width:290px; } }
+        @media (max-width:960px){
+          .liq-work{ flex-direction:column; }
+          .liq-work__main,.liq-work__side{ width:100%; }
+        }
+        /* Dentro del carril de 322px los renglones de plata van más apretados:
+           con el inset de 12px y un valor de 112px fijos, "Mano de obra (sin
+           IVA) · 3 OTs" se partía en tres líneas. */
+        .liq-work__side .card__b{ padding:14px 16px; }
+        .liq-work__side .liq-line{ padding:5px 0; font-size:12.5px; gap:10px; }
+        .liq-work__side .liq-line__v{ min-width:0; }
+        .liq-work__side .liq-grp{ padding:0; }
+        .liq-work__side .liq-aj{ font-size:12.5px; }
+        .liq-work__side .liq-aj__val{ min-width:0; }
+        /* El neto NUNCA bajo el pliegue: si el carril crece (muchos ajustes,
+           formulario abierto), la tarjeta navy se ancla al borde inferior de la
+           ventana y el botón de pagar sigue a la vista. */
+        @media (min-width:961px){
+          .liq-work__side .hd-neto{ position:sticky; bottom:12px; z-index:3; box-shadow:0 6px 20px rgba(13,27,53,.22); }
+        }
+        /* Rótulo del carril: en el diseño el título del Paso 3 NO es cabecera de
+           tarjeta, encabeza la columna entera. */
+        .liq-side__head{ display:flex; align-items:center; gap:10px; padding:0 4px; min-height:26px; }
+        .liq-side__head .t{ font-size:14px; font-weight:700; color:var(--text); }
+        .liq-ref{ font-size:11px; font-weight:600; letter-spacing:.3px; color:var(--accent); background:var(--accent-soft); padding:6px 10px; border-radius:var(--radius-pill); white-space:nowrap; }
+
+        /* Ficha del técnico elegido (Paso 1 hecho) */
+        .liq-done{ gap:13px; }
+        .liq-done__n{ font-size:16px; line-height:1.15; font-weight:700; color:var(--text); }
+        .liq-done__m{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-top:5px; font-size:12.5px; line-height:1; color:var(--text-3); }
+        .liq-debe{ font-size:11.5px; line-height:1; font-weight:700; color:var(--bad-fg); background:var(--bad-bg); padding:6px 9px; border-radius:var(--radius-pill); white-space:nowrap; }
+        .liq-afavor{ font-size:11.5px; line-height:1; font-weight:700; color:var(--ok-fg); background:var(--ok-bg); padding:6px 9px; border-radius:var(--radius-pill); white-space:nowrap; }
+        /* "Cambiar": cápsula de 40px con borde de 1.5, no un botón fantasma */
+        .liq-cambiar{ height:40px; padding:0 18px; font-size:13px; font-weight:600; color:var(--text-2); background:var(--bg-raised); border:1.5px solid var(--border-strong); border-radius:var(--radius-pill); }
+
+        /* Cabecera del Paso 2 (mockup: 13/16/11, sin filete inferior — el filete
+           lo pone la banda de rótulos de la tabla) */
+        #liq-paso2 > .card__h{ padding:13px 16px 11px; border-bottom:none; gap:11px; }
+        #liq-paso2 > .card__h h3{ font-size:14px; font-weight:700; letter-spacing:0; gap:11px; }
+        .liq-chev{ width:26px; height:26px; flex-shrink:0; display:grid; place-items:center; border-radius:var(--radius-pill); background:var(--chip); color:var(--text-3); }
+        .liq-hint{ font-size:11.5px; line-height:1; color:var(--text-4); }
+        /* Lo marcado, en plata: el jefe mira este número mientras marca. */
+        .liq-marcado{ font-size:11.5px; line-height:1; font-weight:700; color:var(--accent); background:var(--accent-soft); padding:8px 13px; border-radius:var(--radius-pill); white-space:nowrap; font-variant-numeric:tabular-nums; }
+        /* "Todos": chip plano del diseño; en táctil recupera los 44px de alto. */
+        .liq-chipbtn{ height:30px; display:inline-flex; align-items:center; padding:0 14px; border:none; border-radius:var(--radius-pill); background:var(--chip); color:var(--text-2); font-family:inherit; font-size:12px; font-weight:600; cursor:pointer; white-space:nowrap; transition:background .12s; }
+        .liq-chipbtn:hover{ background:var(--border); }
+        .liq-chipbtn:active{ transform:scale(.97); }
+        @media (max-width:960px){ .liq-chipbtn{ height:var(--tap); padding:0 16px; font-size:12.5px; } }
+
+        /* Tabla del Paso 2 con la banda de rótulos y las líneas finas del diseño */
+        @media (min-width:961px){
+          #liq-paso2 > .card__b--flush{ max-height:calc(100vh - 342px); min-height:220px; overflow-y:auto; }
+          /* La lista ya no ocupa el ancho entero de la ventana: comparte con el
+             carril de pago. Los 16px de aire a cada lado de CADA celda (32 por
+             columna) partían los montos en dos renglones — el aire pasa a los
+             bordes de la fila, como en el diseño, y los anchos se reparten para
+             que Mano de obra y Comisión quepan siempre en una línea. */
+          #liq-paso2 .tbl-liq{ min-width:0; }
+          #liq-paso2 .tbl-liq thead th,#liq-paso2 .tbl-liq tbody td{ padding-left:8px; padding-right:8px; }
+          #liq-paso2 .tbl-liq th:first-child,#liq-paso2 .tbl-liq td:first-child{ padding-left:16px; }
+          #liq-paso2 .tbl-liq th:last-child,#liq-paso2 .tbl-liq td:last-child{ padding-right:16px; }
+          #liq-paso2 .tbl-liq th:nth-child(2),#liq-paso2 .tbl-liq td:nth-child(2){ width:11%; }
+          #liq-paso2 .tbl-liq th:nth-child(3),#liq-paso2 .tbl-liq td:nth-child(3){ width:11%; }
+          #liq-paso2 .tbl-liq th:nth-child(4),#liq-paso2 .tbl-liq td:nth-child(4){ width:9%; }
+          #liq-paso2 .tbl-liq th:nth-child(5),#liq-paso2 .tbl-liq td:nth-child(5){ width:22%; }
+          #liq-paso2 .tbl-liq th:nth-child(6),#liq-paso2 .tbl-liq td:nth-child(6){ width:14%; }
+          #liq-paso2 .tbl-liq th:nth-child(7),#liq-paso2 .tbl-liq td:nth-child(7){ width:16%; }
+          #liq-paso2 .tbl-liq th:nth-child(8),#liq-paso2 .tbl-liq td:nth-child(8){ width:17%; }
+          /* La ficha del compartido recorta dentro de su columna en vez de
+             montarse sobre los montos. */
+          #liq-paso2 .tbl-liq td.td-comp{ overflow:hidden; }
+          #liq-paso2 .tbl-liq td.td-comp .hd-chip{ font-size:11px; padding:5px 8px; max-width:100%; overflow:hidden; text-overflow:ellipsis; }
+          /* Los filetes van en box-shadow y no en border: la cabecera es sticky
+             y en una tabla con border-collapse los bordes se pierden al rodar. */
+          #liq-paso2 .tbl-liq thead th{ height:28px; padding:0 16px; background:var(--bg-subtle);
+            font-size:9.5px; font-weight:700; line-height:1; letter-spacing:.6px; text-transform:uppercase;
+            color:var(--text-4); border-bottom:none;
+            box-shadow:inset 0 1px 0 var(--row-line), inset 0 -1.5px 0 var(--head-line); }
+          #liq-paso2 .tbl-liq tbody td{ height:46px; padding:6px 16px; border-bottom:1px solid var(--row-line); color:var(--text); }
+          #liq-paso2 .tbl-liq tbody tr:last-child td{ border-bottom:1px solid var(--row-line); }
+          #liq-paso2 .tbl-liq tbody tr:hover{ background:var(--bg-subtle); }
+          #liq-paso2 .tbl-liq tbody tr.on,#liq-paso2 .tbl-liq tbody tr.on:hover{ background:color-mix(in srgb, var(--accent-soft) 55%, var(--bg-raised)); }
+          /* Datos de la fila: cada cifra con su peso, no todas en 14px seminegrita.
+             Solo escritorio: en el celular la tabla son tarjetas y los tamaños
+             los fija el modo táctil. */
+          #liq-paso2 .tbl td.liq-td-ot{ font-size:13px; font-weight:700; }
+          #liq-paso2 .tbl td.liq-td-mo{ font-size:13px; font-weight:400; color:var(--text); }
+          #liq-paso2 .tbl td.liq-td-com{ font-size:13.5px; line-height:1.15; }
+          #liq-paso2 .tbl td[data-label="Cliente"],#liq-paso2 .tbl td[data-label="Vehículo"]{ font-size:12.5px; }
+        }
+        /* El azul de la OT es el ÚNICO acento de la app (antes era el navy
+           --blue-600, que en una tabla se lee como texto oscuro cualquiera). */
+        #liq-paso2 .tbl td.liq-td-ot{ color:var(--accent); }
+        #liq-paso2 .tbl td.liq-td-com{ color:var(--ok-fg); font-weight:700; }
+        /* Marcar un trabajo como compartido: sigue siendo el único punto de
+           entrada, pero deja de gritar en las 10 filas que NO lo son. */
+        .liq-share{ font:inherit; font-size:11.5px; color:var(--text-5); background:none; border:none; padding:4px 6px; cursor:pointer; border-radius:var(--radius-pill); }
+        .liq-share:hover{ color:var(--accent); background:var(--accent-soft); }
+
+        /* Botonera dentro del navy (el diseño la pone ahí, no suelta abajo) */
+        .liq-pay{ display:flex; align-items:center; gap:8px; margin-top:14px; }
+        .liq-pay__go{ flex:1; min-width:0; height:48px; display:inline-flex; align-items:center; justify-content:center; gap:8px;
+          background:#fff; color:var(--navy); border:none; border-radius:var(--radius-pill);
+          font-family:inherit; font-size:14.5px; font-weight:700; cursor:pointer; transition:filter .14s,transform .14s; }
+        .liq-pay__go:hover:not(:disabled){ filter:brightness(.94); }
+        .liq-pay__go:active:not(:disabled){ transform:scale(.97); }
+        .liq-pay__go:disabled{ opacity:.55; cursor:not-allowed; }
+        .liq-pay__go svg{ width:17px; height:17px; stroke:currentColor; fill:none; stroke-width:2.3; flex-shrink:0; }
+        .liq-pay__ico{ width:48px; height:48px; flex:none; display:grid; place-items:center; border-radius:var(--radius-pill);
+          background:transparent; border:1.5px solid rgba(255,255,255,.25); color:#fff; cursor:pointer; transition:background .14s; }
+        .liq-pay__ico:hover{ background:rgba(255,255,255,.12); }
+        .liq-pay__ico svg{ width:18px; height:18px; stroke:currentColor; fill:none; stroke-width:2; }
+        .liq-pay__go:focus-visible,.liq-pay__ico:focus-visible{ outline:2px solid #fff; outline-offset:2px; }
+
+        /* Últimos pagos del técnico: el carril del diseño cierra con ellos */
+        .liq-pago{ display:flex; align-items:baseline; gap:9px; }
+        .liq-pago .f{ flex:none; font-size:12px; line-height:1.3; color:var(--text-3); }
+        .liq-pago .r{ flex:1; min-width:0; font-size:11px; line-height:1.3; color:var(--text-4); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+        .liq-pago .v{ flex:none; font-size:13px; line-height:1.2; font-weight:600; color:var(--text); font-variant-numeric:tabular-nums; }
       `}</style>
       {/* Solo titulo, pestañas y accion: la cifra de cierre ya la encabeza el
           bloque de abajo, con su desglose. Duplicarla aqui la ponia dos veces en
           la misma pantalla — y con distinto conteo de OT, que es peor que no
           ponerla. */}
-      <div className="hd-head">
+      <div className="hd-head" style={{ gap: 14, alignItems: 'center', marginBottom: 12 }}>
         <div className="hd-head__t"><h1>Liquidación de comisiones</h1></div>
+        {tabsLiq}
         <div className="hd-head__sp" />
-        <div className="hd-head__right">
-          {tabsLiq}
+        <div className="hd-head__right" style={{ alignItems: 'center', gap: 12 }}>
+          {/* Guía de pasos: dónde estoy y qué falta. Va en la MISMA fila del
+             título (antes se comía un renglón entero para tres palabras). */}
+          <ol className="liq-steps">
+            <li className={`liq-step${tecData ? ' done' : ' on'}`}><span className="n">{tecData ? '✓' : '1'}</span> Técnico</li>
+            <li className={`liq-step${!tecData ? '' : cantSeleccionados > 0 ? ' done' : ' on'}`}><span className="n">{tecData && cantSeleccionados > 0 ? '✓' : '2'}</span> Trabajos</li>
+            <li className={`liq-step${tecData && cantSeleccionados > 0 ? ' on' : ''}`}><span className="n">3</span> Pago</li>
+          </ol>
           {!tecData && <Button variant="outline" onClick={() => setVerHistorial(!verHistorial)}>{verHistorial ? 'Ocultar historial' : 'Ver historial'}</Button>}
         </div>
       </div>
@@ -1471,15 +1613,6 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
           Cargando liquidaciones…
         </div>
       )}
-
-      {/* Guía de pasos: dónde estoy y qué falta. Un solo carril, sin perderse. */}
-      <ol className="liq-steps">
-        <li className={`liq-step${tecData ? ' done' : ' on'}`}><span className="n">{tecData ? '✓' : '1'}</span> Técnico</li>
-        <li className="liq-step__bar" aria-hidden="true" />
-        <li className={`liq-step${!tecData ? '' : cantSeleccionados > 0 ? ' done' : ' on'}`}><span className="n">{tecData && cantSeleccionados > 0 ? '✓' : '2'}</span> Trabajos</li>
-        <li className="liq-step__bar" aria-hidden="true" />
-        <li className={`liq-step${tecData && cantSeleccionados > 0 ? ' on' : ''}`}><span className="n">3</span> Pago</li>
-      </ol>
 
       {!tecData ? (
       <>
@@ -1645,41 +1778,56 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
       </>
       ) : (
       <>
+        {/* Mesa de trabajo: a la izquierda a quién y qué se le paga; a la
+           derecha, sin bajar la pantalla, cuánto y el botón de pagar. */}
+        <div className="liq-work">
+          <div className="liq-work__main">
           {/* PASO 1 HECHO — se encoge a una línea, con "Cambiar" para volver */}
           <div className="card">
             <div className="liq-done">
-              <span className="av av-1" style={{ width: 40, height: 40, fontSize: 13, flexShrink: 0 }}>{iniciales(tecData.tecnico.nombre)}</span>
+              {/* El color del avatar es el MISMO que trae en la lista del Paso 1
+                 (antes quedaba fijo en av-1 y al elegir a cualquiera que no fuera
+                 el primero le cambiaba de color al pasar de paso). */}
+              <span className={`av av-${(Math.max(0, tecnicosConPendientes.findIndex(x => String(x.id) === String(tecData.tecnico.id))) % 5) + 1}`}
+                style={{ width: 44, height: 44, fontSize: 15, flexShrink: 0 }}>{iniciales(tecData.tecnico.nombre)}</span>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontWeight: 700, fontSize: 15.5 }}>{tecData.tecnico.nombre}</div>
-                <div style={{ fontSize: 12.5, color: 'var(--text-3)', marginTop: 1 }}>
-                  {tecData.tecnico.especialidad || 'Técnico'} · comisión {COMISION.TOTAL * 100}% de la mano de obra
-                  {tecCuenta.saldo > 0 && <> · <strong style={{ color: 'var(--red-600)' }}>debe {fmt(tecCuenta.saldo)}</strong></>}
-                  {tecCuenta.saldo < 0 && <> · <strong style={{ color: 'var(--green-700)' }}>a favor {fmt(-tecCuenta.saldo)}</strong></>}
+                <div className="liq-done__n">{tecData.tecnico.nombre}</div>
+                <div className="liq-done__m">
+                  <span>{tecData.tecnico.especialidad || 'Técnico'} · comisión {COMISION.TOTAL * 100}% de la mano de obra</span>
+                  {/* La deuda deja de ser una palabra más del subtítulo: es una
+                     pastilla roja, que es lo primero que hay que ver al pagarle. */}
+                  {tecCuenta.saldo > 0 && <span className="liq-debe">Debe {fmt(tecCuenta.saldo)}</span>}
+                  {tecCuenta.saldo < 0 && <span className="liq-afavor">A favor {fmt(-tecCuenta.saldo)}</span>}
                 </div>
               </div>
               {/* La referencia sale una sola vez, en el Paso 3 (donde se usa al
                  registrar en Cuentti). Antes aparecía dos veces en la pantalla. */}
-              <Button variant="ghost" size="sm" onClick={() => { setTecnicoSel(''); setSeleccionados({}) }}>Cambiar</Button>
+              <button type="button" className="liq-cambiar" onClick={() => { setTecnicoSel(''); setSeleccionados({}) }}>Cambiar</button>
             </div>
           </div>
 
-          <div className="card" style={{ marginTop: 14 }} id="liq-paso2">
+          <div className="card" id="liq-paso2">
             <div className="card__h" style={{ cursor: 'pointer' }} onClick={() => toggleColapso('trabajos')}>
-              <h3 style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"
-                  style={{ transform: colapso.trabajos ? 'rotate(-90deg)' : 'rotate(0deg)', transition: 'transform 200ms var(--ease-out)', flexShrink: 0, color: 'var(--text-3)' }}>
-                  <polyline points="6 9 12 15 18 9"/>
-                </svg>
+              <h3>
+                <span className="liq-chev">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+                    style={{ transform: colapso.trabajos ? 'rotate(-90deg)' : 'rotate(0deg)', transition: 'transform 200ms var(--ease-out)' }}>
+                    <polyline points="6 9 12 15 18 9"/>
+                  </svg>
+                </span>
                 Paso 2 · ¿Qué trabajos le pagas?
+                {!colapso.trabajos && <span className="liq-hint">Marca los que vas a liquidar</span>}
               </h3>
               <div style={{ display: 'flex', gap: 8, alignItems: 'center' }} onClick={e => e.stopPropagation()}>
-                {cantSeleccionados > 0
-                  ? <span className="count">{cantSeleccionados} de {tecTrabajos.length}</span>
-                  : !colapso.trabajos && <span style={{ fontSize: 13, color: 'var(--text-3)' }}>Marca los que vas a liquidar</span>}
+                {/* Lo marcado en PLATA, no solo un conteo: es la cifra que el
+                   jefe vigila mientras marca (el conteo sigue delante). */}
+                {cantSeleccionados > 0 && (
+                  <span className="liq-marcado">{cantSeleccionados} de {tecTrabajos.length} · {fmt(totalSeleccion.comision)}</span>
+                )}
                 {!colapso.trabajos && (
-                  <Button variant="outline" size="sm" onClick={() => seleccionarTodos(tecTrabajos.map(t => t.id))}>
+                  <button type="button" className="liq-chipbtn" onClick={() => seleccionarTodos(tecTrabajos.map(t => t.id))}>
                     {tecTrabajos.length > 0 && tecTrabajos.every(t => seleccionados[t.id]) ? 'Deseleccionar' : 'Todos'}
-                  </Button>
+                  </button>
                 )}
               </div>
             </div>
@@ -1690,7 +1838,7 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
               {tecTrabajos.length === 0 ? (
                 <div className="empty"><h4>Sin pendientes</h4><p>No hay trabajos pendientes de liquidar.</p></div>
               ) : (
-                <table className="tbl tbl-cards tbl-liq tbl-cards--liq">
+                <table className="tbl tbl-cards tbl-liq tbl-cards--liq tbl--sticky">
                   <thead><tr>
                     <th style={{ width: 40, textAlign: 'center' }}>
                       <input
@@ -1720,12 +1868,12 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
                       // Se muestra como texto, no en mono, para no confundirlo con una real.
                       const sinVeh = !!t.sinVehiculo || (t.placa || '').trim().toUpperCase() === 'SERVICIO'
                       return (
-                        <tr key={t.id} style={{ background: selected ? 'var(--accent-soft)' : undefined, cursor: 'pointer' }} onClick={() => toggleSeleccion(t.id)}>
+                        <tr key={t.id} className={selected ? 'on' : undefined} style={{ background: selected ? 'color-mix(in srgb, var(--accent-soft) 55%, var(--bg-raised))' : undefined, cursor: 'pointer' }} onClick={() => toggleSeleccion(t.id)}>
                           <td className="td-check" data-label="Liquidar" style={{ textAlign: 'center' }}><input type="checkbox" checked={selected} onChange={() => {}} aria-label="Seleccionar trabajo" style={{ accentColor: 'var(--primary)', cursor: 'pointer' }}/></td>
                           {/* .c-name aquí (no en Cliente): en celular la tarjeta se
                              encabeza con la OT, que es lo que identifica el trabajo
                              cuando le pagas a un técnico. */}
-                          <td className="c-mono c-name td-ot" data-label="OT" style={{ color: 'var(--blue-600)', fontWeight: 700 }}>
+                          <td className="c-mono c-name td-ot liq-td-ot" data-label="OT">
                             {t.otCodigo || t.id}
                           </td>
                           <td data-label="Vehículo">
@@ -1741,19 +1889,22 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
                              selector solo sale si hace falta elegir o cambiar. */}
                           <td className="td-comp" data-label="Compartido" style={{ textAlign: 'center' }} onClick={e => e.stopPropagation()}>
                             {!esComp ? (
+                              /* En el diseño esta casilla dice "—" cuando el trabajo
+                                 es de uno solo. Aquí sigue diciendo "Compartir"
+                                 porque es el ÚNICO sitio desde donde se marca —
+                                 pero en gris de dato ausente, sin la pastilla
+                                 punteada que antes gritaba en las diez filas. */
                               <button type="button" title="Este trabajo lo hicieron dos técnicos: el 40% se parte 20/20"
-                                onClick={() => toggleCompartidoSeguro(t.id)}
-                                style={{ font: 'inherit', fontSize: 11.5, color: 'var(--text-4)', background: 'none', border: '1px dashed var(--border-strong)', borderRadius: 999, padding: '3px 11px', cursor: 'pointer' }}>
+                                className="liq-share"
+                                onClick={() => toggleCompartidoSeguro(t.id)}>
                                 Compartir
                               </button>
                             ) : (
-                              <div style={{ display: 'inline-flex', flexDirection: 'column', gap: 5, alignItems: 'center' }}>
-                                <button type="button" className="badge"
+                              <div style={{ display: 'inline-flex', flexDirection: 'column', gap: 5, alignItems: 'center', maxWidth: '100%' }}>
+                                <button type="button" className={`hd-chip ${partner ? 'hd-chip--purple' : 'hd-chip--warn'}`}
                                   onClick={() => setCompAbierto(c => ({ ...c, [t.id]: !c[t.id] }))}
                                   title={partner ? 'Cambiar compañero o quitar' : 'Falta elegir el compañero'}
-                                  style={{ cursor: 'pointer', fontWeight: 700, border: 'none',
-                                    background: partner ? 'var(--soft-blue)' : 'var(--soft-amber)',
-                                    color: partner ? 'var(--blue-600)' : 'var(--amber-700)' }}>
+                                  style={{ cursor: 'pointer', border: 'none', fontFamily: 'inherit', fontSize: 11.5, padding: '6px 9px', maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                                   {/* El OTRO, visto desde el técnico al que le estás
                                      pagando. Mostrar siempre al "compañero" hacía que
                                      en la liquidación de Pedro dijera "½ con Pedro". */}
@@ -1770,7 +1921,7 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
                                         if (yaLiq) { setDialog({ title: 'Cambiar compañero', lead: 'Ya hay una mitad liquidada; cambiar el compañero puede descuadrar lo pagado.', confirmLabel: 'Cambiar igual', tone: 'danger', onConfirm: () => setCompartidoPartner(t.id, nuevoPartner) }); return }
                                         setCompartidoPartner(t.id, nuevoPartner)
                                       }}
-                                      style={{ width: 108, minHeight: 28, height: 28, fontSize: 12, padding: '2px 8px' }}
+                                      style={{ width: '100%', maxWidth: 118, minHeight: 28, height: 28, fontSize: 12, padding: '2px 8px' }}
                                       aria-label="Compañero del trabajo compartido"
                                     >
                                       <option value="">¿Con quién?</option>
@@ -1787,13 +1938,15 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
                               </div>
                             )}
                           </td>
-                          <td className="c-mono c-right" data-label="Mano de obra" style={mano === 0 ? { color: 'var(--red-600)', fontWeight: 700 } : undefined}>
+                          <td className="c-mono c-right liq-td-mo" data-label="Mano de obra" style={mano === 0 ? { color: 'var(--bad-fg)', fontWeight: 700 } : undefined}>
                             {fmt(mano)}
-                            {mano === 0 && <span style={{ display: 'block', fontSize: 10, color: 'var(--red-600)', fontWeight: 600 }}>sin servicios</span>}
+                            {mano === 0 && <span style={{ display: 'block', fontSize: 10, color: 'var(--bad-fg)', fontWeight: 600 }}>sin servicios</span>}
                           </td>
-                          <td className="c-mono c-right" data-label="Comisión" style={{ color: 'var(--green-600)', fontWeight: 600 }}>
+                          {/* La comisión es la cifra por la que se abre esta
+                             pantalla: verde oscuro y en negrita, no un dato más. */}
+                          <td className="c-mono c-right liq-td-com" data-label="Comisión">
                             {fmt(Math.round(com))}
-                            {esComp && <span style={{ display: 'block', fontSize: 10, color: 'var(--text-3)', fontWeight: 500 }}>la mitad</span>}
+                            {esComp && <span style={{ display: 'block', fontSize: 10.5, lineHeight: 1.3, color: 'var(--text-4)', fontWeight: 400 }}>la mitad</span>}
                           </td>
                         </tr>
                       )
@@ -1804,16 +1957,19 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
             </div>
             )}
           </div>
+          </div>
 
           {/* PASO 3 — de dónde sale la plata, qué se ajusta y cuánto se paga.
              Antes esto eran TRES sitios distintos (aportes, cuenta del técnico y
-             resumen); ahora los ajustes son UNA sola lista y el neto va debajo. */}
-          <div className="card" style={{ marginTop: 14 }}>
-            <div className="card__h">
-              <h3>Paso 3 · Ajustes y pago</h3>
-              {/* Insignia del sistema (.badge badge-i), no un estilo suelto */}
-              <span title="Referencia para copiar en Cuentti" className="badge badge-i mono">Ref. #{liqRef(nextLiqId(tecData.tecnico.nombre))}</span>
+             resumen); ahora los ajustes son UNA sola lista y el neto va debajo.
+             El título encabeza el carril (no es cabecera de tarjeta). */}
+          <div className="liq-work__side">
+            <div className="liq-side__head">
+              <span className="t">Paso 3 · Ajustes y pago</span>
+              <span style={{ flex: 1 }} />
+              <span title="Referencia para copiar en Cuentti" className="liq-ref mono">REF #{liqRef(nextLiqId(tecData.tecnico.nombre))}</span>
             </div>
+          <div className="card">
             <div className="card__b">
               {cantSeleccionados === 0 ? (
                 <div className="liq-empty">
@@ -1864,7 +2020,7 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
               <div className="liq-grp" style={{ margin: '20px 0 8px' }}>Ajustes de este pago</div>
 
               {tecMovs.length === 0 && tecCuenta.deudas.length === 0 && tecCuenta.saldo === 0 && (
-                <p style={{ fontSize: 13, color: 'var(--text-3)', margin: 0, padding: '0 12px' }}>Sin ajustes: se paga la comisión completa.</p>
+                <p style={{ fontSize: 12.5, color: 'var(--text-3)', margin: 0 }}>Sin ajustes: se paga la comisión completa.</p>
               )}
 
               {/* Aportes y descuentos de este cierre */}
@@ -1911,7 +2067,7 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
               {/* Monto libre contra su cuenta (o suma, si el taller le debe) */}
               {tecCuenta.saldo !== 0 && (
                 /* Campo y su ayuda apilados: al costado quedaban sin alinear entre sí. */
-                <div style={{ marginTop: 12, padding: '0 12px' }}>
+                <div style={{ marginTop: 12 }}>
                   <div className="field" style={{ maxWidth: 220, margin: 0 }}>
                     <label>{tecCuenta.saldo > 0 ? 'O descontar un monto' : 'Sumar a este pago'}</label>
                     {/* Escribir a mano desmarca los checkboxes (manda lo escrito) */}
@@ -1938,7 +2094,7 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
               {/* Agregar un ajuste nuevo: el formulario aparece SOLO al elegir cuál.
                  Usa .btn-outline del sistema (antes era un borde punteado propio
                  que no calzaba con ningún otro botón de la app). */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginTop: 16, padding: '0 12px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginTop: 16 }}>
                 {[['adelanto', 'Adelanto o cargo'], ['diario', 'Diario del administrador']].map(([k, lbl]) => {
                   const on = aporteForm === k
                   return (
@@ -1953,14 +2109,16 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
                 })}
               </div>
 
-              {/* ADELANTO / CARGO — formulario en línea, plano */}
+              {/* ADELANTO / CARGO — formulario en línea, plano. Dos columnas y no
+                 cinco: vive en el carril de 322px del diseño, donde cinco campos
+                 en fila se aplastaban. */}
               {aporteForm === 'adelanto' && (
-                <form onSubmit={agregarMovimiento} style={{ borderTop: '1px solid var(--border)', marginTop: 14, paddingTop: 16, display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 2fr auto', gap: 12 }}>
+                <form onSubmit={agregarMovimiento} style={{ borderTop: '1px solid var(--border)', marginTop: 14, paddingTop: 16, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                   <div className="field"><label>Tipo</label><select className="input" value={movForm.tipo} onChange={e => setMovForm(f => ({ ...f, tipo: e.target.value }))}><option value="adelanto">Adelanto</option><option value="prestamo">Préstamo</option><option value="consumo">Consumo</option><option value="descuento">Descuento</option></select></div>
                   <div className="field"><label>Monto</label><MoneyInput value={movForm.monto} onChange={v => setMovForm(f => ({ ...f, monto: v }))} placeholder="0" /></div>
-                  <div className="field"><label>Fecha</label><input className="input" type="date" value={movForm.fecha} onChange={e => setMovForm(f => ({ ...f, fecha: e.target.value }))}/></div>
-                  <div className="field"><label>Nota</label><input className="input" value={movForm.nota} onChange={e => setMovForm(f => ({ ...f, nota: e.target.value }))} placeholder="Almuerzo, anticipo..."/></div>
-                  <div style={{ display: 'flex', alignItems: 'flex-end' }}><Button variant="primary" type="submit">Agregar</Button></div>
+                  <div className="field" style={{ gridColumn: '1 / -1' }}><label>Fecha</label><input className="input" type="date" value={movForm.fecha} onChange={e => setMovForm(f => ({ ...f, fecha: e.target.value }))}/></div>
+                  <div className="field" style={{ gridColumn: '1 / -1' }}><label>Nota</label><input className="input" value={movForm.nota} onChange={e => setMovForm(f => ({ ...f, nota: e.target.value }))} placeholder="Almuerzo, anticipo..."/></div>
+                  <div style={{ gridColumn: '1 / -1', display: 'flex', alignItems: 'flex-end' }}><Button variant="primary" type="submit" style={{ width: '100%' }}>Agregar</Button></div>
                 </form>
               )}
 
@@ -2020,27 +2178,9 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
                 </div>
               )}
 
-              {/* NETO — justo debajo de los ajustes que lo formaron. Ya estamos
-                 dentro de la rama "hay selección" del ternario de arriba: el
-                 estado vacío se resuelve al inicio del card__b. */}
-                {/* El neto y lo que lo forma, juntos. Antes la comision, los
-                    descuentos y el neto eran tres lineas del mismo peso: habia que
-                    reconstruir la resta con la vista para saber por que se paga eso. */}
-                <div className="hd-neto">
-                  <div className="hd-neto__l">NETO A PAGAR HOY</div>
-                  <div className="hd-neto__v">{fmt(totalSeleccion.neto)}</div>
-                  <div className="hd-neto__rows">
-                    <div className="hd-neto__r"><span>Comisión de lo marcado</span><span>{fmt(totalSeleccion.comision)}</span></div>
-                    {totalSeleccion.cargosEfectivos !== 0 && (
-                      <div className={`hd-neto__r${totalSeleccion.cargosEfectivos >= 0 ? ' hd-neto__r--neg' : ''}`}>
-                        <span>{totalSeleccion.cargosEfectivos >= 0 ? 'Menos aportes y descuentos' : 'Más ajustes a favor'}</span>
-                        <span>{totalSeleccion.cargosEfectivos >= 0 ? '− ' : '+ '}{fmt(Math.abs(totalSeleccion.cargosEfectivos))}</span>
-                      </div>
-                    )}
-                    <div className="hd-neto__sep" />
-                    <div className="hd-neto__r"><span>{cantSeleccionados} trabajo{cantSeleccionados !== 1 ? 's' : ''} marcado{cantSeleccionados !== 1 ? 's' : ''}</span><span>{fmt(totalSeleccion.manoObra)} mano de obra</span></div>
-                  </div>
-                </div>
+              {/* El neto ya NO va aquí: sube al carril derecho, en el navy, con
+                 el botón de pagar dentro (ver más abajo). Aquí quedan los
+                 ajustes que lo forman y los avisos que hay que leer antes. */}
                 {totalSeleccion.cargos > 0 && (
                   <div style={{ padding: '9px 13px', background: 'rgba(245,158,11,.07)', border: '1px solid rgba(245,158,11,.25)', borderRadius: 9, fontSize: 12.5, color: 'var(--text-2)', marginBottom: 14 }}>
                     {totalSeleccion.cargos !== totalSeleccion.cargosEfectivos ? (
@@ -2117,17 +2257,64 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
                     <Button variant="outline" size="sm" onClick={() => liquidacionHook.recargar()}>Reintentar</Button>
                   </div>
                 )}
-                <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
-                  <Button variant="outline" onClick={exportPdfPago}>Exportar PDF</Button>
-                  {/* El monto del botón es lo que ENTREGAS, no el neto teórico. */}
-                  <Button variant="primary" disabled={connectionError} onClick={pedirPago}>
-                    {connectionError ? 'Sin conexión' : `Generar pago · ${fmt(montoEntregado)}`}
-                  </Button>
-                </div>
               </>
               )}
             </div>
           </div>
+
+          {/* NETO — la tarjeta navy del diseño: la cifra, de qué está hecha y el
+             botón de pagar DENTRO. Antes el botón vivía suelto al final de la
+             página y había que bajar para verlo. */}
+          {cantSeleccionados > 0 && (
+            <div className="hd-neto" style={{ margin: 0 }}>
+              <div className="hd-neto__l">NETO A PAGAR HOY</div>
+              <div className="hd-neto__v">{fmt(totalSeleccion.neto)}</div>
+              <div className="hd-neto__rows">
+                <div className="hd-neto__r"><span>Comisión de lo marcado</span><span>{fmt(totalSeleccion.comision)}</span></div>
+                {totalSeleccion.cargosEfectivos !== 0 && (
+                  <div className={`hd-neto__r${totalSeleccion.cargosEfectivos >= 0 ? ' hd-neto__r--neg' : ''}`}>
+                    <span>{totalSeleccion.cargosEfectivos >= 0 ? 'Menos aportes y descuentos' : 'Más ajustes a favor'}</span>
+                    <span>{totalSeleccion.cargosEfectivos >= 0 ? '− ' : '+ '}{fmt(Math.abs(totalSeleccion.cargosEfectivos))}</span>
+                  </div>
+                )}
+                <div className="hd-neto__sep" />
+                <div className="hd-neto__r"><span>{cantSeleccionados} trabajo{cantSeleccionados !== 1 ? 's' : ''} marcado{cantSeleccionados !== 1 ? 's' : ''}</span><span>{fmt(totalSeleccion.manoObra)} mano de obra</span></div>
+              </div>
+              <div className="liq-pay">
+                {/* El monto del botón es lo que ENTREGAS, no el neto teórico. */}
+                <button type="button" className="liq-pay__go" disabled={connectionError} onClick={pedirPago}>
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 13l4 4L19 7" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                  {connectionError ? 'Sin conexión' : `Generar pago · ${fmt(montoEntregado)}`}
+                </button>
+                <button type="button" className="liq-pay__ico" onClick={exportPdfPago} title="Exportar PDF" aria-label="Exportar PDF">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 14h12v8H6z" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Últimos pagos a este técnico: el carril del diseño cierra con ellos.
+             Es el historial de siempre, filtrado a quien estás pagando. */}
+          <div className="card">
+            <div className="card__b" style={{ padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 9 }}>
+              <div style={{ fontSize: 13, lineHeight: 1, fontWeight: 700, color: 'var(--text)' }}>
+                Últimos pagos a {tecData.tecnico.nombre.split(' ')[0]}
+              </div>
+              {(() => {
+                const suyos = historialOrdenado.filter(h => String(h.tecnicoId) === String(tecData.tecnico.id))
+                if (suyos.length === 0) return <div style={{ fontSize: 12, color: 'var(--text-4)' }}>Sin pagos anteriores.</div>
+                return suyos.slice(0, 3).map(h => (
+                  <div className="liq-pago" key={h.id}>
+                    <span className="f">{fechaCorta(h.fecha)}</span>
+                    <span className="r">#{liqRef(h.id)} · {h.metodoPago || 'efectivo'}</span>
+                    <span className="v mono">{fmt(h.pagado != null ? h.pagado : (h.neto || 0))}</span>
+                  </div>
+                ))
+              })()}
+            </div>
+          </div>
+          </div>
+        </div>
         </>
       )}
 

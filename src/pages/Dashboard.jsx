@@ -182,44 +182,222 @@ export default function Dashboard({ trabajos = [], onNavigate, user }) {
 
   const totalIngresos = barras.values.reduce((s, v) => s + v, 0)
 
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
 
-      {/* ── Barra de título: saludo + los conteos que antes eran tarjetas ──
-         La tira de 4 KPI (unos 200px de alto antes del primer dato real) se
-         fue: "Ingresos del mes" es la cifra grande de la derecha, "Por cobrar"
-         subió a la tarjeta navy —es la única sobre la que se aprieta un botón
-         el mismo día— y los conteos que solo se miran bajaron al subtítulo.
-         Ninguno se perdió: activos, listos y total de trabajos siguen aquí. */}
+  // ── Tira de 4 KPI (mockup :75-89 · datos :292-295) ──────────────────────────
+  // Los cuatro conteos que antes vivían apretados en el subtítulo vuelven a la
+  // tira que dibuja el diseño. Ninguno se pierde: ingresos del mes (con lo de
+  // hoy en la pastilla), listos, activos y el total del historial.
+  const diaHoy = now.getDate()
+  const mesHoy = now.toLocaleString('es-CO', { month: 'long' })
+  const kpis = [
+    {
+      k: 'ing', label: 'INGRESOS DEL MES', value: fmt(stats.ingresosMes),
+      sub: `Acumulado del 1 al ${diaHoy} de ${mesHoy}`,
+      badge: stats.ingresosHoy > 0 ? `${fmt(stats.ingresosHoy)} HOY` : null,
+      d: 'M23 6 13.5 15.5 8.5 10.5 1 18M17 6h6v6',
+    },
+    {
+      k: 'listos', label: 'LISTOS PARA ENTREGAR', value: String(stats.listoCount),
+      sub: 'por entregar', badge: null,
+      d: 'M22 12a10 10 0 1 1-20 0 10 10 0 0 1 20 0zm-13 0 2 2 4-4',
+    },
+    {
+      k: 'activos', label: 'ACTIVOS HOY', value: String(stats.activos),
+      sub: 'en taller', badge: null,
+      d: 'M22 12a10 10 0 1 1-20 0 10 10 0 0 1 20 0zM12 6v6l4 2',
+    },
+    {
+      k: 'total', label: 'TOTAL TRABAJOS', value: String(trabajos.length),
+      sub: 'registrados en el historial', badge: null,
+      d: 'M10 2h4a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1h-4a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1zM8 4H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-2M9 12h6M9 16h4',
+    },
+  ]
+
+  return (
+    <div className="dsh">
+      {/* Maquetación propia de esta pantalla. Vive aquí y no en index.css
+         porque nada de esto se comparte con las otras 12: la tira de KPI, el
+         rail de 288px y el lienzo del gráfico son del Dashboard y de nadie más.
+         Todo va bajo `.dsh` para que no se escape a ninguna otra página. */}
+      <style>{`
+.dsh{display:flex;flex-direction:column;gap:10px}
+/* El mockup dibuja TODAS sus tarjetas a 14px. --radius-card vale 16 y lo
+   comparten las 12 pantallas restantes, así que aquí se ajusta sólo el
+   Dashboard para que la tira de KPI, las tarjetas y el navy coincidan. */
+.dsh .hd-card{border-radius:14px}
+
+/* --- Tira de 4 KPI: una sola tarjeta blanca partida en cuatro (mockup :75-89) --- */
+.dsh-kpis{flex:none;display:flex;flex-wrap:wrap;background:var(--bg-raised);
+  border:1px solid var(--border);border-radius:14px;overflow:hidden}
+.dsh-kpi{flex:1 1 0;min-width:0;padding:14px 16px;border-left:1px solid var(--row-line)}
+.dsh-kpi:first-child{border-left-color:transparent}
+.dsh-kpi__h{display:flex;align-items:center;gap:8px;min-width:0}
+.dsh-kpi__ic{width:26px;height:26px;flex:none;display:grid;place-items:center;border-radius:7px;background:var(--chip)}
+.dsh-kpi__ic svg{width:14px;height:14px;stroke:var(--text-3);fill:none;stroke-width:2}
+.dsh-kpi--a .dsh-kpi__ic{background:var(--accent-soft)}
+.dsh-kpi--a .dsh-kpi__ic svg{stroke:var(--accent)}
+.dsh-kpi__l{font-size:10.5px;line-height:1;font-weight:700;letter-spacing:.5px;color:var(--text-3);
+  min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dsh-kpi__v{font-size:21px;line-height:1.05;font-weight:700;color:var(--text-2);margin-top:9px;
+  font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dsh-kpi--a .dsh-kpi__v{color:var(--text)}
+.dsh-kpi__f{display:flex;align-items:center;flex-wrap:wrap;gap:7px;row-gap:5px;margin-top:7px;min-width:0}
+.dsh-kpi__b{flex:none;font-size:9.5px;line-height:1;font-weight:700;letter-spacing:.4px;
+  padding:4px 6px;border-radius:5px;background:var(--ok-bg);color:var(--ok-fg);white-space:nowrap}
+.dsh-kpi__s{font-size:11.5px;line-height:1.3;color:var(--text-4);min-width:0;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* --- Tiras de aviso: el mockup no dibuja ninguna, así que aquí bajan de
+   jerarquía a un renglón. No se borra ni una palabra: rótulo, contador,
+   explicación y acción siguen todos visibles. --- */
+.dsh-alert{display:flex;align-items:center;flex-wrap:wrap;gap:9px;row-gap:4px;
+  min-height:36px;padding:7px 12px;border-radius:10px}
+.dsh-alert b{font-size:12.5px;line-height:1.2;font-weight:700;color:var(--text);white-space:nowrap}
+.dsh-alert__s{flex:1;min-width:120px;font-size:11.5px;line-height:1.3;color:var(--text-2);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dsh-alert__a{display:inline-flex;align-items:center;gap:5px;flex:none;height:26px;padding:0;
+  border:none;background:none;font-family:inherit;font-size:11.5px;line-height:1;font-weight:700;
+  color:var(--text);cursor:pointer;white-space:nowrap}
+.dsh-alert__a:hover{text-decoration:underline}
+.dsh-alert__a svg{width:13px;height:13px;flex:none}
+
+/* --- Fila principal: columna flexible + rail fijo de 288px (mockup :91-170) --- */
+.dsh-main{display:flex;gap:10px;align-items:stretch}
+.dsh-col{flex:1;min-width:0;display:flex;flex-direction:column;gap:10px}
+.dsh-rail{width:288px;flex:none;display:flex;flex-direction:column;gap:10px}
+.dsh-lc .hd-bar{padding:15px 18px 0;gap:10px}
+.dsh-rc .hd-bar{padding:14px 16px 0;gap:9px;flex-wrap:wrap;row-gap:6px}
+.dsh-t{font-size:14px;line-height:1;font-weight:700;color:var(--text);white-space:nowrap}
+.dsh-rc .dsh-t{font-size:13.5px}
+/* En el rail de 288px el título + contador + "Ver todos" van justos: si no
+   caben, el enlace baja a su propia línea pegado a la derecha en vez de
+   partir el título en dos. */
+.dsh-link{display:inline-flex;align-items:center;gap:5px;margin-left:auto;height:26px;padding:0;
+  border:none;background:none;font-family:inherit;font-size:11.5px;line-height:1;font-weight:700;
+  color:var(--accent);cursor:pointer;white-space:nowrap}
+.dsh-link:hover{text-decoration:underline}
+.dsh-link svg{width:13px;height:13px;flex:none}
+
+/* --- Lienzo del gráfico: alto real, no los 140px de .chartbar (mockup :101-105) --- */
+.dsh-chart{display:flex;align-items:flex-end;gap:8px;height:332px;margin-top:14px;padding:0 18px 16px}
+.dsh-chart__c{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;gap:7px;
+  height:100%;justify-content:flex-end}
+.dsh-chart__b{width:100%;border-radius:4px 4px 0 0;min-height:3px;transition:opacity .12s;
+  background:color-mix(in srgb,var(--accent) 22%,var(--bg-raised))}
+.dsh-chart__c:hover .dsh-chart__b{opacity:.78}
+.dsh-chart__b.on{background:var(--accent)}
+.dsh-chart__x{font-size:9.5px;line-height:1;font-weight:700;letter-spacing:.5px;
+  color:var(--text-4);text-transform:uppercase}
+.dsh-chart__x.on{color:var(--accent)}
+
+/* --- Productividad (mockup :107-125) --- */
+.dsh-prod{display:flex;flex-direction:column;gap:12px;padding:12px 18px 16px}
+.dsh-prod__h{display:flex;align-items:baseline;gap:8px;min-width:0}
+.dsh-prod__av{width:22px;height:22px;flex:none;border-radius:50%;display:grid;place-items:center;
+  font-size:9.5px;font-weight:700;line-height:1;align-self:center}
+.dsh-prod__n{font-size:13px;line-height:1.2;font-weight:700;color:var(--text)}
+.dsh-prod__u{font-size:11.5px;line-height:1;color:var(--text-4);white-space:nowrap}
+.dsh-prod__v{font-size:12.5px;line-height:1;font-weight:700;color:var(--text);
+  font-variant-numeric:tabular-nums;white-space:nowrap}
+.dsh-prod__t{height:7px;margin-top:7px;border-radius:4px;background:var(--chip);overflow:hidden}
+.dsh-prod__f{height:7px;background:var(--accent);border-radius:4px}
+
+/* --- Filas del rail: la tabla de 5 columnas no cabe en 288px, así que la fila
+   se dobla en tres renglones. Placa, cliente, trabajo, técnico, estado y la
+   acción siguen todos ahí. --- */
+.dsh-pr{display:flex;flex-direction:column;gap:5px;padding:10px 16px;border-top:1px solid var(--row-line)}
+.dsh-pr:hover{background:var(--bg-subtle)}
+.dsh-pr__1{display:flex;align-items:center;gap:8px;min-width:0}
+.dsh-pr__2{font-size:12.5px;line-height:1.15;font-weight:700;color:var(--text)}
+.dsh-pr__3{display:flex;align-items:center;gap:6px;min-width:0}
+.dsh-pr__ico{display:inline-flex;align-items:center;justify-content:center;flex:none;
+  width:28px;height:28px;margin:-4px -6px -4px 0;border:none;border-radius:8px;background:none;
+  color:var(--text-5);cursor:pointer}
+.dsh-pr__ico:hover{background:var(--chip);color:var(--text-2)}
+.dsh-pr__ico svg{width:14px;height:14px}
+
+/* --- Vacío verde de Pendientes (mockup :140-143) y notas secas (:151, :159) --- */
+.dsh-ok{display:flex;align-items:center;gap:8px;margin:11px 16px 14px;padding:9px 11px;
+  background:var(--green-50);border-radius:9px}
+.dsh-ok svg{width:15px;height:15px;flex:none;color:var(--green-700)}
+.dsh-ok span{font-size:12px;line-height:1.35;color:var(--ok-fg)}
+.dsh-note{font-size:12px;line-height:1.4;color:var(--text-3);margin:8px 0 0;padding:0 16px 14px}
+
+/* --- Tarjeta navy POR COBRAR (mockup :162-167) --- */
+.dsh-navy{border-radius:14px;padding:15px 16px;margin:0;flex:1 1 auto;min-height:132px}
+.dsh-navy__l{font-size:9.5px;font-weight:700;letter-spacing:.9px}
+.dsh-navy__v{font-size:26px;margin-top:8px}
+.dsh-navy__s{font-size:11.5px;line-height:1.4;color:rgba(255,255,255,.6);margin-top:6px}
+.dsh-navy__btn{display:flex;align-items:center;justify-content:center;gap:7px;width:100%;height:38px;
+  margin-top:14px;border:none;border-radius:9px;background:rgba(255,255,255,.12);color:#fff;
+  font-family:inherit;font-size:12.5px;line-height:1;font-weight:700;cursor:pointer}
+.dsh-navy__btn:hover{background:rgba(255,255,255,.2)}
+
+/* --- Móvil: el rail sube (el mockup pone cartera y pendientes antes que el
+   gráfico), la tira de KPI se parte 1 + 2 + 1 y los objetivos vuelven a 44px --- */
+@media (max-width:960px){
+  .dsh-main{flex-direction:column}
+  .dsh-rail{width:auto;order:1}
+  .dsh-col{order:2}
+  .dsh-navy{flex:none}
+  .dsh .hd-head__right{width:100%}
+  .dsh .hd-head__right .btn{flex:1}
+  .dsh-kpi{flex:1 1 50%;padding:12px 14px}
+  .dsh-kpi:first-child{flex:1 1 100%;border-bottom:1px solid var(--row-line)}
+  .dsh-kpi:nth-child(4){flex:1 1 100%;border-left-color:transparent;border-top:1px solid var(--row-line)}
+  .dsh-kpi:nth-child(3){border-top:1px solid var(--row-line)}
+  .dsh-kpi:nth-child(2){border-left-color:transparent;border-top:1px solid var(--row-line)}
+  .dsh-kpi--a .dsh-kpi__v{font-size:26px}
+  .dsh-kpi__v{font-size:22px}
+  /* En las tres celdas 2-up el mockup móvil (:209-218) no dibuja icono: sin él
+     caben los rótulos largos. El rótulo puede doblar antes que recortarse. */
+  .dsh-kpi:not(.dsh-kpi--a) .dsh-kpi__ic{display:none}
+  .dsh-kpi__l{font-size:10px;letter-spacing:.6px;line-height:1.25;white-space:normal}
+  .dsh-alert__s{white-space:normal;flex:1 1 100%}
+  .dsh-chart{height:220px;gap:4px;padding:0 14px 14px}
+  .dsh-chart__x{font-size:8px;letter-spacing:.3px}
+  .dsh-alert__a,.dsh-link,.dsh-pr__ico,.dsh-navy__btn{min-height:var(--tap)}
+  .dsh-pr__ico{min-width:var(--tap)}
+}
+      `}</style>
+
+      {/* ── Cabecera: saludo, fecha y la acción del día (mockup :69-73) ──── */}
       <div className="hd-head">
         <div className="hd-head__t">
           <h1>Hola{user?.nombre ? `, ${user.nombre.split(' ')[0]}` : ''}</h1>
-          <div className="hd-head__sub">
-            {fechaCap} · {stats.activos} activo{stats.activos !== 1 ? 's' : ''} en taller
-            {' · '}{stats.listoCount} listo{stats.listoCount !== 1 ? 's' : ''} para entregar
-            {' · '}{trabajos.length} trabajo{trabajos.length !== 1 ? 's' : ''} en el historial
-          </div>
+          <div className="hd-head__sub">{fechaCap}</div>
         </div>
         <div className="hd-head__sp" />
-        <div className="hd-head__right">
-          <div className="hd-fig">
-            <div className="hd-fig__l">INGRESOS DEL MES</div>
-            <div className="hd-fig__v hd-n">{fmt(stats.ingresosMes)}</div>
-            <div className="hd-fig__s">
-              {(() => {
-                const d = new Date(); const dia = d.getDate()
-                return `Acumulado del 1 al ${dia} de ${d.toLocaleString('es-CO', { month: 'long' })}`
-              })()}
-              {stats.ingresosHoy > 0 && <> · <strong style={{ color: 'var(--text-2)' }}>{fmt(stats.ingresosHoy)} hoy</strong></>}
-            </div>
-          </div>
-          {onNavigate && <div className="hd-head__div" />}
-          {onNavigate && (
-            <Button variant="primary" onClick={() => onNavigate('recepcion')}>
+        {onNavigate && (
+          <div className="hd-head__right">
+            <Button
+              variant="primary"
+              onClick={() => onNavigate('recepcion')}
+              style={{ height: 40, padding: '0 18px', borderRadius: 10, fontSize: 13.5, fontWeight: 700, boxShadow: 'var(--accent-shadow)' }}
+            >
               <IcPlus /> Recibir vehículo
             </Button>
-          )}
-        </div>
+          </div>
+        )}
+      </div>
+
+      {/* ── Tira de 4 KPI ─────────────────────────────────────────────────── */}
+      <div className="dsh-kpis">
+        {kpis.map((k, i) => (
+          <div key={k.k} className={`dsh-kpi${i === 0 ? ' dsh-kpi--a' : ''}`}>
+            <div className="dsh-kpi__h">
+              <span className="dsh-kpi__ic">
+                <svg viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round"><path d={k.d} /></svg>
+              </span>
+              <span className="dsh-kpi__l" title={k.label}>{k.label}</span>
+            </div>
+            <div className="dsh-kpi__v" title={k.value}>{k.value}</div>
+            <div className="dsh-kpi__f">
+              {k.badge && <span className="dsh-kpi__b">{k.badge}</span>}
+              <span className="dsh-kpi__s" title={k.sub}>{k.sub}</span>
+            </div>
+          </div>
+        ))}
       </div>
 
       {/* ── Alerta CRM: clientes vencidos para contactar ──────────────────── */}
@@ -250,24 +428,14 @@ export default function Dashboard({ trabajos = [], onNavigate, user }) {
         const total = vencidos.size
         if (total === 0) return null
         return (
-          // Antes: 42px de icono, título en 15.5px y 74px de alto para un aviso
-          // que se lee en dos segundos. Ahora es una tira: pastilla que dice de
-          // qué va, el hecho, el detalle y el botón. Mismo texto, un tercio de
-          // alto, y el color vive en la pastilla y no en una franja.
-          <div className="hd-card" style={{ flexDirection: 'row', alignItems: 'center', gap: 12, padding: '11px 14px', background: 'var(--ok-bg)', borderColor: 'transparent', flexWrap: 'wrap' }}>
+          <div className="dsh-alert" style={{ background: 'var(--ok-bg)' }}>
             <span className="hd-chip hd-chip--ok-solid">CRM</span>
-            <div style={{ flex: 1, minWidth: 200 }}>
-              <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>
-                {total} {total === 1 ? 'cliente para contactar' : 'clientes para contactar'}
-              </div>
-              <div className="hd-sub" style={{ fontSize: 11.5, color: 'var(--text-2)' }}>
-                Vehículos que pasaron su intervalo de mantenimiento. Envíales un WhatsApp para reactivarlos.
-              </div>
-            </div>
+            <b>{total} {total === 1 ? 'cliente para contactar' : 'clientes para contactar'}</b>
+            <span className="dsh-alert__s">Vehículos que pasaron su intervalo de mantenimiento. Envíales un WhatsApp para reactivarlos.</span>
             {onNavigate && (
-              <Button variant="outline" size="sm" onClick={() => onNavigate('crm')}>
+              <button type="button" className="dsh-alert__a" onClick={() => onNavigate('crm')}>
                 Abrir CRM <IcArrow />
-              </Button>
+              </button>
             )}
           </div>
         )
@@ -275,207 +443,174 @@ export default function Dashboard({ trabajos = [], onNavigate, user }) {
 
       {/* ── Alerta de trabajos estancados (>3 dias sin moverse) ───────────── */}
       {estancados.length > 0 && (
-        <div className="hd-card" style={{ flexDirection: 'row', alignItems: 'center', gap: 12, padding: '11px 14px', background: 'var(--bad-bg)', borderColor: 'transparent', flexWrap: 'wrap' }}>
+        <div className="dsh-alert" style={{ background: 'var(--bad-bg)' }}>
           <span className="hd-chip hd-chip--bad-solid">ESTANCADOS</span>
-          <div style={{ flex: 1, minWidth: 200 }}>
-            <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>
-              {estancados.length} {estancados.length === 1 ? 'trabajo estancado' : 'trabajos estancados'}
-            </div>
-            <div className="hd-sub" style={{ fontSize: 11.5, color: 'var(--text-2)' }}>
-              {estancados.length === 1 ? 'Lleva' : 'Llevan'} más de {DIAS_ESTANCADO} días sin actualizarse. Revísalos para mover el avance o cambiar estado.
-            </div>
-          </div>
+          <b>{estancados.length} {estancados.length === 1 ? 'trabajo estancado' : 'trabajos estancados'}</b>
+          <span className="dsh-alert__s">
+            {estancados.length === 1 ? 'Lleva' : 'Llevan'} más de {DIAS_ESTANCADO} días sin actualizarse. Revísalos para mover el avance o cambiar estado.
+          </span>
           {onNavigate && (
-            <Button variant="outline" size="sm" onClick={() => onNavigate('trabajos')}>
+            <button type="button" className="dsh-alert__a" onClick={() => onNavigate('trabajos')}>
               Ver estancados <IcArrow />
-            </Button>
+            </button>
           )}
         </div>
       )}
 
       {/* ── Nudge: vehículos por contactar (mantenimiento) → CRM ──────────── */}
       {porContactar > 0 && (
-        <div className="hd-card" style={{ flexDirection: 'row', alignItems: 'center', gap: 12, padding: '11px 14px', background: 'var(--info-bg)', borderColor: 'transparent', flexWrap: 'wrap' }}>
+        <div className="dsh-alert" style={{ background: 'var(--info-bg)' }}>
           <span className="hd-chip hd-chip--info-solid">MANTENIMIENTO</span>
-          <div style={{ flex: 1, minWidth: 200 }}>
-            <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>{porContactar} vehículo{porContactar !== 1 ? 's' : ''} sin volver hace 4+ meses</div>
-            <div className="hd-sub" style={{ fontSize: 11.5, color: 'var(--text-2)' }}>Envíales un recordatorio de mantenimiento (cambio de aceite) y hazlos regresar.</div>
-          </div>
+          <b>{porContactar} vehículo{porContactar !== 1 ? 's' : ''} sin volver hace 4+ meses</b>
+          <span className="dsh-alert__s">Envíales un recordatorio de mantenimiento (cambio de aceite) y hazlos regresar.</span>
           {onNavigate && (
-            <Button variant="outline" size="sm" onClick={() => onNavigate('crm')}>Ver recordatorios <IcArrow /></Button>
+            <button type="button" className="dsh-alert__a" onClick={() => onNavigate('crm')}>
+              Ver recordatorios <IcArrow />
+            </button>
           )}
         </div>
       )}
 
-      {/* ── Fila 1: lo que hay que mover hoy · lo que hay que cobrar hoy ───
-          Si no hay cartera, la fila pasa a una sola columna: dejar la rejilla en
-          2fr 1fr sin su segundo hijo abre un hueco de un tercio de pantalla. */}
-      <div style={{ display: 'grid', gridTemplateColumns: stats.porCobrar > 0 ? '2fr 1fr' : '1fr', gap: 16, alignItems: 'start' }}>
+      {/* ── El cuerpo: histórico a la izquierda, rail de 288px a la derecha ─
+         Es el reparto del mockup (:91-170): Ingresos sobre Productividad, y
+         en el rail Pendientes, Ingresados hoy, Listos y la cartera. */}
+      <div className="dsh-main">
 
-        {/* Pendientes & urgentes */}
-        <div className="hd-card" style={{ minWidth: 0 }}>
-          <div className="hd-bar">
-            <span style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--text)' }}>Pendientes &amp; urgentes</span>
-            <span className="hd-chip hd-chip--mute" style={{ fontFamily: 'var(--mono)', fontSize: 10.5 }}>{urgentes.length}</span>
-            <span className="hd-bar__sp" />
-            {onNavigate && (
-              <Button variant="ghost" size="sm" onClick={() => onNavigate('trabajos')}>
-                Ver todos <IcArrow />
-              </Button>
-            )}
-          </div>
-          {urgentes.length === 0 ? (
-            /* Etiqueta seca: el estado vacío no se celebra ni se ilustra. */
-            <div className="hd-void" style={{ padding: '26px 18px' }}>
-              <div className="hd-void__t">Sin trabajos pendientes</div>
+        <div className="dsh-col">
+
+          {/* Ingresos: últimos 12 meses */}
+          <div className="hd-card dsh-lc" style={{ minWidth: 0 }}>
+            <div className="hd-bar" style={{ alignItems: 'baseline' }}>
+              <span className="dsh-t">Ingresos · últimos 12 meses</span>
+              <span className="hd-bar__sp" />
+              <span className="hd-bar__n" style={{ fontSize: 11.5 }}>Total:</span>
+              <span className="hd-n hd-strong" style={{ fontSize: 14 }}>{fmt(totalIngresos)}</span>
             </div>
-          ) : (
-            <div className="hd-tbl">
-              <div className="hd-tbl__h">
-                <span style={{ width: 84 }}>PLACA</span>
-                <span style={{ flex: 1, minWidth: 0 }}>CLIENTE · TRABAJO</span>
-                <span style={{ width: 104 }}>TÉCNICO</span>
-                <span style={{ width: 96 }}>ESTADO</span>
-                <span style={{ width: 44 }} />
+            <div className="dsh-chart">
+              {barras.values.map((b, i) => {
+                const on = i === barras.values.length - 1
+                return (
+                  <div key={i} className="dsh-chart__c" title={`${barras.labels[i]}: ${fmt(b)}`}>
+                    <div className={`dsh-chart__b${on ? ' on' : ''}`} style={{ height: `${(b / maxB) * 100}%` }} />
+                    <span className={`dsh-chart__x${on ? ' on' : ''}`}>{barras.labels[i]}</span>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+
+          {/* Productividad técnicos */}
+          <div className="hd-card dsh-lc">
+            <div className="hd-bar">
+              <span className="dsh-t">Productividad por técnico</span>
+              <span className="hd-chip hd-chip--mute" style={{ fontFamily: 'var(--mono)', fontSize: 11 }}>{TECNICOS.length}</span>
+            </div>
+            <div className="dsh-prod">
+              {porTecnico.map((t, i) => {
+                const max = Math.max(...porTecnico.map(x => x.completados), 1)
+                const pct = (t.completados / max) * 100
+                return (
+                  <div key={i}>
+                    <div className="dsh-prod__h">
+                      <span className={`dsh-prod__av av av-${(i % 5) + 1}`}>{initials(t.nombre)}</span>
+                      <span className="dsh-prod__n">{t.nombre}</span>
+                      <span className="hd-bar__sp" />
+                      <span className="dsh-prod__v">{t.completados}</span>
+                      <span className="dsh-prod__u">completados ·</span>
+                      <span className="dsh-prod__v">{fmt(t.ingresos)}</span>
+                    </div>
+                    {/* Una sola barra de acento: tres colores distintos sugerían tres
+                       categorías que no existen — es la misma magnitud tres veces. */}
+                    <div className="dsh-prod__t">
+                      <div className="dsh-prod__f" style={{ width: `${pct}%` }} />
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        </div>
+
+        <div className="dsh-rail">
+
+          {/* Pendientes & urgentes */}
+          <div className="hd-card dsh-rc">
+            <div className="hd-bar">
+              <span className="dsh-t">Pendientes &amp; urgentes</span>
+              <span className="hd-chip hd-chip--mute" style={{ fontFamily: 'var(--mono)', fontSize: 11 }}>{urgentes.length}</span>
+              {onNavigate && (
+                <button type="button" className="dsh-link" onClick={() => onNavigate('trabajos')}>
+                  Ver todos <IcArrow />
+                </button>
+              )}
+            </div>
+            {urgentes.length === 0 ? (
+              /* El diseño celebra este vacío concreto: es el único que dice que
+                 no hay nada que hacer ahora mismo. */
+              <div className="dsh-ok">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
+                <span><b>Todo al día.</b> No hay trabajos pendientes en este momento.</span>
               </div>
-              <div className="hd-tbl__b">
+            ) : (
+              <div style={{ paddingBottom: 4 }}>
                 {urgentes.map((t, i) => {
                   const tec = tecNombre(t.tecnicoId)
                   const isVencido = estancados.some(e => e.id === t.id)
                   const servicio = t.items?.length > 0
                     ? (t.items[0].descripcion || t.items[0].nombre || 'Servicio')
                     : (t.observaciones?.slice(0, 40) || 'Sin descripción')
-                  // La placa manda, como en Órdenes de trabajo. El trabajo no se
-                  // pierde: baja a segunda línea bajo el cliente. minHeight y no
-                  // height porque en móvil `.hd-row` pasa a alto automático y un
-                  // height inline lo recortaría.
                   return (
-                    <div key={t.id} className="hd-row" style={{ minHeight: 52, cursor: 'default', flexWrap: 'wrap', rowGap: 6 }}>
-                      <div className="hd-plate" style={{ width: 84, fontSize: 12.5, color: t.placa ? 'var(--text)' : 'var(--text-4)' }}>
-                        {t.placa || 'SERVICIO'}
-                      </div>
-                      <div style={{ flex: 1, minWidth: 150, paddingRight: 10 }}>
-                        <div className="hd-clip" style={{ fontSize: 12.5, lineHeight: 1.15, fontWeight: 700, color: 'var(--text)' }}>{t.cliente || '—'}</div>
-                        <div className="hd-clip hd-sub" style={{ fontSize: 10.5, marginTop: 2 }}>{servicio}</div>
-                      </div>
-                      <div style={{ width: 104, display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
-                        {tec ? (
-                          <>
-                            <span className={`hd-av av av-${(i % 5) + 1}`}>{initials(tec)}</span>
-                            <span className="hd-clip" style={{ fontSize: 11.5, color: 'var(--text-2)' }}>{tec.split(' ')[0]}</span>
-                          </>
-                        ) : <span className="hd-empty" style={{ fontSize: 12 }}>—</span>}
-                      </div>
-                      <div style={{ width: 96 }}>
+                    <div key={t.id} className="dsh-pr">
+                      <div className="dsh-pr__1">
+                        <span className="hd-plate" style={{ fontSize: 12.5, color: t.placa ? 'var(--text)' : 'var(--text-4)' }}>
+                          {t.placa || 'SERVICIO'}
+                        </span>
+                        <span className="hd-bar__sp" />
                         {isVencido
                           ? <span className="hd-chip hd-chip--bad">Estancado</span>
                           : <span className={`hd-chip hd-chip--${chipEstado(t.estado)}`}>{t.estado}</span>}
-                      </div>
-                      <div style={{ width: 44, display: 'flex', justifyContent: 'flex-end' }}>
                         {onNavigate && (
-                          <Button variant="ghost" className="btn-icon" aria-label="Ver trabajos" title="Ver trabajos" onClick={() => onNavigate('trabajos')}>
+                          <button type="button" className="dsh-pr__ico" aria-label="Ver trabajos" title="Ver trabajos" onClick={() => onNavigate('trabajos')}>
                             <IcArrow />
-                          </Button>
+                          </button>
                         )}
+                      </div>
+                      <div className="dsh-pr__2 hd-clip">{t.cliente || '—'}</div>
+                      <div className="dsh-pr__3">
+                        {tec ? (
+                          <>
+                            <span className={`hd-av av av-${(i % 5) + 1}`}>{initials(tec)}</span>
+                            <span style={{ fontSize: 11.5, color: 'var(--text-2)', flex: 'none' }}>{tec.split(' ')[0]}</span>
+                          </>
+                        ) : <span className="hd-empty" style={{ fontSize: 11.5 }}>Sin técnico</span>}
+                        <span className="hd-sub" style={{ color: 'var(--text-5)' }}>·</span>
+                        <span className="hd-clip hd-sub">{servicio}</span>
                       </div>
                     </div>
                   )
                 })}
               </div>
-            </div>
-          )}
-        </div>
-
-        {/* Por cobrar: sale de la tira de KPI y sube a la tarjeta navy. Es la
-            única cifra de esta pantalla sobre la que se actúa el mismo día,
-            así que es la única que lleva navy y botón propio.
-
-            Y por eso mismo NO se pinta cuando vale cero: el navy está reservado
-            para lo que exige actuar, y un día sin cartera el elemento más
-            gritón de la pantalla estaría diciendo "POR COBRAR $ 0". Nada que
-            cobrar es una buena noticia, no un titular. */}
-        {stats.porCobrar > 0 && (
-        <div className="hd-neto" style={{ margin: 0 }}>
-          <div className="hd-neto__l">POR COBRAR</div>
-          <div className="hd-neto__v">{fmt(stats.porCobrar)}</div>
-          <div className="hd-neto__rows">
-            <div className="hd-neto__r">
-              <span>Facturado sin pagar</span>
-              <span>{stats.porCobrarCount} factura{stats.porCobrarCount !== 1 ? 's' : ''}</span>
-            </div>
+            )}
           </div>
-          {onNavigate && (
-            <button
-              type="button"
-              onClick={() => onNavigate('trabajos')}
-              style={{
-                marginTop: 14, width: '100%', height: 44, border: 'none', borderRadius: 10,
-                background: 'rgba(255,255,255,.12)', color: '#fff', cursor: 'pointer',
-                fontFamily: 'inherit', fontSize: 13, fontWeight: 700,
-                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
-              }}
-            >
-              Ver cartera <IcArrow />
-            </button>
-          )}
-        </div>
-        )}
-      </div>
-
-      {/* ── Fila 2: histórico · el movimiento del día ─────────────────────── */}
-      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 16, alignItems: 'start' }}>
-
-        {/* Ingresos: últimos 12 meses */}
-        <div className="hd-card" style={{ minWidth: 0 }}>
-          <div className="hd-bar">
-            <span style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--text)' }}>Ingresos · últimos 12 meses</span>
-            <span className="hd-bar__sp" />
-            <span className="hd-bar__n">Total</span>
-            <span className="hd-n hd-strong">{fmt(totalIngresos)}</span>
-          </div>
-          <div style={{ padding: '2px 18px 14px' }}>
-            <div className="chartbar">
-              {barras.values.map((b, i) => (
-                <div
-                  key={i}
-                  className={`bar ${i === barras.values.length - 1 ? 'a' : ''}`}
-                  style={{ height: `${(b / maxB) * 100}%` }}
-                  title={`${barras.labels[i]}: ${fmt(b)}`}
-                />
-              ))}
-            </div>
-            {/* Cada rótulo bajo su barra (flex:1), y el mes en curso en acento
-               para que se sepa cuál barra está a medio llenar. */}
-            <div className="chart-x">
-              {barras.labels.map((m, i) => (
-                <span key={i} style={{ flex: 1, textAlign: 'center', color: i === barras.labels.length - 1 ? 'var(--accent)' : undefined }}>{m}</span>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 16, minWidth: 0 }}>
 
           {/* Ingresados hoy */}
-          <div className="hd-card">
+          <div className="hd-card dsh-rc">
             <div className="hd-bar">
-              <span style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--text)' }}>Ingresados hoy</span>
-              <span className="hd-chip hd-chip--mute" style={{ fontFamily: 'var(--mono)', fontSize: 10.5 }}>{agenda.length}</span>
+              <span className="dsh-t">Ingresados hoy</span>
+              <span className="hd-chip hd-chip--mute" style={{ fontFamily: 'var(--mono)', fontSize: 11 }}>{agenda.length}</span>
             </div>
             {agenda.length === 0 ? (
-              <div className="hd-void" style={{ padding: '22px 18px' }}>
-                <div className="hd-void__t">Ningún vehículo ingresado hoy</div>
-              </div>
+              <div className="dsh-note">Ningún vehículo ingresado hoy.</div>
             ) : (
-              <div>
+              <div style={{ paddingBottom: 4 }}>
                 {agenda.map((t, i) => (
-                  <div key={t.id} className="hd-row" style={{ minHeight: 50, cursor: 'default', gap: 10 }}>
+                  <div key={t.id} className="dsh-pr" style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
                     <span className={`av av-${(i % 5) + 1}`} style={{ width: 30, height: 30, fontSize: 11, flex: 'none' }}>
                       {initials(t.cliente)}
                     </span>
                     <div style={{ minWidth: 0 }}>
                       <div className="hd-clip" style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--text)' }}>{t.cliente || '—'}</div>
-                      <div className="hd-clip hd-sub" style={{ fontSize: 10.5, marginTop: 2 }}>
+                      <div className="hd-clip hd-sub" style={{ marginTop: 2 }}>
                         <span className="hd-mono">{t.placa || '—'}</span> · {[t.marca, t.modelo].filter(Boolean).join(' ') || '—'}
                       </div>
                     </div>
@@ -488,29 +623,27 @@ export default function Dashboard({ trabajos = [], onNavigate, user }) {
           {/* Listos para entregar. Eran tarjetas dentro de una tarjeta; ahora
              son filas del mismo contenedor, con los mismos datos y los mismos
              dos botones (WhatsApp y llamar) a 44px. */}
-          <div className="hd-card">
+          <div className="hd-card dsh-rc">
             <div className="hd-bar">
-              <span style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--text)' }}>Listos para entregar</span>
-              <span className="hd-chip hd-chip--mute" style={{ fontFamily: 'var(--mono)', fontSize: 10.5 }}>{stats.listoCount}</span>
+              <span className="dsh-t">Listos para entregar</span>
+              <span className="hd-chip hd-chip--mute" style={{ fontFamily: 'var(--mono)', fontSize: 11 }}>{stats.listoCount}</span>
             </div>
             {listos.length === 0 ? (
-              <div className="hd-void" style={{ padding: '22px 18px' }}>
-                <div className="hd-void__t">No hay vehículos listos por ahora</div>
-              </div>
+              <div className="dsh-note">No hay vehículos listos por ahora.</div>
             ) : (
-              <div>
+              <div style={{ paddingBottom: 4 }}>
                 {listos.map(t => (
-                  <div key={t.id} style={{ padding: '11px 18px', borderTop: '1px solid var(--row-line)' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <span className="hd-plate">{t.placa || 'SERVICIO'}</span>
+                  <div key={t.id} className="dsh-pr">
+                    <div className="dsh-pr__1">
+                      <span className="hd-plate" style={{ fontSize: 12.5 }}>{t.placa || 'SERVICIO'}</span>
                       <span className="hd-chip hd-chip--ok">Listo</span>
                       <span className="hd-bar__sp" />
                       <span className="hd-sub">Total</span>
                       <span className="hd-n hd-strong">{fmt(t.total)}</span>
                     </div>
-                    <div className="hd-clip" style={{ fontSize: 12.5, color: 'var(--text-2)', marginTop: 3 }}>{t.cliente || '—'}</div>
+                    <div className="hd-clip" style={{ fontSize: 12.5, color: 'var(--text-2)' }}>{t.cliente || '—'}</div>
                     {t.telefonoCliente && (
-                      <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+                      <div style={{ display: 'flex', gap: 8, marginTop: 5 }}>
                         <a
                           href={whatsappLink(t.telefonoCliente, `Hola ${t.cliente || ''}, su vehículo ${t.placa || ''} ya está listo para entrega en ${TALLER.nombre}. Total ${fmt(t.total)}. ¡Lo esperamos!`)}
                           target="_blank" rel="noreferrer"
@@ -534,17 +667,41 @@ export default function Dashboard({ trabajos = [], onNavigate, user }) {
               </div>
             )}
           </div>
+
+          {/* Por cobrar: la única cifra de esta pantalla sobre la que se actúa el
+              mismo día, así que es la única que lleva navy y botón propio.
+
+              Y por eso mismo NO se pinta cuando vale cero: el navy está reservado
+              para lo que exige actuar, y un día sin cartera el elemento más
+              gritón de la pantalla estaría diciendo "POR COBRAR $ 0". Nada que
+              cobrar es una buena noticia, no un titular. */}
+          {stats.porCobrar > 0 && (
+            <div className="hd-neto dsh-navy" style={{ display: 'flex', flexDirection: 'column' }}>
+              <div className="hd-neto__l dsh-navy__l">POR COBRAR</div>
+              <div className="hd-neto__v dsh-navy__v">{fmt(stats.porCobrar)}</div>
+              <div className="dsh-navy__s">
+                {stats.porCobrarCount} factura{stats.porCobrarCount !== 1 ? 's' : ''} facturada{stats.porCobrarCount !== 1 ? 's' : ''} sin pagar
+              </div>
+              <div style={{ flex: 1, minHeight: 6 }} />
+              {onNavigate && (
+                <button type="button" className="dsh-navy__btn" onClick={() => onNavigate('trabajos')}>
+                  Ver cartera <IcArrow />
+                </button>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
-      {/* ── Estancados: el detalle de la tira roja de arriba ──────────────── */}
+      {/* ── Estancados: el detalle de la tira roja de arriba. El mockup no lo
+         dibuja, así que va al fondo, después de todo lo que sí dibuja. ──── */}
       {estancados.length > 0 && (
-        <div className="hd-card">
+        <div className="hd-card dsh-lc">
           <div className="hd-bar">
-            <span style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--text)' }}>Trabajos estancados</span>
+            <span className="dsh-t">Trabajos estancados</span>
             <span className="hd-chip hd-chip--bad">{estancados.length}</span>
           </div>
-          <div className="hd-tbl">
+          <div className="hd-tbl" style={{ marginTop: 12 }}>
             <div className="hd-tbl__h">
               <span style={{ width: 96 }}>PLACA</span>
               <span style={{ flex: 1, minWidth: 0 }}>CLIENTE</span>
@@ -574,37 +731,6 @@ export default function Dashboard({ trabajos = [], onNavigate, user }) {
           </div>
         </div>
       )}
-
-      {/* ── Productividad técnicos ───────────────────────────────────────── */}
-      <div className="hd-card">
-        <div className="hd-bar">
-          <span style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--text)' }}>Productividad por técnico</span>
-          <span className="hd-chip hd-chip--mute" style={{ fontFamily: 'var(--mono)', fontSize: 10.5 }}>{TECNICOS.length}</span>
-        </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 14, padding: '2px 18px 16px' }}>
-          {porTecnico.map((t, i) => {
-            const max = Math.max(...porTecnico.map(x => x.completados), 1)
-            const pct = (t.completados / max) * 100
-            return (
-              <div key={i}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 7 }}>
-                  <span className={`hd-av av av-${(i % 5) + 1}`}>{initials(t.nombre)}</span>
-                  <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>{t.nombre}</span>
-                  <span className="hd-bar__sp" />
-                  <span className="hd-n hd-strong">{t.completados}</span>
-                  <span style={{ fontSize: 11.5, color: 'var(--text-3)' }}>completados ·</span>
-                  <span className="hd-n hd-strong">{fmt(t.ingresos)}</span>
-                </div>
-                {/* Una sola barra de acento: tres colores distintos sugerían tres
-                   categorías que no existen — es la misma magnitud tres veces. */}
-                <div style={{ height: 7, background: 'var(--chip)', borderRadius: 4, overflow: 'hidden' }}>
-                  <div style={{ width: `${pct}%`, height: '100%', background: 'var(--accent)', borderRadius: 4 }} />
-                </div>
-              </div>
-            )
-          })}
-        </div>
-      </div>
 
     </div>
   )

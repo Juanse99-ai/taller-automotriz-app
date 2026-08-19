@@ -39,17 +39,115 @@ const CLIENTES_COLS = [
   // 112px = un NIT de 10 digitos entero. Cortado ("9005259…") no sirve ni para
   // confirmar, que es lo unico para lo que se usa esta columna.
   { key: 'cedula',   label: 'CC/NIT',        sort: 'cedula',   def: 112, min: 96 },
-  // 124px = un celular de 10 dígitos entero. Un teléfono cortado ("30427537…") no
-  // sirve para llamar, así que esta columna no se recorta por defecto.
-  { key: 'telefono', label: 'Teléfono',      sort: 'telefono', def: 124, min: 80 },
-  // El correo se corta igual por largo, así que no se le da más de lo justo para
-  // reconocerlo; ese espacio rinde más en el Nombre.
-  { key: 'email',    label: 'Email',         sort: 'email',    def: 120, min: 80 },
-  { key: 'veh',      label: 'Vehículos',     sort: 'veh',      def: 72,  min: 60, center: true },
-  { key: 'visita',   label: 'Última visita', sort: 'visita',   def: 96,  min: 88 },
-  { key: 'cuentti',  label: 'En Cuentti',    sort: 'cuentti',  def: 78,  min: 70 },
+  // 104px (valor del mockup) = un celular de 10 dígitos a 12.5px, entero. Un
+  // teléfono cortado ("30427537…") no sirve para llamar: no se recorta por defecto.
+  { key: 'telefono', label: 'Teléfono',      sort: 'telefono', def: 104, min: 80 },
+  // El mockup le da 186px, pero ahí la tabla dispone de 1126px útiles y aquí de
+  // 934 (el rail de la app es mucho más ancho que el del mockup). El sobrante se
+  // le quita a ESTA columna, que trunca igual por largo, y no al Nombre (310) ni a
+  // las tres del mockup que sí quedan exactas (Teléfono 104, Veh. 52, Visita 96).
+  // 140px = "fersaad4412@gmail.com" entero; con los 120 de antes se cortaba en la
+  // primera palabra ("contabilidad@…") y ya no se reconocía de quién era.
+  { key: 'email',    label: 'Email',         sort: 'email',    def: 140, min: 80 },
+  // El mockup rotula esta columna "VEH." y le da 52px: es un contador de un dígito
+  // alineado a la derecha. `full` conserva la palabra completa en el title del th.
+  { key: 'veh',      label: 'Veh.',          sort: 'veh',      def: 52,  min: 44, right: true, full: 'Vehículos' },
+  { key: 'visita',   label: 'Última visita', sort: 'visita',   def: 96,  min: 88, right: true },
+  { key: 'cuentti',  label: 'En Cuentti',    sort: 'cuentti',  def: 88,  min: 70, right: true },
   { key: 'chevron',  label: '',              sort: null,       noResize: true }, // sin def; flexible solo cuando el Nombre es fijo
 ]
+// Iconos de la cabecera (trazo Lucide, con los grosores del mockup: 2.2 en el
+// secundario, 2.4 en el primario). Van aquí y no en components/ui porque son los
+// dos únicos de esta pantalla.
+const IconRefrescar = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M21 12a9 9 0 1 1-3-6.7L21 8" /><path d="M21 3v5h-5" />
+  </svg>
+)
+const IconMas = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" aria-hidden="true">
+    <path d="M12 5v14M5 12h14" />
+  </svg>
+)
+
+// ---------------------------------------------------------------------------
+// Métrica de la pantalla, tomada del mockup del handoff.
+// Vive AQUÍ y no en index.css a propósito: son reglas de una sola pantalla y
+// todas van acotadas a `.cli-pg`, así que no pueden tocar a ninguna otra.
+// Todo lo de la tabla va bajo `min-width:601px`: por debajo de eso la tabla NO
+// es una tabla, es la tarjeta de 3 líneas que arma `.tbl-cards--clientes` en
+// index.css, y pisarle padding o alto la rompe.
+// ---------------------------------------------------------------------------
+const CLIENTES_CSS = `
+/* --- Tabla: cabecera de 28px, fila de 38px, separador --row-line --- */
+@media(min-width:601px){
+  .cli-pg .tbl--clientes thead th{
+    height:28px;padding:0 9px;background:var(--bg-subtle);
+    font-size:9.5px;line-height:1;font-weight:700;letter-spacing:.7px;
+    color:var(--text-4);text-transform:uppercase;
+    border-top:1px solid var(--row-line);
+    border-bottom:1.5px solid var(--head-line);
+    box-shadow:none;
+  }
+  /* 18px sólo contra los bordes de la tarjeta; entre columnas, 9+9. */
+  .cli-pg .tbl--clientes thead th:first-child,
+  .cli-pg .tbl--clientes tbody td:first-child{padding-left:18px}
+  .cli-pg .tbl--clientes thead th:last-child,
+  .cli-pg .tbl--clientes tbody td:last-child{padding-right:18px}
+
+  .cli-pg .tbl--clientes tbody tr{height:var(--row-h)}
+  .cli-pg .tbl--clientes tbody td{
+    padding:0 9px;font-size:13px;line-height:1.2;
+    border-bottom:1px solid var(--row-line);
+  }
+  /* La última fila también lleva raya: en el mockup la lista se corta contra el
+     pie, no se queda flotando. */
+  .cli-pg .tbl--clientes tbody tr:last-child td{border-bottom:1px solid var(--row-line)}
+  .cli-pg .tbl--clientes tbody tr:hover{background:var(--bg-subtle)}
+
+  /* Cada columna con el peso que le da el mockup, no todas en 14px gris. */
+  .cli-pg .tbl--clientes tbody td.c-name{font-size:13px;font-weight:600;color:var(--text);padding-right:14px}
+  .cli-pg .tbl--clientes tbody td.td-cc{font-size:11.5px;font-weight:400;color:var(--text-4)}
+  .cli-pg .tbl--clientes tbody td.td-tel{font-size:12.5px;font-weight:400;color:var(--text-2)}
+  .cli-pg .tbl--clientes tbody td.td-email{font-size:12px;font-weight:400;color:var(--text-4)}
+  .cli-pg .tbl--clientes tbody td.td-vehs{font-size:12.5px;font-weight:600;color:var(--text-2);text-align:right}
+  .cli-pg .tbl--clientes tbody td.td-visita{font-size:12.5px;font-weight:400;color:var(--text-3);text-align:right}
+  .cli-pg .tbl--clientes tbody td.td-cuentti{text-align:right}
+  .cli-pg .tbl--clientes tbody td.td-chevron{color:var(--text-5);font-size:16px}
+}
+/* La cabecera se congela sobre el cuerpo que scrollea, como en el mockup.
+   index.css la deja en position:relative por orden de reglas, así que se
+   reafirma aquí (sigue siendo el bloque de posicionamiento del agarre de
+   arrastre, que es absolute contra ella). */
+@media(min-width:961px){
+  .cli-pg .tbl--clientes thead th{position:sticky;top:0;z-index:2}
+}
+
+/* CC/NIT en monoespaciada de verdad: el token --mono resuelve a la misma pila
+   sans que el resto del texto, así que .c-mono no la diferenciaba en nada. */
+.cli-pg .tbl--clientes tbody td.td-cc{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+
+/* --- Cabecera de página: botones de 40px, no de 44 --- */
+/* Sólo en escritorio: por debajo de 961px manda el objetivo táctil de 44px que
+   ya fija index.css, y no se toca. */
+@media(min-width:961px){
+  .cli-pg .hd-head__right .btn{height:40px;min-height:0;font-size:13px;font-weight:700}
+  .cli-pg .hd-head__right .btn-outline{padding:0 17px;border-width:1.5px;color:var(--text-2)}
+  .cli-pg .hd-head__right .btn-primary{padding:0 18px;font-size:13.5px;box-shadow:var(--accent-shadow)}
+  .cli-pg .hd-head__right .btn-outline svg{width:15px;height:15px}
+  .cli-pg .hd-head__right .btn-primary svg{width:17px;height:17px}
+}
+
+/* --- Barra de la tarjeta --- */
+/* Un espacio de 12.5px entre la etiqueta y su cifra se lee como "Todos850". */
+.cli-pg .cli-seg__n{margin-left:3px}
+/* El contador del segmentado no cabe en 390px con las tres etiquetas: se calla
+   ahí (las tres cifras siguen enteras en la línea de apoyo del título). */
+@media(max-width:600px){
+  .cli-pg .cli-seg__n{display:none}
+}
+`
+
 const CLIENTES_COL_LS = 'clientes_col_widths_v2'
 const anchosPorDefecto = () =>
   Object.fromEntries(CLIENTES_COLS.filter(c => c.def != null).map(c => [c.key, c.def]))
@@ -71,6 +169,10 @@ export default function Clientes({ clientes, vehiculos, trabajos = [], notify })
   const { buscarPorCedula, agregarVehiculo, vehiculos: vehiculosArr } = vehiculos
 
   const [busqueda, setBusqueda] = useState('')
+  // Segmentado de VISTA del mockup (Todos / Con vehículos / Sin teléfono). Abre en
+  // 'todos', que es exactamente lo que la pantalla mostraba antes: no esconde nada
+  // de entrada, solo deja recortar la lista sin escribir en el buscador.
+  const [segmento, setSegmento] = useState('todos')
   const [clienteSeleccionado, setClienteSeleccionado] = useState(null)
   const [editForm, setEditForm] = useState({ nombre: '', telefono: '', email: '', direccion: '' })
   const [guardandoCuentti, setGuardandoCuentti] = useState(false)
@@ -136,13 +238,15 @@ export default function Clientes({ clientes, vehiculos, trabajos = [], notify })
   const nombreFijo = colWidths.nombre != null
   const anchoCol = (c) => {
     if (c.key === 'nombre') return nombreFijo ? colWidths.nombre : null
-    if (c.key === 'chevron') return nombreFijo ? null : 30
+    // 26px: el mismo ancho que ya declara `.td-chevron` en index.css (antes pedía
+    // 30 y sobraban 4px que no usaba nadie).
+    if (c.key === 'chevron') return nombreFijo ? null : 26
     return colWidths[c.key] ?? c.def
   }
   // Ancho mínimo de la tabla: si al ensanchar columnas ya no cabe, hace scroll
-  // horizontal en vez de aplastar (el Nombre nunca baja de 310, el chevron de 30).
+  // horizontal en vez de aplastar (el Nombre nunca baja de 310, el chevron de 26).
   const tablaMinWidth = CLIENTES_COLS.reduce((s, c) =>
-    s + (c.key === 'chevron' ? 30 : (colWidths[c.key] ?? c.def ?? c.min ?? 120)), 0)
+    s + (c.key === 'chevron' ? 26 : (colWidths[c.key] ?? c.def ?? c.min ?? 120)), 0)
 
   // Metricas
   const totalClientes = clientesTable.length
@@ -165,8 +269,8 @@ export default function Clientes({ clientes, vehiculos, trabajos = [], notify })
   const sortIcon = (col) => {
     // Sin opacidad: al 0.25 la flecha de "ordenable" era invisible y nadie sabía
     // que el encabezado se podía clicar.
-    if (sortBy !== col) return <span style={{ color: 'var(--text-4)', fontSize: 11, marginLeft: 5 }}>↕</span>
-    return <span style={{ color: 'var(--primary)', fontSize: 11, marginLeft: 5 }}>{sortDir === 'asc' ? '▲' : '▼'}</span>
+    if (sortBy !== col) return <span style={{ color: 'var(--text-4)', fontSize: 9.5, marginLeft: 4 }}>↕</span>
+    return <span style={{ color: 'var(--accent)', fontSize: 9.5, marginLeft: 4 }}>{sortDir === 'asc' ? '▲' : '▼'}</span>
   }
 
   // Lista deduplicada (por cedula) con campos pre-normalizados — base para busqueda
@@ -343,6 +447,16 @@ export default function Clientes({ clientes, vehiculos, trabajos = [], notify })
     if (sortBy) list = [...list].sort(cmp)
     return list
   }, [dedup, fuse, busqueda, sortBy, sortDir, ultimaVisitaPorCedula])
+
+  // Lo que la TABLA pinta: el resultado de la búsqueda recortado por el segmentado.
+  // Se deja aparte de `clientesFiltrados` a propósito: el fallback a Cuentti y el
+  // vacío de búsqueda siguen mirando el resultado de la búsqueda, no el del filtro.
+  // En 'todos' devuelve la misma lista, sin copiarla.
+  const clientesVista = useMemo(() => {
+    if (segmento === 'veh') return clientesFiltrados.filter(c => (c.vehiculos || []).length > 0)
+    if (segmento === 'sintel') return clientesFiltrados.filter(c => !c.telefono || !c.telefono.toString().trim())
+    return clientesFiltrados
+  }, [clientesFiltrados, segmento])
 
   // Auto-buscar en Cuentti cuando no hay resultados locales y el termino parece cedula
   useEffect(() => {
@@ -890,11 +1004,15 @@ export default function Clientes({ clientes, vehiculos, trabajos = [], notify })
   // --- VISTA LISTA ---
   return (
     <>
-    <div>
+    <style>{CLIENTES_CSS}</style>
+    <div className="cli-pg">
       {/* De los cuatro conteos, solo "sin telefono" sube a cifra grande: es el
           unico accionable y es el que explica el boton de verificar. Los otros
           tres bajan a linea de apoyo — son contexto, no tarea. */}
-      <div className="hd-head">
+      {/* El mockup separa la barra de título de la tarjeta con 10px exactos (la
+          columna que las contiene es un flex con gap:10). Aquí son hermanos en
+          bloque sin gap, así que el hueco lo pone la barra. */}
+      <div className="hd-head" style={{ marginBottom: 10 }}>
         <div className="hd-head__t">
           <h1>Clientes</h1>
           <div className="hd-head__sub">
@@ -916,13 +1034,16 @@ export default function Clientes({ clientes, vehiculos, trabajos = [], notify })
               onClick={sincronizarTelefonosCuentti}
               disabled={syncTel.activo}
               title="Consulta uno por uno en Cuentti: guarda id, teléfono y correo"
+              icon={<IconRefrescar />}
             >
               {syncTel.activo
                 ? `Verificando ${syncTel.procesados}/${syncTel.total}…`
                 : `Verificar ${sinVerificar} en Cuentti`}
             </Button>
           )}
-          <Button variant="primary" onClick={() => setCreando(true)}>+ Nuevo cliente</Button>
+          {/* El "+" era un carácter de texto: en el mockup es un icono de trazo 2.4
+              del mismo alto que la línea, no un signo de la tipografía. */}
+          <Button variant="primary" onClick={() => setCreando(true)} icon={<IconMas />}>Nuevo cliente</Button>
         </div>
       </div>
 
@@ -953,16 +1074,39 @@ export default function Clientes({ clientes, vehiculos, trabajos = [], notify })
           "Verificados" NO es "% de clientes en Cuentti" (eso engañaba: casi todos
           están en Cuentti, vinieron de ahí). Es cuántos tienen su id de Cuentti
           guardado en la app; del resto no sabemos hasta verificar. */}
-      <div className="card">
-        <div className="card__h" style={{display:'flex',alignItems:'center',gap:12,flexWrap:'wrap'}}>
-          <h3 style={{flex:'none'}}>Buscar</h3>
-          <div style={{flex:1,maxWidth:480,display:'flex',alignItems:'center',gap:9,background:'var(--bg-subtle)',border:'1px solid var(--border)',borderRadius:9,padding:'7px 12px'}}>
-            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="var(--text-4)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{flexShrink:0}}><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-            <input placeholder="CC/NIT o nombre del cliente…" value={busqueda} onChange={e => setBusqueda(e.target.value)} style={{border:'none',outline:'none',background:'none',flex:1,fontSize:13.5}}/>
+      {/* radius-card (16) y overflow oculto: el pie de la tabla llega hasta el
+          borde y sin recorte asomaba en punta bajo la esquina redonda. */}
+      <div className="card" style={{ borderRadius: 'var(--radius-card)', overflow: 'hidden' }}>
+        {/* La barra de la tarjeta del mockup: píldora de búsqueda, segmentado y el
+            contador al otro extremo. Sin título "Buscar" (el placeholder lo dice) y
+            sin línea inferior: la raya la pone el borde superior de la cabecera. */}
+        <div className="card__h" style={{display:'flex',alignItems:'center',gap:10,flexWrap:'wrap',padding:'13px 18px 12px',borderBottom:'none'}}>
+          <label className="hd-find" style={{ width: 330 }}>
+            <svg viewBox="0 0 24 24" strokeLinecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+            <input
+              placeholder="Buscar CC/NIT o nombre del cliente..."
+              value={busqueda}
+              onChange={e => setBusqueda(e.target.value)}
+              style={{flex:1,minWidth:0}}
+            />
             {busqueda && <button type="button" className="input-clear" onClick={() => setBusqueda('')} aria-label="Limpiar búsqueda"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>}
+          </label>
+          {/* Segmentado de vista. Los tres conteos ya estaban calculados y vivían
+              solo en la línea de apoyo del título; aquí además recortan la lista. */}
+          <div className="hd-seg" role="group" aria-label="Filtrar clientes">
+            {[['todos', 'Todos', totalClientes], ['veh', 'Con vehículos', conVehiculos], ['sintel', 'Sin teléfono', sinTelefono]].map(([k, l, n]) => (
+              <button
+                key={k}
+                type="button"
+                className={`hd-seg__i${segmento === k ? ' on' : ''}`}
+                aria-pressed={segmento === k}
+                onClick={() => setSegmento(k)}
+              >{l} <span className="cli-seg__n">{n}</span></button>
+            ))}
           </div>
-          <span className="count" style={{ background: clientesFiltrados.length === 0 && busqueda.trim() ? 'var(--soft-red)' : undefined, color: clientesFiltrados.length === 0 && busqueda.trim() ? 'var(--red-700)' : undefined }}>
-            {busqueda.trim() ? `${clientesFiltrados.length} de ${totalClientes}` : `${clientesFiltrados.length} clientes`}
+          <div className="hd-bar__sp" />
+          <span className="hd-bar__n" style={{ color: clientesVista.length === 0 && busqueda.trim() ? 'var(--bad-fg)' : undefined }}>
+            {busqueda.trim() ? `${clientesVista.length} de ${totalClientes} clientes` : `${clientesVista.length} clientes`}
           </span>
           {anchosTocados && (
             <Button
@@ -1009,16 +1153,30 @@ export default function Clientes({ clientes, vehiculos, trabajos = [], notify })
         )}
 
         <div className="card__b card__b--flush">
-          {clientesFiltrados.length === 0 ? (
+          {clientesVista.length === 0 ? (
             <div className="empty">
-              <h4>Sin resultados en la BD local</h4>
-              <p>
-                {soloDigitos(busqueda).length >= 5
-                  ? (resultadoCuentti
-                      ? 'Hay un cliente en Cuentti con esa cedula. Click en "Importar" arriba.'
-                      : (buscandoCuentti ? 'Consultando Cuentti...' : 'Tampoco se encontro en Cuentti.'))
-                  : 'No se encontro ningun cliente. Prueba con la cedula completa.'}
-              </p>
+              {clientesFiltrados.length > 0 ? (
+                <>
+                  {/* La búsqueda SÍ trajo clientes; los escondió el segmentado.
+                      Decirlo evita que parezca que la base está vacía. */}
+                  <h4>Ningún cliente en este filtro</h4>
+                  <p>
+                    {clientesFiltrados.length} {clientesFiltrados.length === 1 ? 'cliente coincide' : 'clientes coinciden'} con la búsqueda.
+                    Toca «Todos» para verlos.
+                  </p>
+                </>
+              ) : (
+                <>
+                  <h4>Sin resultados en la BD local</h4>
+                  <p>
+                    {soloDigitos(busqueda).length >= 5
+                      ? (resultadoCuentti
+                          ? 'Hay un cliente en Cuentti con esa cedula. Click en "Importar" arriba.'
+                          : (buscandoCuentti ? 'Consultando Cuentti...' : 'Tampoco se encontro en Cuentti.'))
+                      : 'No se encontro ningun cliente. Prueba con la cedula completa.'}
+                  </p>
+                </>
+              )}
             </div>
           ) : (
             <table
@@ -1041,7 +1199,11 @@ export default function Clientes({ clientes, vehiculos, trabajos = [], notify })
                     <th
                       key={c.key}
                       onClick={c.sort ? () => toggleSort(c.sort) : undefined}
-                      style={{ cursor: c.sort ? 'pointer' : 'default', userSelect: 'none', textAlign: c.center ? 'center' : undefined }}
+                      /* El mockup alinea a la derecha el rótulo Y el dato de las tres
+                         columnas de números/fecha; antes el rótulo iba a la izquierda
+                         y "EN CUENTTI" quedaba descuadrado sobre su propio valor. */
+                      title={c.full || undefined}
+                      style={{ cursor: c.sort ? 'pointer' : 'default', userSelect: 'none', textAlign: c.right ? 'right' : (c.center ? 'center' : undefined) }}
                     >
                       {c.label}{c.sort ? sortIcon(c.sort) : null}
                       {!c.noResize && (
@@ -1057,10 +1219,14 @@ export default function Clientes({ clientes, vehiculos, trabajos = [], notify })
                 </tr>
               </thead>
               <tbody>
-                {clientesFiltrados.map(c => (
+                {clientesVista.map(c => (
                   <tr key={c.id || c.cedula} style={{cursor:'pointer'}} onClick={() => seleccionar(c)}>
-                    <td className="c-name" title={c.nombre || ''}>{c.nombre || '—'}</td>
-                    <td className="c-mono td-cc" data-label="CC/NIT" style={{fontSize:12.5}}>{c.cedula || '—'}</td>
+                    {/* El guion de un dato ausente va en --text-empty (.hd-empty): el
+                        mockup ni siquiera lo pinta, y con 822 de 850 sin teléfono una
+                        columna de guiones oscuros pesaba más que los datos reales.
+                        Se conserva el guion (no se borra el dato) pero deja de competir. */}
+                    <td className="c-name" title={c.nombre || ''}>{c.nombre || <span className="hd-empty">—</span>}</td>
+                    <td className="c-mono td-cc" data-label="CC/NIT">{c.cedula || <span className="hd-empty">—</span>}</td>
                     {/* En celular esta celda deja de ser texto y se vuelve el BOTÓN DE
                         LLAMAR de 44px (ver .tbl-cards--clientes en index.css). Si no hay
                         número no hay botón: la celda se queda como "Teléfono —" en la
@@ -1075,24 +1241,28 @@ export default function Clientes({ clientes, vehiculos, trabajos = [], notify })
                                además cambiaría de pantalla por debajo del marcador. */
                             onClick={e => e.stopPropagation()}
                           >{fmtTelefono(c.telefono)}</a>
-                        : '—'}
+                        : <span className="hd-empty">—</span>}
                     </td>
-                    <td className="c-muted td-email" data-label="Email">{c.email || '—'}</td>
-                    <td data-label="Vehículos" className="td-vehs" style={{textAlign:'center'}}>
-                      <Badge tone={(c.vehiculos || []).length > 0 ? 'i' : 'n'}>
-                        {(c.vehiculos || []).length}
-                      </Badge>
+                    <td className="c-muted td-email" data-label="Email">{c.email || <span className="hd-empty">—</span>}</td>
+                    {/* Contador pelado, no pastilla: el mockup deja el número a la
+                        derecha en 12.5/600. Una columna de pastillas azules en mitad
+                        de la tabla leía como estado y no como cantidad. */}
+                    <td data-label="Vehículos" className="td-vehs" style={{textAlign:'right'}}>
+                      <span className="cli-veh">{(c.vehiculos || []).length}</span>
                     </td>
-                    <td className="c-muted td-visita" data-label="Última visita">{uvDe(c) ? fmtDate(uvDe(c)).replace(/ de /g, ' ') : '—'}</td>
+                    <td className="c-muted td-visita" data-label="Última visita">{uvDe(c) ? fmtDate(uvDe(c)).replace(/ de /g, ' ') : <span className="hd-empty">—</span>}</td>
                     {/* "En Cuentti" HONESTO: verde = confirmado (tenemos su id de Cuentti);
                         gris "Sin verificar" = NO sabemos (no lo hemos consultado). Antes
                         decía "Pendiente" (implicaba que NO estaba) aunque sí estuviera. */}
                     <td className="td-cuentti" data-label="En Cuentti">
                       {/* Punto + Si/No: la etiqueta larga se truncaba a "En Cuentti…"
                           y "Sin verificar" no cabia nunca. El color ya dice cual es
-                          cual; la palabra solo confirma. */}
+                          cual; la palabra solo confirma.
+                          El punto va en el tono VIVO (--green-500 / --amber-400) y el
+                          texto en el oscuro: con los dos del mismo color el punto se
+                          apagaba y no se distinguía a un metro. */}
                       <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 6 }}>
-                        <span style={{ width: 7, height: 7, borderRadius: '50%', flex: 'none', background: c.cuenttiId ? 'var(--ok-fg)' : 'var(--warn-fg)' }} />
+                        <span style={{ width: 7, height: 7, borderRadius: '50%', flex: 'none', background: c.cuenttiId ? 'var(--green-500)' : 'var(--amber-400)' }} />
                         <span style={{ fontSize: 12, fontWeight: 600, color: c.cuenttiId ? 'var(--ok-fg)' : 'var(--warn-fg)' }}>{c.cuenttiId ? 'Sí' : 'No'}</span>
                       </span>
                     </td>
@@ -1103,6 +1273,24 @@ export default function Clientes({ clientes, vehiculos, trabajos = [], notify })
             </table>
           )}
         </div>
+
+        {/* Pie de la tabla del mockup: banda de 38px sobre --bg-subtle. A la
+            izquierda lo que se está viendo; a la derecha el conteo que explica el
+            botón de la cabecera. NO se porta el "N clientes más" del mockup: allí
+            es un artefacto de que dibuja solo 18 filas de 850; aquí la lista está
+            completa dentro del scroll. */}
+        {clientesVista.length > 0 && (
+          <div className="hd-tbl__f">
+            <span>
+              {busqueda.trim() || segmento !== 'todos'
+                ? `${clientesVista.length} de ${totalClientes} clientes`
+                : `${clientesVista.length} clientes`}
+            </span>
+            <span className="hd-bar__sp" />
+            <span>Sin verificar en Cuentti</span>
+            <b>{sinVerificar}</b>
+          </div>
+        )}
       </div>
     </div>
     <ConfirmDialog cfg={confirmCfg} onClose={() => setConfirmCfg(null)} />
