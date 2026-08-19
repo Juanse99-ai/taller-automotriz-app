@@ -124,7 +124,10 @@ export default function CRM({ trabajos = [], clientes, vehiculos, notify, actual
 
   // Filtros UI
   const [filtroTipo, setFiltroTipo] = useState('todos')
-  const [filtroUrgencia, setFiltroUrgencia] = useState('vencidos')
+  // Abre en "Todos", como el diseño. Abria en "vencidos" y hoy no hay ninguno:
+  // se entraba a la pantalla y no se veia NADA, con los 2 recordatorios reales
+  // escondidos tras un filtro que nadie habia tocado.
+  const [filtroUrgencia, setFiltroUrgencia] = useState('todos')
   const [filtroBusqueda, setFiltroBusqueda] = useState('')
   const [showConfig, setShowConfig] = useState(false)
   const [showTemplate, setShowTemplate] = useState(null) // null o key del servicio

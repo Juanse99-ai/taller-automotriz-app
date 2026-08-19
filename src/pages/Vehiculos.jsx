@@ -202,7 +202,10 @@ export default function Vehiculos({ vehiculos, clientes, trabajos = [], notify }
 
       {/* Tabla */}
       <div className="card">
-        <div className="card__h"><h3>Vehículos</h3><span className="badge badge-n">{vehiculosFiltrados.length}</span></div>
+        {/* El titulo ya lo pone la barra de arriba: repetirlo aqui dejaba
+            "Vehiculos" escrito dos veces a 40px de distancia. Queda el conteo,
+            que es lo unico que esta cabecera aportaba. */}
+        <div className="card__h"><span className="hd-bar__n">{vehiculosFiltrados.length} vehículos</span></div>
         <div className="card__b" style={{ padding: 0 }}>
           {vehiculosFiltrados.length === 0 ? (
             <div style={{ textAlign: 'center', padding: 40, color: 'var(--text-3)' }}>
