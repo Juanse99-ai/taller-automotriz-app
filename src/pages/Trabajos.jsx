@@ -7,6 +7,7 @@ import { loadLogo as loadPdfLogo, drawHeader, drawSectionHeader, drawDataBlock, 
 import FichaTecnico from '../components/FichaTecnico'
 import { labelInventario, etiquetaCombustible, ingresoTieneAlgo } from '../utils/ingreso'
 import { exportarFichasTecnico } from '../utils/fichaPdf'
+import { comisionTecnico, esServicioItem } from '../utils/comision'
 import { lsGet, lsSet, LS_KEYS } from '../services/storage'
 import { borrarVideoEvidencia, fetchEvidenciasTrabajo } from '../services/supabase'
 import SignaturePad from '../components/SignaturePad'
@@ -1195,95 +1196,164 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
       )}
 
       {/* Vista previa de una OT (al hacer clic) — antes de saltar a editar */}
+      {/* Detalle de una OT ya guardada. Las siete acciones pesaban lo mismo:
+          ahora son tres niveles — "Ir a Facturar" con el monto adentro (es la
+          que mueve plata), luego las de 42px, y el descarte como texto. */}
       {previewId && (() => {
         const t = trabajos.find(x => x.id === previewId)
         if (!t) return null
         const tel = String(t.telefonoCliente || '').replace(/\D/g, '')
         const wa = tel.length === 10 ? `57${tel}` : tel
+        const cob = estadoCobro(t)
+        const completado = t.estado === ESTADOS.COMPLETADO
+        const porCobrar = !!onAutoFacturar && !!cob?.porCobrar
+        const comision = comisionTecnico(t)
+        const items = t.items || []
+        const cerrar = () => { setPreviewId(null); setFirmando(false) }
         return (
-          <div className="modal-overlay" onClick={() => { setPreviewId(null); setFirmando(false) }}>
-            <div className="modal" style={{ maxWidth: 470 }} onClick={e => e.stopPropagation()}>
-              <div className="modal-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10 }}>
-                <div style={{ minWidth: 0 }}>
-                  <div className="modal-title" style={{ fontFamily: 'var(--mono)', color: 'var(--blue-600)' }}>{t.otCodigo || '—'} · {t.placa}</div>
-                  <div style={{ fontSize: 12.5, color: 'var(--text-3)', marginTop: 2 }}>{t.cliente || 'Sin cliente'} · {[t.marca, t.modelo].filter(Boolean).join(' ') || '—'}</div>
-                </div>
-                <button className="icobtn" onClick={() => { setPreviewId(null); setFirmando(false) }} aria-label="Cerrar" style={{ flexShrink: 0 }}><IconX /></button>
+          <div className="modal-overlay" onClick={cerrar}>
+            <div className="modal otd" onClick={e => e.stopPropagation()}>
+
+              {/* Franja de estado: lo primero que se lee, y explica por que el
+                  boton azul dice Facturar. Antes era un bloque suelto abajo. */}
+              <div className={`otd__franja otd__franja--${chipEstado(t.estado)}`}>
+                {completado
+                  ? <IconCheck />
+                  : <span className="otd__franja-dot" />}
+                <span className="otd__franja-txt">
+                  {completado
+                    ? `Trabajo completado el ${fmtDate(t.fecha)}${porCobrar ? ' · listo para facturar' : ''}`
+                    : `${t.estado} · ingresó ${fmtDate(t.fecha)}`}
+                </span>
+                <button type="button" className="otd__x" onClick={cerrar} aria-label="Cerrar"><IconX /></button>
               </div>
-              <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
-                  <span className={`badge ${estadoBadge(t.estado)}`}>{t.estado}</span>
-                  {(() => { const c = estadoCobro(t); return c ? <Badge tone={c.tone}>{c.label}</Badge> : null })()}
-                  <span style={{ fontSize: 12.5, color: 'var(--text-3)' }}>{fmtDate(t.fecha)}</span>
+
+              <div className="otd__head">
+                <div className="otd__id">
+                  <div className="otd__idr">
+                    {/* La placa manda: es por lo que se reconoce el registro. */}
+                    <span className={`otd__placa${t.placa ? '' : ' sin'}`}>{t.placa || 'SERVICIO'}</span>
+                    <span className="otd__ot">{t.otCodigo || '—'}</span>
+                  </div>
+                  <div className="otd__cli">{t.cliente || 'Sin cliente'}</div>
+                  <div className="otd__veh">
+                    {[t.marca, t.modelo, t.ano].filter(Boolean).join(' ') || 'Sin ficha'} · ingresó {fmtDate(t.fecha)}
+                  </div>
                 </div>
+                <div className="otd__chips">
+                  <span className={`hd-chip hd-chip--${chipEstado(t.estado)}`}>{t.estado}</span>
+                  {cob && <span className={`hd-chip hd-chip--${chipTono(cob.tone)}`}>{cob.label}</span>}
+                </div>
+              </div>
+
+              <div className="otd__body">
+                {/* La factura de Cuentti y el telefono no estan en el mockup pero
+                    si en la app: no se pierden, bajan a linea de apoyo. */}
                 {t.cuenttiTransacionId && t.cuenttiTransacionId !== SIN_FACTURA && (
-                  <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: -4 }}>
-                    Factura <span className="mono" style={{ color: 'var(--text)' }}>{t.cuenttiTransacionId}</span>
+                  <div className="otd__factura">
+                    Factura <span className="mono">{t.cuenttiTransacionId}</span>
                     {t.facturadoEn && ` · ${fmtDate(t.facturadoEn)}`}
                   </div>
                 )}
-                {tel && (
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, border: '1px solid var(--border)', borderRadius: 10, padding: '10px 12px', background: 'var(--bg-subtle)' }}>
-                    <div style={{ minWidth: 0 }}>
-                      <div style={{ fontSize: 12.5, fontWeight: 600 }}>{t.cliente || 'Cliente'}</div>
-                      <div style={{ fontSize: 11.5, color: 'var(--text-3)' }}>{fmtTelefono(t.telefonoCliente)}</div>
+
+                {items.length > 0 && (
+                  <>
+                    <div className="otd__rot">
+                      <span>ÍTEMS DEL TRABAJO</span>
+                      <span className="otd__n">{items.length}</span>
                     </div>
-                    <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
-                      <a href={`tel:${tel}`} className="btn btn-outline btn-sm btn-icon" aria-label="Llamar" title="Llamar" style={{ height: 32, width: 32 }}><IconPhone /></a>
-                      <a href={`https://wa.me/${wa}`} target="_blank" rel="noreferrer" className="btn btn-sm btn-icon" aria-label="WhatsApp" title="WhatsApp" style={{ height: 32, width: 32, background: 'var(--green-600)', color: '#fff' }}><IconChat /></a>
+                    <div className="otd__items">
+                      {items.map((it, i) => {
+                        const cant = cantidadItem(it)
+                        const precio = parseFloat(it.precio) || 0
+                        return (
+                          <div key={i} className="otd__item">
+                            <span className="otd__item-n">{it.nombre || 'Ítem'}</span>
+                            <span className="otd__item-d">
+                              {esServicioItem(it) ? 'Mano de obra' : `Repuesto · ${fmtCant(cant)} × ${fmt(precio)}`}
+                            </span>
+                            <span className="otd__item-v">{fmt(precio * cant)}</span>
+                          </div>
+                        )
+                      })}
                     </div>
-                  </div>
+                  </>
                 )}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                  <div style={{ border: '1px solid var(--border)', borderRadius: 10, padding: '9px 12px' }}><div style={{ fontSize: 10, color: 'var(--text-4)', textTransform: 'uppercase', letterSpacing: '.4px' }}>Técnico</div><div style={{ fontSize: 13, fontWeight: 600 }}>{tecNombre(t.tecnicoId)}</div></div>
-                  <div style={{ border: '1px solid var(--border)', borderRadius: 10, padding: '9px 12px' }}><div style={{ fontSize: 10, color: 'var(--text-4)', textTransform: 'uppercase', letterSpacing: '.4px' }}>Total</div><div style={{ fontSize: 13, fontWeight: 600 }}>{fmt(t.total)}</div></div>
+
+                <div className="otd__total">
+                  <span>Total</span>
+                  <span className="otd__total-v">{fmt(t.total)}</span>
                 </div>
-                {(t.items || []).length > 0 && (
-                  <div style={{ border: '1px solid var(--border)', borderRadius: 10, padding: '9px 12px' }}>
-                    <div style={{ fontSize: 10, color: 'var(--text-4)', textTransform: 'uppercase', letterSpacing: '.4px', marginBottom: 6 }}>Ítems</div>
-                    {(t.items || []).slice(0, 8).map((it, i) => (
-                      <div key={i} style={{ display: 'flex', justifyContent: 'space-between', gap: 10, fontSize: 12.5, padding: '3px 0' }}>
-                        <span style={{ color: 'var(--text-2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{it.nombre || 'Ítem'}</span>
-                        <span className="mono" style={{ color: 'var(--text-3)', flexShrink: 0 }}>{fmt((parseFloat(it.precio) || 0) * (cantidadItem(it)))}</span>
-                      </div>
-                    ))}
+
+                <div className="otd__tec">
+                  <span className={`hd-av av av-${(parseInt(t.tecnicoId) || 1) % 5 + 1}`}>{tecIniciales(t.tecnicoId)}</span>
+                  <span className="otd__tec-b">
+                    <span className="otd__tec-n">{tecNombre(t.tecnicoId)}</span>
+                    <span className="otd__tec-s">Técnico{comision > 0 ? ` · comisión ${fmt(comision)}` : ''}</span>
+                  </span>
+                  {!t.firmaCliente && !firmando && <span className="hd-chip hd-chip--warn">SIN FIRMA DEL CLIENTE</span>}
+                </div>
+
+                {tel && (
+                  <div className="otd__tel">
+                    <span className="otd__tel-n">{fmtTelefono(t.telefonoCliente)}</span>
+                    <a href={`tel:${tel}`} className="otd__tel-b" aria-label="Llamar al cliente"><IconPhone /></a>
                   </div>
                 )}
-                {/* Firma del cliente (recibido) */}
-                <div style={{ border: '1px solid var(--border)', borderRadius: 10, padding: '10px 12px' }}>
-                  <div style={{ fontSize: 10, color: 'var(--text-4)', textTransform: 'uppercase', letterSpacing: '.4px', marginBottom: 8 }}>Firma del cliente (recibido)</div>
-                  {firmando ? (
+
+                {/* Firma del cliente: se abre solo cuando se va a firmar. */}
+                {firmando ? (
+                  <div className="otd__firma">
                     <SignaturePad initial={t.firmaCliente}
                       onSave={async (dataUrl) => { await actualizarTrabajo(t.id, { firmaCliente: dataUrl }); setFirmando(false); notify('Firma guardada', 'success') }}
                       onCancel={() => setFirmando(false)} />
-                  ) : t.firmaCliente ? (
-                    <div>
-                      <img src={t.firmaCliente} alt="Firma del cliente" style={{ width: '100%', maxHeight: 130, objectFit: 'contain', background: '#fff', border: '1px solid var(--border)', borderRadius: 8 }} />
-                      <Button variant="outline" size="sm" type="button" style={{ marginTop: 8 }} onClick={() => setFirmando(true)}>Firmar de nuevo</Button>
-                    </div>
-                  ) : (
-                    <Button variant="outline" size="sm" type="button" onClick={() => setFirmando(true)}
-                      icon={<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>}>Firmar recibido</Button>
-                  )}
-                </div>
+                  </div>
+                ) : t.firmaCliente ? (
+                  <div className="otd__firma">
+                    <div className="otd__rot"><span>FIRMA DEL CLIENTE</span></div>
+                    <img src={t.firmaCliente} alt="Firma del cliente" className="otd__firma-img" />
+                  </div>
+                ) : null}
               </div>
-              <div className="modal-footer" style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-                {t.otCodigo && <Button variant="outline" size="sm" onClick={() => descargarOT(t)}>PDF</Button>}
-                {t.estado !== ESTADOS.COMPLETADO && <Button variant="outline" size="sm" onClick={() => { handleCompletar(t.id); setPreviewId(null) }}>Marcar listo</Button>}
-                {(() => {
-                  const porCobrar = !!onAutoFacturar && !!estadoCobro(t)?.porCobrar
-                  return (
-                    <>
-                      <Button variant={porCobrar ? 'outline' : 'primary'} size="sm" onClick={() => { setPreviewId(null); handleEditar(t.id) }}>Editar</Button>
-                      {porCobrar && (
-                        <Button variant="primary" size="sm"
-                          onClick={() => { setPreviewId(null); onAutoFacturar(t) }}>
-                          Cobrar {fmt(t.total)}
-                        </Button>
-                      )}
-                    </>
-                  )
-                })()}
+
+              <div className="otd__acc">
+                {porCobrar ? (
+                  <button type="button" className="otd__go" onClick={() => { setPreviewId(null); onAutoFacturar(t) }}>
+                    <IconPdf />Ir a Facturar · {fmt(t.total)}
+                  </button>
+                ) : !completado ? (
+                  <button type="button" className="otd__go" onClick={() => { handleCompletar(t.id); setPreviewId(null) }}>
+                    <IconCheck />Marcar listo
+                  </button>
+                ) : null}
+
+                <div className="otd__acc2">
+                  {!t.firmaCliente && (
+                    <button type="button" className="otd__b" onClick={() => setFirmando(true)}>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 17s2-4 5-4 4 2 6 2 3-2 3-4-2-3-3-2-1 5 1 8 4 2 6 1" /></svg>
+                      Firmar recibido
+                    </button>
+                  )}
+                  {tel && (
+                    <a className="otd__b" href={`https://wa.me/${wa}`} target="_blank" rel="noreferrer">
+                      <IconChat />WhatsApp
+                    </a>
+                  )}
+                  <button type="button" className="otd__b otd__b--chip" onClick={() => { setPreviewId(null); handleEditar(t.id) }}>
+                    <IconEdit />Editar
+                  </button>
+                </div>
+
+                {/* Tercer nivel: texto. Un descarte nunca es un boton. */}
+                <div className="otd__acc3">
+                  {completado && porCobrar && (
+                    <button type="button" className="otd__t" onClick={() => { handleCompletar(t.id); setPreviewId(null) }}>Marcar listo</button>
+                  )}
+                  {t.firmaCliente && <button type="button" className="otd__t" onClick={() => setFirmando(true)}>Firmar de nuevo</button>}
+                  {t.otCodigo && <button type="button" className="otd__t" onClick={() => descargarOT(t)}>PDF</button>}
+                  <span className="otd__sp" />
+                  <button type="button" className="otd__t otd__t--mute" onClick={cerrar}>Después</button>
+                </div>
               </div>
             </div>
           </div>

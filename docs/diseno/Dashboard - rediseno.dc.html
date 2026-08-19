@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics><meta name="design_doc_mode" content="canvas"><link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet"><style>body{margin:0;background:#e8eaee;font-family:Arial,Helvetica,sans-serif;-webkit-font-smoothing:antialiased}a{color:#1D4ED8;text-decoration:none}a:hover{color:#1e3a8a}*{box-sizing:border-box}</style></helmet>
+<div style="display:flex;flex-wrap:wrap;gap:36px;align-items:flex-start;padding:36px 40px 60px">
+
+<div style="display:flex;flex-direction:column;gap:10px">
+<div style="display:flex;align-items:baseline;gap:10px"><span style="font:700 11px/1 'JetBrains Mono',monospace;background:#1D4ED8;color:#fff;padding:4px 7px;border-radius:4px">1280</span><span style="font:700 13px/1 Arial;color:#0f172a">Dashboard · escritorio</span><span style="font:400 12px/1 Arial;color:#64748b">rail colapsable con contadores</span></div>
+
+<div style="width:1280px;height:1000px;background:#e9edf2;border:1px solid #cbd5e1;border-radius:12px;overflow:hidden;display:flex;padding:10px;gap:10px;box-shadow:0 1px 3px rgba(15,23,42,.08)">
+
+  <div style="width:206px;flex:none;background:#0d1b35;border-radius:14px;display:flex;flex-direction:column;overflow:hidden">
+    <div style="display:flex;align-items:center;gap:9px;padding:12px 11px;border-bottom:1px solid rgba(255,255,255,.08)">
+      <img src="logo-mecanico.png" alt="Multidiagnosticos AS" style="width:28px;height:28px;flex:none;border-radius:7px;object-fit:cover;background:#fff">
+      <div style="flex:1;min-width:0"><div style="font:700 12.5px/1.15 Arial;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Multidiagnosticos AS</div><div style="font:400 9.5px/1.3 Arial;letter-spacing:.9px;color:rgba(255,255,255,.5)">TALLER AUTOMOTRIZ</div></div>
+    </div>
+    <div style="flex:1;padding:5px 8px 0;overflow:hidden">
+      <sc-for list="{{ nav }}" as="it" hint-placeholder-count="14">
+        <sc-if value="{{ it.isGroup }}" hint-placeholder-val="{{ false }}">
+          <div style="font:700 8.5px/1 Arial;letter-spacing:1.1px;color:rgba(255,255,255,.34);padding:12px 8px 5px">{{ it.label }}</div>
+        </sc-if>
+        <sc-if value="{{ it.isItem }}" hint-placeholder-val="{{ true }}">
+          <div style="display:flex;align-items:center;height:32px;border-radius:8px;background:{{ it.bg }};white-space:nowrap;padding-right:8px">
+            <span style="width:34px;flex:none;display:grid;place-items:center"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:{{ it.fg }}"><path d="{{ it.d }}"></path></svg></span>
+            <span style="flex:1;font:{{ it.weight }} 12px/1 Arial;color:{{ it.fg }}">{{ it.label }}</span>
+            <sc-if value="{{ it.count }}" hint-placeholder-val="{{ false }}">
+              <span style="flex:none;min-width:20px;height:18px;padding:0 5px;border-radius:9px;background:{{ it.countBg }};color:{{ it.countFg }};font:700 10.5px/18px 'JetBrains Mono',monospace;text-align:center">{{ it.count }}</span>
+            </sc-if>
+          </div>
+        </sc-if>
+      </sc-for>
+    </div>
+    <div style="display:flex;align-items:center;height:38px;margin:6px 8px 0;border-top:1px solid rgba(255,255,255,.08)">
+      <span style="width:34px;flex:none;display:grid;place-items:center"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:rgba(255,255,255,.55)"><path d="m13 18-6-6 6-6"></path><path d="m19 18-6-6 6-6"></path></svg></span>
+      <span style="font:400 11.5px/1 Arial;color:rgba(255,255,255,.55)">Ocultar menú</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:9px;padding:9px 11px;margin:6px 8px 8px;border-radius:10px;background:rgba(255,255,255,.06)">
+      <div style="width:26px;height:26px;flex:none;border-radius:50%;background:#1D4ED8;color:#fff;font:700 11px/26px Arial;text-align:center">J</div>
+      <div style="flex:1;min-width:0"><div style="font:700 11.5px/1.2 Arial;color:#fff">Juan Sebastian</div><div style="font:400 10px/1.2 Arial;color:rgba(255,255,255,.5)">Administrador</div></div>
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:rgba(255,255,255,.55)"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"></path></svg>
+    </div>
+  </div>
+
+  <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:10px">
+
+    <div style="flex:none;height:46px;display:flex;align-items:center;gap:12px;padding:0 14px;background:#fff;border:1px solid #e2e8f0;border-radius:12px">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="color:#94a3b8"><path d="M18 6 6 18M6 6l12 12"></path></svg>
+      <div style="flex:1;max-width:400px;display:flex;align-items:center;gap:7px;height:32px;padding:0 11px;background:#f1f5f9;border-radius:8px">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="color:#64748b;flex:none"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg>
+        <span style="font:400 12px/1 Arial;color:#64748b;white-space:nowrap">Buscar placa, cliente, OT...</span>
+      </div>
+      <div style="flex:1"></div>
+      <div style="display:flex;align-items:center;gap:5px">
+        <div style="width:32px;height:32px;display:grid;place-items:center;border-radius:8px;background:#f1f5f9"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:#475569"><rect x="7" y="2" width="10" height="20" rx="2"></rect><path d="M11 18h2"></path></svg></div>
+        <div style="width:32px;height:32px;display:grid;place-items:center;border-radius:8px;background:#f1f5f9;position:relative"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:#475569"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 8 3 8H3s3-1 3-8M10.3 21a2 2 0 0 0 3.4 0"></path></svg><span style="position:absolute;top:5px;right:6px;width:6px;height:6px;border-radius:50%;background:#1D4ED8"></span></div>
+        <div style="width:32px;height:32px;display:grid;place-items:center;border-radius:8px;background:#f1f5f9"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:#475569"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"></path></svg></div>
+        <div style="width:32px;height:32px;display:grid;place-items:center;border-radius:8px;background:#fef2f2"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:#dc2626"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"></path></svg></div>
+      </div>
+    </div>
+
+    <div style="flex:none;display:flex;align-items:center;gap:14px;padding:0 4px">
+      <div style="flex:1;min-width:0">
+        <h1 style="margin:0;font:700 22px/1.1 Arial;color:#0f172a;letter-spacing:-.3px">Hola, Juan</h1>
+        <div style="font:400 12.5px/1.4 Arial;color:#475569;margin-top:3px">Martes, 18 de agosto</div>
+      </div>
+      <div style="flex:none;height:40px;display:flex;align-items:center;gap:8px;padding:0 18px;background:#1D4ED8;color:#fff;border-radius:10px;font:700 13.5px/1 Arial;box-shadow:0 2px 6px rgba(29,78,216,.25)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg>Recibir vehículo</div>
+    </div>
+
+    <div style="flex:none;display:flex;background:#fff;border:1px solid #e2e8f0;border-radius:14px;overflow:hidden">
+      <sc-for list="{{ kpis }}" as="k" hint-placeholder-count="4">
+        <div style="flex:1;min-width:0;padding:14px 16px;border-left:1px solid {{ k.divider }};background:{{ k.bg }}">
+          <div style="display:flex;align-items:center;gap:8px">
+            <span style="width:26px;height:26px;flex:none;display:grid;place-items:center;border-radius:7px;background:{{ k.iconBg }}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:{{ k.iconFg }}"><path d="{{ k.d }}"></path></svg></span>
+            <span style="font:700 10.5px/1 Arial;letter-spacing:.5px;color:#475569">{{ k.label }}</span>
+          </div>
+          <div style="font:700 {{ k.size }}/1.05 'JetBrains Mono',monospace;color:{{ k.valFg }};margin-top:9px;font-variant-numeric:tabular-nums">{{ k.value }}</div>
+          <div style="display:flex;align-items:center;gap:7px;margin-top:7px">
+            <sc-if value="{{ k.badge }}" hint-placeholder-val="{{ false }}"><span style="font:700 9.5px/1 Arial;letter-spacing:.4px;padding:4px 6px;border-radius:5px;background:{{ k.badgeBg }};color:{{ k.badgeFg }}">{{ k.badge }}</span></sc-if>
+            <span style="font:400 11.5px/1.3 Arial;color:#64748b">{{ k.sub }}</span>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+
+    <div style="flex:1;min-height:0;display:flex;gap:10px">
+      <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:10px">
+
+        <div style="flex:1.15;min-height:0;background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:15px 18px;display:flex;flex-direction:column">
+          <div style="display:flex;align-items:baseline;gap:10px;flex:none">
+            <span style="font:700 14px/1 Arial;color:#0f172a">Ingresos · últimos 12 meses</span>
+            <span style="flex:1"></span>
+            <span style="font:400 11.5px/1 Arial;color:#475569">Total:</span>
+            <span style="font:700 14px/1 'JetBrains Mono',monospace;color:#0f172a;font-variant-numeric:tabular-nums">$ 48.489.804</span>
+          </div>
+          <div style="flex:1;min-height:0;display:flex;align-items:flex-end;gap:8px;margin-top:14px;padding-bottom:2px">
+            <sc-for list="{{ meses }}" as="m" hint-placeholder-count="12">
+              <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:7px;height:100%;justify-content:flex-end">
+                <div style="width:100%;height:{{ m.h }};background:{{ m.fill }};border-radius:4px 4px 0 0;min-height:3px"></div>
+                <span style="font:700 9.5px/1 Arial;letter-spacing:.5px;color:{{ m.labelFg }}">{{ m.label }}</span>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+
+        <div style="flex:1;min-height:0;background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:15px 18px;display:flex;flex-direction:column;gap:12px">
+          <div style="display:flex;align-items:center;gap:9px;flex:none">
+            <span style="font:700 14px/1 Arial;color:#0f172a">Productividad por técnico</span>
+            <span style="font:700 11px/1 'JetBrains Mono',monospace;color:#334155;background:#f1f5f9;padding:4px 6px;border-radius:5px">3</span>
+          </div>
+          <sc-for list="{{ tecnicos }}" as="t" hint-placeholder-count="3">
+            <div style="flex:none">
+              <div style="display:flex;align-items:baseline;gap:8px">
+                <span style="width:22px;height:22px;flex:none;border-radius:50%;background:{{ t.avBg }};color:{{ t.avFg }};font:700 9.5px/22px Arial;text-align:center">{{ t.ini }}</span>
+                <span style="font:700 13px/1.2 Arial;color:#0f172a">{{ t.nombre }}</span>
+                <span style="flex:1"></span>
+                <span style="font:700 12.5px/1 'JetBrains Mono',monospace;color:#0f172a;font-variant-numeric:tabular-nums">{{ t.completados }}</span>
+                <span style="font:400 11.5px/1 Arial;color:#64748b">completados ·</span>
+                <span style="font:700 12.5px/1 'JetBrains Mono',monospace;color:#0f172a;font-variant-numeric:tabular-nums">{{ t.monto }}</span>
+              </div>
+              <div style="height:7px;margin-top:7px;border-radius:4px;background:#eef1f5;overflow:hidden"><div style="height:7px;width:{{ t.pct }};background:{{ t.fill }};border-radius:4px"></div></div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+
+      <div style="width:288px;flex:none;display:flex;flex-direction:column;gap:10px">
+        <div style="flex:none;background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:14px 16px">
+          <div style="display:flex;align-items:center;gap:9px">
+            <span style="font:700 13.5px/1 Arial;color:#0f172a">Pendientes & urgentes</span>
+            <span style="font:700 11px/1 'JetBrains Mono',monospace;color:#334155;background:#f1f5f9;padding:4px 6px;border-radius:5px">0</span>
+            <span style="flex:1"></span>
+            <span style="display:flex;align-items:center;gap:5px;font:700 11.5px/1 Arial;color:#1D4ED8">Ver todos <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"></path></svg></span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;margin-top:11px;padding:9px 11px;background:#f0fdf4;border-radius:9px">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="color:#15803d;flex:none"><path d="M20 6 9 17l-5-5"></path></svg>
+            <span style="font:400 12px/1.35 Arial;color:#166534"><b>Todo al día.</b> No hay trabajos pendientes en este momento.</span>
+          </div>
+        </div>
+
+        <div style="flex:none;background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:14px 16px">
+          <div style="display:flex;align-items:center;gap:9px">
+            <span style="font:700 13.5px/1 Arial;color:#0f172a">Ingresados hoy</span>
+            <span style="font:700 11px/1 'JetBrains Mono',monospace;color:#334155;background:#f1f5f9;padding:4px 6px;border-radius:5px">0</span>
+          </div>
+          <div style="font:400 12px/1.4 Arial;color:#475569;margin-top:8px">Ningún vehículo ingresado hoy.</div>
+        </div>
+
+        <div style="flex:none;background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:14px 16px">
+          <div style="display:flex;align-items:center;gap:9px">
+            <span style="font:700 13.5px/1 Arial;color:#0f172a">Listos para entregar</span>
+            <span style="font:700 11px/1 'JetBrains Mono',monospace;color:#334155;background:#f1f5f9;padding:4px 6px;border-radius:5px">0</span>
+          </div>
+          <div style="font:400 12px/1.4 Arial;color:#475569;margin-top:8px">No hay vehículos listos por ahora.</div>
+        </div>
+
+        <div style="flex:1;min-height:0;background:#0d1b35;border-radius:14px;padding:15px 16px;display:flex;flex-direction:column">
+          <div style="font:700 9.5px/1 Arial;letter-spacing:.9px;color:rgba(255,255,255,.55)">POR COBRAR</div>
+          <div style="font:700 26px/1.05 'JetBrains Mono',monospace;color:#fff;margin-top:8px;font-variant-numeric:tabular-nums">$ 4.420.000</div>
+          <div style="font:400 11.5px/1.4 Arial;color:rgba(255,255,255,.6);margin-top:6px">10 facturas facturadas sin pagar</div>
+          <div style="flex:1"></div>
+          <div style="display:flex;align-items:center;justify-content:center;gap:7px;height:38px;border-radius:9px;background:rgba(255,255,255,.12);font:700 12.5px/1 Arial;color:#fff">Ver cartera <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"></path></svg></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<div style="display:flex;flex-direction:column;gap:10px">
+<div style="display:flex;align-items:baseline;gap:10px"><span style="font:700 11px/1 'JetBrains Mono',monospace;background:#1D4ED8;color:#fff;padding:4px 7px;border-radius:4px">390</span><span style="font:700 13px/1 Arial;color:#0f172a">Dashboard · móvil</span></div>
+
+<div style="width:390px;height:844px;background:#e9edf2;border:1px solid #cbd5e1;border-radius:12px;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 1px 3px rgba(15,23,42,.08)">
+  <div style="flex:none;background:#fff;padding:8px 10px 10px;border-bottom:1px solid #e2e8f0">
+    <div style="display:flex;align-items:center;gap:8px">
+      <div style="width:40px;height:40px;display:grid;place-items:center;border-radius:9px;background:#f1f5f9;position:relative"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="color:#0f172a"><path d="M3 6h18M3 12h18M3 18h18"></path></svg><span style="position:absolute;top:5px;right:5px;min-width:16px;height:16px;padding:0 4px;border-radius:8px;background:#1D4ED8;color:#fff;font:700 9.5px/16px 'JetBrains Mono',monospace;text-align:center">12</span></div>
+      <div style="flex:1;min-width:0"><div style="font:700 16px/1.15 Arial;color:#0f172a">Hola, Juan</div><div style="font:400 11.5px/1.3 Arial;color:#475569">Martes, 18 de agosto</div></div>
+      <div style="width:40px;height:40px;display:grid;place-items:center;border-radius:9px;background:#f1f5f9;position:relative"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:#475569"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 8 3 8H3s3-1 3-8M10.3 21a2 2 0 0 0 3.4 0"></path></svg><span style="position:absolute;top:7px;right:8px;width:6px;height:6px;border-radius:50%;background:#1D4ED8"></span></div>
+      <div style="width:40px;height:40px;display:grid;place-items:center;border-radius:9px;background:#f1f5f9"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:#475569"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"></path></svg></div>
+      <div style="width:40px;height:40px;display:grid;place-items:center;border-radius:9px;background:#fef2f2"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:#dc2626"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"></path></svg></div>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;height:42px;margin-top:8px;padding:0 12px;background:#f1f5f9;border-radius:9px">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="color:#64748b;flex:none"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg>
+      <span style="font:400 13.5px/1 Arial;color:#64748b;white-space:nowrap">Buscar placa, cliente, OT...</span>
+    </div>
+  </div>
+
+  <div style="flex:1;min-height:0;overflow:hidden;padding:10px;display:flex;flex-direction:column;gap:9px">
+
+    <div style="flex:none;background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:12px 14px">
+      <div style="display:flex;align-items:center;gap:8px"><span style="width:24px;height:24px;flex:none;display:grid;place-items:center;border-radius:7px;background:#eff6ff"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:#1D4ED8"><path d="M23 6 13.5 15.5 8.5 10.5 1 18M17 6h6v6"></path></svg></span><span style="font:700 10.5px/1 Arial;letter-spacing:.5px;color:#475569">INGRESOS DEL MES</span></div>
+      <div style="font:700 26px/1.05 'JetBrains Mono',monospace;color:#0f172a;margin-top:8px;font-variant-numeric:tabular-nums">$ 14.636.304</div>
+      <div style="font:400 11.5px/1.35 Arial;color:#64748b;margin-top:5px">Acumulado del 1 al 18 de agosto</div>
+    </div>
+
+    <div style="flex:none;background:#0d1b35;border-radius:12px;padding:12px 14px">
+      <div style="display:flex;align-items:center;gap:8px"><span style="font:700 10px/1 Arial;letter-spacing:.8px;color:rgba(255,255,255,.55)">POR COBRAR</span><span style="font:700 9.5px/1 Arial;color:#fff;background:rgba(239,68,68,.3);padding:4px 6px;border-radius:5px">10 facturas</span></div>
+      <div style="display:flex;align-items:flex-end;gap:10px;margin-top:8px">
+        <div style="flex:1"><div style="font:700 24px/1.05 'JetBrains Mono',monospace;color:#fff;font-variant-numeric:tabular-nums">$ 4.420.000</div><div style="font:400 11px/1.35 Arial;color:rgba(255,255,255,.6);margin-top:4px">facturado sin pagar</div></div>
+        <span style="flex:none;display:flex;align-items:center;gap:6px;height:38px;padding:0 13px;border-radius:9px;background:rgba(255,255,255,.14);font:700 12.5px/1 Arial;color:#fff">Ver <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"></path></svg></span>
+      </div>
+    </div>
+
+    <div style="flex:none;display:flex;gap:9px">
+      <div style="flex:1;background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:11px 13px">
+        <div style="font:700 10px/1 Arial;letter-spacing:.6px;color:#475569">LISTOS PARA ENTREGAR</div>
+        <div style="display:flex;align-items:baseline;gap:7px;margin-top:7px"><span style="font:700 22px/1 'JetBrains Mono',monospace;color:#0f172a">0</span><span style="font:400 11px/1 Arial;color:#64748b">por entregar</span></div>
+      </div>
+      <div style="flex:1;background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:11px 13px">
+        <div style="font:700 10px/1 Arial;letter-spacing:.6px;color:#475569">ACTIVOS HOY</div>
+        <div style="display:flex;align-items:baseline;gap:7px;margin-top:7px"><span style="font:700 22px/1 'JetBrains Mono',monospace;color:#0f172a">0</span><span style="font:400 11px/1 Arial;color:#64748b">en taller</span></div>
+      </div>
+    </div>
+
+    <div style="flex:none;background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;gap:9px">
+      <div style="display:flex;align-items:center;gap:8px">
+        <span style="font:700 13px/1 Arial;color:#0f172a">Pendientes & urgentes</span>
+        <span style="font:700 10.5px/1 'JetBrains Mono',monospace;color:#334155;background:#f1f5f9;padding:4px 6px;border-radius:5px">0</span>
+        <span style="flex:1"></span>
+        <span style="font:700 12px/1 Arial;color:#1D4ED8">Ver todos →</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;padding:9px 11px;background:#f0fdf4;border-radius:9px">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="color:#15803d;flex:none"><path d="M20 6 9 17l-5-5"></path></svg>
+        <span style="font:400 12px/1.35 Arial;color:#166534"><b>Todo al día.</b> No hay trabajos pendientes.</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;font:400 12px/1.35 Arial;color:#475569"><span style="font:700 11px/1 'JetBrains Mono',monospace;color:#334155;background:#f1f5f9;padding:4px 6px;border-radius:5px">0</span>Ingresados hoy · ningún vehículo ingresado hoy.</div>
+      <div style="display:flex;align-items:center;gap:8px;font:400 12px/1.35 Arial;color:#475569"><span style="font:700 11px/1 'JetBrains Mono',monospace;color:#334155;background:#f1f5f9;padding:4px 6px;border-radius:5px">0</span>Listos para entregar · no hay vehículos listos por ahora.</div>
+    </div>
+
+    <div style="flex:1;min-height:0;background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;overflow:hidden">
+      <div style="display:flex;align-items:baseline;gap:8px;flex:none"><span style="font:700 13px/1 Arial;color:#0f172a">Ingresos · 12 meses</span><span style="flex:1"></span><span style="font:700 12.5px/1 'JetBrains Mono',monospace;color:#0f172a">$ 48.489.804</span></div>
+      <div style="flex:1;min-height:0;display:flex;align-items:flex-end;gap:4px;margin-top:10px">
+        <sc-for list="{{ meses }}" as="m" hint-placeholder-count="12">
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;height:100%;justify-content:flex-end">
+            <div style="width:100%;height:{{ m.h }};background:{{ m.fill }};border-radius:3px 3px 0 0;min-height:3px"></div>
+            <span style="font:700 8px/1 Arial;letter-spacing:.3px;color:{{ m.labelFg }}">{{ m.label }}</span>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+  </div>
+
+  <div style="flex:none;padding:9px 10px;background:#fff;border-top:1px solid #e2e8f0">
+    <div style="height:48px;display:flex;align-items:center;justify-content:center;gap:8px;background:#1D4ED8;color:#fff;border-radius:10px;font:700 15px/1 Arial;box-shadow:0 2px 6px rgba(29,78,216,.25)"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg>Recibir vehículo</div>
+  </div>
+</div>
+</div>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:2180,&quot;height&quot;:1100}}">
+class Component extends DCLogic {
+  nav() {
+    const A = 'rgba(255,255,255,.62)';
+    const g = l => ({ isGroup: true, isItem: false, label: l });
+    const i = (label, d, active, count) => ({
+      isGroup: false, isItem: true, label, d, count,
+      fg: active ? '#fff' : A, weight: active ? 700 : 400,
+      bg: active ? '#1D4ED8' : 'transparent',
+      countBg: active ? 'rgba(255,255,255,.22)' : 'rgba(255,255,255,.12)',
+      countFg: '#fff'
+    });
+    return [
+      g('PRINCIPAL'), i('Dashboard', 'M4 3h5a1 1 0 0 1 1 1v5a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1zM15 3h5a1 1 0 0 1 1 1v5a1 1 0 0 1-1 1h-5a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1zM15 14h5a1 1 0 0 1 1 1v5a1 1 0 0 1-1 1h-5a1 1 0 0 1-1-1v-5a1 1 0 0 1 1-1zM4 14h5a1 1 0 0 1 1 1v5a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-5a1 1 0 0 1 1-1z', true),
+      g('OPERACIÓN'),
+      i('Recepcion', 'M10 2h4a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1h-4a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1zM8 4H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-2m-7 10 2 2 4-4'),
+      i('Trabajos', 'M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z', false, 12),
+      i('Inspecciones', 'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6m-11 5 2 2 4-4'),
+      i('Mecanicos', 'M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M13 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0zM22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75'),
+      g('GESTIÓN'),
+      i('Clientes', 'M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M13 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0zM23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75'),
+      i('Vehiculos', 'M7 17h10M5 17a2 2 0 0 1-2-2v-3l2.5-5.5A2 2 0 0 1 7.3 5.3h9.4a2 2 0 0 1 1.8 1.2L21 12v3a2 2 0 0 1-2 2M9 17a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM19 17a2 2 0 1 1-4 0 2 2 0 0 1 4 0z'),
+      i('CRM', 'M21 15a2 2 0 0 1-2 2H8l-4 4V5a2 2 0 0 1 2-2h13a2 2 0 0 1 2 2z'),
+      g('FACTURACIÓN'),
+      i('Cotizaciones', 'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M12 18v-6M9 15h6', false, 3),
+      i('Inventario', 'M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16zM3.27 6.96 12 12.01l8.73-5.05M12 22.08V12'),
+      i('Liquidacion', 'M4 5h16a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2zM2 10h20', false, 2),
+      g('ANÁLISIS'),
+      i('Reportes', 'M18 20V10M12 20V4M6 20v-6M2 20h20'),
+      i('Cuentti', 'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M16 13H8M16 17H8M10 9H8', false, 10),
+      g('SISTEMA'),
+      i('Usuarios', 'M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8')
+    ];
+  }
+  renderVals() {
+    const kpis = [
+      { label: 'INGRESOS DEL MES', value: '$ 14.636.304', size: '21px', sub: 'Acumulado del 1 al 18 de agosto', d: 'M23 6 13.5 15.5 8.5 10.5 1 18M17 6h6v6', iconBg: '#eff6ff', iconFg: '#1D4ED8', divider: 'transparent', bg: '#fff', valFg: '#0f172a' },
+      { label: 'LISTOS PARA ENTREGAR', value: '0', size: '21px', sub: 'por entregar', d: 'M22 12a10 10 0 1 1-20 0 10 10 0 0 1 20 0zm-13 0 2 2 4-4', iconBg: '#f1f5f9', iconFg: '#475569', divider: '#eef1f5', bg: '#fff', valFg: '#334155' },
+      { label: 'ACTIVOS HOY', value: '0', size: '21px', sub: 'en taller', d: 'M22 12a10 10 0 1 1-20 0 10 10 0 0 1 20 0zM12 6v6l4 2', iconBg: '#f1f5f9', iconFg: '#475569', divider: '#eef1f5', bg: '#fff', valFg: '#334155' },
+      { label: 'TOTAL TRABAJOS', value: '157', size: '21px', sub: 'registrados en el historial', d: 'M10 2h4a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1h-4a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1zM8 4H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-2M9 12h6M9 16h4', iconBg: '#f1f5f9', iconFg: '#475569', divider: '#eef1f5', bg: '#fff', valFg: '#334155' }
+    ];
+    const vals = [0.9, 0.9, 1.0, 0.9, 1.1, 0.9, 1.0, 0.9, 1.2, 3.9, 17.4, 14.6];
+    const labels = ['SEP', 'OCT', 'NOV', 'DIC', 'ENE', 'FEB', 'MAR', 'ABR', 'MAY', 'JUN', 'JUL', 'AGO'];
+    const max = Math.max(...vals);
+    const meses = labels.map((label, n) => ({
+      label,
+      h: Math.round((vals[n] / max) * 100) + '%',
+      fill: n === 11 ? '#1D4ED8' : '#c7d7fb',
+      labelFg: n === 11 ? '#1D4ED8' : '#64748b'
+    }));
+    return {
+      nav: this.nav(), kpis, meses,
+      tecnicos: [
+        { nombre: 'Pedro', ini: 'PB', avBg: '#dcfce7', avFg: '#166534', completados: '83', monto: '$ 27.448.003', pct: '100%', fill: '#1D4ED8' },
+        { nombre: 'Víctor', ini: 'VP', avBg: '#fef3c7', avFg: '#92400e', completados: '61', monto: '$ 17.700.301', pct: '73%', fill: '#1D4ED8' },
+        { nombre: 'Ismael', ini: 'IC', avBg: '#ede9fe', avFg: '#5b21b6', completados: '7', monto: '$ 2.988.000', pct: '8%', fill: '#1D4ED8' }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -2654,3 +2654,91 @@ tbody tr:active{background:var(--fill-2)}
   .portal-main > .portal-col:empty{display:none}
   .portal-main:has(> .portal-col:empty){grid-template-columns:1fr}
 }
+
+/* ============================================================
+   FASE 2 — Detalle de una OT ya guardada
+   Las siete acciones tenian el mismo peso. Ahora son tres niveles: la que
+   mueve plata con el monto adentro, las de 42px, y el descarte como texto.
+   ============================================================ */
+.otd{max-width:470px;width:100%;border-radius:20px;overflow:hidden;padding:0;display:flex;flex-direction:column}
+.otd__franja{flex:none;display:flex;align-items:center;gap:10px;min-height:44px;padding:0 12px 0 18px;
+  background:var(--ok-bg);color:var(--ok-fg)}
+.otd__franja--warn{background:var(--warn-bg);color:var(--warn-fg)}
+.otd__franja--info{background:var(--info-bg);color:var(--info-fg)}
+.otd__franja--purple{background:var(--purple-bg);color:var(--purple-fg)}
+.otd__franja--orange{background:var(--orange-bg);color:var(--orange-fg)}
+.otd__franja--mute{background:var(--chip);color:var(--text-3)}
+.otd__franja svg{width:16px;height:16px;flex:none;stroke-width:2.6}
+.otd__franja-dot{width:8px;height:8px;flex:none;border-radius:50%;background:currentColor}
+.otd__franja-txt{flex:1;font-size:12.5px;line-height:1.3;font-weight:700}
+.otd__x{width:30px;height:30px;flex:none;display:grid;place-items:center;border:0;border-radius:50%;
+  background:rgba(15,23,42,.07);color:inherit;cursor:pointer}
+.otd__x svg{width:14px;height:14px;stroke-width:2.4}
+
+.otd__head{flex:none;display:flex;align-items:flex-start;gap:12px;padding:16px 20px 14px;border-bottom:1px solid var(--row-line)}
+.otd__id{flex:1;min-width:0}
+.otd__idr{display:flex;align-items:baseline;gap:11px}
+.otd__placa{font-family:var(--mono);font-size:24px;line-height:1.05;font-weight:700;letter-spacing:.5px;color:var(--text)}
+.otd__placa.sin{font-size:16px;letter-spacing:.6px;color:var(--text-4)}
+.otd__ot{font-family:var(--mono);font-size:13px;line-height:1;color:var(--text-4)}
+.otd__cli{font-size:14px;line-height:1.25;font-weight:600;color:var(--text);margin-top:8px}
+.otd__veh{font-size:12.5px;line-height:1.3;color:var(--text-3);margin-top:3px}
+.otd__chips{flex:none;display:flex;flex-direction:column;align-items:flex-end;gap:6px}
+
+.otd__body{flex:1;min-height:0;overflow-y:auto;padding:13px 20px 0}
+.otd__factura{font-size:11.5px;line-height:1.4;color:var(--text-4);margin-bottom:11px}
+.otd__factura .mono{font-family:var(--mono);color:var(--text-2)}
+.otd__rot{display:flex;align-items:center;gap:9px;font-size:9.5px;line-height:1;font-weight:700;
+  letter-spacing:.9px;color:var(--text-4)}
+.otd__n{font-size:10.5px;font-weight:700;color:var(--text-2);background:var(--chip);padding:4px 7px;border-radius:var(--radius-pill)}
+.otd__items{margin-top:9px}
+.otd__item{display:flex;align-items:center;gap:12px;min-height:38px;padding:5px 0;border-bottom:1px solid var(--row-line)}
+.otd__item-n{flex:1;min-width:0;font-size:13px;line-height:1.25;font-weight:600;color:var(--text)}
+.otd__item-d{flex:none;font-size:11.5px;line-height:1;color:var(--text-4);white-space:nowrap}
+.otd__item-v{width:96px;flex:none;text-align:right;font-size:13px;line-height:1;font-weight:700;color:var(--text)}
+.otd__total{display:flex;align-items:baseline;gap:12px;padding:14px 0 15px}
+.otd__total>span:first-child{flex:1;font-size:14px;font-weight:700;color:var(--text)}
+.otd__total-v{font-size:26px;line-height:1;font-weight:700;color:var(--text)}
+.otd__tec{display:flex;align-items:center;gap:11px;padding:11px 0;border-top:1px solid var(--row-line);border-bottom:1px solid var(--row-line)}
+.otd__tec .av{width:34px;height:34px;font-size:12.5px;flex:none}
+.otd__tec-b{flex:1;min-width:0}
+.otd__tec-n{display:block;font-size:13.5px;line-height:1.2;font-weight:700;color:var(--text)}
+.otd__tec-s{display:block;font-size:11.5px;line-height:1.3;color:var(--text-4);margin-top:2px}
+.otd__tel{display:flex;align-items:center;gap:10px;padding:11px 0;border-bottom:1px solid var(--row-line)}
+.otd__tel-n{flex:1;font-family:var(--mono);font-size:12.5px;color:var(--text-3)}
+.otd__tel-b{width:var(--tap);height:var(--tap);flex:none;display:grid;place-items:center;border-radius:12px;
+  background:var(--chip);color:var(--text-2)}
+.otd__firma{padding:12px 0}
+.otd__firma-img{width:100%;max-height:130px;object-fit:contain;background:#fff;border:1px solid var(--border);
+  border-radius:8px;margin-top:8px}
+
+.otd__acc{flex:none;padding:14px 20px 18px;display:flex;flex-direction:column;gap:9px}
+.otd__go{height:48px;display:flex;align-items:center;justify-content:center;gap:9px;border:0;border-radius:14px;
+  background:var(--accent);color:#fff;font-size:15px;font-weight:700;cursor:pointer;box-shadow:var(--accent-shadow)}
+.otd__go svg{width:18px;height:18px;stroke-width:2.2}
+.otd__acc2{display:flex;align-items:center;gap:8px}
+.otd__b{flex:1;height:42px;display:flex;align-items:center;justify-content:center;gap:8px;border-radius:12px;
+  background:var(--bg-raised);border:1.5px solid var(--border-strong);font-size:13px;font-weight:700;
+  color:var(--text-2);white-space:nowrap;cursor:pointer}
+.otd__b:hover{color:var(--text-2);background:var(--bg-subtle)}
+.otd__b--chip{flex:none;padding:0 14px;background:var(--chip);border-color:transparent}
+.otd__b svg{width:16px;height:16px;flex:none}
+.otd__acc3{display:flex;align-items:center;gap:14px;padding-top:4px;flex-wrap:wrap}
+.otd__t{border:0;background:none;padding:0;font-size:12.5px;font-weight:600;color:var(--text-3);cursor:pointer}
+.otd__t--mute{color:var(--text-4)}
+.otd__sp{flex:1}
+
+/* Movil: no es el modal encogido, es pantalla completa. */
+@media (max-width:700px){
+  .otd{max-width:none;width:100%;height:100dvh;max-height:none;border-radius:0}
+  .otd__head{background:var(--navy);border-bottom:0;padding:14px 16px 16px}
+  .otd__placa,.otd__cli{color:#fff}
+  .otd__ot{color:rgba(255,255,255,.55)}
+  .otd__veh{color:rgba(255,255,255,.6)}
+  .otd__body{padding:12px 14px 0}
+  .otd__acc{padding:10px 14px 16px}
+  .otd__go{height:52px}
+  .otd__b{height:48px;border-radius:13px}
+  .otd__acc3{justify-content:center}
+  .otd__acc3 .otd__sp{display:none}
+}

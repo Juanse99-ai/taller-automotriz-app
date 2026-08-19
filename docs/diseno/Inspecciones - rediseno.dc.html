@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics><meta name="design_doc_mode" content="canvas"><style>body{margin:0;background:#e8eaee;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",Arial,sans-serif;-webkit-font-smoothing:antialiased;font-variant-numeric:tabular-nums}a{color:#1D4ED8;text-decoration:none}a:hover{color:#1e3a8a}*{box-sizing:border-box}</style></helmet>
+<div style="display:flex;flex-wrap:wrap;gap:36px;align-items:flex-start;padding:36px 40px 60px">
+
+<div style="display:flex;flex-direction:column;gap:10px">
+<div style="display:flex;align-items:baseline;gap:10px"><span style="font:700 11px/1 -apple-system,Arial;background:#1D4ED8;color:#fff;padding:5px 8px;border-radius:999px">1280</span><span style="font:600 13px/1 -apple-system,Arial;color:#0f172a">Nueva inspección digital · escritorio</span></div>
+
+<div style="width:1280px;height:920px;background:#e9edf2;border:1px solid #cbd5e1;border-radius:14px;overflow:hidden;display:flex;padding:10px;gap:10px;box-shadow:0 1px 3px rgba(15,23,42,.08)">
+
+  <div onMouseEnter="{{ railOn }}" onMouseLeave="{{ railOff }}" style="width:{{ railW }};min-width:86px;flex:none;background:#0d1b35;border-radius:26px;display:flex;flex-direction:column;align-items:center;padding:12px 0 10px;gap:5px;overflow:hidden;transition:width .18s ease">
+    <img src="logo-mda.png" alt="Multidiagnosticos AS" style="width:62px;height:44px;flex:none;object-fit:contain;background:#fff;border-radius:12px;padding:3px">
+    <div style="width:46px;height:1px;background:rgba(255,255,255,.12);margin:3px 0"></div>
+    <div style="flex:1;width:100%;display:flex;flex-direction:column;align-items:{{ railAlign }};gap:1px;overflow:hidden">
+      <sc-for list="{{ rail }}" as="it" hint-placeholder-count="14">
+        <div style="width:{{ railItemW }};flex:none;display:flex;flex-direction:{{ railDir }};align-items:center;justify-content:{{ railJustify }};gap:{{ railGap }};padding:{{ railItemPad }};margin:{{ railItemMargin }};border-radius:16px;background:{{ it.bg }};position:relative">
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:{{ it.fg }}"><path d="{{ it.d }}"></path></svg>
+          <span style="font:{{ it.weight }} {{ railLabelSize }}/1.15 -apple-system,Arial;color:{{ it.fg }};text-align:{{ railLabelAlign }};white-space:nowrap">{{ it.label }}</span>
+          <sc-if value="{{ it.count }}" hint-placeholder-val="{{ false }}">
+            <span style="position:absolute;top:3px;right:5px;min-width:16px;height:16px;padding:0 4px;border-radius:8px;background:#1D4ED8;color:#fff;font:700 9.5px/16px -apple-system,Arial;text-align:center">{{ it.count }}</span>
+          </sc-if>
+        </div>
+      </sc-for>
+    </div>
+    <div style="width:46px;height:1px;background:rgba(255,255,255,.12)"></div>
+    <div style="width:38px;height:38px;flex:none;border-radius:50%;background:#1D4ED8;color:#fff;font:700 14px/38px -apple-system,Arial;text-align:center">J</div>
+    <span style="font:600 8.5px/1.2 -apple-system,Arial;color:#fff;text-align:center">Juan Sebastian</span>
+    <span style="font:400 8.5px/1.2 -apple-system,Arial;color:rgba(255,255,255,.5);text-align:center">Administrador</span>
+  </div>
+
+  <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:10px">
+
+    <div style="flex:none;height:48px;display:flex;align-items:center;gap:12px;padding:0 14px;background:#fff;border:1px solid #e2e8f0;border-radius:16px">
+      <div style="flex:1"></div>
+      <div style="display:flex;align-items:center;gap:8px;height:34px;padding:0 13px;background:#f1f5f9;border-radius:999px;width:300px">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="color:#64748b;flex:none"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg>
+        <span style="font:400 12.5px/1 -apple-system,Arial;color:#64748b;white-space:nowrap">Buscar placa, cliente, OT...</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px">
+        <div style="width:34px;height:34px;display:grid;place-items:center;border-radius:999px;background:#f1f5f9"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:#475569"><rect x="7" y="2" width="10" height="20" rx="2"></rect><path d="M11 18h2"></path></svg></div>
+        <div style="width:34px;height:34px;display:grid;place-items:center;border-radius:999px;background:#f1f5f9;position:relative"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:#475569"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 8 3 8H3s3-1 3-8M10.3 21a2 2 0 0 0 3.4 0"></path></svg><span style="position:absolute;top:6px;right:7px;width:6px;height:6px;border-radius:50%;background:#1D4ED8"></span></div>
+        <div style="width:34px;height:34px;display:grid;place-items:center;border-radius:999px;background:#f1f5f9"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:#475569"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"></path></svg></div>
+        <div style="width:34px;height:34px;display:grid;place-items:center;border-radius:999px;background:#fef2f2"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:#dc2626"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"></path></svg></div>
+      </div>
+    </div>
+
+    <div style="flex:none;display:flex;align-items:center;gap:14px;padding:0 4px">
+      <span style="height:36px;display:flex;align-items:center;gap:8px;padding:0 15px;border-radius:999px;background:#fff;border:1.5px solid #d7dee7;font:700 12.5px/1 -apple-system,Arial;color:#334155;white-space:nowrap"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"></path></svg>Volver</span>
+      <div>
+        <h1 style="margin:0;font:700 22px/1.1 -apple-system,Arial;color:#0f172a;letter-spacing:-.3px">Nueva inspección digital</h1>
+        <div style="font:400 12.5px/1.4 -apple-system,Arial;color:#475569;margin-top:3px;white-space:nowrap">51 ítems en 7 secciones</div>
+      </div>
+      <div style="flex:1"></div>
+      <div style="display:flex;align-items:center;gap:16px">
+        <div style="display:flex;align-items:center;gap:9px">
+          <span style="width:150px;height:8px;border-radius:999px;background:#e2e8f0;overflow:hidden"><span style="display:block;width:75%;height:8px;border-radius:999px;background:#1D4ED8"></span></span>
+          <span style="font:600 12.5px/1 -apple-system,Arial;color:#334155;white-space:nowrap">38 de 51 revisados</span>
+        </div>
+        <span style="height:40px;display:flex;align-items:center;padding:0 18px;border-radius:999px;background:#fff;border:1.5px solid #d7dee7;font:700 13px/1 -apple-system,Arial;color:#334155">Cancelar</span>
+        <span style="height:40px;display:flex;align-items:center;gap:8px;padding:0 18px;background:#1D4ED8;color:#fff;border-radius:999px;font:700 13.5px/1 -apple-system,Arial;white-space:nowrap;box-shadow:0 2px 6px rgba(29,78,216,.25)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg>Guardar inspección</span>
+      </div>
+    </div>
+
+    <div style="flex:none;background:#fff;border:1px solid #e2e8f0;border-radius:16px;padding:14px 18px">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:11px">
+        <span style="font:700 13.5px/1 -apple-system,Arial;color:#0f172a">Datos del vehículo</span>
+      </div>
+      <div style="display:flex;gap:10px">
+        <div style="width:150px;flex:none">
+          <div style="font:700 10px/1 -apple-system,Arial;letter-spacing:.5px;color:#334155;margin-bottom:5px">PLACA <span style="color:#dc2626">*</span></div>
+          <div style="height:44px;display:flex;align-items:center;padding:0 13px;background:#fff;border:1.5px solid #1D4ED8;border-radius:11px;font:700 16px/1 ui-monospace,SFMono-Regular,Menlo,monospace;color:#0f172a">HJX377</div>
+        </div>
+        <sc-for list="{{ campos }}" as="c" hint-placeholder-count="5">
+          <div style="flex:1;min-width:0">
+            <div style="font:600 10px/1 -apple-system,Arial;letter-spacing:.5px;color:#475569;margin-bottom:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ c.label }}</div>
+            <div style="height:44px;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:0 12px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:11px">
+              <span style="font:{{ c.weight }} 13.5px/1 -apple-system,Arial;color:{{ c.fg }};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ c.valor }}</span>
+              <sc-if value="{{ c.auto }}" hint-placeholder-val="{{ false }}">
+                <span style="flex:none;font:600 9.5px/1 -apple-system,Arial;letter-spacing:.4px;color:#166534;background:#dcfce7;padding:5px 7px;border-radius:999px;white-space:nowrap">DE LA FICHA</span>
+              </sc-if>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+
+    <div style="flex:1;min-height:0;display:flex;flex-direction:column;gap:7px;overflow:hidden">
+
+      <sc-for list="{{ cerradas1 }}" as="s" hint-placeholder-count="3">
+        <div style="flex:none;display:flex;align-items:center;gap:11px;height:44px;padding:0 18px;background:#fff;border:1px solid #e6ebf1;border-radius:13px">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" style="color:#94a3b8;flex:none"><path d="m9 18 6-6-6-6"></path></svg>
+          <span style="font:700 13.5px/1 -apple-system,Arial;color:#0f172a;white-space:nowrap">{{ s.titulo }}</span>
+          <span style="font:600 11px/1 -apple-system,Arial;color:#334155;background:#f1f5f9;padding:5px 9px;border-radius:999px;white-space:nowrap">{{ s.n }} ítems</span>
+          <span style="flex:1"></span>
+          <sc-if value="{{ s.hallazgos }}" hint-placeholder-val="{{ false }}">
+            <span style="display:flex;align-items:center;gap:7px;font:600 12px/1 -apple-system,Arial;color:#92400e;background:#fef3c7;padding:6px 11px;border-radius:999px;white-space:nowrap"><span style="width:6px;height:6px;border-radius:50%;background:#f59e0b"></span>{{ s.hallazgos }}</span>
+          </sc-if>
+          <sc-if value="{{ s.fotos }}" hint-placeholder-val="{{ false }}">
+            <span style="display:flex;align-items:center;gap:6px;font:400 12px/1 -apple-system,Arial;color:#475569;white-space:nowrap"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>{{ s.fotos }}</span>
+          </sc-if>
+          <sc-if value="{{ s.ok }}" hint-placeholder-val="{{ false }}">
+            <span style="display:flex;align-items:center;gap:7px;font:600 12px/1 -apple-system,Arial;color:#166534;white-space:nowrap"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg>todo bien</span>
+          </sc-if>
+        </div>
+      </sc-for>
+
+      <div style="flex:none;background:#fff;border:1.5px solid #1D4ED8;border-radius:14px;overflow:hidden">
+        <div style="display:flex;align-items:center;gap:11px;height:46px;padding:0 18px;background:#f7faff;border-bottom:1px solid #e6ebf1">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" style="color:#1D4ED8;flex:none"><path d="m6 9 6 6 6-6"></path></svg>
+          <span style="font:700 14px/1 -apple-system,Arial;color:#0f172a">Motor</span>
+          <span style="font:600 11px/1 -apple-system,Arial;color:#1D4ED8;background:#e7efff;padding:5px 9px;border-radius:999px">11 ítems</span>
+          <span style="flex:1"></span>
+          <span style="font:400 12px/1 -apple-system,Arial;color:#475569;white-space:nowrap">2 marcados · 9 en bien</span>
+          <span style="display:flex;align-items:center;gap:6px;height:32px;padding:0 12px;border-radius:999px;background:#f1f5f9;font:600 11.5px/1 -apple-system,Arial;color:#334155;white-space:nowrap">Marcar todo bien</span>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0">
+          <sc-for list="{{ motor }}" as="m" hint-placeholder-count="12">
+            <div style="display:flex;align-items:center;gap:10px;height:40px;padding:0 16px;border-bottom:1px solid #f4f6f9">
+              <span style="flex:1;min-width:0;font:{{ m.weight }} 12.5px/1.2 -apple-system,Arial;color:{{ m.fg }};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ m.label }}</span>
+              <span style="flex:none;display:flex;align-items:center;gap:3px;padding:3px;background:#f1f5f9;border-radius:999px">
+                <span style="width:32px;height:26px;display:grid;place-items:center;border-radius:999px;background:{{ m.okBg }}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="color:{{ m.okFg }}"><path d="M20 6 9 17l-5-5"></path></svg></span>
+                <span style="width:32px;height:26px;display:grid;place-items:center;border-radius:999px;background:{{ m.warnBg }};font:700 14px/1 -apple-system,Arial;color:{{ m.warnFg }}">!</span>
+                <span style="width:32px;height:26px;display:grid;place-items:center;border-radius:999px;background:{{ m.badBg }}"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" style="color:{{ m.badFg }}"><path d="M18 6 6 18M6 6l12 12"></path></svg></span>
+              </span>
+              <span style="flex:none;width:30px;height:28px;display:grid;place-items:center;border-radius:9px;background:{{ m.fotoBg }};position:relative">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:{{ m.fotoFg }}"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
+                <sc-if value="{{ m.fotos }}" hint-placeholder-val="{{ false }}">
+                  <span style="position:absolute;top:-4px;right:-4px;min-width:15px;height:15px;padding:0 3px;border-radius:999px;background:#1D4ED8;color:#fff;font:700 9px/15px -apple-system,Arial;text-align:center">{{ m.fotos }}</span>
+                </sc-if>
+              </span>
+            </div>
+          </sc-for>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;padding:11px 16px;background:#fffbf4">
+          <span style="font:700 11.5px/1 -apple-system,Arial;color:#92400e;white-space:nowrap">Nota del ítem marcado</span>
+          <span style="flex:1;height:36px;display:flex;align-items:center;padding:0 12px;background:#fff;border:1px solid #f0e2c8;border-radius:10px;font:400 12.5px/1 -apple-system,Arial;color:#334155">Aceite por debajo del mínimo, se ve oscuro. Recomiendo cambio.</span>
+        </div>
+      </div>
+
+      <sc-for list="{{ cerradas2 }}" as="s" hint-placeholder-count="3">
+        <div style="flex:none;display:flex;align-items:center;gap:11px;height:44px;padding:0 18px;background:#fff;border:1px solid #e6ebf1;border-radius:13px">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" style="color:#94a3b8;flex:none"><path d="m9 18 6-6-6-6"></path></svg>
+          <span style="font:700 13.5px/1 -apple-system,Arial;color:#0f172a;white-space:nowrap">{{ s.titulo }}</span>
+          <span style="font:600 11px/1 -apple-system,Arial;color:#334155;background:#f1f5f9;padding:5px 9px;border-radius:999px;white-space:nowrap">{{ s.n }} ítems</span>
+          <span style="flex:1"></span>
+          <sc-if value="{{ s.pendiente }}" hint-placeholder-val="{{ false }}">
+            <span style="font:400 12px/1 -apple-system,Arial;color:#64748b;white-space:nowrap">sin revisar</span>
+          </sc-if>
+          <sc-if value="{{ s.hallazgos }}" hint-placeholder-val="{{ false }}">
+            <span style="display:flex;align-items:center;gap:7px;font:600 12px/1 -apple-system,Arial;color:#92400e;background:#fef3c7;padding:6px 11px;border-radius:999px;white-space:nowrap"><span style="width:6px;height:6px;border-radius:50%;background:#f59e0b"></span>{{ s.hallazgos }}</span>
+          </sc-if>
+          <sc-if value="{{ s.ok }}" hint-placeholder-val="{{ false }}">
+            <span style="display:flex;align-items:center;gap:7px;font:600 12px/1 -apple-system,Arial;color:#166534;white-space:nowrap"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg>todo bien</span>
+          </sc-if>
+        </div>
+      </sc-for>
+
+    </div>
+  </div>
+</div>
+</div>
+
+<div style="display:flex;flex-direction:column;gap:10px">
+<div style="display:flex;align-items:baseline;gap:10px"><span style="font:700 11px/1 -apple-system,Arial;background:#0f172a;color:#fff;padding:5px 8px;border-radius:999px">390</span><span style="font:600 13px/1 -apple-system,Arial;color:#0f172a">Inspección · móvil</span></div>
+
+<div style="width:390px;height:844px;background:#eef1f5;border:1px solid #cbd5e1;border-radius:34px;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 1px 3px rgba(15,23,42,.08)">
+
+  <div style="flex:none;height:44px;display:flex;align-items:flex-end;justify-content:space-between;padding:0 22px 4px;background:#0d1b35">
+    <span style="font:700 12px/1 -apple-system,Arial;color:#fff">9:41</span>
+    <span style="display:flex;align-items:center;gap:5px"><span style="width:15px;height:9px;border:1.2px solid rgba(255,255,255,.75);border-radius:2px;display:block"></span><span style="width:22px;height:9px;border:1.2px solid rgba(255,255,255,.75);border-radius:2px;display:block;position:relative"><span style="position:absolute;inset:1.5px;background:#fff;border-radius:1px;display:block"></span></span></span>
+  </div>
+
+  <div style="flex:none;background:#0d1b35;padding:8px 14px 13px;display:flex;flex-direction:column;gap:11px">
+    <div style="display:flex;align-items:center;gap:11px">
+      <div style="width:40px;height:40px;flex:none;display:grid;place-items:center;border-radius:999px;background:rgba(255,255,255,.1)"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="color:#fff"><path d="M19 12H5M12 19l-7-7 7-7"></path></svg></div>
+      <div style="flex:1;min-width:0">
+        <div style="font:700 16px/1.1 ui-monospace,SFMono-Regular,Menlo,monospace;color:#fff">HJX377</div>
+        <div style="font:400 11px/1.3 -apple-system,Arial;color:rgba(255,255,255,.6)">Mazda CX-50 2023 · Juan Diego Cuentas</div>
+      </div>
+      <span style="flex:none;font:700 11.5px/1 -apple-system,Arial;color:#fff;background:rgba(255,255,255,.12);padding:8px 11px;border-radius:999px">38/51</span>
+    </div>
+    <div style="height:7px;border-radius:999px;background:rgba(255,255,255,.15);overflow:hidden"><span style="display:block;width:75%;height:7px;border-radius:999px;background:#60a5fa"></span></div>
+  </div>
+
+  <div style="flex:none;padding:12px 14px 0;display:flex;flex-direction:column;gap:9px">
+    <div style="display:flex;align-items:center;gap:10px">
+      <div style="flex:1;min-width:0">
+        <div style="font:700 17px/1.15 -apple-system,Arial;color:#0f172a">Motor</div>
+        <div style="font:400 11.5px/1.3 -apple-system,Arial;color:#475569;margin-top:2px">Sección 5 de 7 · 11 ítems · 2 marcados</div>
+      </div>
+      <span style="flex:none;height:40px;display:flex;align-items:center;padding:0 14px;border-radius:12px;background:#dcfce7;font:700 12.5px/1 -apple-system,Arial;color:#166534;white-space:nowrap">Todo bien</span>
+    </div>
+  </div>
+
+  <div style="flex:1;min-height:0;padding:10px 14px 0;overflow:hidden">
+    <div style="height:100%;background:#fff;border-radius:16px;overflow:hidden">
+      <sc-for list="{{ motorMovil }}" as="m" hint-placeholder-count="4">
+        <div style="padding:10px 13px;border-bottom:1px solid #f1f4f8">
+          <div style="display:flex;align-items:center;gap:9px">
+            <span style="flex:1;min-width:0;font:{{ m.weight }} 13.5px/1.25 -apple-system,Arial;color:{{ m.fg }};text-wrap:pretty">{{ m.label }}</span>
+            <span style="flex:none;width:48px;height:48px;display:grid;place-items:center;border-radius:13px;background:{{ m.fotoBg }};position:relative">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:{{ m.fotoFg }}"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
+              <sc-if value="{{ m.fotos }}" hint-placeholder-val="{{ false }}">
+                <span style="position:absolute;top:-4px;right:-4px;min-width:18px;height:18px;padding:0 4px;border-radius:999px;background:#1D4ED8;color:#fff;font:700 10.5px/18px -apple-system,Arial;text-align:center">{{ m.fotos }}</span>
+              </sc-if>
+            </span>
+          </div>
+          <div style="display:flex;align-items:center;gap:6px;margin-top:8px">
+            <span style="flex:1;height:48px;display:flex;align-items:center;justify-content:center;gap:7px;border-radius:13px;background:{{ m.okBg }};font:700 13px/1 -apple-system,Arial;color:{{ m.okFg }}"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg>Bien</span>
+            <span style="flex:1;height:48px;display:flex;align-items:center;justify-content:center;gap:7px;border-radius:13px;background:{{ m.warnBg }};font:700 13px/1 -apple-system,Arial;color:{{ m.warnFg }}">! Atención</span>
+            <span style="flex:1;height:48px;display:flex;align-items:center;justify-content:center;gap:7px;border-radius:13px;background:{{ m.badBg }};font:700 13px/1 -apple-system,Arial;color:{{ m.badFg }}"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"></path></svg>Mal</span>
+          </div>
+          <sc-if value="{{ m.nota }}" hint-placeholder-val="{{ false }}">
+            <div style="margin-top:8px;padding:10px 12px;background:#fffbf4;border:1px solid #f0e2c8;border-radius:11px;font:400 12.5px/1.4 -apple-system,Arial;color:#334155;text-wrap:pretty">{{ m.nota }}</div>
+          </sc-if>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+
+  <div style="flex:none;padding:10px 14px 14px;display:flex;align-items:center;gap:8px">
+    <span style="flex:none;width:48px;height:48px;display:grid;place-items:center;border-radius:13px;background:#e2e8f0"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="color:#334155"><path d="M15 18l-6-6 6-6"></path></svg></span>
+    <span style="flex:1;height:48px;display:flex;align-items:center;justify-content:center;gap:8px;border-radius:13px;background:#1D4ED8;font:700 14px/1 -apple-system,Arial;color:#fff;white-space:nowrap">Siguiente: Interior<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"></path></svg></span>
+  </div>
+</div>
+</div>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:2160,&quot;height&quot;:1000}}">
+class Component extends DCLogic {
+  state = { railOpen: false };
+  rail() {
+    const A = 'rgba(255,255,255,.62)';
+    const i = (label, d, active, count) => ({ label, d, count, fg: active ? '#fff' : A, weight: active ? 700 : 400, bg: active ? '#1D4ED8' : 'transparent' });
+    return [
+      i('Dashboard', 'M4 3h5a1 1 0 0 1 1 1v5a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1zM15 3h5a1 1 0 0 1 1 1v5a1 1 0 0 1-1 1h-5a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1zM15 14h5a1 1 0 0 1 1 1v5a1 1 0 0 1-1 1h-5a1 1 0 0 1-1-1v-5a1 1 0 0 1 1-1zM4 14h5a1 1 0 0 1 1 1v5a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-5a1 1 0 0 1 1-1z'),
+      i('Recepcion', 'M10 2h4a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1h-4a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1zM8 4H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-2m-7 10 2 2 4-4'),
+      i('Trabajos', 'M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z', false, 12),
+      i('Inspecciones', 'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6m-11 5 2 2 4-4', true),
+      i('Mecanicos', 'M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M13 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0zM22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75'),
+      i('Clientes', 'M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M13 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0zM23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75'),
+      i('Vehiculos', 'M7 17h10M5 17a2 2 0 0 1-2-2v-3l2.5-5.5A2 2 0 0 1 7.3 5.3h9.4a2 2 0 0 1 1.8 1.2L21 12v3a2 2 0 0 1-2 2M9 17a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM19 17a2 2 0 1 1-4 0 2 2 0 0 1 4 0z'),
+      i('CRM', 'M21 15a2 2 0 0 1-2 2H8l-4 4V5a2 2 0 0 1 2-2h13a2 2 0 0 1 2 2z'),
+      i('Cotizaciones', 'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M9 15h6M9 11h6', false, 3),
+      i('Inventario', 'M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16zM3.27 6.96 12 12.01l8.73-5.05M12 22.08V12'),
+      i('Liquidacion', 'M4 5h16a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2zM2 10h20M6 15h4', false, 2),
+      i('Reportes', 'M18 20V10M12 20V4M6 20v-6M2 20h20'),
+      i('Cuentti', 'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M16 13H8M16 17H8M10 9H8', false, 10),
+      i('Usuarios', 'M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2M16 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0z')
+    ];
+  }
+  railUI() {
+    const o = this.state.railOpen;
+    return {
+      railOn: () => this.setState({ railOpen: true }),
+      railOff: () => this.setState({ railOpen: false }),
+      railW: o ? '212px' : '86px',
+      railAlign: o ? 'stretch' : 'center',
+      railItemW: o ? 'auto' : '70px',
+      railDir: o ? 'row' : 'column',
+      railJustify: o ? 'flex-start' : 'center',
+      railGap: o ? '11px' : '3px',
+      railItemPad: o ? '9px 13px' : '6px 0',
+      railItemMargin: o ? '0 9px' : '0',
+      railLabelSize: o ? '12.5px' : '8.5px',
+      railLabelAlign: o ? 'left' : 'center'
+    };
+  }
+  renderVals() {
+    const OFF = '#f1f5f9';
+    const item = (label, estado, fotos, nota) => {
+      const on = k => estado === k;
+      return {
+        label, fotos: fotos || 0, nota: nota || '',
+        weight: estado === 'ok' ? 400 : 600,
+        fg: estado === 'ok' ? '#334155' : '#0f172a',
+        okBg: on('ok') ? '#dcfce7' : 'transparent',
+        okFg: on('ok') ? '#166534' : '#94a3b8',
+        warnBg: on('warn') ? '#fef3c7' : 'transparent',
+        warnFg: on('warn') ? '#92400e' : '#94a3b8',
+        badBg: on('bad') ? '#fee2e2' : 'transparent',
+        badFg: on('bad') ? '#b91c1c' : '#94a3b8',
+        fotoBg: fotos ? '#eff6ff' : OFF,
+        fotoFg: fotos ? '#1D4ED8' : '#64748b'
+      };
+    };
+    const motor = [
+      item('Aceite motor (nivel y estado)', 'warn', 2),
+      item('Filtro de aceite', 'ok'),
+      item('Filtro de aire motor', 'ok'),
+      item('Nivel de refrigerante', 'ok'),
+      item('Nivel de liquido de embrague', 'ok'),
+      item('Nivel del electrolito de la bateria', 'ok'),
+      item('Estado de correas de accesorios', 'warn', 1),
+      item('Fugas en tuberias y mangueras', 'ok'),
+      item('Sistema de refrigeracion', 'ok'),
+      item('Aceite transmision automatica', 'ok'),
+      item('Limpiador sistema combustible', 'ok')
+    ];
+    const motorMovil = [
+      item('Aceite motor (nivel y estado)', 'warn', 2, 'Aceite por debajo del mínimo, se ve oscuro. Recomiendo cambio.'),
+      item('Filtro de aceite', 'ok'),
+      item('Filtro de aire motor', 'ok'),
+      item('Nivel de refrigerante', 'ok')
+    ];
+    const sec = (titulo, n, extra = {}) => ({ titulo, n, ok: extra.ok || false, hallazgos: extra.hallazgos || '', fotos: extra.fotos || '', pendiente: extra.pendiente || false });
+    return {
+      ...this.railUI(),
+      rail: this.rail(),
+      campos: [
+        { label: 'CLIENTE', valor: 'JUAN DIEGO CUENTAS', weight: 600, fg: '#0f172a', auto: true },
+        { label: 'CEDULA', valor: '1082887654', weight: 400, fg: '#334155', auto: true },
+        { label: 'VEHICULO', valor: 'Mazda CX-50 2023', weight: 400, fg: '#334155', auto: true },
+        { label: 'TÉCNICO', valor: 'Pedro Barraza', weight: 600, fg: '#0f172a', auto: false },
+        { label: 'KILOMETRAJE', valor: '45.000', weight: 400, fg: '#334155', auto: true }
+      ],
+      motor,
+      motorMovil,
+      cerradas1: [
+        sec('Frenos', 7, { hallazgos: '1 requiere atención', fotos: '2 fotos' }),
+        sec('Suspension y Direccion', 8, { ok: true }),
+        sec('Llantas', 5, { hallazgos: '2 requieren atención', fotos: '3 fotos' }),
+        sec('Exterior del Vehiculo', 8, { ok: true })
+      ],
+      cerradas2: [
+        sec('Interior', 8, { pendiente: true }),
+        sec('Recomendaciones', 4, { pendiente: true })
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics><meta name="design_doc_mode" content="canvas"><style>body{margin:0;background:#e8eaee;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",Arial,sans-serif;-webkit-font-smoothing:antialiased;font-variant-numeric:tabular-nums}a{color:#1D4ED8;text-decoration:none}a:hover{color:#1e3a8a}*{box-sizing:border-box}</style></helmet>
+<div style="display:flex;flex-wrap:wrap;gap:36px;align-items:flex-start;padding:36px 40px 60px">
+
+<div style="display:flex;flex-direction:column;gap:10px">
+<div style="display:flex;align-items:baseline;gap:10px"><span style="font:700 11px/1 -apple-system,Arial;background:#1D4ED8;color:#fff;padding:5px 8px;border-radius:999px">1280</span><span style="font:600 13px/1 -apple-system,Arial;color:#0f172a">Detalle de OT · escritorio</span></div>
+
+<div style="width:1280px;height:920px;background:#e9edf2;border:1px solid #cbd5e1;border-radius:14px;overflow:hidden;display:flex;padding:10px;gap:10px;position:relative;box-shadow:0 1px 3px rgba(15,23,42,.08)">
+
+  <div style="width:86px;flex:none;background:#0d1b35;border-radius:26px;display:flex;flex-direction:column;align-items:center;padding:12px 0 10px;gap:5px;overflow:hidden">
+    <img src="logo-mda.png" alt="Multidiagnosticos AS" style="width:62px;height:44px;flex:none;object-fit:contain;background:#fff;border-radius:12px;padding:3px">
+    <div style="width:46px;height:1px;background:rgba(255,255,255,.12);margin:3px 0"></div>
+    <div style="flex:1;width:100%;display:flex;flex-direction:column;align-items:center;gap:1px;overflow:hidden">
+      <sc-for list="{{ rail }}" as="it" hint-placeholder-count="14">
+        <div style="width:70px;flex:none;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 0;border-radius:16px;background:{{ it.bg }};position:relative">
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:{{ it.fg }}"><path d="{{ it.d }}"></path></svg>
+          <span style="font:{{ it.weight }} 8.5px/1.15 -apple-system,Arial;color:{{ it.fg }};text-align:center">{{ it.label }}</span>
+          <sc-if value="{{ it.count }}" hint-placeholder-val="{{ false }}">
+            <span style="position:absolute;top:3px;right:5px;min-width:16px;height:16px;padding:0 4px;border-radius:8px;background:#1D4ED8;color:#fff;font:700 9.5px/16px -apple-system,Arial;text-align:center">{{ it.count }}</span>
+          </sc-if>
+        </div>
+      </sc-for>
+    </div>
+    <div style="width:46px;height:1px;background:rgba(255,255,255,.12)"></div>
+    <div style="width:38px;height:38px;flex:none;border-radius:50%;background:#1D4ED8;color:#fff;font:700 14px/38px -apple-system,Arial;text-align:center">J</div>
+    <span style="font:600 8.5px/1.2 -apple-system,Arial;color:#fff;text-align:center">Juan Sebastian</span>
+    <span style="font:400 8.5px/1.2 -apple-system,Arial;color:rgba(255,255,255,.5);text-align:center">Administrador</span>
+  </div>
+
+  <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:10px;opacity:.4">
+    <div style="flex:none;height:48px;background:#fff;border:1px solid #e2e8f0;border-radius:16px"></div>
+    <div style="flex:none;display:flex;align-items:flex-end;gap:20px;padding:0 4px">
+      <div>
+        <h1 style="margin:0;font:700 22px/1.1 -apple-system,Arial;color:#0f172a;letter-spacing:-.3px">Trabajos</h1>
+        <div style="font:400 12.5px/1.4 -apple-system,Arial;color:#475569;margin-top:3px">12 OT abiertas · 157 completadas</div>
+      </div>
+    </div>
+    <div style="flex:1;min-height:0;background:#fff;border:1px solid #e2e8f0;border-radius:16px;overflow:hidden">
+      <sc-for list="{{ fondo }}" as="f" hint-placeholder-count="16">
+        <div style="display:flex;align-items:center;gap:14px;height:38px;padding:0 18px;border-bottom:1px solid #f4f6f9">
+          <span style="width:92px;font:700 13px/1 ui-monospace,SFMono-Regular,Menlo,monospace;color:#0f172a">{{ f.placa }}</span>
+          <span style="flex:1;min-width:0;font:600 13px/1 -apple-system,Arial;color:#334155;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ f.cliente }}</span>
+          <span style="width:130px;font:400 12.5px/1 -apple-system,Arial;color:#475569">{{ f.estado }}</span>
+          <span style="width:98px;text-align:right;font:700 13px/1 -apple-system,Arial;color:#0f172a">{{ f.total }}</span>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+
+  <div style="position:absolute;inset:0;background:rgba(15,23,42,.45);display:flex;align-items:center;justify-content:center">
+    <div style="width:470px;background:#fff;border-radius:20px;overflow:hidden;box-shadow:0 20px 60px rgba(15,23,42,.28);display:flex;flex-direction:column">
+
+      <div style="flex:none;display:flex;align-items:center;gap:10px;height:44px;padding:0 14px 0 18px;background:#dcfce7">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="color:#166534;flex:none"><path d="M20 6 9 17l-5-5"></path></svg>
+        <span style="flex:1;font:700 12.5px/1 -apple-system,Arial;color:#166534">Trabajo completado el 18 ago 2026 · listo para facturar</span>
+        <span style="width:30px;height:30px;display:grid;place-items:center;border-radius:999px;background:rgba(22,101,52,.1)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" style="color:#166534"><path d="M18 6 6 18M6 6l12 12"></path></svg></span>
+      </div>
+
+      <div style="flex:none;padding:16px 20px 14px;border-bottom:1px solid #eef1f5">
+        <div style="display:flex;align-items:flex-start;gap:12px">
+          <div style="flex:1;min-width:0">
+            <div style="display:flex;align-items:baseline;gap:11px">
+              <span style="font:700 24px/1.05 ui-monospace,SFMono-Regular,Menlo,monospace;color:#0f172a;letter-spacing:.5px">ABC222</span>
+              <span style="font:400 13px/1 ui-monospace,SFMono-Regular,Menlo,monospace;color:#64748b">OT-0175</span>
+            </div>
+            <div style="font:600 14px/1.25 -apple-system,Arial;color:#0f172a;margin-top:8px">CUANTIAS MENORES S.A.S.</div>
+            <div style="font:400 12.5px/1.3 -apple-system,Arial;color:#475569;margin-top:3px">Peugeot 208 2020 · ingresó 14 ago 2026</div>
+          </div>
+          <span style="flex:none;font:700 10px/1 -apple-system,Arial;letter-spacing:.5px;color:#166534;background:#dcfce7;padding:7px 10px;border-radius:999px;white-space:nowrap">COMPLETADO</span>
+        </div>
+      </div>
+
+      <div style="flex:none;padding:13px 20px 0">
+        <div style="display:flex;align-items:center;gap:9px">
+          <span style="font:700 9.5px/1 -apple-system,Arial;letter-spacing:.9px;color:#64748b">ÍTEMS DEL TRABAJO</span>
+          <span style="font:700 10.5px/1 -apple-system,Arial;color:#334155;background:#f1f5f9;padding:4px 7px;border-radius:999px">4</span>
+        </div>
+        <div style="margin-top:9px">
+          <sc-for list="{{ items }}" as="i" hint-placeholder-count="4">
+            <div style="display:flex;align-items:center;gap:12px;height:38px;border-bottom:1px solid #f4f6f9">
+              <span style="flex:1;min-width:0;font:600 13px/1.2 -apple-system,Arial;color:#0f172a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ i.nombre }}</span>
+              <span style="flex:none;font:400 11.5px/1 -apple-system,Arial;color:#64748b;white-space:nowrap">{{ i.detalle }}</span>
+              <span style="width:96px;text-align:right;flex:none;font:700 13px/1 -apple-system,Arial;color:#0f172a">{{ i.valor }}</span>
+            </div>
+          </sc-for>
+        </div>
+        <div style="display:flex;align-items:baseline;gap:12px;padding:14px 0 15px">
+          <span style="flex:1;font:700 14px/1 -apple-system,Arial;color:#0f172a">Total</span>
+          <span style="font:700 26px/1 -apple-system,Arial;color:#0f172a">$ 660.000</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:11px;padding:11px 0;border-top:1px solid #f1f4f8;border-bottom:1px solid #f1f4f8">
+          <span style="width:34px;height:34px;flex:none;border-radius:50%;background:#dbeafe;color:#1e3a8a;font:700 12.5px/34px -apple-system,Arial;text-align:center">PB</span>
+          <span style="flex:1;min-width:0">
+            <span style="display:block;font:700 13.5px/1.2 -apple-system,Arial;color:#0f172a">Pedro Barraza</span>
+            <span style="display:block;font:400 11.5px/1.3 -apple-system,Arial;color:#64748b;margin-top:2px">Técnico · comisión $ 231.000</span>
+          </span>
+          <span style="flex:none;font:600 10.5px/1 -apple-system,Arial;color:#92400e;background:#fef3c7;padding:6px 9px;border-radius:999px;white-space:nowrap">SIN FIRMA DEL CLIENTE</span>
+        </div>
+      </div>
+
+      <div style="flex:none;padding:14px 20px 18px;display:flex;flex-direction:column;gap:9px">
+        <span style="height:48px;display:flex;align-items:center;justify-content:center;gap:9px;border-radius:14px;background:#1D4ED8;font:700 15px/1 -apple-system,Arial;color:#fff;box-shadow:0 2px 6px rgba(29,78,216,.25)">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M9 15h6M9 11h3"></path></svg>
+          Ir a Facturar · $ 660.000
+        </span>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="flex:1;height:42px;display:flex;align-items:center;justify-content:center;gap:8px;border-radius:12px;background:#fff;border:1.5px solid #d7dee7;font:700 13px/1 -apple-system,Arial;color:#334155;white-space:nowrap">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 17s2-4 5-4 4 2 6 2 3-2 3-4-2-3-3-2-1 5 1 8 4 2 6 1"></path></svg>
+            Firmar recibido
+          </span>
+          <span style="flex:1;height:42px;display:flex;align-items:center;justify-content:center;gap:8px;border-radius:12px;background:#fff;border:1.5px solid #d7dee7;font:700 13px/1 -apple-system,Arial;color:#334155;white-space:nowrap">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H8l-4 4V5a2 2 0 0 1 2-2h13a2 2 0 0 1 2 2z"></path></svg>
+            WhatsApp
+          </span>
+          <span style="flex:none;height:42px;display:flex;align-items:center;gap:8px;padding:0 14px;border-radius:12px;background:#f1f5f9;font:700 13px/1 -apple-system,Arial;color:#334155;white-space:nowrap">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.8 2.8 0 0 1 4 4L7.5 20.5 2 22l1.5-5.5z"></path></svg>
+            Editar
+          </span>
+        </div>
+        <div style="display:flex;align-items:center;gap:14px;padding-top:4px">
+          <span style="font:600 12.5px/1 -apple-system,Arial;color:#475569">Marcar listo</span>
+          <span style="width:1px;height:14px;background:#dfe5ec"></span>
+          <span style="font:600 12.5px/1 -apple-system,Arial;color:#475569">Firmar de nuevo</span>
+          <span style="flex:1"></span>
+          <span style="font:600 12.5px/1 -apple-system,Arial;color:#64748b">Después</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<div style="display:flex;flex-direction:column;gap:10px">
+<div style="display:flex;align-items:baseline;gap:10px"><span style="font:700 11px/1 -apple-system,Arial;background:#0f172a;color:#fff;padding:5px 8px;border-radius:999px">390</span><span style="font:600 13px/1 -apple-system,Arial;color:#0f172a">Detalle de OT · móvil</span></div>
+
+<div style="width:390px;height:844px;background:#eef1f5;border:1px solid #cbd5e1;border-radius:34px;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 1px 3px rgba(15,23,42,.08)">
+
+  <div style="flex:none;height:44px;display:flex;align-items:flex-end;justify-content:space-between;padding:0 22px 4px;background:#0d1b35">
+    <span style="font:700 12px/1 -apple-system,Arial;color:#fff">9:41</span>
+    <span style="display:flex;align-items:center;gap:5px"><span style="width:15px;height:9px;border:1.2px solid rgba(255,255,255,.75);border-radius:2px;display:block"></span><span style="width:22px;height:9px;border:1.2px solid rgba(255,255,255,.75);border-radius:2px;display:block;position:relative"><span style="position:absolute;inset:1.5px;background:#fff;border-radius:1px;display:block"></span></span></span>
+  </div>
+
+  <div style="flex:none;background:#0d1b35;padding:8px 14px 15px">
+    <div style="display:flex;align-items:center;gap:11px">
+      <div style="width:40px;height:40px;flex:none;display:grid;place-items:center;border-radius:999px;background:rgba(255,255,255,.12)"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="color:#fff"><path d="M19 12H5M12 19l-7-7 7-7"></path></svg></div>
+      <div style="flex:1;min-width:0">
+        <div style="display:flex;align-items:baseline;gap:9px">
+          <span style="font:700 20px/1.05 ui-monospace,SFMono-Regular,Menlo,monospace;color:#fff;letter-spacing:.4px">ABC222</span>
+          <span style="font:400 12px/1 ui-monospace,SFMono-Regular,Menlo,monospace;color:rgba(255,255,255,.55)">OT-0175</span>
+        </div>
+        <div style="font:400 11.5px/1.3 -apple-system,Arial;color:rgba(255,255,255,.6);margin-top:4px">Peugeot 208 2020 · ingresó 14 ago</div>
+      </div>
+      <span style="flex:none;font:700 9.5px/1 -apple-system,Arial;letter-spacing:.5px;color:#166534;background:#dcfce7;padding:7px 9px;border-radius:999px">COMPLETADO</span>
+    </div>
+    <div style="font:600 14px/1.25 -apple-system,Arial;color:#fff;margin-top:14px">CUANTIAS MENORES S.A.S.</div>
+    <div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-top:11px">
+      <div>
+        <div style="font:700 9px/1 -apple-system,Arial;letter-spacing:.9px;color:rgba(255,255,255,.5)">TOTAL</div>
+        <div style="font:700 27px/1.05 -apple-system,Arial;color:#fff;margin-top:6px">$ 660.000</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:9px">
+        <span style="width:30px;height:30px;flex:none;border-radius:50%;background:#dbeafe;color:#1e3a8a;font:700 11px/30px -apple-system,Arial;text-align:center">PB</span>
+        <div style="text-align:right">
+          <div style="font:600 12.5px/1.2 -apple-system,Arial;color:#fff">Pedro Barraza</div>
+          <div style="font:400 11px/1.3 -apple-system,Arial;color:rgba(255,255,255,.55);margin-top:2px">comisión $ 231.000</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div style="flex:none;display:flex;align-items:center;gap:9px;padding:11px 14px;background:#dcfce7">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="color:#166534;flex:none"><path d="M20 6 9 17l-5-5"></path></svg>
+    <span style="flex:1;font:600 12.5px/1.3 -apple-system,Arial;color:#166534">Completado el 18 ago · listo para facturar</span>
+  </div>
+
+  <div style="flex:1;min-height:0;padding:11px 14px 0;display:flex;flex-direction:column;gap:9px;overflow:hidden">
+    <div style="flex:none;display:flex;align-items:center;gap:9px;padding:0 3px">
+      <span style="font:700 9.5px/1 -apple-system,Arial;letter-spacing:.9px;color:#64748b">ÍTEMS DEL TRABAJO</span>
+      <span style="font:700 10.5px/1 -apple-system,Arial;color:#334155;background:#e2e8f0;padding:4px 7px;border-radius:999px">4</span>
+    </div>
+    <div style="flex:none;background:#fff;border-radius:16px;overflow:hidden">
+      <sc-for list="{{ items }}" as="i" hint-placeholder-count="4">
+        <div style="padding:11px 14px;border-bottom:1px solid #f4f6f9">
+          <div style="display:flex;align-items:baseline;gap:12px">
+            <span style="flex:1;min-width:0;font:600 13.5px/1.3 -apple-system,Arial;color:#0f172a;text-wrap:pretty">{{ i.nombre }}</span>
+            <span style="flex:none;font:700 14px/1.3 -apple-system,Arial;color:#0f172a;white-space:nowrap">{{ i.valor }}</span>
+          </div>
+          <div style="font:400 11.5px/1.3 -apple-system,Arial;color:#64748b;margin-top:3px">{{ i.detalle }}</div>
+        </div>
+      </sc-for>
+      <div style="display:flex;align-items:baseline;gap:12px;padding:12px 14px;background:#f8fafc">
+        <span style="flex:1;font:700 13.5px/1 -apple-system,Arial;color:#0f172a">Total</span>
+        <span style="font:700 19px/1 -apple-system,Arial;color:#0f172a">$ 660.000</span>
+      </div>
+    </div>
+
+    <div style="flex:none;display:flex;align-items:center;gap:9px;padding:11px 14px;background:#fffbeb;border-radius:14px">
+      <span style="width:20px;height:20px;flex:none;display:grid;place-items:center;border-radius:50%;background:#fef3c7;font:700 12px/1 -apple-system,Arial;color:#92400e">!</span>
+      <span style="flex:1;font:600 12.5px/1.35 -apple-system,Arial;color:#92400e">Falta la firma del cliente</span>
+      <span style="flex:none;height:36px;display:flex;align-items:center;padding:0 13px;border-radius:11px;background:#fff;font:700 12.5px/1 -apple-system,Arial;color:#92400e;white-space:nowrap">Firmar</span>
+    </div>
+  </div>
+
+  <div style="flex:none;padding:10px 14px 14px;display:flex;flex-direction:column;gap:8px">
+    <span style="height:52px;display:flex;align-items:center;justify-content:center;gap:9px;border-radius:14px;background:#1D4ED8;font:700 15px/1 -apple-system,Arial;color:#fff;box-shadow:0 2px 6px rgba(29,78,216,.25)">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M9 15h6M9 11h3"></path></svg>
+      Ir a Facturar
+    </span>
+    <div style="display:flex;align-items:center;gap:8px">
+      <span style="flex:1;height:48px;display:flex;align-items:center;justify-content:center;gap:8px;border-radius:13px;background:#fff;font:700 13px/1 -apple-system,Arial;color:#334155;white-space:nowrap">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H8l-4 4V5a2 2 0 0 1 2-2h13a2 2 0 0 1 2 2z"></path></svg>
+        WhatsApp
+      </span>
+      <span style="flex:1;height:48px;display:flex;align-items:center;justify-content:center;gap:8px;border-radius:13px;background:#fff;font:700 13px/1 -apple-system,Arial;color:#334155;white-space:nowrap">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.8 2.8 0 0 1 4 4L7.5 20.5 2 22l1.5-5.5z"></path></svg>
+        Editar
+      </span>
+      <span style="flex:none;width:48px;height:48px;display:grid;place-items:center;border-radius:13px;background:#fff"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:#475569"><circle cx="12" cy="12" r="1.6"></circle><circle cx="12" cy="5" r="1.6"></circle><circle cx="12" cy="19" r="1.6"></circle></svg></span>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:center;gap:14px;padding-top:2px">
+      <span style="font:600 12.5px/1 -apple-system,Arial;color:#475569">Marcar listo</span>
+      <span style="width:1px;height:14px;background:#dfe5ec"></span>
+      <span style="font:600 12.5px/1 -apple-system,Arial;color:#64748b">Después</span>
+    </div>
+  </div>
+</div>
+</div>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1760,&quot;height&quot;:1000}}">
+class Component extends DCLogic {
+  rail() {
+    const A = 'rgba(255,255,255,.62)';
+    const i = (label, d, active, count) => ({ label, d, count, fg: active ? '#fff' : A, weight: active ? 700 : 400, bg: active ? '#1D4ED8' : 'transparent' });
+    return [
+      i('Dashboard', 'M4 3h5a1 1 0 0 1 1 1v5a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1zM15 3h5a1 1 0 0 1 1 1v5a1 1 0 0 1-1 1h-5a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1zM15 14h5a1 1 0 0 1 1 1v5a1 1 0 0 1-1 1h-5a1 1 0 0 1-1-1v-5a1 1 0 0 1 1-1zM4 14h5a1 1 0 0 1 1 1v5a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-5a1 1 0 0 1 1-1z'),
+      i('Recepcion', 'M10 2h4a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1h-4a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1zM8 4H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-2m-7 10 2 2 4-4'),
+      i('Trabajos', 'M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z', true, 12),
+      i('Inspecciones', 'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6m-11 5 2 2 4-4'),
+      i('Mecanicos', 'M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M13 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0zM22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75'),
+      i('Clientes', 'M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M13 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0zM23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75'),
+      i('Vehiculos', 'M7 17h10M5 17a2 2 0 0 1-2-2v-3l2.5-5.5A2 2 0 0 1 7.3 5.3h9.4a2 2 0 0 1 1.8 1.2L21 12v3a2 2 0 0 1-2 2M9 17a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM19 17a2 2 0 1 1-4 0 2 2 0 0 1 4 0z'),
+      i('CRM', 'M21 15a2 2 0 0 1-2 2H8l-4 4V5a2 2 0 0 1 2-2h13a2 2 0 0 1 2 2z'),
+      i('Cotizaciones', 'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M9 15h6M9 11h6', false, 3),
+      i('Inventario', 'M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16zM3.27 6.96 12 12.01l8.73-5.05M12 22.08V12'),
+      i('Liquidacion', 'M4 5h16a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2zM2 10h20M6 15h4', false, 2),
+      i('Reportes', 'M18 20V10M12 20V4M6 20v-6M2 20h20'),
+      i('Cuentti', 'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M16 13H8M16 17H8M10 9H8', false, 10),
+      i('Usuarios', 'M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2M16 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0z')
+    ];
+  }
+  renderVals() {
+    return {
+      rail: this.rail(),
+      items: [
+        { nombre: 'Cambio de aceite y filtro', detalle: 'Mano de obra', valor: '$ 90.000' },
+        { nombre: 'Aceite motor 20W50 mineral galón', detalle: 'Repuesto · 1 × $ 70.000', valor: '$ 70.000' },
+        { nombre: 'Pastillas de freno delanteras cerámicas', detalle: 'Repuesto · 1 × $ 130.000', valor: '$ 130.000' },
+        { nombre: 'Rectificación de discos y ajuste', detalle: 'Mano de obra', valor: '$ 370.000' }
+      ],
+      fondo: [
+        { placa: 'ABC222', cliente: 'CUANTIAS MENORES S.A.S.', estado: 'Completado', total: '$ 660.000' },
+        { placa: 'HSK118', cliente: 'MARIA LUISA GUERRERO', estado: 'En Progreso', total: '$ 620.000' },
+        { placa: 'WQZ711', cliente: 'LUZ MARINA CANTILLO', estado: 'En Progreso', total: '$ 480.000' },
+        { placa: 'CBN063', cliente: 'ALVARO JOSE RAMOS', estado: 'En Progreso', total: '$ 320.000' },
+        { placa: 'FKD209', cliente: 'TRANSPORTES SABANALARGA', estado: 'Esperando Repuestos', total: '$ 540.000' },
+        { placa: 'JHY554', cliente: 'EDUARDO SALCEDO MOLINA', estado: 'En Prueba', total: '$ 460.000' },
+        { placa: 'MPO827', cliente: 'YOLANDA BARRIOS DE LEON', estado: 'En Diagnostico', total: '$ 250.000' },
+        { placa: 'TQR045', cliente: 'DISTRIBUCIONES DEL CARIBE', estado: 'Pendiente', total: '$ 480.000' },
+        { placa: 'GVB380', cliente: 'JAIRO ENRIQUE OSPINO', estado: 'Pendiente', total: '$ 320.000' },
+        { placa: 'YHL370', cliente: 'GRUPO EMPRESARIAL MP S.A.S.', estado: 'Completado', total: '$ 245.000' },
+        { placa: 'HRK821', cliente: 'ANA MARIA TORRES', estado: 'En Progreso', total: '$ 780.000' },
+        { placa: 'HJX377', cliente: 'JUAN DIEGO CUENTAS', estado: 'En Diagnostico', total: '$ 195.000' },
+        { placa: 'LPS440', cliente: 'CARLOS ANDRES BOLAÑO', estado: 'Completado', total: '$ 410.000' },
+        { placa: 'RTN908', cliente: 'MARTHA CECILIA DIAZ', estado: 'Pendiente', total: '$ 150.000' },
+        { placa: 'DKM572', cliente: 'AGUSTIN MARTINEZ PALACIOS', estado: 'Completado', total: '$ 890.000' },
+        { placa: 'VBQ211', cliente: 'INVERSIONES EL PRADO', estado: 'En Prueba', total: '$ 1.240.000' }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>
