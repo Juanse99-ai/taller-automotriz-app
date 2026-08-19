@@ -2974,3 +2974,74 @@ tbody tr:active{background:var(--fill-2)}
   .rep-marg__c:last-child{border-bottom:0;padding-bottom:0}
   .rep-dentro{padding-left:16px}
 }
+
+/* ============================================================
+   FASE 2 — Usuarios
+   Cuatro filas no se presentan como si fueran cuatrocientas: la tabla ocupa
+   lo que ocupa y el alta baja a una fila de campos al pie.
+   ============================================================ */
+.usr__cab{display:flex;align-items:center;gap:14px;height:30px;padding:0 18px;
+  border-bottom:1.5px solid var(--head-line)}
+.usr__cab>span{font-size:9.5px;line-height:1;font-weight:700;letter-spacing:.7px;color:var(--text-4)}
+.usr__row{display:flex;align-items:center;gap:14px;min-height:52px;padding:0 18px;
+  border-bottom:1px solid var(--row-line)}
+.usr__row.off{background:#fbfcfd}
+[data-theme="dark"] .usr__row.off{background:rgba(255,255,255,.02)}
+.usr__n{flex:1;min-width:0;display:flex;align-items:center;gap:11px}
+.usr__av{width:32px;height:32px;font-size:11.5px;flex:none}
+.usr__row.off .usr__av{opacity:.5}
+.usr__nb{min-width:0}
+.usr__nn{display:block;font-size:13.5px;line-height:1.2;font-weight:600;color:var(--text);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.usr__row.off .usr__nn{color:var(--text-4)}
+.usr__yo{display:block;font-size:10.5px;line-height:1;font-weight:600;color:var(--accent);margin-top:4px}
+.usr__u{width:150px;flex:none;font-family:var(--mono);font-size:13px;font-weight:600;color:var(--text-2);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.usr__row.off .usr__u{color:var(--text-5)}
+.usr__e{width:104px;flex:none;display:flex;align-items:center;gap:7px;font-size:12.5px;font-weight:600;color:var(--text-4)}
+.usr__dot{width:7px;height:7px;flex:none;border-radius:50%;background:var(--text-5)}
+.usr__dot.on{background:#22c55e}
+.usr__e:has(.usr__dot.on){color:var(--ok-fg)}
+.usr__c{width:104px;flex:none;text-align:right;font-size:12.5px;color:var(--text-3);white-space:nowrap}
+.usr__a{width:152px;flex:none;display:flex;align-items:center;justify-content:flex-end;gap:7px}
+.usr__edit{width:34px;height:34px;flex:none;display:grid;place-items:center;border:1.5px solid var(--border-input);
+  border-radius:var(--radius-pill);background:var(--bg-raised);color:var(--text-3);cursor:pointer}
+.usr__edit svg{width:15px;height:15px}
+.usr__acc{height:34px;display:flex;align-items:center;padding:0 14px;border-radius:var(--radius-pill);
+  font-size:12.5px;font-weight:700;white-space:nowrap;cursor:pointer}
+.usr__acc--off{background:var(--bg-raised);border:1.5px solid var(--border-strong);color:var(--bad-fg)}
+.usr__acc--on{background:var(--accent-soft);border:1.5px solid transparent;color:var(--accent)}
+.usr__acc:disabled{opacity:.4;cursor:default;color:var(--text-4)}
+.usr__pie{display:flex;align-items:center;gap:14px;height:38px;padding:0 18px;background:var(--bg-subtle);
+  border-top:1px solid var(--head-line);font-size:12px;font-weight:600;color:var(--text-3)}
+.usr__pien{font-size:12px;font-weight:400;color:var(--text-4)}
+
+.usr-new{margin-top:10px;padding:15px 20px 17px}
+.usr-new__acc{width:100%;height:44px;padding:0 13px;border:1.5px solid var(--accent);border-radius:11px;
+  background:var(--bg-raised);font-size:13.5px;font-weight:600;color:var(--text)}
+.usr-new__u{display:flex;align-items:center;gap:8px;height:44px;padding:0 12px;background:var(--bg-subtle);
+  border:1px solid var(--border-input);border-radius:11px}
+.usr-new__ui{flex:1;min-width:0;border:0;background:none;font-family:var(--mono);font-size:13.5px;
+  font-weight:600;color:var(--text)}
+.usr-new__ui:focus{outline:none}
+.usr-new__ojo{width:32px;height:32px;flex:none;display:grid;place-items:center;border:0;border-radius:9px;
+  background:var(--bg-raised);color:var(--text-3);cursor:pointer}
+.usr-new__rol{font-size:11.5px;line-height:1.4;color:var(--text-4);margin-top:10px}
+
+@media (max-width:900px){
+  /* En el celular la tabla se vuelve tarjeta: nombre y usuario arriba, rol y
+     estado en la segunda linea, y la accion como boton de 44px. */
+  .usr__cab{display:none}
+  .usr__row{flex-wrap:wrap;gap:9px;padding:13px 14px;min-height:0}
+  .usr__n{flex:1 1 100%}
+  .usr__u{width:auto;flex:none;order:2}
+  .usr__row>span:nth-of-type(3){order:3}
+  .usr__e{width:auto;order:4}
+  .usr__c{width:auto;text-align:left;order:5;flex:1}
+  .usr__a{width:100%;order:6;justify-content:flex-start}
+  .usr__acc,.usr__edit{height:var(--tap);min-height:var(--tap)}
+  .usr__edit{width:var(--tap)}
+  .usr__acc{flex:1;justify-content:center}
+  .usr-new .ec-form__c{flex:1 1 100% !important;width:auto !important}
+  .usr-new .ec-form__go{width:100%}
+}
