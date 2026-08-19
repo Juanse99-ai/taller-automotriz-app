@@ -165,7 +165,15 @@ export default function Sidebar({ active, onNavigate, isOpen, collapsed, onColla
   // Pill rojo en Trabajos: pendientes + en progreso (alerta de carga del taller)
   const pendientes = trabajos.filter(t => t.estado === 'Pendiente' || t.estado === 'En Diagnostico').length
   const enProgreso = trabajos.filter(t => t.estado === 'En Progreso' || t.estado === 'Esperando Repuestos' || t.estado === 'En Prueba').length
-  const pillCounts = { trabajos: pendientes + enProgreso || 0 }
+  // Cuentti: facturado sin pagar. Sale de los mismos trabajos que ya recibe el
+  // rail, asi que no cuesta datos nuevos — y es la cifra que el dueño persigue.
+  // (Los contadores de Cotizaciones y Liquidacion que trae el mockup exigirian
+  // pasarle mas hooks al rail; quedan pendientes.)
+  const porCobrar = trabajos.filter(t => t.cuenttiTransacionId && !t.pagado).length
+  const pillCounts = {
+    trabajos: pendientes + enProgreso || 0,
+    cuentti: porCobrar || 0,
+  }
 
   const inicial = (user?.nombre || user?.usuario || '?')[0].toUpperCase()
   const rolLabel = user?.rol === 'admin' ? 'Administrador' : 'Jefe de taller'

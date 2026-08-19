@@ -705,7 +705,8 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
                 <span style={{ width: 92 }}>ESTADO</span>
                 <span style={{ width: 92 }}>COBRO</span>
                 <span style={{ width: 98, textAlign: 'right' }}>TOTAL</span>
-                <span style={{ width: 74, textAlign: 'right' }}>FECHA</span>
+                <span style={{ width: 84, textAlign: 'right' }}>FECHA</span>
+                <span style={{ width: 88 }} />
               </div>
               <div className="hd-tbl__b">
                 {filtered.map((t, n) => {
@@ -740,7 +741,25 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
                         {cob ? <span className={`hd-chip hd-chip--${chipTono(cob.tone)}`}>{cob.label}</span> : <span className="hd-empty" style={{ fontSize: 12 }}>—</span>}
                       </div>
                       <div className="hd-n hd-strong" style={{ width: 94 }}>{fmt(t.total)}</div>
-                      <div className="hd-n" style={{ width: 74, fontSize: 12, color: 'var(--text-3)' }}>{fmtDate(t.fecha)}</div>
+                      {/* 84px y no 74: el mockup abrevia el año a 2 digitos
+                          ("15 ago 26") pero el README manda dd mmm yyyy, y con 74
+                          "15 ago 2026" se cortaba contra los iconos de accion. */}
+                      <div className="hd-n" style={{ width: 84, fontSize: 12, color: 'var(--text-3)', whiteSpace: 'nowrap' }}>{fmtDate(t.fecha)}</div>
+                      {/* Editar, PDF y eliminar por fila. Al reescribir esta tabla
+                          se quedaron fuera: desde la lista no se podia hacer nada
+                          con una OT sin abrirla, y el mockup si las trae. */}
+                      <div style={{ width: 88, display: 'flex', justifyContent: 'flex-end', gap: 2 }}
+                        onClick={e => e.stopPropagation()}>
+                        <Button variant="ghost" size="sm" className="btn-icon" aria-label={`Editar ${t.otCodigo || t.placa || 'OT'}`} title="Editar"
+                          onClick={() => handleEditar(t.id)}><IconEdit /></Button>
+                        {t.otCodigo && (
+                          <Button variant="ghost" size="sm" className="btn-icon" aria-label={`Descargar PDF de ${t.otCodigo}`} title="Descargar PDF"
+                            onClick={() => descargarOT(t)}><IconPdf /></Button>
+                        )}
+                        <Button variant="ghost" size="sm" className="btn-icon" aria-label={`Eliminar ${t.otCodigo || t.placa || 'OT'}`} title="Eliminar"
+                          style={{ color: 'var(--bad-fg)' }}
+                          onClick={() => setConfirmDel(t.id)}><IconTrash /></Button>
+                      </div>
                     </div>
                   )
                 })}
