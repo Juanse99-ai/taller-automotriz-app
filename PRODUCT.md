@@ -22,7 +22,7 @@ Profesional, confiable, directo. Como una herramienta de trabajo bien hecha: ser
 
 - **El "look IA"**: glassmorphism, degradados de texto, franjas laterales de color (`border-left` decorativo), tarjetas idénticas en grilla, hero-metric con gradiente. El usuario lo detecta y lo rechaza explícitamente.
 - Micro-texto y bajo contraste (slate-400 en textos, iconos a opacidad 0.55).
-- Sidebars que se expanden con hover (molesta; solo click).
+- ~~Sidebars que se expanden con hover~~ — retirado: el dueño pidió el rail con hover-expand (86→212px) en el handoff y lo confirmó el 2026-08-19. Es el comportamiento deseado; no "corregirlo" a solo-click.
 - Dashboards genéricos de plantilla SaaS.
 
 **Referencia positiva**: Pitz (app.pitz.com.mx) — app de taller que compite en la misma categoría; legible, densa donde toca, profesional.

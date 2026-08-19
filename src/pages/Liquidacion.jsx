@@ -1515,7 +1515,9 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
 
         /* Tabla del Paso 2 con la banda de rótulos y las líneas finas del diseño */
         @media (min-width:961px){
-          #liq-paso2 > .card__b--flush{ max-height:calc(100vh - 342px); min-height:220px; overflow-y:auto; }
+          /* Sin min-height: con 1-2 trabajos la tarjeta abrazaba 220px de nada.
+             El tope sigue para que con muchos aparezca el scroll. */
+          #liq-paso2 > .card__b--flush{ max-height:calc(100vh - 342px); overflow-y:auto; }
           /* La lista ya no ocupa el ancho entero de la ventana: comparte con el
              carril de pago. Los 16px de aire a cada lado de CADA celda (32 por
              columna) partían los montos en dos renglones — el aire pasa a los

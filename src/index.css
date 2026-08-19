@@ -1419,6 +1419,8 @@ tbody tr:active{background:var(--fill-2)}
    Solo escritorio (>=961px). En móvil el rail sigue siendo el
    drawer que ya existía: el handoff no lo cambia.
    ============================================================ */
+@keyframes railLbl{from{opacity:0}}
+
 @media (min-width:961px){
   /* El marco: 10px de aire alrededor y 10px entre rail y contenido.
      El rail deja de ser `fixed` y pasa a hermano flex, como pide el
@@ -1445,8 +1447,10 @@ tbody tr:active{background:var(--fill-2)}
     width:var(--rail-w);min-width:var(--rail-w);
     background:var(--navy);border-right:none;border-radius:26px;
     padding:12px 0 10px;align-items:center;gap:5px;
-    /* Única transición de toda la app, según el handoff. */
-    transition:width .2s var(--ease-drawer);
+    /* El unico movimiento del chrome. Curva estandar y no expo: expo mete
+       el 60% del recorrido en los primeros ~40ms y a 126px de delta eso es
+       un salto de 2-3 cuadros, no una apertura. */
+    transition:width .28s var(--ease);
   }
   .sidebar.collapsed{width:var(--rail-w);min-width:var(--rail-w)}
   .sidebar.hover-expand{width:var(--rail-w-open);min-width:var(--rail-w-open);box-shadow:none;z-index:41}
@@ -1502,7 +1506,7 @@ tbody tr:active{background:var(--fill-2)}
     width:auto;align-self:stretch;flex-direction:row;justify-content:flex-start;
     gap:11px;padding:9px 13px;margin:0 9px;
   }
-  .sidebar.hover-expand .navlink span{font-size:12.5px;text-align:left}
+  .sidebar.hover-expand .navlink span{font-size:12.5px;text-align:left;animation:railLbl .22s ease-out}
   .sidebar.hover-expand .sidebar__nav{align-items:stretch}
 
   /* Pie: avatar, nombre y rol centrados bajo un divisor */
@@ -3069,4 +3073,5 @@ tbody tr:active{background:var(--fill-2)}
    ============================================================ */
 @media (prefers-reduced-motion: reduce){
   .sidebar,.main{transition:none}
+  .sidebar .navlink span{animation:none}
 }
