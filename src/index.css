@@ -2329,3 +2329,39 @@ tbody tr:active{background:var(--fill-2)}
     display:inline;margin-right:4px;font-size:11.5px;font-weight:400;color:var(--text-4);
   }
 }
+
+/* Los ultimos por debajo de 44 en movil: el segmentado clasico (.segctl, que
+   usan CRM, Mecanicos y Recepcion) y el input dentro de .hd-find, que medía
+   15px de alto — el area tocable era el contenedor, pero conviene que el propio
+   campo la ocupe entera. */
+@media (max-width:960px){
+  .segctl{height:auto;padding:4px}
+  .segctl > button{min-height:var(--tap)}
+  .hd-find input{height:var(--tap)}
+}
+@media (max-width:960px){
+  /* Con 6 categorias el segmentado medía 432px y empujaba TODA la pagina a 461
+     en una ventana de 375. Envuelve en vez de desbordar. */
+  .segctl{flex-wrap:wrap;row-gap:4px}
+  .search,.search input{max-width:100%;min-width:0}
+}
+@media (max-width:960px){
+  /* Los campos de texto medían 15px de alto dentro de un contenedor de 44: el
+     area tocable ya era correcta, pero el campo debe ocuparla entera para que
+     el toque caiga donde se ve. */
+  .search input,.input,.form-input,.form-select{min-height:var(--tap)}
+  /* La casilla de 18px es de las cosas mas dificiles de acertar con el dedo, y
+     en Liquidacion es la que elige QUE trabajos se pagan. */
+  input[type=checkbox]{width:22px;height:22px}
+}
+
+/* La barra de combustible son 8 segmentos de 16px de alto. El mockup los quiere
+   finos, asi que no se engordan: se les amplia el area de toque con un
+   pseudoelemento invisible hasta los 44px. Se ve igual, se acierta con el dedo. */
+@media (max-width:960px){
+  /* background-clip:content-box pinta el color SOLO en la caja de contenido:
+     el boton mide 44px y se toca entero, pero la barra se sigue viendo de 16px
+     como en el mockup. Un ::after absoluto no servia — el area de toque no se
+     extendia (comprobado con elementFromPoint). */
+  .rc-fuel__seg{height:var(--tap) !important;padding:14px 0 !important;background-clip:content-box !important}
+}

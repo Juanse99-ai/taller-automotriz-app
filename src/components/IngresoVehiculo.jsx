@@ -27,6 +27,7 @@ export default function IngresoVehiculo({ value, onChange }) {
             <button
               key={i}
               type="button"
+              className="rc-fuel__seg"
               aria-label={`Combustible ${NIVEL_COMBUSTIBLE[i + 1]}`}
               onClick={() => patch({ combustible: comb === i + 1 ? i : i + 1 })}
               style={{
