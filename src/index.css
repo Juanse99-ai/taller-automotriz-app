@@ -1751,3 +1751,37 @@ tbody tr:active{background:var(--fill-2)}
   .tbl.tbl-cards--ot tbody td.td-actions > div{justify-content:flex-start;gap:8px}
   .tbl.tbl-cards--ot tbody td.td-actions .btn{min-height:44px}
 }
+
+/* --- Objetivos tactiles en movil ---
+   .btn-sm mide 38px de alto y .btn-icon 40px de ancho: por debajo de los 44px
+   que pide el handoff, y en varias pantallas son la UNICA forma de accionar una
+   fila. En escritorio se quedan como estan (ahi hay cursor); en tactil crecen. */
+@media (max-width:960px){
+  .btn-sm{min-height:var(--tap);padding:0 18px}
+  .btn-icon,.btn-icon.btn-sm{min-width:var(--tap);min-height:var(--tap);width:auto}
+  .icobtn{min-width:var(--tap);min-height:var(--tap)}
+}
+
+/* Los que quedaban por debajo de 44px y son la unica via de accion:
+   - .topbar__menu es lo UNICO que abre el cajon en movil, y medía 36x36.
+   - Los iconos del topbar tenian 44 de alto pero 38 de ancho.
+   - El interruptor de tema medía 32 de alto.
+   - Los segmentados (rango de fecha, Lista/Kanban, filtros) medían 30. */
+@media (max-width:960px){
+  .topbar__menu{width:var(--tap);height:var(--tap)}
+  .topbar .btn-sm{width:var(--tap)}
+  .m3switch{min-height:var(--tap)}
+  .hd-seg{height:auto;padding:4px}
+  .hd-seg__i{height:var(--tap)}
+}
+
+/* Ultimos dos por debajo de 44: las pestañas de estado (32px) y los botones,
+   que una regla movil bajaba a 42px justo donde mas falta hacen los 44. */
+@media (max-width:960px){
+  .hd-tab{height:var(--tap);line-height:var(--tap)}
+  .hd-tab span{line-height:1}
+  .btn{min-height:var(--tap)}
+}
+@media (max-width:960px){
+  .hd-drop,.hd-find{min-height:var(--tap)}
+}
