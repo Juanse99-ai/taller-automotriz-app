@@ -19,6 +19,7 @@ Cómo se logra eso en la práctica:
 
 | Archivo | Qué es |
 |---|---|
+| **`QA - capturas 20 ago 2026.md`** | **Empieza por aquí si la app ya está implementada.** 11 defectos medidos contra capturas de producción, con qué se ve, qué dice el mockup y qué cambiar. Cuatro son bloqueantes. |
 | `README.md` | Las 15 pantallas de la primera tanda: tokens, chrome común, métrica, y por pantalla qué subió, qué bajó y qué se colapsó. |
 | `README - segunda tanda.md` | Reportes, Estado de cuenta, Detalle de OT, Usuarios. Mismo formato + 9 preguntas abiertas. |
 | `README - Estado de cuenta v2.md` | La segunda versión de Estado de cuenta, con 7 preguntas abiertas propias. |
@@ -69,6 +70,16 @@ Dashboard → Órdenes de trabajo → Generar OT → Detalle de OT → Liquidaci
 - **Estado de cuenta va solo en su v2.** `Estado de cuenta - v2.dc.html` reemplaza por completo la versión anterior, que el dueño rechazó ("todo muy esparcido, enredado"). La v1 no está en el paquete.
 - **Trabajos Kanban es una propuesta.** No hubo captura del Kanban actual; las columnas se derivaron de los estados que aparecen en la lista de Trabajos. Confirma con el dueño antes de implementarla.
 - **Las preguntas abiertas no son opcionales.** 9 en el README de la segunda tanda y 7 en el de Estado de cuenta v2. Cuatro cambian números en pantalla: cómo se calcula el ticket promedio, qué hace exactamente "Por días", el umbral de días para que MÁS ANTIGUO pase a ámbar y a rojo, y si una cuenta A FAVOR se resta del POR COBRAR total.
+
+## Decisiones cerradas en esta última pasada
+
+Tres cosas quedaron definidas y ya están en los mockups; impleméntalas así:
+
+- **AÑO es lista desplegable** en los cuatro formularios que lo piden (Nueva cotización escritorio y móvil, Generar OT, Nueva OT desde Trabajos), con el mismo chevron y alineación que Marca, Modelo y Cilindraje. En **Vehículos** sigue siendo columna de tabla: ahí es dato de lectura, no campo.
+- **MÁS ANTIGUO** (Estado de cuenta v2): **gris hasta 30 días, ámbar de 31 a 60, rojo desde 61**. Las comisiones se liquidan por mes, así que un préstamo que sobrevive un ciclo no se descontó y dos ciclos ya es problema.
+- **Las cuentas A FAVOR no se restan del POR COBRAR.** Ese total es solo lo que el taller tiene por cobrar; el pie de la lista lo dice: "Por cobrar · 3 de 4 · 0 a favor".
+
+Queda una pendiente: los **nombres reales de las categorías de inventario**. En la app son Cat-1…Cat-5 y casi todo está en Cat-1, así que la pastilla de filtro por categoría no sirve para nada hasta que tengan nombre. No inventes nombres: pregunta.
 
 ## Datos que el mockup no puede inventar
 

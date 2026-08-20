@@ -1449,8 +1449,12 @@ tbody tr:active{background:var(--fill-2)}
     padding:12px 0 10px;align-items:center;gap:5px;
     /* El unico movimiento del chrome. Curva estandar y no expo: expo mete
        el 60% del recorrido en los primeros ~40ms y a 126px de delta eso es
-       un salto de 2-3 cuadros, no una apertura. */
-    transition:width .28s var(--ease);
+       un salto de 2-3 cuadros, no una apertura.
+       min-width va en la transicion junto con width: las dos reglas de
+       estado fijan las dos propiedades, y un min-width que salta clava el
+       ancho usado en el cuadro 0 por mucho que width este interpolando.
+       Sin esto el panel nunca se animo, solo lo parecia. */
+    transition:width .28s var(--ease),min-width .28s var(--ease);
   }
   .sidebar.collapsed{width:var(--rail-w);min-width:var(--rail-w)}
   .sidebar.hover-expand{width:var(--rail-w-open);min-width:var(--rail-w-open);box-shadow:none;z-index:41}
@@ -1477,6 +1481,12 @@ tbody tr:active{background:var(--fill-2)}
     display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
     border-radius:16px;background:transparent;position:relative;
     color:rgba(255,255,255,.62);font-weight:400;
+    /* El item tiene que viajar CON el panel. Sin esto la geometria de 212px
+       se aplica en el cuadro 0 y el rail solo la va destapando: se lee como
+       un telon que sube, no como algo que se abre. Misma curva y duracion
+       que el ancho para que todo llegue junto. */
+    transition:width .28s var(--ease),padding .28s var(--ease),
+               margin .28s var(--ease),gap .28s var(--ease);
   }
   .navlink svg{width:19px;height:19px;stroke-width:2}
   /* El rótulo SIEMPRE se ve, también en 86px: es lo que distingue este rail
@@ -1485,7 +1495,8 @@ tbody tr:active{background:var(--fill-2)}
   .navlink span,
   .sidebar.collapsed .navlink span{
     max-width:none;font-size:8.5px;line-height:1.15;text-align:center;
-    white-space:nowrap;opacity:1;transition:none;
+    white-space:nowrap;opacity:1;
+    transition:font-size .28s var(--ease);
   }
   .navlink:hover{background:rgba(255,255,255,.06);color:#fff}
   .navlink.active{background:var(--accent);color:#fff;font-weight:700}
@@ -1503,11 +1514,12 @@ tbody tr:active{background:var(--fill-2)}
 
   /* Expandido: el ítem pasa de columna a fila */
   .sidebar.hover-expand .navlink{
-    width:auto;align-self:stretch;flex-direction:row;justify-content:flex-start;
+    width:194px;flex-direction:row;justify-content:flex-start;
     gap:11px;padding:9px 13px;margin:0 9px;
   }
+  /* 194 = 212 - 9 - 9 de margen. Va explicito porque 'auto' no se puede
+     interpolar: con auto el ancho saltaba y el resto de la fila con el. */
   .sidebar.hover-expand .navlink span{font-size:12.5px;text-align:left;animation:railLbl .22s ease-out}
-  .sidebar.hover-expand .sidebar__nav{align-items:stretch}
 
   /* Pie: avatar, nombre y rol centrados bajo un divisor */
   .sidebar__foot{
@@ -3158,8 +3170,8 @@ tbody tr:active{background:var(--fill-2)}
    final, donde ninguna regla posterior la puede pisar.
    ============================================================ */
 @media (prefers-reduced-motion: reduce){
-  .sidebar,.main{transition:none}
-  .sidebar .navlink span{animation:none}
+  .sidebar,.main,.navlink{transition:none}
+  .sidebar .navlink span{animation:none;transition:none}
 }
 
 /* ============================================================
