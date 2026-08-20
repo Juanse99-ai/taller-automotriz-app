@@ -22,6 +22,9 @@ export default function EstadoCuenta({ prestamos, tecnicos, notify, tabs = null,
   const [sel, setSel] = useState(null)
   const [dlg, setDlg] = useState(null)
   const [verPorDias, setVerPorDias] = useState(false)
+  // Tercer momento del movil: la captura como hoja aparte. En escritorio no
+  // se usa — ahi la fila de registro vive dentro de la tarjeta de la cuenta.
+  const [hoja, setHoja] = useState(false)
   const detailRef = useRef(null)
   // Al elegir una cuenta, traer el panel de detalle a la vista: en desktop está
   // arriba-derecha, lejos de la lista de abajo, y sin esto parecía que "no pasa nada".
@@ -384,7 +387,7 @@ export default function EstadoCuenta({ prestamos, tecnicos, notify, tabs = null,
 
       <div className="ec-book">
         {/* Quien debe y cuanto, sin tocar nada. */}
-        <aside className={`ec-aside${cuentaSel ? ' ec-aside--sel' : ''}`}>
+        <aside className={`ec-aside${cuentaSel || hoja ? ' ec-aside--sel' : ''}`}>
           <div className="hd-card ec-aside__card">
             <div className="ec-aside__cab"><span className="ec-aside__cl">CUENTA</span><span className="ec-aside__cr">SALDO</span></div>
             <div className="ec-aside__b">
@@ -419,11 +422,28 @@ export default function EstadoCuenta({ prestamos, tecnicos, notify, tabs = null,
           </div>
         </aside>
 
-        <main className={`ec-main${cuentaSel ? ' ec-main--sel' : ''}`} ref={detailRef}>
+        {/* Momento 1 del movil: la lista y nada mas. Se puede registrar sin
+            entrar a ninguna cuenta, que es lo que dice el mockup. En
+            escritorio este boton no existe: la captura ya esta a la vista. */}
+        {!cuentaSel && !hoja && (
+          <button type="button" className="ec-reg" onClick={() => setHoja(true)}>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
+            Registrar movimiento
+          </button>
+        )}
+        <main className={`ec-main${cuentaSel ? ' ec-main--sel' : ''}${hoja ? ' ec-main--hoja' : ''}`} ref={detailRef}>
           {/* LA CUENTA: una sola tarjeta con divisores, no tres tarjetas.
               Identidad y saldo arriba; los cuatro cortes y Saldar debajo;
               la captura al pie, dentro del mismo objeto visual. */}
           <div className="hd-card ec-cta">
+            {!cuentaSel && hoja && (
+              <div className="ec-hoja__h">
+                <button type="button" className="ec-cta__back" onClick={() => setHoja(false)} aria-label="Volver a las cuentas">
+                  <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5M12 19l-7-7 7-7" /></svg>
+                </button>
+                <span className="ec-hoja__t">Registrar movimiento</span>
+              </div>
+            )}
             {cuentaSel ? (
               <>
                 <div className="ec-cta__id">

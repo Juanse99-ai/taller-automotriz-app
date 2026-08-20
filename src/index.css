@@ -3234,3 +3234,22 @@ tbody tr:active{background:var(--fill-2)}
      de vista y nada avisaba de que existian. Envuelven en vez de esconderse. */
   .hd-tabs{flex-wrap:wrap;overflow-x:visible;row-gap:0}
 }
+
+/* Estado de cuenta en el celular: tres momentos, no una pila.
+   Sin cuenta elegida la columna derecha traia la fila de captura colgando
+   bajo la lista — el apilamiento que el dueno rechazo en la v1. Ahora el
+   momento 1 es solo la lista mas este boton; la captura es el momento 3. */
+.ec-reg,.ec-hoja__h{display:none}
+@media (max-width:900px){
+  .ec-main:not(.ec-main--sel):not(.ec-main--hoja){display:none}
+  .ec-reg{display:flex;align-items:center;justify-content:center;gap:9px;
+    width:100%;height:48px;margin-top:2px;border:0;border-radius:13px;
+    background:var(--accent);color:#fff;cursor:pointer;
+    font-family:inherit;font-size:14.5px;font-weight:700;
+    box-shadow:0 2px 6px rgba(29,78,216,.25)}
+  .ec-reg svg{width:18px;height:18px;flex:none;stroke:currentColor;fill:none;
+    stroke-width:2.4;stroke-linecap:round}
+  .ec-main--hoja .ec-hoja__h{display:flex;align-items:center;gap:11px;
+    padding:14px 16px 12px;border-bottom:1px solid var(--border)}
+  .ec-hoja__t{font-size:17px;line-height:1.15;font-weight:700;color:var(--text)}
+}
