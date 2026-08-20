@@ -140,12 +140,12 @@
     </div>
   </div>
 
-  <div style="flex:none;padding:12px 14px 0;display:flex;gap:6px;overflow:hidden">
+  <div style="flex:none;padding:12px 14px 0;display:grid;grid-template-columns:1fr 1fr;gap:7px">
     <sc-for list="{{ chips }}" as="c" hint-placeholder-count="4">
-      <span style="flex:none;height:42px;display:flex;align-items:center;gap:7px;padding:0 12px;border-radius:12px;background:{{ c.bg }};white-space:nowrap">
-        <span style="width:7px;height:7px;border-radius:50%;background:{{ c.dot }}"></span>
-        <span style="font:{{ c.weight }} 12.5px/1 -apple-system,Arial;color:{{ c.fg }}">{{ c.label }}</span>
-        <span style="font:700 10.5px/1 -apple-system,Arial;color:{{ c.nFg }};background:{{ c.nBg }};padding:4px 6px;border-radius:999px">{{ c.n }}</span>
+      <span style="min-width:0;height:44px;display:flex;align-items:center;gap:8px;padding:0 13px;border-radius:12px;background:{{ c.bg }}">
+        <span style="width:7px;height:7px;flex:none;border-radius:50%;background:{{ c.dot }}"></span>
+        <span style="flex:1;min-width:0;font:{{ c.weight }} 13px/1 -apple-system,Arial;color:{{ c.fg }};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ c.label }}</span>
+        <span style="flex:none;font:700 11px/1 -apple-system,Arial;color:{{ c.nFg }};background:{{ c.nBg }};padding:4px 7px;border-radius:999px">{{ c.n }}</span>
       </span>
     </sc-for>
   </div>

@@ -134,7 +134,7 @@
   </div>
 
   <div style="flex:1;min-height:0;overflow:hidden;padding:10px 12px;display:flex;flex-direction:column;gap:8px">
-    <sc-for list="{{ filasMovil }}" as="f" hint-placeholder-count="5">
+    <sc-for list="{{ filasMovil }}" as="f" hint-placeholder-count="4">
       <div style="flex:none;background:#fff;border-radius:14px;padding:11px 13px">
         <div style="display:flex;align-items:baseline;gap:9px;white-space:nowrap">
           <span style="font:700 13px/1.2 -apple-system,Arial;color:#1D4ED8">{{ f.ref }}</span>
@@ -142,10 +142,13 @@
           <span style="flex:1"></span>
           <span style="font:700 15px/1.1 -apple-system,Arial;color:#0f172a">{{ f.total }}</span>
         </div>
-        <div style="font:600 13px/1.3 -apple-system,Arial;color:#0f172a;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ f.cliente }}</div>
+        <div style="display:flex;align-items:baseline;gap:9px;margin-top:4px">
+          <span style="flex:1;min-width:0;font:600 13px/1.3 -apple-system,Arial;color:#0f172a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ f.cliente }}</span>
+          <span style="flex:none;font:400 11.5px/1.3 -apple-system,Arial;color:#64748b;white-space:nowrap">{{ f.fecha }}</span>
+        </div>
         <div style="display:flex;align-items:center;gap:7px;margin-top:8px;white-space:nowrap">
           <span style="font:700 10px/1 -apple-system,Arial;letter-spacing:.4px;padding:6px 9px;border-radius:999px;background:{{ f.estBg }};color:{{ f.estFg }}">{{ f.estado }}</span>
-          <span style="flex:1;min-width:0;font:400 11.5px/1 -apple-system,Arial;color:#475569;overflow:hidden;text-overflow:ellipsis">{{ f.vehiculo }} · {{ f.fecha }}</span>
+          <span style="flex:1;min-width:0;font:400 11.5px/1 -apple-system,Arial;color:#475569;overflow:hidden;text-overflow:ellipsis">{{ f.vehiculo }}</span>
           <sc-if value="{{ f.revisar }}" hint-placeholder-val="{{ true }}">
             <span style="flex:none;height:38px;display:flex;align-items:center;padding:0 15px;border-radius:999px;background:#eff6ff;font:700 12.5px/1 -apple-system,Arial;color:#1D4ED8">Revisar</span>
           </sc-if>
@@ -153,7 +156,7 @@
         </div>
       </div>
     </sc-for>
-    <div style="flex:none;display:flex;align-items:center;justify-content:center;gap:7px;height:44px;border-radius:999px;background:#f1f5f9;font:600 13px/1 -apple-system,Arial;color:#334155">9 cotizaciones más <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"></path></svg></div>
+    <div style="flex:none;display:flex;align-items:center;justify-content:center;gap:7px;height:44px;border-radius:999px;background:#f1f5f9;font:600 13px/1 -apple-system,Arial;color:#334155">10 cotizaciones más <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"></path></svg></div>
   </div>
 
   <div style="flex:none;padding:9px 12px;background:#fff;border-top:1px solid #e8edf3">
@@ -163,62 +166,236 @@
 </div>
 
 <div style="display:flex;flex-direction:column;gap:10px">
-<div style="display:flex;align-items:baseline;gap:10px"><span style="font:700 11px/1 -apple-system,Arial;background:#0d1b35;color:#fff;padding:5px 8px;border-radius:999px">FORM</span><span style="font:600 13px/1 -apple-system,Arial;color:#0f172a">Nueva Cotizacion</span></div>
-<div style="width:920px;background:#f6f8fa;border:1px solid #cbd5e1;border-radius:18px;padding:14px;display:flex;flex-direction:column;gap:11px;box-shadow:0 1px 3px rgba(15,23,42,.08)">
-  <div style="display:flex;align-items:center;gap:12px;background:#fff;border-radius:14px;padding:13px 16px">
-    <div style="flex:1"><div style="font:700 18px/1.15 -apple-system,Arial;color:#0f172a">Nueva Cotizacion</div><div style="font:400 12px/1.4 -apple-system,Arial;color:#64748b;margin-top:3px">Validez 15 días · se envía en PDF al cliente</div></div>
-    <div style="height:40px;display:flex;align-items:center;gap:7px;padding:0 16px;border:1.5px solid #d8dfe8;border-radius:999px;font:600 13px/1 -apple-system,Arial;color:#334155">Volver</div>
-    <div style="height:40px;display:flex;align-items:center;padding:0 16px;border:1.5px solid #d8dfe8;border-radius:999px;font:600 13px/1 -apple-system,Arial;color:#334155">Cancelar</div>
-    <div style="height:40px;display:flex;align-items:center;gap:8px;padding:0 18px;background:#1D4ED8;color:#fff;border-radius:999px;font:700 13.5px/1 -apple-system,Arial;white-space:nowrap"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"></path></svg>Crear Cotizacion</div>
+<div style="display:flex;align-items:baseline;gap:10px"><span style="font:700 11px/1 -apple-system,Arial;background:#1D4ED8;color:#fff;padding:5px 8px;border-radius:999px">1280</span><span style="font:600 13px/1 -apple-system,Arial;color:#0f172a">Nueva cotizacion · escritorio</span></div>
+
+<div style="width:1280px;height:900px;background:#e9edf2;border:1px solid #cbd5e1;border-radius:14px;overflow:hidden;display:flex;padding:10px;gap:10px;box-shadow:0 1px 3px rgba(15,23,42,.08)">
+  <div onMouseEnter="{{ railOn }}" onMouseLeave="{{ railOff }}" style="width:{{ railW }};min-width:86px;flex:none;background:#0d1b35;border-radius:26px;display:flex;flex-direction:column;align-items:center;padding:12px 0 10px;gap:5px;overflow:hidden;transition:width .18s ease">
+    <img src="logo-mda.png" alt="Multidiagnosticos AS" style="width:62px;height:44px;flex:none;object-fit:contain;background:#fff;border-radius:12px;padding:3px">
+    <div style="width:46px;height:1px;background:rgba(255,255,255,.12);margin:3px 0"></div>
+    <div style="flex:1;width:100%;display:flex;flex-direction:column;align-items:{{ railAlign }};gap:1px;overflow:hidden">
+      <sc-for list="{{ rail }}" as="it" hint-placeholder-count="14">
+        <div style="width:{{ railItemW }};flex:none;display:flex;flex-direction:{{ railDir }};align-items:center;justify-content:{{ railJustify }};gap:{{ railGap }};padding:{{ railItemPad }};margin:{{ railItemMargin }};border-radius:16px;background:{{ it.bg }};position:relative">
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:{{ it.fg }}"><path d="{{ it.d }}"></path></svg>
+          <span style="font:{{ it.weight }} {{ railLabelSize }}/1.15 -apple-system,Arial;color:{{ it.fg }};text-align:{{ railLabelAlign }};white-space:nowrap">{{ it.label }}</span>
+          <sc-if value="{{ it.count }}" hint-placeholder-val="{{ false }}">
+            <span style="position:absolute;top:3px;right:5px;min-width:16px;height:16px;padding:0 4px;border-radius:8px;background:#1D4ED8;color:#fff;font:700 9.5px/16px -apple-system,Arial;text-align:center">{{ it.count }}</span>
+          </sc-if>
+        </div>
+      </sc-for>
+    </div>
+    <div style="width:46px;height:1px;background:rgba(255,255,255,.12)"></div>
+    <div style="width:38px;height:38px;flex:none;border-radius:50%;background:#1D4ED8;color:#fff;font:700 14px/38px -apple-system,Arial;text-align:center">J</div>
+    <span style="font:600 8.5px/1.2 -apple-system,Arial;color:#fff;text-align:center">Juan Sebastian</span>
+    <span style="font:400 8.5px/1.2 -apple-system,Arial;color:rgba(255,255,255,.5);text-align:center">Administrador</span>
   </div>
 
-  <div style="background:#fff;border-radius:14px;padding:14px 16px">
-    <div style="display:flex;align-items:center;gap:10px;margin-bottom:11px"><span style="font:700 13.5px/1 -apple-system,Arial;color:#0f172a">Cliente y vehículo</span><span style="font:400 11.5px/1 -apple-system,Arial;color:#64748b">busca por documento y se llena solo</span></div>
-    <div style="display:grid;grid-template-columns:1fr 1.3fr .9fr;gap:10px">
-      <div><div style="font:600 11px/1 -apple-system,Arial;color:#475569;margin-bottom:6px">Cedula / NIT</div><div style="height:44px;display:flex;align-items:center;gap:8px;padding:0 13px;border:1.5px solid #1D4ED8;border-radius:12px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="color:#1D4ED8;flex:none"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg><span style="font:400 13.5px/1 -apple-system,Arial;color:#64748b">Buscar por documento...</span></div></div>
-      <div><div style="font:600 11px/1 -apple-system,Arial;color:#475569;margin-bottom:6px">Nombre del Cliente</div><div style="height:44px;display:flex;align-items:center;padding:0 13px;border:1px solid #dfe5ec;border-radius:12px;font:400 13.5px/1 -apple-system,Arial;color:#64748b">Nombre completo</div></div>
-      <div><div style="font:600 11px/1 -apple-system,Arial;color:#475569;margin-bottom:6px">Telefono</div><div style="height:44px;display:flex;align-items:center;padding:0 13px;border:1px solid #dfe5ec;border-radius:12px;font:400 13.5px/1 -apple-system,Arial;color:#64748b">300...</div></div>
-    </div>
-    <div style="display:grid;grid-template-columns:.8fr .55fr 1fr 1fr .8fr;gap:10px;margin-top:10px">
-      <div><div style="font:600 11px/1 -apple-system,Arial;color:#475569;margin-bottom:6px">Placa</div><div style="height:46px;display:flex;align-items:center;padding:0 13px;border:1.5px solid #cbd5e1;border-radius:12px;font:700 17px/1 -apple-system,Arial;color:#94a3b8;letter-spacing:1px">ABC123</div></div>
-      <div><div style="font:600 11px/1 -apple-system,Arial;color:#475569;margin-bottom:6px">Año</div><div style="height:46px;display:flex;align-items:center;padding:0 13px;border:1px solid #dfe5ec;border-radius:12px;font:400 13.5px/1 -apple-system,Arial;color:#0f172a">2024</div></div>
-      <div><div style="font:600 11px/1 -apple-system,Arial;color:#475569;margin-bottom:6px">Marca</div><div style="height:46px;display:flex;align-items:center;justify-content:space-between;padding:0 13px;border:1px solid #dfe5ec;border-radius:12px;font:400 13.5px/1 -apple-system,Arial;color:#64748b">Seleccionar...<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="color:#64748b"><path d="m6 9 6 6 6-6"></path></svg></div></div>
-      <div><div style="font:600 11px/1 -apple-system,Arial;color:#475569;margin-bottom:6px">Modelo</div><div style="height:46px;display:flex;align-items:center;justify-content:space-between;padding:0 13px;border:1px solid #dfe5ec;border-radius:12px;font:400 13.5px/1 -apple-system,Arial;color:#64748b">Seleccionar...<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="color:#64748b"><path d="m6 9 6 6 6-6"></path></svg></div></div>
-      <div><div style="font:600 11px/1 -apple-system,Arial;color:#475569;margin-bottom:6px">Cilindraje (cc)</div><div style="height:46px;display:flex;align-items:center;padding:0 13px;border:1px solid #dfe5ec;border-radius:12px;font:400 13.5px/1 -apple-system,Arial;color:#64748b;white-space:nowrap;overflow:hidden">Ej: 1600, 2000</div></div>
-    </div>
-  </div>
+  <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:10px">
 
-  <div style="background:#fff;border-radius:14px;padding:14px 16px">
-    <div style="display:flex;align-items:center;gap:10px">
-      <span style="font:700 13.5px/1 -apple-system,Arial;color:#0f172a">Items</span>
-      <span style="font:400 11.5px/1 -apple-system,Arial;color:#64748b">0 items · Validez 15 dias</span>
-      <span style="flex:1"></span>
-      <div style="height:38px;display:flex;align-items:center;gap:7px;padding:0 16px;background:#eff6ff;border-radius:999px;font:600 12.5px/1 -apple-system,Arial;color:#1D4ED8;white-space:nowrap"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg>Agregar linea</div>
-    </div>
-    <div style="display:flex;align-items:center;gap:11px;margin-top:11px;padding:13px 14px;border:1.5px dashed #cbd5e1;border-radius:12px;background:#f8fafc">
-      <span style="font:400 12.5px/1.4 -apple-system,Arial;color:#64748b">Sin items</span>
-    </div>
-    <div style="display:flex;align-items:center;gap:18px;margin-top:11px;padding-top:11px;border-top:1px solid #eef1f5;white-space:nowrap">
-      <span style="flex:1"></span>
-      <span style="font:400 11.5px/1 -apple-system,Arial;color:#475569">Subtotal <b style="font-weight:700;color:#0f172a">$ 0</b></span>
-      <span style="font:400 11.5px/1 -apple-system,Arial;color:#475569">IVA <b style="font-weight:700;color:#0f172a">$ 0</b></span>
-      <span style="font:600 12px/1 -apple-system,Arial;color:#475569">Total <b style="font-weight:700;font-size:19px;color:#1D4ED8">$ 0</b></span>
-    </div>
-  </div>
-
-  <div style="display:flex;gap:11px">
-    <div style="flex:1;background:#fff;border-radius:14px;padding:14px 16px">
-      <div style="display:flex;align-items:center;gap:9px"><span style="font:700 13.5px/1 -apple-system,Arial;color:#0f172a">Observaciones</span><span style="font:400 11.5px/1 -apple-system,Arial;color:#64748b">Notas adicionales (visibles en el PDF)</span></div>
-      <div style="height:66px;margin-top:9px;padding:10px 13px;border:1px solid #dfe5ec;border-radius:12px;font:400 12.5px/1.45 -apple-system,Arial;color:#64748b">Condiciones, garantias, terminos especiales...</div>
-    </div>
-    <div style="width:250px;flex:none;background:#fff;border-radius:14px;padding:14px 16px">
-      <div style="font:700 13.5px/1 -apple-system,Arial;color:#0f172a">Validez</div>
-      <div style="font:600 11px/1 -apple-system,Arial;color:#475569;margin:9px 0 6px">Dias de vigencia</div>
-      <div style="height:46px;display:flex;align-items:center;justify-content:space-between;padding:0 6px 0 13px;border:1px solid #dfe5ec;border-radius:12px">
-        <span style="font:600 15px/1 -apple-system,Arial;color:#0f172a">15</span>
-        <span style="display:flex;gap:5px"><span style="width:34px;height:34px;display:grid;place-items:center;border-radius:999px;background:#f1f5f9;font:700 15px/1 -apple-system,Arial;color:#334155">−</span><span style="width:34px;height:34px;display:grid;place-items:center;border-radius:999px;background:#f1f5f9;font:700 15px/1 -apple-system,Arial;color:#334155">+</span></span>
+    <div style="flex:none;height:48px;display:flex;align-items:center;gap:12px;padding:0 14px;background:#fff;border:1px solid #e2e8f0;border-radius:16px">
+      <div style="flex:1"></div>
+      <div style="display:flex;align-items:center;gap:8px;height:34px;padding:0 13px;background:#f1f5f9;border-radius:999px;width:300px">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="color:#64748b;flex:none"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg>
+        <span style="font:400 12.5px/1 -apple-system,Arial;color:#64748b;white-space:nowrap">Buscar placa, cliente, OT...</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px">
+        <div style="width:34px;height:34px;display:grid;place-items:center;border-radius:999px;background:#f1f5f9"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:#475569"><rect x="7" y="2" width="10" height="20" rx="2"></rect><path d="M11 18h2"></path></svg></div>
+        <div style="width:34px;height:34px;display:grid;place-items:center;border-radius:999px;background:#f1f5f9;position:relative"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:#475569"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 8 3 8H3s3-1 3-8M10.3 21a2 2 0 0 0 3.4 0"></path></svg><span style="position:absolute;top:6px;right:7px;width:6px;height:6px;border-radius:50%;background:#1D4ED8"></span></div>
+        <div style="width:34px;height:34px;display:grid;place-items:center;border-radius:999px;background:#f1f5f9"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:#475569"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"></path></svg></div>
+        <div style="width:34px;height:34px;display:grid;place-items:center;border-radius:999px;background:#fef2f2"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:#dc2626"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"></path></svg></div>
       </div>
     </div>
+
+    <div style="flex:none;display:flex;align-items:flex-end;gap:16px;padding:0 4px">
+      <span style="height:36px;display:flex;align-items:center;gap:8px;padding:0 15px;border-radius:999px;background:#fff;border:1.5px solid #d7dee7;font:700 12.5px/1 -apple-system,Arial;color:#334155;white-space:nowrap;margin-bottom:1px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"></path></svg>Volver</span>
+      <div>
+        <h1 style="margin:0;font:700 22px/1.1 -apple-system,Arial;color:#0f172a;letter-spacing:-.3px">Nueva cotizacion</h1>
+        <div style="font:400 12.5px/1.4 -apple-system,Arial;color:#475569;margin-top:3px;white-space:nowrap">Validez 15 dias · se envia en PDF al cliente</div>
+      </div>
+      <div style="flex:1"></div>
+      <div style="text-align:right">
+        <div style="font:700 9.5px/1 -apple-system,Arial;letter-spacing:.9px;color:#64748b">TOTAL</div>
+        <div style="font:700 27px/1 -apple-system,Arial;color:#0f172a;margin-top:6px;white-space:nowrap">$ 0</div>
+      </div>
+      <div style="width:1px;height:44px;background:#d7dee7"></div>
+      <div style="display:flex;align-items:center;gap:9px;margin-bottom:1px">
+        <span style="height:40px;display:flex;align-items:center;padding:0 16px;background:#fff;border:1.5px solid #d7dee7;border-radius:999px;font:700 13px/1 -apple-system,Arial;color:#334155;white-space:nowrap">Cancelar</span>
+        <span style="height:40px;display:flex;align-items:center;gap:8px;padding:0 18px;background:#1D4ED8;color:#fff;border-radius:999px;font:700 13.5px/1 -apple-system,Arial;white-space:nowrap;box-shadow:0 2px 6px rgba(29,78,216,.25)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg>Crear cotizacion</span>
+      </div>
+    </div>
+
+    <div style="flex:none;background:#fff;border:1px solid #e2e8f0;border-radius:16px;padding:14px 18px">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:11px">
+        <span style="font:700 13.5px/1 -apple-system,Arial;color:#0f172a">Cliente y vehiculo</span>
+        <span style="font:400 11.5px/1 -apple-system,Arial;color:#475569">busca por documento y se llena solo</span>
+      </div>
+      <div style="display:flex;gap:10px">
+        <div style="width:168px;flex:none">
+          <div style="font:700 9.5px/1 -apple-system,Arial;letter-spacing:.9px;color:#334155;margin-bottom:6px">CEDULA / NIT</div>
+          <div style="height:44px;display:flex;align-items:center;gap:8px;padding:0 12px;background:#fff;border:1.5px solid #1D4ED8;border-radius:11px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="color:#1D4ED8;flex:none"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg><span style="font:400 13px/1 -apple-system,Arial;color:#b0bac6;white-space:nowrap;overflow:hidden">Buscar...</span></div>
+        </div>
+        <div style="flex:1;min-width:0">
+          <div style="font:700 9.5px/1 -apple-system,Arial;letter-spacing:.9px;color:#334155;margin-bottom:6px">NOMBRE DEL CLIENTE</div>
+          <div style="height:44px;display:flex;align-items:center;padding:0 12px;background:#f8fafc;border:1px solid #dfe5ec;border-radius:11px;font:400 13.5px/1 -apple-system,Arial;color:#b0bac6">Nombre completo</div>
+        </div>
+        <div style="width:130px;flex:none">
+          <div style="font:700 9.5px/1 -apple-system,Arial;letter-spacing:.9px;color:#475569;margin-bottom:6px">TELEFONO</div>
+          <div style="height:44px;display:flex;align-items:center;padding:0 12px;background:#f8fafc;border:1px solid #dfe5ec;border-radius:11px;font:400 13.5px/1 -apple-system,Arial;color:#b0bac6">300...</div>
+        </div>
+        <div style="width:1px;background:#e8edf3;margin:16px 4px 0"></div>
+        <div style="width:118px;flex:none">
+          <div style="font:700 9.5px/1 -apple-system,Arial;letter-spacing:.9px;color:#334155;margin-bottom:6px">PLACA</div>
+          <div style="height:44px;display:flex;align-items:center;padding:0 12px;background:#fff;border:1.5px solid #d7dee7;border-radius:11px;font:700 16px/1 ui-monospace,SFMono-Regular,Menlo,monospace;color:#b0bac6;letter-spacing:.5px">ABC123</div>
+        </div>
+        <div style="width:76px;flex:none">
+          <div style="font:700 9.5px/1 -apple-system,Arial;letter-spacing:.9px;color:#475569;margin-bottom:6px">AÑO</div>
+          <div style="height:44px;display:flex;align-items:center;padding:0 12px;background:#f8fafc;border:1px solid #dfe5ec;border-radius:11px;font:400 13.5px/1 -apple-system,Arial;color:#334155">2024</div>
+        </div>
+        <div style="flex:1;min-width:0">
+          <div style="font:700 9.5px/1 -apple-system,Arial;letter-spacing:.9px;color:#334155;margin-bottom:6px">MARCA</div>
+          <div style="height:44px;display:flex;align-items:center;justify-content:space-between;gap:6px;padding:0 12px;background:#f8fafc;border:1px solid #dfe5ec;border-radius:11px"><span style="font:400 13.5px/1 -apple-system,Arial;color:#b0bac6;white-space:nowrap;overflow:hidden">Seleccionar...</span><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="color:#64748b;flex:none"><path d="m6 9 6 6 6-6"></path></svg></div>
+        </div>
+        <div style="flex:1;min-width:0">
+          <div style="font:700 9.5px/1 -apple-system,Arial;letter-spacing:.9px;color:#334155;margin-bottom:6px">MODELO</div>
+          <div style="height:44px;display:flex;align-items:center;justify-content:space-between;gap:6px;padding:0 12px;background:#f8fafc;border:1px solid #dfe5ec;border-radius:11px"><span style="font:400 13.5px/1 -apple-system,Arial;color:#b0bac6;white-space:nowrap;overflow:hidden">Seleccionar...</span><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="color:#64748b;flex:none"><path d="m6 9 6 6 6-6"></path></svg></div>
+        </div>
+        <div style="width:112px;flex:none">
+          <div style="font:700 9.5px/1 -apple-system,Arial;letter-spacing:.9px;color:#475569;margin-bottom:6px">CILINDRAJE</div>
+          <div style="height:44px;display:flex;align-items:center;padding:0 12px;background:#f8fafc;border:1px solid #dfe5ec;border-radius:11px;font:400 13.5px/1 -apple-system,Arial;color:#b0bac6;white-space:nowrap;overflow:hidden">1600, 2000</div>
+        </div>
+      </div>
+    </div>
+
+    <div style="flex:1;min-height:0;background:#fff;border:1px solid #e2e8f0;border-radius:16px;display:flex;flex-direction:column;overflow:hidden">
+      <div style="flex:none;display:flex;align-items:center;gap:10px;padding:13px 18px 12px">
+        <span style="font:700 13.5px/1 -apple-system,Arial;color:#0f172a">Items</span>
+        <span style="font:400 11.5px/1 -apple-system,Arial;color:#475569">0 items · repuestos del inventario o servicios</span>
+        <span style="flex:1"></span>
+        <span style="height:36px;display:flex;align-items:center;gap:7px;padding:0 15px;background:#eff6ff;border-radius:999px;font:700 12.5px/1 -apple-system,Arial;color:#1D4ED8;white-space:nowrap"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg>Agregar linea</span>
+      </div>
+      <div style="flex:none;height:30px;display:flex;align-items:center;gap:10px;padding:0 18px;background:#f8fafc;border-top:1.5px solid #e8edf3;border-bottom:1.5px solid #e8edf3">
+        <div style="flex:1;min-width:0;font:700 9.5px/1 -apple-system,Arial;letter-spacing:.7px;color:#64748b">DESCRIPCION</div>
+        <div style="width:104px;text-align:right;font:700 9.5px/1 -apple-system,Arial;letter-spacing:.7px;color:#64748b">PRECIO</div>
+        <div style="width:56px;text-align:right;font:700 9.5px/1 -apple-system,Arial;letter-spacing:.7px;color:#64748b">CANT.</div>
+        <div style="width:56px;text-align:right;font:700 9.5px/1 -apple-system,Arial;letter-spacing:.7px;color:#64748b">IVA %</div>
+        <div style="width:112px;text-align:right;font:700 9.5px/1 -apple-system,Arial;letter-spacing:.7px;color:#64748b">SUBTOTAL</div>
+        <div style="width:26px"></div>
+      </div>
+      <div style="flex:1;min-height:0;display:flex;align-items:flex-start;padding:13px 18px">
+        <span style="font:400 12.5px/1 -apple-system,Arial;color:#94a3b8">Sin items.</span>
+      </div>
+      <div style="flex:none;height:38px;display:flex;align-items:center;gap:18px;padding:0 18px;background:#f8fafc;border-top:1px solid #e8edf3">
+        <span style="font:400 11.5px/1 -apple-system,Arial;color:#475569;white-space:nowrap">0 items · validez 15 dias</span>
+        <span style="flex:1"></span>
+        <span style="font:400 11.5px/1 -apple-system,Arial;color:#475569;white-space:nowrap">Subtotal <b style="font-weight:700;font-size:12.5px;color:#0f172a">$ 0</b></span>
+        <span style="font:400 11.5px/1 -apple-system,Arial;color:#475569;white-space:nowrap">IVA <b style="font-weight:700;font-size:12.5px;color:#0f172a">$ 0</b></span>
+        <span style="font:600 12px/1 -apple-system,Arial;color:#334155;white-space:nowrap">Total <b style="font-weight:700;font-size:15px;color:#0f172a">$ 0</b></span>
+      </div>
+    </div>
+
+    <div style="flex:none;display:flex;gap:10px">
+      <div style="flex:1;min-width:0;background:#fff;border:1px solid #e2e8f0;border-radius:16px;padding:13px 18px">
+        <div style="display:flex;align-items:center;gap:10px">
+          <span style="font:700 13.5px/1 -apple-system,Arial;color:#0f172a">Observaciones</span>
+          <span style="font:400 11.5px/1 -apple-system,Arial;color:#475569">notas adicionales, visibles en el PDF</span>
+        </div>
+        <div style="height:44px;display:flex;align-items:center;margin-top:9px;padding:0 12px;background:#f8fafc;border:1px solid #dfe5ec;border-radius:11px;font:400 13px/1 -apple-system,Arial;color:#b0bac6">Condiciones, garantias, terminos especiales...</div>
+      </div>
+      <div style="width:250px;flex:none;background:#fff;border:1px solid #e2e8f0;border-radius:16px;padding:13px 18px">
+        <div style="display:flex;align-items:center;gap:10px">
+          <span style="font:700 13.5px/1 -apple-system,Arial;color:#0f172a">Validez</span>
+          <span style="font:400 11.5px/1 -apple-system,Arial;color:#475569">dias de vigencia</span>
+        </div>
+        <div style="height:44px;display:flex;align-items:center;justify-content:space-between;margin-top:9px;padding:0 5px 0 13px;background:#f8fafc;border:1px solid #dfe5ec;border-radius:11px">
+          <span style="font:700 15px/1 -apple-system,Arial;color:#0f172a">15</span>
+          <span style="display:flex;gap:5px">
+            <span style="width:34px;height:34px;display:grid;place-items:center;border-radius:999px;background:#fff;border:1px solid #dfe5ec;font:700 15px/1 -apple-system,Arial;color:#334155">−</span>
+            <span style="width:34px;height:34px;display:grid;place-items:center;border-radius:999px;background:#fff;border:1px solid #dfe5ec;font:700 15px/1 -apple-system,Arial;color:#334155">+</span>
+          </span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<div style="display:flex;flex-direction:column;gap:10px">
+<div style="display:flex;align-items:baseline;gap:10px"><span style="font:700 11px/1 -apple-system,Arial;background:#0f172a;color:#fff;padding:5px 8px;border-radius:999px">390</span><span style="font:600 13px/1 -apple-system,Arial;color:#0f172a">Nueva cotizacion · movil</span></div>
+
+<div style="width:390px;height:844px;background:#eef1f5;border:1px solid #cbd5e1;border-radius:34px;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 1px 3px rgba(15,23,42,.08)">
+  <div style="flex:none;height:44px;display:flex;align-items:flex-end;justify-content:space-between;padding:0 22px 4px;background:#0d1b35">
+    <span style="font:700 12px/1 -apple-system,Arial;color:#fff">9:41</span>
+    <span style="display:flex;align-items:center;gap:5px"><span style="width:15px;height:9px;border:1.2px solid rgba(255,255,255,.75);border-radius:2px;display:block"></span><span style="width:22px;height:9px;border:1.2px solid rgba(255,255,255,.75);border-radius:2px;display:block;position:relative"><span style="position:absolute;inset:1.5px;background:#fff;border-radius:1px;display:block"></span></span></span>
+  </div>
+
+  <div style="flex:none;background:#0d1b35;padding:8px 14px 15px">
+    <div style="display:flex;align-items:center;gap:11px">
+      <div style="width:38px;height:38px;flex:none;display:grid;place-items:center;border-radius:999px;background:rgba(255,255,255,.12)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="color:#fff"><path d="M19 12H5M12 19l-7-7 7-7"></path></svg></div>
+      <div style="flex:1;min-width:0">
+        <div style="font:700 15.5px/1.15 -apple-system,Arial;color:#fff">Nueva cotizacion</div>
+        <div style="font:400 11px/1.3 -apple-system,Arial;color:rgba(255,255,255,.6);margin-top:2px">Paso 1 de 3 · Cliente y vehiculo</div>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:5px;margin-top:14px">
+      <span style="flex:1;height:5px;border-radius:999px;background:#60a5fa"></span>
+      <span style="flex:1;height:5px;border-radius:999px;background:rgba(255,255,255,.18)"></span>
+      <span style="flex:1;height:5px;border-radius:999px;background:rgba(255,255,255,.18)"></span>
+    </div>
+  </div>
+
+  <div style="flex:1;min-height:0;padding:13px 14px 0;display:flex;flex-direction:column;gap:11px;overflow:hidden">
+    <div style="flex:none;background:#fff;border-radius:16px;padding:13px 15px">
+      <div style="font:700 9.5px/1 -apple-system,Arial;letter-spacing:.9px;color:#334155;margin-bottom:8px">CEDULA / NIT</div>
+      <div style="height:52px;display:flex;align-items:center;gap:9px;padding:0 14px;background:#fff;border:1.5px solid #1D4ED8;border-radius:13px"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="color:#1D4ED8;flex:none"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg><span style="font:400 15px/1 -apple-system,Arial;color:#b0bac6">Buscar por documento...</span></div>
+      <div style="font:400 11.5px/1.4 -apple-system,Arial;color:#475569;margin-top:8px">Con el documento se llenan nombre, telefono y los datos del vehiculo.</div>
+    </div>
+
+    <div style="flex:none;background:#fff;border-radius:16px;padding:13px 15px;display:flex;flex-direction:column;gap:11px">
+      <div>
+        <div style="font:700 9.5px/1 -apple-system,Arial;letter-spacing:.9px;color:#334155;margin-bottom:8px">NOMBRE DEL CLIENTE</div>
+        <div style="height:48px;display:flex;align-items:center;padding:0 14px;background:#f8fafc;border:1px solid #dfe5ec;border-radius:13px;font:400 14.5px/1 -apple-system,Arial;color:#b0bac6">Nombre completo</div>
+      </div>
+      <div style="display:flex;gap:9px">
+        <div style="flex:1;min-width:0">
+          <div style="font:700 9.5px/1 -apple-system,Arial;letter-spacing:.9px;color:#475569;margin-bottom:8px">TELEFONO</div>
+          <div style="height:48px;display:flex;align-items:center;padding:0 14px;background:#f8fafc;border:1px solid #dfe5ec;border-radius:13px;font:400 14.5px/1 -apple-system,Arial;color:#b0bac6">300...</div>
+        </div>
+        <div style="width:132px;flex:none">
+          <div style="font:700 9.5px/1 -apple-system,Arial;letter-spacing:.9px;color:#334155;margin-bottom:8px">PLACA</div>
+          <div style="height:48px;display:flex;align-items:center;padding:0 13px;background:#fff;border:1.5px solid #d7dee7;border-radius:13px;font:700 17px/1 ui-monospace,SFMono-Regular,Menlo,monospace;color:#b0bac6;letter-spacing:.5px">ABC123</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:9px">
+        <div style="flex:1;min-width:0">
+          <div style="font:700 9.5px/1 -apple-system,Arial;letter-spacing:.9px;color:#334155;margin-bottom:8px">MARCA</div>
+          <div style="height:48px;display:flex;align-items:center;justify-content:space-between;gap:6px;padding:0 13px;background:#f8fafc;border:1px solid #dfe5ec;border-radius:13px"><span style="font:400 14px/1 -apple-system,Arial;color:#b0bac6;white-space:nowrap;overflow:hidden">Seleccionar...</span><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="color:#64748b;flex:none"><path d="m6 9 6 6 6-6"></path></svg></div>
+        </div>
+        <div style="width:96px;flex:none">
+          <div style="font:700 9.5px/1 -apple-system,Arial;letter-spacing:.9px;color:#475569;margin-bottom:8px">AÑO</div>
+          <div style="height:48px;display:flex;align-items:center;padding:0 13px;background:#f8fafc;border:1px solid #dfe5ec;border-radius:13px;font:400 14.5px/1 -apple-system,Arial;color:#334155">2024</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:9px">
+        <div style="flex:1;min-width:0">
+          <div style="font:700 9.5px/1 -apple-system,Arial;letter-spacing:.9px;color:#334155;margin-bottom:8px">MODELO</div>
+          <div style="height:48px;display:flex;align-items:center;justify-content:space-between;gap:6px;padding:0 13px;background:#f8fafc;border:1px solid #dfe5ec;border-radius:13px"><span style="font:400 14px/1 -apple-system,Arial;color:#b0bac6;white-space:nowrap;overflow:hidden">Seleccionar...</span><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="color:#64748b;flex:none"><path d="m6 9 6 6 6-6"></path></svg></div>
+        </div>
+        <div style="width:132px;flex:none">
+          <div style="font:700 9.5px/1 -apple-system,Arial;letter-spacing:.9px;color:#475569;margin-bottom:8px">CILINDRAJE</div>
+          <div style="height:48px;display:flex;align-items:center;padding:0 13px;background:#f8fafc;border:1px solid #dfe5ec;border-radius:13px;font:400 14px/1 -apple-system,Arial;color:#b0bac6;white-space:nowrap;overflow:hidden">1600, 2000</div>
+        </div>
+      </div>
+    </div>
+
+    <div style="flex:none;display:flex;align-items:center;gap:10px;height:46px;padding:0 15px;background:#fff;border-radius:14px">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" style="color:#94a3b8;flex:none"><path d="m9 18 6-6-6-6"></path></svg>
+      <span style="flex:1;font:600 13.5px/1 -apple-system,Arial;color:#334155">Observaciones y validez</span>
+      <span style="font:400 12px/1 -apple-system,Arial;color:#64748b;white-space:nowrap">15 dias</span>
+    </div>
+  </div>
+
+  <div style="flex:none;padding:11px 14px 14px;display:flex;align-items:center;gap:8px">
+    <span style="flex:none;height:48px;display:flex;align-items:center;padding:0 17px;border-radius:13px;background:#fff;font:700 13.5px/1 -apple-system,Arial;color:#334155">Cancelar</span>
+    <span style="flex:1;height:48px;display:flex;align-items:center;justify-content:center;gap:8px;border-radius:13px;background:#1D4ED8;font:700 14.5px/1 -apple-system,Arial;color:#fff;white-space:nowrap">Siguiente: Items<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"></path></svg></span>
   </div>
 </div>
 </div>
@@ -303,7 +480,7 @@ class Component extends DCLogic {
       ...this.railUI(),
       rail: this.rail(),
       filas,
-      filasMovil: filas.slice(0, 5),
+      filasMovil: filas.slice(0, 4),
       filtros: [t('Todas 14', 'Todas', true), t('Pendientes 7', 'Pend. 7', false), t('Aprobadas 6', 'Aprob. 6', false), t('Facturadas 1', 'Fact. 1', false)]
     };
   }
