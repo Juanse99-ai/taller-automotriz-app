@@ -174,6 +174,31 @@ function leerPagosIniciados() {
   } catch { return {} }
 }
 
+/* El cliente entra a ver si su carro esta listo, no a leer su historial:
+   con 23 servicios el estado del vehiculo activo quedaba enterrado bajo unos
+   2.000px de filas casi identicas (solo cambia el codigo de OT), contra los
+   ~200px que ocupa la tarjeta de avance. Se ven los 3 mas recientes y el resto
+   queda tras una fila que dice CUANTOS hay dentro, no solo "ver mas": el
+   handoff solo permite colapsar con el contador a la vista.
+   Va como componente porque hay dos historiales — el plano del cliente normal
+   y el agrupado por vehiculo de una flota — y cada uno necesita su estado. */
+const HIST_VISIBLES = 3
+function HistorialLista({ trabajos, fila }) {
+  const [todo, setTodo] = useState(false)
+  const resto = trabajos.length - HIST_VISIBLES
+  return (
+    <>
+      <div className="pc-servs">{(todo ? trabajos : trabajos.slice(0, HIST_VISIBLES)).map(fila)}</div>
+      {resto > 0 && (
+        <button type="button" className="pc-mas" aria-expanded={todo} onClick={() => setTodo(v => !v)}>
+          <span>{todo ? `Ver solo los ${HIST_VISIBLES} últimos` : `Ver los ${resto} anteriores`}</span>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d={todo ? 'm18 15-6-6-6 6' : 'm9 18 6-6-6-6'} /></svg>
+        </button>
+      )}
+    </>
+  )
+}
+
 export default function PortalCliente() {
   // Leer ?c=<cedula> de la URL al montar (link prellenado para el cliente)
   const urlParams = new URLSearchParams(window.location.search)
@@ -1172,7 +1197,7 @@ export default function PortalCliente() {
                     <span style={{fontSize:13,color:'var(--text-3)'}}>{[v.marca,v.modelo].filter(Boolean).join(' ')}</span>
                     <span style={{fontSize:12.5,color:'var(--text-4)',marginLeft:'auto'}}>{v.trabajos.length} {v.trabajos.length===1?'servicio':'servicios'}</span>
                   </div>
-                  <div className="pc-servs">{v.trabajos.map(t => filaHist(t, true))}</div>
+                  <HistorialLista trabajos={v.trabajos} fila={t => filaHist(t, true)} />
                 </div>
               ))}
             </div>
@@ -1181,7 +1206,7 @@ export default function PortalCliente() {
           <div className="card portal-full">
             <div className="card__h"><h3>Historial de servicios</h3><span className="count">{datos.trabajos.length}</span></div>
             <div className="card__b card__b--flush">
-              <div className="pc-servs">{datos.trabajos.map(t => filaHist(t, false))}</div>
+              <HistorialLista trabajos={datos.trabajos} fila={t => filaHist(t, false)} />
             </div>
           </div>
         )

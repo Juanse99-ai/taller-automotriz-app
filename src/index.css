@@ -3209,3 +3209,16 @@ tbody tr:active{background:var(--fill-2)}
 .trab-drop > svg{position:absolute;right:12px;top:50%;margin-top:-6.5px;
   width:13px;height:13px;flex:none;pointer-events:none;
   color:var(--text-4);stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round}
+
+/* Fila de resumen del historial del Portal. Los valores son los de la fila
+   equivalente del mockup (radius 11, #f8fafc, 12.5px/600), pero con 44px de
+   alto en vez de 40: el Portal se usa de pie desde un enlace de WhatsApp y
+   el minimo tactil del handoff manda sobre el valor dibujado. */
+.pc-mas{display:flex;align-items:center;gap:8px;width:auto;
+  min-height:44px;margin:8px 0 0;padding:0 12px;border:0;border-radius:11px;
+  background:var(--bg-subtle);color:var(--text-2);
+  font-family:inherit;font-size:12.5px;font-weight:600;text-align:left;cursor:pointer}
+.pc-mas > span{flex:1;min-width:0}
+.pc-mas > svg{width:14px;height:14px;flex:none;color:var(--text-5);
+  stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round}
+.card__b--flush .pc-mas{margin:8px 14px 14px}
