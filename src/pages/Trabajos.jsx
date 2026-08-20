@@ -922,6 +922,12 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
            textos siguen ahi, solo pierden el icono de 40px. */
         <div className="hd-void">
           <p className="hd-void__t" style={{ margin: 0 }}>{trabajos.length === 0 ? 'No hay trabajos registrados' : 'No hay trabajos con estos filtros'}</p>
+          {/* EXCEPCION DELIBERADA a la regla del handoff ("los vacios son
+              etiquetas secas, sin texto explicativo"). Aqui no es un vacio:
+              la vista abre en Activos + Hoy, asi que un taller con 163
+              trabajos ve 0 y parece que se borraron. La linea dice por que.
+              Decidido por el dueño el 2026-08-20. No quitarla citando la
+              regla general: esta es la excepcion que el aprobo. */}
           <p className="hd-void__s" style={{ margin: 0 }}>{trabajos.length === 0 ? 'Crea una nueva OT para comenzar.' : 'Prueba cambiar el filtro de fecha (Hoy / Semana / Todas) o el estado.'}</p>
         </div>
       ) : isWide ? (
