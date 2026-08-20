@@ -1623,7 +1623,7 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
       <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 28, flexWrap: 'wrap', padding: '4px 2px 20px', borderBottom: '1px solid var(--border)', marginBottom: 24 }}>
         <div style={{ minWidth: 0 }}>
           <div className="eyebrow">Total a pagar · cierre actual</div>
-          <div className="mono" style={{ fontWeight: 800, fontSize: 'clamp(40px, 7vw, 58px)', letterSpacing: '-.03em', lineHeight: 1.02, color: 'var(--green-700)', margin: '7px 0 8px' }}>
+          <div className="mono" style={{ fontWeight: 800, fontSize: 27, letterSpacing: '-.01em', lineHeight: 1.05, color: 'var(--text)', margin: '6px 0 8px' }}>
             {fmt(totalNomina)}
           </div>
           <div style={{ fontSize: 13.5, color: 'var(--text-3)' }}>

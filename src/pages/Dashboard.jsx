@@ -354,7 +354,9 @@ export default function Dashboard({ trabajos = [], onNavigate, user }) {
   .dsh-kpi:not(.dsh-kpi--a) .dsh-kpi__ic{display:none}
   .dsh-kpi__l{font-size:10px;letter-spacing:.6px;line-height:1.25;white-space:normal}
   .dsh-alert__s{white-space:normal;flex:1 1 100%}
-  .dsh-chart{height:220px;gap:4px;padding:0 14px 14px}
+  /* La grafica es contexto, no la razon por la que se abre el dashboard en
+     el celular: nueve de los doce meses estan en cero. */
+  .dsh-chart{height:160px;gap:4px;padding:0 14px 14px}
   .dsh-chart__x{font-size:8px;letter-spacing:.3px}
   .dsh-alert__a,.dsh-link,.dsh-pr__ico,.dsh-navy__btn{min-height:var(--tap)}
   .dsh-pr__ico{min-width:var(--tap)}

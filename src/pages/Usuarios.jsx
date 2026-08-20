@@ -264,12 +264,12 @@ export default function Usuarios({ notify, currentUser }) {
           <span className="ec-form__hs">el usuario y la contraseña se entregan a la persona</span>
         </div>
         <div className="ec-form__r">
-          <div className="ec-form__c" style={{ flex: 1, minWidth: 170 }}>
+          <div className="ec-form__c" style={{ flex: 1, minWidth: 150 }}>
             <div className="ec-form__l">NOMBRE COMPLETO <span className="req">*</span></div>
             <input className="usr-new__acc" value={nuevo.nombre} placeholder="ej: Jefe de Patio"
               onChange={e => setNuevo(n => ({ ...n, nombre: e.target.value }))} />
           </div>
-          <div className="ec-form__c" style={{ width: 190, flex: 'none' }}>
+          <div className="ec-form__c" style={{ flex: 1, minWidth: 150 }}>
             <div className="ec-form__l">USUARIO <span className="req">*</span></div>
             <div className="usr-new__u">
               <input className="usr-new__ui" value={nuevo.auto ? usuarioDeNombre(nuevo.nombre) : nuevo.usuario}
@@ -278,14 +278,14 @@ export default function Usuarios({ notify, currentUser }) {
               {nuevo.auto && nuevo.nombre.trim() && <span className="hd-chip hd-chip--ok">DEL NOMBRE</span>}
             </div>
           </div>
-          <div className="ec-form__c" style={{ width: 200, flex: 'none' }}>
+          <div className="ec-form__c" style={{ width: 160, flex: 'none' }}>
             <div className="ec-form__l">ROL</div>
             <select className="hd-drop" style={{ width: '100%' }} value={nuevo.rol}
               onChange={e => setNuevo(n => ({ ...n, rol: e.target.value }))}>
               {ROLES.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
             </select>
           </div>
-          <div className="ec-form__c" style={{ width: 190, flex: 'none' }}>
+          <div className="ec-form__c" style={{ width: 200, flex: 'none' }}>
             <div className="ec-form__l">CONTRASEÑA <span className="req">*</span></div>
             <div className="usr-new__u">
               <input className="usr-new__ui" type={showPassN ? 'text' : 'password'} value={nuevo.password}

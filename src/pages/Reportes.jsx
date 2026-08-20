@@ -691,7 +691,7 @@ export default function Reportes({ trabajos, loading = false, notify }) {
                     <tr key={i}>
                       <td className="c-name" title={r.nombre}>{r.nombre}{r.sospechoso && <span className="badge badge-w" title="El nombre suena a mano de obra: puede estar mal marcado como repuesto (revísalo en la OT)." style={{ marginLeft: 8, fontSize: 10.5, verticalAlign: 'middle' }}>¿servicio?</span>}</td>
                       <td className="c-mono c-right" data-label="Cant." style={{ fontWeight: 700 }}>{r.cantidad}</td>
-                      <td className="c-mono c-right" data-label="Ingresos" style={{ fontWeight: 700, color: 'var(--green-600)' }}>{fmt(r.ingresos)}</td>
+                      <td className="c-mono c-right" data-label="Ingresos" style={{ fontWeight: 400, color: 'var(--text-3)' }}>{fmt(r.ingresos)}</td>
                       <td className="td-bar"><div style={{ height: 6, background: 'var(--bg-subtle)', borderRadius: 3, overflow: 'hidden', border: '1px solid var(--border)' }}><div style={{ width: `${pct}%`, height: '100%', background: 'var(--blue-500)' }} /></div></td>
                     </tr>
                   )
@@ -723,7 +723,7 @@ export default function Reportes({ trabajos, loading = false, notify }) {
                       <span style={{fontWeight:600}}>{t.nombre}{t.inactivo && <span className="aviso-ambar" style={{marginLeft:6,fontSize:11,fontWeight:600}}>· Inactivo</span>}</span>
                     </div></td>
                     <td className="c-mono c-right" data-label="Trabajos" style={{fontWeight:700}}>{t.cantidad}</td>
-                    <td className="c-mono c-right" data-label="Mano de obra" style={{fontWeight:700,color:t.facturado>0?'var(--green-600)':'var(--text-3)'}}>{fmt(t.facturado)}</td>
+                    <td className="c-mono c-right" data-label="Mano de obra" style={{fontWeight:400,color:'var(--text-3)'}}>{fmt(t.facturado)}</td>
                     <td className="td-bar">
                       <div style={{height:6,background:'var(--bg-subtle)',borderRadius:3,overflow:'hidden',border:'1px solid var(--border)'}}>
                         <div style={{width:`${pct}%`,height:'100%',background:'var(--blue-500)'}}/>
@@ -796,7 +796,7 @@ export default function Reportes({ trabajos, loading = false, notify }) {
                     <tr key={i}>
                       <td className="c-name"><div style={{display:'flex',alignItems:'center',gap:10}}><span className={`av av-${(i%5)+1}`}>{c.nombre.split(' ').map(x=>x[0]).slice(0,2).join('').toUpperCase()}</span><span style={{fontWeight:600}}>{c.nombre}{c.mostrador && <span style={{marginLeft:6,fontSize:11,fontWeight:600,color:'var(--text-3)'}}>· Mostrador</span>}</span></div></td>
                       <td className="c-mono c-right" data-label="OTs" style={{fontWeight:700}}>{c.ots}</td>
-                      <td className="c-mono c-right" data-label="Facturado" style={{fontWeight:700,color:'var(--green-600)'}}>{fmt(c.total)}</td>
+                      <td className="c-mono c-right" data-label="Facturado" style={{fontWeight:700,color:'var(--text)'}}>{fmt(c.total)}</td>
                       <td className="td-bar">
                         <div style={{height:6,background:'var(--bg-subtle)',borderRadius:3,overflow:'hidden',border:'1px solid var(--border)'}}>
                           <div style={{width:`${pct}%`,height:'100%',background:'var(--blue-500)'}}/>

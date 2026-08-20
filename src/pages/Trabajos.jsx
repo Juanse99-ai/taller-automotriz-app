@@ -282,7 +282,7 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
   const [filtroBusqueda, setFiltroBusqueda] = useState('')
   // Filtro de fecha de la LISTA (el kanban siempre muestra todo el trabajo activo).
   // Por defecto 'hoy' → al abrir Trabajos solo se ven las OT del día.
-  const [filtroFecha, setFiltroFecha] = useState(() => lsGet('mda:trab_fecha', 'hoy'))
+  const [filtroFecha, setFiltroFecha] = useState(() => lsGet('mda:trab_fecha', 'todas'))
   useEffect(() => {
     lsSet('mda:trab_estado', filtroEstado); lsSet('mda:trab_tecnico', filtroTecnico); lsSet('mda:trab_fecha', filtroFecha)
   }, [filtroEstado, filtroTecnico, filtroFecha])

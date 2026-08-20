@@ -3155,7 +3155,8 @@ tbody tr:active{background:var(--fill-2)}
   .usr__a{width:100%;order:6;justify-content:flex-start}
   .usr__acc,.usr__edit{height:var(--tap);min-height:var(--tap)}
   .usr__edit{width:var(--tap)}
-  .usr__acc{flex:1;justify-content:center}
+  /* Desactivar es raro y destructivo: va al lado de editar, no a lo ancho. */
+  .usr__acc{flex:none;justify-content:center;padding:0 16px}
   .usr-new .ec-form__c{flex:1 1 100% !important;width:auto !important}
   .usr-new .ec-form__go{width:100%}
 }
@@ -3197,3 +3198,14 @@ tbody tr:active{background:var(--fill-2)}
   .ec-form__r .ec-form__c{width:auto!important;min-width:0!important;flex:none!important}
   .ec-form__go{width:100%;height:52px}
 }
+
+/* Chevron del filtro de tecnico en Trabajos.
+   .trab-drop no tenia ni una regla: un <svg viewBox="0 0 24 24"> sin ancho
+   ni alto declarados cae al tamano por defecto de un SVG reemplazado,
+   300x150px, con el trazo heredando el color del texto. Eso es la mancha
+   negra que salia flotando en el movil. */
+.trab-drop{position:relative;display:inline-flex;align-items:center;flex:none}
+.trab-drop .hd-drop{padding-right:32px;appearance:none;-webkit-appearance:none}
+.trab-drop > svg{position:absolute;right:12px;top:50%;margin-top:-6.5px;
+  width:13px;height:13px;flex:none;pointer-events:none;
+  color:var(--text-4);stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round}
