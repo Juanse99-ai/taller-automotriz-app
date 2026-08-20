@@ -186,7 +186,7 @@ export default function TopBar({ title, subtitle, onToggleSidebar, sidebarOpen, 
             onChange={e => handleSearch(e.target.value)}
             onFocus={() => { if (results.length) setShowResults(true) }}
             onKeyDown={e => { if (e.key === 'Enter' && results.length) { e.preventDefault(); selectResult(results[0]) } }}
-            placeholder="Buscar placa, cliente, OT..."
+            placeholder="Ir a una OT, placa o cliente..."
           />
           {showResults && (
             <div style={{ position: 'absolute', top: 'calc(100% + 6px)', left: 0, right: 0, background: 'var(--bg-raised)', border: '1px solid var(--border)', borderRadius: 10, boxShadow: 'var(--shadow-md)', maxHeight: 320, overflowY: 'auto', zIndex: 100 }}>

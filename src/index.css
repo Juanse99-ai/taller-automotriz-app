@@ -3222,3 +3222,15 @@ tbody tr:active{background:var(--fill-2)}
 .pc-mas > svg{width:14px;height:14px;flex:none;color:var(--text-5);
   stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round}
 .card__b--flush .pc-mas{margin:8px 14px 14px}
+
+/* Contadores de la barra de titulo: rotulo largo en escritorio, corto en el
+   celular. Con los cuatro completos caian en tres lineas (60px de alto). */
+.hd-cnt--corto{display:none}
+@media (max-width:960px){
+  .hd-cnts{gap:14px !important}
+  .hd-cnt--largo{display:none}
+  .hd-cnt--corto{display:inline}
+  /* Las 9 pestanas de estado suman 851px: con overflow-x cinco quedaban fuera
+     de vista y nada avisaba de que existian. Envuelven en vez de esconderse. */
+  .hd-tabs{flex-wrap:wrap;overflow-x:visible;row-gap:0}
+}

@@ -761,18 +761,23 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
             <h1>Órdenes de trabajo</h1>
             <span style={{ fontSize: 12, lineHeight: 1, color: 'var(--text-4)' }}>Gestión de órdenes de trabajo</span>
           </div>
-          <div className="hd-head__sub" style={{ display: 'flex', alignItems: 'baseline', gap: 18, flexWrap: 'wrap', marginTop: 8 }}>
+          {/* En el celular los cuatro rotulos completos caian en tres lineas.
+              El mockup los abrevia para que entren en una: se pintan los dos
+              y el CSS elige, en vez de medir el ancho en JS. */}
+          <div className="hd-head__sub hd-cnts" style={{ display: 'flex', alignItems: 'baseline', gap: 18, flexWrap: 'wrap', marginTop: 8 }}>
             {[
-              ['En vista', stats.total, 'var(--text)'],
-              ['Completados', stats.comp, 'var(--ok-fg)'],
-              ['Pendientes', stats.pend, 'var(--text-3)'],
-              ['En progreso', stats.prog, 'var(--text-3)'],
-            ].map(([l, v, c], i) => (
+              ['En vista', 'En vista', stats.total, 'var(--text)'],
+              ['Completados', 'Compl.', stats.comp, 'var(--ok-fg)'],
+              ['Pendientes', 'Pend.', stats.pend, 'var(--text-3)'],
+              ['En progreso', 'En progreso', stats.prog, 'var(--text-3)'],
+            ].map(([l, corto, v, c], i) => (
               <Fragment key={l}>
                 {/* Un solo divisor: separa "cuantas veo" de "como estan" */}
                 {i === 1 && <span style={{ width: 1, height: 12, background: 'var(--border-strong)' }} />}
                 <span style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
-                  <span style={{ fontSize: 9.5, fontWeight: 700, letterSpacing: '.8px', textTransform: 'uppercase', color: 'var(--text-4)' }}>{l}</span>
+                  <span style={{ fontSize: 9.5, fontWeight: 700, letterSpacing: '.8px', textTransform: 'uppercase', color: 'var(--text-4)' }}>
+                    <span className="hd-cnt--largo">{l}</span><span className="hd-cnt--corto">{corto}</span>
+                  </span>
                   <span className="hd-n" style={{ fontSize: 15, fontWeight: 700, color: v === 0 ? 'var(--text-4)' : c }}>{v}</span>
                 </span>
               </Fragment>
