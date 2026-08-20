@@ -3023,7 +3023,7 @@ tbody tr:active{background:var(--fill-2)}
   background:var(--warn-bg-2);border:1px solid var(--group-line);border-radius:var(--radius-card);
   font-size:12.5px;font-weight:600;color:var(--warn-fg)}
 
-.rep-band{display:flex;align-items:stretch;gap:24px;padding:16px 20px;margin-top:10px;flex-wrap:wrap}
+.rep-band{display:flex;flex-direction:row;align-items:stretch;gap:24px;padding:16px 20px;margin-top:10px;flex-wrap:wrap}
 .rep-band__div{width:1px;flex:none;background:var(--head-line)}
 .rep-band__c{flex:none}
 .rep-band__c--margen{flex:1;min-width:260px}
@@ -3160,4 +3160,28 @@ tbody tr:active{background:var(--fill-2)}
 @media (prefers-reduced-motion: reduce){
   .sidebar,.main{transition:none}
   .sidebar .navlink span{animation:none}
+}
+
+/* ============================================================
+   Primitivas COMPARTIDAS de formulario y rótulo
+   ------------------------------------------------------------
+   Nacieron en Estado de cuenta pero las usan tambien Reportes
+   (DESDE/HASTA, rotulos de la banda, titulo de seccion) y
+   Usuarios (la fila de alta). Al reescribir el bloque de Estado
+   de cuenta se borraron y las dos pantallas se apilaron con el
+   titulo pegado a la ayuda. Viven aqui, fuera de esa seccion,
+   para que no vuelva a pasar.
+   ============================================================ */
+.ec-form__h{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+.ec-form__hs{font-size:11.5px;line-height:1.3;color:var(--text-4)}
+.ec-form__r{display:flex;align-items:flex-end;gap:10px;flex-wrap:wrap}
+.ec-form__l{font-size:9.5px;line-height:1;font-weight:700;letter-spacing:.9px;
+  color:var(--text-2);margin-bottom:6px;display:block}
+.ec-band__gl{font-size:9.5px;line-height:1;font-weight:700;letter-spacing:.7px;
+  color:var(--text-4);white-space:nowrap}
+.ec-aside__t{font-size:13.5px;line-height:1;font-weight:700;color:var(--text)}
+@media (max-width:900px){
+  .ec-form__r{flex-direction:column;align-items:stretch;gap:13px}
+  .ec-form__r .ec-form__c{width:auto!important;min-width:0!important;flex:none!important}
+  .ec-form__go{width:100%;height:52px}
 }

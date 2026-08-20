@@ -723,7 +723,7 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
           <span className={`av av-${(parseInt(t.tecnicoId) || 1) % 5 + 1}`} title={tecNombre(t.tecnicoId)}>{tecIniciales(t.tecnicoId)}</span>
           {/* El codigo de OT no cabe arriba (ahi manda la placa) pero no se
               pierde: acompaña a los dias, que es como se nombra la orden. */}
-          <span className="kb-card__dias">{t.otCodigo ? `${t.otCodigo} · ` : ''}{dias === 0 ? 'hoy' : `${dias}d`}</span>
+          <span className="kb-card__dias" title={t.otCodigo || ''}>{dias === 0 ? 'hoy' : dias === 1 ? '1 día aquí' : `${dias} días aquí`}</span>
           <span className="kb-card__total">{fmt(t.total)}</span>
         </div>
         {siguiente && (

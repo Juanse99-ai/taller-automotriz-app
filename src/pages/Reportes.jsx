@@ -65,7 +65,7 @@ export default function Reportes({ trabajos, loading = false, notify }) {
   // que Juan dejó configurado (persiste en localStorage).
   const [colapso, setColapso] = useState(() => {
     try { const raw = localStorage.getItem(COLAPSO_KEY); if (raw) return JSON.parse(raw) } catch { /* default */ }
-    return Object.fromEntries(SECCIONES.map(k => [k, true]))
+    return Object.fromEntries(SECCIONES.map(k => [k, k !== 'repuestos' && k !== 'equipo']))
   })
   useEffect(() => {
     try { localStorage.setItem(COLAPSO_KEY, JSON.stringify(colapso)) } catch { /* quota */ }
