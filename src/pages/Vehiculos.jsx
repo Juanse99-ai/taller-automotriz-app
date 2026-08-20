@@ -289,6 +289,14 @@ export default function Vehiculos({ vehiculos, clientes, trabajos = [], notify }
            no caben: la tabla scrollea DENTRO de su tarjeta, nunca empuja la
            pagina de lado (min-width:0 es lo que impide que estire la tarjeta). */
         .veh-scroll{min-width:0;overflow-x:auto;-webkit-overflow-scrolling:touch}
+        /* ...pero eso no pasaba: sin un min-width la tabla se encoge hasta caber
+           en el envoltorio en vez de desbordarlo, y table-layout:fixed reparte
+           primero las columnas CON ancho declarado. A PROPIETARIO, la unica sin
+           ancho pactado, no le quedaba nada. Medido: a 601px daba 0px — el
+           nombre del dueno desaparecia de la pantalla — y a 700px, 68px.
+           860 = los 602 fijos + 258, que es lo que ocupa a 12.5px/600 el nombre
+           mas largo de la base ("DALGYS PATRICIA ARENAS BUSTAMANTE"). */
+        @media (min-width:601px){ .veh-scroll .tbl{min-width:860px} }
 
         /* La placa es un codigo: monoespaciada en las dos vistas. */
         .tbl.tbl-cards--veh tbody td.td-placa{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
