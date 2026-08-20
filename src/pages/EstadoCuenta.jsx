@@ -273,12 +273,94 @@ export default function EstadoCuenta({ prestamos, tecnicos, notify, tabs = null,
   const movsSel = cuentaSel ? conSaldo(cuentaSel.movs) : []
   const dias = diasMasAntiguo(cuentaSel)
 
+  // Abonos elegibles que aun no se registraron como gasto en Cuentti.
+  const sinCuentti = movsSel.filter(m => m.tipo === 'abono' && !cuentaSel?.tecnicoId && !!cedulaDeCuenta(cuentaSel) && !gastoDone[m.id]).length
+  const esHoy = form.fecha === hoyISO()
+  const personaEnUso = form.personaSel === '__otra' ? form.personaOtra : form.personaSel
+  const iniciales = (n) => (n || '?').split(' ').map(x => x[0]).slice(0, 2).join('')
+  const idxAv = Math.max(0, cuentas.findIndex(c => mismaPersona(c.persona, personaEnUso)))
+
+  // La fila de captura: vive dentro de la tarjeta de la cuenta y arrastra la
+  // persona elegida, asi que registrar no obliga a bajar la vista ni a repetir
+  // de quien es la plata.
+  const filaRegistro = (
+    <>
+      <div className="ec-cta__form">
+        <div className="ec-cta__c ec-cta__c--tipo">
+          <div className="ec-cta__l">TIPO</div>
+          <div className="hd-seg">
+            <button type="button" className={`hd-seg__i${form.tipo === 'prestamo' ? ' on' : ''}`} onClick={() => setForm(f => ({ ...f, tipo: 'prestamo' }))}>Préstamo</button>
+            <button type="button" className={`hd-seg__i${form.tipo === 'abono' ? ' on ec-seg--abono' : ''}`} onClick={() => setForm(f => ({ ...f, tipo: 'abono' }))}>Abono</button>
+          </div>
+        </div>
+        <div className="ec-cta__c ec-cta__c--persona">
+          <div className="ec-cta__l">PERSONA</div>
+          <div className="ec-cta__pers">
+            {personaEnUso && <span className={`av av-${(idxAv % 5) + 1} ec-cta__av`}>{iniciales(personaEnUso)}</span>}
+            <select className="hd-drop" value={form.personaSel} onChange={e => { const v = e.target.value; setForm(f => ({ ...f, personaSel: v })); if (v && v !== '__otra') setSel(v) }}>
+              <option value="">Seleccionar…</option>
+              {tecnicos.filter(t => !t.eliminado).map(t => <option key={t.id} value={t.nombre}>{t.nombre}</option>)}
+              {PERSONAS_CUENTA.map(p => <option key={p.nombre} value={p.nombre}>{p.nombre}{p.rol ? ` (${p.rol})` : ''}</option>)}
+              <option value="__otra">Otra persona (tercero)…</option>
+            </select>
+          </div>
+        </div>
+        {form.personaSel === '__otra' && (
+          <div className="ec-cta__c ec-cta__c--persona">
+            <div className="ec-cta__l">NOMBRE</div>
+            <input className="hd-drop" value={form.personaOtra} onChange={e => setForm(f => ({ ...f, personaOtra: e.target.value }))} placeholder="Ej. proveedor, tercero…" />
+          </div>
+        )}
+        <div className="ec-cta__c ec-cta__c--monto">
+          <div className="ec-cta__l">MONTO <span className="req">*</span></div>
+          <MoneyInput value={form.monto} onChange={v => setForm(f => ({ ...f, monto: v, valorDia: '', dias: '' }))} placeholder="0" className="ec-monto" />
+        </div>
+        <div className="ec-cta__c ec-cta__c--fecha">
+          <div className="ec-cta__l">FECHA</div>
+          <div className="ec-cta__fecha">
+            <input className="hd-drop" type="date" value={form.fecha} onChange={e => setForm(f => ({ ...f, fecha: e.target.value }))} />
+            {esHoy && <span className="ec-hoy">HOY</span>}
+          </div>
+        </div>
+        {(() => {
+          const monto = (parseFloat(form.monto) || 0) > 0 ? Math.round(parseFloat(form.monto)) : ((parseFloat(form.valorDia) || 0) * (parseInt(form.dias) || 0))
+          return (
+            <Button variant="primary" type="button" onClick={guardar} disabled={monto <= 0} className="ec-cta__go">
+              {monto > 0 ? `Registrar ${form.tipo === 'abono' ? 'abono' : 'préstamo'} · ${fmt(monto)}` : 'Registrar'}
+            </Button>
+          )
+        })()}
+      </div>
+
+      {/* Nota y la calculadora comparten renglon: la nota se llena una de cada
+          veinte veces y le estaba quitando ancho a PERSONA. */}
+      <div className="ec-cta__pie">
+        <span className="ec-cta__l">NOTA</span>
+        <input className="hd-drop ec-cta__nota" value={form.nota} onChange={e => setForm(f => ({ ...f, nota: e.target.value }))} placeholder="opcional" />
+        {(verPorDias || (parseFloat(form.valorDia) || 0) > 0 || (parseInt(form.dias) || 0) > 0) ? (
+          <div className="ec-dias">
+            <span className="ec-cta__l">POR DÍAS</span>
+            <MoneyInput value={form.valorDia} onChange={v => setDia({ valorDia: v })} placeholder="Valor/día" style={{ width: 116 }} />
+            <span className="ec-dias__x">×</span>
+            <input className="hd-drop" type="number" min="0" value={form.dias} onChange={e => setDia({ dias: e.target.value })} placeholder="Días" style={{ width: 78 }} />
+            {(parseFloat(form.valorDia) || 0) > 0 && (parseInt(form.dias) || 0) > 0 && (
+              <span className="ec-dias__eq">= <b>{fmt((parseFloat(form.valorDia) || 0) * (parseInt(form.dias) || 0))}</b></span>
+            )}
+          </div>
+        ) : (
+          <button type="button" className="ec-dias__abrir" onClick={() => setVerPorDias(true)}>
+            <span className="ec-dias__chev">›</span> Calcular por días
+            <span className="ec-dias__hint">valor por día × días = monto</span>
+          </button>
+        )}
+      </div>
+    </>
+  )
+
   return (
     <div className="ec">
       <ConfirmDialog cfg={dlg} onClose={() => setDlg(null)} />
 
-      {/* Barra de titulo. "Por cobrar" es el numero por el que existe esta
-          pestaña, asi que sube a cifra de cabecera con su divisor. */}
       <div className="hd-head ec-head">
         <div className="hd-head__t">
           <h1>Liquidación</h1>
@@ -288,244 +370,169 @@ export default function EstadoCuenta({ prestamos, tecnicos, notify, tabs = null,
             {cortes.alDia > 0 && ` · ${cortes.alDia} al día`}
           </div>
         </div>
+        {tabs}
         <div className="hd-head__sp" />
         <div className="hd-head__right">
-          {tabs}
           <div className="ec-fig">
             <div className="ec-fig__l">POR COBRAR</div>
             <div className="ec-fig__v">{fmt(totalPorCobrar)}</div>
           </div>
           <div className="hd-head__div" />
-          {cuentaSel && <Button variant="outline" size="sm" onClick={() => exportarPDF(cuentaSel)}>PDF</Button>}
+          {cuentaSel && <Button variant="outline" size="sm" onClick={() => exportarPDF(cuentaSel)}>Estado de cuenta · MDA</Button>}
         </div>
       </div>
 
       <div className="ec-book">
-        {/* Columna de cuentas. El saldo manda: rojo si debe, verde a favor,
-            gris al dia. El nombre pesa 700 solo en quien debe. */}
+        {/* Quien debe y cuanto, sin tocar nada. */}
         <aside className={`ec-aside${cuentaSel ? ' ec-aside--sel' : ''}`}>
-          <div className="hd-card" style={{ padding: 0, overflow: 'hidden' }}>
-            <div className="ec-aside__h">
-              <span className="ec-aside__t">Cuentas</span>
-              <span className="ec-aside__n">{cuentas.length}</span>
-              <span className="hd-bar__sp" />
-              <span className="ec-aside__s">saldo a hoy</span>
+          <div className="hd-card ec-aside__card">
+            <div className="ec-aside__cab"><span className="ec-aside__cl">CUENTA</span><span className="ec-aside__cr">SALDO</span></div>
+            <div className="ec-aside__b">
+              {cuentas.map((c, i) => {
+                const on = mismaPersona(sel, c.persona)
+                const debe = c.saldo > 0, favor = c.saldo < 0
+                return (
+                  <button key={c.persona} type="button" className={`ec-row${on ? ' on' : ''}`} onClick={() => elegirCuenta(c.persona)}>
+                    <span className={`av av-${(i % 5) + 1} ec-row__av`}>{iniciales(c.persona)}</span>
+                    <span className="ec-row__b">
+                      <span className={`ec-row__n${on ? ' on' : ''}`}>{c.persona}</span>
+                      <span className="ec-row__m">
+                        {c.rol ? `${c.rol} · ` : ''}{c.movs.length ? `${c.movs.length} movimiento${c.movs.length === 1 ? '' : 's'}` : 'sin movimientos'}
+                      </span>
+                    </span>
+                    <span className="ec-row__r">
+                      <span className={`ec-row__s${debe ? ' debe' : favor ? ' favor' : ''}`}>
+                        {debe ? fmt(c.saldo) : favor ? fmt(-c.saldo) : '$ 0'}
+                      </span>
+                      <span className={`ec-row__e${debe ? ' debe' : favor ? ' favor' : ''}`}>
+                        {debe ? 'DEBE' : favor ? 'A FAVOR' : 'AL DÍA'}
+                      </span>
+                    </span>
+                  </button>
+                )
+              })}
             </div>
-            {cuentas.map((c, i) => {
-              const on = mismaPersona(sel, c.persona)
-              const debe = c.saldo > 0, favor = c.saldo < 0
-              return (
-                <button key={c.persona} type="button" className={`ec-row${on ? ' on' : ''}`} onClick={() => elegirCuenta(c.persona)}>
-                  <span className={`av av-${(i % 5) + 1} ec-row__av`}>
-                    {(c.persona || '?').split(' ').map(x => x[0]).slice(0, 2).join('')}
-                  </span>
-                  <span className="ec-row__b">
-                    <span className={`ec-row__n${debe ? ' debe' : ''}`}>{c.persona}</span>
-                    <span className="ec-row__m">{c.rol || (c.movs.length ? `${c.movs.length} movimiento${c.movs.length === 1 ? '' : 's'}` : 'sin movimientos')}</span>
-                  </span>
-                  <span className="ec-row__r">
-                    <span className={`ec-row__s${debe ? ' debe' : favor ? ' favor' : ''}`}>
-                      {debe ? fmt(c.saldo) : favor ? fmt(-c.saldo) : '$ 0'}
-                    </span>
-                    <span className={`ec-row__e${debe ? ' debe' : favor ? ' favor' : ''}`}>
-                      {debe ? 'DEBE' : favor ? 'A FAVOR' : 'AL DÍA'}
-                    </span>
-                  </span>
-                </button>
-              )
-            })}
             <div className="ec-aside__f">
-              <span>Por cobrar</span>
+              <span className="ec-aside__fl">Por cobrar · {cortes.abiertas} de {cuentas.length} cuentas</span>
               <span className="ec-aside__ft">{fmt(totalPorCobrar)}</span>
             </div>
           </div>
         </aside>
 
-        <main className={`ec-main${cuentaSel ? ' ec-main--sel' : ''}`}>
-          {!cuentaSel ? (
-            <div className="hd-card"><div className="hd-void">Elige una cuenta para ver sus movimientos</div></div>
-          ) : (
-            <>
-              {/* Banda de la cuenta: DEBE grande, y al lado los cuatro cortes.
-                  "Mas antiguo" sale de la fecha del prestamo mas viejo sin
-                  saldar; es el que dice si hay que insistir. */}
-              <div className="hd-card ec-band">
-                <button type="button" className="ec-band__back" onClick={() => setSel(null)} aria-label="Volver a las cuentas">
-                  <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5M12 19l-7-7 7-7" /></svg>
-                </button>
-                <span className={`av av-${(cuentas.findIndex(c => mismaPersona(c.persona, sel)) % 5) + 1} ec-band__av`}>
-                  {(cuentaSel.persona || '?').split(' ').map(x => x[0]).slice(0, 2).join('')}
-                </span>
-                <div className="ec-band__id">
-                  <div className="ec-band__n">{cuentaSel.persona}</div>
-                  <div className="ec-band__s">
-                    {cuentaSel.rol || (cuentaSel.tecnicoId != null ? 'Técnico' : 'Cuenta')}
-                    {abiertaDesde(cuentaSel) && ` · cuenta abierta desde ${abiertaDesde(cuentaSel)}`}
+        <main className={`ec-main${cuentaSel ? ' ec-main--sel' : ''}`} ref={detailRef}>
+          {/* LA CUENTA: una sola tarjeta con divisores, no tres tarjetas.
+              Identidad y saldo arriba; los cuatro cortes y Saldar debajo;
+              la captura al pie, dentro del mismo objeto visual. */}
+          <div className="hd-card ec-cta">
+            {cuentaSel ? (
+              <>
+                <div className="ec-cta__id">
+                  <button type="button" className="ec-cta__back" onClick={() => setSel(null)} aria-label="Volver a las cuentas">
+                    <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5M12 19l-7-7 7-7" /></svg>
+                  </button>
+                  <div className="ec-cta__idb">
+                    <div className="ec-cta__nl">
+                      <span className="ec-cta__n">{cuentaSel.persona}</span>
+                      <span className="ec-cta__rol">{cuentaSel.rol || (cuentaSel.tecnicoId != null ? 'Técnico' : 'Cuenta')}</span>
+                    </div>
+                    {abiertaDesde(cuentaSel) && <div className="ec-cta__desde">Cuenta abierta desde {abiertaDesde(cuentaSel)}</div>}
+                  </div>
+                  <div className="ec-cta__debe">
+                    <div className={`ec-cta__debe-l${cuentaSel.saldo > 0 ? ' debe' : cuentaSel.saldo < 0 ? ' favor' : ''}`}>
+                      {cuentaSel.saldo < 0 ? 'A FAVOR' : cuentaSel.saldo > 0 ? 'DEBE' : 'AL DÍA'}
+                    </div>
+                    <div className="ec-cta__debe-v">{fmt(Math.abs(cuentaSel.saldo))}</div>
                   </div>
                 </div>
-                <div className="ec-band__sp" />
-                <div className="ec-band__debe">
-                  <div className="ec-fig__l">{cuentaSel.saldo < 0 ? 'A FAVOR' : 'DEBE'}</div>
-                  <div className={`ec-band__debe-v${cuentaSel.saldo > 0 ? ' debe' : cuentaSel.saldo < 0 ? ' favor' : ''}`}>
-                    {fmt(Math.abs(cuentaSel.saldo))}
+
+                <div className="ec-cta__nums">
+                  <div className="ec-num"><div className="ec-num__l">PRESTADO</div><div className="ec-num__v">{fmt(cuentaSel.prestado)}</div></div>
+                  <div className="ec-num"><div className="ec-num__l">ABONADO</div><div className="ec-num__v ok">{fmt(cuentaSel.abonado)}</div></div>
+                  <div className="ec-num"><div className="ec-num__l">MOVS.</div><div className="ec-num__v">{cuentaSel.movs.length}</div></div>
+                  <div className={`ec-num${dias >= 30 ? ' alerta' : ''}`}>
+                    <div className="ec-num__l">MÁS ANTIGUO</div>
+                    <div className="ec-num__v">{dias > 0 ? `${dias} días` : '—'}</div>
                   </div>
+                  {cuentaSel.saldo !== 0 && (
+                    <Button variant="outline" onClick={() => saldarCuenta(cuentaSel)} className="ec-cta__saldar">Saldar la cuenta</Button>
+                  )}
                 </div>
-                <div className="hd-head__div" />
-                <div className="ec-band__grid">
-                  <div><div className="ec-band__gl">PRESTADO</div><div className="ec-band__gv">{fmt(cuentaSel.prestado)}</div></div>
-                  <div><div className="ec-band__gl">ABONADO</div><div className="ec-band__gv ok">{fmt(cuentaSel.abonado)}</div></div>
-                  <div><div className="ec-band__gl">MOVIMIENTOS</div><div className="ec-band__gv">{cuentaSel.movs.length}</div></div>
-                  <div><div className="ec-band__gl">MÁS ANTIGUO</div><div className={`ec-band__gv${dias > 0 ? ' warn' : ''}`}>{dias > 0 ? `${dias} días` : '—'}</div></div>
-                </div>
-                {cuentaSel.saldo !== 0 && (
-                  <Button variant="outline" onClick={() => saldarCuenta(cuentaSel)} className="ec-band__saldar">Saldar la cuenta</Button>
-                )}
-              </div>
-
-              {/* Movimientos, con el saldo corrido despues de cada uno. */}
-              <div className="hd-card" style={{ padding: 0, overflow: 'hidden' }}>
-                <div className="ec-movs__h">
-                  <span className="ec-aside__t">Movimientos de {cuentaSel.persona}</span>
-                  <span className="ec-aside__n">{cuentaSel.movs.length}</span>
-                </div>
-                {cuentaSel.movs.length === 0 ? (
-                  <div className="hd-void">Sin movimientos</div>
-                ) : (
-                  <>
-                    <div className="ec-movs__cab">
-                      <span style={{ width: 88 }}>FECHA</span>
-                      <span style={{ width: 92 }}>TIPO</span>
-                      <span style={{ width: 112, textAlign: 'right' }}>MONTO</span>
-                      <span style={{ flex: 1, minWidth: 0, paddingLeft: 18 }}>NOTA</span>
-                      <span style={{ width: 96, textAlign: 'right' }}>SALDO</span>
-                      <span style={{ width: 34 }} />
-                    </div>
-                    <div className="ec-movs__b">
-                      {movsSel.map(m => {
-                        const abono = m.tipo === 'abono'
-                        const puedeCuentti = abono && !cuentaSel.tecnicoId && !!cedulaDeCuenta(cuentaSel)
-                        const doc = gastoDone[m.id]
-                        return (
-                          <div key={m.id} className="ec-mov">
-                            <div className="ec-mov__r">
-                              <span className="ec-mov__f">{fmtDate(m.fecha)}</span>
-                              <span style={{ width: 92 }}>
-                                <span className={`hd-chip hd-chip--${abono ? 'ok' : 'warn'}`}>{abono ? 'ABONO' : 'PRÉSTAMO'}</span>
-                              </span>
-                              <span className={`ec-mov__m${abono ? ' ok' : ''}`}>{abono ? '− ' : '+ '}{fmt(m.monto)}</span>
-                              <span className="ec-mov__nota">{m.nota || <span className="hd-empty">—</span>}</span>
-                              <span className="ec-mov__saldo">{fmt(m.saldoCorrido)}</span>
-                              <span className="ec-mov__del">
-                                <button type="button" className="ec-del" aria-label="Eliminar movimiento" title="Eliminar" onClick={() => setDlg({
-                                  title: 'Eliminar movimiento',
-                                  lead: `${abono ? 'Abono' : 'Préstamo'} · ${fmt(m.monto)} · ${fmtDate(m.fecha)}`,
-                                  confirmLabel: 'Sí, eliminar', tone: 'danger',
-                                  onConfirm: () => eliminarMovimiento(m.id),
-                                })}><IconX /></button>
-                              </span>
-                            </div>
-                            {puedeCuentti && (
-                              <div className="ec-mov__cuentti">
-                                {doc ? (
-                                  <span className="hd-chip hd-chip--ok" title="Gasto ya registrado en Cuentti">Registrado en Cuentti · {doc}</span>
-                                ) : (
-                                  <>
-                                    <span className="ec-mov__cl">CUENTTI</span>
-                                    <div className="segctl" style={{ margin: 0 }}>
-                                      <button type="button" className={(metodoG[m.id] || 'efectivo') === 'efectivo' ? 'on' : ''} onClick={() => setMetodoG(g => ({ ...g, [m.id]: 'efectivo' }))}>Efectivo</button>
-                                      <button type="button" className={(metodoG[m.id] || 'efectivo') === 'transferencia' ? 'on' : ''} onClick={() => setMetodoG(g => ({ ...g, [m.id]: 'transferencia' }))}>Transferencia</button>
-                                    </div>
-                                    <Button variant="outline" size="sm" style={{ marginLeft: 'auto' }} disabled={gastoReg === m.id} onClick={() => pedirRegistrarGastoEC(m, cuentaSel)}>
-                                      {gastoReg === m.id ? 'Registrando…' : (gastoErr[m.id] ? 'Reintentar' : 'Registrar en Cuentti')}
-                                    </Button>
-                                  </>
-                                )}
-                              </div>
-                            )}
-                          </div>
-                        )
-                      })}
-                    </div>
-                    <div className="ec-movs__f">
-                      <span className="hd-bar__sp">{cuentaSel.movs.length} movimientos · {fmt(cuentaSel.prestado)} prestado, {fmt(cuentaSel.abonado)} abonado</span>
-                      <span className={`ec-movs__ft${cuentaSel.saldo > 0 ? ' debe' : cuentaSel.saldo < 0 ? ' favor' : ''}`}>
-                        {cuentaSel.saldo > 0 ? `Debe ${fmt(cuentaSel.saldo)}` : cuentaSel.saldo < 0 ? `A favor ${fmt(-cuentaSel.saldo)}` : 'Al día'}
-                      </span>
-                    </div>
-                  </>
-                )}
-              </div>
-            </>
-          )}
-
-          {/* Registrar movimiento: deja de pesar lo mismo que el saldo y baja al
-              pie, en una fila. El monto es el unico con borde de acento. */}
-          <div className="hd-card ec-form">
-            <div className="ec-form__h">
-              <span className="ec-aside__t">Registrar movimiento</span>
-              <span className="ec-form__hs">
-                {cuentaSel ? cuentaSel.persona : 'elige la persona'} · hoy {fmtDate(hoyISO())}
-              </span>
-            </div>
-            <div className="ec-form__r">
-              <div className="ec-form__c ec-form__c--tipo">
-                <div className="ec-form__l">TIPO</div>
-                <div className="hd-seg">
-                  <button type="button" className={`hd-seg__i${form.tipo === 'prestamo' ? ' on' : ''}`} onClick={() => setForm(f => ({ ...f, tipo: 'prestamo' }))}>Préstamo</button>
-                  <button type="button" className={`hd-seg__i${form.tipo === 'abono' ? ' on' : ''}`} onClick={() => setForm(f => ({ ...f, tipo: 'abono' }))}>Abono</button>
-                </div>
-              </div>
-              <div className="ec-form__c ec-form__c--persona">
-                <div className="ec-form__l">PERSONA</div>
-                <select className="hd-drop" value={form.personaSel} onChange={e => { const v = e.target.value; setForm(f => ({ ...f, personaSel: v })); if (v && v !== '__otra') setSel(v) }}>
-                  <option value="">Seleccionar…</option>
-                  {tecnicos.filter(t => !t.eliminado).map(t => <option key={t.id} value={t.nombre}>{t.nombre}</option>)}
-                  {PERSONAS_CUENTA.map(p => <option key={p.nombre} value={p.nombre}>{p.nombre}{p.rol ? ` (${p.rol})` : ''}</option>)}
-                  <option value="__otra">Otra persona (tercero)…</option>
-                </select>
-              </div>
-              {form.personaSel === '__otra' && (
-                <div className="ec-form__c ec-form__c--persona">
-                  <div className="ec-form__l">NOMBRE</div>
-                  <input className="hd-drop" value={form.personaOtra} onChange={e => setForm(f => ({ ...f, personaOtra: e.target.value }))} placeholder="Ej. Administrador, proveedor…" />
-                </div>
-              )}
-              <div className="ec-form__c ec-form__c--monto">
-                <div className="ec-form__l">MONTO <span className="req">*</span></div>
-                <MoneyInput value={form.monto} onChange={v => setForm(f => ({ ...f, monto: v, valorDia: '', dias: '' }))} placeholder="0" className="ec-monto" />
-              </div>
-              <div className="ec-form__c ec-form__c--fecha">
-                <div className="ec-form__l">FECHA</div>
-                <input className="hd-drop" type="date" value={form.fecha} onChange={e => setForm(f => ({ ...f, fecha: e.target.value }))} />
-              </div>
-              <div className="ec-form__c ec-form__c--nota">
-                <div className="ec-form__l">NOTA</div>
-                <input className="hd-drop" value={form.nota} onChange={e => setForm(f => ({ ...f, nota: e.target.value }))} placeholder="Concepto, referencia…" />
-              </div>
-              {(() => {
-                const hayMonto = (parseFloat(form.monto) || 0) > 0 || ((parseFloat(form.valorDia) || 0) > 0 && (parseInt(form.dias) || 0) > 0)
-                return <Button variant="primary" type="button" onClick={guardar} disabled={!hayMonto} className="ec-form__go">Registrar</Button>
-              })()}
-            </div>
-            {/* "Por dias" es una calculadora del monto, no una vista: vive aqui,
-                recogida bajo su etiqueta, y solo se abre si se usa. */}
-            {(verPorDias || (parseFloat(form.valorDia) || 0) > 0 || (parseInt(form.dias) || 0) > 0) ? (
-              <div className="ec-dias">
-                <span className="ec-form__l">POR DÍAS</span>
-                <MoneyInput value={form.valorDia} onChange={v => setDia({ valorDia: v })} placeholder="Valor/día" style={{ flex: '1 1 120px', minWidth: 0 }} />
-                <span className="ec-dias__x">×</span>
-                <input className="hd-drop" type="number" min="0" value={form.dias} onChange={e => setDia({ dias: e.target.value })} placeholder="Días" style={{ width: 90 }} />
-                {(parseFloat(form.valorDia) || 0) > 0 && (parseInt(form.dias) || 0) > 0 && (
-                  <span className="ec-dias__eq">= <b>{fmt((parseFloat(form.valorDia) || 0) * (parseInt(form.dias) || 0))}</b></span>
-                )}
-              </div>
+              </>
             ) : (
-              <button type="button" className="ec-dias__abrir" onClick={() => setVerPorDias(true)}>Calcular por días</button>
+              <div className="ec-cta__id ec-cta__id--vacia">
+                <div className="ec-cta__idb"><div className="ec-cta__nl"><span className="ec-cta__n ec-cta__n--vacio">Ninguna cuenta elegida</span></div></div>
+              </div>
+            )}
+            {filaRegistro}
+          </div>
+
+          {/* Movimientos. Cuentti dejo de ser una tira entre filas: es una
+              columna de la propia fila, asi 5 movimientos son 5 renglones. */}
+          <div className="hd-card ec-movs">
+            {!cuentaSel ? (
+              <div className="hd-void">Elige una cuenta para ver sus movimientos</div>
+            ) : cuentaSel.movs.length === 0 ? (
+              <div className="hd-void">Sin movimientos</div>
+            ) : (
+              <>
+                <div className="ec-movs__cab">
+                  <span className="ec-c-fecha">FECHA</span>
+                  <span className="ec-c-tipo">TIPO</span>
+                  <span className="ec-c-monto">MONTO</span>
+                  <span className="ec-c-saldo">SALDO</span>
+                  <span className="ec-c-nota">NOTA</span>
+                  <span className="ec-c-cuentti">CUENTTI</span>
+                  <span className="ec-c-del" />
+                </div>
+                <div className="ec-movs__b">
+                  {movsSel.map(m => {
+                    const abono = m.tipo === 'abono'
+                    const puedeCuentti = abono && !cuentaSel.tecnicoId && !!cedulaDeCuenta(cuentaSel)
+                    const doc = gastoDone[m.id]
+                    return (
+                      <div key={m.id} className="ec-mov">
+                        <span className="ec-c-fecha">{fmtDate(m.fecha)}</span>
+                        <span className="ec-c-tipo"><span className={`hd-chip hd-chip--${abono ? 'ok' : 'warn'}`}>{abono ? 'ABONO' : 'PRÉSTAMO'}</span></span>
+                        <span className={`ec-c-monto${abono ? ' ok' : ''}`}>{abono ? '− ' : '+ '}{fmt(m.monto)}</span>
+                        <span className="ec-c-saldo">{fmt(m.saldoCorrido)}</span>
+                        <span className="ec-c-nota">{m.nota || <span className="hd-empty">—</span>}</span>
+                        <span className="ec-c-cuentti">
+                          {!puedeCuentti ? <span className="hd-empty">—</span> : doc ? (
+                            <span className="hd-chip hd-chip--ok" title="Gasto ya registrado en Cuentti">Cuentti · {doc}</span>
+                          ) : (
+                            <>
+                              <span className="segctl ec-segmini">
+                                <button type="button" className={(metodoG[m.id] || 'efectivo') === 'efectivo' ? 'on' : ''} onClick={() => setMetodoG(g => ({ ...g, [m.id]: 'efectivo' }))}>Efectivo</button>
+                                <button type="button" className={(metodoG[m.id] || 'efectivo') === 'transferencia' ? 'on' : ''} onClick={() => setMetodoG(g => ({ ...g, [m.id]: 'transferencia' }))}>Transf.</button>
+                              </span>
+                              <button type="button" className="ec-cbtn" disabled={gastoReg === m.id} onClick={() => pedirRegistrarGastoEC(m, cuentaSel)}>
+                                {gastoReg === m.id ? '…' : (gastoErr[m.id] ? 'Reintentar' : 'Cuentti')}
+                              </button>
+                            </>
+                          )}
+                        </span>
+                        <span className="ec-c-del">
+                          <button type="button" className="ec-del" aria-label="Eliminar movimiento" title="Eliminar" onClick={() => setDlg({
+                            title: 'Eliminar movimiento',
+                            lead: `${abono ? 'Abono' : 'Préstamo'} · ${fmt(m.monto)} · ${fmtDate(m.fecha)}`,
+                            confirmLabel: 'Sí, eliminar', tone: 'danger',
+                            onConfirm: () => eliminarMovimiento(m.id),
+                          })}><IconX /></button>
+                        </span>
+                      </div>
+                    )
+                  })}
+                </div>
+                <div className="ec-movs__f">
+                  <span className="ec-movs__fn">{cuentaSel.movs.length} movimientos</span>
+                  <span className="ec-movs__fd">{fmt(cuentaSel.prestado)} prestado · {fmt(cuentaSel.abonado)} abonado</span>
+                  <span className="hd-bar__sp" />
+                  {sinCuentti > 0 && <span className="ec-movs__fc">{sinCuentti} {sinCuentti === 1 ? 'abono sin registrar' : 'abonos sin registrar'} en Cuentti</span>}
+                </div>
+              </>
             )}
           </div>
 
-          {/* Resumen por tecnico: no es el libro de prestamos sino lo liquidado
-              y entregado. Se conserva, recogido bajo su etiqueta y contador. */}
           {resumen}
         </main>
       </div>
