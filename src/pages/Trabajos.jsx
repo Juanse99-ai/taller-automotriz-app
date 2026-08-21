@@ -1145,7 +1145,7 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
                  reales de la pantalla; no hay nada fijo del mockup. */
               <div className="trab-detail">
                 <div className="trab-detail__h"><i /><span>Detalle</span></div>
-                <p className="trab-detail__p">Sin trabajo seleccionado. Toca una fila de la lista para verla aquí.</p>
+                <p className="trab-detail__p">Sin trabajo seleccionado</p>
                 <div className="trab-detail__div" />
                 <div className="trab-detail__l">Filtro activo</div>
                 <div className="trab-detail__chips">

@@ -818,7 +818,7 @@ export default function CuenttiPanel({ trabajos, actualizarTrabajo, notify, trab
                     ? <>
                         {trabajoFacturaSel.otCodigo || trabajoFacturaSel.id} · <span className={trabajoFacturaSel.placa ? undefined : 'hd-empty'}>{trabajoFacturaSel.placa || 'SERVICIO'}</span> · {trabajoFacturaSel.cliente || '—'} · {fmt(trabajoFacturaSel.total || 0)}
                       </>
-                    : <>Selecciona un trabajo completado para enviar la factura a Cuentti.</>}
+                    : <>Sin trabajo seleccionado</>}
                 </div>
                 {/* El filtro activo se avisa SIEMPRE, haya o no trabajo elegido.
                     Antes solo aparecía en el estado sin selección: desaparecía

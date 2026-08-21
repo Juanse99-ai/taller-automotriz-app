@@ -609,7 +609,7 @@ export default function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [
         <div className="form-grid-2" style={{ alignItems: 'stretch' }}>
         {/* CLIENTE */}
         <div className="card">
-          <div className="card__h"><h3 style={H3}>Cliente <span style={SUBT}>Se busca en Cuentti por documento</span></h3></div>
+          <div className="card__h"><h3 style={H3}>Cliente</h3></div>
           <div className="card__b" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
             <div className="field" style={{ position: 'relative' }}>
               <label>Cédula / NIT <span className="req">*</span></label>

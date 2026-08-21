@@ -273,7 +273,6 @@ export default function Usuarios({ notify, currentUser }) {
       <div className="hd-card usr-new">
         <div className="ec-form__h">
           <span className="ec-aside__t">Nuevo usuario</span>
-          <span className="ec-form__hs">el usuario y la contraseña se entregan a la persona</span>
         </div>
         <div className="ec-form__r">
           <div className="ec-form__c" style={{ flex: 1, minWidth: 150 }}>
