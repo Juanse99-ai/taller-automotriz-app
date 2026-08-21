@@ -1478,7 +1478,13 @@ tbody tr:active{background:var(--fill-2)}
   border-bottom:2px solid transparent;margin-bottom:-1px;white-space:nowrap;flex:none;
   font-size:12px;font-weight:400;color:var(--text-3);cursor:pointer;background:none}
 .hd-tab.on{border-bottom-color:var(--accent);color:var(--text);font-weight:700}
-.hd-tab__n{font-size:10px;font-weight:700;color:var(--text-3);background:var(--chip);padding:3px 5px;border-radius:var(--r-xs)}
+/* line-height:1 es lo que impide que el contador rompa la linea azul. Sin el
+   hereda el line-height:32px de .hd-tab, asi que su caja mide 32+3+3 = 38px
+   dentro de una pestana de 32: con align-items:baseline se cuelga 6px por
+   debajo y su fondo gris cruza justo por encima del borde de 2px de la pestana
+   activa, partiendolo. El arreglo ya existia en @media (max-width:960px) como
+   .hd-tab span{line-height:1}, pero el escritorio se habia quedado sin el. */
+.hd-tab__n{font-size:10px;line-height:1;font-weight:700;color:var(--text-3);background:var(--chip);padding:3px 5px;border-radius:var(--r-xs)}
 
 /* --- Tabla: cabecera 28px, fila 38px, pie 38px --- */
 .hd-tbl{flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden}
