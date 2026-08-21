@@ -1406,7 +1406,7 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
           .liq-cifras{ flex-direction:column; gap:0; width:100%; }
           .liq-cifras__i{ flex-direction:row; align-items:baseline; justify-content:space-between; gap:14px; padding:8px 0; border-top:1px solid var(--border); }
           .liq-cifras__i .eyebrow{ white-space:nowrap; }
-          .liq-cifras__v{ margin-top:0; font-size:16.5px; white-space:nowrap; }
+          .liq-cifras__v{ margin-top:0; font-size:16px; white-space:nowrap; }
         }
         /* ===== Eje único de montos =====
            Renglones de dinero y fichas de ajuste comparten EXACTAMENTE el mismo
