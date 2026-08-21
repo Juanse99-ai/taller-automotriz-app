@@ -1470,7 +1470,16 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
            formulario abierto), la tarjeta navy se ancla al borde inferior de la
            ventana y el botón de pagar sigue a la vista. */
         @media (min-width:961px){
-          .liq-work__side .hd-neto{ position:sticky; bottom:12px; z-index:3; box-shadow:0 6px 20px rgba(13,27,53,.22); }
+          /* SIN position:sticky, a proposito. La tarjeta es el ULTIMO elemento del
+             carril y mide 216px; su sitio natural cae 79px por debajo del borde de
+             la ventana. Pegada al fondo, flotaba encima de los ultimos campos del
+             paso 3 —"Pagado en efectivo" y su linea de ayuda quedaban debajo— y
+             como la pagina solo tiene 83px de scroll, eso se veia asi desde el
+             primer momento, no al hacer scroll. Medido a 1512x950: 6 elementos
+             tapados, hasta 75px. Fijarla ganaba tener el boton siempre a la vista
+             a cambio de esconder dos campos que hay que llenar ANTES de pulsarlo.
+             La sombra se queda: separa la tarjeta del fondo igual. */
+          .liq-work__side .hd-neto{ box-shadow:0 6px 20px rgba(13,27,53,.22); }
         }
         /* Rótulo del carril: en el diseño el título del Paso 3 NO es cabecera de
            tarjeta, encabeza la columna entera. */
@@ -1960,6 +1969,33 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
             </div>
             )}
           </div>
+          {/* Últimos pagos a este técnico. Vivía al final del carril derecho, y de
+             ahí salían los dos defectos que se veían en pantalla: estiraba esa
+             columna a 1.034px mientras la izquierda medía 377 (medido a 1512px),
+             o sea 650px de fondo vacío a la izquierda; y con el carril tan alto,
+             la tarjeta navy —que va pegada al fondo de la ventana— tapaba los
+             últimos campos del paso 3, entre ellos "Pagado en efectivo" y su
+             línea de ayuda. Aquí abajo cierra la columna del trabajo, que es
+             donde estás mirando cuando marcas las OTs. No se quitó nada: se
+             movió. */}
+          <div className="card">
+            <div className="card__b" style={{ padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 9 }}>
+              <div style={{ fontSize: 13, lineHeight: 1, fontWeight: 700, color: 'var(--text)' }}>
+                Últimos pagos a {tecData.tecnico.nombre.split(' ')[0]}
+              </div>
+              {(() => {
+                const suyos = historialOrdenado.filter(h => String(h.tecnicoId) === String(tecData.tecnico.id))
+                if (suyos.length === 0) return <div style={{ fontSize: 12, color: 'var(--text-4)' }}>Sin pagos anteriores.</div>
+                return suyos.slice(0, 3).map(h => (
+                  <div className="liq-pago" key={h.id}>
+                    <span className="f">{fechaCorta(h.fecha)}</span>
+                    <span className="r">#{liqRef(h.id)} · {h.metodoPago || 'efectivo'}</span>
+                    <span className="v mono">{fmt(h.pagado != null ? h.pagado : (h.neto || 0))}</span>
+                  </div>
+                ))
+              })()}
+            </div>
+          </div>
           </div>
 
           {/* PASO 3 — de dónde sale la plata, qué se ajusta y cuánto se paga.
@@ -2296,26 +2332,6 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
             </div>
           )}
 
-          {/* Últimos pagos a este técnico: el carril del diseño cierra con ellos.
-             Es el historial de siempre, filtrado a quien estás pagando. */}
-          <div className="card">
-            <div className="card__b" style={{ padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 9 }}>
-              <div style={{ fontSize: 13, lineHeight: 1, fontWeight: 700, color: 'var(--text)' }}>
-                Últimos pagos a {tecData.tecnico.nombre.split(' ')[0]}
-              </div>
-              {(() => {
-                const suyos = historialOrdenado.filter(h => String(h.tecnicoId) === String(tecData.tecnico.id))
-                if (suyos.length === 0) return <div style={{ fontSize: 12, color: 'var(--text-4)' }}>Sin pagos anteriores.</div>
-                return suyos.slice(0, 3).map(h => (
-                  <div className="liq-pago" key={h.id}>
-                    <span className="f">{fechaCorta(h.fecha)}</span>
-                    <span className="r">#{liqRef(h.id)} · {h.metodoPago || 'efectivo'}</span>
-                    <span className="v mono">{fmt(h.pagado != null ? h.pagado : (h.neto || 0))}</span>
-                  </div>
-                ))
-              })()}
-            </div>
-          </div>
           </div>
         </div>
         </>
