@@ -3255,3 +3255,11 @@ tbody tr:active{background:var(--fill-2)}
    el resto de campos de la fila, que usan --bg-raised y --border-input. */
 .ec-pers__t{background:var(--bg-raised);border-color:var(--border-input);
   border-radius:var(--r-md);font-size:13.5px;color:var(--text)}
+
+/* El saldo cabe holgado en la lista desplegada, pero dentro del campo compite
+   con el nombre: a 926px salia "PB Pedr… $ 192.000". En la fila estrecha el
+   nombre manda — el saldo ya se ve en la lista de cuentas de la izquierda y en
+   la cabecera del panel. */
+@media (max-width:1200px){
+  [data-slot="select-trigger"] .ec-pers__s{display:none}
+}
