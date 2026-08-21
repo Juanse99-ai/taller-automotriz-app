@@ -843,7 +843,12 @@ export default function Reportes({ trabajos, loading = false, notify }) {
         {dentro('estado', `${stats.completados} completados · ${stats.total - stats.completados} sin cerrar · ${stats.porEstado.length} estados`)}
         {!colapso.estado && (() => {
           const activos = stats.porEstado.filter(e => e.cantidad > 0)
-          const colors = {'Completado':'var(--green-500)','Cancelado':'var(--red-500)','En Progreso':'var(--blue-500)','Pendiente':'var(--amber-400)','En Diagnostico':'var(--blue-400)','Esperando Repuestos':'var(--amber-500)','En Prueba':'var(--purple-500,#7c3aed)','Programado':'var(--slate-400)'}
+          // Cada entrada lleva fallback: --blue-400 NO existe en :root, asi que
+          // "En Diagnostico" resolvia a nada y su tramo se pintaba transparente.
+          // Un token que falta no puede volver a borrar un estado del grafico.
+          // Los tres colores corregidos son los que el handoff asigna a esos
+          // estados: Diagnostico morado, Esperando Rep. naranja, En Prueba cyan.
+          const colors = {'Completado':'var(--green-500,#22c55e)','Cancelado':'var(--red-500,#ef4444)','En Progreso':'var(--blue-500,#1e40af)','Pendiente':'var(--amber-400,#fbbf24)','En Diagnostico':'var(--purple-500,#5b21b6)','Esperando Repuestos':'var(--orange-600,#9a3412)','En Prueba':'var(--cyan-700,#155e75)','Programado':'var(--slate-400,#94a3b8)'}
           if (activos.length <= 1) {
             const e = activos[0]
             return (

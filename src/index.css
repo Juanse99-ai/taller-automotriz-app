@@ -3310,3 +3310,10 @@ tbody tr:active{background:var(--fill-2)}
   .sidebar.collapsed .navlink span,
   .sidebar.hover-expand .navlink span{transition:none;animation:none}
 }
+
+/* --accent-soft-2 se declara en :root (98), en [data-theme="dark"] (160) y otra
+   vez en el :root del handoff (229). Las tres tienen la misma especificidad, asi
+   que gana la ultima: el :root tardio le pisaba el valor oscuro y ::selection
+   quedaba #dbeafe con texto claro encima, o sea seleccion invisible en modo
+   oscuro. Se reafirma aqui, al final, donde ningun :root posterior lo alcanza. */
+[data-theme="dark"]{--accent-soft-2:rgba(76,141,255,.24)}
