@@ -709,7 +709,12 @@ export default function Reportes({ trabajos, loading = false, notify }) {
         {!colapso.equipo && (
         <div className="card__b card__b--flush">
           <table className="tbl tbl-cards">
-            <thead><tr><th>Mecánico</th><th className="c-right">Trabajos</th><th className="c-right">Mano de obra</th><th style={{width:'25%'}}/></tr></thead>
+            {/* 12% y no 25%: esta tabla vive en la columna derecha, de 430px, asi que un
+                  cuarto del ancho para la barrita dejaba al nombre con 66px cuando
+                  "Pedro Barraza" necesita 93, y los tres tecnicos salian partidos en dos
+                  lineas. La tabla ancha de "Repuestos mas vendidos" mide 1.240px y ahi el
+                  25% no le quita nada a nadie, por eso se queda como esta. */}
+            <thead><tr><th>Mecánico</th><th className="c-right">Trabajos</th><th className="c-right">Mano de obra</th><th style={{width:'12%'}}/></tr></thead>
             <tbody>
               {stats.porTecnico.map((t,i)=>{
                 const maxFact = Math.max(...stats.porTecnico.map(x=>x.facturado),1)
@@ -785,7 +790,7 @@ export default function Reportes({ trabajos, loading = false, notify }) {
           {!colapso.clientes && (
           <div className="card__b card__b--flush">
             <table className="tbl tbl-cards">
-              <thead><tr><th>Cliente</th><th className="c-right">OTs</th><th className="c-right">Facturado</th><th style={{width:'25%'}}/></tr></thead>
+              <thead><tr><th>Cliente</th><th className="c-right">OTs</th><th className="c-right">Facturado</th><th style={{width:'12%'}}/></tr></thead>
               <tbody>
                 {stats.topClientes.map((c,i)=>{
                   const maxTot = Math.max(...stats.topClientes.map(x=>x.total),1)
