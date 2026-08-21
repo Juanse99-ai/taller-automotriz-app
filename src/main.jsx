@@ -1,5 +1,24 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
+
+// IBM Plex, auto-hospedada. Antes la app tomaba la fuente del sistema, asi que
+// se veia distinta en el Mac (SF Pro), en el PC de recepcion (Segoe UI) y en el
+// celular del mecanico (Roboto). Solo los cuatro pesos que el CSS pide: 400,
+// 500, 600 y 700. Los nueve font-weight:800 sueltos caen al 700, que es el tope
+// de Plex, sin negrita sintetica.
+import '@fontsource/ibm-plex-sans/latin-400.css'
+import '@fontsource/ibm-plex-sans/latin-500.css'
+import '@fontsource/ibm-plex-sans/latin-600.css'
+import '@fontsource/ibm-plex-sans/latin-700.css'
+// Solo el subconjunto latin: cubre acentos, ñ, ¿ y ¡. Importar la entrada
+// completa arrastraba cirilico, griego y vietnamita al deploy (470 KB que el
+// navegador nunca baja, pero que igual viajan a Vercel).
+// Plex Mono es la que por fin alinea las columnas de plata y separa el codigo
+// de producto y la placa del texto corrido. Su cero va sin raya.
+import '@fontsource/ibm-plex-mono/latin-400.css'
+import '@fontsource/ibm-plex-mono/latin-500.css'
+import '@fontsource/ibm-plex-mono/latin-600.css'
+import '@fontsource/ibm-plex-mono/latin-700.css'
 import './index.css'
 import App from './App.jsx'
 import { precargarLogo } from './utils/pdfTheme'

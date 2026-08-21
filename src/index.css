@@ -9,8 +9,8 @@
 
 /* === TOKENS === */
 :root{
-  --font:-apple-system,BlinkMacSystemFont,'SF Pro Text','SF Pro Display',system-ui,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
-  --mono:var(--font);
+  --font:'IBM Plex Sans',-apple-system,BlinkMacSystemFont,system-ui,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+  --mono:'IBM Plex Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
 
   /* navy ramp (sidebar + headers) */
   --navy-950:#060f23;
