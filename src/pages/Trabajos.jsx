@@ -1132,7 +1132,7 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
                     <Button variant="outline" size="sm" className="btn-icon" aria-label="Editar" title="Editar" onClick={() => handleEditar(selTrabajo.id)}><IconEdit /></Button>
                     {selTrabajo.otCodigo && <Button variant="outline" size="sm" className="btn-icon" aria-label="Descargar PDF" title="Descargar PDF" onClick={() => descargarOT(selTrabajo)}><IconPdf /></Button>}
                     {selTrabajo.estado !== ESTADOS.COMPLETADO && <Button variant="primary" size="sm" className="btn-icon" aria-label="Marcar listo" title="Marcar listo" onClick={() => handleCompletar(selTrabajo.id)}><IconCheck /></Button>}
-                    <Button variant="ghost" size="sm" className="btn-icon" aria-label="Eliminar" title="Eliminar" style={{ color: 'var(--red-600)' }} onClick={() => setConfirmCfg({ title: 'Eliminar OT', confirmLabel: 'Eliminar', tone: 'danger', onConfirm: () => handleEliminar(selTrabajo.id) })}><IconTrash /></Button>
+                    <Button variant="ghost" size="sm" className="btn-icon" aria-label="Eliminar" title="Eliminar" style={{ color: 'var(--red-600)' }} onClick={() => setConfirmCfg({ title: 'Eliminar OT', lead: `${selTrabajo.otCodigo || 'Sin OT'} · ${selTrabajo.placa || 'SERVICIO'} · ${fmt(selTrabajo.total)} · no se puede deshacer.`, confirmLabel: 'Eliminar', tone: 'danger', onConfirm: () => handleEliminar(selTrabajo.id) })}><IconTrash /></Button>
                   </div>
                 </div>
               </div>
@@ -1219,8 +1219,12 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
                           )}
                           {confirmDel === t.id ? (
                             <>
-                              <Button variant="ghost" size="sm" style={{ color: 'var(--red-600)' }} onClick={() => handleEliminar(t.id)}>Si</Button>
-                              <Button variant="ghost" size="sm" onClick={() => setConfirmDel(null)}>No</Button>
+                              {/* "Si"/"No" no decian que se borra, y "Si" iba sin tilde,
+                                  que es la palabra contraria. Se usan los dos verbos del
+                                  ConfirmDialog de escritorio: el mismo borrado no puede
+                                  confirmarse con dos gramaticas segun el ancho. */}
+                              <Button variant="ghost" size="sm" style={{ color: 'var(--red-600)' }} onClick={() => handleEliminar(t.id)}>Eliminar</Button>
+                              <Button variant="ghost" size="sm" onClick={() => setConfirmDel(null)}>Cancelar</Button>
                             </>
                           ) : (
                             <Button variant="ghost" size="sm" style={{ color: 'var(--red-500)' }} onClick={() => setConfirmDel(t.id)}>

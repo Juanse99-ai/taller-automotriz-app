@@ -286,7 +286,13 @@ export default function PortalCliente() {
       })
       const data = await res.json().catch(() => null)
       if (!res.ok || !data?.ok || !data.firma || !data.publicKey || !(data.montoCentavos > 0)) {
-        setError(data?.error || 'No se pudo iniciar el pago. Intenta de nuevo en un momento.')
+        // Al cliente solo se le repite el texto del servidor cuando habla de SU
+        // factura (404 no existe / 409 ya pagada). Los demas codigos devuelven
+        // texto de servidor —"Falta WOMPI_INTEGRITY_SECRET en el servidor",
+        // "Solo POST"— y quien entra sin login desde un enlace de WhatsApp no
+        // tiene por que leer el nombre de una variable de entorno justo cuando
+        // va a pagar.
+        setError(([404, 409].includes(res.status) && data?.error) || 'No se pudo iniciar el pago. Intenta de nuevo en un momento.')
         setPagando(null); return
       }
       const form = document.createElement('form')
