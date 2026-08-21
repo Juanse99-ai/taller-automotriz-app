@@ -197,7 +197,12 @@ export default function Sidebar({ active, onNavigate, isOpen, collapsed, onColla
   // re-anima el stagger. En celular no aplica (ahí es drawer).
   const [hoverExpand, setHoverExpand] = useState(false)
   const hoverTimer = useRef(null)
-  const puedeHover = collapsed && !isMobile
+  // NO lleva && collapsed: en el rediseno el escritorio solo tiene dos estados,
+  // 86px en reposo y 212 al pasar el cursor — el rail "expandido" de 240px ya no
+  // existe. Quien tuviera guardado mda:sidebar='expanded' de antes se quedaba con
+  // el rail a 86px pero SIN hover: la compuerta lo apagaba y no habia forma de
+  // abrirlo. El ancho ya lo fija .sidebar del bloque de escritorio.
+  const puedeHover = !isMobile
   const onHoverEnter = () => {
     if (!puedeHover) return
     clearTimeout(hoverTimer.current)

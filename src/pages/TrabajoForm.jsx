@@ -603,8 +603,10 @@ export default function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [
       </div>
 
       <form onSubmit={handleSubmit} className="form-stack" style={{ marginTop: 16 }}>
-        {/* CLIENTE + VEHICULO en 2 columnas */}
-        <div className="form-grid-2">
+        {/* CLIENTE + VEHICULO en 2 columnas. stretch porque .form-grid-2 trae
+            align-items:start y las dos tarjetas quedaban a distinta altura:
+            Cliente son 4 campos en 2x2 y Vehiculo 6 en 3x2. */}
+        <div className="form-grid-2" style={{ alignItems: 'stretch' }}>
         {/* CLIENTE */}
         <div className="card">
           <div className="card__h"><h3 style={H3}>Cliente <span style={SUBT}>Se busca en Cuentti por documento</span></h3></div>
@@ -897,28 +899,6 @@ export default function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [
           )}
         </div>
 
-        {/* TOTAL OT — la única cifra en navy de la pantalla, porque es sobre la
-           que se aprieta Guardar. El desglose (M.O., repuestos, subtotal, IVA)
-           queda bajo la lista, junto a las líneas que lo producen. */}
-        <div className="hd-neto" style={{ margin: 0 }}>
-          <div className="hd-neto__l">TOTAL OT</div>
-          <div className="hd-neto__v">{fmt(totales.total)}</div>
-          <div style={{ fontSize: 11.5, lineHeight: 1.4, color: 'rgba(255,255,255,.6)', marginTop: 6 }}>
-            {items.length} {items.length === 1 ? 'línea' : 'líneas'} · {(() => {
-              const t = TECNICOS.find(x => String(x.id) === String(form.tecnicoId))
-              return t ? `técnico ${t.nombre}` : 'sin técnico asignado'
-            })()}
-          </div>
-          <div className="hd-neto__sep" style={{ margin: '14px 0 13px' }} />
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <Button variant="outline" type="button" onClick={cancelar}
-              style={{ minHeight: 46, background: 'transparent', borderColor: 'rgba(255,255,255,.25)', color: '#fff' }}>Cancelar</Button>
-            <Button variant="primary" type="submit" disabled={guardando}
-              style={{ flex: 1, minHeight: 46, justifyContent: 'center', background: '#fff', borderColor: '#fff', color: 'var(--navy)' }}>
-              {guardando ? 'Guardando…' : isEdit ? 'Actualizar OT' : `Guardar OT · ${fmt(totales.total)}`}
-            </Button>
-          </div>
-        </div>
         </div>{/* /ot-col side */}
 
         {/* Columna IZQUIERDA — la orden y la plata */}
@@ -1172,6 +1152,32 @@ export default function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [
               <span className="ot-stat"><span className="ot-stat__lbl">Subtotal</span><span className="ot-stat__val">{fmt(totales.subtotal)}</span></span>
               <span className="ot-stat"><span className="ot-stat__lbl">IVA</span><span className="ot-stat__val">{fmt(totales.iva)}</span></span>
             </div>
+          </div>
+        </div>
+
+        {/* TOTAL OT — va al pie de la columna izquierda, bajo las lineas que
+           lo producen: a la derecha quedaba colgando y el hueco de abajo a la
+           izquierda se quedaba vacio.
+           TOTAL OT — la única cifra en navy de la pantalla, porque es sobre la
+           que se aprieta Guardar. El desglose (M.O., repuestos, subtotal, IVA)
+           queda bajo la lista, junto a las líneas que lo producen. */}
+        <div className="hd-neto" style={{ margin: 0 }}>
+          <div className="hd-neto__l">TOTAL OT</div>
+          <div className="hd-neto__v">{fmt(totales.total)}</div>
+          <div style={{ fontSize: 11.5, lineHeight: 1.4, color: 'rgba(255,255,255,.6)', marginTop: 6 }}>
+            {items.length} {items.length === 1 ? 'línea' : 'líneas'} · {(() => {
+              const t = TECNICOS.find(x => String(x.id) === String(form.tecnicoId))
+              return t ? `técnico ${t.nombre}` : 'sin técnico asignado'
+            })()}
+          </div>
+          <div className="hd-neto__sep" style={{ margin: '14px 0 13px' }} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <Button variant="outline" type="button" onClick={cancelar}
+              style={{ minHeight: 46, background: 'transparent', borderColor: 'rgba(255,255,255,.25)', color: '#fff' }}>Cancelar</Button>
+            <Button variant="primary" type="submit" disabled={guardando}
+              style={{ flex: 1, minHeight: 46, justifyContent: 'center', background: '#fff', borderColor: '#fff', color: 'var(--navy)' }}>
+              {guardando ? 'Guardando…' : isEdit ? 'Actualizar OT' : `Guardar OT · ${fmt(totales.total)}`}
+            </Button>
           </div>
         </div>
 
