@@ -327,9 +327,15 @@ export default function EstadoCuenta({ prestamos, tecnicos, notify, tabs = null,
         </div>
         {(() => {
           const monto = (parseFloat(form.monto) || 0) > 0 ? Math.round(parseFloat(form.monto)) : ((parseFloat(form.valorDia) || 0) * (parseInt(form.dias) || 0))
+          // Un boton apagado que no dice por que obliga a adivinar cual de los dos
+          // campos obligatorios falta. Y hasta ahora los dos se portaban distinto:
+          // sin monto se apagaba en silencio, sin persona dejaba pulsar para soltar
+          // un error despues. Ahora el rotulo dice siempre cual es el paso que falta,
+          // que es prevenir el error en vez de explicarlo cuando ya ocurrio.
+          const falta = !personaFinal ? 'Elige la persona' : monto <= 0 ? 'Escribe un monto' : null
           return (
-            <Button variant="primary" type="button" onClick={guardar} disabled={monto <= 0} className="ec-cta__go">
-              {monto > 0 ? `Registrar ${form.tipo === 'abono' ? 'abono' : 'préstamo'} de ${fmt(monto)}` : 'Registrar'}
+            <Button variant="primary" type="button" onClick={guardar} disabled={!!falta} className="ec-cta__go">
+              {falta || `Registrar ${form.tipo === 'abono' ? 'abono' : 'préstamo'} de ${fmt(monto)}`}
             </Button>
           )
         })()}
