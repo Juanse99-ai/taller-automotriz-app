@@ -15,7 +15,6 @@ export default function Inventario({ notify }) {
     refresh,
   } = useInventario()
   const [busqueda, setBusqueda] = useState('')
-  const [categoriaFiltro, setCategoriaFiltro] = useState('todas')
   const [soloReponer, setSoloReponer] = useState(false)
   const [, setNowTick] = useState(0)
   useEffect(() => {
@@ -27,11 +26,6 @@ export default function Inventario({ notify }) {
     await refresh()
     if (forzar) notify('Inventario actualizado desde Cuentti', 'success')
   }
-
-  const categorias = useMemo(() => {
-    const cats = new Set(productos.map(p => p.categoria || 'General'))
-    return ['todas', ...Array.from(cats).sort()]
-  }, [productos])
 
   // Estado para ordenamiento de columnas
   // sortBy: 'codigo' | 'nombre' | 'categoria' | 'stock' | 'precio' | 'iva' | 'estado'
@@ -74,9 +68,6 @@ export default function Inventario({ notify }) {
     if (soloReponer) {
       list = list.filter(p => !p.esServicio && (parseFloat(p.stock) || 0) <= STOCK_BAJO_UMBRAL)
     }
-    if (categoriaFiltro !== 'todas') {
-      list = list.filter(p => p.categoria === categoriaFiltro)
-    }
     if (busqueda.trim()) {
       // Multi-palabra: cada palabra debe aparecer (en cualquier orden) en
       // nombre/código/SKU. Ej: "rodamiento duster" trae los que tengan AMBAS.
@@ -105,7 +96,7 @@ export default function Inventario({ notify }) {
       })
     }
     return list
-  }, [productos, busqueda, categoriaFiltro, sortBy, sortDir, soloReponer])
+  }, [productos, busqueda, sortBy, sortDir, soloReponer])
 
   // Productos por reponer (bajo o sin stock, sin servicios) — para el botón y la lista
   const porReponer = useMemo(
@@ -135,8 +126,8 @@ export default function Inventario({ notify }) {
     }
   }
 
-  // Volver a la página 1 al cambiar la búsqueda/categoría/reposición
-  useEffect(() => { setPagina(1) }, [busqueda, categoriaFiltro, soloReponer])
+  // Volver a la página 1 al cambiar la búsqueda o la reposición
+  useEffect(() => { setPagina(1) }, [busqueda, soloReponer])
   const totalPaginas = Math.max(1, Math.ceil(filtrados.length / PAGE_SIZE))
   const paginaActual = Math.min(pagina, totalPaginas)
   const paginados = filtrados.slice((paginaActual - 1) * PAGE_SIZE, paginaActual * PAGE_SIZE)
@@ -265,14 +256,6 @@ export default function Inventario({ notify }) {
                   <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
                 </button>
               )}
-            </div>
-            {/* Filtro categorías */}
-            <div className="segctl">
-              {categorias.slice(0, 6).map(c => (
-                <button key={c} className={categoriaFiltro === c ? 'on' : ''} onClick={() => setCategoriaFiltro(c)} style={{ textTransform: 'capitalize' }}>
-                  {c === 'todas' ? 'Todas' : c}
-                </button>
-              ))}
             </div>
             {/* Reposición: filtrar a bajo/sin stock + compartir lista */}
             <button type="button" className={`btn btn-sm ${soloReponer ? 'btn-primary' : 'btn-outline'}`} onClick={() => setSoloReponer(v => !v)}>
