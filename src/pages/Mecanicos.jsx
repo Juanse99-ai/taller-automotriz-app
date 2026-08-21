@@ -521,8 +521,8 @@ const ESTILOS = `
   /* El alto lo pone el item, no el riel: con height fijo en el riel el boton
      quedaba en 36px y pisaba en silencio el minimo tactil de 44 que index.css
      aplica a todos los .hd-seg__i en movil. */
-  .mec-seg{height:auto;border-radius:14px;padding:4px;gap:4px}
-  .mec-seg .hd-seg__i{height:var(--tap);border-radius:11px;font-size:13.5px}
+  .mec-seg{height:auto;border-radius:var(--r-lg);padding:4px;gap:4px}
+  .mec-seg .hd-seg__i{height:var(--tap);border-radius:var(--r-md);font-size:13.5px}
   .btn.mec-add{width:100%;height:var(--tap-lg);font-size:15px}
 
   /* La fila tenia 698px de anchos fijos dentro de una tarjeta con
@@ -542,9 +542,9 @@ const ESTILOS = `
   .mec-row .mec-lbl--i{display:inline;margin:0 7px 0 0}
   .av.mec-av{width:42px;height:42px;font-size:15px}
   .mec-name{font-size:15px}
-  .btn.mec-ver{flex:1;height:var(--tap-lg);border-radius:13px;background:var(--accent);color:#fff;font-size:14px;box-shadow:var(--accent-shadow)}
+  .btn.mec-ver{flex:1;height:var(--tap-lg);border-radius:var(--r-md);background:var(--accent);color:#fff;font-size:14px;box-shadow:var(--accent-shadow)}
   .btn.mec-ver:hover:not(:active){background:var(--primary-hover)}
-  .btn.mec-edit{width:var(--tap-lg);height:var(--tap-lg);border-radius:13px}
+  .btn.mec-edit{width:var(--tap-lg);height:var(--tap-lg);border-radius:var(--r-md)}
 
   /* Pie: los subtotales se etiquetan porque la cabecera ya no esta. */
   .mec-tbl .mec-f{height:auto;min-height:40px;flex-wrap:wrap;row-gap:6px;padding:10px 14px}

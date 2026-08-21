@@ -224,15 +224,15 @@ export default function Dashboard({ trabajos = [], onNavigate, user }) {
 /* El mockup dibuja TODAS sus tarjetas a 14px. --radius-card vale 16 y lo
    comparten las 12 pantallas restantes, así que aquí se ajusta sólo el
    Dashboard para que la tira de KPI, las tarjetas y el navy coincidan. */
-.dsh .hd-card{border-radius:14px}
+.dsh .hd-card{border-radius:var(--r-lg)}
 
 /* --- Tira de 4 KPI: una sola tarjeta blanca partida en cuatro (mockup :75-89) --- */
 .dsh-kpis{flex:none;display:flex;flex-wrap:wrap;background:var(--bg-raised);
-  border:1px solid var(--border);border-radius:14px;overflow:hidden}
+  border:1px solid var(--border);border-radius:var(--r-lg);overflow:hidden}
 .dsh-kpi{flex:1 1 0;min-width:0;padding:14px 16px;border-left:1px solid var(--row-line)}
 .dsh-kpi:first-child{border-left-color:transparent}
 .dsh-kpi__h{display:flex;align-items:center;gap:8px;min-width:0}
-.dsh-kpi__ic{width:26px;height:26px;flex:none;display:grid;place-items:center;border-radius:7px;background:var(--chip)}
+.dsh-kpi__ic{width:26px;height:26px;flex:none;display:grid;place-items:center;border-radius:var(--r-sm);background:var(--chip)}
 .dsh-kpi__ic svg{width:14px;height:14px;stroke:var(--text-3);fill:none;stroke-width:2}
 .dsh-kpi--a .dsh-kpi__ic{background:var(--accent-soft)}
 .dsh-kpi--a .dsh-kpi__ic svg{stroke:var(--accent)}
@@ -243,7 +243,7 @@ export default function Dashboard({ trabajos = [], onNavigate, user }) {
 .dsh-kpi--a .dsh-kpi__v{color:var(--text)}
 .dsh-kpi__f{display:flex;align-items:center;flex-wrap:wrap;gap:7px;row-gap:5px;margin-top:7px;min-width:0}
 .dsh-kpi__b{flex:none;font-size:9.5px;line-height:1;font-weight:700;letter-spacing:.4px;
-  padding:4px 6px;border-radius:5px;background:var(--ok-bg);color:var(--ok-fg);white-space:nowrap}
+  padding:4px 6px;border-radius:var(--r-xs);background:var(--ok-bg);color:var(--ok-fg);white-space:nowrap}
 .dsh-kpi__s{font-size:11.5px;line-height:1.3;color:var(--text-4);min-width:0;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 
@@ -251,7 +251,7 @@ export default function Dashboard({ trabajos = [], onNavigate, user }) {
    jerarquía a un renglón. No se borra ni una palabra: rótulo, contador,
    explicación y acción siguen todos visibles. --- */
 .dsh-alert{display:flex;align-items:center;flex-wrap:wrap;gap:9px;row-gap:4px;
-  min-height:36px;padding:7px 12px;border-radius:10px}
+  min-height:36px;padding:7px 12px;border-radius:var(--r-md)}
 .dsh-alert b{font-size:12.5px;line-height:1.2;font-weight:700;color:var(--text);white-space:nowrap}
 .dsh-alert__s{flex:1;min-width:120px;font-size:11.5px;line-height:1.3;color:var(--text-2);
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -299,8 +299,8 @@ export default function Dashboard({ trabajos = [], onNavigate, user }) {
 .dsh-prod__u{font-size:11.5px;line-height:1;color:var(--text-4);white-space:nowrap}
 .dsh-prod__v{font-size:12.5px;line-height:1;font-weight:700;color:var(--text);
   font-variant-numeric:tabular-nums;white-space:nowrap}
-.dsh-prod__t{height:7px;margin-top:7px;border-radius:4px;background:var(--chip);overflow:hidden}
-.dsh-prod__f{height:7px;background:var(--accent);border-radius:4px}
+.dsh-prod__t{height:7px;margin-top:7px;border-radius:var(--r-xs);background:var(--chip);overflow:hidden}
+.dsh-prod__f{height:7px;background:var(--accent);border-radius:var(--r-xs)}
 
 /* --- Filas del rail: la tabla de 5 columnas no cabe en 288px, así que la fila
    se dobla en tres renglones. Placa, cliente, trabajo, técnico, estado y la
@@ -311,25 +311,25 @@ export default function Dashboard({ trabajos = [], onNavigate, user }) {
 .dsh-pr__2{font-size:12.5px;line-height:1.15;font-weight:700;color:var(--text)}
 .dsh-pr__3{display:flex;align-items:center;gap:6px;min-width:0}
 .dsh-pr__ico{display:inline-flex;align-items:center;justify-content:center;flex:none;
-  width:28px;height:28px;margin:-4px -6px -4px 0;border:none;border-radius:8px;background:none;
+  width:28px;height:28px;margin:-4px -6px -4px 0;border:none;border-radius:var(--r-sm);background:none;
   color:var(--text-5);cursor:pointer}
 .dsh-pr__ico:hover{background:var(--chip);color:var(--text-2)}
 .dsh-pr__ico svg{width:14px;height:14px}
 
 /* --- Vacío verde de Pendientes (mockup :140-143) y notas secas (:151, :159) --- */
 .dsh-ok{display:flex;align-items:center;gap:8px;margin:11px 16px 14px;padding:9px 11px;
-  background:var(--green-50);border-radius:9px}
+  background:var(--green-50);border-radius:var(--r-sm)}
 .dsh-ok svg{width:15px;height:15px;flex:none;color:var(--green-700)}
 .dsh-ok span{font-size:12px;line-height:1.35;color:var(--ok-fg)}
 .dsh-note{font-size:12px;line-height:1.4;color:var(--text-3);margin:8px 0 0;padding:0 16px 14px}
 
 /* --- Tarjeta navy POR COBRAR (mockup :162-167) --- */
-.dsh-navy{border-radius:14px;padding:15px 16px;margin:0;flex:1 1 auto;min-height:132px}
+.dsh-navy{border-radius:var(--r-lg);padding:15px 16px;margin:0;flex:1 1 auto;min-height:132px}
 .dsh-navy__l{font-size:9.5px;font-weight:700;letter-spacing:.9px}
 .dsh-navy__v{font-size:26px;margin-top:8px}
 .dsh-navy__s{font-size:11.5px;line-height:1.4;color:rgba(255,255,255,.6);margin-top:6px}
 .dsh-navy__btn{display:flex;align-items:center;justify-content:center;gap:7px;width:100%;height:38px;
-  margin-top:14px;border:none;border-radius:9px;background:rgba(255,255,255,.12);color:#fff;
+  margin-top:14px;border:none;border-radius:var(--r-sm);background:rgba(255,255,255,.12);color:#fff;
   font-family:inherit;font-size:12.5px;line-height:1;font-weight:700;cursor:pointer}
 .dsh-navy__btn:hover{background:rgba(255,255,255,.2)}
 

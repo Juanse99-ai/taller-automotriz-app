@@ -1306,7 +1306,6 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="m9 18 6-6-6-6" /></svg>
           <span className="ec-resumen__t">Liquidado y entregado por técnico</span>
           <span className="ec-aside__n">{cuentasTecnicos.length}</span>
-          <span className="ec-resumen__s">no es el libro de préstamos: es lo que ya se le pagó de comisiones</span>
         </summary>
         <div className="ec-resumen__b">
           <div className="ec-resumen__cab">
@@ -1354,7 +1353,7 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
            el resto de la app pone su segmentado ahí), y cada paso es una cápsula
            con su número — el hecho en verde, el actual en azul. */
         .liq-steps{ display:flex; align-items:center; gap:7px; list-style:none; margin:0; padding:0; flex-wrap:wrap; }
-        .liq-step{ display:flex; align-items:center; gap:7px; height:34px; padding:0 13px 0 7px; border-radius:var(--radius-pill); background:var(--chip); font-size:12px; font-weight:400; color:var(--text-4); white-space:nowrap; }
+        .liq-step{ display:flex; align-items:center; gap:7px; height:34px; padding:0 13px 0 7px; border-radius:var(--radius-pill); background:var(--chip); font-size:12px; font-weight:400; color:var(--text-3); white-space:nowrap; }
         .liq-step .n{ width:20px; height:20px; border-radius:50%; background:var(--border); color:var(--text-4); display:grid; place-items:center; font-size:11px; font-weight:700; line-height:1; flex-shrink:0; }
         .liq-step.done{ color:var(--text); }
         .liq-step.done .n{ background:var(--ok-bg); color:var(--ok-fg); }
@@ -1387,7 +1386,7 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
         .liq-roster-row:active,.liq-roster-mini:active{ background:var(--fill); transition-duration:0s; }
         /* Aviso de OTs huérfanas: es un enlace de verdad, con blanco suficiente
            para el dedo (los 44px de alto los da el padding + el interlineado). */
-        .liq-aviso{ display:inline-flex; align-items:center; gap:5px; font:inherit; font-weight:600; color:var(--red-600); background:none; border:none; padding:4px 6px; margin:-4px -2px; cursor:pointer; text-decoration:underline; text-underline-offset:3px; -webkit-user-select:none; user-select:none; touch-action:manipulation; }
+        .liq-aviso{ display:inline-flex; align-items:center; gap:5px; font:inherit; font-weight:600; color:var(--red-700); background:none; border:none; padding:4px 6px; margin:-4px -2px; cursor:pointer; text-decoration:underline; text-underline-offset:3px; -webkit-user-select:none; user-select:none; touch-action:manipulation; }
         .liq-aviso:active{ opacity:.6; }
         /* Trío de cifras del cierre. En pantalla ancha van en columna a la
            derecha del total. En el celular no caben en fila: "Mano de obra
@@ -1424,7 +1423,7 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
            Estructura común: texto · monto · control, con el control SIEMPRE en el
            mismo hueco derecho (× para quitar un aporte, casilla para descontar
            una deuda) — misma anatomía aunque la acción difiera. */
-        .liq-aj{ display:flex; align-items:center; gap:12px; background:var(--bg-subtle); border-radius:10px; padding:10px 12px; font-size:13.5px; }
+        .liq-aj{ display:flex; align-items:center; gap:12px; background:var(--bg-subtle); border-radius:var(--r-md); padding:10px 12px; font-size:13.5px; }
         .liq-aj + .liq-aj{ margin-top:6px; }
         .liq-aj.on{ background:color-mix(in srgb, var(--primary) 10%, var(--bg-subtle)); }
         .liq-aj__txt{ flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
@@ -1440,7 +1439,7 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
         .liq-empty p{ font-size:13.5px; color:var(--text-3); max-width:340px; line-height:1.5; margin:0; }
         .liq-empty__note{ margin-top:14px; padding-top:14px; border-top:1px solid var(--border); width:100%; max-width:420px; font-size:12.5px; color:var(--text-3); display:flex; align-items:center; gap:8px; justify-content:center; }
         /* Quién es el dueño de la OT en un compartido (segunda línea de la celda OT) */
-        .c-asignado{ display:block; font-family:var(--sans); font-size:10.5px; font-weight:600; color:var(--text-3); margin-top:1px; letter-spacing:0; }
+        .c-asignado{ display:block; font-family:var(--font); font-size:10.5px; font-weight:600; color:var(--text-3); margin-top:1px; letter-spacing:0; }
         /* Filtros del historial: una sola fila que envuelve, sin caja propia */
         .liq-filtros{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; padding:0 0 14px; }
         .liq-filtros .input{ width:auto; height:32px; min-height:32px; font-size:12.5px; padding:2px 9px; }
@@ -1504,7 +1503,6 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
         #liq-paso2 > .card__h{ padding:13px 16px 11px; border-bottom:none; gap:11px; }
         #liq-paso2 > .card__h h3{ font-size:14px; font-weight:700; letter-spacing:0; gap:11px; }
         .liq-chev{ width:26px; height:26px; flex-shrink:0; display:grid; place-items:center; border-radius:var(--radius-pill); background:var(--chip); color:var(--text-3); }
-        .liq-hint{ font-size:11.5px; line-height:1; color:var(--text-4); }
         /* Lo marcado, en plata: el jefe mira este número mientras marca. */
         .liq-marcado{ font-size:11.5px; line-height:1; font-weight:700; color:var(--accent); background:var(--accent-soft); padding:8px 13px; border-radius:var(--radius-pill); white-space:nowrap; font-variant-numeric:tabular-nums; }
         /* "Todos": chip plano del diseño; en táctil recupera los 44px de alto. */
@@ -1822,7 +1820,6 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
                   </svg>
                 </span>
                 Paso 2 · ¿Qué trabajos le pagas?
-                {!colapso.trabajos && <span className="liq-hint">Marca los que vas a liquidar</span>}
               </h3>
               <div style={{ display: 'flex', gap: 8, alignItems: 'center' }} onClick={e => e.stopPropagation()}>
                 {/* Lo marcado en PLATA, no solo un conteo: es la cifra que el
@@ -2026,7 +2023,7 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
               <div className="liq-grp" style={{ margin: '20px 0 8px' }}>Ajustes de este pago</div>
 
               {tecMovs.length === 0 && tecCuenta.deudas.length === 0 && tecCuenta.saldo === 0 && (
-                <p style={{ fontSize: 12.5, color: 'var(--text-3)', margin: 0 }}>Sin ajustes: se paga la comisión completa.</p>
+                <p style={{ fontSize: 12.5, color: 'var(--text-3)', margin: 0 }}>Sin ajustes.</p>
               )}
 
               {/* Aportes y descuentos de este cierre */}
@@ -2216,7 +2213,7 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
                         <MoneyInput value={pagoReal} onChange={setPagoReal} />
                       </div>
                       <div className="liq-medio__ayuda">
-                        Déjalo vacío para pagar el neto completo (<strong className="mono">{fmt(totalSeleccion.neto)}</strong>).
+                        Vacío paga el neto completo (<strong className="mono">{fmt(totalSeleccion.neto)}</strong>).
                       </div>
                     </div>
                     {(() => {

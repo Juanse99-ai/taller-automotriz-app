@@ -353,7 +353,6 @@ export default function EstadoCuenta({ prestamos, tecnicos, notify, tabs = null,
         ) : (
           <button type="button" className="ec-dias__abrir" onClick={() => setVerPorDias(true)}>
             <span className="ec-dias__chev">›</span> Calcular por días
-            <span className="ec-dias__hint">valor por día × días = monto</span>
           </button>
         )}
       </div>
@@ -480,7 +479,7 @@ export default function EstadoCuenta({ prestamos, tecnicos, notify, tabs = null,
               </>
             ) : (
               <div className="ec-cta__id ec-cta__id--vacia">
-                <div className="ec-cta__idb"><div className="ec-cta__nl"><span className="ec-cta__n ec-cta__n--vacio">Ninguna cuenta elegida</span></div></div>
+                <div className="ec-cta__idb"><div className="ec-cta__nl"><span className="ec-cta__n ec-cta__n--vacio">Elige una cuenta</span></div></div>
               </div>
             )}
             {filaRegistro}
@@ -490,7 +489,7 @@ export default function EstadoCuenta({ prestamos, tecnicos, notify, tabs = null,
               columna de la propia fila, asi 5 movimientos son 5 renglones. */}
           <div className="hd-card ec-movs">
             {!cuentaSel ? (
-              <div className="hd-void">Elige una cuenta para ver sus movimientos</div>
+              <div className="hd-void">Aquí verás sus movimientos</div>
             ) : cuentaSel.movs.length === 0 ? (
               <div className="hd-void">Sin movimientos</div>
             ) : (

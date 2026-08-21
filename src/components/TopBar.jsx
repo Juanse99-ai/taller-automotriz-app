@@ -187,6 +187,9 @@ export default function TopBar({ title, subtitle, onToggleSidebar, sidebarOpen, 
             onFocus={() => { if (results.length) setShowResults(true) }}
             onKeyDown={e => { if (e.key === 'Enter' && results.length) { e.preventDefault(); selectResult(results[0]) } }}
             placeholder="Ir a una OT, placa o cliente..."
+            /* Un placeholder no es una etiqueta: el lector de pantalla no lo
+               anuncia como nombre del campo, y desaparece al escribir. */
+            aria-label="Buscar una OT, una placa o un cliente"
           />
           {showResults && (
             <div style={{ position: 'absolute', top: 'calc(100% + 6px)', left: 0, right: 0, background: 'var(--bg-raised)', border: '1px solid var(--border)', borderRadius: 10, boxShadow: 'var(--shadow-md)', maxHeight: 320, overflowY: 'auto', zIndex: 100 }}>

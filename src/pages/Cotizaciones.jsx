@@ -635,8 +635,8 @@ function DetalleCotizacion({ cot, yaTieneOT, creando, creandoAlguna, onClose, on
 
 const ESTILOS = `
 .cot-row{cursor:pointer}
-.cot-menu{position:fixed;z-index:120;width:210px;padding:6px;border-radius:13px;background:var(--bg-raised);border:1px solid var(--border);box-shadow:var(--shadow-lg)}
-.cot-menu button{display:flex;align-items:center;gap:11px;width:100%;padding:11px 12px;border-radius:9px;background:none;border:none;font:inherit;font-size:14.5px;font-weight:500;color:var(--text);text-align:left}
+.cot-menu{position:fixed;z-index:120;width:210px;padding:6px;border-radius:var(--r-md);background:var(--bg-raised);border:1px solid var(--border);box-shadow:var(--shadow-lg)}
+.cot-menu button{display:flex;align-items:center;gap:11px;width:100%;padding:11px 12px;border-radius:var(--r-sm);background:none;border:none;font:inherit;font-size:14.5px;font-weight:500;color:var(--text);text-align:left}
 .cot-menu button:hover{background:var(--fill)}
 .cot-menu button:focus-visible{outline:2px solid var(--primary);outline-offset:-2px}
 .cot-menu button svg{width:16px;height:16px;flex-shrink:0;color:var(--text-3)}

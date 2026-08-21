@@ -864,7 +864,7 @@ export default function PortalCliente() {
         .pc-fx__desglose { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 4px 14px; font-size: 12.5px; color: var(--text-3); margin-top: 2px }
         .pc-fx__cta { text-align: right }
         .pc-pill { display: inline-block; background: var(--soft-amber); color: var(--amber-700);
-                   font-size: 12.5px; font-weight: 700; padding: 5px 11px; border-radius: 999px; white-space: nowrap }
+                   font-size: 12.5px; font-weight: 700; padding: 5px 11px; border-radius:var(--r-pill); white-space: nowrap }
         @media (max-width: 560px) {
           .pc-fx { grid-template-columns: 1fr; gap: 10px }
           .pc-fx__money { align-items: flex-start; text-align: left }

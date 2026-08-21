@@ -175,7 +175,7 @@ const CSS_TRABAJOS = `
   .trab-page .hd-head__right{gap:8px}
   /* Accion principal: rectangulo de 34px, no pildora de 44 */
   .trab-page .trab-new{height:34px;min-height:34px;padding:0 14px;gap:6px;
-    border-radius:6px;font-size:12.5px;font-weight:700;box-shadow:none}
+    border-radius:var(--r-sm);font-size:12.5px;font-weight:700;box-shadow:none}
   .trab-page .trab-new:hover{transform:none}
   .trab-page .trab-new svg{width:14px;height:14px;stroke-width:2.4}
 
@@ -187,12 +187,12 @@ const CSS_TRABAJOS = `
 
   /* Buscador y desplegable: rectangulo blanco con borde, no pildora gris */
   .trab-page .hd-find{height:32px;padding:0 10px;background:var(--bg-raised);
-    border:1px solid var(--border-strong);border-radius:10px}
+    border:1px solid var(--border-strong);border-radius:var(--r-md)}
   .trab-page .hd-find svg{width:14px;height:14px}
   .trab-page .hd-find input{font-size:12px}
   .trab-page .trab-drop{position:relative;display:flex;align-items:center;flex:none}
   .trab-page .trab-drop > .hd-drop{width:190px;height:32px;padding:0 28px 0 10px;
-    border-color:var(--border-strong);border-radius:10px;font-size:12px;color:var(--text-2);
+    border-color:var(--border-strong);border-radius:var(--r-md);font-size:12px;color:var(--text-2);
     appearance:none;-webkit-appearance:none;-moz-appearance:none}
   .trab-page .trab-drop > svg{position:absolute;right:9px;width:13px;height:13px;
     pointer-events:none;color:var(--text-4);stroke:currentColor;fill:none;stroke-width:2}
@@ -201,7 +201,7 @@ const CSS_TRABAJOS = `
   /* Lista + rail de detalle son UNA superficie blanca partida por 1px, como
      en el mockup, en vez de dos cajas flotando con 10px de gris en medio. */
   .trab-page .trab-cockpit{gap:0;background:var(--bg-raised);
-    border:1px solid var(--border-strong);border-radius:8px;overflow:hidden}
+    border:1px solid var(--border-strong);border-radius:var(--r-sm);overflow:hidden}
   .trab-page .trab-cockpit__list{border:none;border-radius:0;background:none}
   .trab-page .hd-tbl__h{padding:0 12px;border-top:none;border-bottom:1.5px solid var(--border)}
   .trab-page .hd-row{padding:0 12px;border-bottom:1px solid var(--chip)}
@@ -212,7 +212,7 @@ const CSS_TRABAJOS = `
   .trab-page .hd-plate{font-family:inherit;line-height:1.15}
   /* Iconos de fila: 26x26 radio 5 con svg de 14, no pildoras de 38 */
   .trab-page .hd-row .btn-icon.btn-sm{width:26px;min-width:26px;height:26px;min-height:26px;
-    padding:0;border-radius:5px}
+    padding:0;border-radius:var(--r-xs)}
   .trab-page .hd-row .btn-icon.btn-sm svg{width:14px;height:14px}
   .trab-page .hd-row .btn-icon.btn-sm:hover{transform:none}
   /* El mockup no trae pie, pero el pie lleva datos (cuantas y cuanto suman):
@@ -855,7 +855,7 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
         {/* Chevron propio (13px) en vez del del sistema: el mockup lo dibuja
             gris y alineado al borde derecho de un campo de 190px. */}
         <span className="trab-drop">
-          <select className="hd-drop" value={filtroTecnico} onChange={e => setFiltroTecnico(e.target.value)}>
+          <select className="hd-drop" aria-label="Filtrar por técnico" value={filtroTecnico} onChange={e => setFiltroTecnico(e.target.value)}>
             <option value="todos">Todos los técnicos</option>
             {TECNICOS.map(t => <option key={t.id} value={t.id}>{t.nombre}{t.activo === false ? ' (inactivo)' : ''}</option>)}
           </select>
