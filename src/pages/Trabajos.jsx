@@ -1,4 +1,25 @@
 import { Fragment, useState, useEffect, useMemo, useRef } from 'react'
+
+// Bloques por antiguedad para la lista de OT. Con 157 filas ordenadas por fecha
+// hay que leer la columna FECHA de cada una para ubicarse; una cabecera cada
+// vez que cambia el bloque deja barrer la lista de un vistazo. NO sustituye a
+// la columna: la columna dice el dia exacto, la cabecera da el tramo.
+const MESES_ES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
+  'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre']
+function bloqueFecha(f) {
+  if (!f) return 'Sin fecha'
+  const d = new Date(f)
+  if (isNaN(d)) return 'Sin fecha'
+  const hoy = new Date(); hoy.setHours(0, 0, 0, 0)
+  const dia = new Date(d); dia.setHours(0, 0, 0, 0)
+  const dias = Math.round((hoy - dia) / 86400000)
+  if (dias <= 0) return 'Hoy'
+  if (dias === 1) return 'Ayer'
+  if (dias < 7) return 'Esta semana'
+  if (dias < 14) return 'La semana pasada'
+  if (hoy.getFullYear() === dia.getFullYear() && hoy.getMonth() === dia.getMonth()) return 'Este mes'
+  return `${MESES_ES[dia.getMonth()]} ${dia.getFullYear()}`
+}
 import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import { fmt, fmtDate, fmtTelefono, cantidadItem, fmtCant } from '../utils/helpers'
@@ -950,7 +971,10 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
                 <span style={{ width: 84 }} />
               </div>
               <div className="hd-tbl__b">
-                {filtered.map((t) => {
+                {(() => { let bloqueAnterior = null; return filtered.map((t) => {
+                  const bloque = bloqueFecha(t.fecha)
+                  const abreBloque = bloque !== bloqueAnterior
+                  bloqueAnterior = bloque
                   const dias = t.fecha ? Math.floor((Date.now() - new Date(t.fecha).getTime()) / 86400000) : 0
                   const estancado = t.estado !== ESTADOS.COMPLETADO && t.estado !== ESTADOS.CANCELADO && dias >= DIAS_ESTANCADO
                   const cob = estadoCobro(t)
@@ -958,7 +982,9 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
                     /* La cebra pasa a CSS (:nth-child(even)): en linea pisaba el
                        hover y el resaltado de fila seleccionada, y el blanco fijo
                        se colaba en modo oscuro. */
-                    <div key={t.id} className={`hd-row hd-row--ot${t.id === selId ? ' on' : ''}`}
+                    <Fragment key={t.id}>
+                    {abreBloque && <div className="hd-grp">{bloque}</div>}
+                    <div className={`hd-row hd-row--ot${t.id === selId ? ' on' : ''}`}
                       style={{ height: 40 }}
                       onClick={() => setSelId(t.id)}>
                       {/* La placa manda: es por lo que se reconoce una OT. Cuando el
@@ -1009,8 +1035,9 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
                           onClick={() => setConfirmDel(t.id)}><IconTrash /></Button>
                       </div>
                     </div>
+                    </Fragment>
                   )
-                })}
+                }) })()}
               </div>
               <div className="hd-tbl__f">
                 <span>{filtered.length} de {trabajos.length} trabajos</span>
@@ -1149,12 +1176,17 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
                 </tr>
               </thead>
               <tbody>
-                {filtered.map(t => {
+                {(() => { let bloqueAnterior = null; return filtered.map(t => {
+                  const bloque = bloqueFecha(t.fecha)
+                  const abreBloque = bloque !== bloqueAnterior
+                  bloqueAnterior = bloque
                   const bc = estadoBadge(t.estado)
                   const diasSinMover = t.fecha ? Math.floor((Date.now() - new Date(t.fecha).getTime()) / 86400000) : 0
                   const estancado = t.estado !== ESTADOS.COMPLETADO && t.estado !== ESTADOS.CANCELADO && diasSinMover >= DIAS_ESTANCADO
                   return (
-                    <tr key={t.id} style={estancado ? { background: 'rgba(220,38,38,.06)', boxShadow: 'inset 0 0 0 1px rgba(220,38,38,.18)' } : {}}>
+                    <Fragment key={t.id}>
+                    {abreBloque && <tr className="tbl-grp"><td colSpan={9}>{bloque}</td></tr>}
+                    <tr style={estancado ? { background: 'rgba(220,38,38,.06)', boxShadow: 'inset 0 0 0 1px rgba(220,38,38,.18)' } : {}}>
                       <td className="c-mono td-placa" data-label="Placa" style={{ fontWeight: 700 }}>{t.placa || 'SERVICIO'}</td>
                       <td className="c-mono td-ot" data-label="OT" style={{ color: 'var(--blue-600)', fontWeight: 700 }}>{t.otCodigo || '—'}</td>
                       <td className="c-name">{t.cliente || '—'}</td>
@@ -1198,8 +1230,9 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
                         </div>
                       </td>
                     </tr>
+                    </Fragment>
                   )
-                })}
+                }) })()}
               </tbody>
             </table>
           </div>

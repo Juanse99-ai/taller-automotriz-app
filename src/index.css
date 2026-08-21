@@ -3253,3 +3253,34 @@ tbody tr:active{background:var(--fill-2)}
     padding:14px 16px 12px;border-bottom:1px solid var(--border)}
   .ec-hoja__t{font-size:17px;line-height:1.15;font-weight:700;color:var(--text)}
 }
+
+/* Cabecera de bloque dentro de una tabla (lista de OT agrupada por antiguedad).
+   Reusa el vocabulario de la cabecera de tabla que ya existe — 9.5px/700 en
+   --text-4 sobre --bg-subtle — para no inventar un tercer registro visual. */
+.tbl .tbl-grp > td{height:28px;padding:0 12px;background:var(--bg-subtle);
+  border-bottom:1px solid var(--head-line);
+  font-size:9.5px;line-height:1;font-weight:700;letter-spacing:.7px;
+  text-transform:uppercase;color:var(--text-4)}
+@media(max-width:600px){
+  /* En tarjetas la fila de bloque no es una tarjeta: es el rotulo que las separa. */
+  .tbl.tbl-cards tbody tr.tbl-grp{display:block;background:none;border:0;
+    border-radius:0;padding:0;margin:16px 0 7px;box-shadow:none}
+  .tbl.tbl-cards tbody tr.tbl-grp > td{display:block;height:auto;padding:0 2px;
+    background:none;border:0}
+  .tbl.tbl-cards tbody tr.tbl-grp > td::before{display:none}
+}
+
+/* Numero de rango en una tabla ya ordenada: hace explicito el orden sin robar
+   una columna a los anchos medidos del mockup. --text-4 y no --text-5 porque
+   PRODUCT.md prohibe el gris claro sobre blanco. */
+.rk{display:inline-block;min-width:16px;margin-right:9px;text-align:right;
+  font-size:11.5px;font-weight:700;color:var(--text-4);
+  font-variant-numeric:tabular-nums}
+
+/* Cabecera de bloque en la lista de OT de escritorio, que no es una <table>
+   sino filas .hd-row. Mismo registro que .tbl-grp para que las dos listas se
+   lean igual. */
+.hd-grp{display:flex;align-items:center;height:28px;padding:0 12px;
+  background:var(--bg-subtle);border-bottom:1px solid var(--head-line);
+  font-size:9.5px;line-height:1;font-weight:700;letter-spacing:.7px;
+  text-transform:uppercase;color:var(--text-4)}
