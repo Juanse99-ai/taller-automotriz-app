@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react'
 import { fmtDate, uid, hoyISO, normalizarDoc, normalizarNombre, fmtTelefono } from '../utils/helpers'
 import { TECNICOS, ESTADOS } from '../utils/constants'
 import { MARCAS, getModelos } from '../utils/vehiculos'
+import { ANIOS } from '../components/ui'
 import { useClientes } from '../hooks/useClientes'
 import Switch from '../components/Switch'
 import IngresoVehiculo from '../components/IngresoVehiculo'
@@ -367,8 +368,10 @@ export default function Recepcion({ hook, vehiculosHook, clientesHook, notify })
                 </div>
                 <div className="field">
                   <label>Año</label>
-                  <input className="input" type="number" value={form.ano} min="1980" max="2030" placeholder="Ej. 2018"
-                    onChange={e => set('ano', e.target.value)} />
+                  <select className="input" value={form.ano} onChange={e => set('ano', e.target.value)}>
+                    <option value="">Año</option>
+                    {ANIOS.map(a => <option key={a} value={a}>{a}</option>)}
+                  </select>
                 </div>
                 <div className="field">
                   <label>Kilometraje <span style={{ fontWeight: 400, color: 'var(--text-4)' }}>km</span></label>

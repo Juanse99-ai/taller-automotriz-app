@@ -104,10 +104,12 @@ export default function Login({ onLogin }) {
             </p>
           </div>
 
+          {/* El numeral se distingue por PESO, no por un ambar: el handoff fija un
+              solo acento y este era un segundo, colado en la pantalla de entrada. */}
           <div style={{ display: 'flex', gap: 32, fontSize: 12.5, color: 'rgba(255,255,255,.55)', flexWrap: 'wrap' }}>
-            <span><span className="mono" style={{ color: '#fbbf24', fontWeight: 700, marginRight: 6 }}>01</span> Recepción</span>
-            <span><span className="mono" style={{ color: '#fbbf24', fontWeight: 700, marginRight: 6 }}>02</span> Diagnóstico</span>
-            <span><span className="mono" style={{ color: '#fbbf24', fontWeight: 700, marginRight: 6 }}>03</span> Entrega</span>
+            <span><span className="mono" style={{ color: '#fff', fontWeight: 700, marginRight: 6 }}>01</span> Recepción</span>
+            <span><span className="mono" style={{ color: '#fff', fontWeight: 700, marginRight: 6 }}>02</span> Diagnóstico</span>
+            <span><span className="mono" style={{ color: '#fff', fontWeight: 700, marginRight: 6 }}>03</span> Entrega</span>
           </div>
         </div>
       </div>
@@ -121,12 +123,8 @@ export default function Login({ onLogin }) {
         padding: '48px 40px',
       }}>
         <div style={{ width: '100%', maxWidth: 400 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 11, marginBottom: 30 }}>
-            <div style={{ width: 38, height: 38, borderRadius: 10, overflow: 'hidden', border: '1px solid var(--border)', flexShrink: 0 }}>
-              <img src="/logo.png" alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-            </div>
-            <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)' }}>{TALLER.razonSocial || TALLER.nombre}</span>
-          </div>
+          {/* Aqui iba un segundo bloque de marca. El panel ya la trae en grande, y
+              en movil se apila justo encima: eran dos logos pegados. */}
           <h2 style={{
             margin: '0 0 8px', fontSize: 30, fontWeight: 700,
             letterSpacing: '-.5px', color: 'var(--text)',

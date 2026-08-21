@@ -18,7 +18,7 @@ import { subirVideoEvidencia, borrarVideoEvidencia, fetchEvidenciasTrabajo } fro
 import Switch from '../components/Switch'
 import MoneyInput from '../components/MoneyInput'
 import ConfirmDialog from '../components/ConfirmDialog'
-import { Button } from '../components/ui'
+import { Button, ANIOS } from '../components/ui'
 
 // Opciones de cilindraje del motor (litros): 0.8 a 5.0 en pasos de 0.1
 const CILINDRAJES = Array.from({ length: 43 }, (_, i) => (0.8 + i * 0.1).toFixed(1))
@@ -704,7 +704,10 @@ export default function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [
             </div>
             <div className="field">
               <label>Año</label>
-              <input className="input" type="number" value={form.ano} min="1980" max="2030" placeholder="Ej. 2018" disabled={form.sinVehiculo} onChange={e => set('ano', e.target.value)} />
+              <select className="input" value={form.ano} disabled={form.sinVehiculo} onChange={e => set('ano', e.target.value)}>
+                <option value="">Año</option>
+                {ANIOS.map(a => <option key={a} value={a}>{a}</option>)}
+              </select>
             </div>
             <div className="field">
               <label>Cilindraje</label>

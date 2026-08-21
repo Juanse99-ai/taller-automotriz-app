@@ -4,7 +4,7 @@ import { fmtDate, fmtTelefono, fmt } from '../utils/helpers'
 import { TIPOS_IDENTIFICACION, TIPOS_PERSONA, REGIMENES, buscarClientePorCedula, obtenerUrlDocumento } from '../services/cuentti'
 import ConfirmDialog from '../components/ConfirmDialog'
 import { SIN_FACTURA } from '../utils/constants'
-import { Button, Badge } from '../components/ui'
+import { Button, Badge, ANIOS } from '../components/ui'
 
 // Quita acentos: "FERNÁNDEZ" → "fernandez"
 const _sinAcentos = (s) => (s || '').toString().toLowerCase()
@@ -875,8 +875,11 @@ export default function Clientes({ clientes, vehiculos, trabajos = [], notify })
                   </div>
                   <div className="field">
                     <label>Año</label>
-                    <input className="input" type="number" value={nuevoVeh.ano}
-                      onChange={e => setNuevoVeh(s => ({ ...s, ano: e.target.value }))} placeholder="2020" />
+                    <select className="input" value={nuevoVeh.ano}
+                      onChange={e => setNuevoVeh(s => ({ ...s, ano: e.target.value }))}>
+                      <option value="">Año</option>
+                      {ANIOS.map(a => <option key={a} value={a}>{a}</option>)}
+                    </select>
                   </div>
                   <div className="field">
                     <label>Marca</label>

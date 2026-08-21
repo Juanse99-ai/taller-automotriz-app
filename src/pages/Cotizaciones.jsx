@@ -10,7 +10,7 @@ import ConfirmDialog from '../components/ConfirmDialog'
 import { useClientes } from '../hooks/useClientes'
 import { useInventario, formatCacheAge } from '../hooks/useInventario'
 import { lsGet, lsSet, LS_KEYS } from '../services/storage'
-import { Button, Badge, IconX, IconEdit, IconTrash, IconPdf } from '../components/ui'
+import { Button, Badge, IconX, IconEdit, IconTrash, IconPdf, ANIOS } from '../components/ui'
 
 const ESTADO_COT = { PENDIENTE: 'Pendiente', APROBADA: 'Aprobada', RECHAZADA: 'Rechazada' }
 
@@ -855,8 +855,10 @@ function CotizacionForm({ cotizacion, trabajos = [], onSave, onCancel }) {
               </div>
               <div className="field">
                 <label>Año</label>
-                <input className="input" type="number" value={form.ano} placeholder="2024" min="1950" max="2030"
-                  onChange={e => set('ano', e.target.value)} />
+                <select className="input" value={form.ano} onChange={e => set('ano', e.target.value)}>
+                  <option value="">Año</option>
+                  {ANIOS.map(a => <option key={a} value={a}>{a}</option>)}
+                </select>
               </div>
               <div className="field">
                 <label>Marca</label>

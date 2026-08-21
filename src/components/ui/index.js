@@ -9,3 +9,4 @@ export { IconEdit, IconTrash, IconPdf, IconPhone, IconChat, IconEye, IconCheck }
 export { default as Card } from './Card'
 export { default as Toolbar } from './Toolbar'
 export { Field, Input, Select, Textarea } from './Field'
+export { ANIOS } from './anios'
