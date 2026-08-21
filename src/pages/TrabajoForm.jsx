@@ -955,7 +955,7 @@ export default function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [
                 <span style={{ width: 96, flexShrink: 0, textAlign: 'right' }}>PRECIO</span>
                 <span style={{ width: 58, flexShrink: 0, textAlign: 'center' }}>CANT.</span>
                 <span style={{ width: 56, flexShrink: 0, textAlign: 'center' }}>IVA %</span>
-                <span style={{ width: 74, flexShrink: 0, textAlign: 'center' }}>SERVICIO</span>
+                <span style={{ width: 74, flexShrink: 0, paddingLeft: 6, textAlign: 'center' }}>SERVICIO</span>
                 <span style={{ width: 96, flexShrink: 0, textAlign: 'right' }}>TOTAL</span>
                 <span style={{ width: 46, flexShrink: 0 }} />
               </div>
@@ -1085,17 +1085,27 @@ export default function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [
                             onChange={e => updateItem(item.id, 'iva', e.target.value)}
                             style={{ padding: '6px 4px', fontSize: 13, textAlign: 'center', width: '100%', minHeight: 38 }} />
                         </div>
-                        <div style={{ width: 74, flexShrink: 0, display: 'flex', justifyContent: 'center' }}>
-                          {/* Era una casilla de 13px: imposible de acertar con el dedo.
-                             Ahora es la misma pastilla que se lee en la lista, y de
-                             paso dice qué es la línea sin tener que descifrar un tic. */}
-                          <button type="button" aria-pressed={!!item.esServicio}
-                            title="Marcar como mano de obra / servicio"
-                            onClick={() => updateItem(item.id, 'esServicio', !item.esServicio)}
-                            className={`hd-chip hd-chip--${item.esServicio ? 'info' : 'mute'}`}
-                            style={{ height: 44, minWidth: 70, border: 'none', cursor: 'pointer', borderRadius: 'var(--radius-pill)' }}>
-                            {item.esServicio ? 'Servicio' : 'Repuesto'}
-                          </button>
+                        <div style={{ width: 74, flexShrink: 0, paddingLeft: 6, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                          {/* Interruptor, no pastilla. La pastilla medía 70px dentro de una
+                             columna de 74 (2px de aire contra los 6 de sus vecinos) y 44px
+                             de alto contra los 38 de los campos: sobresalía y apiñaba la
+                             fila. El interruptor mide 52x32, deja 8px a cada lado y queda
+                             mas bajo que los campos, que es lo que corresponde a un control
+                             secundario. El rotulo de la columna ya dice SERVICIO, asi que
+                             encendido = es servicio; apagado = repuesto. Bajando la vista,
+                             una columna de interruptores se lee de un golpe. */}
+                          <Switch
+                            checked={!!item.esServicio}
+                            onChange={v => updateItem(item.id, 'esServicio', v)}
+                            ariaLabel={`${item.nombre || 'Línea'}: ${item.esServicio ? 'es mano de obra o servicio' : 'es un repuesto'}`}
+                            title={item.esServicio ? 'Es mano de obra / servicio' : 'Es un repuesto'}
+                            checkedIcon={
+                              <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor"
+                                strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                <path d="m5 12 5 5L20 7" />
+                              </svg>
+                            }
+                          />
                         </div>
                         <div className="hd-n hd-strong hd-mono" style={{ width: 96, flexShrink: 0 }}>{fmt(lineTotal)}</div>
                         <div style={{ width: 46, flexShrink: 0, display: 'flex', justifyContent: 'flex-end' }}>
