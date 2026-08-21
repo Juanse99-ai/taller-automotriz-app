@@ -134,6 +134,12 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
   const [compAbierto, setCompAbierto] = useState({}) // trabajoId -> selector de compañero desplegado
   // Ventanas del tecnico seleccionado: minimizables por header
   const [colapso, setColapso] = useState({ trabajos: false, movs: false })
+  // Paso dentro de un tecnico ya elegido: 2 = que trabajos le pago, 3 = cuanto.
+  // Antes la pantalla deducia el paso de tecData y cantSeleccionados y mostraba
+  // los tres a la vez en dos columnas. Eso contradecia sus propias pastillas
+  // ("1 Tecnico -> 2 Trabajos -> 3 Pago") y dejaba la izquierda en 504px contra
+  // 907 de la derecha. Con un paso explicito no hay dos columnas que descuadrar.
+  const [paso, setPaso] = useState(2)
   const toggleColapso = (k) => setColapso(c => ({ ...c, [k]: !c[k] }))
   // CTA del estado vacío del paso 3 ("Ir al paso 2"): despliega la tabla de
   // trabajos si estaba colapsada y hace scroll hasta ella.
@@ -1450,6 +1456,60 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
            derecho, a la vista desde el primer clic. En el celular vuelve a ser
            una sola columna (mismo orden de lectura). */
         .liq-work{ display:flex; align-items:flex-start; gap:10px; }
+        /* Un paso a la vez: la columna que toca ocupa el ancho. En el paso 2 la
+           tabla recupera los 322px que se llevaba el carril, asi que Cliente y
+           Vehiculo dejan de apretarse. */
+        .liq-work--p2 .liq-work__main{ width:100%; }
+        /* PRODUCT.md: "denso donde se trabaja, aire donde se decide". El paso 3
+           es la decision, asi que no se estira a 1.500px: una columna de lectura
+           centrada. 660 deja el resumen de dos cifras en una linea comoda. */
+        .liq-work--p3{ justify-content:center; }
+        .liq-work--p3 .liq-work__side{ width:100%; max-width:660px; }
+
+        /* Pie del paso 2 */
+        .liq-paso2__pie{ display:flex; align-items:center; justify-content:space-between;
+          gap:16px; flex-wrap:wrap; padding:14px 4px 0; }
+        .liq-paso2__n{ font-size:13px; color:var(--text-3); }
+        .liq-paso2__n strong{ color:var(--text); font-weight:700; }
+
+        /* Linea de vuelta del paso 3 */
+        .liq-vuelta{ display:flex; align-items:center; gap:10px; width:100%;
+          padding:9px 14px 9px 10px; border:1px solid var(--border); border-radius:var(--radius-pill);
+          background:var(--bg-raised); font:inherit; color:var(--text); text-align:left;
+          cursor:pointer; transition:background .15s var(--ease-out), border-color .15s var(--ease-out); }
+        .liq-vuelta:hover{ background:var(--bg-subtle); border-color:var(--border-strong); }
+        .liq-vuelta:focus-visible{ outline:2px solid var(--accent); outline-offset:2px; }
+        .liq-vuelta svg{ flex:none; color:var(--text-4); }
+        .liq-vuelta__av{ width:26px; height:26px; flex:none; font-size:10px; }
+        .liq-vuelta__n{ flex:1; min-width:0; font-size:13.5px; font-weight:700;
+          overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+        .liq-vuelta__s{ flex:none; font-size:12.5px; color:var(--text-3); }
+        .liq-vuelta__s strong{ color:var(--text); font-weight:700; }
+
+        /* Las pastillas de paso ahora son <button>. Heredan tipografia y pierden
+           el puntero cuando no se puede volver a ese paso. */
+        .liq-steps li{ display:flex; }
+        .liq-step{ font:inherit; border:none; cursor:pointer; }
+        .liq-step:disabled{ cursor:default; }
+        .liq-step:not(:disabled):hover{ background:var(--bg-subtle); }
+        .liq-step.on:not(:disabled):hover,.liq-step.on{ background:var(--accent-soft); }
+        .liq-step:focus-visible{ outline:2px solid var(--accent); outline-offset:2px; }
+
+        /* Objetivo tactil en el telefono. PRODUCT.md pide botones grandes en movil
+           y estos dos se quedaban cortos: Cambiar en 40px y Compartir en 24. Los
+           checkbox de fila NO entran aqui a proposito: la fila entera es pulsable
+           (onClick toggleSeleccion), asi que el cuadrito es solo el indicador y el
+           objetivo real es el renglon. */
+        @media (max-width:960px){
+          /* .liq-done .liq-cambiar y no .liq-cambiar a secas: la regla de 40px se
+             declara mas abajo en esta misma hoja, y una media query no anade
+             especificidad, asi que ganaria por orden. */
+          .liq-done .liq-cambiar{ height:var(--tap); }
+          .liq-share{ min-height:var(--tap); padding:0 12px; display:inline-flex; align-items:center; }
+          .liq-paso2__pie{ padding:14px 0 0; }
+          .liq-paso2__pie .btn{ flex:1; }
+          .liq-vuelta{ padding:11px 14px 11px 10px; }
+        }
         .liq-work__main{ flex:1; min-width:0; display:flex; flex-direction:column; gap:10px; }
         .liq-work__side{ width:322px; flex:none; display:flex; flex-direction:column; gap:10px; }
         @media (min-width:961px) and (max-width:1199px){ .liq-work__side{ width:290px; } }
@@ -1607,10 +1667,33 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
         <div className="hd-head__right" style={{ alignItems: 'center', gap: 12 }}>
           {/* Guía de pasos: dónde estoy y qué falta. Va en la MISMA fila del
              título (antes se comía un renglón entero para tres palabras). */}
+          {/* Las pastillas dejan de ser texto muerto: los pasos ya hechos son
+             botones para volver. Un paso al que aun no puedes llegar no es
+             pulsable, y se anuncia con aria-current cual es el de ahora. */}
           <ol className="liq-steps">
-            <li className={`liq-step${tecData ? ' done' : ' on'}`}><span className="n">{tecData ? '✓' : '1'}</span> Técnico</li>
-            <li className={`liq-step${!tecData ? '' : cantSeleccionados > 0 ? ' done' : ' on'}`}><span className="n">{tecData && cantSeleccionados > 0 ? '✓' : '2'}</span> Trabajos</li>
-            <li className={`liq-step${tecData && cantSeleccionados > 0 ? ' on' : ''}`}><span className="n">3</span> Pago</li>
+            <li>
+              <button type="button" className={`liq-step${tecData ? ' done' : ' on'}`} disabled={!tecData}
+                aria-current={!tecData ? 'step' : undefined}
+                onClick={() => { setTecnicoSel(''); setSeleccionados({}); setPaso(2) }}>
+                <span className="n">{tecData ? '✓' : '1'}</span> Técnico
+              </button>
+            </li>
+            <li>
+              <button type="button" disabled={!tecData || paso === 2}
+                className={`liq-step${!tecData ? '' : paso === 3 ? ' done' : ' on'}`}
+                aria-current={tecData && paso === 2 ? 'step' : undefined}
+                onClick={() => setPaso(2)}>
+                <span className="n">{tecData && paso === 3 ? '✓' : '2'}</span> Trabajos
+              </button>
+            </li>
+            <li>
+              <button type="button" disabled={!tecData || cantSeleccionados === 0 || paso === 3}
+                className={`liq-step${tecData && paso === 3 ? ' on' : ''}`}
+                aria-current={tecData && paso === 3 ? 'step' : undefined}
+                onClick={() => setPaso(3)}>
+                <span className="n">3</span> Pago
+              </button>
+            </li>
           </ol>
           {!tecData && <Button variant="outline" onClick={() => setVerHistorial(!verHistorial)}>{verHistorial ? 'Ocultar historial' : 'Ver historial'}</Button>}
         </div>
@@ -1699,7 +1782,7 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
             <button
               key={t.id}
               type="button"
-              onClick={() => { setTecnicoSel(activo ? '' : String(t.id)); setSeleccionados({}); setColapso({ trabajos: false, movs: false }) }}
+              onClick={() => { setTecnicoSel(activo ? '' : String(t.id)); setSeleccionados({}); setColapso({ trabajos: false, movs: false }) ; setPaso(2) }}
               className={`liq-roster-row${activo ? ' on' : ''}`}
             >
               <span className={`av av-${(i % 5) + 1}`} style={{ width: 36, height: 36, fontSize: 12.5, flexShrink: 0 }}>
@@ -1739,7 +1822,7 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
                difícil de reportar que "nunca funciona". */}
             {verInactivos && tecnicosSinPendientes.map(t => (
               <button key={t.id} type="button" className="liq-roster-mini"
-                onClick={() => { setTecnicoSel(String(t.id)); setSeleccionados({}); setColapso({ trabajos: false, movs: false }) }}
+                onClick={() => { setTecnicoSel(String(t.id)); setSeleccionados({}); setColapso({ trabajos: false, movs: false }) ; setPaso(2) }}
                 style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%', padding: '10px 16px', borderTop: '1px solid var(--border)', borderLeft: 'none', borderRight: 'none', borderBottom: 'none', background: 'transparent', font: 'inherit', fontSize: 13, textAlign: 'left', cursor: 'pointer' }}>
                 <span style={{ flex: 1, minWidth: 0, color: 'var(--text-2)' }}>{t.nombre}</span>
                 {t.cargos > 0 && <span style={{ fontWeight: 700, color: 'var(--amber-700)', fontSize: 12.5 }}>{fmt(t.cargos)} en aportes</span>}
@@ -1793,7 +1876,11 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
       <>
         {/* Mesa de trabajo: a la izquierda a quién y qué se le paga; a la
            derecha, sin bajar la pantalla, cuánto y el botón de pagar. */}
-        <div className="liq-work">
+        <div className={`liq-work liq-work--p${paso}`}>
+        {/* Un paso a la vez. Antes main y side se pintaban a la vez en dos
+           columnas y la izquierda quedaba en 504px contra 907 de la derecha:
+           400px de fondo vacio cuando el tecnico tiene pocas OTs. */}
+        {paso === 2 ? (
           <div className="liq-work__main">
           {/* PASO 1 HECHO — se encoge a una línea, con "Cambiar" para volver */}
           <div className="card">
@@ -1815,7 +1902,7 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
               </div>
               {/* La referencia sale una sola vez, en el Paso 3 (donde se usa al
                  registrar en Cuentti). Antes aparecía dos veces en la pantalla. */}
-              <button type="button" className="liq-cambiar" onClick={() => { setTecnicoSel(''); setSeleccionados({}) }}>Cambiar</button>
+              <button type="button" className="liq-cambiar" onClick={() => { setTecnicoSel(''); setSeleccionados({}) ; setPaso(2) }}>Cambiar</button>
             </div>
           </div>
 
@@ -1833,7 +1920,10 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
               <div style={{ display: 'flex', gap: 8, alignItems: 'center' }} onClick={e => e.stopPropagation()}>
                 {/* Lo marcado en PLATA, no solo un conteo: es la cifra que el
                    jefe vigila mientras marca (el conteo sigue delante). */}
-                {cantSeleccionados > 0 && (
+                {/* Solo con la seccion plegada: desplegada, el pie del paso 2 dice
+                   lo mismo a 250px de aqui y justo al lado del boton, que es donde
+                   hace falta. Repetirlo arriba es ruido. */}
+                {cantSeleccionados > 0 && colapso.trabajos && (
                   <span className="liq-marcado">{cantSeleccionados} de {tecTrabajos.length} · {fmt(totalSeleccion.comision)}</span>
                 )}
                 {!colapso.trabajos && (
@@ -1969,6 +2059,21 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
             </div>
             )}
           </div>
+
+          {/* Pie del paso 2: lo marcado y el paso siguiente. Antes no habia
+             "siguiente" porque el paso 3 ya estaba pintado al lado; ahora hace
+             falta un gesto explicito. Desactivado sin nada marcado, y el rotulo
+             dice por que en vez de dejar un boton gris mudo. */}
+          <div className="liq-paso2__pie">
+            <span className="liq-paso2__n">
+              {cantSeleccionados === 0
+                ? 'Marca los trabajos que le vas a pagar'
+                : <>{cantSeleccionados} de {tecTrabajos.length} · <strong className="mono">{fmt(totalSeleccion.comision)}</strong> de comisión</>}
+            </span>
+            <Button variant="primary" disabled={cantSeleccionados === 0} onClick={() => setPaso(3)}>
+              {cantSeleccionados === 0 ? 'Marca al menos uno' : 'Continuar al pago'}
+            </Button>
+          </div>
           {/* Últimos pagos a este técnico. Vivía al final del carril derecho, y de
              ahí salían los dos defectos que se veían en pantalla: estiraba esa
              columna a 1.034px mientras la izquierda medía 377 (medido a 1512px),
@@ -1997,12 +2102,29 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
             </div>
           </div>
           </div>
-
-          {/* PASO 3 — de dónde sale la plata, qué se ajusta y cuánto se paga.
-             Antes esto eran TRES sitios distintos (aportes, cuenta del técnico y
-             resumen); ahora los ajustes son UNA sola lista y el neto va debajo.
-             El título encabeza el carril (no es cabecera de tarjeta). */}
+        ) : (
+          // PASO 3 — de donde sale la plata, que se ajusta y cuanto se paga.
+          // Los ajustes son UNA sola lista y el neto va debajo. Va como comentario
+          // de linea porque la rama del ternario todavia no es JSX: un comentario
+          // de llaves no es valido aqui, y uno de bloque se cerraria solo al
+          // escribir las llaves de ejemplo dentro.
           <div className="liq-work__side">
+            {/* Linea de vuelta: quien, cuantas OTs y cuanto. Es el unico rastro de
+               los trabajos en este paso, y es pulsable para volver a marcarlos.
+               Un <button> y no un enlace: no navega, cambia el paso. */}
+            <button type="button" className="liq-vuelta" onClick={() => setPaso(2)}>
+              <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor"
+                strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="m15 18-6-6 6-6" />
+              </svg>
+              <span className={`av av-${(Math.max(0, tecnicosConPendientes.findIndex(x => String(x.id) === String(tecData.tecnico.id))) % 5) + 1} liq-vuelta__av`}>
+                {iniciales(tecData.tecnico.nombre)}
+              </span>
+              <span className="liq-vuelta__n">{tecData.tecnico.nombre}</span>
+              <span className="liq-vuelta__s">
+                {cantSeleccionados} {cantSeleccionados === 1 ? 'OT' : 'OTs'} · <strong className="mono">{fmt(totalSeleccion.comision)}</strong>
+              </span>
+            </button>
             <div className="liq-side__head">
               <span className="t">Paso 3 · Ajustes y pago</span>
               <span style={{ flex: 1 }} />
@@ -2333,6 +2455,7 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
           )}
 
           </div>
+        )}
         </div>
         </>
       )}
