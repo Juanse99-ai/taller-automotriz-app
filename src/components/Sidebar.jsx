@@ -242,7 +242,12 @@ export default function Sidebar({ active, onNavigate, isOpen, collapsed, onColla
             <div key={g.group}>
               <div className="sidebar__group">{g.group}</div>
               {visible.map(item => (
-                <a
+                // <button> y no <a>: un ancla sin href no recibe foco ni
+                // responde a Enter, asi que los 14 items del rail eran
+                // inalcanzables con teclado. Aqui no se navega a una URL, se
+                // cambia de vista: el elemento honesto es un boton.
+                <button
+                  type="button"
                   key={item.key}
                   className={`navlink ${active === item.key ? 'active' : ''}`}
                   onClick={() => onNavigate(item.key)}
@@ -254,7 +259,7 @@ export default function Sidebar({ active, onNavigate, isOpen, collapsed, onColla
                   {ICONS[item.key]}
                   <span>{item.label}</span>
                   {pillCounts[item.key] > 0 && <span className="pill">{pillCounts[item.key]}</span>}
-                </a>
+                </button>
               ))}
             </div>
           )

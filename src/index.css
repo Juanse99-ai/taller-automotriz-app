@@ -3284,3 +3284,29 @@ tbody tr:active{background:var(--fill-2)}
   background:var(--bg-subtle);border-bottom:1px solid var(--head-line);
   font-size:9.5px;line-height:1;font-weight:700;letter-spacing:.7px;
   text-transform:uppercase;color:var(--text-4)}
+
+/* El rail se navega con teclado (los items son <button>), asi que necesita su
+   propio anillo: el generico usa --primary #1D4ED8, que sobre el navy #0d1b35
+   da 2,2:1 y no llega al 3:1 que pide un componente de interfaz. Blanco sobre
+   navy da ~17:1. El offset negativo lo mete DENTRO del item para no deformarle
+   el radio de 16px, que es lo que hacia el generico al forzar 6px. */
+@media (min-width:961px){
+  .sidebar .navlink{border:0;background:transparent;font-family:inherit;
+    width:70px;text-align:center;-webkit-appearance:none;appearance:none}
+  .sidebar .navlink:focus-visible{outline:2px solid #fff;outline-offset:-3px;
+    border-radius:16px}
+}
+
+/* La guarda de movimiento reducido tiene que PESAR mas que lo que apaga:
+   .sidebar .navlink span es (0,2,1) y perdia contra
+   .sidebar.hover-expand .navlink span, que es (0,3,1). Con el rotulo animandose
+   igual, la guarda era decorativa. */
+@media (prefers-reduced-motion: reduce){
+  /* Cada selector de aqui tiene que igualar o superar al que apaga. El rotulo
+     lo declaran DOS reglas de (0,3,1) — .sidebar.collapsed para el tamano y
+     .sidebar.hover-expand para el fundido — asi que las dos se repiten. */
+  .sidebar,.main,.navlink{transition:none}
+  .sidebar .navlink span,
+  .sidebar.collapsed .navlink span,
+  .sidebar.hover-expand .navlink span{transition:none;animation:none}
+}
