@@ -19,6 +19,10 @@ import '@fontsource/ibm-plex-mono/latin-400.css'
 import '@fontsource/ibm-plex-mono/latin-500.css'
 import '@fontsource/ibm-plex-mono/latin-600.css'
 import '@fontsource/ibm-plex-mono/latin-700.css'
+// shadcn va ANTES de index.css a proposito: asi, cuando una utilidad de
+// Tailwind y una regla de la app tocan lo mismo con la misma
+// especificidad, gana la de la app.
+import './shadcn.css'
 import './index.css'
 import App from './App.jsx'
 import { precargarLogo } from './utils/pdfTheme'

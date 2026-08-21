@@ -1,0 +1,74 @@
+/* ═══════════════════════════════════════════════════════════════════════
+   Tailwind + shadcn, montado SOBRE el sistema de la app, no al lado.
+
+   Dos decisiones que hacen que esto no rompa nada:
+
+   1. SIN PREFLIGHT. Tailwind trae un reset (modern-normalize) que quita
+      margenes, bordes y estilos de titulo, boton y lista en TODO el
+      documento. Con las 3.200 lineas de index.css encima, eso cambiaria
+      el aspecto de la app entera. Se evita importando solo las capas
+      theme y utilities y omitiendo preflight.css, que es la forma que
+      documenta Tailwind para meterse en proyectos que ya existen.
+
+   2. LOS COLORES DE SHADCN APUNTAN A LOS TOKENS DE LA APP. shadcn espera
+      --background, --popover, --muted-foreground, etc. La app ya tiene
+      los suyos, y en dos casos con el MISMO nombre y distinto
+      significado: --accent aqui es el azul de marca, en shadcn es el
+      gris de hover. Definirlos en :root machacaria los de la app. Con
+      @theme inline se mapea el nombre de color de Tailwind al token que
+      ya existe, sin redefinir ninguno. Efecto util: el modo oscuro sale
+      gratis, porque son los tokens de la app los que cambian bajo
+      [data-theme="dark"] y estos los siguen.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+@layer theme, base, components, utilities;
+
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/utilities.css" layer(utilities) source("../src");
+
+/* La app conmuta el tema con [data-theme="dark"] en <html>. El dark: de
+   Tailwind mira prefers-color-scheme por defecto, que aqui no manda. */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+@theme inline {
+  /* superficies */
+  --color-background: var(--bg);
+  --color-foreground: var(--text);
+  --color-card: var(--bg-raised);
+  --color-card-foreground: var(--text);
+  --color-popover: var(--bg-raised);
+  --color-popover-foreground: var(--text);
+
+  /* accion principal: el azul de marca */
+  --color-primary: var(--accent);
+  --color-primary-foreground: #fff;
+
+  /* apoyo y estados inertes */
+  --color-secondary: var(--bg-subtle);
+  --color-secondary-foreground: var(--text-2);
+  --color-muted: var(--bg-subtle);
+  --color-muted-foreground: var(--text-4);
+
+  /* OJO: el "accent" de shadcn es el fondo de un item resaltado en un
+     menu, no un color de marca. Por eso va al gris sutil y no a --accent. */
+  --color-accent: var(--bg-subtle);
+  --color-accent-foreground: var(--text);
+
+  --color-destructive: var(--red-600);
+  --color-destructive-foreground: #fff;
+
+  /* lineas */
+  --color-border: var(--border);
+  --color-input: var(--border-input);
+  --color-ring: var(--accent);
+
+  /* radios: los seis escalones de la app, no la escala por defecto */
+  --radius-sm: var(--r-xs);
+  --radius-md: var(--r-sm);
+  --radius-lg: var(--r-md);
+  --radius-xl: var(--r-lg);
+
+  /* tipografia: IBM Plex, la misma que el resto */
+  --font-sans: var(--font);
+  --font-mono: var(--mono);
+}

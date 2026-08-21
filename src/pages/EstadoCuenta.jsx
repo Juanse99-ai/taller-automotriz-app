@@ -14,6 +14,7 @@ import { PERSONAS_CUENTA } from '../utils/constants'
 import { registrarGastoNominaBackend } from '../services/cuentti'
 import ConfirmDialog from '../components/ConfirmDialog'
 import { Button, Badge, IconX } from '../components/ui'
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectSeparator, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { loadLogo, drawHeader, drawSectionHeader, drawDataBlock, drawSignatures, drawFooter, tableStylesItems, PDF_LAYOUT } from '../utils/pdfTheme'
 
 export default function EstadoCuenta({ prestamos, tecnicos, notify, tabs = null, resumen = null }) {
@@ -279,9 +280,22 @@ export default function EstadoCuenta({ prestamos, tecnicos, notify, tabs = null,
   // Abonos elegibles que aun no se registraron como gasto en Cuentti.
   const sinCuentti = movsSel.filter(m => m.tipo === 'abono' && !cuentaSel?.tecnicoId && !!cedulaDeCuenta(cuentaSel) && !gastoDone[m.id]).length
   const esHoy = form.fecha === hoyISO()
-  const personaEnUso = form.personaSel === '__otra' ? form.personaOtra : form.personaSel
   const iniciales = (n) => (n || '?').split(' ').map(x => x[0]).slice(0, 2).join('')
-  const idxAv = Math.max(0, cuentas.findIndex(c => mismaPersona(c.persona, personaEnUso)))
+  // Opciones del desplegable de PERSONA. Un <option> nativo solo aguanta texto,
+  // asi que el avatar vivia FUERA del campo, como una pastilla aparte. Con el
+  // Select de shadcn cada opcion es JSX, y como SelectItem mete sus hijos en
+  // ItemText, el avatar se ve tanto en la lista como en el propio campo.
+  const listaPersonas = useMemo(() => {
+    const cuentaDe = (nom) => cuentas.find(c => mismaPersona(c.persona, nom))
+    const arma = (nom, rol) => {
+      const i = cuentas.findIndex(c => mismaPersona(c.persona, nom))
+      return { nombre: nom, rol, av: (Math.max(0, i) % 5) + 1, saldo: cuentaDe(nom)?.saldo ?? 0 }
+    }
+    return {
+      tecnicos: tecnicos.filter(t => !t.eliminado).map(t => arma(t.nombre, 'Técnico')),
+      admin: PERSONAS_CUENTA.map(p => arma(p.nombre, p.rol)),
+    }
+  }, [cuentas, tecnicos])
 
   // La fila de captura: vive dentro de la tarjeta de la cuenta y arrastra la
   // persona elegida, asi que registrar no obliga a bajar la vista ni a repetir
@@ -299,13 +313,53 @@ export default function EstadoCuenta({ prestamos, tecnicos, notify, tabs = null,
         <div className="ec-cta__c ec-cta__c--persona">
           <div className="ec-cta__l">PERSONA</div>
           <div className="ec-cta__pers">
-            {personaEnUso && <span className={`av av-${(idxAv % 5) + 1} ec-cta__av`}>{iniciales(personaEnUso)}</span>}
-            <select className="hd-drop" value={form.personaSel} onChange={e => { const v = e.target.value; setForm(f => ({ ...f, personaSel: v })); if (v && v !== '__otra') setSel(v) }}>
-              <option value="">Seleccionar…</option>
-              {tecnicos.filter(t => !t.eliminado).map(t => <option key={t.id} value={t.nombre}>{t.nombre}</option>)}
-              {PERSONAS_CUENTA.map(p => <option key={p.nombre} value={p.nombre}>{p.nombre}{p.rol ? ` (${p.rol})` : ''}</option>)}
-              <option value="__otra">Otra persona (tercero)…</option>
-            </select>
+            <Select
+              value={form.personaSel || undefined}
+              onValueChange={v => { setForm(f => ({ ...f, personaSel: v })); if (v && v !== '__otra') setSel(v) }}
+            >
+              {/* w-full: el trigger de shadcn viene w-fit y aqui tiene que llenar
+                  la casilla. h-[42px] iguala a .input, que es el alto del resto
+                  de campos de la fila. */}
+              <SelectTrigger className="ec-pers__t w-full h-[42px]" aria-label="Persona de la cuenta">
+                <SelectValue placeholder="Seleccionar…" />
+              </SelectTrigger>
+              {/* position="popper" ancla el panel DEBAJO del campo. El valor por
+                  defecto de shadcn es "item-aligned", que coloca el panel de modo
+                  que la opcion elegida caiga sobre el campo: sin nada elegido eso
+                  lo subia encima del rotulo PERSONA. El min-w lo iguala al ancho
+                  del campo en vez de dejarlo mas angosto. */}
+              <SelectContent position="popper" className="min-w-[var(--radix-select-trigger-width)]">
+                {listaPersonas.tecnicos.length > 0 && (
+                  <SelectGroup>
+                    <SelectLabel>Técnicos</SelectLabel>
+                    {listaPersonas.tecnicos.map(p => (
+                      <SelectItem key={p.nombre} value={p.nombre}>
+                        <span className={`av av-${p.av} ec-pers__av`}>{iniciales(p.nombre)}</span>
+                        <span className="ec-pers__n">{p.nombre}</span>
+                        {p.saldo !== 0 && <span className="ec-pers__s mono">{fmt(p.saldo)}</span>}
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
+                )}
+                {listaPersonas.admin.length > 0 && (
+                  <SelectGroup>
+                    <SelectLabel>Administración</SelectLabel>
+                    {listaPersonas.admin.map(p => (
+                      <SelectItem key={p.nombre} value={p.nombre}>
+                        <span className={`av av-${p.av} ec-pers__av`}>{iniciales(p.nombre)}</span>
+                        <span className="ec-pers__n">{p.nombre}</span>
+                        {p.saldo !== 0 && <span className="ec-pers__s mono">{fmt(p.saldo)}</span>}
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
+                )}
+                <SelectSeparator />
+                <SelectItem value="__otra">
+                  <span className="ec-pers__av ec-pers__av--otra">+</span>
+                  <span className="ec-pers__n">Otra persona (tercero)…</span>
+                </SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </div>
         {form.personaSel === '__otra' && (
