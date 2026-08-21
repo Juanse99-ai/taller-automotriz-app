@@ -479,10 +479,10 @@ export default function Recepcion({ hook, vehiculosHook, clientesHook, notify })
                 </div>
               )}
               <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 16, flexWrap: 'wrap' }}>
+                {/* Se cayo la linea "Se notificara al tecnico...": el handoff prohibe
+                    texto explicativo, y ademas prometia un aviso que la app no manda
+                    (no hay nada de notificacion en services/, hooks/ ni api/). */}
                 <button type="submit" className="btn btn-primary" disabled={enviando}>{enviando ? 'Recibiendo…' : 'Recibir vehículo'}</button>
-                <span style={{ fontSize: 11.5, lineHeight: 1.4, color: 'var(--text-3)' }}>
-                  Se notificará al técnico asignado y quedará registrado el ingreso.
-                </span>
               </div>
             </section>
           </div>

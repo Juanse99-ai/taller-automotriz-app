@@ -1425,7 +1425,7 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
               <p className="text-sm text-muted" style={{ marginBottom: 16 }}>
                 Total: <strong className="text-mono">{fmt(showFacturarModal.total)}</strong>
               </p>
-              <p style={{ fontSize: 14 }}>Deseas facturar este trabajo en Cuentti?</p>
+              <p style={{ fontSize: 14 }}>¿Facturar este trabajo en Cuentti?</p>
             </div>
             <div className="modal-footer">
               <Button variant="outline" onClick={() => setShowFacturarModal(null)}>Después</Button>

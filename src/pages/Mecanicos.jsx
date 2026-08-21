@@ -518,8 +518,11 @@ const ESTILOS = `
   .mec-fig .hd-fig__l{font-size:10px}
   .mec-fig .hd-fig__v{font-size:26px;margin-top:5px}
   .mec-fig .hd-fig__s{font-size:12px;line-height:1.35;margin-top:4px}
-  .mec-seg{height:var(--tap);border-radius:14px;padding:4px;gap:4px}
-  .mec-seg .hd-seg__i{height:36px;border-radius:11px;font-size:13.5px}
+  /* El alto lo pone el item, no el riel: con height fijo en el riel el boton
+     quedaba en 36px y pisaba en silencio el minimo tactil de 44 que index.css
+     aplica a todos los .hd-seg__i en movil. */
+  .mec-seg{height:auto;border-radius:14px;padding:4px;gap:4px}
+  .mec-seg .hd-seg__i{height:var(--tap);border-radius:11px;font-size:13.5px}
   .btn.mec-add{width:100%;height:var(--tap-lg);font-size:15px}
 
   /* La fila tenia 698px de anchos fijos dentro de una tarjeta con

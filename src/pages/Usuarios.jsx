@@ -99,7 +99,10 @@ export default function Usuarios({ notify, currentUser }) {
       cerrar()
       setRefreshTick(t => t + 1)
     } catch (e) {
-      notify('Error: ' + e.message, 'error')
+      // El dueño no es tecnico: "Error: Failed to fetch" no le dice si
+      // reintentar. El detalle va a consola, el aviso nombra la accion.
+      console.warn('Usuarios.guardar:', e.message)
+      notify('No se pudo guardar el usuario. Reintenta en un momento.', 'error')
     } finally {
       setSaving(false)
     }
@@ -123,7 +126,10 @@ export default function Usuarios({ notify, currentUser }) {
       setShowPassN(false)
       setRefreshTick(t => t + 1)
     } catch (e) {
-      notify('Error: ' + e.message, 'error')
+      // El dueño no es tecnico: "Error: Failed to fetch" no le dice si
+      // reintentar. El detalle va a consola, el aviso nombra la accion.
+      console.warn('Usuarios.crearInline:', e.message)
+      notify('No se pudo crear el usuario. Reintenta en un momento.', 'error')
     } finally {
       setCreando(false)
     }
@@ -142,7 +148,10 @@ export default function Usuarios({ notify, currentUser }) {
       notify('Usuario desactivado', 'info')
       setRefreshTick(t => t + 1)
     } catch (e) {
-      notify('Error: ' + e.message, 'error')
+      // El dueño no es tecnico: "Error: Failed to fetch" no le dice si
+      // reintentar. El detalle va a consola, el aviso nombra la accion.
+      console.warn('Usuarios.desactivar:', e.message)
+      notify('No se pudo desactivar el usuario. Reintenta en un momento.', 'error')
     }
   }
 
@@ -158,7 +167,10 @@ export default function Usuarios({ notify, currentUser }) {
       notify('Usuario reactivado', 'success')
       setRefreshTick(t => t + 1)
     } catch (e) {
-      notify('Error: ' + e.message, 'error')
+      // El dueño no es tecnico: "Error: Failed to fetch" no le dice si
+      // reintentar. El detalle va a consola, el aviso nombra la accion.
+      console.warn('Usuarios.reactivar:', e.message)
+      notify('No se pudo reactivar el usuario. Reintenta en un momento.', 'error')
     }
   }
 

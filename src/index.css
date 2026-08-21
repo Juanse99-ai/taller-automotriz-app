@@ -463,9 +463,12 @@ input,select,textarea{font-family:inherit;font-size:14px;color:inherit}
 .topbar .btn-sm{width:38px;padding:0;gap:0;justify-content:center}
 .content{padding:26px 28px 48px;max-width:1440px;width:100%;margin:0 auto}
 
-/* form layout helpers — separación vertical entre cards y rows 2-col */
-.form-stack{display:flex;flex-direction:column;gap:16px}
-.form-row-2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+/* form layout helpers — separación vertical entre cards y rows 2-col.
+   10 y no 16: los mockups de formulario miden la columna principal y las
+   rejillas de campos con gap:10, el mismo de las otras diez pantallas. Con 16
+   la app cambiaba de ritmo al pasar de Ordenes de trabajo a Generar OT. */
+.form-stack{display:flex;flex-direction:column;gap:10px}
+.form-row-2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .form-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:24px;padding-top:20px;border-top:1px solid var(--border)}
 @media (max-width:960px){.form-row-2{grid-template-columns:1fr}}
 

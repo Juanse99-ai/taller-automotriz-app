@@ -268,7 +268,7 @@ export default function Cotizaciones({ notify, trabajos = [], onCrearTrabajo, co
     // confirmar; la referencia corta va de apoyo.
     const cot = cotizaciones.find(c => c.id === id)
     setConfirmCfg({
-      title: 'Eliminar cotizacion',
+      title: 'Eliminar cotización',
       lead: `${cot?.cliente || 'Sin cliente'} · Ref. ${cotRef(id)} · no se puede deshacer.`,
       confirmLabel: 'Eliminar',
       tone: 'danger',

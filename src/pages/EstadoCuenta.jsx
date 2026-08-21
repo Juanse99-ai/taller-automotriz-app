@@ -329,7 +329,7 @@ export default function EstadoCuenta({ prestamos, tecnicos, notify, tabs = null,
           const monto = (parseFloat(form.monto) || 0) > 0 ? Math.round(parseFloat(form.monto)) : ((parseFloat(form.valorDia) || 0) * (parseInt(form.dias) || 0))
           return (
             <Button variant="primary" type="button" onClick={guardar} disabled={monto <= 0} className="ec-cta__go">
-              {monto > 0 ? `Registrar ${form.tipo === 'abono' ? 'abono' : 'préstamo'} · ${fmt(monto)}` : 'Registrar'}
+              {monto > 0 ? `Registrar ${form.tipo === 'abono' ? 'abono' : 'préstamo'} de ${fmt(monto)}` : 'Registrar'}
             </Button>
           )
         })()}
