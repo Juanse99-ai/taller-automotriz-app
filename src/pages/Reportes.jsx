@@ -515,14 +515,16 @@ export default function Reportes({ trabajos, loading = false, notify }) {
             {fmtDate(rango.desde)} – {fmtDate(rango.hasta)}
           </button>
           <button type="button" className="rep-ico" onClick={toggleTodas} aria-pressed={todasColapsadas}
-            title={todasColapsadas ? 'Expandir todas las secciones' : 'Recoger todas las secciones'}>
+            title={todasColapsadas ? 'Expandir todas las secciones' : 'Recoger todas las secciones'}
+            aria-label={todasColapsadas ? 'Expandir todas las secciones' : 'Recoger todas las secciones'}>
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"
               style={{ transform: todasColapsadas ? 'none' : 'rotate(180deg)' }}>
               <path d="M4 8V5a1 1 0 0 1 1-1h3M16 4h3a1 1 0 0 1 1 1v3M20 16v3a1 1 0 0 1-1 1h-3M8 20H5a1 1 0 0 1-1-1v-3" />
             </svg>
           </button>
           <button type="button" className="rep-ico" onClick={() => exportarResumen()} disabled={sinDatos}
-            title={sinDatos ? 'No hay datos para exportar en este rango' : 'Exportar el resumen en PDF'}>
+            title={sinDatos ? 'No hay datos para exportar en este rango' : 'Exportar el resumen en PDF'}
+            aria-label={sinDatos ? 'No hay datos para exportar en este rango' : 'Exportar el resumen en PDF'}>
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /></svg>
           </button>
           <Button variant="primary" onClick={exportarCSV} disabled={sinDatos}
