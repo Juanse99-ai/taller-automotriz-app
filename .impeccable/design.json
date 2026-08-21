@@ -1,0 +1,337 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-08-21T13:46:17.915096+00:00",
+  "title": "Design System: Multidiagnósticos AS",
+  "extensions": {
+    "colorMeta": {
+      "azul-orden": {
+        "role": "primary",
+        "displayName": "Azul de orden",
+        "canonical": "#1D4ED8",
+        "tonalRamp": [
+          "#162e6f",
+          "#1E3A8A",
+          "#1D4ED8",
+          "#2563eb",
+          "#4c8dff",
+          "#93c5fd",
+          "#dbeafe",
+          "#eff6ff"
+        ]
+      },
+      "navy-taller": {
+        "role": "secondary",
+        "displayName": "Navy de taller",
+        "canonical": "#0d1b35",
+        "tonalRamp": [
+          "#060f23",
+          "#0d1b35",
+          "#152544",
+          "#1f3257",
+          "#2a4070",
+          "#3d5688",
+          "#6b81ad",
+          "#c3cee0"
+        ]
+      },
+      "verde-cobrado": {
+        "role": "tertiary",
+        "displayName": "Verde cobrado",
+        "canonical": "#166534",
+        "tonalRamp": [
+          "#14532d",
+          "#15803d",
+          "#166534",
+          "#16a34a",
+          "#22c55e",
+          "#bbf7d0",
+          "#dcfce7",
+          "#f0fdf4"
+        ]
+      },
+      "ambar-revisar": {
+        "role": "tertiary",
+        "displayName": "Ámbar revisar",
+        "canonical": "#92400e",
+        "tonalRamp": [
+          "#78350f",
+          "#92400e",
+          "#b45309",
+          "#d97706",
+          "#f59e0b",
+          "#fbbf24",
+          "#fef3c7",
+          "#fffbeb"
+        ]
+      },
+      "rojo-debe": {
+        "role": "tertiary",
+        "displayName": "Rojo debe",
+        "canonical": "#b91c1c",
+        "tonalRamp": [
+          "#7f1d1d",
+          "#991b1b",
+          "#b91c1c",
+          "#dc2626",
+          "#ef4444",
+          "#fecaca",
+          "#fee2e2",
+          "#fef2f2"
+        ]
+      },
+      "tinta": {
+        "role": "neutral",
+        "displayName": "Tinta",
+        "canonical": "#0f172a",
+        "tonalRamp": [
+          "#0f172a",
+          "#1e293b",
+          "#334155",
+          "#475569",
+          "#57677d",
+          "#94a3b8",
+          "#cbd5e1",
+          "#f1f5f9"
+        ]
+      },
+      "mesa": {
+        "role": "neutral",
+        "displayName": "Mesa",
+        "canonical": "#e9edf2",
+        "tonalRamp": [
+          "#0f172a",
+          "#334155",
+          "#64748b",
+          "#94a3b8",
+          "#cbd5e1",
+          "#e2e8f0",
+          "#e9edf2",
+          "#ffffff"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "La cifra grande de una tarjeta navy. Una por pantalla."
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "Título de página."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Título de tarjeta, botón primario, nombre de persona."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Celda de tabla, campo de formulario, texto corrido."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Rótulos de columna y de campo, en versalita."
+      },
+      "mono": {
+        "displayName": "Mono",
+        "purpose": "Toda cifra que se compare con otra, más placas y códigos de OT."
+      }
+    },
+    "shadows": [
+      {
+        "name": "shadow-sm",
+        "value": "0 1px 2px rgba(15,23,42,.06), 0 1px 1px rgba(15,23,42,.03)",
+        "purpose": "Botón primario y segmentos."
+      },
+      {
+        "name": "shadow",
+        "value": "0 2px 6px rgba(15,23,42,.08), 0 1px 2px rgba(15,23,42,.04)",
+        "purpose": "Elemento levantado en reposo."
+      },
+      {
+        "name": "shadow-md",
+        "value": "0 6px 18px rgba(15,23,42,.10), 0 2px 6px rgba(15,23,42,.05)",
+        "purpose": "Desplegables y menús flotantes."
+      },
+      {
+        "name": "shadow-lg",
+        "value": "0 18px 40px rgba(15,23,42,.16), 0 4px 12px rgba(15,23,42,.06)",
+        "purpose": "El cajón de navegación del teléfono."
+      },
+      {
+        "name": "shadow-modal",
+        "value": "0 30px 80px -20px rgba(0,0,0,.4)",
+        "purpose": "Diálogo que tapa la aplicación entera. Única sombra dramática permitida."
+      }
+    ],
+    "motion": [
+      {
+        "name": "ease",
+        "value": "cubic-bezier(.4,0,.2,1)",
+        "purpose": "Transición por defecto de estado."
+      },
+      {
+        "name": "ease-out",
+        "value": "cubic-bezier(0.23,1,0.32,1)",
+        "purpose": "Entradas y aparición de capas."
+      },
+      {
+        "name": "ease-in-out",
+        "value": "cubic-bezier(0.77,0,0.175,1)",
+        "purpose": "Movimientos de ida y vuelta."
+      },
+      {
+        "name": "ease-drawer",
+        "value": "cubic-bezier(0.16,1,0.3,1)",
+        "purpose": "Cajón del teléfono y rail que se expande."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "movil",
+        "value": "390px"
+      },
+      {
+        "name": "tableta",
+        "value": "768px"
+      },
+      {
+        "name": "escritorio",
+        "value": "961px"
+      },
+      {
+        "name": "ancho",
+        "value": "1500px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Botón primario",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "La acción de la pantalla. Uno por vista.",
+      "html": "<button class=\"ds-btn ds-btn-primary\">Generar pago · $ 47.530</button>",
+      "css": ".ds-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:44px;padding:0 20px;border-radius:999px;border:1px solid transparent;font-family:'IBM Plex Sans',system-ui,sans-serif;font-size:15px;font-weight:600;white-space:nowrap;cursor:pointer;transition:background .16s,border-color .16s,transform 140ms cubic-bezier(0.23,1,0.32,1)}.ds-btn-primary{background:#1D4ED8;color:#fff;box-shadow:0 1px 2px rgba(15,23,42,.12)}.ds-btn-primary:hover{background:#1E3A8A}.ds-btn-primary:focus-visible{outline:2px solid #1D4ED8;outline-offset:2px}.ds-btn-primary:disabled{opacity:.52;cursor:not-allowed}"
+    },
+    {
+      "name": "Botón outline",
+      "kind": "button",
+      "refersTo": "button-outline",
+      "description": "Acción secundaria de una fila o cabecera.",
+      "html": "<button class=\"ds-btn ds-btn-outline\">Cambiar</button>",
+      "css": ".ds-btn-outline{display:inline-flex;align-items:center;justify-content:center;height:44px;padding:0 20px;border-radius:999px;background:#fff;color:#0f172a;border:1px solid #d7dee7;font-family:'IBM Plex Sans',system-ui,sans-serif;font-size:15px;font-weight:600;cursor:pointer;box-shadow:0 1px 2px rgba(15,23,42,.05);transition:background .16s,border-color .16s}.ds-btn-outline:hover{background:#f8fafc;border-color:#cbd5e1}.ds-btn-outline:focus-visible{outline:2px solid #1D4ED8;outline-offset:2px}"
+    },
+    {
+      "name": "Campo de texto",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Campo de formulario. 42px de alto, esquina de 12px.",
+      "html": "<input class=\"ds-input\" type=\"text\" placeholder=\"Tu usuario\" aria-label=\"Usuario\">",
+      "css": ".ds-input{width:100%;padding:10px 13px;min-height:42px;border:1px solid #d7dee7;border-radius:12px;background:#fff;color:#0f172a;font-family:'IBM Plex Sans',system-ui,sans-serif;font-size:13.5px;outline:none;transition:border-color .12s,box-shadow .12s}.ds-input::placeholder{color:#57677d}.ds-input:focus{border-color:#1D4ED8;box-shadow:0 0 0 3px #eff6ff}"
+    },
+    {
+      "name": "Campo de fila",
+      "kind": "input",
+      "refersTo": "chip-filtro",
+      "description": "El vocabulario de campo de una fila de filtros: 36px y pastilla. En una misma fila todos los campos usan este alto y esta esquina.",
+      "html": "<button class=\"ds-drop\" type=\"button\">Todos los técnicos <span class=\"ds-drop-chev\">⌄</span></button>",
+      "css": ".ds-drop{display:inline-flex;align-items:center;gap:7px;height:36px;padding:0 13px;border:1px solid #dfe5ec;border-radius:999px;background:#fff;color:#0f172a;font-family:'IBM Plex Sans',system-ui,sans-serif;font-size:12.5px;cursor:pointer;transition:border-color .12s}.ds-drop:hover{border-color:#d7dee7}.ds-drop:focus-visible{outline:2px solid #1D4ED8;outline-offset:2px}.ds-drop-chev{color:#57677d;font-size:11px}"
+    },
+    {
+      "name": "Tarjeta",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "Papel blanco sobre la mesa. Plana: se separa con un borde de 1px, no con sombra. Prohibido anidarlas.",
+      "html": "<div class=\"ds-card\"><div class=\"ds-card-t\">Últimos pagos a Pedro</div><div class=\"ds-card-r\"><span>19 ago · efectivo</span><span class=\"ds-mono\">$ 96.000</span></div></div>",
+      "css": ".ds-card{background:#fff;border:1px solid #e2e8f0;border-radius:16px;box-shadow:none;padding:18px;font-family:'IBM Plex Sans',system-ui,sans-serif}.ds-card-t{font-size:15px;font-weight:700;color:#0f172a;margin-bottom:10px}.ds-card-r{display:flex;justify-content:space-between;align-items:center;font-size:13.5px;color:#475569}.ds-mono{font-family:'IBM Plex Mono',ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;font-weight:600;color:#0f172a}"
+    },
+    {
+      "name": "Pastilla de estado",
+      "kind": "chip",
+      "refersTo": "badge",
+      "description": "Estado contable en versalita. Usa un par fondo/texto de los tres colores de plata.",
+      "html": "<span class=\"ds-badge ds-badge-bad\">Sin stock</span> <span class=\"ds-badge ds-badge-warn\">Bajo</span> <span class=\"ds-badge ds-badge-ok\">OK</span>",
+      "css": ".ds-badge{display:inline-flex;align-items:center;padding:3px 10px;border-radius:999px;font-family:'IBM Plex Sans',system-ui,sans-serif;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.4px;white-space:nowrap}.ds-badge-ok{background:#dcfce7;color:#166534}.ds-badge-warn{background:#fef3c7;color:#92400e}.ds-badge-bad{background:#fee2e2;color:#b91c1c}"
+    },
+    {
+      "name": "Ítem de navegación",
+      "kind": "nav",
+      "refersTo": "nav-item",
+      "description": "Rail navy. El rótulo se ve SIEMPRE, también a 86px de ancho: eso lo distingue de una tira de iconos que hay que adivinar.",
+      "html": "<nav class=\"ds-nav\"><a class=\"ds-nav-i ds-nav-on\" href=\"#\"><svg viewBox=\"0 0 24 24\" width=\"19\" height=\"19\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><path d=\"M4 5h16a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2zM2 10h20\"/></svg> Liquidación <span class=\"ds-nav-n\">1</span></a><a class=\"ds-nav-i\" href=\"#\"><svg viewBox=\"0 0 24 24\" width=\"19\" height=\"19\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><path d=\"M18 20V10M12 20V4M6 20v-6\"/></svg> Reportes</a></nav>",
+      "css": ".ds-nav{background:#0d1b35;border-radius:24px;padding:10px;display:flex;flex-direction:column;gap:2px;width:212px;font-family:'IBM Plex Sans',system-ui,sans-serif}.ds-nav-i{display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:8px;font-size:14.5px;font-weight:500;color:rgba(255,255,255,.62);text-decoration:none;position:relative;transition:background .12s,color .12s}.ds-nav-i:hover{background:rgba(255,255,255,.06);color:#fff}.ds-nav-on{background:#1D4ED8;color:#fff;font-weight:700}.ds-nav-n{margin-left:auto;min-width:16px;height:16px;padding:0 4px;border-radius:999px;background:#dc2626;color:#fff;font-family:'IBM Plex Mono',monospace;font-size:10px;line-height:16px;font-weight:700;text-align:center}"
+    },
+    {
+      "name": "Tarjeta navy del neto",
+      "kind": "custom",
+      "refersTo": "button-primary",
+      "description": "La única cifra por pantalla sobre la que se aprieta un botón. Una por vista, y no se pinta si el valor es cero.",
+      "html": "<div class=\"ds-neto\"><div class=\"ds-neto-l\">NETO A PAGAR HOY</div><div class=\"ds-neto-v\">$ 47.530</div><button class=\"ds-neto-b\">✓ Generar pago · $ 47.530</button></div>",
+      "css": ".ds-neto{background:#0d1b35;border-radius:20px;padding:16px 17px;font-family:'IBM Plex Sans',system-ui,sans-serif}.ds-neto-l{font-size:10px;line-height:1;font-weight:600;letter-spacing:.9px;color:rgba(255,255,255,.55)}.ds-neto-v{font-size:32px;line-height:1.05;font-weight:700;color:#fff;margin-top:8px;font-variant-numeric:tabular-nums}.ds-neto-b{width:100%;margin-top:14px;height:44px;border:none;border-radius:999px;background:#fff;color:#0f172a;font-family:inherit;font-size:15px;font-weight:700;cursor:pointer;transition:filter .16s}.ds-neto-b:hover{filter:brightness(.94)}"
+    }
+  ],
+  "narrative": {
+    "northStar": "El libro de cuentas del mostrador",
+    "overview": "Un libro de cuentas bien llevado no decora: alinea. Las columnas cuadran, los números se leen sin acercarse, y lo que está mal salta antes de que te lo cuenten. La app se usa de pie en el mostrador, con luz de taller, mientras alguien espera su carro. La superficie es papel: blanco sobre una mesa gris azulada, con líneas finas en vez de sombras. Un solo azul de orden marca lo activo y lo pulsable; el navy sostiene la navegación y la única cifra por pantalla sobre la que se aprieta un botón. La densidad es alta donde se trabaja y se abre donde se decide.",
+    "keyCharacteristics": [
+      "Papel blanco sobre mesa gris azulada; el borde separa, no la sombra",
+      "IBM Plex Sans para leer, IBM Plex Mono para toda cifra que se compare",
+      "Un azul de orden (#1D4ED8) reservado a lo activo y lo pulsable",
+      "Rojo, ámbar y verde solo como estado contable, nunca como decoración",
+      "Pastillas (999px) para controles, 16px para tarjetas: dos formas, sin medias tintas",
+      "Objetivo táctil de 44px en móvil, sin excepción"
+    ],
+    "rules": [
+      {
+        "name": "La Regla del Navy Único",
+        "body": "El navy pinta el rail y una sola cifra por pantalla: aquella sobre la que hay un botón. Dos tarjetas navy en la misma pantalla es un error. Si el valor es cero, la tarjeta no se pinta.",
+        "section": "colors"
+      },
+      {
+        "name": "La Regla del Color Contable",
+        "body": "Rojo, ámbar y verde no describen importancia: describen un estado de plata. Un título en rojo porque «es importante» está mal.",
+        "section": "colors"
+      },
+      {
+        "name": "La Regla de los Semánticos",
+        "body": "Se usa var(--text-3), nunca #475569. El modo oscuro redefine 76 tokens; un hex a mano no se entera y se queda blanco sobre negro.",
+        "section": "colors"
+      },
+      {
+        "name": "La Regla de la Columna que Cuadra",
+        "body": "Cualquier número que aparezca encima o debajo de otro va en Mono con tabular-nums. Sin eso las columnas de plata bailan.",
+        "section": "typography"
+      },
+      {
+        "name": "La Regla del Peso 800",
+        "body": "No existe. Plex llega a 700; un font-weight:800 suelto cae al 700 sin negrita sintética.",
+        "section": "typography"
+      },
+      {
+        "name": "La Regla de lo Plano en Reposo",
+        "body": "Una superficie quieta no lleva sombra. La sombra es respuesta a un estado: flotar, abrirse, tapar.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do usar los tokens semánticos (var(--text-3), var(--bg-raised)), nunca el hex crudo.",
+      "Do poner toda cifra comparable en .mono con tabular-nums.",
+      "Do quedarse en los dos altos de botón, 44px y 38px, y en los seis escalones de radio.",
+      "Do darle a cada control táctil 44px de alto en móvil, salvo cuando el objetivo real es la fila o el label que lo contiene.",
+      "Do decir en el rótulo de un botón desactivado qué falta para activarlo.",
+      "Do comprobar el contraste sobre la mesa (#e9edf2), no solo sobre papel.",
+      "Do declarar el borde a mano en cualquier componente de shadcn que sea un <button>."
+    ],
+    "donts": [
+      "Don't usar glassmorphism, degradados de texto, franjas laterales de color ni tarjetas idénticas en grilla.",
+      "Don't montar el hero-metric con gradiente ni ningún dashboard genérico de plantilla SaaS.",
+      "Don't usar micro-texto ni bajo contraste: nada de --text-5 en texto, ni iconos a opacidad 0,55.",
+      "Don't pintar dos tarjetas navy en la misma pantalla, ni pintarla cuando el valor es cero.",
+      "Don't anidar una tarjeta dentro de otra.",
+      "Don't escribir font-weight:800: Plex llega a 700.",
+      "Don't proponer el rail solo-clic. El hover-expand es decisión del dueño, confirmada el 2026-08-19.",
+      "Don't dejar un position:sticky encima de campos que hay que llenar.",
+      "Don't meter filtros por categoría en Inventario: el 97,3% del catálogo es Cat-1."
+    ]
+  }
+}
