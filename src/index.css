@@ -1684,7 +1684,7 @@ tbody tr:active{background:var(--fill-2)}
   .btn{min-height:var(--tap)}
 }
 @media (max-width:960px){
-  .hd-drop,.hd-find{min-height:var(--tap)}
+  .hd-drop,.hd-find,.ec-pers__t{min-height:var(--tap)}
 }
 
 
@@ -2733,13 +2733,14 @@ tbody tr:active{background:var(--fill-2)}
 .ec-hoy{position:absolute;right:8px;font-size:8.5px;line-height:1;font-weight:600;
   color:var(--ok-fg);background:var(--ok-bg);padding:4px 5px;border-radius:var(--r-pill);pointer-events:none}
 /* El monto es el unico campo con borde de acento: es el dato obligatorio. */
-/* MoneyInput trae className='input' por defecto, y .input lleva width:100%.
-   Aqui se le pasa className="ec-monto", que SUSTITUYE a 'input' en vez de
-   sumarse, asi que el campo se quedaba sin ancho declarado y conservaba su
-   ancho intrinseco de <input> (~201px). La casilla de MONTO mide 124px: el
-   campo se salia 77px y se metia por debajo de FECHA. Se veia sobre todo con
-   el foco puesto, porque el borde azul cruzaba al campo vecino. */
-.ec-cta__form .ec-monto{width:100%;border-width:1.5px;border-color:var(--accent);font-weight:700;font-size:15px}
+/* El className de MoneyInput SUSTITUYE al de por defecto ('input'), no se suma.
+   Pasarle solo "ec-monto" dejaba el campo sin ancho, sin radio, sin relleno y
+   sin alto: salia cuadrado, de 21px de alto (los vecinos miden 36) y 13px mas
+   abajo que TIPO, PERSONA y FECHA. Por eso ahora recibe "hd-drop ec-monto":
+   hereda el campo de esta fila y aqui solo se anade lo suyo — el borde en
+   acento por ser el unico obligatorio, y la cifra en grande. */
+.ec-cta__form .ec-monto{width:100%;border-width:1.5px;border-color:var(--accent);
+  font-weight:700;font-size:15px;cursor:text}
 .ec-cta__go{flex:none;white-space:nowrap}
 .ec-seg--abono{color:var(--ok-fg)}
 
@@ -2865,7 +2866,7 @@ tbody tr:active{background:var(--fill-2)}
   .ec-cta__c--monto,.ec-cta__c--fecha,.ec-cta__c--persona{width:auto;min-width:0}
   .ec-cta__form .hd-seg{height:52px;padding:4px}
   .ec-cta__form .hd-seg__i{flex:1;height:44px;font-size:14px}
-  .ec-cta__form .hd-drop{height:52px;min-height:52px;font-size:14.5px}
+  .ec-cta__form .hd-drop,.ec-cta__form .ec-pers__t{height:52px;min-height:52px;font-size:14.5px}
   .ec-cta__form .ec-monto{height:56px;min-height:56px;font-size:22px}
   .ec-cta__go{width:100%;height:52px;font-size:15px}
   .ec-cta__pie{flex-wrap:wrap;gap:9px}
@@ -3253,8 +3254,19 @@ tbody tr:active{background:var(--fill-2)}
 .ec-pers__s{flex:none;font-size:11.5px;font-weight:600;color:var(--text-4);font-variant-numeric:tabular-nums}
 /* El trigger trae bg-transparent y borde de shadcn; aqui tiene que verse como
    el resto de campos de la fila, que usan --bg-raised y --border-input. */
-.ec-pers__t{background:var(--bg-raised);border-color:var(--border-input);
-  border-radius:var(--r-md);font-size:13.5px;color:var(--text)}
+/* El trigger de shadcn trae su propio alto y radio; aqui tiene que ser un
+   campo mas de la fila, o sea lo mismo que .hd-drop: 36px y radio de pastilla.
+
+   TRAMPA A RECORDAR con el resto de componentes de shadcn: la linea 310 de este
+   archivo hace button{border:none} para TODO boton. Esa regla va fuera de
+   @layer, y en la cascada lo que esta fuera de capa gana a lo que esta dentro,
+   asi que le gana a la utilidad .border de Tailwind, que vive en
+   @layer utilities. Cualquier componente de shadcn que sea un <button> se queda
+   sin borde aunque lleve la clase. Un <div> con las mismas clases si lo pinta.
+   Por eso el borde se declara aqui explicito. */
+.ec-pers__t{height:36px;padding:0 13px;
+  background:var(--bg-raised);border:1px solid var(--border-input);
+  border-radius:var(--radius-pill);font-size:12.5px;color:var(--text)}
 
 /* El saldo cabe holgado en la lista desplegada, pero dentro del campo compite
    con el nombre: a 926px salia "PB Pedr… $ 192.000". En la fila estrecha el

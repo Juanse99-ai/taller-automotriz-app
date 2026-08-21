@@ -320,7 +320,7 @@ export default function EstadoCuenta({ prestamos, tecnicos, notify, tabs = null,
               {/* w-full: el trigger de shadcn viene w-fit y aqui tiene que llenar
                   la casilla. h-[42px] iguala a .input, que es el alto del resto
                   de campos de la fila. */}
-              <SelectTrigger className="ec-pers__t w-full h-[42px]" aria-label="Persona de la cuenta">
+              <SelectTrigger className="ec-pers__t w-full" aria-label="Persona de la cuenta">
                 <SelectValue placeholder="Seleccionar…" />
               </SelectTrigger>
               {/* position="popper" ancla el panel DEBAJO del campo. El valor por
@@ -370,7 +370,7 @@ export default function EstadoCuenta({ prestamos, tecnicos, notify, tabs = null,
         )}
         <div className="ec-cta__c ec-cta__c--monto">
           <div className="ec-cta__l">MONTO <span className="req">*</span></div>
-          <MoneyInput value={form.monto} onChange={v => setForm(f => ({ ...f, monto: v, valorDia: '', dias: '' }))} placeholder="0" className="ec-monto" />
+          <MoneyInput value={form.monto} onChange={v => setForm(f => ({ ...f, monto: v, valorDia: '', dias: '' }))} placeholder="0" className="hd-drop ec-monto" />
         </div>
         <div className="ec-cta__c ec-cta__c--fecha">
           <div className="ec-cta__l">FECHA</div>
