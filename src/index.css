@@ -516,7 +516,7 @@ input,select,textarea{font-family:inherit;font-size:14px;color:inherit}
 .btn:active{transform:scale(.96);filter:brightness(.95)}
 .btn:hover:not(:active){transform:translateY(-1px)}
 .btn:focus-visible{outline:2px solid var(--primary);outline-offset:2px}
-.icobtn:focus-visible,.tabs button:focus-visible{outline:2px solid var(--primary);outline-offset:2px;border-radius:8px}
+.icobtn:focus-visible{outline:2px solid var(--primary);outline-offset:2px;border-radius:8px}
 /* Fallback de foco de teclado para cualquier botón/control sin clase propia (a11y):
    antes los <button> con estilo inline no mostraban foco. */
 button:focus-visible,[role="button"]:focus-visible,a:focus-visible,select:focus-visible{outline:2px solid var(--primary);outline-offset:2px;border-radius:6px}
@@ -535,7 +535,7 @@ button:focus-visible,[role="button"]:focus-visible,a:focus-visible,select:focus-
 .input-clear:focus-visible{outline:2px solid var(--primary);outline-offset:1px}
 .input-clear svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2.4;stroke-linecap:round}
 /* Sin el flash gris al tocar en móvil (feel tipo iOS) en todo lo interactivo */
-a,button,[role=button],.navlink,.mob-tab,.icobtn,.tabs button{-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+a,button,[role=button],.navlink,.mob-tab,.icobtn{-webkit-tap-highlight-color:transparent;touch-action:manipulation}
 .m3switch{-webkit-tap-highlight-color:transparent;touch-action:manipulation}
 .m3switch:focus-visible{outline:2px solid var(--primary);outline-offset:2px}
 .m3switch svg{width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:2.2}
@@ -620,28 +620,6 @@ a,button,[role=button],.navlink,.mob-tab,.icobtn,.tabs button{-webkit-tap-highli
 @media (hover:hover) and (pointer:fine){
   .kpi:hover{border-color:var(--border-strong)}
 }
-.kpi__head{display:flex;align-items:center;gap:10px}
-/* Tarjetas .kpi viejas: se ocultan los íconos-en-cuadrito (el tell "IA") para que
-   queden limpias como el resto, sin tocar el JSX de cada página. */
-.kpi__ic{display:none}
-.kpi__ic--hidden{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
-.kpi__ic svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.8}
-.kpi__ic.blue{background:rgba(30,58,138,.10);color:var(--blue-600)}
-.kpi__ic.amber{background:rgba(245,158,11,.12);color:var(--amber-500)}
-.kpi__ic.red{background:rgba(220,38,38,.10);color:var(--red-600)}
-.kpi__ic.green{background:rgba(22,163,74,.10);color:var(--green-600)}
-[data-theme="dark"] .kpi__ic.blue{background:rgba(37,99,235,.14);color:#93c5fd}
-[data-theme="dark"] .kpi__ic.amber{background:rgba(245,158,11,.14);color:#fbbf24}
-[data-theme="dark"] .kpi__ic.red{background:rgba(220,38,38,.16);color:#fca5a5}
-[data-theme="dark"] .kpi__ic.green{background:rgba(22,163,74,.16);color:#4ade80}
-.kpi__lbl{font-size:12.5px;font-weight:500;color:var(--text-3);text-transform:none;letter-spacing:0;flex:1}
-.kpi__v{font-family:var(--mono);font-weight:600;font-size:27px;letter-spacing:-.5px;line-height:1.05;color:var(--text);margin-top:2px}
-.kpi__delta{display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--text-3);font-weight:500}
-.kpi__delta b{font-family:var(--mono);font-weight:700;padding:1px 7px;border-radius:5px;font-size:10.5px}
-.kpi__delta .up{background:var(--green-100);color:#166534}
-.kpi__delta .down{background:var(--red-100);color:#991b1b}
-[data-theme="dark"] .kpi__delta .up{background:rgba(22,163,74,.16);color:#4ade80}
-[data-theme="dark"] .kpi__delta .down{background:rgba(220,38,38,.16);color:#fca5a5}
 
 /* table (prototipo class) — pulida al estilo iOS: encabezado sin bloque gris,
    separadores hairline (0.5px) y filas que responden al toque. */
@@ -700,31 +678,6 @@ textarea.input{min-height:88px;resize:vertical;padding-top:11px}
    "Esperando Rep.", "Completados" y "Cancelados" quedaban invisibles y nadie
    sospechaba que se podía deslizar. Se apaga al llegar al final (scroll-driven,
    sin JS) y no tapa clics. */
-.tabs{position:relative;display:flex;gap:2px;border-bottom:1px solid var(--border);margin-bottom:18px;overflow-x:auto;flex-wrap:nowrap;scrollbar-width:none;-webkit-overflow-scrolling:touch;
-  background:linear-gradient(to left,var(--bg),transparent 34px) right center / 34px 100% no-repeat local,
-             linear-gradient(to left,rgba(15,23,42,.13),transparent 12px) right center / 12px 100% no-repeat scroll}
-[data-theme="dark"] .tabs{background:linear-gradient(to left,var(--bg),transparent 34px) right center / 34px 100% no-repeat local,
-             linear-gradient(to left,rgba(0,0,0,.5),transparent 12px) right center / 12px 100% no-repeat scroll}
-.tabs::-webkit-scrollbar{display:none}
-
-/* ===== Franja de cifras =====
-   Reemplaza las grillas de 4 tarjetas KPI idénticas (el patrón de plantilla que
-   el dueño rechaza, y que además abría con cuatro ceros gigantes). Es el mismo
-   lenguaje que ya usa la cabecera de Liquidación: etiqueta pequeña + cifra
-   tabular, sin caja, sin ícono en cuadrito y sin franja de color. Los ceros se
-   atenúan: un cero no merece el mismo peso visual que una cifra real. */
-.statline{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 30px;padding:0 2px 15px;border-bottom:1px solid var(--border);margin-bottom:18px}
-.statline__i{display:flex;flex-direction:column;gap:3px;min-width:0}
-.statline__v{font-family:var(--mono);font-size:23px;font-weight:700;color:var(--text);line-height:1.05;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
-.statline__v.is-zero{color:var(--text-4);font-weight:600}
-@media(max-width:600px){.statline{gap:4px 22px;padding-bottom:13px;margin-bottom:14px}.statline__v{font-size:19px}}
-.tabs button{padding:10px 14px;font-size:13px;font-weight:600;color:var(--text-3);border-bottom:2px solid transparent;margin-bottom:-1px;white-space:nowrap;flex-shrink:0}
-.tabs button:hover{color:var(--text)}
-.tabs button.on{color:var(--primary);border-bottom-color:var(--primary)}
-[data-theme="dark"] .tabs button.on{color:var(--primary);border-bottom-color:var(--primary)}
-/* Contador dentro de una pestaña de estado (chips de resumen) */
-.tab-count{display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;margin-left:6px;padding:0 5px;font-family:var(--mono);font-size:10.5px;font-weight:700;line-height:1;border-radius:999px;background:var(--fill);color:var(--text-3);vertical-align:middle}
-.tabs button.on .tab-count{background:var(--primary);color:#fff}
 
 /* chart bar */
 .chartbar{display:flex;align-items:flex-end;gap:6px;height:140px;padding:0 2px}
@@ -908,7 +861,7 @@ tbody tr:active{background:var(--fill-2)}
 .c-muted{color:var(--text-3);font-size:12px}
 .c-right{text-align:right}
 .c-mono{font-family:var(--mono);font-weight:600;font-variant-numeric:tabular-nums}
-.kpi__v,.calendar-day-num{font-variant-numeric:tabular-nums}
+.calendar-day-num{font-variant-numeric:tabular-nums}
 /* Skeleton de carga (shimmer) — más pulido que el spinner suelto */
 .skeleton{position:relative;overflow:hidden;background:var(--bg-subtle);border-radius:8px}
 .skeleton::after{content:"";position:absolute;inset:0;transform:translateX(-100%);background:linear-gradient(90deg,transparent,rgba(148,163,184,.18),transparent);animation:skShimmer 1.3s ease-in-out infinite}
@@ -930,38 +883,6 @@ tbody tr:active{background:var(--fill-2)}
 .ck-d-cell{border:1px solid var(--border);border-radius:10px;padding:10px 12px;background:var(--bg-subtle)}
 .ck-d-cell .l{font-size:10px;color:var(--text-4);text-transform:uppercase;letter-spacing:.4px}
 .ck-d-cell .v{font-size:13.5px;color:var(--text);font-weight:600;margin-top:3px}
-/* Tarjetas KPI industriales: planas, borde + barra de acento, sin sombra, número protagonista */
-.kpi-ind-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
-/* Sin franja de color de 3px: es la misma banda decorativa vetada, girada 90°.
-   El estado ya se lee en el COLOR DE LA CIFRA (.kpi-ind__v.red y compañía), que
-   es donde importa; el borde superior solo repetía esa información gritando. */
-.kpi-ind{background:var(--bg-raised);border:1px solid var(--border);border-radius:11px;padding:14px 16px}
-.kpi-ind.red .kpi-ind__v{color:var(--red-700)}
-.kpi-ind.green .kpi-ind__v{color:var(--green-700)}
-.kpi-ind.amber .kpi-ind__v{color:var(--amber-700)}
-.kpi-ind__l{font-size:10.5px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:.5px}
-.kpi-ind__v{font-family:var(--mono);font-size:26px;font-weight:700;color:var(--text);line-height:1.1;margin-top:7px;font-variant-numeric:tabular-nums;letter-spacing:-.5px}
-.kpi-ind__v.red{color:var(--red-700)}
-.kpi-ind__sub{font-size:11px;color:var(--text-3);margin-top:4px;font-weight:500}
-@media(max-width:760px){.kpi-ind-row{grid-template-columns:repeat(2,1fr)}}
-/* Tarjetas KPI estilo beehiiv: agrupadas en un contenedor, divididas por líneas,
-   número grande + pastilla verde de % + subtexto. Limpio y aireado. */
-.kpi-bh{display:flex;flex-wrap:wrap;background:var(--bg-raised);border:1px solid var(--border);border-radius:14px;overflow:hidden}
-.kpi-bh__s{flex:1 1 185px;padding:16px 20px;border-left:1px solid var(--border);min-width:0}
-.kpi-bh__s:first-child{border-left:none}
-.kpi-bh__l{font-size:12px;color:var(--text-3);font-weight:500}
-.kpi-bh__row{display:flex;align-items:center;gap:10px;margin-top:8px;flex-wrap:wrap}
-.kpi-bh__v{font-size:26px;font-weight:600;color:var(--text);font-variant-numeric:tabular-nums;letter-spacing:-.5px;line-height:1}
-.kpi-bh__pill{font-size:11px;font-weight:600;color:var(--green-700);background:var(--soft-green);border-radius:999px;padding:2px 8px;white-space:nowrap}
-.kpi-bh__pill.red{color:var(--red-700);background:var(--soft-red)}
-.kpi-bh__sub{font-size:11.5px;color:var(--text-4);margin-top:6px}
-@media(max-width:760px){
-  .kpi-bh{flex-direction:column}
-  /* En columna, el flex-basis 185px se volvía ALTURA y cada tarjeta quedaba
-     gigante (mucho vacío bajo el texto). Alto natural = solo lo que ocupa. */
-  .kpi-bh__s{flex:0 0 auto;border-left:none;border-top:1px solid var(--border);padding:13px 16px}
-  .kpi-bh__s:first-child{border-top:none}
-}
 /* Control segmentado de filtros — consistente en toda la app (Inventario, CRM…) */
 /* Segmented control iOS: pista gris, thumb blanco con sombrita */
 /* Segmentado tipo iOS: riel periwinkle relleno + pastilla blanca en la opción
@@ -1030,18 +951,6 @@ tbody tr:active{background:var(--fill-2)}
 /* Texto de aviso ámbar legible en ambos temas (en dark, amber-600 no pasa AA) */
 .aviso-ambar{color:var(--amber-600)}
 [data-theme="dark"] .aviso-ambar{color:#fbbf24}
-/* KPIs de Reportes con jerarquía contable: 2 anclas de dinero grandes + fila de
-   detalle más pequeña. Clases (no estilo inline) para no activar la regla global
-   .content [style*="grid-template-columns"]:has(>.kpi) que fuerza el grid. */
-.rep-money{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;margin-bottom:12px}
-.rep-money .kpi__v{font-size:32px !important}
-.rep-ops{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:12px}
-/* Mantener la jerarquía money>ops en CADA breakpoint. El global .kpi__v baja a 24px
-   (<=960) y 19px (<=480) con !important; sin !important aquí, esas reglas aplastaban
-   las anclas de dinero al mismo tamaño que la operación. Con !important + mayor
-   especificidad (.rep-money .kpi__v), el dinero queda por encima en todo ancho. */
-@media(max-width:960px){ .rep-money .kpi__v{font-size:28px !important} }
-@media(max-width:480px){ .rep-money .kpi__v{font-size:22px !important} }
 /* Cabezal plegable de Reportes: feedback de hover como el resto de la app */
 .rep-toggle:hover{background:var(--bg-subtle)}
 /* La transición del chevron va en CSS (no inline) para que el bloque
@@ -1126,15 +1035,6 @@ tbody tr:active{background:var(--fill-2)}
 .text-muted{color:var(--text-3)}
 .text-sm{font-size:13px}
 .text-xs{font-size:12px}
-.mt-2{margin-top:8px}
-.mt-4{margin-top:16px}
-.mb-4{margin-bottom:16px}
-.gap-2{gap:8px}
-.flex{display:flex}
-.flex-wrap{flex-wrap:wrap}
-.items-center{align-items:center}
-.justify-between{justify-content:space-between}
-.totals-row{display:flex;justify-content:flex-end;gap:16px;flex-wrap:wrap;align-items:center}
 .actions-cell{display:flex;gap:6px;flex-wrap:nowrap;align-items:center}
 
 /* Boton de icono cuadrado: acciones utilitarias en tablas (PDF, editar, eliminar).
@@ -1144,10 +1044,6 @@ tbody tr:active{background:var(--fill-2)}
 .icon-btn:focus-visible{outline:2px solid var(--primary);outline-offset:2px}
 .icon-btn svg{width:15px;height:15px}
 .icon-btn--danger:hover{border-color:var(--red-600);color:var(--red-600);background:rgba(220,38,38,.06)}
-
-/* tabs alias */
-.tabs button.active{color:var(--primary);border-bottom-color:var(--primary)}
-[data-theme="dark"] .tabs button.active{color:var(--primary);border-bottom-color:var(--primary)}
 
 /* legacy btn touch tweaks */
 .btn{-webkit-tap-highlight-color:transparent;touch-action:manipulation}
@@ -1194,10 +1090,6 @@ tbody tr:active{background:var(--fill-2)}
   .content [style*="grid-template-columns"][style*="minmax(200px"]
   {grid-template-columns:1fr 1fr !important;gap:10px !important}
   .kpi{padding:14px 14px;gap:10px}
-  .kpi__v{font-size:24px !important}
-  .kpi__ic{width:32px;height:32px}
-  .kpi__ic svg{width:16px;height:16px}
-  .kpi__lbl{font-size:11.5px}
 
   .calendar-week{grid-template-columns:repeat(4,1fr)}
   .calendar-day{min-height:80px;padding:8px 4px}
@@ -1206,10 +1098,6 @@ tbody tr:active{background:var(--fill-2)}
   .card__b--flush{overflow-x:auto;-webkit-overflow-scrolling:touch}
   .tbl,table{min-width:580px}
   .tbl thead th,.tbl tbody td,th,td{padding:11px 13px;font-size:13px}
-
-  .tabs{overflow-x:auto;scrollbar-width:none;flex-wrap:nowrap}
-  .tabs::-webkit-scrollbar{display:none}
-  .tabs button{white-space:nowrap;flex-shrink:0;padding:10px 12px;font-size:13px}
 
   .btn{height:42px;font-size:13.5px}
   .btn-sm{height:38px}
@@ -1236,7 +1124,6 @@ tbody tr:active{background:var(--fill-2)}
   {grid-template-columns:1fr !important}
   .card-title{font-size:13px}
   .toast{left:12px;right:12px;max-width:none}
-  .totals-row{flex-direction:column;align-items:flex-end;gap:6px}
   .actions-cell{flex-direction:row;flex-wrap:wrap;gap:6px}
   .actions-cell .btn{flex:1 1 auto;justify-content:center}
   .actions-cell .icon-btn{width:36px;height:36px}
@@ -1252,30 +1139,13 @@ tbody tr:active{background:var(--fill-2)}
 @media (max-width:480px){
   .content{padding:14px 12px 80px}
   .pagehd .actions .btn span,.pagehd .actions .btn{font-size:12.5px}
-  .kpi__v{font-size:19px !important}
-  .kpi__delta{font-size:10.5px}
   .card__h h3{font-size:12.5px}
   .content [style*="grid-template-columns"][style*="minmax(210px"],
   .content [style*="grid-template-columns"][style*="minmax(220px"],
   .content [style*="grid-template-columns"][style*="minmax(200px"]
   {grid-template-columns:1fr !important}
 }
-
-/* === Dashboard KPI hero + mini layout === */
-.kpi-grid{display:grid;grid-template-columns:1.4fr 1fr;gap:16px}
-.kpi-hero{transition:border-color .15s,box-shadow .15s}
-.kpi-mini{transition:border-color .15s,box-shadow .15s}
-@media (hover:hover) and (pointer:fine){
-  .kpi-hero:hover{border-color:var(--border-strong);box-shadow:var(--shadow-sm)}
-  .kpi-mini:hover{border-color:var(--border-strong);box-shadow:var(--shadow-sm)}
-}
-@media(max-width:960px){
-  .kpi-grid{grid-template-columns:1fr !important;gap:12px}
-  .kpi-hero{min-height:auto !important;padding:18px 20px !important}
-  .kpi-hero > div:last-child > div:first-child{font-size:38px !important;letter-spacing:-.8px !important}
-}
 @media(max-width:600px){
-  .kpi-hero > div:last-child > div:first-child{font-size:32px !important}
   /* Grids INLINE de columnas fijas (1fr 1fr, repeat(2,1fr)…) → 1 columna en
      celular, para que no queden apretados (Inspeccion, CuenttiPanel, etc.).
      Solo afecta estilos inline; las grids con clase propia no se tocan.

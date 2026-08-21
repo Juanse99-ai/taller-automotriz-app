@@ -568,11 +568,9 @@ export default function Reportes({ trabajos, loading = false, notify }) {
         <div className="card">
           <div className="empty">
             <h4>{rangoInvalido ? 'Rango de fechas inválido' : 'Sin trabajos en el periodo'}</h4>
-            <p>
-              {rangoInvalido
-                ? 'Corrige las fechas para ver el reporte.'
-                : `No hay órdenes de trabajo entre ${fmtDate(rango.desde)} y ${fmtDate(rango.hasta)}. Prueba un rango más amplio.`}
-            </p>
+            {/* Sin parrafo: el rango ya se lee en la barra de filtro de arriba,
+                y "prueba un rango mas amplio" es texto explicativo. El vacio se
+                queda en la etiqueta seca del titulo. */}
             {!rangoInvalido && (
               <div style={{ marginTop: 12 }}>
                 <Button variant="outline" size="sm" onClick={() => aplicarPreset('mes')}>Ver mes actual</Button>

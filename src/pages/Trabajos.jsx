@@ -1274,7 +1274,11 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
                 <span className="otd__franja-txt">
                   {completado
                     ? `Trabajo completado el ${fmtDate(t.fecha)}${porCobrar ? ' · listo para facturar' : ''}`
-                    : `${t.estado} · ingresó ${fmtDate(t.fecha)}`}
+                    : t.estado}
+                    {/* Sin la fecha: la linea del vehiculo, dos filas mas abajo,
+                        ya dice "ingreso 14 ago 2026". El estado tambien sale en
+                        la pastilla de la derecha, pero ahi es la pastilla la que
+                        se queda: es donde se busca. */}
                 </span>
                 <button type="button" className="otd__x" onClick={cerrar} aria-label="Cerrar"><IconX /></button>
               </div>
