@@ -168,7 +168,8 @@ export default function Vehiculos({ vehiculos, clientes, trabajos = [], notify }
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 8, fontSize: 13 }}>
                       <div><span style={{ color: 'var(--text-3)', fontWeight: 600 }}>Km: </span><span className="mono">{h.kilometraje != null ? h.kilometraje.toLocaleString('es-CO') : '--'}</span></div>
                       <div><span style={{ color: 'var(--text-3)', fontWeight: 600 }}>Tecnico: </span><span>{h.tecnico || '--'}</span></div>
-                      <div><span style={{ color: 'var(--text-3)', fontWeight: 600 }}>Total: </span><span className="mono" style={{ fontWeight: 700, color: 'var(--green-600)' }}>{fmt(h.total)}</span></div>
+                      <div><span style={{ color: 'var(--text-3)', fontWeight: 600 }}>Total: </span>{/* El total de un servicio es plata de consulta, no un estado "correcto". */}
+                    <span className="mono" style={{ fontWeight: 700 }}>{fmt(h.total)}</span></div>
                     </div>
                     {h.observaciones && (
                       <div style={{ marginTop: 8, fontSize: 13, color: 'var(--text-2)' }}>

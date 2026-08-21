@@ -1562,7 +1562,10 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
         #liq-paso2 .tbl td.liq-td-com{ color:var(--ok-fg); font-weight:700; }
         /* Marcar un trabajo como compartido: sigue siendo el único punto de
            entrada, pero deja de gritar en las 10 filas que NO lo son. */
-        .liq-share{ font:inherit; font-size:11.5px; color:var(--text-5); background:none; border:none; padding:4px 6px; cursor:pointer; border-radius:var(--radius-pill); }
+        /* --text-5 (2,56:1) es el tono de los chevrones inertes, y esto es el
+           UNICO sitio desde donde se marca un trabajo como compartido. Baja de
+           jerarquia por tamano y peso, no por lavarse hasta no leerse. */
+        .liq-share{ font:inherit; font-size:11.5px; color:var(--text-3); background:none; border:none; padding:4px 6px; cursor:pointer; border-radius:var(--radius-pill); }
         .liq-share:hover{ color:var(--accent); background:var(--accent-soft); }
 
         /* Botonera dentro del navy (el diseño la pone ahí, no suelta abajo) */

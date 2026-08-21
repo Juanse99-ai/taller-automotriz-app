@@ -977,8 +977,11 @@ function CotizacionForm({ cotizacion, trabajos = [], onSave, onCancel }) {
                                         <span style={{
                                           fontFamily: 'var(--mono)', fontWeight: 700, fontSize: 13,
                                           padding: '2px 8px', borderRadius: 4,
-                                          background: i === 0 ? 'rgba(255,255,255,.2)' : p.esServicio ? '#dbeafe' : p.stock > 0 ? '#dcfce7' : '#fee2e2',
-                                          color: i === 0 ? '#fff' : p.esServicio ? '#1d4ed8' : p.stock > 0 ? '#16a34a' : '#dc2626'
+                                          // Pares semanticos en vez de hex crudos: los crudos
+                                          // dejaban la pastilla clara sobre negro en modo
+                                          // oscuro, y el verde daba 3,0:1.
+                                          background: i === 0 ? 'rgba(255,255,255,.2)' : p.esServicio ? 'var(--info-bg)' : p.stock > 0 ? 'var(--ok-bg)' : 'var(--bad-bg)',
+                                          color: i === 0 ? '#fff' : p.esServicio ? 'var(--info-fg)' : p.stock > 0 ? 'var(--ok-fg)' : 'var(--bad-fg)'
                                         }}>
                                           {p.esServicio ? '∞' : `(${p.stock})`}
                                         </span>

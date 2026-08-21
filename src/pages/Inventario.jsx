@@ -364,7 +364,10 @@ export default function Inventario({ notify }) {
                       <td className="c-mono c-right td-precio" data-label="Precio" style={{ fontWeight: 700 }}>{fmt(p.precio)}</td>
                       <td className="c-mono c-right td-util" data-label="Utilidad" style={{
                         fontWeight: 700,
-                        color: util == null ? 'var(--text-4)' : utilRota ? 'var(--amber-600)' : util < 0 ? 'var(--red-600)' : util < 15 ? 'var(--amber-600)' : 'var(--green-600)',
+                        // Un margen sano es lo NORMAL, no un estado: pintarlo de verde en
+                        // las 3.400 filas gastaba el verde y ademas quedaba en 3,3:1 sobre
+                        // blanco. Solo se colorea la excepcion, con los pares del handoff.
+                        color: util == null ? 'var(--text-4)' : utilRota ? 'var(--warn-fg)' : util < 0 ? 'var(--bad-fg)' : util < 15 ? 'var(--warn-fg)' : 'var(--text)',
                       }}>
                         {util == null ? '—'
                           : utilRota

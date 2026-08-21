@@ -92,8 +92,11 @@ function diasQuieta(t) {
 }
 function tonoAntiguedad(t, dias) {
   if (t.estado === ESTADOS.COMPLETADO || t.estado === ESTADOS.CANCELADO) return ''
-  if (dias >= 5) return 'var(--bad-fg)'
-  if (dias >= 4) return '#f59e0b'
+  // Los dos puntos son del mismo juego que los de .st (--red-500 / --amber-400).
+  // --bad-fg es tinta de TEXTO: en modo oscuro se aclara a rosa palido y dejaba
+  // la alarma de 5 dias mas floja que el aviso de 4, invirtiendo la escalada.
+  if (dias >= 5) return 'var(--red-500)'
+  if (dias >= 4) return 'var(--amber-400)'
   return ''
 }
 
