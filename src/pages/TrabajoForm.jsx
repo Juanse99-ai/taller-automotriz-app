@@ -120,6 +120,30 @@ export default function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [
     !!(trabajo?.tipoAceite || trabajo?.proximoKm || trabajo?.proximaVisita || trabajo?.notasProximoMant)
   )
 
+  // Un cambio de aceite que no anota cuando vuelve el carro es un cliente que se
+  // pierde. Medido en produccion: de 21 OT con aceite, solo 4 eligieron el tipo
+  // y 17 quedaron sin proximo km. Y no era pereza del taller: este bloque esta
+  // PLEGADO y rotulado "opcional", asi que sencillamente nadie lo abria.
+  //
+  // Las lineas de la OT ya dicen si se cambio aceite. Cuando lo dicen, el bloque
+  // se abre solo y deja de llamarse opcional. El calculo de +5.000/+10.000 km ya
+  // existia: lo unico que faltaba era que alguien llegara a verlo.
+  // Las lineas viven en su propio estado `items`, no dentro de `form`.
+  const llevaAceite = useMemo(
+    () => (items || []).some(i => /aceite/i.test(i?.nombre || i?.nombreInventario || '')),
+    [items]
+  )
+  const faltaMant = llevaAceite && !form.tipoAceite
+  // Se abre UNA sola vez. Si el usuario lo cierra a proposito, se queda cerrado:
+  // un panel que se reabre solo cada vez que tocas algo es peor que el problema.
+  const mantAbiertoAuto = useRef(false)
+  useEffect(() => {
+    if (faltaMant && !mantAbiertoAuto.current) {
+      mantAbiertoAuto.current = true
+      setShowMant(true)
+    }
+  }, [faltaMant])
+
   // La foto se sube al bucket y en la OT queda solo el enlace. Antes se guardaba
   // el base64 DENTRO de la fila: medido en produccion, 14 ordenes cargaban 6,2 MB
   // asi y la mas pesada 1 MB. Esa fila entera viaja en cada guardado, que es lo
@@ -866,9 +890,14 @@ export default function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [
            la plata: no se toca en la mayoría de OT. El contador muestra la fecha
            pactada, o "Sin fecha" cuando el bloque sigue vacío. */}
         <div className="card">
-          <PlegHead titulo="Próximo mantenimiento" sub="opcional · alimenta CRM"
-            chip={form.proximaVisita ? form.proximaVisita.split('-').reverse().join('/') : 'Sin fecha'}
-            tono={form.proximaVisita ? 'ok' : 'mute'}
+          <PlegHead titulo="Próximo mantenimiento"
+            sub={faltaMant
+              ? 'este servicio lleva aceite: falta cuándo vuelve'
+              : 'opcional · alimenta CRM'}
+            chip={form.proximaVisita
+              ? form.proximaVisita.split('-').reverse().join('/')
+              : (faltaMant ? 'Falta' : 'Sin fecha')}
+            tono={form.proximaVisita ? 'ok' : (faltaMant ? 'warn' : 'mute')}
             open={showMant} onToggle={() => setShowMant(v => !v)} />
           {showMant && (
           <div className="card__b" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(200px,1fr))', gap: 14 }}>
