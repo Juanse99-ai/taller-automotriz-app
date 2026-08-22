@@ -161,7 +161,17 @@ export default async function handler(req, res) {
       if (!e) { res.status(200).json({ ok: false, motivo: 'sin datos' }); return }
       const deuda = Math.round(Number(e.total_deuda || 0))
       const abono = Math.round(Number(e.total_abono || 0))
-      res.status(200).json({ ok: true, total_deuda: deuda, total_abono: abono, pendiente: deuda - abono })
+      // id_cliente sale de la propia factura: es el unico numero que Cuentti
+      // reconoce como suyo para el recibo de caja. Antes se mandaba -1 cuando la
+      // OT no lo tenia, confiando en que Cuentti lo resolviera, y no lo resuelve.
+      res.status(200).json({
+        ok: true,
+        total_deuda: deuda,
+        total_abono: abono,
+        pendiente: deuda - abono,
+        id_cliente: e.id_cliente ?? null,
+        n_transacion: e.n_transacion ?? null,
+      })
     } catch (err) {
       // Cuentti caido o lento: NO se afirma que el pago fallo, solo que no se
       // pudo comprobar. Quien llama decide (y nunca marca pagado a ciegas).

@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { fmt } from '../utils/helpers'
-import { confirmarPagoEnCuentti } from '../services/supabase'
+import { confirmarPagoEnCuentti, datosFacturaCuentti } from '../services/supabase'
 import {
   buscarClientePorCedula,
   cargarInventario,
@@ -516,15 +516,21 @@ export default function CuenttiPanel({ trabajos, actualizarTrabajo, notify, trab
         // quede pagada sin saldo por redondeo.
         if (esPagoInmediato) {
           try {
+            // El id_cliente se lee de la FACTURA recien creada, no se adivina.
+            // Antes salia de trabajo.cuenttiId y, si la OT no lo tenia, se mandaba
+            // -1 confiando en que Cuentti lo resolviera. La factura 5955 (21/08/2026)
+            // demostro que no lo resuelve: el pago se perdia sin avisar. La propia
+            // factura sabe a que cliente pertenece; se le pregunta a ella.
+            const datosFac = await datosFacturaCuentti(txId.toString())
+            const idClienteReal = datosFac?.id_cliente || trabajo.cuenttiId || undefined
             await agregarPagoTransacion({
               idTransacion: txId.toString(),
               valor: payload.total_neto,
               idMedioPago: metodoPago,
               idBanco,
-              // Mismo criterio que buildFacturaPayload: NUNCA el id local de la
-              // app (trabajo.clienteId) — Cuentti lo tomaba como suyo y el recibo
-              // quedaba a nombre de otra persona. Solo un id que venga de Cuentti.
-              idCliente: trabajo.cuenttiId || undefined,
+              // NUNCA el id local de la app (trabajo.clienteId): Cuentti lo tomaba
+              // como suyo y el recibo quedaba a nombre de otra persona.
+              idCliente: idClienteReal,
               nota: `OT ${trabajo.otCodigo || trabajo.id}`,
             })
             // No basta con que la llamada no lance: Cuentti responde sus errores

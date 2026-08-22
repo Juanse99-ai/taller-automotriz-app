@@ -676,3 +676,17 @@ export async function confirmarPagoEnCuentti(idTransacion, valorEsperado = 0) {
     return { confirmado: false, motivo: e.message }
   }
 }
+
+// Lee de CUENTTI los datos de una factura recien creada. Se usa para sacar el
+// id_cliente real: es el unico numero que Cuentti reconoce como suyo al crear el
+// recibo de caja. Antes se mandaba -1 cuando la OT no lo tenia, confiando en que
+// Cuentti lo resolviera; la factura 5955 demostro que no lo resuelve y el pago
+// se perdia en silencio.
+export async function datosFacturaCuentti(idTransacion) {
+  if (!idTransacion) return null
+  try {
+    const r = await fetch(`/api/supabase?estadoPago=${encodeURIComponent(idTransacion)}`)
+    const d = await r.json().catch(() => null)
+    return d?.ok ? d : null
+  } catch { return null }
+}

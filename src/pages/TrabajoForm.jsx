@@ -16,6 +16,7 @@ import { useClientes } from '../hooks/useClientes'
 import { useInventario, formatCacheAge } from '../hooks/useInventario'
 import { subirVideoEvidencia, borrarVideoEvidencia, fetchEvidenciasTrabajo } from '../services/supabase'
 import Switch from '../components/Switch'
+import { comprimirVideo } from '../utils/video'
 import MoneyInput from '../components/MoneyInput'
 import ConfirmDialog from '../components/ConfirmDialog'
 import { Button, ANIOS } from '../components/ui'
@@ -160,6 +161,7 @@ export default function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [
   const MAX_VIDEO_SEG = 30
   const MAX_VIDEO_BYTES = 75 * 1024 * 1024
   const [subiendoVideo, setSubiendoVideo] = useState(false)
+  const [estadoVideo, setEstadoVideo] = useState('') // texto de progreso mientras comprime/sube
   // Videos subidos al bucket en ESTA sesión de edición (aún no persistidos en el
   // trabajo). Si se cancela, o si se quitan antes de guardar, hay que borrarlos del
   // bucket para no dejar huérfanos.
@@ -196,7 +198,9 @@ export default function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [
   const addVideo = async (campo, file) => {
     if (!file) return
     if (!file.type?.startsWith('video/')) { notify?.('Ese archivo no es un video.', 'error'); return }
-    if (file.size > MAX_VIDEO_BYTES) { notify?.('El video pesa más de 75 MB. Grábalo más corto o en menor calidad.', 'error'); return }
+    // El limite se comprueba DESPUES de comprimir: un clip de 10s en 4K pesa
+    // ~60MB y a 1080p queda en 8-12, asi que rechazarlo antes seria rechazar
+    // videos que si caben. Solo se corta lo que ni comprimido entra.
     // Duración: se lee del propio archivo antes de subir.
     const dur = await new Promise(resolve => {
       const v = document.createElement('video')
@@ -208,9 +212,27 @@ export default function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [
     if (dur > MAX_VIDEO_SEG + 0.5) { notify?.(`El video dura ${Math.round(dur)}s. El máximo son ${MAX_VIDEO_SEG} segundos.`, 'error'); return }
     setSubiendoVideo(true)
     try {
+      // Los telefonos graban en 4K por defecto. Se baja a 1080p en el propio
+      // navegador antes de subir: mismo clip, ~5 veces menos peso, y en la
+      // pantalla de un telefono no se nota. Si el navegador no puede, devuelve
+      // el original y la subida sigue.
+      setEstadoVideo('Preparando el video…')
+      const r = await comprimirVideo(file, {
+        onProgreso: p => setEstadoVideo(`Preparando el video… ${Math.round(p * 100)}%`),
+      })
+      const archivo = r.file
+      if (archivo.size > MAX_VIDEO_BYTES) {
+        notify?.(`El video pesa ${Math.round(archivo.size / 1024 / 1024)} MB, más del máximo. Grábalo más corto.`, 'error')
+        setSubiendoVideo(false); setEstadoVideo('')
+        return
+      }
+      setEstadoVideo(r.comprimido
+        ? `Subiendo… (${Math.round(r.de / 1024 / 1024)} MB → ${Math.round(r.a / 1024 / 1024)} MB)`
+        : 'Subiendo…')
+      const file2 = archivo
       // Carpeta por OT: el `form` no tiene otCodigo/id, se toman del trabajo (o placa).
       const carpeta = trabajo?.otCodigo || trabajo?.id || form.placa || 'nueva'
-      const { url, path } = await subirVideoEvidencia(file, carpeta)
+      const { url, path } = await subirVideoEvidencia(file2, carpeta)
       videosSesionRef.current.push({ url, path })
       setForm(f => ({ ...f, [campo]: [...(f[campo] || []), { id: uid(), nombre: file.name, tipo: 'video', url, path, nota: '' }] }))
       notify?.('Video subido.', 'success')
@@ -218,6 +240,7 @@ export default function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [
       notify?.(`No se pudo subir el video: ${e.message}`, 'error')
     } finally {
       setSubiendoVideo(false)
+      setEstadoVideo('')
     }
   }
 
@@ -889,7 +912,7 @@ export default function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [
               <input type="file" accept="image/*" multiple onChange={e => addFotos('evidenciasIngreso', e.target.files)} />
               <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
                 <label className="btn btn-outline btn-sm" style={{ cursor: subiendoVideo ? 'wait' : 'pointer', margin: 0, minHeight: 'var(--tap)' }}>
-                  {subiendoVideo ? 'Subiendo video…' : '+ Agregar video (máx 30s)'}
+                  {subiendoVideo ? (estadoVideo || 'Subiendo video…') : '+ Agregar video (máx 30s)'}
                   <input type="file" accept="video/*" capture="environment" disabled={subiendoVideo}
                     onChange={e => { const file = e.target.files?.[0]; e.target.value = ''; addVideo('evidenciasIngreso', file) }}
                     style={{ display: 'none' }} />
