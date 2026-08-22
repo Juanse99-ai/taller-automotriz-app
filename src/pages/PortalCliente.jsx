@@ -791,6 +791,10 @@ export default function PortalCliente() {
   // Lo primero que pregunta el cliente: de que carro estamos hablando y en que
   // va. Eso es la cabecera; el saludo y la marca bajan a linea de apoyo.
   const cabCliente = tituloCliente(datos.trabajos[0]?.cliente || cotizaciones[0]?.cliente)
+  // 57 = Colombia. wa.me quiere el numero sin espacios ni signos.
+  const telPlano = TALLER.celular.replace(/\D/g, '')
+  const telHref = `tel:${telPlano}`
+  const waHref = `https://wa.me/57${telPlano}?text=${encodeURIComponent(`Hola, soy ${cabCliente}. Escribo por mi vehiculo.`)}`
   const cabVeh = trabajoActivo
     ? (esSinVehiculo(trabajoActivo) ? 'Servicio en el taller'
        : ([trabajoActivo.marca, trabajoActivo.modelo].filter(Boolean).join(' ') || 'Su vehículo'))
@@ -1228,9 +1232,23 @@ export default function PortalCliente() {
           con el nombre y la ciudad; el telefono ni siquiera estaba. Es lo que
           hace un cliente cuando la pantalla no le resuelve la duda. */}
       <div className="portal-full pc-pie">
-        <a className="pc-pie__tel" href={`tel:${TALLER.celular.replace(/\s/g, '')}`}>
-          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2z" /></svg>
-          Llamar al taller
+        {/* WhatsApp primero: un cliente que abre esto desde el celular escribe
+            antes que llamar, y escribiendo el taller conserva el hilo. El mensaje
+            va prellenado con su nombre para que en el taller sepan quien es sin
+            tener que preguntar. Llamar NO se quita: baja a accion secundaria. */}
+        <a className="pc-wa" target="_blank" rel="noopener noreferrer"
+          href={waHref}>
+          <span className="pc-wa__ico" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="21" height="21" fill="currentColor">
+              <path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2 22l5.25-1.38a9.86 9.86 0 0 0 4.79 1.22c5.46 0 9.91-4.45 9.91-9.91C21.96 6.45 17.5 2 12.04 2zm0 18.02a8.2 8.2 0 0 1-4.2-1.15l-.3-.18-3.12.82.83-3.04-.2-.31a8.19 8.19 0 0 1-1.26-4.37c0-4.54 3.7-8.23 8.25-8.23a8.23 8.23 0 0 1 0 16.46z" />
+              <path d="M17.47 14.38c-.3-.15-1.74-.86-2-.96-.27-.1-.47-.15-.66.15-.2.29-.76.95-.93 1.15-.17.2-.34.22-.63.08-.3-.15-1.25-.46-2.38-1.47-.88-.78-1.47-1.75-1.64-2.04-.17-.3-.02-.46.13-.6.13-.14.3-.35.44-.53.15-.18.2-.3.3-.5.1-.2.05-.37-.02-.52-.08-.15-.66-1.6-.9-2.18-.24-.57-.48-.5-.66-.5h-.57c-.2 0-.52.07-.79.37-.27.3-1.03 1-1.03 2.45s1.06 2.84 1.2 3.04c.15.2 2.08 3.18 5.04 4.46.7.3 1.25.48 1.68.62.7.22 1.35.19 1.86.12.57-.09 1.74-.71 1.99-1.4.25-.69.25-1.28.17-1.4-.07-.13-.27-.2-.57-.35z" />
+            </svg>
+          </span>
+          Escribir por WhatsApp
+        </a>
+        <a className="pc-pie__tel pc-pie__tel--sec" href={telHref}>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2z" /></svg>
+          o llamar al {TALLER.celular}
         </a>
         <div className="pc-pie__dir">{TALLER.nombre} · {TALLER.ciudad}</div>
       </div>

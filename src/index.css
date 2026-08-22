@@ -3290,3 +3290,52 @@ tbody tr:active{background:var(--fill-2)}
 @media (max-width:1200px){
   [data-slot="select-trigger"] .ec-pers__s{display:none}
 }
+
+/* ═══ Portal: escribir por WhatsApp ═══
+   Es la acción principal del cliente. Se usa el verde de WhatsApp a propósito y
+   no un color de la paleta: es una marca que el cliente reconoce de un vistazo,
+   y eso vale más aquí que la coherencia cromática (familiaridad ganada).
+
+   La animación es FINITA, no un latido perpetuo. Entra una vez al cargar y da
+   tres pulsos de halo; después se queda quieto. Un botón que late para siempre
+   en la pantalla de un cliente es decoración, y decoración es justo lo que
+   PRODUCT.md rechaza. Va en CSS y no con motion ni GSAP: el portal es lo que un
+   cliente abre desde el celular con los datos del taller, y no merece cargar una
+   librería de animación para un botón. */
+.pc-wa{
+  display:flex; align-items:center; justify-content:center; gap:11px;
+  width:100%; max-width:420px; min-height:56px; padding:0 22px;
+  border-radius:var(--r-pill); background:#25D366; color:#0b2e18;
+  font-family:var(--font); font-size:16px; font-weight:700; text-decoration:none;
+  box-shadow:0 4px 14px rgba(37,211,102,.32);
+  animation:pcWaEntra .5s var(--ease-out) both, pcWaHalo 2.4s var(--ease-out) .6s 3;
+  transition:transform .16s var(--ease-out), box-shadow .16s var(--ease-out), filter .16s;
+}
+.pc-wa:hover{ filter:brightness(1.04); box-shadow:0 6px 20px rgba(37,211,102,.42) }
+.pc-wa:active{ transform:scale(.98) }
+.pc-wa:focus-visible{ outline:3px solid #0b2e18; outline-offset:3px }
+.pc-wa__ico{ display:inline-flex; flex:none }
+
+@keyframes pcWaEntra{
+  from{ opacity:0; transform:translateY(10px) }
+  to  { opacity:1; transform:none }
+}
+/* El halo se dibuja con box-shadow y no con transform: así no empuja nada de
+   alrededor ni provoca reflow. */
+@keyframes pcWaHalo{
+  0%  { box-shadow:0 4px 14px rgba(37,211,102,.32), 0 0 0 0 rgba(37,211,102,.55) }
+  70% { box-shadow:0 4px 14px rgba(37,211,102,.32), 0 0 0 14px rgba(37,211,102,0) }
+  100%{ box-shadow:0 4px 14px rgba(37,211,102,.32), 0 0 0 0 rgba(37,211,102,0) }
+}
+
+/* Llamar baja a acción secundaria: sigue estando, ya no compite. */
+.pc-pie__tel--sec{
+  display:inline-flex; align-items:center; gap:7px; min-height:var(--tap);
+  background:none; border:none; padding:0 12px;
+  color:var(--text-3); font-size:13px; font-weight:600;
+}
+.pc-pie__tel--sec:hover{ color:var(--text); filter:none }
+
+@media (prefers-reduced-motion: reduce){
+  .pc-wa{ animation:none }
+}
