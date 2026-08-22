@@ -226,6 +226,9 @@ export default function PortalCliente() {
   const [error, setError] = useState('')
   const [cargando, setCargando] = useState(false)
   const [galeria, setGaleria] = useState(null) // array de fotos para el visor
+  // De que orden salen las fotos abiertas. El visor tapa la pantalla entera, y
+  // sin esto el cliente pierde el hilo de que servicio esta mirando.
+  const [galOt, setGalOt] = useState('')
   // Enlaces a la factura de Cuentti, por trabajo. Se piden al servidor porque el
   // portal es publico y NO trae cuentti_id_transacion (ver SELECT_PORTAL): sale
   // solo el enlace ya resuelto. Se cargan al abrir y no al pulsar, porque Safari
@@ -797,7 +800,7 @@ export default function PortalCliente() {
             )}
             {t.evidencias?.length > 0 && (
               <button type="button" className="pc-serv__fotos"
-                onClick={e => { e.stopPropagation(); setGaleria(t.evidencias); setGalIdx(0) }}
+                onClick={e => { e.stopPropagation(); setGaleria(t.evidencias); setGalOt(t.otCodigo || ''); setGalIdx(0) }}
                 aria-label={`Ver ${t.evidencias.length} fotos`}>
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" /><path d="m21 15-5-5L5 21" /></svg>
                 {t.evidencias.length}
@@ -1134,7 +1137,7 @@ export default function PortalCliente() {
           <div className="card__h"><h3>Fotos y videos de su servicio</h3><span className="count">{trabajoActivo.evidencias.length}</span></div>
           <div className="card__b pc-fotos">
             {trabajoActivo.evidencias.map((f,i)=>(
-              <button key={f.id||i} className="pc-foto" onClick={()=>{setGaleria(trabajoActivo.evidencias);setGalIdx(i)}}>
+              <button key={f.id||i} className="pc-foto" onClick={()=>{setGaleria(trabajoActivo.evidencias);setGalOt(trabajoActivo.otCodigo||'');setGalIdx(i)}}>
                 <span className="pc-foto__img"><MiniEvid f={f} /></span>
                 {f.nota && <span className="pc-foto__pie">{f.nota}</span>}
               </button>
@@ -1273,7 +1276,10 @@ export default function PortalCliente() {
             va prellenado con su nombre para que en el taller sepan quien es sin
             tener que preguntar. Es la unica accion del pie: llamar se quito por
             decision del dueno, y el telefono sigue en el encabezado del portal. */}
-        <a className="pc-wa" target="_blank" rel="noopener noreferrer"
+        {/* Se retira cuando hay algo abierto encima: un boton flotante que se
+            transparenta a traves del visor de fotos es ruido, no un atajo. */}
+        <a className={`pc-wa${(galeria || vistaServicio || vistaInspeccion || firmandoCotiz) ? ' pc-wa--oculto' : ''}`}
+          target="_blank" rel="noopener noreferrer"
           href={waHref} aria-label="Escribir por WhatsApp">
           <span className="pc-wa__ico" aria-hidden="true">
             <svg viewBox="0 0 24 24" width="21" height="21" fill="currentColor">
@@ -1438,7 +1444,7 @@ export default function PortalCliente() {
                   <div style={{fontSize:11.5,fontWeight:700,color:'var(--text-3)',textTransform:'uppercase',letterSpacing:'.05em',marginBottom:6}}>Fotos y videos</div>
                   <div className="pc-fotos">
                     {t.evidencias.map((f,i)=>(
-                      <button key={f.id||i} className="pc-foto" onClick={()=>{setGaleria(t.evidencias);setGalIdx(i)}}>
+                      <button key={f.id||i} className="pc-foto" onClick={()=>{setGaleria(t.evidencias);setGalOt(t.otCodigo||'');setGalIdx(i)}}>
                         <span className="pc-foto__img"><MiniEvid f={f} /></span>
                         {f.nota && <span className="pc-foto__pie">{f.nota}</span>}
                       </button>
@@ -1460,6 +1466,7 @@ export default function PortalCliente() {
         <div onClick={()=>setGaleria(null)}
           style={{position:'fixed',inset:0,background:'rgba(6,11,26,.93)',zIndex:1000,display:'flex',overflowY:'auto',WebkitOverflowScrolling:'touch',padding:20}}>
           {/* Cerrar (X) fija en la esquina superior derecha */}
+          {galOt && <div className="lb-ot">{galOt}</div>}
           <button className="lb-ctl lb-close" aria-label="Cerrar" onClick={(e)=>{e.stopPropagation();setGaleria(null)}}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
           </button>
@@ -1468,7 +1475,7 @@ export default function PortalCliente() {
             {esVideoEvid(galeria[galIdx])
               ? <video key={galeria[galIdx]?.url} src={galeria[galIdx]?.url} controls autoPlay playsInline onClick={e=>e.stopPropagation()}
                   style={{maxWidth:'100%',maxHeight:'72vh',borderRadius:8,boxShadow:'0 10px 40px rgba(0,0,0,.5)',background:'#000'}}/>
-              : <img src={galeria[galIdx]?.dataUrl} alt={galeria[galIdx]?.nota||''} onClick={e=>e.stopPropagation()}
+              : <img src={galeria[galIdx]?.dataUrl || galeria[galIdx]?.url} alt={galeria[galIdx]?.nota||''} onClick={e=>e.stopPropagation()}
                   style={{maxWidth:'100%',maxHeight:'72vh',objectFit:'contain',borderRadius:8,boxShadow:'0 10px 40px rgba(0,0,0,.5)'}}/>}
             {galeria[galIdx]?.nota && (
               <div style={{color:'#fff',marginTop:12,fontSize:14,textAlign:'center',maxWidth:600}}>{galeria[galIdx].nota}</div>
@@ -1478,6 +1485,22 @@ export default function PortalCliente() {
                 <button className="lb-ctl lb-nav" onClick={()=>setGalIdx(i=>(i-1+galeria.length)%galeria.length)}>‹ Anterior</button>
                 <span style={{color:'rgba(255,255,255,.7)',fontSize:13,fontWeight:600}}>{galIdx+1} / {galeria.length}</span>
                 <button className="lb-ctl lb-nav" onClick={()=>setGalIdx(i=>(i+1)%galeria.length)}>Siguiente ›</button>
+              </div>
+            )}
+            {/* Tira de miniaturas: con seis fotos, llegar a la ultima costaba
+                cinco toques en Siguiente. Aqui se salta a cualquiera. */}
+            {galeria.length > 1 && (
+              <div className="lb-tiras" onClick={e=>e.stopPropagation()}>
+                {galeria.map((f,i)=>(
+                  <button key={f.id||i} type="button" aria-label={`Foto ${i+1} de ${galeria.length}`}
+                    aria-current={i===galIdx} className={`lb-tira${i===galIdx?' es':''}`}
+                    onClick={()=>setGalIdx(i)}
+                    ref={i===galIdx ? el => el?.scrollIntoView({block:'nearest',inline:'nearest'}) : undefined}>
+                    {esVideoEvid(f)
+                      ? <span className="lb-tira__play"><svg width="15" height="15" viewBox="0 0 24 24" fill="#fff"><path d="M8 5v14l11-7z"/></svg></span>
+                      : <img src={f.dataUrl || f.url} alt="" loading="lazy" />}
+                  </button>
+                ))}
               </div>
             )}
           </div>

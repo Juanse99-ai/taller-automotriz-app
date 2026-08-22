@@ -3499,3 +3499,31 @@ tbody tr:active{background:var(--fill-2)}
 @media(min-width:900px){
   .pc-fotos{ grid-template-columns:repeat(3,1fr) }
 }
+
+/* ── Visor de fotos: contexto y salto directo ──────────────────────────────
+   El visor tapa la pantalla entera y solo decia "1/3" sobre negro. Ahora dice
+   de que orden son las fotos, y la tira de abajo deja saltar a cualquiera sin
+   pasar por todas. El pie de foto ya iba antes de los botones, que es lo que
+   hay que leer sin bajar la vista; eso se queda como estaba. */
+.lb-ot{
+  position:fixed; top:16px; left:18px; z-index:2;
+  font-family:var(--mono); font-size:13px; font-weight:700; letter-spacing:.4px;
+  color:rgba(255,255,255,.92); padding:7px 12px; border-radius:var(--r-pill);
+  background:rgba(255,255,255,.10); pointer-events:none;
+}
+.lb-tiras{
+  display:flex; gap:8px; margin-top:16px; max-width:100%;
+  overflow-x:auto; padding:2px 2px 6px; scrollbar-width:thin;
+}
+.lb-tira{
+  flex:none; width:56px; height:56px; padding:0; cursor:pointer; overflow:hidden;
+  border:2px solid transparent; border-radius:7px; background:rgba(255,255,255,.10);
+  opacity:.5; transition:opacity .15s var(--ease-out), border-color .15s var(--ease-out);
+}
+.lb-tira:hover{ opacity:.85 }
+.lb-tira.es{ opacity:1; border-color:#fff }
+.lb-tira:focus-visible{ outline:2px solid #fff; outline-offset:2px }
+.lb-tira img{ width:100%; height:100%; object-fit:cover; display:block }
+.lb-tira__play{ width:100%; height:100%; display:flex; align-items:center; justify-content:center }
+/* visibility en vez de display: asi el boton no reaparece de golpe al cerrar. */
+.pc-wa--oculto{ opacity:0; visibility:hidden; transition:opacity .15s var(--ease-out) }
