@@ -54,6 +54,34 @@ function buildHeaders() {
 }
 
 // Request generico al proxy de Cuentti
+// Cuentti responde sus ERRORES con HTTP 200 y el detalle en el cuerpo, asi que
+// cuenttiRequest (que solo lanza si !res.ok) los deja pasar como si todo hubiera
+// ido bien. buscarClientePorCedula ya lo comprobaba a mano; esto lo hace
+// reutilizable para las llamadas donde tragarse un error cuesta plata.
+//
+// Devuelve el mensaje de error si lo hay, o null si la respuesta es buena.
+export function errorDeCuentti(data) {
+  // DELIBERADAMENTE conservador: solo señala lo que es inequivocamente un
+  // rechazo. Un falso positivo aqui es peor que el fallo que arregla, porque
+  // avisaria en rojo en CADA pago bueno y dejaria las OTs sin marcar como
+  // pagadas. Ante la duda, se calla. Por eso null/vacio NO cuentan como error:
+  // no se puede probar que fallara.
+  if (data == null) return null
+  if (typeof data === 'string') {
+    const t = data.trim()
+    if (!t) return null
+    // Solo texto que dice explicitamente que fallo.
+    if (/\b(error|no se pudo|invalid|denied|fail(ed)?|excepcion|exception)\b/i.test(t)) return t.slice(0, 200)
+    return null
+  }
+  if (typeof data === 'object') {
+    // type:0 es la forma documentada de error de Cuentti; ya se comprobaba a
+    // mano en buscarClientePorCedula.
+    if (data.type === 0) return data.message || 'Cuentti rechazo la operacion'
+  }
+  return null
+}
+
 async function cuenttiRequest(endpoint, method = 'GET', body = null, timeout = CONFIG.timeout) {
   const url = `${CONFIG.baseUrl}?path=${encodeURIComponent(endpoint)}`
   const headers = buildHeaders()
@@ -845,7 +873,17 @@ export async function agregarPagoTransacion(pago) {
     fecha_registro: new Date().toISOString(),
     id_centro_costo: 1,
   }
-  return cuenttiRequest(CONFIG.paths.facturas.agregarPago, 'POST', body)
+  const resp = await cuenttiRequest(CONFIG.paths.facturas.agregarPago, 'POST', body)
+  // Sin esto, un rechazo de Cuentti (que llega con HTTP 200) se daba por bueno:
+  // la app marcaba la OT como pagada y en Cuentti la factura seguia "Pendiente x
+  // Pagar" con T.Abonado 0 y sin recibos. Paso el 21/08/2026 con la factura 5955.
+  const err = errorDeCuentti(resp)
+  if (err) {
+    const e = new Error(`Cuentti no registro el pago: ${err}`)
+    e.respuesta = resp
+    throw e
+  }
+  return resp
 }
 
 // Obtener URL del documento/factura (QR/PDF)
