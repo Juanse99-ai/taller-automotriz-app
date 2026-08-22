@@ -183,15 +183,27 @@ function leerPagosIniciados() {
    Va como componente porque hay dos historiales — el plano del cliente normal
    y el agrupado por vehiculo de una flota — y cada uno necesita su estado. */
 const HIST_VISIBLES = 3
-function HistorialLista({ trabajos, fila }) {
+function HistorialLista({ trabajos, fila, tabla = false }) {
   const [todo, setTodo] = useState(false)
   const resto = trabajos.length - HIST_VISIBLES
   return (
     <>
-      <div className="pc-servs">{(todo ? trabajos : trabajos.slice(0, HIST_VISIBLES)).map(fila)}</div>
+      <div className={`pc-servs${tabla ? ' pc-servs--tabla' : ''}`}>
+        {tabla && (
+          // Cabecera de columnas. Solo existe en escritorio (CSS la oculta en
+          // movil, donde cada servicio se lee como ficha y no como fila).
+          <div className="pc-servs__cab" aria-hidden="true">
+            <span>Placa</span><span>Fecha</span><span>Vehiculo</span>
+            <span>Estado</span><span className="pc-servs__cab--der">Total</span><span />
+          </div>
+        )}
+        {(todo ? trabajos : trabajos.slice(0, HIST_VISIBLES)).map(fila)}
+      </div>
       {resto > 0 && (
         <button type="button" className="pc-mas" aria-expanded={todo} onClick={() => setTodo(v => !v)}>
-          <span>{todo ? `Ver solo los ${HIST_VISIBLES} últimos` : `Ver los ${resto} anteriores`}</span>
+          <span>{todo
+            ? `Ver solo los ${HIST_VISIBLES} últimos`
+            : resto === 1 ? 'Ver el anterior' : `Ver los ${resto} anteriores`}</span>
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d={todo ? 'm18 15-6-6-6 6' : 'm9 18 6-6-6-6'} /></svg>
         </button>
       )}
@@ -761,7 +773,10 @@ export default function PortalCliente() {
             {t.otCodigo && <span className="pc-serv__ot">{t.otCodigo}</span>}
           </div>
           <div className="pc-serv__meta">
-            {fmtDate(t.fecha)}{compact ? '' : ` · ${[t.marca, t.modelo].filter(Boolean).join(' ') || 'Sin ficha'}`}
+            <span className="pc-serv__fecha">{fmtDate(t.fecha)}</span>
+            {!compact && (
+              <span className="pc-serv__veh">{[t.marca, t.modelo].filter(Boolean).join(' ') || 'Sin ficha'}</span>
+            )}
           </div>
           <div className="pc-serv__chips">
             <span className={`badge ${ESTADO_TRABAJO_DISPLAY[t.estado]?.cls || 'badge-n'}`}>
@@ -831,6 +846,7 @@ export default function PortalCliente() {
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2z" /></svg>
             {TALLER.celular}
           </a>
+          <span className="pc-top__quien">{cabCliente}</span>
           <button type="button" className="pc-top__salir" onClick={salir}>Salir</button>
         </div>
         <div className="pc-top__hola">Hola, {cabCliente}</div>
@@ -1236,7 +1252,7 @@ export default function PortalCliente() {
           <div className="card portal-full">
             <div className="card__h"><h3>Historial de servicios</h3><span className="count">{datos.trabajos.length}</span></div>
             <div className="card__b card__b--flush">
-              <HistorialLista trabajos={datos.trabajos} fila={t => filaHist(t, false)} />
+              <HistorialLista trabajos={datos.trabajos} fila={t => filaHist(t, false)} tabla />
             </div>
           </div>
         )
@@ -1256,14 +1272,14 @@ export default function PortalCliente() {
             tener que preguntar. Es la unica accion del pie: llamar se quito por
             decision del dueno, y el telefono sigue en el encabezado del portal. */}
         <a className="pc-wa" target="_blank" rel="noopener noreferrer"
-          href={waHref}>
+          href={waHref} aria-label="Escribir por WhatsApp">
           <span className="pc-wa__ico" aria-hidden="true">
             <svg viewBox="0 0 24 24" width="21" height="21" fill="currentColor">
               <path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2 22l5.25-1.38a9.86 9.86 0 0 0 4.79 1.22c5.46 0 9.91-4.45 9.91-9.91C21.96 6.45 17.5 2 12.04 2zm0 18.02a8.2 8.2 0 0 1-4.2-1.15l-.3-.18-3.12.82.83-3.04-.2-.31a8.19 8.19 0 0 1-1.26-4.37c0-4.54 3.7-8.23 8.25-8.23a8.23 8.23 0 0 1 0 16.46z" />
               <path d="M17.47 14.38c-.3-.15-1.74-.86-2-.96-.27-.1-.47-.15-.66.15-.2.29-.76.95-.93 1.15-.17.2-.34.22-.63.08-.3-.15-1.25-.46-2.38-1.47-.88-.78-1.47-1.75-1.64-2.04-.17-.3-.02-.46.13-.6.13-.14.3-.35.44-.53.15-.18.2-.3.3-.5.1-.2.05-.37-.02-.52-.08-.15-.66-1.6-.9-2.18-.24-.57-.48-.5-.66-.5h-.57c-.2 0-.52.07-.79.37-.27.3-1.03 1-1.03 2.45s1.06 2.84 1.2 3.04c.15.2 2.08 3.18 5.04 4.46.7.3 1.25.48 1.68.62.7.22 1.35.19 1.86.12.57-.09 1.74-.71 1.99-1.4.25-.69.25-1.28.17-1.4-.07-.13-.27-.2-.57-.35z" />
             </svg>
           </span>
-          Escribir por WhatsApp
+          <span className="pc-wa__txt">Escríbenos</span>
         </a>
         <div className="pc-pie__dir">{TALLER.nombre} · {TALLER.ciudad}</div>
       </div>

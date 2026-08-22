@@ -3352,3 +3352,118 @@ tbody tr:active{background:var(--fill-2)}
 .pc-serv__fac:hover{ background:var(--accent-soft-2); border-color:var(--accent) }
 .pc-serv__fac:focus-visible{ outline:2px solid var(--accent); outline-offset:2px }
 @media (max-width:960px){ .pc-serv__fac{ min-height:var(--tap); padding:0 13px } }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   PORTAL v2 — el escritorio deja de ser la pagina de movil estirada
+   ══════════════════════════════════════════════════════════════════════════
+   El movil ya funcionaba: se lee como una ficha por servicio y se queda igual.
+   Lo que estaba mal era el escritorio, que gastaba 250px de navy en saludar y
+   luego ponia cada servicio en una tarjeta alta cuando el cliente lo que hace
+   es BARRER la lista buscando una fecha o una placa. Barrer es lo que hace una
+   tabla, asi que en escritorio esto es una tabla de verdad.
+
+   Todo lo de aqui va detras de min-width:900px salvo el punto separador y el
+   flotante, que existen en las dos anchuras. */
+
+/* El punto entre la fecha y el vehiculo solo tiene sentido cuando van juntos
+   en una linea (movil). En la tabla son dos columnas y el punto sobra. */
+.pc-serv__veh::before{ content:' · ' }
+
+/* Las dos piezas que SOLO existen en escritorio. Sin este estado base salen en
+   movil: la cabecera como texto pegado ("PlacaFechaVehiculoEstadoTotal") y el
+   nombre del cliente dos veces, en la barra y en el "Hola,". */
+.pc-servs__cab{ display:none }
+.pc-top__quien{ display:none }
+
+/* ── El boton de WhatsApp: flotante permanente, no barra en el pie ─────────
+   Un cliente que abre esto por el celular escribe en cualquier momento de la
+   lectura, no solo cuando llega al final de la pagina. */
+.pc-wa{
+  position:fixed; right:16px; bottom:16px; z-index:60;
+  width:auto; max-width:none; min-height:0;
+  height:52px; padding:0; gap:0; justify-content:center;
+  aspect-ratio:1; border-radius:50%;
+}
+.pc-wa__txt{ display:none }
+/* El pie le reserva sitio al flotante para que no caiga sobre la direccion.
+   Medido, no a ojo: el circulo ocupa 52+16+16 = 84px de esquina. */
+.pc-pie{ padding-bottom:84px }
+
+@media(min-width:900px){
+  /* ── La barra navy: de ~250px a ~100px ──────────────────────────────────
+     El nombre del cliente sube a la barra superior, al lado de Salir, y el
+     estado se queda con la fecha del ultimo servicio en la MISMA linea. */
+  .pc-top__in{ padding:14px 16px 18px }
+  .pc-top__r{ padding-bottom:15px }
+  .pc-top__quien{
+    display:inline-block; max-width:210px; overflow:hidden; white-space:nowrap;
+    text-overflow:ellipsis; font-size:12.5px; font-weight:600; color:#fff;
+    padding-left:13px; border-left:1px solid rgba(255,255,255,.22);
+  }
+  .pc-top__hola{ display:none }
+  /* Inline los dos, para que caigan en un renglon sin tocar el JSX. */
+  .pc-top__veh{ display:inline; font-size:26px }
+  .pc-top__meta{ display:inline-flex; margin:0 0 0 13px; vertical-align:baseline }
+  .pc-top__meta::before{ content:'·'; margin-right:13px; opacity:.45 }
+  /* Blanco puro sobre navy. La jerarquia la da el tamano y el peso, no la
+     opacidad: un blanco al 60% sobre #0d1b35 se lee mal, y el que abre esto
+     lo abre con la luz del taller encima. */
+  .pc-top__marca, .pc-top__meta, .pc-top__flota{ color:#fff }
+
+  /* ── El historial como tabla ────────────────────────────────────────────
+     Seis columnas. Solo la lista ancha la usa: la lista compacta por vehiculo
+     vive en una columna estrecha y ahi la tabla no cabe. */
+  .pc-servs--tabla .pc-servs__cab,
+  .pc-servs--tabla .pc-serv{
+    display:grid; align-items:center; gap:0 14px;
+    /* TODAS las anchuras deterministas menos el vehiculo. Cada fila es su
+       propia rejilla, asi que una columna 'auto' se resuelve segun SU contenido
+       y la cabecera acaba sobre otra columna. Medido: la cabecera daba 43px de
+       Estado contra 265px de las filas. */
+    grid-template-columns:140px 92px minmax(0,1fr) 288px 96px 15px;
+  }
+  .pc-servs--tabla .pc-servs__cab{
+    padding:9px 15px; background:var(--bg-subtle);
+    border-bottom:1px solid var(--row-line);
+    font-size:10.5px; line-height:1; font-weight:700; letter-spacing:.6px;
+    text-transform:uppercase; color:var(--text-4);
+  }
+  /* Estado y Total van pegados a la derecha, contra el borde de la tabla. */
+  .pc-servs--tabla .pc-servs__cab--der,
+  .pc-servs--tabla .pc-servs__cab span:nth-child(4){ text-align:right }
+  .pc-servs--tabla .pc-serv{ padding:0 15px; min-height:52px }
+  /* display:contents sube los hijos a la rejilla: sin esto habria que
+     desarmar el JSX que el movil necesita tal cual esta. */
+  .pc-servs--tabla .pc-serv__l,
+  .pc-servs--tabla .pc-serv__r,
+  .pc-servs--tabla .pc-serv__meta{ display:contents }
+  /* La OT baja bajo la placa: dos servicios del mismo carro el mismo dia se
+     ven identicos sin ella. */
+  .pc-servs--tabla .pc-serv__id{ flex-direction:column; align-items:flex-start; gap:1px }
+  .pc-servs--tabla .pc-serv__fecha,
+  .pc-servs--tabla .pc-serv__veh{
+    font-size:12.5px; line-height:1.3; color:var(--text-3);
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  }
+  .pc-servs--tabla .pc-serv__veh::before{ content:none }
+  /* justify-end no es cosmetico: cuando un servicio trae badge + PAGADO +
+     Factura + fotos + Pagar, los chips se salen de los 288px. Alineados a la
+     derecha ese sobrante se va hacia la IZQUIERDA, sobre el hueco del vehiculo,
+     en vez de montarse sobre el Total. */
+  .pc-servs--tabla .pc-serv__chips{ margin-top:0; flex-wrap:nowrap; justify-content:flex-end }
+  .pc-servs--tabla .pc-serv__total{ justify-self:end }
+
+  /* ── El flotante en su forma extendida ─────────────────────────────────── */
+  .pc-wa{
+    right:20px; bottom:20px; height:44px; width:auto; aspect-ratio:auto;
+    padding:0 17px 0 14px; gap:9px; border-radius:var(--r-pill);
+  }
+  .pc-wa__txt{ display:inline; font-size:14px }
+  .pc-pie{ padding-bottom:26px }
+}
+
+/* El handoff pedia reservar 186px a la derecha del pie para el flotante. NO se
+   aplica aqui: eso estaba pensado para un pie de tres columnas. El nuestro es
+   una linea corta y centrada, y medido a 1280px el texto acaba en x=689 con el
+   flotante empezando en x=1127 (y ademas 83px mas abajo). La reserva no evitaba
+   ningun choque y descentraba la linea 86px. Queda solo la holgura vertical. */
