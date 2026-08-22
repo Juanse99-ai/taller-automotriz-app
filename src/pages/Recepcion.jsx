@@ -96,6 +96,19 @@ export default function Recepcion({ hook, vehiculosHook, clientesHook, notify })
       notify('Placa y cliente son obligatorios', 'error')
       return
     }
+    // El telefono lleva su asterisco rojo desde siempre, pero nadie lo exigia:
+    // medido en la base, 65 de los 90 clientes con OT (72%) no tienen ninguno.
+    // A esos no se les puede mandar el enlace del portal, ni un recordatorio de
+    // mantenimiento, ni nada. Y no se recupera despues: Cuentti tampoco los
+    // tiene. Se pide aqui porque aqui es donde el cliente esta enfrente.
+    //
+    // Tolerante a proposito: 7 digitos o mas. Asi entran fijos, celulares y
+    // numeros de empresa, y lo unico que se rechaza es el campo vacio o basura.
+    const digitos = (form.telefonoCliente || '').replace(/\D/g, '')
+    if (digitos.length < 7) {
+      notify('Falta el teléfono del cliente. Sin él no podrá recibir el enlace de su vehículo ni los avisos del taller.', 'error')
+      return
+    }
     // No numerar una OT si aún no sabemos el consecutivo real (arrancaría en OT-0001).
     if (!puedeCrearOT()) { notify('Sin conexión con el servidor: no se puede numerar la OT todavía. Reintenta en un momento.', 'error'); return }
     const placaNorm = form.placa.toUpperCase()
