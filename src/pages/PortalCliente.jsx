@@ -847,10 +847,6 @@ export default function PortalCliente() {
         <div className="pc-top__r">
           <img src="/logo.png" alt={TALLER.nombre} className="pc-top__logo" />
           <span className="pc-top__marca">Multidiagnósticos AS</span>
-          <a className="pc-top__tel" href={`tel:${TALLER.celular.replace(/\s/g, '')}`}>
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2z" /></svg>
-            {TALLER.celular}
-          </a>
           <span className="pc-top__quien">{cabCliente}</span>
           <button type="button" className="pc-top__salir" onClick={salir}>Salir</button>
         </div>
@@ -1275,7 +1271,8 @@ export default function PortalCliente() {
             antes que llamar, y escribiendo el taller conserva el hilo. El mensaje
             va prellenado con su nombre para que en el taller sepan quien es sin
             tener que preguntar. Es la unica accion del pie: llamar se quito por
-            decision del dueno, y el telefono sigue en el encabezado del portal. */}
+            decision del dueno, y el numero de la cabecera tambien: WhatsApp va
+            a ese mismo numero, asi que el canal no se pierde. */}
         {/* Se retira cuando hay algo abierto encima: un boton flotante que se
             transparenta a traves del visor de fotos es ruido, no un atajo. */}
         <a className={`pc-wa${(galeria || vistaServicio || vistaInspeccion || firmandoCotiz) ? ' pc-wa--oculto' : ''}`}
