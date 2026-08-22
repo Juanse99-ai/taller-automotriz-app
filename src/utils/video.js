@@ -40,9 +40,9 @@ export function sePuedeComprimirVideo() {
 
 // Devuelve { file, comprimido, de, a } — `file` es el original si no se pudo.
 export async function comprimirVideo(file, { onProgreso } = {}) {
-  const sinCambios = { file, comprimido: false, de: file.size, a: file.size }
+  const sinCambios = (motivo) => ({ file, comprimido: false, de: file.size, a: file.size, motivo })
   const mimeType = elegirFormato()
-  if (!mimeType || !sePuedeComprimirVideo()) return sinCambios
+  if (!mimeType || !sePuedeComprimirVideo()) return sinCambios('este navegador no puede grabar video')
 
   let url = null
   try {
@@ -50,6 +50,13 @@ export async function comprimirVideo(file, { onProgreso } = {}) {
     video.muted = true          // sin esto, iOS no deja reproducir sin gesto
     video.playsInline = true
     video.preload = 'auto'
+    // FUERA DE PANTALLA PERO DENTRO DEL DOM. Safari no reproduce un <video> que
+    // no esta en el documento, y sin reproduccion no hay cuadros que pintar en el
+    // canvas: la compresion se quedaba colgada y acababa subiendo el original.
+    // No vale display:none ni visibility:hidden por lo mismo.
+    video.style.cssText = 'position:fixed;left:-10000px;top:0;width:2px;height:2px;opacity:0.01;pointer-events:none'
+    video.setAttribute('data-comprimiendo', '1')
+    document.body.appendChild(video)
     url = URL.createObjectURL(file)
     video.src = url
 
@@ -61,9 +68,9 @@ export async function comprimirVideo(file, { onProgreso } = {}) {
 
     const anchoOrig = video.videoWidth
     const altoOrig = video.videoHeight
-    if (!anchoOrig || !altoOrig) return sinCambios
+    if (!anchoOrig || !altoOrig) return sinCambios('no se pudieron leer las medidas')
     // Ya es 1080p o menos: recodificar solo empeoraría la calidad.
-    if (Math.min(anchoOrig, altoOrig) <= ALTO_OBJETIVO) return sinCambios
+    if (Math.min(anchoOrig, altoOrig) <= ALTO_OBJETIVO) return sinCambios('ya venia en 1080p o menos')
 
     const escala = ALTO_OBJETIVO / Math.min(anchoOrig, altoOrig)
     // Dimensiones pares: algunos codificadores fallan con impares.
@@ -80,7 +87,8 @@ export async function comprimirVideo(file, { onProgreso } = {}) {
     // Si el navegador no expone captureStream del <video>, el clip queda mudo,
     // que para una evidencia de taller es aceptable; perder la subida no.
     try {
-      const vs = video.captureStream ? video.captureStream() : null
+      const cap = video.captureStream || video.webkitCaptureStream
+      const vs = cap ? cap.call(video) : null
       const pista = vs?.getAudioTracks?.()[0]
       if (pista) stream.addTrack(pista)
     } catch { /* sin audio, pero se sube */ }
@@ -115,18 +123,19 @@ export async function comprimirVideo(file, { onProgreso } = {}) {
     await terminado
 
     const blob = new Blob(trozos, { type: mimeType })
-    if (!blob.size) return sinCambios
+    if (!blob.size) return sinCambios('la grabacion salio vacia')
     // Si el "comprimido" no es más chico, no sirve de nada: se sube el original.
-    if (blob.size >= file.size) return sinCambios
+    if (blob.size >= file.size) return sinCambios('comprimido pesaba mas que el original')
 
     const ext = mimeType.includes('mp4') ? 'mp4' : 'webm'
     const base = (file.name || 'video').replace(/\.[^.]+$/, '')
     const nuevo = new File([blob], `${base}-1080.${ext}`, { type: mimeType })
     return { file: nuevo, comprimido: true, de: file.size, a: nuevo.size }
-  } catch {
-    // Cualquier fallo: se sube el original.
-    return sinCambios
+  } catch (e) {
+    // Cualquier fallo: se sube el original, pero diciendo que paso.
+    return sinCambios(e?.message || 'fallo al comprimir')
   } finally {
     if (url) URL.revokeObjectURL(url)
+    try { document.querySelectorAll('video[data-comprimiendo]').forEach(v => v.remove()) } catch { /* ya no esta */ }
   }
 }

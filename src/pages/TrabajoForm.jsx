@@ -229,8 +229,8 @@ export default function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [
       if (archivo.size > MAX_VIDEO_BYTES) {
         const mb = Math.round(archivo.size / 1024 / 1024)
         notify?.(r.comprimido
-          ? `Aun comprimido pesa ${mb} MB y el maximo son 50. Grábalo más corto.`
-          : `El video pesa ${mb} MB y el máximo son 50. Este navegador no pudo comprimirlo: grábalo en menor calidad o más corto.`,
+          ? `Aún comprimido pesa ${mb} MB y el máximo son 50. Grábalo más corto.`
+          : `El video pesa ${mb} MB y el máximo son 50. No se pudo comprimir: ${r.motivo || 'motivo desconocido'}.`,
           'error')
         setSubiendoVideo(false); setEstadoVideo('')
         return
@@ -238,6 +238,9 @@ export default function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [
       setEstadoVideo(r.comprimido
         ? `Subiendo… (${Math.round(r.de / 1024 / 1024)} MB → ${Math.round(r.a / 1024 / 1024)} MB)`
         : 'Subiendo…')
+      // Si no comprimio pero igual cabe, se sube y se deja constancia del motivo
+      // en la consola: sin esto no hay forma de saber por que no comprimio.
+      if (!r.comprimido && r.motivo) console.warn('[video] sin comprimir:', r.motivo)
       const file2 = archivo
       // Carpeta por OT: el `form` no tiene otCodigo/id, se toman del trabajo (o placa).
       const carpeta = trabajo?.otCodigo || trabajo?.id || form.placa || 'nueva'
