@@ -101,7 +101,20 @@ export default function Dashboard({ trabajos = [], onNavigate, user }) {
     // Por cobrar = facturado (tiene factura en Cuentti) pero AÚN sin pagar
     const porCobrarList = trabajos.filter(t => t.cuenttiTransacionId && !t.pagado)
     const porCobrar = porCobrarList.reduce((s, t) => s + (t.total || 0), 0)
-    return { activos, listoCount, ingresosMes, ingresosHoy, porCobrar, porCobrarCount: porCobrarList.length }
+    // Mismo tramo del mes pasado: del 1 al MISMO dia. Comparar un mes a medias
+    // contra un mes entero siempre pinta una caida que no existe. Si el mes
+    // pasado fue mas corto (hoy 31, febrero), se corta en su ultimo dia.
+    const diaDeHoy = now.getDate()
+    const diasMesAnt = new Date(now.getFullYear(), now.getMonth(), 0).getDate()
+    const corte = Math.min(diaDeHoy, diasMesAnt)
+    const iniAnt = new Date(now.getFullYear(), now.getMonth() - 1, 1)
+    const finAnt = new Date(now.getFullYear(), now.getMonth() - 1, corte, 23, 59, 59, 999)
+    const ingresosMesAnt = trabajos
+      .filter(t => { const f = new Date(t.fecha); return t.estado !== ESTADOS.CANCELADO && f >= iniAnt && f <= finAnt })
+      .reduce((s, t) => s + (t.total || 0), 0)
+    const mesAntNombre = iniAnt.toLocaleString('es-CO', { month: 'long' })
+    return { activos, listoCount, ingresosMes, ingresosHoy, porCobrar, porCobrarCount: porCobrarList.length,
+             ingresosMesAnt, mesAntNombre }
   }, [trabajos])
 
   // ── Estancados ─────────────────────────────────────────────────────────────
@@ -193,6 +206,15 @@ export default function Dashboard({ trabajos = [], onNavigate, user }) {
     {
       k: 'ing', label: 'INGRESOS DEL MES', value: fmt(stats.ingresosMes),
       sub: `Acumulado del 1 al ${diaHoy} de ${mesHoy}`,
+      // Solo se compara si el mes pasado tuvo movimiento: dividir por cero, o
+      // contra un mes en que la app no se usaba, da porcentajes de fantasia.
+      delta: stats.ingresosMesAnt > 0
+        ? (() => {
+            const pct = Math.round((stats.ingresosMes - stats.ingresosMesAnt) / stats.ingresosMesAnt * 100)
+            return { pct, texto: `${pct >= 0 ? '+' : ''}${pct}% vs ${stats.mesAntNombre}`,
+                     titulo: `Del 1 al ${diaHoy} de ${stats.mesAntNombre} llevabas ${fmt(stats.ingresosMesAnt)}` }
+          })()
+        : null,
       badge: stats.ingresosHoy > 0 ? `${fmt(stats.ingresosHoy)} HOY` : null,
       d: 'M23 6 13.5 15.5 8.5 10.5 1 18M17 6h6v6',
     },
@@ -244,6 +266,13 @@ export default function Dashboard({ trabajos = [], onNavigate, user }) {
 .dsh-kpi__f{display:flex;align-items:center;flex-wrap:wrap;gap:7px;row-gap:5px;margin-top:7px;min-width:0}
 .dsh-kpi__b{flex:none;font-size:9.5px;line-height:1;font-weight:700;letter-spacing:.4px;
   padding:4px 6px;border-radius:var(--r-xs);background:var(--ok-bg);color:var(--ok-fg);white-space:nowrap}
+/* El delta va contra el MISMO tramo del mes pasado. En ambar cuando baja, no en
+   rojo: un mes mas flojo no es un error, es informacion. Y sin flechas: el signo
+   ya lo dice y una flecha mas el signo es decir lo mismo dos veces. */
+.dsh-kpi__d{flex:none;font-size:9.5px;line-height:1;font-weight:700;letter-spacing:.3px;
+  padding:4px 6px;border-radius:var(--r-xs);background:var(--warn-bg);color:var(--warn-fg);
+  white-space:nowrap;cursor:help}
+.dsh-kpi__d.up{background:var(--ok-bg);color:var(--ok-fg)}
 .dsh-kpi__s{font-size:11.5px;line-height:1.3;color:var(--text-4);min-width:0;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 
@@ -396,6 +425,11 @@ export default function Dashboard({ trabajos = [], onNavigate, user }) {
             <div className="dsh-kpi__v" title={k.value}>{k.value}</div>
             <div className="dsh-kpi__f">
               {k.badge && <span className="dsh-kpi__b">{k.badge}</span>}
+              {k.delta && (
+                <span className={`dsh-kpi__d${k.delta.pct >= 0 ? ' up' : ''}`} title={k.delta.titulo}>
+                  {k.delta.texto}
+                </span>
+              )}
               <span className="dsh-kpi__s" title={k.sub}>{k.sub}</span>
             </div>
           </div>
