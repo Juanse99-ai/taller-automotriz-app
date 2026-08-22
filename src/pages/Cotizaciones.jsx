@@ -11,8 +11,21 @@ import { useClientes } from '../hooks/useClientes'
 import { useInventario, formatCacheAge } from '../hooks/useInventario'
 import { lsGet, lsSet, LS_KEYS } from '../services/storage'
 import { Button, Badge, IconX, IconEdit, IconTrash, IconPdf, ANIOS } from '../components/ui'
+import { recordarCotizacionWhatsApp } from '../utils/portalLink'
 
 const ESTADO_COT = { PENDIENTE: 'Pendiente', APROBADA: 'Aprobada', RECHAZADA: 'Rechazada' }
+
+// Dias que lleva esperando respuesta una cotizacion. Se cuenta desde su fecha,
+// no desde created_at: la fecha es la que el cliente vio en el documento.
+function diasEsperando(c) {
+  const t = new Date(c?.fecha || 0).getTime()
+  if (!t) return 0
+  return Math.max(0, Math.floor((Date.now() - t) / 86400000))
+}
+// Vencida = paso su propia validez. Ahi ya no toca "revisar": toca recordar.
+function seEnfrio(c) {
+  return c?.estado === ESTADO_COT.PENDIENTE && diasEsperando(c) > (c?.validezDias || 15)
+}
 
 // Referencia corta y legible. Conviven ids nuevos cortos (COT-0002) con uids
 // aleatorios de 13 chars (COT-mskjp68522nbo) que se partían en dos líneas y no
@@ -389,14 +402,36 @@ export default function Cotizaciones({ notify, trabajos = [], onCrearTrabajo, co
                       <td className="c-muted td-veh" data-label="Vehículo">{[c.marca, c.modelo, c.ano].filter(Boolean).join(' ') || '—'}</td>
                       <td className="td-estado" data-label="Estado"><Badge tone={bc}>{c.estado}</Badge></td>
                       <td className="c-right c-mono td-total" data-label="Total">{fmt(c.total)}</td>
-                      <td className="c-muted td-fecha" data-label="Fecha">{fmtDate(c.fecha)}</td>
+                      <td className="c-muted td-fecha" data-label="Fecha">
+                        {fmtDate(c.fecha)}
+                        {/* Una fecha sola no dice nada; los dias esperando, si. Sin esto
+                            una cotizacion de hace dos meses se ve igual que la de ayer. */}
+                        {c.estado === ESTADO_COT.PENDIENTE && diasEsperando(c) > 0 && (
+                          <div className="cot-espera" data-fria={seEnfrio(c) ? '1' : undefined}>
+                            {diasEsperando(c) === 1 ? 'hace 1 día' : `hace ${diasEsperando(c)} días`}
+                          </div>
+                        )}
+                      </td>
                       {/* Una sola acción visible: la que toca ahora. Aprobar, rechazar,
                           PDF, editar y eliminar viven en el detalle o en el menú "⋯",
                           para que el tacho nunca quede al lado de algo que se usa a diario. */}
                       <td className="td-actions" onClick={e => e.stopPropagation()}>
                         <div className="actions-cell">
-                          {c.estado === ESTADO_COT.PENDIENTE && (
+                          {/* Sigue habiendo UNA sola accion visible, pero es la que toca
+                              AHORA: mientras la cotizacion esta vigente, revisarla; cuando
+                              ya paso su validez sin respuesta, lo que falta no es mirarla
+                              otra vez, es recordarsela al cliente. */}
+                          {c.estado === ESTADO_COT.PENDIENTE && !seEnfrio(c) && (
                             <Button variant="outline" size="sm" onClick={() => setDetalleId(c.id)}>Revisar</Button>
+                          )}
+                          {seEnfrio(c) && (
+                            <Button variant="outline" size="sm" className="btn-wa"
+                              title={c.telefonoCliente
+                                ? `Recordar por WhatsApp al ${c.telefonoCliente}`
+                                : 'Este cliente no tiene teléfono: se abrirá WhatsApp para elegir el contacto'}
+                              onClick={() => recordarCotizacionWhatsApp(c)}>
+                              Recordar
+                            </Button>
                           )}
                           {c.estado === ESTADO_COT.APROBADA && onCrearTrabajo && !yaTieneOT && (
                             <Button variant="primary" size="sm" disabled={creandoTrabajoId !== null}
@@ -406,6 +441,7 @@ export default function Cotizaciones({ notify, trabajos = [], onCrearTrabajo, co
                           <MenuFila
                             etiqueta={`Más acciones de la cotización ${cotRef(c.id)}`}
                             opciones={[
+                              ...(seEnfrio(c) ? [{ label: 'Revisar', onSelect: () => setDetalleId(c.id) }] : []),
                               { label: 'Descargar PDF', icon: <IconPdf />, onSelect: () => imprimirCotizacion(c) },
                               { label: 'Editar', icon: <IconEdit />, onSelect: () => { setEditId(c.id); setVista('editar') } },
                               { separador: true },
