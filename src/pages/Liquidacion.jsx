@@ -1,6 +1,5 @@
 import { useState, useMemo, useRef, useEffect } from 'react'
-import { jsPDF } from 'jspdf'
-import autoTable from 'jspdf-autotable'
+import { cargarPdf } from '../utils/pdfLazy'
 import { fmt, fmtDate, uid, hoyISO, tituloCliente, cantidadItem } from '../utils/helpers'
 import MoneyInput from '../components/MoneyInput'
 import { COMISION, ESTADOS } from '../utils/constants'
@@ -946,6 +945,8 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
 
   const exportPdfPago = async () => {
     if (cantSeleccionados === 0) { notify('Selecciona trabajos primero', 'error'); return }
+    // 419 kB que solo viajan si alguien pide un PDF de verdad.
+    const { jsPDF, autoTable } = await cargarPdf()
     const doc = new jsPDF()
     const { MARGIN } = PDF_LAYOUT
     const logoData = await loadLogo()
@@ -1069,6 +1070,8 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
   }
 
   const exportPdfHistorial = async (reg) => {
+    // 419 kB que solo viajan si alguien pide un PDF de verdad.
+    const { jsPDF, autoTable } = await cargarPdf()
     const doc = new jsPDF()
     const { MARGIN } = PDF_LAYOUT
     const logoData = await loadLogo()

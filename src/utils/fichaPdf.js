@@ -3,8 +3,7 @@
 // Separado del componente FichaTecnico para no romper Fast Refresh (un
 // archivo de componente solo debe exportar componentes).
 // =====================================================================
-import { jsPDF } from 'jspdf'
-import autoTable from 'jspdf-autotable'
+import { cargarPdf } from './pdfLazy'
 import { fmtCant } from './helpers'
 import { loadLogo, drawHeader, drawSectionHeader, drawDataBlock, drawSignatures, drawFooter, tableStylesItems, PDF_LAYOUT, PDF_COLORS } from './pdfTheme'
 import { fmtDate } from './helpers'
@@ -96,6 +95,8 @@ export async function dibujarUnaFicha(doc, t, tecNombre, hechasSet, logoData, es
 
 // Ficha de UNA OT → un PDF.
 export async function imprimirFichaOT(t, tecNombre, hechasSet) {
+  // 419 kB que solo viajan si alguien pide un PDF de verdad.
+  const { jsPDF, autoTable } = await cargarPdf()
   const doc = new jsPDF()
   const logoData = await loadLogo()
   await dibujarUnaFicha(doc, t, tecNombre, hechasSet || new Set(Array.isArray(t.tareasHechas) ? t.tareasHechas : []), logoData, true)
@@ -107,6 +108,8 @@ export async function imprimirFichaOT(t, tecNombre, hechasSet) {
 export async function exportarFichasTecnico(trabajos, tecNombre, nombreArchivo) {
   const lista = (trabajos || []).filter(Boolean)
   if (!lista.length) return
+  // 419 kB que solo viajan si alguien pide un PDF de verdad.
+  const { jsPDF, autoTable } = await cargarPdf()
   const doc = new jsPDF()
   const logoData = await loadLogo()
   for (let i = 0; i < lista.length; i++) {

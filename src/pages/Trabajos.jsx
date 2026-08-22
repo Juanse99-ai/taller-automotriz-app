@@ -20,8 +20,7 @@ function bloqueFecha(f) {
   if (hoy.getFullYear() === dia.getFullYear() && hoy.getMonth() === dia.getMonth()) return 'Este mes'
   return `${MESES_ES[dia.getMonth()]} ${dia.getFullYear()}`
 }
-import { jsPDF } from 'jspdf'
-import autoTable from 'jspdf-autotable'
+import { cargarPdf } from '../utils/pdfLazy'
 import { fmt, fmtDate, fmtTelefono, cantidadItem, fmtCant } from '../utils/helpers'
 import { TECNICOS, ESTADOS, DIAS_ESTANCADO, TALLER, SIN_FACTURA } from '../utils/constants'
 import { loadLogo as loadPdfLogo, drawHeader, drawSectionHeader, drawDataBlock, drawTotalsBox, drawSignatures, drawFooter, tableStylesItems, PDF_LAYOUT, PDF_COLORS } from '../utils/pdfTheme'
@@ -396,6 +395,8 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
   }
 
   const imprimirOT = async (t) => {
+    // 419 kB que solo viajan si alguien pide un PDF de verdad.
+    const { jsPDF, autoTable } = await cargarPdf()
     const doc = new jsPDF()
     const { MARGIN, CONTENT_W } = PDF_LAYOUT
     const { NAVY, SLATE_300, SLATE_400, SLATE_500, AMBER } = PDF_COLORS

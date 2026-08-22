@@ -1,6 +1,5 @@
 import { useState, useMemo, useEffect } from 'react'
-import { jsPDF } from 'jspdf'
-import autoTable from 'jspdf-autotable'
+import { cargarPdf } from '../utils/pdfLazy'
 import { fmt, fmtDate, cantidadItem } from '../utils/helpers'
 import { COMISION, ESTADOS } from '../utils/constants'
 import { useTecnicos } from '../services/tecnicos'
@@ -305,7 +304,9 @@ export default function Reportes({ trabajos, loading = false, notify }) {
     notify?.(`CSV descargado (${rows.length} OT)`, 'success')
   }
 
-  const exportarResumen = () => {
+  const exportarResumen = async () => {
+    // 419 kB que solo viajan si alguien pide un PDF de verdad.
+    const { jsPDF, autoTable } = await cargarPdf()
     const doc = new jsPDF()
     const { MARGIN, CONTENT_W } = PDF_LAYOUT
 

@@ -1,6 +1,5 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react'
-import { jsPDF } from 'jspdf'
-import autoTable from 'jspdf-autotable'
+import { cargarPdf } from '../utils/pdfLazy'
 import { fmt, fmtDate, uid, hoyISO, normalizarDoc, normalizarNombre, fmtTelefono, cantidadItem, fmtCant } from '../utils/helpers'
 import { TECNICOS, IVA_DEFAULT, TALLER } from '../utils/constants'
 import { loadLogo as loadPdfLogo, drawHeader, drawSectionHeader, drawDataBlock, drawTotalsBox, drawSignatures, drawFooter, tableStylesItems, PDF_LAYOUT, PDF_COLORS } from '../utils/pdfTheme'
@@ -63,6 +62,8 @@ export default function Cotizaciones({ notify, trabajos = [], onCrearTrabajo, co
   }
 
   const imprimirCotizacion = async (c) => {
+    // 419 kB que solo viajan si alguien pide un PDF de verdad.
+    const { jsPDF, autoTable } = await cargarPdf()
     const doc = new jsPDF()
     const { MARGIN, CONTENT_W } = PDF_LAYOUT
     const { NAVY, SLATE_300, SLATE_400, SLATE_500, SLATE_600 } = PDF_COLORS

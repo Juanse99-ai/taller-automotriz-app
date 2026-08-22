@@ -6,8 +6,7 @@
 // arriesgado (es la pantalla de la plata). Es autónomo — solo recibe props.
 // ============================================================
 import { useState, useEffect, useRef, useMemo } from 'react'
-import { jsPDF } from 'jspdf'
-import autoTable from 'jspdf-autotable'
+import { cargarPdf } from '../utils/pdfLazy'
 import { fmt, fmtDate, uid, hoyISO } from '../utils/helpers'
 import MoneyInput from '../components/MoneyInput'
 import { PERSONAS_CUENTA } from '../utils/constants'
@@ -239,6 +238,8 @@ export default function EstadoCuenta({ prestamos, tecnicos, notify, tabs = null,
   }
 
   const exportarPDF = async (c) => {
+    // 419 kB que solo viajan si alguien pide un PDF de verdad.
+    const { jsPDF, autoTable } = await cargarPdf()
     const doc = new jsPDF()
     const { MARGIN } = PDF_LAYOUT
     const logoData = await loadLogo()
