@@ -1,4 +1,5 @@
 import bcrypt from 'bcryptjs'
+import { firmarSesion, verificarSesion } from './_lib/sesion.js'
 
 const ALLOWED_ORIGINS = [
   'https://taller-multias.vercel.app',
@@ -32,6 +33,20 @@ export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS')
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type')
   if (req.method === 'OPTIONS') { res.status(200).end(); return }
+  // GET = comprobacion de salud. Responde si el servidor PUEDE firmar y volver a
+  // verificar una sesion. No devuelve el secreto ni ningun token utilizable: solo
+  // un si o un no. Existe porque si el secreto faltara, el login daria 500 y no
+  // entraria nadie al taller; esto permite verlo antes de desplegar, sin tener
+  // que escribir la contrasena de nadie.
+  if (req.method === 'GET') {
+    let firma = false
+    try {
+      const t = firmarSesion({ usuario: '_salud', rol: '_salud' })
+      firma = !!verificarSesion(t) && !verificarSesion(t.split('.')[0] + '.roto')
+    } catch { firma = false }
+    res.status(firma ? 200 : 503).json({ ok: firma, sesiones: firma ? 'operativas' : 'sin secreto configurado' })
+    return
+  }
   if (req.method !== 'POST') { res.status(405).json({ error: 'Solo POST' }); return }
 
   const { usuario, password } = req.body || {}
@@ -89,9 +104,12 @@ export default async function handler(req, res) {
 
     // Login exitoso - devolver datos del usuario sin la contraseña
     const { password_hash, ...userData } = user
+    // El token es lo que /api/supabase pide para dejar entrar. Antes no habia
+    // ninguno: el proxy miraba QUE tabla pedias pero nunca QUIEN eras.
     res.status(200).json({
       ok: true,
       user: userData,
+      token: firmarSesion(userData),
     })
   } catch (err) {
     console.error('Auth error:', err)

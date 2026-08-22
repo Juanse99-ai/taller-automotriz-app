@@ -21,7 +21,7 @@ export async function login(usuario, password) {
   if (raw) { try { data = JSON.parse(raw) } catch { data = null } }
   if (!res.ok) throw new Error((data && data.error) || 'El servidor no respondió bien. Intenta de nuevo en unos segundos.')
   if (!data || !data.user) throw new Error('El servidor no respondió. Intenta de nuevo en unos segundos.')
-  const session = { ...data.user, _loginAt: Date.now() }
+  const session = { ...data.user, _loginAt: Date.now(), _token: data.token || '' }
   // El navegador se llena (el caché de trabajos con fotos pasa de los ~5 MB que
   // da Safari) y este setItem reventaba: el login se completaba en el servidor
   // pero moría al guardar la sesión, y salía "The quota has been exceeded" —
@@ -55,6 +55,13 @@ export function getSession() {
       logout()
       return null
     }
+    // Sesion de antes de que existieran los tokens. Sin token la API responde
+    // 401 a todo, asi que es mejor mandar a la pantalla de entrada que dejar la
+    // app abierta y rota. Pasa UNA vez, al desplegar este cambio.
+    if (!session._token) {
+      logout()
+      return null
+    }
     return session
   } catch {
     return null
@@ -69,4 +76,11 @@ const PERMISOS = {
 
 export function getSeccionesPermitidas(rol) {
   return PERMISOS[rol] || PERMISOS.jefe_taller
+}
+
+// El token que /api/supabase exige. Se lee de la sesion en cada llamada y no se
+// cachea: al cerrar sesion tiene que dejar de servir de inmediato.
+export function getToken() {
+  try { return JSON.parse(localStorage.getItem(SESSION_KEY) || '{}')._token || '' }
+  catch { return '' }
 }

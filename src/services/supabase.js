@@ -1,5 +1,14 @@
 // Cliente a traves de proxy backend para evitar CORS
+import { getToken } from './auth'
+
 const proxy = (table) => `/api/supabase?table=${table}`
+
+// La cabecera de sesion que /api/supabase pide. Va aqui, en un solo sitio, para
+// que las 33 llamadas del fichero la lleven sin tener que tocarlas una a una.
+function conSesion(options = {}) {
+  const t = getToken()
+  return t ? { ...options, headers: { ...(options.headers || {}), 'X-Sesion': t } } : options
+}
 const baseProxy = proxy('trabajos')
 const REQUEST_TIMEOUT_MS = 12000
 
@@ -16,10 +25,10 @@ async function subirAEvidencias(file, trabajoId, extDefecto, mimeDefecto) {
   const rand = Math.random().toString(36).slice(2, 8)
   const carpeta = String(trabajoId || 'sin-ot').replace(/[^\w-]/g, '')
   const path = `${carpeta}/${Date.now()}-${rand}.${ext}`
-  const sr = await fetch('/api/supabase?storage=sign', {
+  const sr = await fetch('/api/supabase?storage=sign', conSesion({
     method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ path }),
-  })
+  }))
   const sd = await sr.json().catch(() => null)
   if (!sr.ok || !sd?.signedUrl) throw new Error(sd?.error || 'No se pudo preparar la subida')
   const up = await fetch(sd.signedUrl, {
@@ -60,10 +69,10 @@ export async function borrarVideoEvidencia(evid) {
   const path = evid?.path || (url.includes('/evidencias/') ? url.split('/evidencias/')[1] : '')
   if (!path) return false
   try {
-    const r = await fetch('/api/supabase?storage=delete', {
+    const r = await fetch('/api/supabase?storage=delete', conSesion({
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ path: decodeURIComponent(path) }),
-    })
+    }))
     return r.ok
   } catch { return false }
 }
@@ -72,7 +81,7 @@ async function fetchWithTimeout(url, options = {}) {
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS)
   try {
-    return await fetch(url, { ...options, signal: controller.signal })
+    return await fetch(url, { ...conSesion(options), signal: controller.signal })
   } catch (error) {
     if (error?.name === 'AbortError') {
       throw new Error(`Tiempo de espera agotado (${REQUEST_TIMEOUT_MS}ms)`)
@@ -687,7 +696,7 @@ export async function deleteCompartido(trabajoId) {
 export async function confirmarPagoEnCuentti(idTransacion, valorEsperado = 0) {
   if (!idTransacion) return { confirmado: false, motivo: 'sin id_transacion' }
   try {
-    const r = await fetch(`/api/supabase?estadoPago=${encodeURIComponent(idTransacion)}`)
+    const r = await fetch(`/api/supabase?estadoPago=${encodeURIComponent(idTransacion)}`, conSesion())
     const d = await r.json().catch(() => null)
     if (!d?.ok) return { confirmado: false, motivo: d?.motivo || 'no se pudo consultar' }
     const abono = Number(d.total_abono || 0)
@@ -708,7 +717,7 @@ export async function confirmarPagoEnCuentti(idTransacion, valorEsperado = 0) {
 export async function datosFacturaCuentti(idTransacion) {
   if (!idTransacion) return null
   try {
-    const r = await fetch(`/api/supabase?estadoPago=${encodeURIComponent(idTransacion)}`)
+    const r = await fetch(`/api/supabase?estadoPago=${encodeURIComponent(idTransacion)}`, conSesion())
     const d = await r.json().catch(() => null)
     return d?.ok ? d : null
   } catch { return null }

@@ -5,6 +5,8 @@ const ALLOWED_ORIGINS = [
   'http://localhost:5173',
 ]
 
+import { sesionDeLaPeticion } from './_lib/sesion.js'
+
 const SUPABASE_URL = 'https://hpndvrjjizzkusuuhefb.supabase.co'
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhwbmR2cmpqaXp6a3VzdXVoZWZiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM0NjkwMzMsImV4cCI6MjA4OTA0NTAzM30.-6Jz1TsDjAladZUOGD-WNMvVbZXd1Z4WBoOF-npew5c'
 
@@ -184,6 +186,8 @@ export default async function handler(req, res) {
   }
 
   if (req.query.estadoPago) {
+    // Subir, borrar y consultar pagos es cosa de la app. El portal no pasa por aqui.
+    if (!sesionDeLaPeticion(req)) { res.status(401).json({ error: 'Sesion requerida' }); return }
     const tx = String(req.query.estadoPago).replace(/[^\w-]/g, '')
     if (!tx) { res.status(400).json({ error: 'falta id_transacion' }); return }
     try {
@@ -214,6 +218,8 @@ export default async function handler(req, res) {
   }
 
   if (req.query.storage === 'sign') {
+    // Subir, borrar y consultar pagos es cosa de la app. El portal no pasa por aqui.
+    if (!sesionDeLaPeticion(req)) { res.status(401).json({ error: 'Sesion requerida' }); return }
     if (req.method !== 'POST') { res.status(405).json({ error: 'Solo POST' }); return }
     const path = String((req.body && req.body.path) || '').replace(/^\/+/, '')
     // Ruta simple dentro del bucket: evita path traversal y sobrescribir otras cosas.
@@ -240,6 +246,8 @@ export default async function handler(req, res) {
   // Storage: borra un archivo del bucket "evidencias" (cuando se quita un video
   // de una OT o se elimina la OT). Solo ese bucket; el servidor usa la llave.
   if (req.query.storage === 'delete') {
+    // Subir, borrar y consultar pagos es cosa de la app. El portal no pasa por aqui.
+    if (!sesionDeLaPeticion(req)) { res.status(401).json({ error: 'Sesion requerida' }); return }
     if (req.method !== 'POST') { res.status(405).json({ error: 'Solo POST' }); return }
     const path = String((req.body && req.body.path) || '').replace(/^\/+/, '')
     if (!path || path.includes('..') || !/^[\w./-]+$/.test(path)) { res.status(400).json({ error: 'path inválido' }); return }
@@ -275,6 +283,37 @@ export default async function handler(req, res) {
 
   const table = req.query.table
   if (!table) { res.status(400).json({ error: 'table param requerido' }); return }
+
+  // ── Quien puede pasar ────────────────────────────────────────────────────
+  // El portal del cliente es publico y no tiene sesion, asi que necesita una
+  // puerta propia. Es DELIBERADAMENTE estrecha: solo lo que el portal hace de
+  // verdad, y nada mas. Todo lo demas exige token.
+  const soloLoSuyo = (v) => typeof v === 'string' && v.startsWith('eq.') && v.length > 3
+  function permitidoSinSesion() {
+    if (req.method === 'GET') {
+      // Leer, pero SIEMPRE acotado a la cedula del que consulta. Sin el filtro
+      // esto seria un volcado de toda la tabla.
+      if (table === 'trabajos') return soloLoSuyo(req.query.cedula_cliente)
+      if (table === 'cotizaciones') return soloLoSuyo(req.query.cedula)
+      return false
+    }
+    // Lo unico que el cliente escribe: aprobar su cotizacion firmando.
+    if (req.method === 'PATCH' && table === 'cotizaciones' && soloLoSuyo(req.query.id)) {
+      const CAMPOS = ['estado', 'firma_aprobacion', 'aprobada_en']
+      const cuerpo = req.body || {}
+      const claves = Object.keys(cuerpo)
+      // Sin esta comprobacion el cuerpo pasa tal cual a Supabase y desde fuera
+      // se podria cambiar el TOTAL de una cotizacion, no solo aprobarla.
+      return claves.length > 0
+        && claves.every(k => CAMPOS.includes(k))
+        && cuerpo.estado === 'Aprobada'
+    }
+    return false
+  }
+  if (!permitidoSinSesion() && !sesionDeLaPeticion(req)) {
+    res.status(401).json({ error: 'Sesion requerida' })
+    return
+  }
   const ALLOWED_TABLES = [
     'trabajos', 'cotizaciones', 'clientes', 'vehiculos', 'inspecciones',
     'movimientos_tecnicos', 'liquidacion_historial', 'liquidados', 'trabajos_compartidos',

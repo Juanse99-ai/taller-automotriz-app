@@ -24,6 +24,8 @@ import { useEffect, useState } from 'react'
 
 const LS_KEY = 'mda_tecnicos'
 const EVT = 'mda:tecnicos-changed'
+import { getToken } from './auth'
+
 const API = '/api/supabase?table=tecnicos'
 
 const SEED = [
@@ -80,7 +82,7 @@ const fromDB = (r) => ({
 })
 
 const apiCall = (opts = {}, qs = '') =>
-  fetch(`${API}${qs}`, { headers: { 'Content-Type': 'application/json' }, ...opts })
+  fetch(`${API}${qs}`, { ...opts, headers: { 'Content-Type': 'application/json', 'X-Sesion': getToken(), ...(opts.headers || {}) } })
 
 // Crea o actualiza una fila por id (upsert). Silencioso: los datos ya están en LS.
 const dbUpsert = (t) =>
