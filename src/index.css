@@ -3329,12 +3329,6 @@ tbody tr:active{background:var(--fill-2)}
 }
 
 /* Llamar baja a acción secundaria: sigue estando, ya no compite. */
-.pc-pie__tel--sec{
-  display:inline-flex; align-items:center; gap:7px; min-height:var(--tap);
-  background:none; border:none; padding:0 12px;
-  color:var(--text-3); font-size:13px; font-weight:600;
-}
-.pc-pie__tel--sec:hover{ color:var(--text); filter:none }
 
 @media (prefers-reduced-motion: reduce){
   .pc-wa{ animation:none }

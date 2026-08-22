@@ -814,7 +814,6 @@ export default function PortalCliente() {
   const cabCliente = tituloCliente(datos.trabajos[0]?.cliente || cotizaciones[0]?.cliente)
   // 57 = Colombia. wa.me quiere el numero sin espacios ni signos.
   const telPlano = TALLER.celular.replace(/\D/g, '')
-  const telHref = `tel:${telPlano}`
   const waHref = `https://wa.me/57${telPlano}?text=${encodeURIComponent(`Hola, soy ${cabCliente}. Escribo por mi vehiculo.`)}`
   const cabVeh = trabajoActivo
     ? (esSinVehiculo(trabajoActivo) ? 'Servicio en el taller'
@@ -1249,14 +1248,13 @@ export default function PortalCliente() {
         </div>
       )}
 
-      {/* Barra de abajo: llamar al taller. Era una linea de texto gris al pie
-          con el nombre y la ciudad; el telefono ni siquiera estaba. Es lo que
-          hace un cliente cuando la pantalla no le resuelve la duda. */}
+      {/* Barra de abajo: escribir al taller. */}
       <div className="portal-full pc-pie">
         {/* WhatsApp primero: un cliente que abre esto desde el celular escribe
             antes que llamar, y escribiendo el taller conserva el hilo. El mensaje
             va prellenado con su nombre para que en el taller sepan quien es sin
-            tener que preguntar. Llamar NO se quita: baja a accion secundaria. */}
+            tener que preguntar. Es la unica accion del pie: llamar se quito por
+            decision del dueno, y el telefono sigue en el encabezado del portal. */}
         <a className="pc-wa" target="_blank" rel="noopener noreferrer"
           href={waHref}>
           <span className="pc-wa__ico" aria-hidden="true">
@@ -1266,10 +1264,6 @@ export default function PortalCliente() {
             </svg>
           </span>
           Escribir por WhatsApp
-        </a>
-        <a className="pc-pie__tel pc-pie__tel--sec" href={telHref}>
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2z" /></svg>
-          o llamar al {TALLER.celular}
         </a>
         <div className="pc-pie__dir">{TALLER.nombre} · {TALLER.ciudad}</div>
       </div>
