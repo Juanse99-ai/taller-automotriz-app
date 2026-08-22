@@ -11,6 +11,10 @@ import { fmtDate } from './helpers'
 // Dibuja UNA ficha (sin precios) en el doc. hechasSet = índices de tareas hechas.
 // Con esPrimera=false agrega una página nueva antes (para varias OT en un PDF).
 export async function dibujarUnaFicha(doc, t, tecNombre, hechasSet, logoData, esPrimera) {
+  // Esta funcion recibe el `doc` ya hecho, pero dibuja la tabla ella misma, asi
+  // que necesita autoTable aunque no cree el documento. cargarPdf cachea: pedirlo
+  // aqui no vuelve a descargar nada.
+  const { autoTable } = await cargarPdf()
   const { MARGIN, CONTENT_W } = PDF_LAYOUT
   const { NAVY, SLATE_300, SLATE_400, SLATE_600 } = PDF_COLORS
   const items = Array.isArray(t.items) ? t.items : []
@@ -96,7 +100,7 @@ export async function dibujarUnaFicha(doc, t, tecNombre, hechasSet, logoData, es
 // Ficha de UNA OT → un PDF.
 export async function imprimirFichaOT(t, tecNombre, hechasSet) {
   // 419 kB que solo viajan si alguien pide un PDF de verdad.
-  const { jsPDF, autoTable } = await cargarPdf()
+  const { jsPDF } = await cargarPdf()
   const doc = new jsPDF()
   const logoData = await loadLogo()
   await dibujarUnaFicha(doc, t, tecNombre, hechasSet || new Set(Array.isArray(t.tareasHechas) ? t.tareasHechas : []), logoData, true)
@@ -109,7 +113,7 @@ export async function exportarFichasTecnico(trabajos, tecNombre, nombreArchivo) 
   const lista = (trabajos || []).filter(Boolean)
   if (!lista.length) return
   // 419 kB que solo viajan si alguien pide un PDF de verdad.
-  const { jsPDF, autoTable } = await cargarPdf()
+  const { jsPDF } = await cargarPdf()
   const doc = new jsPDF()
   const logoData = await loadLogo()
   for (let i = 0; i < lista.length; i++) {
