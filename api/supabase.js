@@ -146,6 +146,30 @@ export default async function handler(req, res) {
   // caben ni en la columna ni en el límite de 4.5MB de una función). El servidor
   // firma con la llave anon; el navegador sube el archivo grande DIRECTO a esa
   // URL (la llave nunca sale al cliente). Devuelve también la URL pública.
+  // Estado de pago de UNA factura en Cuentti. Se usa justo despues de registrar
+  // un pago para confirmar que de verdad entro: Cuentti responde sus errores con
+  // HTTP 200, asi que "no fallo" no significa "quedo registrado". Mismo endpoint
+  // y misma cabecera de empresa que el barrido de verificarPagos.
+  if (req.query.estadoPago) {
+    const tx = String(req.query.estadoPago).replace(/[^\w-]/g, '')
+    if (!tx) { res.status(400).json({ error: 'falta id_transacion' }); return }
+    try {
+      const url = `https://transaciones.cuenti.com/jServerj4ErpPro/com/j4ErpPro/server/transacion/consultarTransacionIdExterno/${encodeURIComponent(tx)}`
+      const d = await fetch(url, { headers: { 'X-Auth-Token-empresa': '11464' } }).then(r => r.json())
+      const enc = ((Array.isArray(d) ? d : []).find(x => x.consulta === 'Encabezados') || {}).resultado || []
+      const e = enc[0]
+      if (!e) { res.status(200).json({ ok: false, motivo: 'sin datos' }); return }
+      const deuda = Math.round(Number(e.total_deuda || 0))
+      const abono = Math.round(Number(e.total_abono || 0))
+      res.status(200).json({ ok: true, total_deuda: deuda, total_abono: abono, pendiente: deuda - abono })
+    } catch (err) {
+      // Cuentti caido o lento: NO se afirma que el pago fallo, solo que no se
+      // pudo comprobar. Quien llama decide (y nunca marca pagado a ciegas).
+      res.status(200).json({ ok: false, motivo: err.message })
+    }
+    return
+  }
+
   if (req.query.storage === 'sign') {
     if (req.method !== 'POST') { res.status(405).json({ error: 'Solo POST' }); return }
     const path = String((req.body && req.body.path) || '').replace(/^\/+/, '')

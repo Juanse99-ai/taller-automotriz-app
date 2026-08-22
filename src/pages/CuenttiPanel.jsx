@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { fmt } from '../utils/helpers'
+import { confirmarPagoEnCuentti } from '../services/supabase'
 import {
   buscarClientePorCedula,
   cargarInventario,
@@ -526,9 +527,18 @@ export default function CuenttiPanel({ trabajos, actualizarTrabajo, notify, trab
               idCliente: trabajo.cuenttiId || undefined,
               nota: `OT ${trabajo.otCodigo || trabajo.id}`,
             })
-            pagoOk = true
+            // No basta con que la llamada no lance: Cuentti responde sus errores
+            // con HTTP 200. Se relee la factura y se mira el total_abono que dice
+            // Cuentti, que es la unica fuente que vale. Si no cuadra, la OT NO se
+            // marca pagada. Paso el 21/08/2026 con la factura 5955.
+            const chk = await confirmarPagoEnCuentti(txId.toString(), payload.total_neto)
+            if (chk.confirmado) {
+              pagoOk = true
+            } else {
+              notify(`Factura creada, pero Cuentti no confirma el pago (${chk.motivo}). Regístralo en "Pago / Abono".`, 'error')
+            }
           } catch (err) {
-            notify('Factura creada, pero el pago no entró a caja. Regístralo en "Pago / Abono".', 'error')
+            notify(`Factura creada, pero el pago no entró a caja: ${err.message}. Regístralo en "Pago / Abono".`, 'error')
           }
         }
         // Marcar trabajo como facturado (anti-duplicado entre dispositivos)

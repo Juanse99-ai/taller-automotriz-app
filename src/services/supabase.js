@@ -650,3 +650,29 @@ export async function deleteCompartido(trabajoId) {
     return false
   }
 }
+
+// Confirma en CUENTTI que un pago quedo registrado de verdad. Devuelve
+// { confirmado, abono, pendiente, motivo }.
+//
+// Existe porque Cuentti responde sus errores con HTTP 200: que agregarPagoTransacion
+// no lance no prueba que el abono entrara. Aqui se relee la factura y se mira el
+// total_abono que dice Cuentti, que es la unica fuente que vale.
+//
+// confirmado:false NO significa "fallo": puede que Cuentti este caido y no se
+// haya podido comprobar. Por eso `motivo` distingue los dos casos y quien llama
+// nunca marca pagado a ciegas.
+export async function confirmarPagoEnCuentti(idTransacion, valorEsperado = 0) {
+  if (!idTransacion) return { confirmado: false, motivo: 'sin id_transacion' }
+  try {
+    const r = await fetch(`/api/supabase?estadoPago=${encodeURIComponent(idTransacion)}`)
+    const d = await r.json().catch(() => null)
+    if (!d?.ok) return { confirmado: false, motivo: d?.motivo || 'no se pudo consultar' }
+    const abono = Number(d.total_abono || 0)
+    // Se compara con tolerancia de 1 peso: Cuentti redondea centavos.
+    const esperado = Math.round(Number(valorEsperado) || 0)
+    const confirmado = esperado > 0 ? abono >= esperado - 1 : abono > 0
+    return { confirmado, abono, pendiente: Number(d.pendiente || 0), motivo: confirmado ? '' : 'Cuentti no registro el abono' }
+  } catch (e) {
+    return { confirmado: false, motivo: e.message }
+  }
+}
