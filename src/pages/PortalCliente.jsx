@@ -14,8 +14,15 @@ import { drawHeader, drawSectionHeader, drawDataBlock, drawFooter, tableStylesIt
 // la primera palabra. Las siglas jurídicas (con punto, o SAS/SA/LTDA/CIA/EU) se
 // dejan en mayúscula; el resto va con inicial mayúscula (respeta ñ/tildes).
 
-// Una evidencia es video si trae { tipo:'video', url } (las fotos traen dataUrl).
-const esVideoEvid = (f) => f?.tipo === 'video' || (!!f?.url && !f?.dataUrl)
+// Una evidencia es video si LO DICE. Antes esto era "tiene url y no tiene
+// dataUrl", que valia mientras las fotos fueran siempre base64. Ahora las fotos
+// tambien se suben a Storage y cumplen esa condicion al pie de la letra: con la
+// regla vieja, toda foto subida se pintaria como un <video> vacio.
+const esVideoEvid = (f) => {
+  if (f?.tipo) return f.tipo === 'video'
+  // Evidencias antiguas que no traen `tipo`: se mira la extension del archivo.
+  return /\.(mp4|mov|m4v|webm|avi|mkv)(\?|$)/i.test(f?.url || '')
+}
 
 // Miniatura de una evidencia (foto o video). El video muestra su primer frame
 // con un ▶ encima; la foto, la imagen.

@@ -14,7 +14,8 @@ import { ingresoVacio, INVENTARIO_ITEMS, etiquetaCombustible, ingresoTieneAlgo }
 import { MARCAS, getModelos } from '../utils/vehiculos'
 import { useClientes } from '../hooks/useClientes'
 import { useInventario, formatCacheAge } from '../hooks/useInventario'
-import { subirVideoEvidencia, borrarVideoEvidencia, fetchEvidenciasTrabajo } from '../services/supabase'
+import { fotoParaSubir } from '../utils/imagen'
+import { subirVideoEvidencia, subirFotoEvidencia, borrarVideoEvidencia, fetchEvidenciasTrabajo } from '../services/supabase'
 import Switch from '../components/Switch'
 import { comprimirVideo } from '../utils/video'
 import MoneyInput from '../components/MoneyInput'
@@ -118,41 +119,41 @@ export default function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [
   const [showMant, setShowMant] = useState(
     !!(trabajo?.tipoAceite || trabajo?.proximoKm || trabajo?.proximaVisita || trabajo?.notasProximoMant)
   )
-  // Comprime la imagen (máx 1100px, JPEG) antes de guardarla: así pesa poco
-  // para localStorage, el PDF y el portal del cliente. Cae al original si falla.
-  const comprimirImagen = (file, maxDim = 1100, quality = 0.62) => new Promise((resolve) => {
-    const reader = new FileReader()
-    reader.onload = () => {
-      const img = new Image()
-      img.onload = () => {
-        let { width, height } = img
-        if (width > maxDim || height > maxDim) {
-          if (width >= height) { height = Math.round(height * maxDim / width); width = maxDim }
-          else { width = Math.round(width * maxDim / height); height = maxDim }
-        }
-        try {
-          const canvas = document.createElement('canvas')
-          canvas.width = width; canvas.height = height
-          canvas.getContext('2d').drawImage(img, 0, 0, width, height)
-          resolve(canvas.toDataURL('image/jpeg', quality))
-        } catch { resolve(reader.result) }
-      }
-      img.onerror = () => resolve(reader.result)
-      img.src = reader.result
-    }
-    reader.onerror = () => resolve(null)
-    reader.readAsDataURL(file)
-  })
 
+  // La foto se sube al bucket y en la OT queda solo el enlace. Antes se guardaba
+  // el base64 DENTRO de la fila: medido en produccion, 14 ordenes cargaban 6,2 MB
+  // asi y la mas pesada 1 MB. Esa fila entera viaja en cada guardado, que es lo
+  // que se sentia como que la OT tardaba en guardar.
+  //
+  // Se pinta ya la copia local para que la foto aparezca al instante, y cuando
+  // la subida termina se cambia el base64 por el enlace. Si la subida falla se
+  // QUEDA el base64: pesa mas, pero la foto no se pierde nunca, que es lo unico
+  // que no se puede permitir aqui.
   const addFotos = (campo, files) => {
     if (!files?.length) return
     Array.from(files).forEach(async file => {
-      const dataUrl = await comprimirImagen(file)
-      if (!dataUrl) return
+      const foto = await fotoParaSubir(file)
+      if (!foto) return
+      const { dataUrl, blob } = foto
+      const idFoto = uid()
       setForm(f => ({
         ...f,
-        [campo]: [...(f[campo] || []), { id: uid(), nombre: file.name, dataUrl, nota: '' }],
+        [campo]: [...(f[campo] || []), { id: idFoto, nombre: file.name, tipo: 'foto', dataUrl, nota: '' }],
       }))
+      try {
+        if (!blob) throw new Error('sin blob')
+        const carpeta = trabajo?.otCodigo || trabajo?.id || form.placa || 'nueva'
+        const { url, path } = await subirFotoEvidencia(blob, carpeta)
+        archivosSesionRef.current.push({ url, path })
+        setForm(f => ({
+          ...f,
+          // La nota se lee del estado, no de fuera: el usuario pudo escribirla
+          // mientras la foto subia.
+          [campo]: (f[campo] || []).map(e => e.id === idFoto
+            ? { id: idFoto, nombre: file.name, tipo: 'foto', url, path, nota: e.nota || '' }
+            : e),
+        }))
+      } catch { /* se queda en base64, que es como funcionaba hasta ahora */ }
     })
   }
 
@@ -170,7 +171,7 @@ export default function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [
   // Videos subidos al bucket en ESTA sesión de edición (aún no persistidos en el
   // trabajo). Si se cancela, o si se quitan antes de guardar, hay que borrarlos del
   // bucket para no dejar huérfanos.
-  const videosSesionRef = useRef([])
+  const archivosSesionRef = useRef([])
 
   // Las fotos ya NO llegan en la lista de trabajos (pesan MB y viajaban en cada
   // poll: eran el ~98% del Fast Origin Transfer de Vercel). Al abrir una OT
@@ -245,7 +246,7 @@ export default function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [
       // Carpeta por OT: el `form` no tiene otCodigo/id, se toman del trabajo (o placa).
       const carpeta = trabajo?.otCodigo || trabajo?.id || form.placa || 'nueva'
       const { url, path } = await subirVideoEvidencia(file2, carpeta)
-      videosSesionRef.current.push({ url, path })
+      archivosSesionRef.current.push({ url, path })
       setForm(f => ({ ...f, [campo]: [...(f[campo] || []), { id: uid(), nombre: file.name, tipo: 'video', url, path, nota: '' }] }))
       notify?.('Video subido.', 'success')
     } catch (e) {
@@ -534,9 +535,15 @@ export default function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [
     // quitados antes de guardar) → borrarlos del bucket. Los que sí quedan ya están
     // persistidos; los que estaban en el trabajo original y se quitaron los borra el
     // diff del onSave del padre.
-    const urlsFinal = new Set((form.evidenciasIngreso || []).filter(e => e?.tipo === 'video').map(e => e.url))
-    videosSesionRef.current.filter(v => !urlsFinal.has(v.url)).forEach(v => borrarVideoEvidencia(v))
-    videosSesionRef.current = []
+    // Sin filtrar por tipo: ahora tambien hay FOTOS en el bucket, y si se filtra
+    // por 'video' cada foto que se deja en la OT se borraria del bucket al
+    // guardar, dejando la orden apuntando a un archivo que ya no existe.
+    const urlsFinal = new Set(
+      [...(form.evidenciasIngreso || []), ...(form.evidenciasEntrega || [])]
+        .map(e => e?.url).filter(Boolean)
+    )
+    archivosSesionRef.current.filter(v => !urlsFinal.has(v.url)).forEach(v => borrarVideoEvidencia(v))
+    archivosSesionRef.current = []
     } finally {
       guardandoRef.current = false
       setGuardando(false)
@@ -551,8 +558,8 @@ export default function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [
   // Cancelar: nada se guardó, así que se borran del bucket los videos subidos en
   // ESTA sesión (si no, quedan huérfanos, sobre todo en una OT nueva descartada).
   const cancelar = () => {
-    videosSesionRef.current.forEach(v => borrarVideoEvidencia(v))
-    videosSesionRef.current = []
+    archivosSesionRef.current.forEach(v => borrarVideoEvidencia(v))
+    archivosSesionRef.current = []
     onCancel()
   }
 
@@ -1246,7 +1253,7 @@ function ThumbGrid({ fotos = [], onNota, onRemove }) {
           <div style={{ position: 'relative', paddingBottom: '70%', overflow: 'hidden', borderRadius: 6, marginBottom: 6, background: '#000' }}>
             {fv.tipo === 'video'
               ? <video src={fv.url} controls preload="metadata" playsInline style={{ position: 'absolute', width: '100%', height: '100%', objectFit: 'cover' }} />
-              : <img src={fv.dataUrl} alt={fv.nombre} style={{ position: 'absolute', width: '100%', height: '100%', objectFit: 'cover' }} />}
+              : <img src={fv.dataUrl || fv.url} alt={fv.nombre} style={{ position: 'absolute', width: '100%', height: '100%', objectFit: 'cover' }} />}
           </div>
           <input className="form-input text-xs" placeholder="Nota breve" value={fv.nota || ''}
             onChange={e => onNota?.(fv.id, e.target.value)} />

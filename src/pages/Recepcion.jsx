@@ -7,6 +7,8 @@ import { useClientes } from '../hooks/useClientes'
 import Switch from '../components/Switch'
 import IngresoVehiculo from '../components/IngresoVehiculo'
 import { ingresoVacio } from '../utils/ingreso'
+import { fotoParaSubir } from '../utils/imagen'
+import { subirFotoEvidencia } from '../services/supabase'
 
 // Iniciales del tecnico para el avatar de 19px de la lista del taller.
 function tecIniciales(id) {
@@ -152,20 +154,33 @@ export default function Recepcion({ hook, vehiculosHook, clientesHook, notify })
     }
   }
 
+  // Antes esto guardaba el archivo CRUDO en base64 dentro de la orden: una foto
+  // de camara son 3-5 MB. Ahora se comprime y se sube al bucket, y en la orden
+  // queda el enlace. Si la subida falla se queda el base64 comprimido, que ya es
+  // mucho mejor que lo que habia.
   const addFotosIngreso = (files) => {
     if (!files?.length) return
-    Array.from(files).forEach(file => {
-      const reader = new FileReader()
-      reader.onload = () => {
+    Array.from(files).forEach(async file => {
+      const foto = await fotoParaSubir(file)
+      if (!foto) return
+      const idFoto = uid()
+      setForm(f => ({
+        ...f,
+        evidenciasIngreso: [
+          ...f.evidenciasIngreso,
+          { id: idFoto, nombre: file.name, tipo: 'foto', dataUrl: foto.dataUrl, nota: '' },
+        ],
+      }))
+      if (!foto.blob) return
+      try {
+        const { url, path } = await subirFotoEvidencia(foto.blob, form.placa || 'recepcion')
         setForm(f => ({
           ...f,
-          evidenciasIngreso: [
-            ...f.evidenciasIngreso,
-            { id: uid(), nombre: file.name, dataUrl: reader.result, nota: '' },
-          ],
+          evidenciasIngreso: (f.evidenciasIngreso || []).map(e => e.id === idFoto
+            ? { id: idFoto, nombre: file.name, tipo: 'foto', url, path, nota: e.nota || '' }
+            : e),
         }))
-      }
-      reader.readAsDataURL(file)
+      } catch { /* se queda el base64 comprimido */ }
     })
   }
 
@@ -446,7 +461,7 @@ export default function Recepcion({ hook, vehiculosHook, clientesHook, notify })
                 )}
                 {form.evidenciasIngreso.map(fv => (
                   <div key={fv.id} style={{ width: 146, flex: 'none', border: '1px solid var(--border)', borderRadius: 12, padding: 6, display: 'flex', flexDirection: 'column', gap: 6 }}>
-                    <img src={fv.dataUrl} alt={fv.nombre} style={{ width: '100%', height: 78, objectFit: 'cover', borderRadius: 8, display: 'block', background: 'var(--bg-subtle)' }} />
+                    <img src={fv.dataUrl || fv.url} alt={fv.nombre} style={{ width: '100%', height: 78, objectFit: 'cover', borderRadius: 8, display: 'block', background: 'var(--bg-subtle)' }} />
                     <input className="input" placeholder="Nota breve" value={fv.nota}
                       style={{ fontSize: 11.5, minHeight: 'var(--tap)', padding: '6px 8px', borderRadius: 7 }}
                       onChange={e => actualizarNotaFoto(fv.id, e.target.value)} />

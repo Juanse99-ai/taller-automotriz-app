@@ -5,6 +5,8 @@ import { TECNICOS } from '../utils/constants'
 import { lsGet, lsSet, LS_KEYS } from '../services/storage'
 import ConfirmDialog from '../components/ConfirmDialog'
 import { Button, IconEdit, IconTrash } from '../components/ui'
+import { fotoParaSubir } from '../utils/imagen'
+import { subirFotoEvidencia } from '../services/supabase'
 
 const ESTADO_ITEM = { BUENO: 'bueno', SUGERIDO: 'sugerido', URGENTE: 'urgente', NO_APLICA: 'no_aplica' }
 
@@ -214,16 +216,27 @@ function InspeccionForm({ inspeccion, trabajos, onSave, onCancel }) {
     setItems(prev => prev.map(i => i.id === id ? { ...i, [field]: value } : i))
   }
 
+  // Igual que en Recepcion: se comprime y se sube, y en la inspeccion queda el
+  // enlace en vez del archivo entero en base64.
   const addFoto = (id, files) => {
     if (!files?.length) return
-    Array.from(files).forEach(file => {
-      const reader = new FileReader()
-      reader.onload = () => {
+    Array.from(files).forEach(async file => {
+      const foto = await fotoParaSubir(file)
+      if (!foto) return
+      const idFoto = uid()
+      const fecha = new Date().toISOString()
+      setItems(prev => prev.map(i => i.id === id ? {
+        ...i, fotos: [...(i.fotos || []), { id: idFoto, tipo: 'foto', dataUrl: foto.dataUrl, fecha }]
+      } : i))
+      if (!foto.blob) return
+      try {
+        const { url, path } = await subirFotoEvidencia(foto.blob, placa || 'inspeccion')
         setItems(prev => prev.map(i => i.id === id ? {
-          ...i, fotos: [...(i.fotos || []), { id: uid(), dataUrl: reader.result, fecha: new Date().toISOString() }]
+          ...i, fotos: (i.fotos || []).map(f => f.id === idFoto
+            ? { id: idFoto, tipo: 'foto', url, path, fecha }
+            : f),
         } : i))
-      }
-      reader.readAsDataURL(file)
+      } catch { /* se queda el base64 comprimido */ }
     })
   }
 
@@ -564,7 +577,7 @@ function InspeccionItemView({ item }) {
         {item.fotos?.length > 0 && (
           <div style={{display:'flex',gap:8,marginTop:6,flexWrap:'wrap'}}>
             {item.fotos.map(f => (
-              <img key={f.id} src={f.dataUrl} alt="" style={{width:60,height:60,objectFit:'cover',borderRadius:6,border:'1px solid var(--border)'}}/>
+              <img key={f.id} src={f.dataUrl || f.url} alt="" style={{width:60,height:60,objectFit:'cover',borderRadius:6,border:'1px solid var(--border)'}}/>
             ))}
           </div>
         )}

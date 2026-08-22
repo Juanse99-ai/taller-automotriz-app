@@ -9,8 +9,10 @@ const REQUEST_TIMEOUT_MS = 12000
 //   2) el navegador sube el archivo DIRECTO a esa URL.
 // Devuelve { url } público para guardar en la evidencia y reproducir en el portal.
 // Sin timeout: subir un video puede tardar; un corte mataría la subida a medias.
-export async function subirVideoEvidencia(file, trabajoId) {
-  const ext = ((file.name || '').split('.').pop() || 'mp4').toLowerCase().replace(/[^a-z0-9]/g, '') || 'mp4'
+// El cuerpo de verdad. Sirve igual para un video y para una foto: el bucket es
+// el mismo y el firmador de /api/supabase?storage=sign no mira el tipo.
+async function subirAEvidencias(file, trabajoId, extDefecto, mimeDefecto) {
+  const ext = ((file.name || '').split('.').pop() || extDefecto).toLowerCase().replace(/[^a-z0-9]/g, '') || extDefecto
   const rand = Math.random().toString(36).slice(2, 8)
   const carpeta = String(trabajoId || 'sin-ot').replace(/[^\w-]/g, '')
   const path = `${carpeta}/${Date.now()}-${rand}.${ext}`
@@ -22,7 +24,7 @@ export async function subirVideoEvidencia(file, trabajoId) {
   if (!sr.ok || !sd?.signedUrl) throw new Error(sd?.error || 'No se pudo preparar la subida')
   const up = await fetch(sd.signedUrl, {
     method: 'PUT',
-    headers: { 'Content-Type': file.type || 'video/mp4' },
+    headers: { 'Content-Type': file.type || mimeDefecto },
     body: file,
   })
   if (!up.ok) {
@@ -36,6 +38,18 @@ export async function subirVideoEvidencia(file, trabajoId) {
     throw new Error(`Falló la subida (${up.status})`)
   }
   return { url: sd.publicUrl, path }
+}
+
+export function subirVideoEvidencia(file, trabajoId) {
+  return subirAEvidencias(file, trabajoId, 'mp4', 'video/mp4')
+}
+
+// Las fotos iban en base64 DENTRO de la fila de la OT. Medido en produccion: 14
+// ordenes cargaban 6,2 MB asi, y la mas pesada 1 MB. Esa fila entera viaja en
+// cada guardado y en cada lectura, que es lo que se sentia como "demora para
+// guardar la OT". Subiendola aqui, en la orden solo queda el enlace.
+export function subirFotoEvidencia(file, trabajoId) {
+  return subirAEvidencias(file, trabajoId, 'jpg', 'image/jpeg')
 }
 
 // Borra el archivo de un video de evidencia del bucket (al quitarlo de una OT o
