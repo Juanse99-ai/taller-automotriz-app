@@ -129,6 +129,43 @@ export default function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [
   // se abre solo y deja de llamarse opcional. El calculo de +5.000/+10.000 km ya
   // existia: lo unico que faltaba era que alguien llegara a verlo.
   // Las lineas viven en su propio estado `items`, no dentro de `form`.
+  // Trae las lineas de una OT anterior de la misma placa. Medido: 162 de 167 OT
+  // se crean y se cierran en menos de 5 minutos, o sea que el trabajo diario es
+  // TECLEAR RAPIDO lo que ya paso. Y 28 clientes vuelven. Para un carro que ya
+  // vino, su ultimo servicio es la mejor plantilla que existe, y no hay que
+  // configurar ninguna.
+  //
+  // Anade, NO reemplaza: si ya hay lineas escritas, borrarlas seria perder
+  // trabajo hecho. Los ids se generan de nuevo para que React no choque llaves.
+  const repetirServicio = (h) => {
+    const lineas = (h?.items || []).map(i => ({
+      id: uid(),
+      codigo: i.codigo || '',
+      sku: i.sku || '',
+      nombreInventario: i.nombreInventario || '',
+      nombre: i.nombre || '',
+      precio: parseFloat(i.precio) || 0,
+      cantidad: i.cantidad ?? 1,
+      iva: i.iva ?? IVA_DEFAULT,
+      esServicio: !!i.esServicio,
+    }))
+    if (!lineas.length) { notify?.('Esa orden no tiene lineas que traer.', 'error'); return }
+    setItems(prev => [...prev, ...lineas])
+    // La mano de obra manual SOLO se copia si la OT anterior no llevaba lineas de
+    // servicio. Cuando las lleva, la mano de obra sale de esas lineas y el campo
+    // manual se ignora (ver manoObraLinea mas abajo): copiarlo dejaria un valor
+    // dormido que se activaria solo si alguien borra las lineas despues.
+    // Y nunca pisa lo que el tecnico ya escribio aqui.
+    let moTexto = ''
+    const teniaServicios = (h?.items || []).some(i => i.esServicio)
+    const moAnterior = teniaServicios ? 0 : (parseFloat(h.manoObra) || 0)
+    if (moAnterior > 0 && !(parseFloat(form.manoObra) || 0)) {
+      set('manoObra', String(moAnterior))
+      moTexto = ` y la mano de obra (${fmt(moAnterior)})`
+    }
+    notify?.(`${lineas.length} ${lineas.length === 1 ? 'linea traida' : 'lineas traidas'} de ${h.otCodigo || 'la OT anterior'}${moTexto}.`, 'success')
+  }
+
   const llevaAceite = useMemo(
     () => (items || []).some(i => /aceite/i.test(i?.nombre || i?.nombreInventario || '')),
     [items]
@@ -866,6 +903,7 @@ export default function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [
                         <th>Técnico</th>
                         <th className="text-right">Total</th>
                         <th>Fecha</th>
+                        <th></th>
                       </tr>
                     </thead>
                     <tbody>
@@ -876,6 +914,15 @@ export default function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [
                           <td className="text-sm">{TECNICOS.find(t => t.id === parseInt(h.tecnicoId))?.nombre || '—'}</td>
                           <td className="text-right text-mono">{fmt(h.total)}</td>
                           <td className="text-sm text-muted">{fmtDate(h.fecha)}</td>
+                          <td className="text-right">
+                            {(h.items || []).length > 0 && (
+                              <button type="button" className="btn btn-outline btn-sm"
+                                title={`Traer las ${h.items.length} lineas de ${h.otCodigo || 'esta orden'} a la OT actual`}
+                                onClick={() => repetirServicio(h)}>
+                                Repetir
+                              </button>
+                            )}
+                          </td>
                         </tr>
                       ))}
                     </tbody>
