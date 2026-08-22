@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { jsPDF } from 'jspdf'
-import autoTable from 'jspdf-autotable'
+import { cargarPdf } from '../utils/pdfLazy'
 import { InspeccionDetalle } from './Inspecciones'
 import { ESTADOS, TECNICOS, TALLER } from '../utils/constants'
 import { fmtDate, fmt, tituloCliente, cantidadItem, fmtCant } from '../utils/helpers'
@@ -508,7 +507,10 @@ export default function PortalCliente() {
     }
   }
 
-  const descargarPDF = (insp) => {
+  const descargarPDF = async (insp) => {
+    // La libreria se pide aqui, no al abrir la pagina: son 419 kB que el cliente
+    // solo necesita si de verdad pulsa Descargar.
+    const { jsPDF, autoTable } = await cargarPdf()
     const doc = new jsPDF()
     const { MARGIN, CONTENT_W } = PDF_LAYOUT
 

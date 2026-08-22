@@ -14,7 +14,6 @@ const Inventario = lazy(() => import('./pages/Inventario'))
 const Liquidacion = lazy(() => import('./pages/Liquidacion'))
 const Reportes = lazy(() => import('./pages/Reportes'))
 const Inspecciones = lazy(() => import('./pages/Inspecciones'))
-const PortalCliente = lazy(() => import('./pages/PortalCliente'))
 const CuenttiPanel = lazy(() => import('./pages/CuenttiPanel'))
 const Clientes = lazy(() => import('./pages/Clientes'))
 const Vehiculos = lazy(() => import('./pages/Vehiculos'))
@@ -80,11 +79,8 @@ const SECTIONS = {
 }
 
 export default function App() {
-  // Portal de clientes (ruta publica)
-  if (window.location.pathname === '/portal' || window.location.hash === '#portal') {
-    return <Suspense fallback={<CargandoPagina />}><PortalCliente /></Suspense>
-  }
-
+  // El portal ya no se decide aqui: lo hace main.jsx antes de importar App. Asi
+  // los hooks de abajo dejan de vivir detras de un return condicional.
   const [user, setUser] = useState(() => getSession())
   const [section, setSection] = useState('dashboard')
   const [sidebarOpen, setSidebarOpen] = useState(false)
