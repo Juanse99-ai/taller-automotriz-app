@@ -212,6 +212,11 @@ export default function PortalCliente() {
   const [error, setError] = useState('')
   const [cargando, setCargando] = useState(false)
   const [galeria, setGaleria] = useState(null) // array de fotos para el visor
+  // Enlaces a la factura de Cuentti, por trabajo. Se piden al servidor porque el
+  // portal es publico y NO trae cuentti_id_transacion (ver SELECT_PORTAL): sale
+  // solo el enlace ya resuelto. Se cargan al abrir y no al pulsar, porque Safari
+  // bloquea abrir una pestana despues de un await.
+  const [facturas, setFacturas] = useState({})
   const [galIdx, setGalIdx] = useState(0)
   const [pagando, setPagando] = useState(null) // id del trabajo cuyo pago Wompi se está abriendo
   const [confirmandoPago, setConfirmandoPago] = useState(false) // volvió del checkout; esperando que el webhook marque pagado
@@ -375,6 +380,12 @@ export default function PortalCliente() {
     }
 
     setDatos({ trabajos: misTrab, inspecciones: misInsp, cotizaciones: misCotiz, cedula: cedulaLimpia })
+    // Enlaces a las facturas, en segundo plano: si Cuentti tarda o falla, la
+    // pantalla ya esta pintada y simplemente no sale el boton. Nunca bloquea.
+    fetch(`/api/supabase?facturasPortal=${encodeURIComponent(cedulaLimpia)}`)
+      .then(r => r.json())
+      .then(d => { if (d?.ok && d.urls) setFacturas(d.urls) })
+      .catch(() => { /* sin facturas: el resto del portal funciona igual */ })
     setAutenticado(true)
     // Un pago ya confirmado (trabajo.pagado) deja de estar "por confirmar".
     const yaPagados = misTrab.filter(t => t.pagado).map(t => t.id)
@@ -757,6 +768,16 @@ export default function PortalCliente() {
               {ESTADO_TRABAJO_DISPLAY[t.estado]?.label || t.estado}
             </span>
             {t.pagado && <span className="pc-serv__pag">PAGADO</span>}
+            {facturas[t.id] && (
+              <a className="pc-serv__fac" href={facturas[t.id]} target="_blank" rel="noopener noreferrer"
+                onClick={e => e.stopPropagation()}
+                aria-label={`Ver la factura del servicio ${t.otCodigo || ''}`.trim()}>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><path d="M14 2v6h6" /><path d="M9 13h6M9 17h4" />
+                </svg>
+                Factura
+              </a>
+            )}
             {t.evidencias?.length > 0 && (
               <button type="button" className="pc-serv__fotos"
                 onClick={e => { e.stopPropagation(); setGaleria(t.evidencias); setGalIdx(0) }}

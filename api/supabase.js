@@ -150,6 +150,39 @@ export default async function handler(req, res) {
   // un pago para confirmar que de verdad entro: Cuentti responde sus errores con
   // HTTP 200, asi que "no fallo" no significa "quedo registrado". Mismo endpoint
   // y misma cabecera de empresa que el barrido de verificarPagos.
+  // URLs de factura para el PORTAL, por cedula. Se resuelven AQUI y no en el
+  // cliente a proposito: el portal es publico y deliberadamente no trae
+  // cuentti_id_transacion (ver SELECT_PORTAL). Sale solo el enlace ya resuelto,
+  // que Cuentti protege con un codigo aleatorio de 20 hex por documento.
+  if (req.query.facturasPortal) {
+    const ced = String(req.query.facturasPortal).replace(/[.\-\s]/g, '')
+    if (!ced) { res.status(400).json({ error: 'falta cedula' }); return }
+    try {
+      const cols = 'id,cuentti_id_transacion'
+      const r = await fetch(
+        `${SUPABASE_URL}/rest/v1/trabajos?cedula_cliente=eq.${encodeURIComponent(ced)}` +
+        `&cuentti_id_transacion=not.is.null&deleted=not.is.true&select=${cols}&limit=40`,
+        { headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` } })
+      const rows = r.ok ? await r.json() : []
+      const urls = {}
+      await Promise.all((Array.isArray(rows) ? rows : []).map(async t => {
+        const tx = String(t.cuentti_id_transacion || '').trim()
+        if (!tx) return
+        try {
+          const d = await fetch(
+            `https://transaciones.cuenti.com/jServerj4ErpPro/com/j4ErpPro/server/transacion/buscarQrId_transacion/${encodeURIComponent(tx)}`,
+            { headers: { 'X-Auth-Token-empresa': '11464' } }).then(x => x.json())
+          const u = (Array.isArray(d) ? d[0] : d)?.url
+          if (u) urls[t.id] = u
+        } catch { /* esa factura no se ofrece; el resto si */ }
+      }))
+      res.status(200).json({ ok: true, urls })
+    } catch (e) {
+      res.status(200).json({ ok: false, urls: {}, motivo: e.message })
+    }
+    return
+  }
+
   if (req.query.estadoPago) {
     const tx = String(req.query.estadoPago).replace(/[^\w-]/g, '')
     if (!tx) { res.status(400).json({ error: 'falta id_transacion' }); return }
