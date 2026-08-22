@@ -3467,3 +3467,35 @@ tbody tr:active{background:var(--fill-2)}
    una linea corta y centrada, y medido a 1280px el texto acaba en x=689 con el
    flotante empezando en x=1127 (y ademas 83px mas abajo). La reserva no evitaba
    ningun choque y descentraba la linea 86px. Queda solo la holgura vertical. */
+
+/* ── Fotos del servicio, con su pie ────────────────────────────────────────
+   Antes eran cuadros mudos: el cliente veia seis miniaturas iguales y tenia
+   que abrirlas una a una para saber cual era cual. La nota que el taller ya
+   escribe ("Correa tiempo nueva") se muestra debajo.
+
+   La barra gris solo sale cuando HAY nota. Medido en la base: 21 de 44 fotos
+   la tienen, asi que una barra vacia en las otras 23 seria ruido. */
+.pc-fotos{ display:grid; grid-template-columns:repeat(2,1fr); gap:9px }
+.pc-foto{
+  display:flex; flex-direction:column; padding:0; text-align:left; cursor:pointer;
+  border:1px solid var(--border); border-radius:8px; overflow:hidden;
+  background:var(--bg-subtle);
+}
+.pc-foto:hover{ border-color:var(--text-5) }
+.pc-foto:focus-visible{ outline:2px solid var(--accent); outline-offset:2px }
+/* El recorte cuadrado se queda en la imagen: si estuviera en el boton, el pie
+   comeria alto de la foto. position:relative lo necesita el play del video. */
+.pc-foto__img{ display:block; position:relative; aspect-ratio:1; overflow:hidden }
+/* Dos lineas como maximo, para que las filas de la rejilla queden parejas.
+   NO se usa -webkit-line-clamp: el pie es hijo directo de un flex y el navegador
+   convierte su display en flow-root, con lo que el clamp no llega a aplicarse
+   (comprobado: getComputedStyle devolvia flow-root, no -webkit-box). El tope de
+   alto sobrevive a esa conversion. */
+.pc-foto__pie{
+  overflow:hidden; max-height:calc(2 * 1.35em);
+  padding:6px 8px; font-size:11.5px; line-height:1.35;
+  color:var(--text-2); border-top:1px solid var(--border);
+}
+@media(min-width:900px){
+  .pc-fotos{ grid-template-columns:repeat(3,1fr) }
+}

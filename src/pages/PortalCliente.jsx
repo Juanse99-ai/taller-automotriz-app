@@ -30,7 +30,9 @@ function MiniEvid({ f }) {
       </span>
     </>
   )
-  return <img src={f.dataUrl} alt={f.nota||'Evidencia'} loading="lazy" style={{width:'100%',height:'100%',objectFit:'cover',display:'block'}}/>
+  // dataUrl es la foto incrustada; url es la que ya vive en Storage. Sin este
+  // respaldo las segundas salen rotas en el portal.
+  return <img src={f.dataUrl || f.url} alt={f.nota||'Evidencia'} loading="lazy" style={{width:'100%',height:'100%',objectFit:'cover',display:'block'}}/>
 }
 
 // color = acento vivo para barras de progreso y círculos de paso.
@@ -1130,11 +1132,11 @@ export default function PortalCliente() {
       {trabajoActivo?.evidencias?.length > 0 && (
         <div className="card">
           <div className="card__h"><h3>Fotos y videos de su servicio</h3><span className="count">{trabajoActivo.evidencias.length}</span></div>
-          <div className="card__b" style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(92px,1fr))',gap:8}}>
+          <div className="card__b pc-fotos">
             {trabajoActivo.evidencias.map((f,i)=>(
-              <button key={f.id||i} onClick={()=>{setGaleria(trabajoActivo.evidencias);setGalIdx(i)}}
-                style={{padding:0,border:'1px solid var(--border)',borderRadius:8,overflow:'hidden',cursor:'pointer',aspectRatio:'1',background:'var(--bg-subtle)',position:'relative'}}>
-                <MiniEvid f={f} />
+              <button key={f.id||i} className="pc-foto" onClick={()=>{setGaleria(trabajoActivo.evidencias);setGalIdx(i)}}>
+                <span className="pc-foto__img"><MiniEvid f={f} /></span>
+                {f.nota && <span className="pc-foto__pie">{f.nota}</span>}
               </button>
             ))}
           </div>
@@ -1360,7 +1362,10 @@ export default function PortalCliente() {
                     ))}
                     <div style={{display:'flex',justifyContent:'space-between',padding:'12px 0',fontSize:15.5,fontWeight:800}}>
                       <span>Total</span>
-                      <span className="mono" style={{color:'var(--green-600)'}}>{fmt(total)}</span>
+                      {/* En negro, no en verde: en esta app el verde significa "pagado"
+                          o "listo". Usarlo tambien para la plata hace que un total
+                          cualquiera se lea como un total ya cobrado. */}
+                      <span className="mono">{fmt(total)}</span>
                     </div>
                   </div>
                 )}
@@ -1379,8 +1384,13 @@ export default function PortalCliente() {
                 </div>
               )}
 
-              {t.tecnicoId && tecNombre(t.tecnicoId) && (
+              {/* Quien lo hizo y el enlace a la factura, en la misma fila. El chip
+                  tambien esta en la lista del historial, pero un cliente que ya
+                  abrio el servicio no deberia tener que cerrarlo y volver a
+                  buscar la fila para bajarse su factura. */}
+              {((t.tecnicoId && tecNombre(t.tecnicoId)) || facturas[t.id]) && (
                 <div style={{margin:'0 20px 12px',display:'flex',alignItems:'center',gap:10}}>
+                  {t.tecnicoId && tecNombre(t.tecnicoId) && (<>
                   <div style={{width:34,height:34,borderRadius:'50%',background:'var(--navy-800,#152544)',color:'#fff',display:'flex',alignItems:'center',justifyContent:'center',fontWeight:800,fontSize:12,flexShrink:0}}>
                     {tecNombre(t.tecnicoId).split(' ').map(x=>x[0]).slice(0,2).join('')}
                   </div>
@@ -1388,6 +1398,17 @@ export default function PortalCliente() {
                     <div style={{fontSize:13.5,fontWeight:700}}>{tecNombre(t.tecnicoId)}</div>
                     <div style={{fontSize:12,color:'var(--text-3)'}}>Técnico responsable</div>
                   </div>
+                  </>)}
+                  {facturas[t.id] && (
+                    <a className="pc-serv__fac" style={{marginLeft:'auto'}} href={facturas[t.id]}
+                      target="_blank" rel="noopener noreferrer">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><path d="M14 2v6h6" />
+                      </svg>
+                      Ver factura
+                    </a>
+                  )}
                 </div>
               )}
 
@@ -1415,11 +1436,11 @@ export default function PortalCliente() {
               {t.evidencias?.length > 0 && (
                 <div style={{margin:'0 20px 12px'}}>
                   <div style={{fontSize:11.5,fontWeight:700,color:'var(--text-3)',textTransform:'uppercase',letterSpacing:'.05em',marginBottom:6}}>Fotos y videos</div>
-                  <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(84px,1fr))',gap:8}}>
+                  <div className="pc-fotos">
                     {t.evidencias.map((f,i)=>(
-                      <button key={f.id||i} onClick={()=>{setGaleria(t.evidencias);setGalIdx(i)}}
-                        style={{padding:0,border:'1px solid var(--border)',borderRadius:8,overflow:'hidden',cursor:'pointer',aspectRatio:'1',background:'var(--bg-subtle)',position:'relative'}}>
-                        <MiniEvid f={f} />
+                      <button key={f.id||i} className="pc-foto" onClick={()=>{setGaleria(t.evidencias);setGalIdx(i)}}>
+                        <span className="pc-foto__img"><MiniEvid f={f} /></span>
+                        {f.nota && <span className="pc-foto__pie">{f.nota}</span>}
                       </button>
                     ))}
                   </div>
