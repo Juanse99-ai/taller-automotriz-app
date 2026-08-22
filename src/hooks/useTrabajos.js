@@ -93,6 +93,19 @@ export function useTrabajos() {
   const [trabajos, setTrabajos] = useState(() => lsGet(LS_KEYS.TRABAJOS, []))
   const [loading, setLoading] = useState(true)
   const [connectionError, setConnectionError] = useState(false)
+  // Ids que se guardaron en LOCAL pero no llegaron al servidor. sincronizar() ya
+  // los reintenta solo; esto existe para poder DECIRLO. Hasta ahora fallar era un
+  // console.warn: la OT se veia creada en el dashboard y en la base no existia,
+  // y lo unico que avisaba era la franja amarilla, que habla de la LECTURA.
+  const [sinSubir, setSinSubir] = useState([])
+  const marcarSinSubir = useCallback((id, fallo) => {
+    if (!id) return
+    setSinSubir(prev => {
+      const tiene = prev.includes(id)
+      if (fallo === tiene) return prev          // sin cambio: no re-render
+      return fallo ? [...prev, id] : prev.filter(x => x !== id)
+    })
+  }, [])
   const trabajosRef = useRef(trabajos)
   trabajosRef.current = trabajos
 
@@ -224,14 +237,20 @@ export function useTrabajos() {
         !sbIds.has(t.id) && (!t.otCodigo || !sbOtCodigos.has(t.otCodigo))
       )
 
+      // El sync es la fuente de verdad de que esta y que no esta arriba: si no
+      // hay pendientes, no queda nada sin subir, aunque un intento anterior
+      // hubiera fallado.
+      if (pendientes.length === 0) setSinSubir([])
       if (pendientes.length > 0) {
         console.log(`[Sync] Subiendo ${pendientes.length} trabajos pendientes`)
         let subidos = 0
+        const fallidos = []
         for (const t of pendientes) {
           const tConOt = asegurarOtCodigo(t)
           const r = await upsertTrabajo(tConOt)
-          if (r) subidos++
+          if (r) subidos++; else fallidos.push(t.id)
         }
+        setSinSubir(fallidos)
         if (subidos > 0) {
           // Re-fetch despues de subir
           const sbDataRetry = await fetchTrabajos()
@@ -364,11 +383,12 @@ export function useTrabajos() {
     setTrabajos(prev => [trabajo, ...prev])
     marcarDirty(trabajo.id) // proteger de que un poll con datos viejos lo revierta
     const result = await upsertTrabajo(trabajo)
+    marcarSinSubir(trabajo.id, !result)
     if (!result) {
       console.warn('Trabajo guardado solo en local — Supabase fallo:', trabajo.otCodigo)
     }
     return trabajo
-  }, [nextOtCodigo, marcarDirty])
+  }, [nextOtCodigo, marcarDirty, marcarSinSubir])
 
   const actualizarTrabajo = useCallback(async (id, changes) => {
     // Calcular el trabajo actualizado desde la ref (estado ACTUAL), NO dentro del
@@ -377,16 +397,27 @@ export function useTrabajos() {
     // estado COMPLETADO) quedaba solo en local y la sincronizacion lo revertia a
     // pendiente. Ahora el upsert siempre corre y el cambio se guarda en Supabase.
     const actual = trabajosRef.current.find(t => t.id === id)
-    if (!actual) return
+    // Si la OT no esta en memoria NO se puede actualizar: no hay base sobre la
+    // que aplicar los cambios. Pasa de verdad — si el servidor responde mal, el
+    // sync deja la lista vacia aunque el cache conserve las ordenes. Antes esto
+    // era un `return` mudo: el cambio se perdia entero (ni siquiera en local) y
+    // el usuario veia "Trabajo actualizado". Ahora se devuelve false y quien
+    // llama decide que decir.
+    if (!actual) {
+      console.warn('actualizarTrabajo: la OT no esta en memoria, no se guardo nada:', id)
+      return false
+    }
     const trabajoActualizado = { ...actual, ...changes }
     if (!trabajoActualizado.otCodigo) trabajoActualizado.otCodigo = nextOtCodigo()
     setTrabajos(prev => prev.map(t => t.id === id ? trabajoActualizado : t))
     marcarDirty(id) // proteger de que un poll con datos viejos revierta este cambio
     const result = await upsertTrabajo(trabajoActualizado)
+    marcarSinSubir(id, !result)
     if (!result) {
       console.warn('Cambio guardado solo en local — Supabase fallo:', id)
     }
-  }, [nextOtCodigo, marcarDirty])
+    return true
+  }, [nextOtCodigo, marcarDirty, marcarSinSubir])
 
   const eliminarTrabajo = useCallback(async (id) => {
     setTrabajos(prev => prev.filter(t => t.id !== id))
@@ -396,7 +427,7 @@ export function useTrabajos() {
   }, [])
 
   return {
-    trabajos, loading, connectionError,
+    trabajos, loading, connectionError, sinSubir,
     agregarTrabajo, actualizarTrabajo, eliminarTrabajo,
     recargar: cargarInicial,
     sincronizar,

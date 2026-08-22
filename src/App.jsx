@@ -354,6 +354,25 @@ export default function App() {
           onNavigate={navigate}
         />
         <div className="content">
+          {/* La franja amarilla de abajo habla de la LECTURA. Esta habla de la
+              ESCRITURA, que es lo grave: una OT que se ve creada en pantalla y
+              no existe en la base. No se pierde nada (el sync la reintenta
+              solo), pero hasta ahora nadie se enteraba de que estaba en el aire. */}
+          {trabajosHook.sinSubir?.length > 0 && (
+            <div className="connection-error connection-error--grave">
+              <span>
+                <b>{trabajosHook.sinSubir.length}</b>
+                {trabajosHook.sinSubir.length === 1
+                  ? ' cambio guardado en este equipo todavía no llegó al servidor.'
+                  : ' cambios guardados en este equipo todavía no llegaron al servidor.'}
+                {' '}No cierres sesión ni limpies el navegador hasta que suba.
+              </span>
+              {/* sincronizar(), NO recargar(): recargar vuelve a LEER del servidor,
+                  y lo que hace falta aqui es volver a SUBIR lo que quedo en el
+                  aire. Es el unico que reintenta los pendientes. */}
+              <button onClick={() => trabajosHook.sincronizar()}>Reintentar</button>
+            </div>
+          )}
           {(trabajosHook.connectionError || cotizacionesHook.connectionError || liquidacionHook.connectionError) && (
             <div className="connection-error">
               <span>No se pudo conectar con el servidor. Mostrando datos guardados localmente.</span>

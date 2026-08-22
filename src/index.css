@@ -3536,3 +3536,14 @@ tbody tr:active{background:var(--fill-2)}
    una accion de una fila, no el asunto principal de la pantalla. */
 .btn-wa{ border-color:#168840; color:#168840 }
 .btn-wa:hover{ background:rgba(22,136,64,.08); border-color:#168840 }
+
+/* ── Aviso de ESCRITURA sin confirmar ──────────────────────────────────────
+   La franja amarilla normal dice que no se pudo LEER del servidor y se muestran
+   datos del cache: molesto, pero nada se pierde. Esta otra dice que algo se
+   guardo solo en este equipo, que es lo que de verdad puede costar una orden si
+   alguien limpia el navegador. Va en rojo por eso. */
+.connection-error--grave{
+  background:var(--bad-bg); color:var(--bad-fg);
+  border-color:color-mix(in srgb, var(--bad-fg) 26%, transparent);
+}
+.connection-error--grave b{ font-weight:700 }

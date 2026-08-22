@@ -680,7 +680,13 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
             const urlsAhora = new Set((data.evidenciasIngreso || []).filter(e => e?.tipo === 'video').map(e => e.url))
             // GUARDAR primero (des-referencia el video), LUEGO borrar del bucket: así
             // el endpoint de borrado (que rechaza archivos aún referenciados) no falla.
-            await actualizarTrabajo(editId, data)
+            const guardado = await actualizarTrabajo(editId, data)
+            if (!guardado) {
+              // No se toca nada mas: si el cambio no se aplico, borrar los videos
+              // que "sobran" dejaria la OT apuntando a archivos inexistentes.
+              notify('No se pudo guardar: la orden no está cargada. Recarga la página y vuelve a intentarlo.', 'error')
+              return
+            }
             videosAntes.forEach(v => { if (!urlsAhora.has(v.url)) borrarVideoEvidencia(v) })
             sincronizarClienteVehiculo()
             notify('Trabajo actualizado', 'success')
