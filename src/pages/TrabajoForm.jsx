@@ -159,7 +159,12 @@ export default function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [
   // Video de evidencia (máx 30s). No cabe en la columna: se sube al bucket de
   // Storage y en la evidencia solo se guarda el link ({ tipo:'video', url }).
   const MAX_VIDEO_SEG = 30
-  const MAX_VIDEO_BYTES = 75 * 1024 * 1024
+  // 50 MB es el limite REAL del bucket de Storage, medido: 52 MB devuelven
+  // {"statusCode":"413","code":"EntityTooLarge"} envuelto en un HTTP 400, que en
+  // Safari se ve como "Load failed". Antes aqui ponia 75, asi que la app
+  // prometia mas de lo que el servidor acepta y el usuario recibia ese error
+  // seco. Si algun dia se sube el limite del bucket, sube este numero tambien.
+  const MAX_VIDEO_BYTES = 50 * 1024 * 1024
   const [subiendoVideo, setSubiendoVideo] = useState(false)
   const [estadoVideo, setEstadoVideo] = useState('') // texto de progreso mientras comprime/sube
   // Videos subidos al bucket en ESTA sesión de edición (aún no persistidos en el
@@ -222,7 +227,11 @@ export default function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [
       })
       const archivo = r.file
       if (archivo.size > MAX_VIDEO_BYTES) {
-        notify?.(`El video pesa ${Math.round(archivo.size / 1024 / 1024)} MB, más del máximo. Grábalo más corto.`, 'error')
+        const mb = Math.round(archivo.size / 1024 / 1024)
+        notify?.(r.comprimido
+          ? `Aun comprimido pesa ${mb} MB y el maximo son 50. Grábalo más corto.`
+          : `El video pesa ${mb} MB y el máximo son 50. Este navegador no pudo comprimirlo: grábalo en menor calidad o más corto.`,
+          'error')
         setSubiendoVideo(false); setEstadoVideo('')
         return
       }

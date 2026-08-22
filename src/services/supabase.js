@@ -25,7 +25,16 @@ export async function subirVideoEvidencia(file, trabajoId) {
     headers: { 'Content-Type': file.type || 'video/mp4' },
     body: file,
   })
-  if (!up.ok) throw new Error(`Falló la subida (${up.status})`)
+  if (!up.ok) {
+    // Supabase devuelve el 413 ("EntityTooLarge") envuelto en un HTTP 400, y en
+    // Safari la peticion se corta antes y solo se ve "Load failed". Se lee el
+    // cuerpo para poder decir de verdad que paso.
+    const txt = await up.text().catch(() => '')
+    if (up.status === 413 || /EntityTooLarge|too large/i.test(txt)) {
+      throw new Error('el archivo pesa más de lo que acepta el servidor (50 MB)')
+    }
+    throw new Error(`Falló la subida (${up.status})`)
+  }
   return { url: sd.publicUrl, path }
 }
 
