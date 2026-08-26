@@ -972,13 +972,24 @@ function CotizacionForm({ cotizacion, trabajos = [], onSave, onCancel }) {
         </div>{/* end Cliente+Vehiculo grid */}
 
         <div className="card">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
-            <div className="card-title" style={{ marginBottom: 0 }}>Items</div>
+          {/* card__h + h3, igual que Cliente, Vehiculo, Observaciones y Validez.
+              Antes era un div suelto con .card-title y estilos en linea: quedaba
+              sin el relleno ni la linea inferior de las demas tarjetas, y por eso
+              se veia a medio terminar. Ademas .card-title usa font-weight:800, que
+              DESIGN.md prohibe porque Plex llega a 700. */}
+          <div className="card__h">
+            <h3>Ítems</h3>
             <Button type="button" variant="outline" size="sm" onClick={addItem}>+ Agregar línea</Button>
           </div>
+          <div className="card__b">
           {invLoading && <p className="text-xs text-muted" style={{ marginBottom: 8 }}>Cargando inventario de Cuentti...</p>}
           {items.length === 0 ? (
-            <p className="text-sm text-muted text-center" style={{ padding: 24 }}>Sin ítems todavía. Agrega una línea y busca productos del inventario.</p>
+            /* Mismo bloque de estado vacio que usa Orden de Trabajo, en vez de un
+               parrafo suelto centrado. */
+            <div className="hd-void">
+              <p>Sin ítems todavía.</p>
+              <p className="hd-sub">Agrega una línea y busca productos del inventario.</p>
+            </div>
           ) : (
             // tbl-cards: en celular cada linea se vuelve una tarjeta con su rotulo
             // delante del dato, en vez de una tabla que hay que arrastrar de lado.
@@ -1108,10 +1119,12 @@ function CotizacionForm({ cotizacion, trabajos = [], onSave, onCancel }) {
               </table>
             </div>
           )}
-          {/* Totalizer rediseñado */}
-          <div className="ot-totals" style={{ marginTop: 14 }}>
+          </div>{/* fin card__b */}
+          {/* El totalizador va FUERA del card__b, pegado al borde de la tarjeta:
+              esta pensado como pie a sangre, con su propio fondo y borde superior. */}
+          <div className="ot-totals">
             <div className="ot-totals__group">
-              <span style={{ fontSize: 12, color: 'var(--text-3)' }}>{items.length} {items.length === 1 ? 'item' : 'items'} · Validez <strong style={{ color: 'var(--text-2)' }}>{form.validezDias} días</strong></span>
+              <span style={{ fontSize: 12, color: 'var(--text-3)' }}>{items.length} {items.length === 1 ? 'ítem' : 'ítems'} · Validez <strong style={{ color: 'var(--text-2)' }}>{form.validezDias} días</strong></span>
             </div>
             <div className="ot-totals__group">
               <span className="ot-stat"><span className="ot-stat__lbl">Subtotal</span><span className="ot-stat__val">{fmt(totales.subtotal)}</span></span>
