@@ -284,6 +284,24 @@ export default async function handler(req, res) {
   const table = req.query.table
   if (!table) { res.status(400).json({ error: 'table param requerido' }); return }
 
+  // Columnas que el portal PUBLICO puede leer. Es la misma lista que el front ya
+  // pedia a proposito (ver SELECT_PORTAL en PortalCliente.jsx), pero alli era solo
+  // una intencion: el servidor aceptaba cualquier `select`, asi que un select=*
+  // devolvia las 55 columnas, incluidas firma_cliente, telefono_cliente,
+  // email_cliente y cuentti_id_transacion. Comprobado con curl.
+  const COLUMNAS_PORTAL = {
+    trabajos: 'id,fecha,created_at,cedula_cliente,cliente,placa,marca,modelo,ano,kilometraje,'
+      + 'tecnico_id,estado,observaciones,items,total,ot_codigo,tipo_aceite,proximo_km,'
+      + 'proxima_visita,notas_proximo_mant,evidencias,sin_vehiculo,pagado,facturado_en,ingreso',
+    cotizaciones: 'id,fecha,cliente,placa,marca,modelo,ano,items,subtotal,iva,total,'
+      + 'observaciones,validez_dias,estado,aprobada_en',
+  }
+
+  // Tablas que solo un admin puede tocar: son la plata que se le debe a los
+  // tecnicos. El rol se comprobaba SOLO en el navegador (getSeccionesPermitidas),
+  // asi que un jefe_taller con sesion valida podia leerlas y escribirlas por curl.
+  const TABLAS_SOLO_ADMIN = ['liquidados', 'liquidacion_historial', 'movimientos_tecnicos', 'prestamos_movimientos']
+
   // ── Quien puede pasar ────────────────────────────────────────────────────
   // El portal del cliente es publico y no tiene sesion, asi que necesita una
   // puerta propia. Es DELIBERADAMENTE estrecha: solo lo que el portal hace de
@@ -310,8 +328,14 @@ export default async function handler(req, res) {
     }
     return false
   }
-  if (!permitidoSinSesion() && !sesionDeLaPeticion(req)) {
+  const esPublico = permitidoSinSesion()
+  const sesion = esPublico ? null : sesionDeLaPeticion(req)
+  if (!esPublico && !sesion) {
     res.status(401).json({ error: 'Sesion requerida' })
+    return
+  }
+  if (!esPublico && TABLAS_SOLO_ADMIN.includes(table) && sesion.r !== 'admin') {
+    res.status(403).json({ error: 'Esta seccion es solo para administradores' })
     return
   }
   const ALLOWED_TABLES = [
@@ -325,6 +349,12 @@ export default async function handler(req, res) {
     const qs = new URL(req.url, 'http://localhost')
     qs.searchParams.delete('table')
     qs.searchParams.delete('upsert')
+    // En el camino publico el servidor DECIDE las columnas: se sobreescribe lo que
+    // pidan. Validar en vez de sobreescribir dejaria la puerta a un select vacio o
+    // ausente, que en PostgREST equivale a traerlo todo.
+    if (esPublico && COLUMNAS_PORTAL[table]) {
+      qs.searchParams.set('select', COLUMNAS_PORTAL[table])
+    }
     const queryString = qs.searchParams.toString()
     const url = `${SUPABASE_URL}/rest/v1/${table}${queryString ? `?${queryString}` : ''}`
     const headers = {

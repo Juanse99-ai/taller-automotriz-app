@@ -1,6 +1,40 @@
 import bcrypt from 'bcryptjs'
 import { firmarSesion, verificarSesion } from './_lib/sesion.js'
 
+// ── Freno a la prueba de contraseñas ───────────────────────────────────────
+// Sin esto, /api/auth acepta intentos ilimitados: con bcrypt cada uno cuesta
+// ~100ms, pero nadie tiene prisa y dos de los tres usuarios todavia arrastran
+// hash SHA-256 sin sal.
+//
+// HONESTO SOBRE SU ALCANCE: esto vive en la memoria de la instancia serverless.
+// Vercel reutiliza instancias, asi que frena un ataque sostenido desde el mismo
+// sitio, pero alguien que reparta los intentos entre instancias lo diluye. Es un
+// freno real, no una puerta blindada; la puerta blindada es cambiar las dos
+// contraseñas viejas.
+const INTENTOS_MAX = 8
+const BLOQUEO_MS = 10 * 60 * 1000
+const VENTANA_MS = 15 * 60 * 1000
+const intentos = new Map() // clave -> { fallos, primero, hasta }
+
+function limpiarViejos(ahora) {
+  for (const [k, v] of intentos) {
+    if (ahora > (v.hasta || 0) && ahora - v.primero > VENTANA_MS) intentos.delete(k)
+  }
+}
+
+function bloqueado(clave, ahora) {
+  const v = intentos.get(clave)
+  return v && v.hasta && ahora < v.hasta ? Math.ceil((v.hasta - ahora) / 60000) : 0
+}
+
+function registrarFallo(clave, ahora) {
+  const v = intentos.get(clave) || { fallos: 0, primero: ahora, hasta: 0 }
+  if (ahora - v.primero > VENTANA_MS) { v.fallos = 0; v.primero = ahora }
+  v.fallos += 1
+  if (v.fallos >= INTENTOS_MAX) { v.hasta = ahora + BLOQUEO_MS; v.fallos = 0; v.primero = ahora }
+  intentos.set(clave, v)
+}
+
 const ALLOWED_ORIGINS = [
   'https://taller-multias.vercel.app',
   'https://taller-automotriz-app.vercel.app',
@@ -50,6 +84,16 @@ export default async function handler(req, res) {
   if (req.method !== 'POST') { res.status(405).json({ error: 'Solo POST' }); return }
 
   const { usuario, password } = req.body || {}
+
+  // Dos claves: por usuario (protege la cuenta) y por origen (frena el barrido).
+  const ahora = Date.now()
+  limpiarViejos(ahora)
+  const ip = String(req.headers['x-forwarded-for'] || '').split(',')[0].trim() || 'sin-ip'
+  const claves = [`u:${String(usuario || '').toLowerCase()}`, `ip:${ip}`]
+  const espera = Math.max(...claves.map(c => bloqueado(c, ahora)))
+  if (espera > 0) {
+    return res.status(429).json({ error: `Demasiados intentos. Espera ${espera} minuto${espera === 1 ? '' : 's'} e intenta de nuevo.` })
+  }
   if (!usuario || !password) {
     return res.status(400).json({ error: 'Usuario y contraseña requeridos' })
   }
@@ -71,6 +115,7 @@ export default async function handler(req, res) {
 
     const usuarios = await response.json()
     if (!usuarios.length) {
+      claves.forEach(c => registrarFallo(c, ahora))
       return res.status(401).json({ error: 'Usuario no encontrado' })
     }
 
@@ -86,6 +131,7 @@ export default async function handler(req, res) {
       migrar = ok // login legacy correcto → re-hashear a bcrypt (migración perezosa)
     }
     if (!ok) {
+      claves.forEach(c => registrarFallo(c, ahora))
       return res.status(401).json({ error: 'Contraseña incorrecta' })
     }
 
@@ -103,6 +149,8 @@ export default async function handler(req, res) {
     }
 
     // Login exitoso - devolver datos del usuario sin la contraseña
+    // Acerto: se borra el contador para que no arrastre fallos de antes.
+    claves.forEach(c => intentos.delete(c))
     const { password_hash, ...userData } = user
     // El token es lo que /api/supabase pide para dejar entrar. Antes no habia
     // ninguno: el proxy miraba QUE tabla pedias pero nunca QUIEN eras.
