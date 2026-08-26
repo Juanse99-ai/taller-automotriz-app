@@ -20,9 +20,7 @@ function wompiFirmaIntegridad({ referencia, montoCentavos, moneda, secreto, expi
 // Supabase del proyecto del taller. La anon key es pública (RLS es deuda conocida)
 // y va hardcodeada como en api/supabase.js. NO usar process.env.SUPABASE_URL: en
 // Vercel apunta a OTRO proyecto y hace "fetch failed".
-const SB_URL = 'https://hpndvrjjizzkusuuhefb.supabase.co';
-const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhwbmR2cmpqaXp6a3VzdXVoZWZiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM0NjkwMzMsImV4cCI6MjA4OTA0NTAzM30.-6Jz1TsDjAladZUOGD-WNMvVbZXd1Z4WBoOF-npew5c';
-const SB_HEAD = { apikey: SB_KEY, Authorization: `Bearer ${SB_KEY}` };
+import { SUPABASE_URL as SB_URL, SUPABASE_HEAD as SB_HEAD } from './_lib/supabase.js';
 
 // Comparación de checksums hex en tiempo constante (defensa en profundidad).
 function checksumIgual(a, b) {

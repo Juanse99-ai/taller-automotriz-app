@@ -3,8 +3,7 @@
 
 import bcrypt from 'bcryptjs'
 
-const SUPABASE_URL = 'https://hpndvrjjizzkusuuhefb.supabase.co'
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhwbmR2cmpqaXp6a3VzdXVoZWZiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM0NjkwMzMsImV4cCI6MjA4OTA0NTAzM30.-6Jz1TsDjAladZUOGD-WNMvVbZXd1Z4WBoOF-npew5c'
+import { SUPABASE_URL, SUPABASE_KEY } from './_lib/supabase.js'
 
 const SB_HEADERS = {
   'apikey': SUPABASE_KEY,

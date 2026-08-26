@@ -19,9 +19,7 @@ const ALLOWED_ORIGINS = [
 // Bitácora en Supabase (misma que usa el MCP) para idempotencia: si un reintento
 // tras timeout re-envía el mismo gasto, se detecta por la clave (idemKey, ej. el
 // id de la liquidación LQ-...) y NO se graba dos veces.
-const SB_URL = 'https://hpndvrjjizzkusuuhefb.supabase.co'
-const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhwbmR2cmpqaXp6a3VzdXVoZWZiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM0NjkwMzMsImV4cCI6MjA4OTA0NTAzM30.-6Jz1TsDjAladZUOGD-WNMvVbZXd1Z4WBoOF-npew5c'
-const SB_HEAD = { apikey: SB_KEY, Authorization: `Bearer ${SB_KEY}` }
+import { SUPABASE_URL as SB_URL, SUPABASE_HEAD as SB_HEAD } from './_lib/supabase.js'
 
 async function buscarPorIdemKey(idemKey) {
   try {

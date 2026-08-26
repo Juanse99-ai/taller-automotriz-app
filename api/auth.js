@@ -42,8 +42,7 @@ const ALLOWED_ORIGINS = [
   'http://localhost:5173',
 ]
 
-const SUPABASE_URL = 'https://hpndvrjjizzkusuuhefb.supabase.co'
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhwbmR2cmpqaXp6a3VzdXVoZWZiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM0NjkwMzMsImV4cCI6MjA4OTA0NTAzM30.-6Jz1TsDjAladZUOGD-WNMvVbZXd1Z4WBoOF-npew5c'
+import { SUPABASE_URL, SUPABASE_KEY, rolDeLaClave, origenDeLaClave, proyectoDeLaClave } from './_lib/supabase.js'
 
 function getOrigin(reqOrigin = '') {
   if (ALLOWED_ORIGINS.includes(reqOrigin)) return reqOrigin
@@ -78,7 +77,17 @@ export default async function handler(req, res) {
       const t = firmarSesion({ usuario: '_salud', rol: '_salud' })
       firma = !!verificarSesion(t) && !verificarSesion(t.split('.')[0] + '.roto')
     } catch { firma = false }
-    res.status(firma ? 200 : 503).json({ ok: firma, sesiones: firma ? 'operativas' : 'sin secreto configurado' })
+    // El rol de la clave se informa para poder comprobar, ANTES de encender RLS,
+    // que el servidor va con la clave de servicio. Si fuera 'anon', encender RLS
+    // dejaria al taller sin poder trabajar. No se expone la clave: el rol y el
+    // nombre de la variable no son secretos.
+    res.status(firma ? 200 : 503).json({
+      ok: firma,
+      sesiones: firma ? 'operativas' : 'sin secreto configurado',
+      claveSupabase: rolDeLaClave(),
+      origenClave: origenDeLaClave(),
+      proyectoClave: proyectoDeLaClave(),
+    })
     return
   }
   if (req.method !== 'POST') { res.status(405).json({ error: 'Solo POST' }); return }
