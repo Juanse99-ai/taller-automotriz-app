@@ -482,7 +482,10 @@ input,select,textarea{font-family:inherit;font-size:14px;color:inherit}
    rejillas de campos con gap:10, el mismo de las otras diez pantallas. Con 16
    la app cambiaba de ritmo al pasar de Ordenes de trabajo a Generar OT. */
 .form-stack{display:flex;flex-direction:column;gap:10px}
-.form-row-2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+/* align-items:start: sin esto las dos tarjetas se estiran a la altura de la
+   mas alta. Cliente tiene 3 campos y Vehiculo 5, asi que Cliente quedaba con
+   un hueco blanco de casi 100px debajo del ultimo campo. */
+.form-row-2{display:grid;grid-template-columns:1fr 1fr;gap:10px;align-items:start}
 .form-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:24px;padding-top:20px;border-top:1px solid var(--border)}
 @media (max-width:960px){.form-row-2{grid-template-columns:1fr}}
 
@@ -3547,3 +3550,35 @@ tbody tr:active{background:var(--fill-2)}
   border-color:color-mix(in srgb, var(--bad-fg) 26%, transparent);
 }
 .connection-error--grave b{ font-weight:700 }
+
+/* ── Editor de items de una cotizacion ────────────────────────────────────
+   La LISTA de cotizaciones ya colapsaba a tarjetas en el telefono; el EDITOR
+   no, porque su <table> no llevaba .tbl-cards. Con la regla general
+   `.tbl,table{min-width:580px}` la tabla se quedaba rigida en 580px dentro de
+   una pantalla de 375: el IVA, el Total y los precios quedaban fuera y habia
+   que arrastrar la tabla de lado. Medido: 231px de exceso. */
+
+/* La celda de descripcion debe poder encoger. Una celda de tabla no encoge por
+   debajo de su contenido salvo que se le permita explicitamente. */
+.tbl-cards--items td.td-desc{ min-width:0; max-width:0; width:38% }
+.tbl-cards--items td.td-desc input{ min-width:0; text-overflow:ellipsis }
+
+@media(max-width:600px){
+  /* Cada linea pasa a ser una tarjeta con el rotulo delante del dato. */
+  .tbl-cards--items{ min-width:0 }
+  .tbl-cards--items td.td-desc{ max-width:none; width:auto }
+  /* El nombre del producto manda: ocupa su propia linea, a ancho completo. */
+  .tbl-cards--items tbody td.c-name{ order:-1 }
+  .tbl-cards--items tbody td.c-name input{ font-size:15px; min-height:var(--tap) }
+  /* Precio, cantidad e IVA se leen como "rotulo ....... valor". */
+  .tbl-cards--items tbody td input{ min-height:var(--tap) }
+  .tbl-cards--items tbody td[data-label="Cantidad"] input,
+  .tbl-cards--items tbody td[data-label="IVA %"] input{ width:88px }
+  /* El total de la linea, en negrita y a la derecha, cierra la tarjeta. */
+  .tbl-cards--items tbody td.td-total-linea{
+    border-top:1px solid var(--border); margin-top:4px; padding-top:10px; font-size:15px;
+  }
+  /* Quitar la linea: boton propio, ancho completo, con su rotulo visible. */
+  .tbl-cards--items tbody td.td-quitar{ justify-content:flex-end }
+  .tbl-cards--items tbody td.td-quitar::before{ content:'Quitar' }
+}

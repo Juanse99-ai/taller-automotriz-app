@@ -291,7 +291,7 @@ export default function Cotizaciones({ notify, trabajos = [], onCrearTrabajo, co
       onConfirm: async () => {
         try {
           await eliminarHook(id)
-          notify('Cotizacion eliminada', 'info')
+          notify('Cotización eliminada', 'info')
         } catch (e) {
           notify(`No se pudo eliminar en la nube: ${e.message}`, 'error')
         }
@@ -310,17 +310,17 @@ export default function Cotizaciones({ notify, trabajos = [], onCrearTrabajo, co
             if (vista === 'editar') {
               const original = cotizaciones.find(c => c.id === editId)
               await guardarUna({ ...original, ...data, id: editId })
-              notify('Cotizacion actualizada y sincronizada', 'success')
+              notify('Cotización actualizada y sincronizada', 'success')
             } else {
               const nueva = { ...data, id: `COT-${uid()}`, estado: ESTADO_COT.PENDIENTE, fecha: new Date().toISOString() }
               await guardarUna(nueva)
-              notify('Cotizacion creada y sincronizada', 'success')
+              notify('Cotización creada y sincronizada', 'success')
             }
             setVista('lista')
             setEditId(null)
           } catch (e) {
             // Quedo guardada en local pero no en la nube
-            notify(`Guardada solo en este dispositivo. Sync fallo: ${e.message}`, 'error')
+            notify(`Guardada solo en este equipo, no llegó al servidor: ${e.message}`, 'error')
             setVista('lista')
             setEditId(null)
           }
@@ -355,7 +355,7 @@ export default function Cotizaciones({ notify, trabajos = [], onCrearTrabajo, co
                 <div style={{ fontSize: 9.5, fontWeight: 600, letterSpacing: '.7px', color: 'var(--warn-fg)' }}>PENDIENTES</div>
                 <div style={{ fontSize: 22, lineHeight: 1.05, fontWeight: 700, color: 'var(--warn-fg)', marginTop: 5 }}>{stats.pendientes}</div>
               </div>
-              <div style={{ width: 1, height: 34, background: 'rgba(146,64,14,.2)' }} />
+              <div style={{ width: 1, height: 34, background: 'var(--warn-fg)' }} />
               <div>
                 <div style={{ fontSize: 9.5, fontWeight: 600, letterSpacing: '.7px', color: 'var(--warn-fg)' }}>VALOR PENDIENTE</div>
                 <div className="hd-n" style={{ fontSize: 22, lineHeight: 1.05, fontWeight: 700, color: 'var(--warn-fg)', marginTop: 5 }}>{fmt(stats.valorPendiente)}</div>
@@ -374,7 +374,7 @@ export default function Cotizaciones({ notify, trabajos = [], onCrearTrabajo, co
               en vez de 7 pares etiqueta/valor apilados. Las clases td-* son solo
               anclajes de CSS: ningun dato cambia de contenido ni de orden. */}
           {sorted.length === 0 ? (
-            <div style={{ padding: 32, textAlign: 'center', color: 'var(--slate-400)' }}>
+            <div style={{ padding: 32, textAlign: 'center', color: 'var(--text-4)' }}>
               <p>No hay cotizaciones registradas.</p>
             </div>
           ) : (
@@ -824,28 +824,42 @@ function CotizacionForm({ cotizacion, trabajos = [], onSave, onCancel }) {
     return { subtotal: Math.round(subtotal), iva: Math.round(iva), total: Math.round(total) }
   }, [items])
 
-  const handleSubmit = (e) => {
+  // Candado anti doble-click, igual que en Orden de Trabajo. Alli existe porque
+  // el 23-jul-2026 clicks repetidos crearon 22 OT duplicadas; aqui faltaba, y una
+  // cotizacion duplicada llega igual al cliente.
+  const guardandoRef = useRef(false)
+  const [guardando, setGuardando] = useState(false)
+
+  const handleSubmit = async (e) => {
     e.preventDefault()
+    if (guardandoRef.current) return
     if (!form.cliente) return
-    // _bloqueado es solo estado de la interfaz: no debe viajar a la base.
-    const itemsLimpios = items.map(item => {
-      const resto = { ...item }
-      delete resto._bloqueado
-      return resto
-    })
-    onSave({ ...form, placa: (form.placa || '').toUpperCase(), ano: parseInt(form.ano) || null, items: itemsLimpios, ...totales })
+    guardandoRef.current = true
+    setGuardando(true)
+    try {
+      // _bloqueado es solo estado de la interfaz: no debe viajar a la base.
+      const itemsLimpios = items.map(item => {
+        const resto = { ...item }
+        delete resto._bloqueado
+        return resto
+      })
+      await onSave({ ...form, placa: (form.placa || '').toUpperCase(), ano: parseInt(form.ano) || null, items: itemsLimpios, ...totales })
+    } finally {
+      guardandoRef.current = false
+      setGuardando(false)
+    }
   }
 
   return (
     <div>
       <div className="pagehd">
         <div>
-          <h2>{isEdit ? 'Editar Cotizacion' : 'Nueva Cotizacion'}</h2>
+          <h2>{isEdit ? 'Editar cotización' : 'Nueva cotización'}</h2>
           {isEdit && cotizacion && (
             <div className="pagehd__meta">
               {cotizacion.id && <span className="pagehd__ot">{String(cotizacion.id).startsWith('COT-') ? cotizacion.id : `COT-${cotizacion.id}`}</span>}
               {cotizacion.fecha && <><span className="pagehd__sep">·</span><span>Creada {fmtDate(cotizacion.fecha)}</span></>}
-              {cotizacion.validezDias && <><span className="pagehd__sep">·</span><span>Valida {cotizacion.validezDias} dias</span></>}
+              {cotizacion.validezDias && <><span className="pagehd__sep">·</span><span>Válida {cotizacion.validezDias} días</span></>}
               {cotizacion.estado && <><span className="pagehd__sep">·</span><Badge tone={
                 cotizacion.estado === ESTADO_COT.APROBADA ? 'success' :
                 cotizacion.estado === ESTADO_COT.RECHAZADA ? 'danger' :
@@ -866,20 +880,20 @@ function CotizacionForm({ cotizacion, trabajos = [], onSave, onCancel }) {
           <div className="card__b">
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
               <div className="field" style={{ position: 'relative' }}>
-                <label>Cedula / NIT</label>
+                <label>Cédula / NIT</label>
                 <input className="input" value={form.cedula} placeholder="Buscar por documento..."
                   onChange={e => { set('cedula', e.target.value); buscarDebounced(e.target.value) }} />
                 {resultados.length > 0 && (
                   <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 20, background: 'var(--bg-raised)', border: '1px solid var(--border)', borderRadius: 8, maxHeight: 200, overflowY: 'auto', boxShadow: 'var(--shadow-md)' }}>
                     {resultados.map((c, i) => (
                       <div key={i} onClick={() => seleccionarCliente(c)}
-                        style={{ padding: '10px 14px', cursor: 'pointer', borderBottom: '1px solid var(--slate-100)', fontSize: 13 }}>
+                        style={{ padding: '10px 14px', cursor: 'pointer', borderBottom: '1px solid var(--border)', fontSize: 13 }}>
                         <strong>{normalizarDoc(c)}</strong> — {normalizarNombre(c)}
                       </div>
                     ))}
                   </div>
                 )}
-                {buscando && <span style={{ display: 'block', fontSize: 11, color: 'var(--slate-400)', marginTop: 4 }}>Buscando en Cuentti...</span>}
+                {buscando && <span style={{ display: 'block', fontSize: 11, color: 'var(--text-4)', marginTop: 4 }}>Buscando en Cuentti...</span>}
               </div>
               <div className="field">
                 <label>Nombre del Cliente</label>
@@ -887,7 +901,7 @@ function CotizacionForm({ cotizacion, trabajos = [], onSave, onCancel }) {
                   onChange={e => { set('cliente', e.target.value); buscarDebounced(e.target.value) }} />
               </div>
               <div className="field">
-                <label>Telefono</label>
+                <label>Teléfono</label>
                 <input className="input" value={form.telefonoCliente} placeholder="300..." onChange={e => set('telefonoCliente', e.target.value)} />
               </div>
             </div>
@@ -895,7 +909,7 @@ function CotizacionForm({ cotizacion, trabajos = [], onSave, onCancel }) {
         </div>
 
         <div className="card">
-          <div className="card__h"><h3>Vehiculo</h3></div>
+          <div className="card__h"><h3>Vehículo</h3></div>
           <div className="card__b">
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
               <div className="field">
@@ -955,22 +969,27 @@ function CotizacionForm({ cotizacion, trabajos = [], onSave, onCancel }) {
         <div className="card">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
             <div className="card-title" style={{ marginBottom: 0 }}>Items</div>
-            <Button type="button" variant="outline" size="sm" onClick={addItem}>+ Agregar linea</Button>
+            <Button type="button" variant="outline" size="sm" onClick={addItem}>+ Agregar línea</Button>
           </div>
-          {invLoading && <p className="text-xs text-muted" style={{ marginBottom: 8 }}>Cargando inventario Cuentti...</p>}
+          {invLoading && <p className="text-xs text-muted" style={{ marginBottom: 8 }}>Cargando inventario de Cuentti...</p>}
           {items.length === 0 ? (
-            <p className="text-sm text-muted text-center" style={{ padding: 24 }}>Sin items. Agrega una linea y busca productos del inventario.</p>
+            <p className="text-sm text-muted text-center" style={{ padding: 24 }}>Sin ítems todavía. Agrega una línea y busca productos del inventario.</p>
           ) : (
+            // tbl-cards: en celular cada linea se vuelve una tarjeta con su rotulo
+            // delante del dato, en vez de una tabla que hay que arrastrar de lado.
+            // Sin esta clase, la regla `.tbl,table{min-width:580px}` de index.css
+            // dejaba la tabla rigida en 580px dentro de una pantalla de 375: el
+            // IVA, el Total y los precios quedaban fuera. Medido: 231px de exceso.
             <div className="table-wrap">
-              <table>
+              <table className="tbl tbl-cards tbl-cards--items">
                 <thead>
                   <tr>
-                    <th style={{ width: '35%' }}>Descripcion</th>
-                    <th style={{ width: '15%' }}>Precio</th>
+                    <th style={{ width: '38%' }}>Descripción</th>
+                    <th style={{ width: '16%' }}>Precio</th>
                     <th style={{ width: '10%' }}>Cant.</th>
                     <th style={{ width: '10%' }}>IVA %</th>
-                    <th style={{ width: '15%' }} className="text-right">Total</th>
-                    <th style={{ width: '5%' }}></th>
+                    <th style={{ width: '16%' }} className="text-right">Total</th>
+                    <th style={{ width: '5%' }}><span className="sr-only">Acciones</span></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -979,10 +998,20 @@ function CotizacionForm({ cotizacion, trabajos = [], onSave, onCancel }) {
                     const search = itemSearch[item.id] || {}
                     return (
                       <tr key={item.id}>
-                        <td>
-                          <div style={{ position: 'relative' }}>
+                        <td className="c-name td-desc" data-label="Descripción">
+                          {/* min-width:0 es lo que permite que la celda encoja. Sin el,
+                              un nombre largo del inventario ("ACEITE WOLF OFFICIALTECH
+                              5W40 C3 1L VW 511 00") empuja la columna y desborda: medido,
+                              166px de exceso a 1024px de ancho y 242px a 375px. */}
+                          <div style={{ position: 'relative', minWidth: 0 }}>
+                            {/* title: el nombre completo al pasar el cursor. Los del
+                                inventario llegan a 50 caracteres y no caben en la celda a
+                                ningun ancho; recortar con puntos suspensivos y dar el
+                                texto entero en el title es lo que deja leerlo sin romper
+                                la tabla. */}
                             <input className="form-input" value={item.nombre}
-                              placeholder={item._bloqueado ? 'Editar descripcion...' : 'Buscar producto o escribir...'}
+                              title={item.nombre || undefined}
+                              placeholder={item._bloqueado ? 'Editar descripción...' : 'Buscar producto o escribir...'}
                               autoComplete="off" spellCheck={false}
                               onChange={e => {
                                 updateItem(item.id, 'nombre', e.target.value)
@@ -1011,7 +1040,7 @@ function CotizacionForm({ cotizacion, trabajos = [], onSave, onCancel }) {
                             <div className="cmd-backdrop" onClick={() => setItemSearch(prev => ({ ...prev, [item.id]: { ...prev[item.id], show: false } }))}>
                               <div className="cmd-palette" onClick={e => e.stopPropagation()}>
                                 <div className="cmd-header">
-                                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--slate-400,#94a3b8)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--text-4)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                     <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
                                   </svg>
                                   <span className="cmd-header__query">{search.query || item.nombre}</span>
@@ -1057,16 +1086,16 @@ function CotizacionForm({ cotizacion, trabajos = [], onSave, onCancel }) {
                             </div>
                           )}
                         </td>
-                        <td><MoneyInput className="form-input" value={Math.round(parseFloat(item.precio) || 0)}
+                        <td data-label="Precio"><MoneyInput className="form-input" value={Math.round(parseFloat(item.precio) || 0)}
                           onChange={v => updateItem(item.id, 'precio', v)} inputStyle={{ padding: '6px 10px 6px 22px', fontSize: 13, textAlign: 'right' }} /></td>
                         {/* step="any": acepta media unidad (0,5), igual que la OT. */}
-                        <td><input className="form-input" type="number" value={item.cantidad} min="0" step="any"
+                        <td data-label="Cantidad"><input className="form-input" type="number" value={item.cantidad} min="0" step="any"
                           title="Acepta decimales: 0,5 = media unidad"
                           onChange={e => updateItem(item.id, 'cantidad', e.target.value)} style={{ padding: '6px 10px', fontSize: 13, textAlign: 'center', width: 60 }} /></td>
-                        <td><input className="form-input" type="number" value={item.iva} min="0"
+                        <td data-label="IVA %"><input className="form-input" type="number" value={item.iva} min="0"
                           onChange={e => updateItem(item.id, 'iva', e.target.value)} style={{ padding: '6px 10px', fontSize: 13, textAlign: 'center', width: 60 }} /></td>
-                        <td className="text-right text-mono" style={{ fontWeight: 600 }}>{fmt(lineTotal)}</td>
-                        <td><Button type="button" variant="ghost" size="sm" aria-label="Eliminar ítem" onClick={() => removeItem(item.id)}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg></Button></td>
+                        <td className="text-right text-mono td-total-linea" data-label="Total" style={{ fontWeight: 600 }}>{fmt(lineTotal)}</td>
+                        <td className="td-quitar"><Button type="button" variant="ghost" size="sm" aria-label="Eliminar ítem" onClick={() => removeItem(item.id)}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg></Button></td>
                       </tr>
                     )
                   })}
@@ -1077,7 +1106,7 @@ function CotizacionForm({ cotizacion, trabajos = [], onSave, onCancel }) {
           {/* Totalizer rediseñado */}
           <div className="ot-totals" style={{ marginTop: 14 }}>
             <div className="ot-totals__group">
-              <span style={{ fontSize: 12, color: 'var(--text-3)' }}>{items.length} {items.length === 1 ? 'item' : 'items'} · Validez <strong style={{ color: 'var(--text-2)' }}>{form.validezDias} dias</strong></span>
+              <span style={{ fontSize: 12, color: 'var(--text-3)' }}>{items.length} {items.length === 1 ? 'item' : 'items'} · Validez <strong style={{ color: 'var(--text-2)' }}>{form.validezDias} días</strong></span>
             </div>
             <div className="ot-totals__group">
               <span className="ot-stat"><span className="ot-stat__lbl">Subtotal</span><span className="ot-stat__val">{fmt(totales.subtotal)}</span></span>
@@ -1094,7 +1123,7 @@ function CotizacionForm({ cotizacion, trabajos = [], onSave, onCancel }) {
             <div className="card__b">
               <div className="field">
                 <label>Notas adicionales <span className="help" style={{ marginLeft: 6, fontWeight: 400, color: 'var(--text-3)' }}>(visibles en el PDF)</span></label>
-                <textarea className="input" value={form.observaciones} placeholder="Condiciones, garantias, terminos especiales..."
+                <textarea className="input" value={form.observaciones} placeholder="Condiciones, garantías, términos especiales..."
                   rows={3}
                   onChange={e => set('observaciones', e.target.value)} />
               </div>
@@ -1104,7 +1133,7 @@ function CotizacionForm({ cotizacion, trabajos = [], onSave, onCancel }) {
             <div className="card__h"><h3>Validez</h3></div>
             <div className="card__b">
               <div className="field">
-                <label>Dias de vigencia</label>
+                <label>Días de vigencia</label>
                 <input className="input" type="number" value={form.validezDias} min="1"
                   onChange={e => set('validezDias', parseInt(e.target.value) || 15)} />
               </div>
@@ -1114,7 +1143,12 @@ function CotizacionForm({ cotizacion, trabajos = [], onSave, onCancel }) {
 
         <div className="form-actions">
           <Button type="button" variant="outline" onClick={onCancel}>Cancelar</Button>
-          <Button type="submit" variant="primary">{isEdit ? 'Actualizar' : 'Crear Cotizacion'}</Button>
+          {/* El rotulo dice que esta pasando y por que no se puede pulsar, como
+              manda DESIGN.md: un boton apagado y mudo no explica nada. */}
+          <Button type="submit" variant="primary" disabled={guardando || !form.cliente}
+            title={!form.cliente ? 'Escribe el nombre del cliente' : undefined}>
+            {guardando ? 'Guardando…' : !form.cliente ? 'Falta el cliente' : (isEdit ? 'Actualizar' : 'Crear cotización')}
+          </Button>
         </div>
       </form>
     </div>

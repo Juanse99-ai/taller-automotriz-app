@@ -1,0 +1,79 @@
+<!doctype html><meta charset=utf-8>
+<link rel=stylesheet href='https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;600;700&display=block'>
+<style>
+body{font-family:'IBM Plex Sans',sans-serif}
+.tbl{font-family:'IBM Plex Sans',sans-serif}
+body{margin:0;font-family:system-ui;font-size:14px}
+.tbl{width:100%;border-collapse:collapse;font-size:14px}
+.tbl thead th{text-align:left;padding:9px 16px;font-size:12px;font-weight:600;white-space:nowrap}
+.tbl tbody td{padding:11px 16px;line-height:1.4;vertical-align:middle}
+.tbl .c-muted{font-size:12px}
+.tbl .c-mono{font-variant-numeric:tabular-nums;font-weight:600}
+.tbl .c-right{text-align:right}
+.box{width:1000px;border:1px solid #ccc}
+#w{overflow-x:auto}
+.anywhere .td-veh{overflow-wrap:anywhere}
+</style>
+<div class=box><div id=w>
+<table class="tbl" id=t>
+<thead><tr><th>Ref.</th><th>Cliente</th><th>Placa</th><th>Vehículo</th><th>Estado</th><th class=c-right>Total</th><th>Fecha</th><th></th><th></th></tr></thead>
+<tbody>
+<tr><td class="c-mono td-ref">COT-0142</td><td class=c-name>FACTORY ENGINEERING SAS</td><td class="c-mono td-placa">ABC123</td><td class="c-muted td-veh" id=veh>RENAULT CLIO II/MEGANE/SYMBOL/LOGAN 2014</td><td class=td-estado><span style="display:inline-block;padding:3px 10px;border:1px solid #ccc;border-radius:999px;font-size:12px">Pendiente</span></td><td class="c-right c-mono td-total">$ 1.250.000</td><td class="c-muted td-fecha">12 ago 2026</td><td><button style="height:38px;padding:0 16px;border-radius:999px">Revisar</button></td><td><button style="height:38px;width:38px;border-radius:999px">⋯</button></td></tr>
+<tr><td class="c-mono td-ref">COT-0141</td><td class=c-name>JUAN PEREZ</td><td class="c-mono td-placa">XYZ789</td><td class="c-muted td-veh">CHEVROLET SPARK 2018</td><td class=td-estado><span style="display:inline-block;padding:3px 10px;border:1px solid #ccc;border-radius:999px;font-size:12px">Aprobada</span></td><td class="c-right c-mono td-total">$ 850.000</td><td class="c-muted td-fecha">10 ago 2026</td><td><button style="height:38px;padding:0 16px;border-radius:999px">Revisar</button></td><td><button style="height:38px;width:38px;border-radius:999px">⋯</button></td></tr>
+</tbody></table>
+</div></div>
+<pre id=out></pre>
+<script>
+function meas(){
+  const box=document.querySelector('.box'), t=document.getElementById('t'), veh=document.getElementById('veh');
+  const r=[];
+  for(const w of [768,1000,1200]){
+    box.style.width=w+'px';
+    // min-content of the whole table
+    t.style.width='min-content';
+    const minW=t.getBoundingClientRect().width;
+    t.style.width='';
+    r.push({viewport:w, tableW:+t.getBoundingClientRect().width.toFixed(1), tableMinContent:+minW.toFixed(1),
+      vehW:+veh.getBoundingClientRect().width.toFixed(1), vehH:+veh.getBoundingClientRect().height.toFixed(1),
+      rowH:+veh.parentElement.getBoundingClientRect().height.toFixed(1)});
+  }
+  box.style.width='1000px';
+  return r;
+}
+const before=meas();
+// now measure min-content contribution of the veh cell alone
+function cellMin(text, anywhere){
+  const s=document.createElement('span');
+  s.style.cssText='position:absolute;font-size:12px;font-family:system-ui;width:min-content;'+(anywhere?'overflow-wrap:anywhere;':'');
+  s.textContent=text; document.body.appendChild(s);
+  const w=s.getBoundingClientRect().width; s.remove(); return +w.toFixed(1);
+}
+const out={
+  measurements: before,
+  minContent_normal_barras: cellMin('RENAULT CLIO II/MEGANE/SYMBOL/LOGAN 2014',false),
+  minContent_anywhere_barras: cellMin('RENAULT CLIO II/MEGANE/SYMBOL/LOGAN 2014',true),
+  minContent_normal_corto: cellMin('CHEVROLET SPARK 2018',false),
+  minContent_anywhere_corto: cellMin('CHEVROLET SPARK 2018',true),
+};
+document.getElementById('out').textContent=JSON.stringify(out,null,1);
+
+window.__r=out;
+(async()=>{
+ await document.fonts.load('400 12px "IBM Plex Sans"'); await document.fonts.ready;
+ const t=document.getElementById('t'), veh=document.getElementById('veh'), box=document.querySelector('.box');
+ const LONG='RENAULT CLIO II/MEGANE/SYMBOL/LOGAN 2014', SHORT='RENAULT LOGAN 2014';
+ const tableMin=()=>{t.style.width='min-content';const w=t.getBoundingClientRect().width;t.style.width='';return +w.toFixed(1)};
+ const lines=()=>{const rg=document.createRange();rg.selectNodeContents(veh);return rg.getClientRects().length};
+ const res={fontOK:document.fonts.check('12px "IBM Plex Sans"')};
+ for(const [name,txt] of [['long',LONG],['short',SHORT]])
+  for(const [mode,ow] of [['normal',''],['anywhere','anywhere']]){
+   veh.textContent=txt; veh.style.overflowWrap=ow;
+   const o={tableMin:tableMin()};
+   for(const w of [768,1000,1280]){box.style.width=w+'px';
+     o['w'+w]={rowH:+veh.parentElement.getBoundingClientRect().height.toFixed(1),lines:lines(),vehW:+veh.getBoundingClientRect().width.toFixed(1)};}
+   box.style.width='1000px'; res[name+'_'+mode]=o;
+  }
+ window.__r2=res; document.title='DONE';
+})();
+
+</script>
