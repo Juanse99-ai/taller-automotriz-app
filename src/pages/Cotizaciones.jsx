@@ -627,13 +627,18 @@ function DetalleCotizacion({ cot, yaTieneOT, creando, creandoAlguna, onClose, on
           {cot.items?.length > 0 && (
             <div style={{ marginTop: 20 }}>
               <div className="eyebrow" style={{ marginBottom: 6 }}>{cot.items.length} {cot.items.length === 1 ? 'ítem' : 'ítems'}</div>
-              <table className="tbl">
+              {/* tbl-cards, igual que el editor y que la lista: sin esa clase la
+                  tabla hereda `.tbl,table{min-width:580px}` y dentro de la hoja de
+                  640px se desborda 227px en un telefono. Es la pantalla donde se
+                  aprueba o se rechaza, asi que el de mostrador tenia que arrastrar
+                  la tabla de lado para ver por cuanto es cada linea. */}
+              <table className="tbl tbl-cards tbl-cards--detalle">
                 <tbody>
                   {cot.items.map((i, idx) => (
                     <tr key={i.id || idx}>
-                      <td className="c-name">{i.nombre || '—'}</td>
-                      <td className="c-muted" style={{ whiteSpace: 'nowrap' }}>{fmtCant(i)} × {fmt(parseFloat(i.precio) || 0)}</td>
-                      <td className="c-right c-mono">{fmt((parseFloat(i.precio) || 0) * cantidadItem(i))}</td>
+                      <td className="c-name" title={i.nombre || undefined}>{i.nombre || '—'}</td>
+                      <td className="c-muted" data-label="Cantidad" style={{ whiteSpace: 'nowrap' }}>{fmtCant(i)} × {fmt(parseFloat(i.precio) || 0)}</td>
+                      <td className="c-right c-mono" data-label="Total">{fmt((parseFloat(i.precio) || 0) * cantidadItem(i))}</td>
                     </tr>
                   ))}
                 </tbody>

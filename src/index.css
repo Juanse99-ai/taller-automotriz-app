@@ -3582,3 +3582,22 @@ tbody tr:active{background:var(--fill-2)}
   .tbl-cards--items tbody td.td-quitar{ justify-content:flex-end }
   .tbl-cards--items tbody td.td-quitar::before{ content:'Quitar' }
 }
+
+/* ── Items dentro de la hoja de detalle de una cotizacion ─────────────────
+   Misma causa raiz que el editor: sin .tbl-cards la tabla hereda
+   `.tbl,table{min-width:580px}` y dentro de la hoja (max 640px) se desborda
+   227px en un telefono. Es la pantalla donde se aprueba o se rechaza, asi que
+   el total de cada linea quedaba fuera y habia que arrastrar la tabla de lado. */
+.tbl-cards--detalle td.c-name{
+  /* overflow-wrap:anywhere y no solo min-width:0: un nombre tipo SKU sin guiones
+     (KITDISTRIBUCIONCONTINENTALCT1168WP2BOMBAAGUAINCLUIDA) es un solo token y
+     estira la tabla el solo. Medido: sin esta linea quedaban 264px de desborde. */
+  overflow-wrap:anywhere; min-width:0;
+}
+@media(max-width:600px){
+  .tbl-cards--detalle{ min-width:0 }
+  /* El nombre del repuesto encabeza la tarjeta; cantidad y total debajo, cada
+     uno con su rotulo. La cifra del total cierra la linea a la derecha. */
+  .tbl-cards--detalle tbody td.c-name{ order:-1; font-weight:600 }
+  .tbl-cards--detalle tbody td.c-right{ font-weight:700 }
+}
