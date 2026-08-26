@@ -13,6 +13,8 @@ import { Button, Badge, IconX, IconEdit, IconTrash, IconPdf, ANIOS } from '../co
 import { recordarCotizacionWhatsApp } from '../utils/portalLink'
 
 const ESTADO_COT = { PENDIENTE: 'Pendiente', APROBADA: 'Aprobada', RECHAZADA: 'Rechazada' }
+// Mismos valores que la pantalla de Orden de Trabajo: 0.8 L a 5.0 L.
+const CILINDRAJES = Array.from({ length: 43 }, (_, i) => (0.8 + i * 0.1).toFixed(1))
 
 // Dias que lleva esperando respuesta una cotizacion. Se cuenta desde su fecha,
 // no desde created_at: la fecha es la que el cliente vio en el documento.
@@ -650,8 +652,8 @@ function DetalleCotizacion({ cot, yaTieneOT, creando, creandoAlguna, onClose, on
         </div>
 
         <div className="modal__f" style={{ flexWrap: 'wrap' }}>
-          <Button variant="ghost" size="sm" onClick={onPdf}>PDF</Button>
-          <Button variant="ghost" size="sm" onClick={onEditar}>Editar</Button>
+          <Button variant="outline" size="sm" onClick={onPdf}><IconPdf /> PDF</Button>
+          <Button variant="outline" size="sm" onClick={onEditar}><IconEdit /> Editar</Button>
           <span style={{ flex: 1 }} />
           {cot.estado === ESTADO_COT.PENDIENTE && (
             <>
@@ -708,7 +710,12 @@ function CotizacionForm({ cotizacion, trabajos = [], onSave, onCancel }) {
     observaciones: cotizacion?.observaciones || '',
     validezDias: cotizacion?.validezDias || 15,
   })
-  const [items, setItems] = useState(cotizacion?.items || [])
+  // Un item que ya llega con descripcion entra BLOQUEADO: asi al tocarlo se puede
+  // editar el texto sin que se reabra el buscador de inventario. Era el bug de
+  // "no me deja editar la descripcion" en cotizaciones ya guardadas.
+  const [items, setItems] = useState(() =>
+    (cotizacion?.items || []).map(i => i.nombre?.trim() ? { ...i, _bloqueado: true } : i)
+  )
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
 
@@ -772,6 +779,14 @@ function CotizacionForm({ cotizacion, trabajos = [], onSave, onCancel }) {
     }, 150)
   }, [inventario])
 
+  const cambiarProducto = (itemId) => {
+    // Volver a buscar otro producto: limpia el bloqueo y la referencia al SKU.
+    updateItem(itemId, '_bloqueado', false)
+    updateItem(itemId, 'nombreInventario', '')
+    updateItem(itemId, 'sku', '')
+    updateItem(itemId, 'codigo', '')
+  }
+
   const seleccionarProducto = (itemId, producto) => {
     updateItem(itemId, 'nombre', producto.nombre)
     updateItem(itemId, 'precio', producto.precio)
@@ -779,6 +794,11 @@ function CotizacionForm({ cotizacion, trabajos = [], onSave, onCancel }) {
     updateItem(itemId, 'codigo', producto.codigo || producto.sku || '')
     updateItem(itemId, 'sku', producto.sku || '')
     updateItem(itemId, 'esServicio', !!producto.esServicio)
+    updateItem(itemId, 'nombreInventario', producto.nombre)
+    // _bloqueado evita que el proximo foco/tecla reabra el buscador. Sin esto,
+    // tocar una linea ya elegida (ej. "MANO DE OBRA") reabria el overlay y no
+    // dejaba editar la descripcion: era el bug reportado.
+    updateItem(itemId, '_bloqueado', true)
     setItemSearch(prev => ({ ...prev, [itemId]: { query: '', results: [], show: false } }))
   }
 
@@ -807,7 +827,13 @@ function CotizacionForm({ cotizacion, trabajos = [], onSave, onCancel }) {
   const handleSubmit = (e) => {
     e.preventDefault()
     if (!form.cliente) return
-    onSave({ ...form, placa: (form.placa || '').toUpperCase(), ano: parseInt(form.ano) || null, items, ...totales })
+    // _bloqueado es solo estado de la interfaz: no debe viajar a la base.
+    const itemsLimpios = items.map(item => {
+      const resto = { ...item }
+      delete resto._bloqueado
+      return resto
+    })
+    onSave({ ...form, placa: (form.placa || '').toUpperCase(), ano: parseInt(form.ano) || null, items: itemsLimpios, ...totales })
   }
 
   return (
@@ -912,9 +938,14 @@ function CotizacionForm({ cotizacion, trabajos = [], onSave, onCancel }) {
                 </select>
               </div>
               <div className="field" style={{ gridColumn: '1 / -1' }}>
-                <label>Cilindraje (cc)</label>
-                <input className="input" value={form.cilindraje} placeholder="Ej: 1600, 2000, 3.0L"
-                  onChange={e => set('cilindraje', e.target.value)} />
+                <label>Cilindraje</label>
+                {/* Lista desplegable, igual que en Orden de Trabajo, en vez de
+                    texto libre: asi el dato entra siempre con el mismo formato. */}
+                <select className="input" value={form.cilindraje} onChange={e => set('cilindraje', e.target.value)}>
+                  <option value="">Seleccionar</option>
+                  {form.cilindraje && !CILINDRAJES.some(c => `${c}L` === form.cilindraje) && <option value={form.cilindraje}>{form.cilindraje}</option>}
+                  {CILINDRAJES.map(c => <option key={c} value={`${c}L`}>{c} L</option>)}
+                </select>
               </div>
             </div>
           </div>
@@ -950,83 +981,77 @@ function CotizacionForm({ cotizacion, trabajos = [], onSave, onCancel }) {
                       <tr key={item.id}>
                         <td>
                           <div style={{ position: 'relative' }}>
-                            <input className="form-input" value={item.nombre} placeholder="Buscar producto o escribir..."
-                              onChange={e => { updateItem(item.id, 'nombre', e.target.value); buscarEnInventario(item.id, e.target.value) }}
-                              onFocus={() => { if (item.nombre?.length >= 2) buscarEnInventario(item.id, item.nombre) }}
+                            <input className="form-input" value={item.nombre}
+                              placeholder={item._bloqueado ? 'Editar descripcion...' : 'Buscar producto o escribir...'}
+                              autoComplete="off" spellCheck={false}
+                              onChange={e => {
+                                updateItem(item.id, 'nombre', e.target.value)
+                                if (!item._bloqueado) buscarEnInventario(item.id, e.target.value)
+                              }}
+                              onFocus={() => { if (!item._bloqueado && item.nombre?.length >= 2) buscarEnInventario(item.id, item.nombre) }}
                               onBlur={() => setTimeout(() => setItemSearch(prev => ({ ...prev, [item.id]: { ...prev[item.id], show: false } })), 250)}
                               onKeyDown={e => { if (e.key === 'Escape') setItemSearch(prev => ({ ...prev, [item.id]: { ...prev[item.id], show: false } })) }}
-                              style={{ padding: '6px 10px', fontSize: 13 }} />
-                            {invLoading && <span style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', fontSize: 11, color: 'var(--text-3)' }}>...</span>}
+                              style={{ padding: item._bloqueado ? '6px 36px 6px 10px' : '6px 10px', fontSize: 13, fontWeight: item._bloqueado ? 600 : 400 }} />
+                            {invLoading && !item._bloqueado && <span style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', fontSize: 11, color: 'var(--text-3)' }}>...</span>}
+                            {item._bloqueado && (
+                              <button type="button" onClick={() => cambiarProducto(item.id)}
+                                title={`Cambiar producto (actual: ${item.nombreInventario || item.sku || 'sin SKU'})`}
+                                aria-label="Cambiar producto"
+                                style={{ position: 'absolute', right: 3, top: '50%', transform: 'translateY(-50%)', width: 28, height: 28, display: 'grid', placeItems: 'center', border: 0, background: 'none', cursor: 'pointer', color: 'var(--text-4)' }}>
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                  <path d="M3 12a9 9 0 0 1 15-6.7L21 8M21 3v5h-5" /><path d="M21 12a9 9 0 0 1-15 6.7L3 16M3 21v-5h5" />
+                                </svg>
+                              </button>
+                            )}
                           </div>
+                          {/* Mismo command palette que la pantalla de OT (clases cmd-*),
+                              en vez del overlay propio: asi las dos pantallas se ven y se
+                              comportan igual. */}
                           {search.show && search.results.length > 0 && (
-                            <div style={{
-                              position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 99,
-                              background: 'rgba(13,27,53,.72)', display: 'flex', justifyContent: 'center', alignItems: 'flex-start', paddingTop: 80
-                            }} onClick={() => setItemSearch(prev => ({ ...prev, [item.id]: { ...prev[item.id], show: false } }))}>
-                              <div style={{
-                                background: 'var(--bg-raised)', borderRadius: 10, width: '90%', maxWidth: 700,
-                                maxHeight: '70vh', display: 'flex', flexDirection: 'column', border: '1px solid var(--border)',
-                                boxShadow: 'var(--shadow-lg)', overflow: 'hidden'
-                              }} onClick={e => e.stopPropagation()}>
-                                <div style={{ padding: '12px 16px', background: 'var(--navy-900, #1e293b)', color: '#fff', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                  <span style={{ fontWeight: 700, fontSize: 14 }}>Buscar Producto</span>
-                                  <span style={{ fontSize: 12, color: '#94a3b8' }}>{search.results.length} resultados</span>
+                            <div className="cmd-backdrop" onClick={() => setItemSearch(prev => ({ ...prev, [item.id]: { ...prev[item.id], show: false } }))}>
+                              <div className="cmd-palette" onClick={e => e.stopPropagation()}>
+                                <div className="cmd-header">
+                                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--slate-400,#94a3b8)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
+                                  </svg>
+                                  <span className="cmd-header__query">{search.query || item.nombre}</span>
+                                  <span className="cmd-header__count"><strong>{search.results.length}</strong> resultados</span>
+                                  <kbd className="cmd-kbd" onClick={() => setItemSearch(prev => ({ ...prev, [item.id]: { ...prev[item.id], show: false } }))}>Esc</kbd>
                                 </div>
-                                <div style={{
-                                  display: 'grid', gridTemplateColumns: '1fr 100px 70px', gap: 8,
-                                  padding: '8px 16px', background: 'var(--bg-subtle)', borderBottom: '1px solid var(--border)',
-                                  fontSize: 11, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '.5px'
-                                }}>
-                                  <span>Articulo</span>
-                                  <span style={{ textAlign: 'right' }}>P.Venta</span>
-                                  <span style={{ textAlign: 'center' }}>Exist.</span>
-                                </div>
-                                <div style={{ overflowY: 'auto', flex: 1 }}>
-                                  {search.results.map((p, i) => (
-                                    <div key={p.id || p.codigo}
-                                      onClick={() => seleccionarProducto(item.id, p)}
-                                      style={{
-                                        display: 'grid', gridTemplateColumns: '1fr 100px 70px', gap: 8,
-                                        padding: '10px 16px', cursor: 'pointer',
-                                        borderBottom: '1px solid var(--border)',
-                                        background: i === 0 ? 'var(--primary)' : 'transparent',
-                                        color: i === 0 ? '#fff' : 'var(--text)',
-                                        transition: 'background .1s'
-                                      }}
-                                      onMouseEnter={e => { if (i !== 0) e.currentTarget.style.background = 'var(--bg-subtle)' }}
-                                      onMouseLeave={e => { if (i !== 0) e.currentTarget.style.background = 'transparent' }}
-                                    >
-                                      <div style={{ minWidth: 0 }}>
-                                        <div style={{ fontWeight: 700, fontSize: 13, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                          {p.nombre}
+                                <div className="cmd-results">
+                                  {search.results.map((p) => {
+                                    const q = (search.query || item.nombre || '').toLowerCase()
+                                    const nombre = p.nombre || ''
+                                    const idx = nombre.toLowerCase().indexOf(q)
+                                    return (
+                                      <div key={p.id || p.codigo} className="cmd-row" onClick={() => seleccionarProducto(item.id, p)}>
+                                        <div className="cmd-row__info">
+                                          <div className="cmd-row__name">
+                                            {idx >= 0 && q.length >= 2
+                                              ? <>{nombre.slice(0, idx)}<mark>{nombre.slice(idx, idx + q.length)}</mark>{nombre.slice(idx + q.length)}</>
+                                              : nombre}
+                                          </div>
+                                          <div className="cmd-row__meta">
+                                            {p.codigoBarras && <span>Cod: {p.codigoBarras}</span>}
+                                            {p.sku && <span>SKU: {p.sku}</span>}
+                                            {(!p.codigoBarras && !p.sku && p.codigo) && <span>Ref: {p.codigo}</span>}
+                                            {p.precioBase > 0 && <><span>&middot;</span><span>Base: {fmt(p.precioBase)}</span></>}
+                                            {p.iva > 0 && <><span>&middot;</span><span>IVA {p.iva}%</span></>}
+                                          </div>
                                         </div>
-                                        <div style={{ fontSize: 11, opacity: .7, marginTop: 2, display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                                          {p.codigoBarras && <span>Cod: {p.codigoBarras}</span>}
-                                          {p.sku && <span>Codigo: {p.sku}</span>}
-                                          {(!p.codigoBarras && !p.sku && p.codigo) && <span>Ref: {p.codigo}</span>}
-                                          <span>- P.Venta+imp: {fmt(p.precio)}</span>
-                                          {p.precioBase > 0 && <span>- P.Base: {fmt(p.precioBase)}</span>}
-                                          {p.iva > 0 && <span>IVA: {p.iva}%</span>}
+                                        <div className="cmd-row__price">
+                                          <div className="cmd-row__price-val">{fmt(p.precio)}</div>
+                                          <div className="cmd-row__price-lbl">P. venta</div>
+                                        </div>
+                                        <div className="cmd-row__stock">
+                                          <span className={`hd-chip hd-chip--${p.esServicio ? 'info' : p.stock > 3 ? 'ok' : p.stock > 0 ? 'warn' : 'bad'}`}
+                                            style={{ fontFamily: 'var(--mono)', fontSize: 11 }}>
+                                            {p.esServicio ? 'Servicio' : `${p.stock} und`}
+                                          </span>
                                         </div>
                                       </div>
-                                      <div style={{ textAlign: 'right', fontFamily: 'var(--mono)', fontWeight: 700, fontSize: 13, alignSelf: 'center' }}>
-                                        {fmt(p.precio)}
-                                      </div>
-                                      <div style={{ textAlign: 'center', alignSelf: 'center' }}>
-                                        <span style={{
-                                          fontFamily: 'var(--mono)', fontWeight: 700, fontSize: 13,
-                                          padding: '2px 8px', borderRadius: 4,
-                                          // Pares semanticos en vez de hex crudos: los crudos
-                                          // dejaban la pastilla clara sobre negro en modo
-                                          // oscuro, y el verde daba 3,0:1.
-                                          background: i === 0 ? 'rgba(255,255,255,.2)' : p.esServicio ? 'var(--info-bg)' : p.stock > 0 ? 'var(--ok-bg)' : 'var(--bad-bg)',
-                                          color: i === 0 ? '#fff' : p.esServicio ? 'var(--info-fg)' : p.stock > 0 ? 'var(--ok-fg)' : 'var(--bad-fg)'
-                                        }}>
-                                          {p.esServicio ? '∞' : `(${p.stock})`}
-                                        </span>
-                                      </div>
-                                    </div>
-                                  ))}
+                                    )
+                                  })}
                                 </div>
                               </div>
                             </div>
