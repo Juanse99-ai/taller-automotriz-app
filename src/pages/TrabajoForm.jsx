@@ -11,7 +11,7 @@ import IngresoVehiculo from '../components/IngresoVehiculo'
 // INVENTARIO_ITEMS y etiquetaCombustible: solo para el contador del bloque
 // plegado ("3 / 16 · 1/2"), no cambian nada de lo que se guarda.
 import { ingresoVacio, INVENTARIO_ITEMS, etiquetaCombustible, ingresoTieneAlgo } from '../utils/ingreso'
-import { MARCAS, getModelos } from '../utils/vehiculos'
+import { MARCAS, getModelos, CILINDRAJES } from '../utils/vehiculos'
 import { useClientes } from '../hooks/useClientes'
 import { useInventario, formatCacheAge } from '../hooks/useInventario'
 import { fotoParaSubir } from '../utils/imagen'
@@ -21,9 +21,6 @@ import { comprimirVideo } from '../utils/video'
 import MoneyInput from '../components/MoneyInput'
 import ConfirmDialog from '../components/ConfirmDialog'
 import { Button, ANIOS } from '../components/ui'
-
-// Opciones de cilindraje del motor (litros): 0.8 a 5.0 en pasos de 0.1
-const CILINDRAJES = Array.from({ length: 43 }, (_, i) => (0.8 + i * 0.1).toFixed(1))
 
 // Título de tarjeta del handoff (13.5px/700). Las clases viejas (.card__h h3)
 // pintan 15.5px/800, que en un formulario de 9 bloques compite con los datos.

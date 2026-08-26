@@ -163,3 +163,8 @@ export const PRECIOS_MANO_OBRA = [
   { servicio: 'Reparacion motor de arranque', precioMin: 80000, precioMax: 200000 },
   { servicio: 'Reparacion alternador', precioMin: 80000, precioMax: 200000 },
 ]
+
+// Cilindrajes en litros, de 0.8 a 5.0 en pasos de 0.1. Vive aqui y no en cada
+// pantalla: antes estaba copiado en TrabajoForm y en Cotizaciones, y cualquier
+// cambio en una dejaba a la otra ofreciendo valores distintos.
+export const CILINDRAJES = Array.from({ length: 43 }, (_, i) => (0.8 + i * 0.1).toFixed(1))

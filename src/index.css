@@ -1046,7 +1046,9 @@ tbody tr:active{background:var(--fill-2)}
 @keyframes pageEnter{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
 
 /* Utilities */
-.text-mono{font-family:var(--mono)}
+/* tabular-nums igual que .mono y .c-mono: si la pila monoespaciada no carga y
+   cae en una proporcional, los totales de cada linea dejan de alinearse. */
+.text-mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
 .text-right{text-align:right}
 .text-center{text-align:center}
 .text-muted{color:var(--text-3)}
@@ -3639,3 +3641,9 @@ tbody tr:active{background:var(--fill-2)}
   .tbl-cards--items td.td-desc input{ padding-right:46px }
 }
 
+
+/* ── Celda de vehiculo en la tabla de cotizaciones (vista ancha) ──────────── */
+/* Por encima de 960px la lista vuelve a ser tabla y td-veh pierde el recorte
+   que le da el bloque de tarjetas. Un modelo escrito sin espacios estira la
+   columna y empuja al resto: overflow-wrap lo parte donde sea. */
+.tbl-cards--cot td.td-veh{ min-width:0; overflow-wrap:anywhere }

@@ -3,7 +3,7 @@ import { cargarPdf } from '../utils/pdfLazy'
 import { fmt, fmtDate, uid, hoyISO, normalizarDoc, normalizarNombre, fmtTelefono, cantidadItem, fmtCant } from '../utils/helpers'
 import { TECNICOS, IVA_DEFAULT, TALLER } from '../utils/constants'
 import { loadLogo as loadPdfLogo, drawHeader, drawSectionHeader, drawDataBlock, drawTotalsBox, drawSignatures, drawFooter, tableStylesItems, PDF_LAYOUT, PDF_COLORS } from '../utils/pdfTheme'
-import { MARCAS, getModelos } from '../utils/vehiculos'
+import { MARCAS, getModelos, CILINDRAJES } from '../utils/vehiculos'
 import MoneyInput from '../components/MoneyInput'
 import ConfirmDialog from '../components/ConfirmDialog'
 import { useClientes } from '../hooks/useClientes'
@@ -13,8 +13,6 @@ import { Button, Badge, IconX, IconEdit, IconTrash, IconPdf, ANIOS } from '../co
 import { recordarCotizacionWhatsApp } from '../utils/portalLink'
 
 const ESTADO_COT = { PENDIENTE: 'Pendiente', APROBADA: 'Aprobada', RECHAZADA: 'Rechazada' }
-// Mismos valores que la pantalla de Orden de Trabajo: 0.8 L a 5.0 L.
-const CILINDRAJES = Array.from({ length: 43 }, (_, i) => (0.8 + i * 0.1).toFixed(1))
 
 // Dias que lleva esperando respuesta una cotizacion. Se cuenta desde su fecha,
 // no desde created_at: la fecha es la que el cliente vio en el documento.
@@ -727,6 +725,10 @@ function CotizacionForm({ cotizacion, trabajos = [], onSave, onCancel }) {
     (cotizacion?.items || []).map(i => i.nombre?.trim() ? { ...i, _bloqueado: true } : i)
   )
 
+  // Que campo del bloque Cliente tiene el cursor: decide bajo cual de los dos se
+  // despliega la lista de resultados.
+  const [campoActivo, setCampoActivo] = useState(null)
+
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
 
   const seleccionarCliente = (c) => {
@@ -901,26 +903,43 @@ function CotizacionForm({ cotizacion, trabajos = [], onSave, onCancel }) {
           <div className="card__h"><h3>Cliente</h3></div>
           <div className="card__b">
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+              {/* campoActivo, igual que en Orden de Trabajo: la lista de clientes se
+                  pinta debajo del campo donde se esta escribiendo. Sin esto salia
+                  siempre bajo "Cedula / NIT" aunque la busqueda viniera del nombre. */}
               <div className="field" style={{ position: 'relative' }}>
                 <label>Cédula / NIT</label>
                 <input className="input" value={form.cedula} placeholder="Buscar por documento..."
+                  onFocus={() => setCampoActivo('cedula')}
                   onChange={e => { set('cedula', e.target.value); buscarDebounced(e.target.value) }} />
-                {resultados.length > 0 && (
+                {resultados.length > 0 && campoActivo === 'cedula' && (
                   <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 20, background: 'var(--bg-raised)', border: '1px solid var(--border)', borderRadius: 8, maxHeight: 200, overflowY: 'auto', boxShadow: 'var(--shadow-md)' }}>
                     {resultados.map((c, i) => (
-                      <div key={i} onClick={() => seleccionarCliente(c)}
+                      <div key={i} onMouseDown={() => seleccionarCliente(c)}
                         style={{ padding: '10px 14px', cursor: 'pointer', borderBottom: '1px solid var(--border)', fontSize: 13 }}>
                         <strong>{normalizarDoc(c)}</strong> — {normalizarNombre(c)}
+                        {c.telefono && <span style={{ marginLeft: 8, color: 'var(--text-3)' }}>{fmtTelefono(c.telefono)}</span>}
                       </div>
                     ))}
                   </div>
                 )}
-                {buscando && <span style={{ display: 'block', fontSize: 11, color: 'var(--text-4)', marginTop: 4 }}>Buscando en Cuentti...</span>}
+                {buscando && <span className="help">Buscando en Cuentti...</span>}
               </div>
-              <div className="field">
-                <label>Nombre del cliente</label>
-                <input className="input" value={form.cliente} required placeholder="Nombre completo"
+              <div className="field" style={{ position: 'relative' }}>
+                <label>Nombre del cliente <span className="req">*</span></label>
+                <input className="input" value={form.cliente} required placeholder="Nombre o documento..."
+                  onFocus={() => setCampoActivo('nombre')}
                   onChange={e => { set('cliente', e.target.value); buscarDebounced(e.target.value) }} />
+                {resultados.length > 0 && campoActivo === 'nombre' && (
+                  <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 20, background: 'var(--bg-raised)', border: '1px solid var(--border)', borderRadius: 8, maxHeight: 220, overflowY: 'auto', boxShadow: 'var(--shadow-md)' }}>
+                    {resultados.map((c, i) => (
+                      <div key={i} onMouseDown={() => seleccionarCliente(c)}
+                        style={{ padding: '10px 14px', cursor: 'pointer', borderBottom: '1px solid var(--border)', fontSize: 13 }}>
+                        <strong>{normalizarNombre(c)}</strong> <span style={{ color: 'var(--text-3)' }}>· {normalizarDoc(c)}</span>
+                        {c.telefono && <span style={{ marginLeft: 8, color: 'var(--text-3)' }}>{fmtTelefono(c.telefono)}</span>}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
               <div className="field">
                 <label>Teléfono</label>
