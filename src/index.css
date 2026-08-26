@@ -1903,7 +1903,20 @@ tbody tr:active{background:var(--fill-2)}
   }
 }
 
-@media(max-width:600px){
+/* Corte a 960px y no a 600: la tabla de 9 columnas no cabe hasta ~925px, asi que
+   un corte en 600 (o en 768) deja rotas justo las tabletas mas comunes: un iPad
+   Air de 820px escondia 70px y un iPad Pro de 834px, 90px. 960px ademas ya es la
+   linea que este repo usa para "esto es tactil": es donde el rail pasa a cajon.
+   Solo afecta a .tbl-cards--cot, que unicamente usa la lista de Cotizaciones. */
+@media(max-width:960px){
+  /* Andamiaje que por debajo de 600px le presta el bloque generico de .tbl-cards
+     y que entre 601 y 960 hay que declarar aqui, o la tabla no colapsa. */
+  .tbl.tbl-cards--cot{min-width:0;width:100%;display:block}
+  .tbl.tbl-cards--cot thead{display:none}
+  .tbl.tbl-cards--cot tbody{display:block}
+  .tbl.tbl-cards--cot tbody tr{background:var(--bg-raised);border:1px solid var(--border);border-radius:var(--r-md);margin-bottom:10px;padding:12px 14px}
+  .tbl.tbl-cards--cot tbody td{border:0}
+  .tbl.tbl-cards--cot tbody tr:hover{background:var(--bg-raised)}
 /* Cotizaciones en celular: 4 lineas por fila en vez de 7 pares etiqueta/valor.
        linea 1   ref  placa ..................... total
        linea 2   cliente

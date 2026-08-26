@@ -862,27 +862,39 @@ function CotizacionForm({ cotizacion, trabajos = [], onSave, onCancel }) {
 
   return (
     <div>
-      <div className="pagehd">
-        <div>
-          <h2>{isEdit ? 'Editar cotización' : 'Nueva cotización'}</h2>
+      {/* hd-head, el mismo encabezado que usan Orden de Trabajo y la LISTA de
+          Cotizaciones. Antes este formulario usaba .pagehd, con h2 a 30px: al
+          pasar de una pantalla a otra el titulo saltaba de 22px a 30px, y la
+          incoherencia se notaba sin salir de Cotizaciones. La regla es
+          `.hd-head__t h1`, asi que la etiqueta tiene que ser h1: con h2 el
+          titulo se quedaria sin estilo ninguno. */}
+      <div className="hd-head">
+        <div className="hd-head__t">
+          <h1>{isEdit ? 'Editar cotización' : 'Nueva cotización'}</h1>
           {isEdit && cotizacion && (
-            <div className="pagehd__meta">
-              {cotizacion.id && <span className="pagehd__ot">{String(cotizacion.id).startsWith('COT-') ? cotizacion.id : `COT-${cotizacion.id}`}</span>}
-              {cotizacion.fecha && <><span className="pagehd__sep">·</span><span>Creada {fmtDate(cotizacion.fecha)}</span></>}
-              {cotizacion.validezDias && <><span className="pagehd__sep">·</span><span>Válida {cotizacion.validezDias} días</span></>}
-              {cotizacion.estado && <><span className="pagehd__sep">·</span><Badge tone={
-                cotizacion.estado === ESTADO_COT.APROBADA ? 'success' :
-                cotizacion.estado === ESTADO_COT.RECHAZADA ? 'danger' :
-                'warning'
-              }>{cotizacion.estado}</Badge></>}
+            <div className="hd-head__sub">
+              {cotizacion.id && <span className="hd-mono" style={{ fontWeight: 700, color: 'var(--text-2)' }}>{String(cotizacion.id).startsWith('COT-') ? cotizacion.id : `COT-${cotizacion.id}`}</span>}
+              {cotizacion.fecha && <> · <span>Creada {fmtDate(cotizacion.fecha)}</span></>}
+              {/* Ternario y no `&&`: con && , un validezDias en 0 imprimiria un
+                  "0" suelto en el subtitulo. */}
+              {cotizacion.validezDias ? <> · <span>Válida {cotizacion.validezDias} días</span></> : null}
+              {cotizacion.estado && <> · <span className={`hd-chip hd-chip--${
+                cotizacion.estado === ESTADO_COT.APROBADA ? 'ok' :
+                cotizacion.estado === ESTADO_COT.RECHAZADA ? 'bad' :
+                'warn'
+              }`}>{cotizacion.estado}</span></>}
             </div>
           )}
         </div>
-        <div className="actions">
+        <div className="hd-head__sp" />
+        <div className="hd-head__right">
           <Button type="button" variant="outline" onClick={onCancel}>Volver</Button>
         </div>
       </div>
-      <form onSubmit={handleSubmit} className="form-stack">
+      {/* marginTop:16 porque .hd-head no trae el margin-bottom:22px que si tenia
+          .pagehd. Sin esto el titulo queda pegado a la primera tarjeta. Es lo
+          mismo que hace TrabajoForm. */}
+      <form onSubmit={handleSubmit} className="form-stack" style={{ marginTop: 16 }}>
         {/* Cliente + Vehiculo side-by-side at desktop */}
         <div className="form-row-2">
         <div className="card">
@@ -980,8 +992,9 @@ function CotizacionForm({ cotizacion, trabajos = [], onSave, onCancel }) {
           {/* card__h + h3, igual que Cliente, Vehiculo, Observaciones y Validez.
               Antes era un div suelto con .card-title y estilos en linea: quedaba
               sin el relleno ni la linea inferior de las demas tarjetas, y por eso
-              se veia a medio terminar. Ademas .card-title usa font-weight:800, que
-              DESIGN.md prohibe porque Plex llega a 700. */}
+              se veia a medio terminar. (Nota: .card__h h3 tambien declara
+              font-weight:800, igual que .card-title; no es el motivo del cambio.
+              Se renderiza como 700 porque solo se cargan esos pesos de Plex.) */}
           <div className="card__h">
             <h3>Ítems</h3>
             <Button type="button" variant="outline" size="sm" onClick={addItem}>+ Agregar línea</Button>
@@ -989,11 +1002,12 @@ function CotizacionForm({ cotizacion, trabajos = [], onSave, onCancel }) {
           <div className="card__b">
           {invLoading && <p className="text-xs text-muted" style={{ marginBottom: 8 }}>Cargando inventario de Cuentti...</p>}
           {items.length === 0 ? (
-            /* Mismo bloque de estado vacio que usa Orden de Trabajo, en vez de un
-               parrafo suelto centrado. */
+            /* Mismo bloque de estado vacio que usa Orden de Trabajo. Las clases
+               importan: un <p> suelto pinta 15px/400 en vez de 13px/600, y
+               .hd-sub (11px) no es lo mismo que .hd-void__s (12px). */
             <div className="hd-void">
-              <p>Sin ítems todavía.</p>
-              <p className="hd-sub">Agrega una línea y busca productos del inventario.</p>
+              <div className="hd-void__t">Sin ítems todavía</div>
+              <div className="hd-void__s">Agrega una línea y busca productos del inventario.</div>
             </div>
           ) : (
             // tbl-cards: en celular cada linea se vuelve una tarjeta con su rotulo
