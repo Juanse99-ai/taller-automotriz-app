@@ -154,7 +154,7 @@ export default function Cotizaciones({ notify, trabajos = [], onCrearTrabajo, co
               doc.setFontSize(6.5)
               doc.setTextColor(...SLATE_400)
               doc.setFont('courier', 'normal')
-              doc.text(`Codigo ${sku}`, data.cell.x + 3, data.cell.y + data.cell.height - 2)
+              doc.text(`Código ${sku}`, data.cell.x + 3, data.cell.y + data.cell.height - 2)
               doc.setFont(undefined, 'normal')
             }
           }
@@ -183,7 +183,12 @@ export default function Cotizaciones({ notify, trabajos = [], onCrearTrabajo, co
 
       // Caja de totales (derecha, helper unificado)
       const rows = [{ lbl: 'Subtotal', val: fmt(subtotal) }]
-      if (iva > 0) rows.push({ lbl: 'IVA (19%)', val: fmt(iva) })
+      if (iva > 0) {
+        // El rotulo salia siempre "IVA (19%)" aunque la cotizacion llevara items
+        // a otra tasa: en un documento que ve el cliente eso es un dato falso.
+        const tasas = [...new Set((c.items || []).filter(i => (parseFloat(i.iva) || 0) > 0).map(i => parseFloat(i.iva)))]
+        rows.push({ lbl: tasas.length === 1 ? `IVA (${tasas[0]}%)` : 'IVA', val: fmt(iva) })
+      }
       const boxX = 122, boxW = 74
       let tY = drawTotalsBox(doc, {
         y: cursorY, x: boxX, w: boxW,
@@ -203,7 +208,7 @@ export default function Cotizaciones({ notify, trabajos = [], onCrearTrabajo, co
       doc.setTextColor(...SLATE_600)
       doc.setFont(undefined, 'normal')
       doc.text('Para aprobar esta cotización', boxX + boxW / 2, tY + 5, { align: 'center' })
-      doc.text('responda este correo o llame al', boxX + boxW / 2, tY + 8.5, { align: 'center' })
+      doc.text('escríbanos por WhatsApp o llame al', boxX + boxW / 2, tY + 8.5, { align: 'center' })
       doc.setFont(undefined, 'bold')
       doc.setTextColor(...NAVY)
       doc.text(TALLER.celular, boxX + boxW / 2, tY + 12.5, { align: 'center' })
@@ -685,7 +690,7 @@ const ESTILOS = `
 .cot-menu button:focus-visible{outline:2px solid var(--primary);outline-offset:-2px}
 .cot-menu button svg{width:16px;height:16px;flex-shrink:0;color:var(--text-3)}
 .cot-menu button.peligro,.cot-menu button.peligro svg{color:var(--red-600)}
-.cot-menu button.peligro:hover{background:rgba(220,38,38,.09)}
+.cot-menu button.peligro:hover{background:var(--bad-bg)}
 .cot-menu hr{margin:5px 8px;border:none;border-top:1px solid var(--border)}
 .cot-dl{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:15px 18px}
 .cot-dl>div{display:flex;flex-direction:column;gap:3px;min-width:0}
@@ -901,13 +906,13 @@ function CotizacionForm({ cotizacion, trabajos = [], onSave, onCancel }) {
                 {buscando && <span style={{ display: 'block', fontSize: 11, color: 'var(--text-4)', marginTop: 4 }}>Buscando en Cuentti...</span>}
               </div>
               <div className="field">
-                <label>Nombre del Cliente</label>
+                <label>Nombre del cliente</label>
                 <input className="input" value={form.cliente} required placeholder="Nombre completo"
                   onChange={e => { set('cliente', e.target.value); buscarDebounced(e.target.value) }} />
               </div>
               <div className="field">
                 <label>Teléfono</label>
-                <input className="input" value={form.telefonoCliente} placeholder="300..." onChange={e => set('telefonoCliente', e.target.value)} />
+                <input className="input" value={form.telefonoCliente} placeholder="3001234567" onChange={e => set('telefonoCliente', e.target.value)} />
               </div>
             </div>
           </div>
@@ -945,14 +950,14 @@ function CotizacionForm({ cotizacion, trabajos = [], onSave, onCancel }) {
               <div className="field">
                 <label>Marca</label>
                 <select className="input" value={form.marca} onChange={e => { set('marca', e.target.value); set('modelo', '') }}>
-                  <option value="">Seleccionar...</option>
+                  <option value="">Seleccionar</option>
                   {MARCAS.map(m => <option key={m} value={m}>{m}</option>)}
                 </select>
               </div>
               <div className="field">
                 <label>Modelo</label>
                 <select className="input" value={form.modelo} onChange={e => set('modelo', e.target.value)} disabled={!form.marca}>
-                  <option value="">Seleccionar...</option>
+                  <option value="">Seleccionar</option>
                   {modelos.map(m => <option key={m} value={m}>{m}</option>)}
                 </select>
               </div>
@@ -1060,7 +1065,7 @@ function CotizacionForm({ cotizacion, trabajos = [], onSave, onCancel }) {
                                     <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
                                   </svg>
                                   <span className="cmd-header__query">{search.query || item.nombre}</span>
-                                  <span className="cmd-header__count"><strong>{search.results.length}</strong> resultados</span>
+                                  <span className="cmd-header__count"><strong>{search.results.length}</strong> {search.results.length === 1 ? 'resultado' : 'resultados'}</span>
                                   <kbd className="cmd-kbd" onClick={() => setItemSearch(prev => ({ ...prev, [item.id]: { ...prev[item.id], show: false } }))}>Esc</kbd>
                                 </div>
                                 <div className="cmd-results">

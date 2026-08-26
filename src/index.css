@@ -3601,3 +3601,18 @@ tbody tr:active{background:var(--fill-2)}
   .tbl-cards--detalle tbody td.c-name{ order:-1; font-weight:600 }
   .tbl-cards--detalle tbody td.c-right{ font-weight:700 }
 }
+
+/* ── Objetivos tactiles en la pantalla de cotizaciones ────────────────────
+   DESIGN.md fija 44px (var(--tap)) para todo control tactil en movil. El menu
+   de fila "⋯" se quedaba en 32-38px y el boton de cambiar producto en 28px, que
+   con guantes o dedo grueso se falla. Solo se levanta en movil: en escritorio el
+   raton acierta y engordarlos rompe la densidad de la tabla. */
+@media(max-width:600px){
+  .icon-btn{ min-width:var(--tap); min-height:var(--tap) }
+  /* El boton de cambiar producto vive dentro del campo, asi que se le da area
+     tactil sin cambiar su caja visual. */
+  .tbl-cards--items td.td-desc button[aria-label="Cambiar producto"]{
+    width:var(--tap); height:var(--tap); right:0;
+  }
+  .tbl-cards--items td.td-desc input{ padding-right:46px }
+}
