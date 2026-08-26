@@ -3607,12 +3607,22 @@ tbody tr:active{background:var(--fill-2)}
    de fila "⋯" se quedaba en 32-38px y el boton de cambiar producto en 28px, que
    con guantes o dedo grueso se falla. Solo se levanta en movil: en escritorio el
    raton acierta y engordarlos rompe la densidad de la tabla. */
+/* Boton de cambiar producto dentro del campo de descripcion. Va ANTES del
+   bloque movil de abajo: con la misma especificidad gana la regla que aparece
+   despues, asi que si esta base se escribe al final pisa la version tactil. */
+.cot-cambiar-prod{
+  position:absolute; right:3px; top:50%; transform:translateY(-50%);
+  width:28px; height:28px; display:grid; place-items:center;
+  border:0; background:none; cursor:pointer; color:var(--text-4);
+}
+.cot-cambiar-prod:hover{ color:var(--text-2) }
+
 @media(max-width:600px){
   .icon-btn{ min-width:var(--tap); min-height:var(--tap) }
-  /* El boton de cambiar producto vive dentro del campo, asi que se le da area
-     tactil sin cambiar su caja visual. */
-  .tbl-cards--items td.td-desc button[aria-label="Cambiar producto"]{
-    width:var(--tap); height:var(--tap); right:0;
-  }
+  /* El boton de cambiar producto: 44px de area tactil en movil. Sus medidas
+     estaban en estilos EN LINEA (width:28), que ninguna media query puede
+     levantar; por eso paso a clase. */
+  .cot-cambiar-prod{ width:var(--tap); height:var(--tap); right:0 }
   .tbl-cards--items td.td-desc input{ padding-right:46px }
 }
+
