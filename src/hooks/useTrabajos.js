@@ -3,6 +3,7 @@ import { fetchTrabajos, upsertTrabajo, deleteTrabajo as sbDelete } from '../serv
 import { lsGet, lsSet, LS_KEYS } from '../services/storage'
 import { uid } from '../utils/helpers'
 import { ESTADOS } from '../utils/constants'
+import { haySesion } from '../services/auth'
 
 // Normaliza un row de Supabase al modelo del front
 // Despues de migracion: id es text en Supabase — mismo ID que el front
@@ -222,6 +223,9 @@ export function useTrabajos() {
 
   // Sincronizacion silenciosa (no toca loading): para polling y focus
   const sincronizar = useCallback(async () => {
+    // Sin sesion no se pide nada: la API responde 401 y marcar "no hay conexion"
+    // seria mentira. En cuanto se entra, App llama a recargar().
+    if (!haySesion()) return false
     try {
       const sbData = await fetchTrabajos()
       servidorRespondioRef.current = true
@@ -288,6 +292,9 @@ export function useTrabajos() {
   // Carga inicial: muestra loading solo la primera vez
   // Si Supabase esta vacio, intenta subir datos locales (seed)
   const cargarInicial = useCallback(async () => {
+    // Ver el comentario de haySesion(): sin token esto solo consigue un 401 y un
+    // aviso de desconexion falso en la pantalla de entrada.
+    if (!haySesion()) { setLoading(false); return }
     setLoading(true)
     setConnectionError(false)
     try {

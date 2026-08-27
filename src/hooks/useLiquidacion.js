@@ -7,6 +7,7 @@ import {
   fetchCompartidos, upsertCompartido, deleteCompartido,
 } from '../services/supabase'
 import { lsGet, lsSet, LS_KEYS } from '../services/storage'
+import { haySesion } from '../services/auth'
 
 // Robustez de sync (esto mueve la plata de las liquidaciones): colas de
 // PENDIENTES + LÁPIDAS por tabla, igual que usePrestamos. Un upsert o un delete
@@ -152,6 +153,9 @@ export function useLiquidacion() {
 
   // Sincronizacion silenciosa (polling): no toca loading
   const sincronizar = useCallback(async () => {
+    // Sin sesion no se pide nada: la API responde 401 y marcar "no hay conexion"
+    // seria mentira. En cuanto se entra, App llama a recargar().
+    if (!haySesion()) return false
     try {
       const [sbMovs, sbHist, sbLiq, sbComp] = await Promise.all([
         fetchMovimientos().catch(() => null),
@@ -177,6 +181,9 @@ export function useLiquidacion() {
   }, [])
 
   const cargarDatos = useCallback(async () => {
+    // Ver el comentario de haySesion(): sin token esto solo consigue un 401 y un
+    // aviso de desconexion falso en la pantalla de entrada.
+    if (!haySesion()) { setLoading(false); return }
     setLoading(true)
     setConnectionError(false)
     try {

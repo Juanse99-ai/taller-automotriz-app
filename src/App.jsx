@@ -30,7 +30,7 @@ import { useVehiculos } from './hooks/useVehiculos'
 import { useCotizaciones } from './hooks/useCotizaciones'
 import { useInspecciones } from './hooks/useInspecciones'
 import { useLiquidacion } from './hooks/useLiquidacion'
-import { getSession, logout, getSeccionesPermitidas } from './services/auth'
+import { getSession, logout, getSeccionesPermitidas, EVT_SESION_VENCIDA } from './services/auth'
 import { cargarInventarioCompleto } from './services/cuentti'
 import { lsGet, lsSet, LS_KEYS } from './services/storage'
 
@@ -82,6 +82,8 @@ export default function App() {
   // El portal ya no se decide aqui: lo hace main.jsx antes de importar App. Asi
   // los hooks de abajo dejan de vivir detras de un return condicional.
   const [user, setUser] = useState(() => getSession())
+  // Mensaje para la pantalla de entrada cuando el servidor tumba la sesion.
+  const [avisoSesion, setAvisoSesion] = useState('')
   const [section, setSection] = useState('dashboard')
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
@@ -91,6 +93,20 @@ export default function App() {
     try { return localStorage.getItem('mda:sidebar') !== 'expanded' } catch { return true }
   })
   const [toast, setToast] = useState(null)
+  // Si el servidor rechaza la sesion (401), salir a la pantalla de entrada
+  // diciendo por que. Antes esto se veia como "No se pudo conectar con el
+  // servidor" y Reintentar no podia arreglarlo: el usuario seguia sobre el
+  // cache local creyendo que miraba la base.
+  useEffect(() => {
+    const alVencer = () => {
+      logout()
+      setUser(null)
+      setAvisoSesion('Tu sesión venció por seguridad. Entra de nuevo.')
+    }
+    window.addEventListener(EVT_SESION_VENCIDA, alVencer)
+    return () => window.removeEventListener(EVT_SESION_VENCIDA, alVencer)
+  }, [])
+
   const trabajosHook = useTrabajos()
   const clientesHook = useClientes()
   const vehiculosHook = useVehiculos()
@@ -244,7 +260,17 @@ export default function App() {
 
   // Si no hay sesion, mostrar login
   if (!user) {
-    return <Login onLogin={(u) => setUser(u)} />
+    return <Login aviso={avisoSesion} onLogin={(u) => {
+      setAvisoSesion('')
+      setUser(u)
+      // Los hooks se montaron sin sesion, asi que no pidieron nada (ver
+      // haySesion en services/auth). Al entrar hay que pedirlo YA: si no, la
+      // app se queda con el cache local hasta el sondeo de los 60 segundos.
+      trabajosHook.recargar()
+      cotizacionesHook.recargar()
+      inspeccionesHook.recargar()
+      liquidacionHook.recargar()
+    }} />
   }
 
   const seccionesPermitidas = getSeccionesPermitidas(user.rol)

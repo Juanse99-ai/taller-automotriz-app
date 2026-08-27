@@ -24,7 +24,7 @@ import { useEffect, useState } from 'react'
 
 const LS_KEY = 'mda_tecnicos'
 const EVT = 'mda:tecnicos-changed'
-import { getToken } from './auth'
+import { getToken, haySesion, avisarSesionVencida } from './auth'
 
 const API = '/api/supabase?table=tecnicos'
 
@@ -81,8 +81,14 @@ const fromDB = (r) => ({
   ...(r.eliminado ? { eliminado: true } : {}),
 })
 
-const apiCall = (opts = {}, qs = '') =>
-  fetch(`${API}${qs}`, { ...opts, headers: { 'Content-Type': 'application/json', 'X-Sesion': getToken(), ...(opts.headers || {}) } })
+// Sin sesion no se llama: la API responde 401 y en la pantalla de entrada eso
+// era ruido puro. Con sesion, un 401 significa que dejo de valer y se avisa.
+const apiCall = async (opts = {}, qs = '') => {
+  if (!haySesion()) throw new Error('No hay sesion iniciada')
+  const res = await fetch(`${API}${qs}`, { ...opts, headers: { 'Content-Type': 'application/json', 'X-Sesion': getToken(), ...(opts.headers || {}) } })
+  if (res.status === 401) avisarSesionVencida()
+  return res
+}
 
 // Crea o actualiza una fila por id (upsert). Silencioso: los datos ya están en LS.
 const dbUpsert = (t) =>

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { fetchInspecciones, upsertInspeccion } from '../services/supabase'
 import { lsGet, lsSet, LS_KEYS } from '../services/storage'
+import { haySesion } from '../services/auth'
 
 export function useInspecciones() {
   const [inspecciones, setInspecciones] = useState([])
@@ -20,6 +21,9 @@ export function useInspecciones() {
   })
 
   const cargarDatos = useCallback(async () => {
+    // Ver el comentario de haySesion(): sin token esto solo consigue un 401 y un
+    // aviso de desconexion falso en la pantalla de entrada.
+    if (!haySesion()) { setLoading(false); return }
     setLoading(true)
     setConnectionError(false)
     try {

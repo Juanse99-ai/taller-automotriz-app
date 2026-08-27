@@ -21,11 +21,11 @@ const EyeIcon = ({ open }) => (
   )
 )
 
-export default function Login({ onLogin }) {
+export default function Login({ onLogin, aviso = '' }) {
   const [usuario, setUsuario] = useState('')
   const [password, setPassword] = useState('')
   const [showPass, setShowPass] = useState(false)
-  const [error, setError] = useState('')
+  const [error, setError] = useState(aviso)
   const [loading, setLoading] = useState(false)
 
   const handleSubmit = async (e) => {

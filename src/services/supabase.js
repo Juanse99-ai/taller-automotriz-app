@@ -1,5 +1,5 @@
 // Cliente a traves de proxy backend para evitar CORS
-import { getToken } from './auth'
+import { getToken, haySesion, avisarSesionVencida } from './auth'
 
 const proxy = (table) => `/api/supabase?table=${table}`
 
@@ -78,10 +78,18 @@ export async function borrarVideoEvidencia(evid) {
 }
 
 async function fetchWithTimeout(url, options = {}) {
+  // Sin sesion ni se sale a la red: la API responde 401 a todo. Pasaba en la
+  // pantalla de entrada, porque App monta los hooks de datos antes de decidir
+  // si toca mostrar el login.
+  if (!haySesion()) throw new Error('No hay sesion iniciada')
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS)
   try {
-    return await fetch(url, { ...conSesion(options), signal: controller.signal })
+    const res = await fetch(url, { ...conSesion(options), signal: controller.signal })
+    // 401 CON token puesto = la sesion dejo de valer. Se avisa para mandar a la
+    // pantalla de entrada; si no, esto se veria como un fallo de conexion.
+    if (res.status === 401) avisarSesionVencida()
+    return res
   } catch (error) {
     if (error?.name === 'AbortError') {
       throw new Error(`Tiempo de espera agotado (${REQUEST_TIMEOUT_MS}ms)`)

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { fetchCotizaciones, upsertCotizacion, deleteCotizacion } from '../services/supabase'
 import { lsGet, lsSet, LS_KEYS } from '../services/storage'
+import { haySesion } from '../services/auth'
 
 function normalizarRow(r) {
   return {
@@ -34,6 +35,9 @@ export function useCotizaciones() {
 
   // Sincronizacion silenciosa
   const sincronizar = useCallback(async () => {
+    // Sin sesion no se pide nada: la API responde 401 y marcar "no hay conexion"
+    // seria mentira. En cuanto se entra, App llama a recargar().
+    if (!haySesion()) return false
     try {
       const sbData = await fetchCotizaciones()
       setConnectionError(false)
@@ -60,6 +64,9 @@ export function useCotizaciones() {
   }, [])
 
   const cargarInicial = useCallback(async () => {
+    // Ver el comentario de haySesion(): sin token esto solo consigue un 401 y un
+    // aviso de desconexion falso en la pantalla de entrada.
+    if (!haySesion()) { setLoading(false); return }
     setLoading(true)
     setConnectionError(false)
     try {

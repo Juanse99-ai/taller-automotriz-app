@@ -21,6 +21,7 @@ export async function login(usuario, password) {
   if (raw) { try { data = JSON.parse(raw) } catch { data = null } }
   if (!res.ok) throw new Error((data && data.error) || 'El servidor no respondió bien. Intenta de nuevo en unos segundos.')
   if (!data || !data.user) throw new Error('El servidor no respondió. Intenta de nuevo en unos segundos.')
+  yaAvisado = false // sesion nueva: el aviso de vencida vuelve a estar armado
   const session = { ...data.user, _loginAt: Date.now(), _token: data.token || '' }
   // El navegador se llena (el caché de trabajos con fotos pasa de los ~5 MB que
   // da Safari) y este setItem reventaba: el login se completaba en el servidor
@@ -83,4 +84,34 @@ export function getSeccionesPermitidas(rol) {
 export function getToken() {
   try { return JSON.parse(localStorage.getItem(SESSION_KEY) || '{}')._token || '' }
   catch { return '' }
+}
+
+// ¿Hay una sesion con la que se pueda pedir datos?
+//
+// Por que hace falta: los hooks de datos se montan en App ANTES de la linea que
+// decide mostrar el login, asi que en la pantalla de entrada ya estaban pidiendo
+// trabajos, cotizaciones y liquidacion sin token. Desde que /api/supabase exige
+// sesion eso responde 401, los hooks lo tomaban por un fallo de red y encendian
+// "No se pudo conectar con el servidor" — un aviso falso, en una pantalla donde
+// todavia no hay con que conectarse, que seguia puesto hasta un minuto despues
+// de entrar.
+export function haySesion() {
+  return !!getToken()
+}
+
+// Aviso de "el servidor rechazo la sesion" (401 con token puesto). Existe
+// porque un 401 llegaba a la interfaz igual que un cable desconectado, y salia
+// "No se pudo conectar con el servidor": un mensaje que el boton Reintentar no
+// puede arreglar nunca, mientras el usuario sigue trabajando sobre datos viejos
+// creyendo que son los de la base. El token dura 24 h, asi que a quien deje la
+// app abierta de un dia para otro le pasa siempre.
+export const EVT_SESION_VENCIDA = 'taller:sesion-vencida'
+
+// Se avisa UNA sola vez: en una carga salen ~8 peticiones a la vez y todas
+// devolverian 401 juntas.
+let yaAvisado = false
+export function avisarSesionVencida() {
+  if (yaAvisado || !getToken()) return
+  yaAvisado = true
+  window.dispatchEvent(new CustomEvent(EVT_SESION_VENCIDA))
 }
