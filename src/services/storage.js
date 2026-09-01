@@ -41,6 +41,10 @@ export function lsPurgarCache() {
 // Claves usadas
 export const LS_KEYS = {
   TRABAJOS: 'trabajos',
+  // Cuando el servidor respondio por ultima vez. Se guarda aparte de los datos
+  // para que al recargar la pagina el sello diga la edad REAL del cache y no
+  // "hace 0s" por haberlo leido del navegador.
+  TRABAJOS_TIMESTAMP: 'trabajos_ts',
   OT_CONSECUTIVO: 'ot_consecutivo',
   CLIENTES_CACHE: 'clientes_cache',
   INVENTARIO_CACHE: 'inventario_cache',

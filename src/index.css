@@ -3647,3 +3647,26 @@ tbody tr:active{background:var(--fill-2)}
    que le da el bloque de tarjetas. Un modelo escrito sin espacios estira la
    columna y empuja al resto: overflow-wrap lo parte donde sea. */
 .tbl-cards--cot td.td-veh{ min-width:0; overflow-wrap:anywhere }
+
+/* ── Sello de frescura del tablero ───────────────────────────────────────── */
+/* Es un boton, pero se lee como una pastilla de estado: hereda .hd-chip y solo
+   se le quita el aspecto de boton del navegador. */
+.dsh-frescura{
+  border:0; cursor:pointer; font-family:inherit; vertical-align:baseline;
+  transition:filter .15s ease;
+}
+.dsh-frescura:hover{ filter:brightness(.94) }
+.dsh-frescura:focus-visible{ outline:2px solid var(--accent); outline-offset:2px }
+@media(max-width:600px){
+  /* La fecha y el sello pueden partirse en dos lineas. */
+  .dsh .hd-head__sub{ line-height:1.9 }
+  /* El sello mide 24px y debe seguir midiendolos: agrandarlo a 44 romperia la
+     linea de texto donde vive. Lo que se agranda es la ZONA QUE RESPONDE AL
+     DEDO, con un ::after transparente, para cumplir los 44px tactiles sin
+     tocar el dibujo. */
+  .dsh-frescura{ position:relative }
+  .dsh-frescura::after{
+    content:''; position:absolute; left:0; right:0;
+    top:50%; transform:translateY(-50%); height:var(--tap);
+  }
+}

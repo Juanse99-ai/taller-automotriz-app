@@ -1,7 +1,52 @@
-import { useMemo } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 import { fmt, fmtDate, whatsappLink } from '../utils/helpers'
 import { ESTADOS, TECNICOS, DIAS_ESTANCADO, TALLER } from '../utils/constants'
 import { Button } from '../components/ui'
+import { formatCacheAge } from '../hooks/useInventario'
+
+// Cuando las cifras dejan de ser de fiar sin que nada falle: la app consulta
+// cada 60s, pero SOLO con la pestaña a la vista. Una pestaña olvidada toda la
+// tarde no consulta ni una vez y no salta ningun aviso, asi que el tablero
+// puede estar enseñando plata de hace horas como si fuera de ahora.
+const VIEJO_MS = 5 * 60 * 1000
+
+// Sello de frescura: desde cuando son los numeros que estas viendo.
+function SelloFrescura({ ultimaSync, sinConexion, onRefrescar }) {
+  // Un reloj propio: sin esto el texto se congela en la edad que tenia al
+  // pintarse y diria "hace 3s" media hora despues. La hora vive en el estado y
+  // no se lee en el render: Date.now() durante el render es impuro y da
+  // resultados que cambian solos en cualquier repintado.
+  const [ahora, setAhora] = useState(() => Date.now())
+  useEffect(() => {
+    const id = setInterval(() => setAhora(Date.now()), 10000)
+    return () => clearInterval(id)
+  }, [])
+
+  const edad = ultimaSync ? ahora - ultimaSync : null
+  const viejo = edad == null || edad > VIEJO_MS
+  // El tono no decora: dice si puedes confiar en la cifra de al lado.
+  const tono = sinConexion ? 'bad' : viejo ? 'warn' : 'mute'
+  // formatCacheAge devuelve "sin sincronizar" tanto si no hay fecha como si la
+  // fecha es absurda (cache roto). Sin esta comprobacion saldria el sinsentido
+  // "Actualizado sin sincronizar".
+  const relativo = formatCacheAge(edad)
+  const texto = sinConexion
+    ? 'Sin conexión · datos guardados'
+    : relativo.startsWith('hace') ? `Actualizado ${relativo}` : 'Sin sincronizar'
+
+  return (
+    <button
+      type="button"
+      onClick={onRefrescar}
+      className={`hd-chip hd-chip--${tono} dsh-frescura`}
+      title={ultimaSync
+        ? `El servidor respondió a las ${new Date(ultimaSync).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })}. Toca para volver a consultar.`
+        : 'Todavía no se ha podido leer del servidor. Toca para intentarlo.'}
+    >
+      {texto}
+    </button>
+  )
+}
 
 // ── Icons ─────────────────────────────────────────────────────────────────────
 const IcAlert = () => (
@@ -79,7 +124,7 @@ function chipEstado(estado) {
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
-export default function Dashboard({ trabajos = [], onNavigate, user }) {
+export default function Dashboard({ trabajos = [], onNavigate, user, ultimaSync = 0, sinConexion = false, onRefrescar }) {
   const now = new Date()
 
   // ── KPI stats ──────────────────────────────────────────────────────────────
@@ -396,7 +441,11 @@ export default function Dashboard({ trabajos = [], onNavigate, user }) {
       <div className="hd-head">
         <div className="hd-head__t">
           <h1>Hola{user?.nombre ? `, ${user.nombre.split(' ')[0]}` : ''}</h1>
-          <div className="hd-head__sub">{fechaCap}</div>
+          <div className="hd-head__sub">
+            {fechaCap}
+            {' · '}
+            <SelloFrescura ultimaSync={ultimaSync} sinConexion={sinConexion} onRefrescar={onRefrescar} />
+          </div>
         </div>
         <div className="hd-head__sp" />
         {onNavigate && (

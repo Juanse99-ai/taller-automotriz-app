@@ -94,6 +94,15 @@ export function useTrabajos() {
   const [trabajos, setTrabajos] = useState(() => lsGet(LS_KEYS.TRABAJOS, []))
   const [loading, setLoading] = useState(true)
   const [connectionError, setConnectionError] = useState(false)
+  // Momento de la ultima respuesta BUENA del servidor. Arranca del navegador:
+  // si la pagina se abre con datos de cache, la edad tiene que contar desde que
+  // se trajeron, no desde ahora.
+  const [ultimaSync, setUltimaSync] = useState(() => lsGet(LS_KEYS.TRABAJOS_TIMESTAMP, 0))
+  const marcarSincronizado = useCallback(() => {
+    const ahora = Date.now()
+    lsSet(LS_KEYS.TRABAJOS_TIMESTAMP, ahora)
+    setUltimaSync(ahora)
+  }, [])
   // Ids que se guardaron en LOCAL pero no llegaron al servidor. sincronizar() ya
   // los reintenta solo; esto existe para poder DECIRLO. Hasta ahora fallar era un
   // console.warn: la OT se veia creada en el dashboard y en la base no existia,
@@ -230,6 +239,7 @@ export function useTrabajos() {
       const sbData = await fetchTrabajos()
       servidorRespondioRef.current = true
       setConnectionError(false)
+      marcarSincronizado()
       const normalized = sbData.map(normalizar)
       registrarMaxOtRemoto(normalized) // incluye borradas: el consecutivo no retrocede
 
@@ -300,6 +310,7 @@ export function useTrabajos() {
     try {
       const sbData = await fetchTrabajos()
       servidorRespondioRef.current = true // ya sabemos el máximo real → numerar OT es seguro
+      marcarSincronizado()
       if (sbData.length > 0) {
         const normalized = sbData.map(normalizar)
         registrarMaxOtRemoto(normalized) // incluye borradas: el consecutivo no retrocede
@@ -434,7 +445,7 @@ export function useTrabajos() {
   }, [])
 
   return {
-    trabajos, loading, connectionError, sinSubir,
+    trabajos, loading, connectionError, sinSubir, ultimaSync,
     agregarTrabajo, actualizarTrabajo, eliminarTrabajo,
     recargar: cargarInicial,
     sincronizar,

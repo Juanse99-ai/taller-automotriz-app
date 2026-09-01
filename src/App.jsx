@@ -290,7 +290,10 @@ export default function App() {
     }
     switch (section) {
       case 'dashboard':
-        return <Dashboard trabajos={trabajosHook.trabajos} loading={trabajosHook.loading} onNavigate={navigate} user={user} />
+        return <Dashboard trabajos={trabajosHook.trabajos} loading={trabajosHook.loading} onNavigate={navigate} user={user}
+          ultimaSync={trabajosHook.ultimaSync}
+          sinConexion={trabajosHook.connectionError}
+          onRefrescar={() => trabajosHook.sincronizar()} />
       case 'trabajos':
         {/* onAutoFacturar solo si el rol puede entrar a Cuentti: sin esto, el
            jefe de taller veía el botón "Cobrar" y aterrizaba en "No tienes
