@@ -5,20 +5,61 @@ import Toast from './components/Toast'
 import Login from './components/Login'
 // Páginas por demanda (React.lazy): cada una es su propio chunk, así el bundle
 // inicial baja y las libs pesadas (jspdf, gsap) viajan solo con la página que las usa.
-const Dashboard = lazy(() => import('./pages/Dashboard'))
-const Trabajos = lazy(() => import('./pages/Trabajos'))
-const Recepcion = lazy(() => import('./pages/Recepcion'))
-const Mecanicos = lazy(() => import('./pages/Mecanicos'))
-const Cotizaciones = lazy(() => import('./pages/Cotizaciones'))
-const Inventario = lazy(() => import('./pages/Inventario'))
-const Liquidacion = lazy(() => import('./pages/Liquidacion'))
-const Reportes = lazy(() => import('./pages/Reportes'))
-const Inspecciones = lazy(() => import('./pages/Inspecciones'))
-const CuenttiPanel = lazy(() => import('./pages/CuenttiPanel'))
-const Clientes = lazy(() => import('./pages/Clientes'))
-const Vehiculos = lazy(() => import('./pages/Vehiculos'))
-const Usuarios = lazy(() => import('./pages/Usuarios'))
-const CRM = lazy(() => import('./pages/CRM'))
+// Cada seccion se descarga aparte, con el numero de version en el nombre del
+// archivo. Cuando se publica una version nueva, una pestaña que lleve horas
+// abierta sigue pidiendo los nombres VIEJOS, que ya no existen en el servidor:
+// el navegador falla con "Importing a module script failed" y la seccion no
+// abre. La app no esta rota, la pestaña quedo vieja.
+//
+// Asi que se recarga sola UNA vez por seccion. La marca lleva el nombre de la
+// seccion a proposito: con una marca global, la recarga cargaba bien el
+// Dashboard, eso borraba la marca, y volver a entrar a la seccion rota
+// recargaba otra vez. Bucle infinito de recargas. Con marca por seccion, que
+// el Dashboard cargue no dice nada sobre Vehiculos.
+//
+// Va en sessionStorage y no en una variable porque tiene que sobrevivir justo
+// a la recarga que ella misma provoca.
+const marca = {
+  clave: (nombre) => `taller_recarga:${nombre}`,
+  hay: (n) => { try { return !!sessionStorage.getItem(marca.clave(n)) } catch { return false } },
+  poner: (n) => { try { sessionStorage.setItem(marca.clave(n), '1') } catch { /* modo privado */ } },
+  quitar: (n) => { try { sessionStorage.removeItem(marca.clave(n)) } catch { /* modo privado */ } },
+}
+
+function seccion(nombre, importar) {
+  return lazy(() => importar().then(mod => {
+    // ESTA seccion cargo bien: se suelta SU marca, para que un despliegue
+    // futuro pueda volver a recargar por ella.
+    marca.quitar(nombre)
+    return mod
+  }).catch(err => {
+    if (!marca.hay(nombre)) {
+      marca.poner(nombre)
+      window.location.reload()
+      // A proposito no se resuelve: la pagina se esta yendo y resolver aqui
+      // alcanzaria a pintar un error que el usuario no necesita ver.
+      return new Promise(() => {})
+    }
+    // Ya se recargo por esta seccion y sigue fallando: es un fallo de verdad
+    // (sin internet, archivo dañado) y hay que enseñarlo, no recargar en bucle.
+    throw err
+  }))
+}
+
+const Dashboard = seccion('Dashboard', () => import('./pages/Dashboard'))
+const Trabajos = seccion('Trabajos', () => import('./pages/Trabajos'))
+const Recepcion = seccion('Recepcion', () => import('./pages/Recepcion'))
+const Mecanicos = seccion('Mecanicos', () => import('./pages/Mecanicos'))
+const Cotizaciones = seccion('Cotizaciones', () => import('./pages/Cotizaciones'))
+const Inventario = seccion('Inventario', () => import('./pages/Inventario'))
+const Liquidacion = seccion('Liquidacion', () => import('./pages/Liquidacion'))
+const Reportes = seccion('Reportes', () => import('./pages/Reportes'))
+const Inspecciones = seccion('Inspecciones', () => import('./pages/Inspecciones'))
+const CuenttiPanel = seccion('CuenttiPanel', () => import('./pages/CuenttiPanel'))
+const Clientes = seccion('Clientes', () => import('./pages/Clientes'))
+const Vehiculos = seccion('Vehiculos', () => import('./pages/Vehiculos'))
+const Usuarios = seccion('Usuarios', () => import('./pages/Usuarios'))
+const CRM = seccion('CRM', () => import('./pages/CRM'))
 
 // Fallback mientras carga el chunk de una página.
 function CargandoPagina() {
@@ -39,6 +80,10 @@ class ErrorBoundary extends Component {
   static getDerivedStateFromError(error) { return { error } }
   render() {
     if (this.state.error) {
+      // Los navegadores redactan este fallo cada uno a su manera; se mira por
+      // trozos en vez de por texto exacto.
+      const msg = String(this.state.error?.message || '')
+      const esVersionVieja = /importing a module script failed|failed to fetch dynamically imported module|error loading dynamically imported module|dynamically imported module/i.test(msg)
       return (
         <div style={{ padding: 24 }}>
           <div className="card" style={{ background: 'var(--red-100)', border: '1px solid rgba(220,38,38,.32)' }}>
@@ -47,11 +92,24 @@ class ErrorBoundary extends Component {
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--red-600)" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                   <circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/>
                 </svg>
-                <h3 style={{ color: 'var(--red-700)', margin: 0, fontSize: 16, fontWeight: 800 }}>Error en esta sección</h3>
+                <h3 style={{ color: 'var(--red-700)', margin: 0, fontSize: 16, fontWeight: 700 }}>
+                  {esVersionVieja ? 'Se actualizó la aplicación' : 'Error en esta sección'}
+                </h3>
               </div>
-              <p style={{ fontSize: 14.5, color: 'var(--text-2)', marginBottom: 14 }}>{this.state.error?.message || 'Error desconocido'}</p>
+              <p style={{ fontSize: 14.5, color: 'var(--text-2)', marginBottom: 14 }}>
+                {esVersionVieja
+                  ? 'Esta pestaña quedó con una versión anterior. Recarga la página para seguir; no se pierde nada de lo que hayas guardado.'
+                  : (this.state.error?.message || 'Error desconocido')}
+              </p>
+              {/* Un fallo de version NO se arregla volviendo a pintar: hay que
+                  pedirle al servidor la version nueva. Por eso este boton
+                  recarga en vez de limpiar el estado. */}
               <button className="btn btn-primary btn-sm"
-                onClick={() => this.setState({ error: null })}>Reintentar</button>
+                onClick={() => esVersionVieja
+                  ? window.location.reload()
+                  : this.setState({ error: null })}>
+                {esVersionVieja ? 'Recargar' : 'Reintentar'}
+              </button>
             </div>
           </div>
         </div>
