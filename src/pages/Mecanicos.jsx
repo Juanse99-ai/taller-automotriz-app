@@ -453,13 +453,13 @@ const ESTILOS = `
 /* El mockup separa cabecera y tarjeta 10px (columna con gap:10). */
 .mec-card{margin-top:10px}
 .mec-panel{margin-top:10px;padding:15px 20px}
-.btn.mec-add{height:40px;padding:0 18px;font-size:13.5px;font-weight:700;gap:8px;box-shadow:var(--accent-shadow)}
+.btn.mec-add{padding:0 18px;gap:8px;box-shadow:var(--accent-shadow)}  /* alto y letra: los del primario (44 / 15) */
 .btn.mec-add svg{width:17px;height:17px;stroke-width:2.4}
 /* El riel del segmentado tiene que HUNDIRSE respecto al fondo de la
    pagina: --chip (#f1f5f9) es mas claro que --bg (#e9edf2) y brillaba.
    --border es el token mas cercano al #e6eaf0 del mockup. */
-.mec-seg{height:40px;background:var(--border)}
-.mec-seg .hd-seg__i{height:34px;padding:0 17px;font-size:13px}
+.mec-seg{background:var(--border)}  /* alto: el del sistema (36 con items de 30) */
+.mec-seg .hd-seg__i{padding:0 17px;font-size:13px}
 .mec-fig .hd-fig__v{font-size:27px}
 
 /* --- Tabla: cabecera 30, fila 62, pie 40, margen lateral 20 --- */

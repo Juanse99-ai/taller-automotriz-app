@@ -173,22 +173,27 @@ const CSS_TRABAJOS = `
   .trab-page .hd-head__t h1{font-size:20px;letter-spacing:-.2px}
   .trab-page .hd-head__right{gap:8px}
   /* Accion principal: rectangulo de 34px, no pildora de 44 */
-  .trab-page .trab-new{height:34px;min-height:34px;padding:0 14px;gap:6px;
-    border-radius:var(--r-sm);font-size:12.5px;font-weight:700;box-shadow:none}
+  /* size="sm" como el resto de acciones de barra; 34px era un tercer alto. */
+  .trab-page .trab-new{padding:0 16px;gap:6px;box-shadow:none}  /* alto y letra: los de .btn-sm (38 / 13.5) */
   .trab-page .trab-new:hover{transform:none}
   .trab-page .trab-new svg{width:14px;height:14px;stroke-width:2.4}
 
   /* Segmentados: riel --border (el --chip casi no se distinguia del blanco
      de al lado) e inactivos en 400, no en 600 */
-  .trab-page .hd-seg{gap:0;height:auto;padding:2px;background:var(--border)}
-  .trab-page .hd-seg__i{height:auto;padding:7px 12px;font-size:11.5px;font-weight:400;color:var(--text-3)}
-  .trab-page .hd-seg__i.on{padding:7px 13px;font-weight:700;color:var(--text)}
+  .trab-page .hd-seg{gap:0;height:36px;padding:3px;background:var(--border)}  /* 36 como el riel del sistema */
+  /* Mismo segmentado que el resto de la app (30 dentro de 36). Estaba en 26px
+     con letra de 11.5: el mismo control media distinto en cada pantalla. */
+  .trab-page .hd-seg__i{height:30px;padding:0 13px;font-size:12.5px;font-weight:400;color:var(--text-3)}
+  .trab-page .hd-seg__i.on{font-weight:700;color:var(--text)}
 
-  /* Buscador y desplegable: rectangulo blanco con borde, no pildora gris */
-  .trab-page .hd-find{height:32px;padding:0 10px;background:var(--bg-raised);
-    border:1px solid var(--border-strong);border-radius:var(--r-md)}
+  /* Buscador: blanco con borde para distinguirlo del riel gris del segmentado,
+     pero con el alto (36) y la esquina (pastilla) de la fila de filtros: en una
+     misma fila todos los campos miden y se curvan igual. Estaba en 32 y
+     rectangular. */
+  .trab-page .hd-find{height:36px;padding:0 12px;background:var(--bg-raised);
+    border:1px solid var(--border-strong)}
   .trab-page .hd-find svg{width:14px;height:14px}
-  .trab-page .hd-find input{font-size:12px}
+  .trab-page .hd-find input{font-size:12.5px}
   .trab-page .trab-drop{position:relative;display:flex;align-items:center;flex:none}
   .trab-page .trab-drop > .hd-drop{width:190px;height:32px;padding:0 28px 0 10px;
     border-color:var(--border-strong);border-radius:var(--r-md);font-size:12px;color:var(--text-2);
@@ -214,6 +219,9 @@ const CSS_TRABAJOS = `
     padding:0;border-radius:var(--r-xs)}
   .trab-page .hd-row .btn-icon.btn-sm svg{width:14px;height:14px}
   .trab-page .hd-row .btn-icon.btn-sm:hover{transform:none}
+  /* Llamar / WhatsApp en la ficha: 32px en escritorio. Iban en linea y ninguna
+     media query podia subirlos. */
+  .trab-page .trab-ficha .btn-icon.btn-sm{width:32px;height:32px;min-width:32px;min-height:32px;padding:0}
   /* El mockup no trae pie, pero el pie lleva datos (cuantas y cuanto suman):
      no se tira, baja de jerarquia a linea de apoyo. */
   .trab-page .hd-tbl__f{height:30px;padding:0 12px;background:none;
@@ -241,6 +249,15 @@ const CSS_TRABAJOS = `
   .trab-page .trab-detail__b{flex:1;min-height:0;overflow-y:auto;
     display:flex;flex-direction:column;gap:12px}
 }
+/* Movil: lo unico que la geometria generica de index.css no resuelve sola.
+   Va FUERA del bloque de escritorio: una @media (max-width) anidada dentro de
+   otra (min-width:961px) no se cumple nunca. */
+@media (max-width:600px){
+  /* El primario a ancho completo y 48 de alto, igual que "Agregar tecnico" en
+     Mecanicos: solo en su fila, una pastilla de 127px parecia secundario. */
+  .trab-page .trab-new{width:100%;height:var(--tap-lg);min-height:var(--tap-lg);font-size:15px}
+}
+
 `
 
 export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, onAutoFacturar }) {
@@ -829,7 +846,7 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
               Cancelados<span>{conteos[ESTADOS.CANCELADO]}</span>
             </button>
           )}
-          <Button variant="primary" className="trab-new" onClick={() => setVista('nuevo')}
+          <Button variant="primary" size="sm" className="trab-new" onClick={() => setVista('nuevo')}
             icon={<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>}>Nueva OT</Button>
         </div>
       </div>
@@ -1088,9 +1105,9 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
                           <div style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{selTrabajo.cliente || 'Cliente'}</div>
                           <div style={{ fontSize: 11.5, color: 'var(--text-3)' }}>{fmtTelefono(selTrabajo.telefonoCliente)}</div>
                         </div>
-                        <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
-                          <a href={`tel:${tel}`} className="btn btn-outline btn-sm btn-icon" aria-label="Llamar" title="Llamar" style={{ height: 32, width: 32 }}><IconPhone /></a>
-                          <a href={`https://wa.me/${wa}`} target="_blank" rel="noreferrer" className="btn btn-sm btn-icon" aria-label="WhatsApp" title="WhatsApp" style={{ height: 32, width: 32, background: 'var(--green-600)', color: '#fff' }}><IconChat /></a>
+                        <div className="trab-ficha" style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+                          <a href={`tel:${tel}`} className="btn btn-outline btn-sm btn-icon" aria-label="Llamar" title="Llamar"><IconPhone /></a>
+                          <a href={`https://wa.me/${wa}`} target="_blank" rel="noreferrer" className="btn btn-sm btn-icon" aria-label="WhatsApp" title="WhatsApp" style={{ background: 'var(--green-600)', color: '#fff' }}><IconChat /></a>
                         </div>
                       </div>
                     )

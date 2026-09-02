@@ -283,7 +283,7 @@ function InspeccionForm({ inspeccion, trabajos, onSave, onCancel }) {
 
   const LBL = { fontSize:10, lineHeight:1, fontWeight:600, letterSpacing:'.5px', color:'var(--text-4)', marginBottom:5, display:'flex', alignItems:'center', gap:6, whiteSpace:'nowrap' }
   const CAMPO = { height:44, width:'100%', padding:'0 12px', background:'var(--bg-subtle)', border:'1px solid var(--border-input)', borderRadius:11, fontSize:13.5, color:'var(--text)', fontFamily:'inherit', outline:'none' }
-  const chipFicha = <span style={{fontSize:8.5,fontWeight:700,letterSpacing:'.4px',color:'var(--ok-fg)',background:'var(--ok-bg)',padding:'3px 6px',borderRadius:'var(--radius-pill)'}}>DE LA FICHA</span>
+  const chipFicha = <span style={{fontSize:9.5,fontWeight:700,letterSpacing:'.4px',color:'var(--ok-fg)',background:'var(--ok-bg)',padding:'3px 6px',borderRadius:'var(--radius-pill)'}}>DE LA FICHA</span>
   const TONO = {
     bueno: { bg:'var(--ok-bg)', fg:'var(--ok-fg)' },
     sugerido: { bg:'var(--warn-bg)', fg:'var(--warn-fg)' },
@@ -434,7 +434,7 @@ function InspeccionForm({ inspeccion, trabajos, onSave, onCancel }) {
                             return (
                               <button key={key} type="button" title={val.label} aria-label={val.label} aria-pressed={active}
                                 style={{width:46,height:38,display:'grid',placeItems:'center',borderRadius:'var(--radius-pill)',border:'none',cursor:'pointer',
-                                  background:active ? t.bg : 'transparent', color:active ? t.fg : 'var(--text-5)', fontSize:15, fontWeight:800, fontFamily:'inherit'}}
+                                  background:active ? t.bg : 'transparent', color:active ? t.fg : 'var(--text-5)', fontSize:15, fontWeight:700, fontFamily:'inherit'}}
                                 onClick={() => updateItem(item.id, 'estado', key)}>
                                 {key === 'bueno' ? <IcTick w={16} /> : key === 'urgente' ? <IcCross w={14} /> : '!'}
                               </button>
@@ -502,13 +502,13 @@ export function InspeccionDetalle({ inspeccion, onVolver }) {
                 <circle cx="50" cy="50" r="42" fill="none" stroke={pct>=80?'var(--green-500)':pct>=50?'var(--amber-500)':'var(--red-500)'} strokeWidth="9" strokeLinecap="round" strokeDasharray={`${pct*2.64} 264`}/>
               </svg>
               <div style={{position:'absolute',inset:0,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center'}}>
-                <div style={{fontSize:38,fontWeight:800,letterSpacing:'-.02em',color:pct>=80?'var(--green-600)':pct>=50?'var(--amber-600)':'var(--red-600)'}}>{pct}%</div>
+                <div style={{fontSize:38,fontWeight:700,letterSpacing:'-.02em',color:pct>=80?'var(--green-600)':pct>=50?'var(--amber-600)':'var(--red-600)'}}>{pct}%</div>
                 <div style={{fontSize:11,color:'var(--text-3)',fontWeight:600}}>en buen estado</div>
               </div>
             </div>
             <div style={{display:'flex',gap:18,marginTop:14,marginBottom:6}}>
               {[{n:buenos.length,l:'Buenos',c:'var(--green-600)'},{n:sugeridos.length,l:'Sugeridos',c:'var(--amber-600)'},{n:urgentes.length,l:'Urgentes',c:'var(--red-600)'}].map(s=>(
-                <div key={s.l} style={{textAlign:'center'}}><div style={{fontSize:22,fontWeight:800,color:s.c,lineHeight:1}}>{s.n}</div><div style={{fontSize:10.5,fontWeight:700,letterSpacing:'.04em',color:'var(--text-3)',textTransform:'uppercase',marginTop:3}}>{s.l}</div></div>
+                <div key={s.l} style={{textAlign:'center'}}><div style={{fontSize:22,fontWeight:700,color:s.c,lineHeight:1}}>{s.n}</div><div style={{fontSize:10.5,fontWeight:700,letterSpacing:'.04em',color:'var(--text-3)',textTransform:'uppercase',marginTop:3}}>{s.l}</div></div>
               ))}
             </div>
           </div>
@@ -570,7 +570,7 @@ function InspeccionItemView({ item }) {
   const ic = item.estado === 'urgente' ? '✕' : item.estado === 'sugerido' ? '!' : '✓'
   return (
     <div style={{display:'flex',gap:12,padding:'12px 0',borderBottom:'1px solid var(--border)',alignItems:'flex-start'}}>
-      <span style={{width:24,height:24,borderRadius:'50%',background:est.bg,color:est.color,display:'inline-flex',alignItems:'center',justifyContent:'center',fontWeight:800,fontSize:12,flexShrink:0,marginTop:2}}>{ic}</span>
+      <span style={{width:24,height:24,borderRadius:'50%',background:est.bg,color:est.color,display:'inline-flex',alignItems:'center',justifyContent:'center',fontWeight:700,fontSize:12,flexShrink:0,marginTop:2}}>{ic}</span>
       <div style={{flex:1}}>
         <div style={{fontWeight:600,fontSize:13.5,color:'var(--text)'}}>{item.categoria}: {item.nombre}</div>
         {item.comentario && <div style={{fontSize:12.5,color:'var(--text-3)',marginTop:3,lineHeight:1.5}}>{item.comentario}</div>}

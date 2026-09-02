@@ -592,7 +592,7 @@ export default function Recepcion({ hook, vehiculosHook, clientesHook, notify })
                       <span className="hd-clip" style={{ flex: 1, minWidth: 0, fontSize: 10.5, color: 'var(--text-3)' }}>{[t.marca, t.modelo, t.ano].filter(Boolean).join(' ') || '—'}</span>
                       <span className={`hd-av av av-${(parseInt(t.tecnicoId) || 1) % 5 + 1}`}>{tecIniciales(t.tecnicoId)}</span>
                       <span className="hd-clip" style={{ flex: 'none', maxWidth: 84, fontSize: 10.5, color: 'var(--text-2)' }}>{TECNICOS.find(tc => tc.id === parseInt(t.tecnicoId))?.nombre || 'Sin asignar'}</span>
-                      <span className={`hd-chip hd-chip--${chipEstado(t.estado)}`} style={{ flex: 'none', fontSize: 8.5 }}>{t.estado}</span>
+                      <span className={`hd-chip hd-chip--${chipEstado(t.estado)}`} style={{ flex: 'none' }}>{t.estado}</span>
                     </div>
                   </div>
                 ))}

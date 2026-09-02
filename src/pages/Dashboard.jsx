@@ -453,7 +453,6 @@ export default function Dashboard({ trabajos = [], onNavigate, user, ultimaSync 
             <Button
               variant="primary"
               onClick={() => onNavigate('recepcion')}
-              style={{ height: 40, padding: '0 18px', borderRadius: 10, fontSize: 13.5, fontWeight: 700, boxShadow: 'var(--accent-shadow)' }}
             >
               <IcPlus /> Recibir vehículo
             </Button>

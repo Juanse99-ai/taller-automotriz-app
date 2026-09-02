@@ -1426,8 +1426,8 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
         .liq-line__v{ margin-left:auto; min-width:112px; text-align:right; white-space:nowrap; }
         .liq-slot{ width:28px; flex-shrink:0; }     /* espejo del control de las fichas */
         .liq-neto__tot{ display:flex; align-items:baseline; gap:12px; padding:12px 12px 0; border-top:2px solid var(--border-strong); margin-top:8px; }
-        .liq-neto__tot .l{ font-size:12.5px; font-weight:800; letter-spacing:.5px; text-transform:uppercase; color:var(--text); }
-        .liq-neto__tot .v{ margin-left:auto; min-width:112px; text-align:right; font-size:30px; font-weight:800; letter-spacing:-.02em; }
+        .liq-neto__tot .l{ font-size:12.5px; font-weight:700; letter-spacing:.5px; text-transform:uppercase; color:var(--text); }
+        .liq-neto__tot .v{ margin-left:auto; min-width:112px; text-align:right; font-size:30px; font-weight:700; letter-spacing:-.02em; }
         /* Ajustes: UNA sola lista (aportes, diario y deudas juntos).
            Estructura común: texto · monto · control, con el control SIEMPRE en el
            mismo hueco derecho (× para quitar un aporte, casilla para descontar
@@ -1437,7 +1437,7 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
         .liq-aj.on{ background:color-mix(in srgb, var(--primary) 10%, var(--bg-subtle)); }
         .liq-aj__txt{ flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
         .liq-aj__val{ min-width:112px; text-align:right; font-weight:700; white-space:nowrap; }
-        .liq-grp{ font-size:11px; font-weight:800; letter-spacing:.6px; text-transform:uppercase; color:var(--text-4); padding:0 12px; }
+        .liq-grp{ font-size:11px; font-weight:700; letter-spacing:.6px; text-transform:uppercase; color:var(--text-4); padding:0 12px; }
         /* Estado vacío del paso 3 (sin trabajos marcados): reemplaza TODO el
            desglose — antes "Mano de obra $0" convivía con ajustes reales
            (ej. "Deuda $100.000") y parecía un error. Apple HIG: nunca mostrar
@@ -1719,7 +1719,7 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
       <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 28, flexWrap: 'wrap', padding: '4px 2px 20px', borderBottom: '1px solid var(--border)', marginBottom: 24 }}>
         <div style={{ minWidth: 0 }}>
           <div className="eyebrow">Total a pagar · cierre actual</div>
-          <div className="mono" style={{ fontWeight: 800, fontSize: 27, letterSpacing: '-.01em', lineHeight: 1.05, color: 'var(--text)', margin: '6px 0 8px' }}>
+          <div className="mono" style={{ fontWeight: 700, fontSize: 27, letterSpacing: '-.01em', lineHeight: 1.05, color: 'var(--text)', margin: '6px 0 8px' }}>
             {fmt(totalNomina)}
           </div>
           <div style={{ fontSize: 13.5, color: 'var(--text-3)' }}>
@@ -2195,7 +2195,7 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
                     <span style={{ color: 'var(--text-3)' }}> · {fechaCorta(m.fecha)}{m.nota ? ` · ${m.nota}` : ''}</span>
                   </span>
                   <span className="liq-aj__val mono" style={{ color: 'var(--amber-700)' }}>− {fmt(m.monto)}</span>
-                  <Button variant="ghost" size="sm" className="btn-icon" aria-label="Quitar ajuste" title="Quitar" style={{ width: 28, height: 28, flexShrink: 0 }} onClick={() => setDialog({
+                  <Button variant="ghost" size="sm" className="btn-icon liq-aj__x" aria-label="Quitar ajuste" title="Quitar" onClick={() => setDialog({
                     title: 'Eliminar movimiento',
                     lead: `${tipoLabel(m.tipo)} · ${fmt(m.monto)} · ${fechaCorta(m.fecha)}`,
                     confirmLabel: 'Sí, eliminar', tone: 'danger',

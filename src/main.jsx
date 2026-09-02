@@ -4,7 +4,7 @@ import { createRoot } from 'react-dom/client'
 // IBM Plex, auto-hospedada. Antes la app tomaba la fuente del sistema, asi que
 // se veia distinta en el Mac (SF Pro), en el PC de recepcion (Segoe UI) y en el
 // celular del mecanico (Roboto). Solo los cuatro pesos que el CSS pide: 400,
-// 500, 600 y 700. Los nueve font-weight:800 sueltos caen al 700, que es el tope
+// 500, 600 y 700. Los nueve font-weight:700 sueltos caen al 700, que es el tope
 // de Plex, sin negrita sintetica.
 import '@fontsource/ibm-plex-sans/latin-400.css'
 import '@fontsource/ibm-plex-sans/latin-500.css'

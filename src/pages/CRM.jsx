@@ -598,7 +598,7 @@ export default function CRM({ trabajos = [], clientes, vehiculos, notify, actual
         <div className="modal-overlay" onClick={() => setContactoActivo(null)}>
           <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 560 }}>
             <div className="modal__h">
-              <h3 style={{ margin: 0, fontSize: 16, fontWeight: 800 }}>Contactar a {contactoActivo.cliente.nombre}</h3>
+              <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700 }}>Contactar a {contactoActivo.cliente.nombre}</h3>
               <Button variant="ghost" size="sm" onClick={() => setContactoActivo(null)}><IconX /></Button>
             </div>
             <div className="modal__b" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
@@ -629,7 +629,7 @@ export default function CRM({ trabajos = [], clientes, vehiculos, notify, actual
                   variant="primary"
                   onClick={() => enviarPorCanal('whatsapp')}
                   disabled={!contactoActivo.cliente.telefono}
-                  style={{ background: '#16a34a', flex: '1 1 auto' }}>
+                  style={{ background: 'var(--green-600)', flex: '1 1 auto' }}>
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
                   WhatsApp{!contactoActivo.cliente.telefono && ' (sin tel)'}
                 </Button>

@@ -131,7 +131,7 @@ const CLIENTES_CSS = `
 /* Sólo en escritorio: por debajo de 961px manda el objetivo táctil de 44px que
    ya fija index.css, y no se toca. */
 @media(min-width:961px){
-  .cli-pg .hd-head__right .btn{height:40px;min-height:0;font-size:13px;font-weight:700}
+  .cli-pg .hd-head__right .btn{font-weight:700}  /* alto: el del sistema; min-height:0 anulaba los 44 tactiles */
   .cli-pg .hd-head__right .btn-outline{padding:0 17px;border-width:1.5px;color:var(--text-2)}
   .cli-pg .hd-head__right .btn-primary{padding:0 18px;font-size:13.5px;box-shadow:var(--accent-shadow)}
   .cli-pg .hd-head__right .btn-outline svg{width:15px;height:15px}
@@ -991,7 +991,7 @@ export default function Clientes({ clientes, vehiculos, trabajos = [], notify })
               <div className="card__b" style={{ borderTop: '1px solid var(--border)' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <span style={{ color: 'var(--text-3)', fontSize: 13.5 }}>Total facturado ({facturasCliente.length})</span>
-                  <span className="c-mono" style={{ fontWeight: 800, fontSize: 15.5 }}>{fmt(totalFacturado)}</span>
+                  <span className="c-mono" style={{ fontWeight: 700, fontSize: 15.5 }}>{fmt(totalFacturado)}</span>
                 </div>
                 <p style={{ fontSize: 12, color: 'var(--text-3)', margin: '8px 0 0' }}>
                   Solo facturas emitidas desde la app. El histórico anterior a la app vive en Cuentti.

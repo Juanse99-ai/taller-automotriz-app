@@ -640,7 +640,7 @@ export default function Reportes({ trabajos, loading = false, notify }) {
               </div>
               <div className="rep-marg__bar">
                 <span style={{ width: `${pRep}%`, background: 'var(--accent)' }} />
-                <span style={{ width: `${100 - pRep}%`, background: '#93b4f7' }} />
+                <span style={{ width: `${100 - pRep}%`, background: 'color-mix(in srgb, var(--accent) 45%, var(--bg-raised))' }} />
               </div>
               <div className="rep-marg__cols">
                 <div className="rep-marg__c">
@@ -653,7 +653,7 @@ export default function Reportes({ trabajos, loading = false, notify }) {
                   </div>
                 </div>
                 <div className="rep-marg__c">
-                  <div className="rep-marg__cl"><span className="rep-marg__dot" style={{ background: '#93b4f7' }} />MANO DE OBRA</div>
+                  <div className="rep-marg__cl"><span className="rep-marg__dot" style={{ background: 'color-mix(in srgb, var(--accent) 45%, var(--bg-raised))' }} />MANO DE OBRA</div>
                   <div className="rep-marg__cv">{fmt(mo)}</div>
                   <div className="rep-marg__cn">
                     Utilidad por mano de obra {fmt(stats.utilidadMO)} · {mo > 0 ? Math.round(stats.utilidadMO / mo * 100) : 0}%

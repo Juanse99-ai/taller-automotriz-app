@@ -910,7 +910,7 @@ export default function PortalCliente() {
            para que el saldo y el botón no queden espichados en un renglón. */
         .pc-fx { display: grid; grid-template-columns: 1fr auto auto; align-items: center; gap: 10px 18px; padding: 14px 20px }
         .pc-fx__money { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; text-align: right }
-        .pc-fx__saldo { font-size: 20px; font-weight: 800; letter-spacing: -.01em; line-height: 1.1 }
+        .pc-fx__saldo { font-size: 20px; font-weight: 700; letter-spacing: -.01em; line-height: 1.1 }
         .pc-fx__desglose { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 4px 14px; font-size: 12.5px; color: var(--text-3); margin-top: 2px }
         .pc-fx__cta { text-align: right }
         .pc-pill { display: inline-block; background: var(--soft-amber); color: var(--amber-700);
@@ -934,7 +934,7 @@ export default function PortalCliente() {
             {facturasPendientes.length > 1 && (
               <div style={{textAlign:'right'}}>
                 <div className="eyebrow">Saldo pendiente total</div>
-                <div className="mono" style={{fontSize:20,fontWeight:800,letterSpacing:'-.01em'}}>{fmt(totalPorPagar)}</div>
+                <div className="mono" style={{fontSize:20,fontWeight:700,letterSpacing:'-.01em'}}>{fmt(totalPorPagar)}</div>
               </div>
             )}
           </div>
@@ -1007,7 +1007,7 @@ export default function PortalCliente() {
                     </div>
                   </div>
                   <div style={{textAlign:'right'}}>
-                    <div className="mono" style={{fontSize:17,fontWeight:800,color:'var(--green-700)'}}>{fmt(c.total)}</div>
+                    <div className="mono" style={{fontSize:17,fontWeight:700,color:'var(--green-700)'}}>{fmt(c.total)}</div>
                     <div style={{fontSize:11,color:'var(--text-4)'}}>IVA incluido</div>
                   </div>
                 </div>
@@ -1045,7 +1045,7 @@ export default function PortalCliente() {
               return (
                 <button key={v.placa} type="button" className={`veh-card${sel?' is-sel':''}`} onClick={()=>elegirVehiculo(v.placa)}>
                   <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',gap:8}}>
-                    <span className="mono" style={{fontSize:18,fontWeight:800,letterSpacing:'-.01em'}}>{v.placa}</span>
+                    <span className="mono" style={{fontSize:18,fontWeight:700,letterSpacing:'-.01em'}}>{v.placa}</span>
                     <span className={`badge ${est.cls}`} style={{fontWeight:700}}>{est.label}</span>
                   </div>
                   <div style={{fontSize:13,color:'var(--text-3)',marginTop:3}}>{[v.marca,v.modelo].filter(Boolean).join(' ')||'Vehículo'}</div>
@@ -1249,7 +1249,7 @@ export default function PortalCliente() {
               {vehiculos.map(v => (
                 <div key={v.placa}>
                   <div style={{display:'flex',alignItems:'baseline',gap:8,marginBottom:6,paddingBottom:6,borderBottom:'1px solid var(--border)'}}>
-                    <span className="mono" style={{fontWeight:800,fontSize:15}}>{v.placa}</span>
+                    <span className="mono" style={{fontWeight:700,fontSize:15}}>{v.placa}</span>
                     <span style={{fontSize:13,color:'var(--text-3)'}}>{[v.marca,v.modelo].filter(Boolean).join(' ')}</span>
                     <span style={{fontSize:12.5,color:'var(--text-4)',marginLeft:'auto'}}>{v.trabajos.length} {v.trabajos.length===1?'servicio':'servicios'}</span>
                   </div>
@@ -1338,10 +1338,10 @@ export default function PortalCliente() {
                 <div style={{minWidth:0}}>
                   <div style={{fontSize:12.5,color:'var(--text-3)'}}>{fmtDate(t.fecha)}{t.otCodigo ? ` · ${t.otCodigo}` : ''}</div>
                   {esSinVehiculo(t) ? (
-                    <div style={{fontSize:19,fontWeight:800,letterSpacing:'-.01em',marginTop:2}}>Servicio sin vehículo</div>
+                    <div style={{fontSize:19,fontWeight:700,letterSpacing:'-.01em',marginTop:2}}>Servicio sin vehículo</div>
                   ) : (
                     <>
-                      <div className="mono" style={{fontSize:19,fontWeight:800,letterSpacing:'-.01em',marginTop:2}}>{t.placa}</div>
+                      <div className="mono" style={{fontSize:19,fontWeight:700,letterSpacing:'-.01em',marginTop:2}}>{t.placa}</div>
                       <div style={{fontSize:13,color:'var(--text-3)'}}>{[t.marca,t.modelo,t.ano].filter(Boolean).join(' ') || '—'}</div>
                     </>
                   )}
@@ -1372,7 +1372,7 @@ export default function PortalCliente() {
                         <div className="mono" style={{fontSize:14,fontWeight:700,whiteSpace:'nowrap'}}>{fmt(linea(i))}</div>
                       </div>
                     ))}
-                    <div style={{display:'flex',justifyContent:'space-between',padding:'12px 0',fontSize:15.5,fontWeight:800}}>
+                    <div style={{display:'flex',justifyContent:'space-between',padding:'12px 0',fontSize:15.5,fontWeight:700}}>
                       <span>Total</span>
                       {/* En negro, no en verde: en esta app el verde significa "pagado"
                           o "listo". Usarlo tambien para la plata hace que un total
@@ -1403,7 +1403,7 @@ export default function PortalCliente() {
               {((t.tecnicoId && tecNombre(t.tecnicoId)) || facturas[t.id]) && (
                 <div style={{margin:'0 20px 12px',display:'flex',alignItems:'center',gap:10}}>
                   {t.tecnicoId && tecNombre(t.tecnicoId) && (<>
-                  <div style={{width:34,height:34,borderRadius:'50%',background:'var(--navy-800,#152544)',color:'#fff',display:'flex',alignItems:'center',justifyContent:'center',fontWeight:800,fontSize:12,flexShrink:0}}>
+                  <div style={{width:34,height:34,borderRadius:'50%',background:'var(--navy-800,#152544)',color:'#fff',display:'flex',alignItems:'center',justifyContent:'center',fontWeight:700,fontSize:12,flexShrink:0}}>
                     {tecNombre(t.tecnicoId).split(' ').map(x=>x[0]).slice(0,2).join('')}
                   </div>
                   <div>

@@ -1012,7 +1012,7 @@ function CotizacionForm({ cotizacion, trabajos = [], onSave, onCancel }) {
               Antes era un div suelto con .card-title y estilos en linea: quedaba
               sin el relleno ni la linea inferior de las demas tarjetas, y por eso
               se veia a medio terminar. (Nota: .card__h h3 tambien declara
-              font-weight:800, igual que .card-title; no es el motivo del cambio.
+              font-weight:700, igual que .card-title; no es el motivo del cambio.
               Se renderiza como 700 porque solo se cargan esos pesos de Plex.) */}
           <div className="card__h">
             <h3>Ítems</h3>

@@ -224,8 +224,8 @@ export default function TopBar({ title, subtitle, onToggleSidebar, sidebarOpen, 
             <BellIcon />
             {pendientesCount > 0 && (
               <span style={{
-                position: 'absolute', top: 2, right: 2, width: 16, height: 16,
-                background: '#ef4444', borderRadius: '50%', fontSize: 9,
+                position: 'absolute', top: 1, right: 1, width: 18, height: 18,
+                background: 'var(--red-500)', borderRadius: '50%', fontSize: 10,
                 color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center',
                 fontWeight: 700, lineHeight: 1,
               }}>{pendientesCount > 9 ? '9+' : pendientesCount}</span>
@@ -278,7 +278,7 @@ export default function TopBar({ title, subtitle, onToggleSidebar, sidebarOpen, 
             className="btn btn-outline btn-sm"
             onClick={() => { setConfirmCfg({ title: 'Cerrar sesion', confirmLabel: 'Cerrar sesion', tone: 'primary', onConfirm: () => onLogout() }); return }}
             title="Cerrar sesion"
-            style={{ gap: 6, color: '#dc2626', borderColor: 'rgba(220,38,38,.35)' }}
+            style={{ gap: 6, color: 'var(--red-600)', borderColor: 'rgba(220,38,38,.35)' }}
           >
             <LogoutIcon /> <span className="btn-label">Salir</span>
           </button>

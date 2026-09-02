@@ -80,7 +80,7 @@ export default function Login({ onLogin, aviso = '' }) {
               <img src="/logo.png" alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
             </div>
             <div style={{ minWidth: 0 }}>
-              <div style={{ fontSize: 16, fontWeight: 800, letterSpacing: .2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              <div style={{ fontSize: 16, fontWeight: 700, letterSpacing: .2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                 {TALLER.razonSocial || TALLER.nombre}
               </div>
               <div style={{ fontSize: 11.5, color: 'rgba(255,255,255,.65)', textTransform: 'uppercase', letterSpacing: 1.2, marginTop: 3, fontWeight: 600 }}>
