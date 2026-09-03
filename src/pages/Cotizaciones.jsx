@@ -1057,8 +1057,9 @@ function CotizacionForm({ cotizacion, trabajos = [], onSave, onCancel }) {
                     <th style={{ width: '13%' }}>Precio</th>
                     <th style={{ width: '10%' }}>Cant.</th>
                     <th style={{ width: '10%' }}>IVA %</th>
-                    <th style={{ width: '14%' }} className="text-right">Total</th>
-                    <th style={{ width: '5%' }}><span className="sr-only">Orden</span></th>
+                    <th style={{ width: '12%' }} className="text-right">Total</th>
+                    {/* 7%: las dos flechas en fila miden 56px juntas. */}
+                    <th style={{ width: '7%' }}><span className="sr-only">Orden</span></th>
                     <th style={{ width: '5%' }}><span className="sr-only">Acciones</span></th>
                   </tr>
                 </thead>

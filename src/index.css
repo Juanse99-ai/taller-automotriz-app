@@ -3575,6 +3575,15 @@ tbody tr:active{background:var(--fill-2)}
    una pantalla de 375: el IVA, el Total y los precios quedaban fuera y habia
    que arrastrar la tabla de lado. Medido: 231px de exceso. */
 
+/* El alto de la fila lo marca el campo de 42px (la altura de entrada del
+   sistema, no se toca). Con los 11px de relleno genericos arriba y abajo la
+   fila salia en 64px; 7px dejan el aire justo para un editor de 11 lineas que
+   se lee de un vistazo. Solo en escritorio: en el telefono cada linea es una
+   tarjeta y ese relleno lo pone otro bloque. */
+@media(min-width:601px){
+  .tbl-cards--items tbody td{ padding-top:7px; padding-bottom:7px }
+}
+
 /* La celda de descripcion debe poder encoger. Una celda de tabla no encoge por
    debajo de su contenido salvo que se le permita explicitamente. */
 .tbl-cards--items td.td-desc{ min-width:0; max-width:0; width:38% }
@@ -3600,17 +3609,19 @@ tbody tr:active{background:var(--fill-2)}
   .tbl-cards--items tbody td.td-quitar::before{ content:'Quitar' }
   /* En tarjeta las flechas van en fila, no apiladas, y a 44px de dedo. */
   .tbl-cards--items tbody td.td-mover::before{ content:'Mover' }
-  .tbl-cards--items tbody td.td-mover .cot-mover-grupo{ flex-direction:row; gap:8px }
+  .tbl-cards--items tbody td.td-mover .cot-mover-grupo{ gap:8px }
   .tbl-cards--items tbody td.td-mover .cot-mover{
     width:var(--tap); height:var(--tap); border:1px solid var(--border-strong); border-radius:var(--r-md);
   }
 }
 
 /* ── Subir / bajar una linea de la cotizacion ────────────────────────────── */
-/* Dos botones de 26px apilados dentro de la fila: la fila mide ~75px, asi que
-   los dos caben sin estirarla. No son botones del sistema (44/38) porque viven
-   DENTRO de una celda de tabla densa, igual que la papelera de al lado. */
-.cot-mover-grupo{ display:inline-flex; flex-direction:column; gap:2px }
+/* En FILA, no apiladas. Apiladas median 26+2+26 = 54px y eran ellas las que
+   marcaban el alto de la fila entera: la subian de 64 a 77px, cuando el campo
+   de texto solo mide 42. En fila miden 26 y dejan de mandar.
+   No son botones del sistema (44/38) porque viven DENTRO de una celda de tabla
+   densa, igual que la papelera de al lado. */
+.cot-mover-grupo{ display:inline-flex; gap:4px }
 .cot-mover{
   width:26px; height:26px; flex:none; display:grid; place-items:center;
   border:0; background:none; cursor:pointer; color:var(--text-4);
