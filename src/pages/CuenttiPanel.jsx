@@ -14,6 +14,7 @@ import {
   testTokenDirecto,
   detectarMediosPago,
   probarIdMedioPago,
+  anularTransacion,
 } from '../services/cuentti'
 import { RESOLUCIONES, SIN_FACTURA } from '../utils/constants'
 import ConfirmDialog from '../components/ConfirmDialog'
@@ -87,6 +88,8 @@ function Campo({ label, children }) {
 
 export default function CuenttiPanel({ trabajos, actualizarTrabajo, notify, trabajoPreseleccionado }) {
   const [confirmCfg, setConfirmCfg] = useState(null)
+  // Factura que se esta anulando ahora mismo, para no dejar apretar dos veces.
+  const [anulando, setAnulando] = useState(null)
   const [verFacturados, setVerFacturados] = useState(false)
   const [testResult, setTestResult] = useState(null)
   const [testing, setTesting] = useState(false)
@@ -590,6 +593,64 @@ export default function CuenttiPanel({ trabajos, actualizarTrabajo, notify, trab
   // (falló el paso al facturar). Solo marca el estado local como pagada — NO
   // escribe a Cuentti aquí, para no arriesgar un pago DOBLE (el usuario ya lo
   // registra en Cuentti, manual o en "Pago / Abono").
+  // ── Anular una factura ────────────────────────────────────────────────────
+  //
+  // Por que hace falta: la resolucion (interna MAS / electronica FEIC) se graba
+  // DENTRO de la factura al crearla, en su serie de numeracion. Una factura que
+  // salio por la serie interna no se puede pasar a la electronica ni renumerar:
+  // la unica salida es anularla y volver a facturar. Hasta ahora eso solo se
+  // podia hacer entrando a Cuentti.
+  const ejecutarAnulacion = async (f) => {
+    const num = f.cuenttiTransacionId
+    setAnulando(num)
+    try {
+      const resp = await anularTransacion({
+        idTransacion: num,
+        observacion: `Anulada desde la app. OT ${f.otCodigo || '?'} - ${f.placa || ''}`.trim(),
+      })
+      // Cuentti responde HTTP 200 tambien cuando falla; el motivo viaja en el
+      // cuerpo con type:0. Sin esta comprobacion una anulacion rechazada se
+      // veria como exito y la OT quedaria desmarcada con la factura VIVA.
+      if (resp && Number(resp.type) === 0) {
+        throw new Error(resp.message || 'Cuentti rechazó la anulación')
+      }
+      // El orden importa: primero Cuentti, despues lo de aqui. Si se hiciera al
+      // contrario y Cuentti fallara, la OT volveria a "por facturar" con la
+      // factura todavia viva, y el siguiente envio la duplicaria.
+      if (actualizarTrabajo) {
+        await actualizarTrabajo(f.id, {
+          cuenttiTransacionId: null,
+          cuenttiResolucion: null,
+          facturadoEn: null,
+          pagado: false,
+          metodoPago: null,
+        })
+      }
+      notify(`Factura ${num} anulada. La orden volvió a "por facturar".`, 'success')
+    } catch (e) {
+      notify(`No se pudo anular la factura ${num}: ${e.message}. Aquí NO se cambió nada. Revisa en Cuentti antes de reintentar.`, 'error')
+    } finally {
+      setAnulando(null)
+    }
+  }
+
+  const anularFactura = (f) => {
+    const num = f.cuenttiTransacionId
+    const esElectronica = (f.cuenttiResolucion || '') === 'FEIC'
+    setConfirmCfg({
+      title: 'Anular esta factura',
+      // Una electronica ya la tiene la DIAN: anularla en Cuentti no la borra
+      // alli, eso pide nota credito. No se bloquea (lo decide el contador),
+      // pero no se puede dejar que se apriete sin saberlo.
+      lead: esElectronica
+        ? `La factura ${num} de ${f.cliente || 'este cliente'} (${fmt(f.total || 0)}) es ELECTRÓNICA: la DIAN ya la tiene. Anularla aquí no la elimina ante la DIAN, para eso hace falta una nota crédito. Consulta con tu contador antes de seguir.`
+        : `Se anula la factura ${num} de ${f.cliente || 'este cliente'} (${fmt(f.total || 0)}) en Cuentti, y la orden ${f.otCodigo || ''} vuelve a la lista de "por facturar". El pago sale de caja.`.replace('  ', ' '),
+      confirmLabel: 'Sí, anular',
+      tone: 'danger',
+      onConfirm: () => ejecutarAnulacion(f),
+    })
+  }
+
   const marcarFacturaPagada = (f) => {
     setConfirmCfg({
       title: 'Marcar como pagada',
@@ -1157,7 +1218,12 @@ export default function CuenttiPanel({ trabajos, actualizarTrabajo, notify, trab
                 </div>
                 {ultimasFacturas.map((f, i) => {
                   const sinFactura = f.cuenttiTransacionId === SIN_FACTURA
-                  const tipo = f.cuenttiPrefijo || (f.cuenttiTransacionId?.toString().startsWith('FE') ? 'FEIC' : 'MAS')
+                  // cuenttiResolucion PRIMERO: es el campo que se guarda al
+                  // facturar. Antes se miraba cuenttiPrefijo, que no existe en el
+                  // objeto, y el respaldo era "empieza por FE" - los ids son
+                  // numericos (6019), asi que TODA factura se rotulaba "Interna"
+                  // aunque fuera electronica.
+                  const tipo = f.cuenttiResolucion || f.cuenttiPrefijo || (f.cuenttiTransacionId?.toString().startsWith('FE') ? 'FEIC' : 'MAS')
                   const tipoLabel = sinFactura ? 'Sin factura' : (tipo === 'FEIC' ? 'Electrónica DIAN' : 'Interna')
                   const num = sinFactura ? '—' : f.cuenttiTransacionId
                   // efectivo/transferencia SIN pagar = el pago NO entró a caja (falló al
@@ -1182,6 +1248,15 @@ export default function CuenttiPanel({ trabajos, actualizarTrabajo, notify, trab
                           <span className={`hd-chip ${estadoBadge.c}`} style={{ marginTop: 4 }}>{estadoBadge.l}</span>
                         </span>
                       </div>
+                      {!sinFactura && (
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 6 }}>
+                          <Button variant="ghost" size="sm" disabled={anulando === f.cuenttiTransacionId}
+                            title={`Anular la factura ${num} en Cuentti y devolver la orden a "por facturar"`}
+                            onClick={() => anularFactura(f)}>
+                            {anulando === f.cuenttiTransacionId ? 'Anulando...' : 'Anular'}
+                          </Button>
+                        </div>
+                      )}
                       {pagoNoEntroCaja && (
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap', marginTop: 8, padding: '8px 10px', background: 'var(--bad-bg)', borderRadius: 10 }}>
                           <span style={{ fontSize: 11.5, color: 'var(--bad-fg)', lineHeight: 1.35, flex: 1, minWidth: 140 }}>El pago en {f.metodoPago} no entró a caja. Regístralo en Cuentti y márcalo pagado aquí.</span>
