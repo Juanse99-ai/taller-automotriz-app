@@ -192,11 +192,22 @@ export default async function handler(req, res) {
     try {
       const url = `https://transaciones.cuenti.com/jServerj4ErpPro/com/j4ErpPro/server/transacion/consultarTransacionIdExterno/${encodeURIComponent(tx)}`
       const d = await fetch(url, { headers: { 'X-Auth-Token-empresa': '11464' } }).then(r => r.json())
-      const enc = ((Array.isArray(d) ? d : []).find(x => x.consulta === 'Encabezados') || {}).resultado || []
+      const bloque = (nombre) => ((Array.isArray(d) ? d : []).find(x => x.consulta === nombre) || {}).resultado || []
+      const enc = bloque('Encabezados')
       const e = enc[0]
       if (!e) { res.status(200).json({ ok: false, motivo: 'sin datos' }); return }
       const deuda = Math.round(Number(e.total_deuda || 0))
       const abono = Math.round(Number(e.total_abono || 0))
+      // Cuentti manda en el MISMO sobre el estado ante la DIAN y las notas de
+      // credito. El panel de la app los necesita para poder AFIRMAR el estado
+      // en vez de recordar que botones se apretaron en la pestaña.
+      const fe = bloque('Estado_Factura_electronica')[0] || null
+      // Una anulacion viaja como nota de credito con es_anulacion=1. `es_activo`
+      // importa: si se reversa, la fila sigue ahi pero apagada.
+      const anulacion = bloque('notas_credito')
+        .find(n => Number(n.es_anulacion) === 1 && n.es_activo !== false) || null
+      const neto = Math.round(Number(e.total_neto || 0))
+      const devuelto = Math.round(Number(e.total_devoluciones || 0))
       // id_cliente sale de la propia factura: es el unico numero que Cuentti
       // reconoce como suyo para el recibo de caja. Antes se mandaba -1 cuando la
       // OT no lo tenia, confiando en que Cuentti lo resolviera, y no lo resuelve.
@@ -207,6 +218,22 @@ export default async function handler(req, res) {
         pendiente: deuda - abono,
         id_cliente: e.id_cliente ?? null,
         n_transacion: e.n_transacion ?? null,
+        // ── Estado real de la factura, para el panel de Cuentti ──
+        // prefijo dice de que serie es: MAS = interna, FEIC = electronica DIAN.
+        // El numero IMPRESO es prefijo-numeracion; el id_transacion es otra cosa.
+        prefijo: e.prefijo ?? null,
+        numeracion: e.numeracion ?? null,
+        total_neto: neto,
+        total_devoluciones: devuelto,
+        // La DIAN la tiene de verdad cuando hay CUFE. `enviado_documento_electronico`
+        // vale -1 en las internas, que nunca salen hacia la DIAN.
+        electronica: Number(e.enviado_documento_electronico) === 1,
+        cufe: fe?.cufe || null,
+        dian_error: fe ? Number(fe.esError) === 1 : false,
+        dian_detalle: fe?.descripcionEstado || fe?.MensajeEmisor || null,
+        url_xml: fe?.url_xml || null,
+        anulada: !!anulacion || (neto > 0 && devuelto >= neto),
+        anulada_nota: anulacion?.consecutivo ?? null,
       })
     } catch (err) {
       // Cuentti caido o lento: NO se afirma que el pago fallo, solo que no se

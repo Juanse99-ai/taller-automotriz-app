@@ -128,6 +128,19 @@ export default function CuenttiPanel({ trabajos, actualizarTrabajo, notify, trab
   const [pagando, setPagando] = useState(false)
   const [pagoResp, setPagoResp] = useState(null)
 
+  // ── Estado REAL de la factura, leido de Cuentti ────────────────────────────
+  //
+  // El panel de la derecha afirmaba cosas mirando solo si se habian apretado
+  // los botones en ESTA pestaña: al recargar decia "0 de 6" con la factura ya
+  // emitida, y "Firmado y aprobado DIAN" se ponia verde por haber pulsado el
+  // boton, sin que la DIAN hubiera contestado nada. Ahora cada linea la afirma
+  // Cuentti (numero impreso, CUFE, saldo, anulacion).
+  const [estadoF, setEstadoF] = useState(null)
+  const [cargandoEstadoF, setCargandoEstadoF] = useState(false)
+  // Contador para volver a preguntar despues de emitir, pagar o anular: en esos
+  // casos el id_transacion no cambia, asi que el efecto no se reactivaria solo.
+  const [refrescoEstado, setRefrescoEstado] = useState(0)
+
   const [docId, setDocId] = useState('')
   const [docResp, setDocResp] = useState(null)
   const [docLoading, setDocLoading] = useState(false)
@@ -626,6 +639,7 @@ export default function CuenttiPanel({ trabajos, actualizarTrabajo, notify, trab
           metodoPago: null,
         })
       }
+      setRefrescoEstado(n => n + 1)
       notify(`Factura ${num} anulada. La orden volvió a "por facturar".`, 'success')
     } catch (e) {
       notify(`No se pudo anular la factura ${num}: ${e.message}. Aquí NO se cambió nada. Revisa en Cuentti antes de reintentar.`, 'error')
@@ -671,7 +685,10 @@ export default function CuenttiPanel({ trabajos, actualizarTrabajo, notify, trab
     try {
       const res = await emitirFacturaElectronica(emitId.trim())
       setEmitResp(res)
-      notify('Solicitud de FE enviada a DIAN', 'success')
+      // Volver a preguntarle a Cuentti: la DIAN es la que dice si quedo firmada,
+      // no este boton.
+      setRefrescoEstado(n => n + 1)
+      notify('Solicitud enviada. El panel de la derecha dirá si la DIAN la firmó.', 'success')
     } catch (e) {
       notify(`Error emitiendo FE: ${e.message}`, 'error')
     } finally {
@@ -690,6 +707,7 @@ export default function CuenttiPanel({ trabajos, actualizarTrabajo, notify, trab
         devuelta: parseFloat(pagoForm.devuelta) || 0,
       })
       setPagoResp(res)
+      setRefrescoEstado(n => n + 1)
       notify('Pago agregado en Cuentti', 'success')
     } catch (e) {
       notify(`Error agregando pago: ${e.message}`, 'error')
@@ -747,6 +765,21 @@ export default function CuenttiPanel({ trabajos, actualizarTrabajo, notify, trab
 
   // Estado del hilo de 5 pasos. MISMAS condiciones que ya tenía el stepper y el
   // panel de estado; solo se calculan una vez y se pintan en un único hilo.
+  const trabajoDelPanel = trabajos.find(t => t.id === (facturaId || '').trim()) || null
+  const txSel = trabajoDelPanel?.cuenttiTransacionId && trabajoDelPanel.cuenttiTransacionId !== SIN_FACTURA
+    ? String(trabajoDelPanel.cuenttiTransacionId)
+    : null
+
+  useEffect(() => {
+    if (!txSel) { setEstadoF(null); return }
+    let vivo = true
+    setCargandoEstadoF(true)
+    datosFacturaCuentti(txSel)
+      .then(d => { if (vivo) setEstadoF(d) })
+      .finally(() => { if (vivo) setCargandoEstadoF(false) })
+    return () => { vivo = false }
+  }, [txSel, refrescoEstado])
+
   const hasTrabajo = !!facturaId
   const hasFactura = !!facturaResp && !facturaResp.error
   const hasDian = !!emitResp && !emitResp.error
@@ -758,14 +791,39 @@ export default function CuenttiPanel({ trabajos, actualizarTrabajo, notify, trab
     .sort((a, b) => new Date(b.facturadoEn || b.fecha || 0) - new Date(a.facturadoEn || a.fecha || 0))
     .slice(0, 5)
 
+  // Se fueron "Cliente sincronizado" e "Inventario actualizado": las dos eran
+  // la misma cosa (que el token respondiera) partida en dos pasos, se ponian
+  // verdes con o sin factura y no decian nada de ESTA venta.
+  //
+  // Antes de enviar manda la resolucion elegida en el desplegable; despues, la
+  // que Cuentti tenga grabada de verdad.
+  const esFEIC = (estadoF?.prefijo || trabajoDelPanel?.cuenttiResolucion || prefijo) === 'FEIC'
+  // El numero IMPRESO es prefijo-numeracion. El 6018 que se ve en pantalla es
+  // el id interno de la transaccion, no el numero de la factura.
+  const numeroImpreso = estadoF?.numeracion ? `${estadoF.prefijo}-${estadoF.numeracion}` : null
+
   const statusItems = [
     { lbl: 'Trabajo seleccionado', ok: hasTrabajo },
-    { lbl: 'Cliente sincronizado', ok: conexionOK && hasTrabajo },
-    { lbl: 'Inventario actualizado', ok: conexionOK },
-    { lbl: 'Enviado a Cuentti', ok: hasFactura },
-    { lbl: 'Firmado y aprobado DIAN', ok: hasDian },
-    { lbl: 'Pago registrado', ok: hasPago },
+    {
+      lbl: numeroImpreso ? `Enviado a Cuentti · ${numeroImpreso}` : 'Enviado a Cuentti',
+      ok: !!estadoF?.ok || hasFactura,
+    },
+    esFEIC
+      ? (estadoF?.dian_error
+          ? { lbl: `La DIAN rechazó el documento${estadoF.dian_detalle ? ` · ${estadoF.dian_detalle}` : ''}`, mal: true }
+          : { lbl: 'Firmado y aprobado DIAN', ok: !!estadoF?.cufe })
+      // Una interna nunca sale hacia la DIAN: dejar el paso en gris para
+      // siempre hacia creer que faltaba algo.
+      : { lbl: 'Firmado por la DIAN · no aplica, es interna', na: true },
+    (estadoF?.ok && estadoF.pendiente > 0)
+      ? { lbl: `Falta abonar ${fmt(estadoF.pendiente)}`, mal: true }
+      : { lbl: 'Pago registrado', ok: estadoF?.ok ? estadoF.pendiente <= 0 : hasPago },
   ]
+  if (estadoF?.anulada) {
+    statusItems.push({ lbl: `Factura anulada${estadoF.anulada_nota ? ` · nota ${estadoF.anulada_nota}` : ''}`, mal: true })
+  }
+  // Un "no aplica" no cuenta ni a favor ni en contra.
+  const statusTotal = statusItems.filter(s => !s.na).length
   const statusDone = statusItems.filter(s => s.ok).length
 
   const resolucionLabel = resoluciones.find(r => r.code === prefijo)?.label || prefijo
@@ -1179,7 +1237,7 @@ export default function CuenttiPanel({ trabajos, actualizarTrabajo, notify, trab
             <div className="hd-bar">
               <span className="hd-strong">Estado de envío</span>
               <div className="hd-bar__sp" />
-              <span className="hd-chip hd-chip--info">{statusDone} DE {statusItems.length}</span>
+              <span className="hd-chip hd-chip--info">{statusDone} DE {statusTotal}</span>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 9, padding: '0 18px 15px' }}>
               {statusItems.map((s, i) => (
@@ -1187,14 +1245,29 @@ export default function CuenttiPanel({ trabajos, actualizarTrabajo, notify, trab
                   <span style={{
                     width: 20, height: 20, flex: 'none', borderRadius: '50%',
                     display: 'grid', placeItems: 'center',
-                    background: s.ok ? 'var(--ok-bg)' : 'var(--chip)',
-                    color: s.ok ? 'var(--ok-fg)' : 'var(--text-4)',
+                    background: s.mal ? 'var(--bad-bg)' : s.ok ? 'var(--ok-bg)' : 'var(--chip)',
+                    color: s.mal ? 'var(--bad-fg)' : s.ok ? 'var(--ok-fg)' : 'var(--text-4)',
                   }}>
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
+                    {s.mal ? (
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><path d="M18 6 6 18M6 6l12 12" /></svg>
+                    ) : s.na ? (
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><path d="M5 12h14" /></svg>
+                    ) : (
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
+                    )}
                   </span>
-                  <span style={{ flex: 1, minWidth: 0, fontSize: 12.5, lineHeight: 1.3, color: s.ok ? 'var(--text)' : 'var(--text-3)', fontWeight: s.ok ? 600 : 400 }}>{s.lbl}</span>
+                  <span style={{ flex: 1, minWidth: 0, fontSize: 12.5, lineHeight: 1.3, color: s.mal ? 'var(--bad-fg)' : s.ok ? 'var(--text)' : 'var(--text-3)', fontWeight: (s.ok || s.mal) ? 600 : 400 }}>{s.lbl}</span>
                 </div>
               ))}
+              {/* De donde sale lo de arriba. Sin esta linea, un panel que no
+                  pudo consultar se ve igual que uno que si: era el problema
+                  original. */}
+              <div className="hd-sub" style={{ marginTop: 2 }}>
+                {cargandoEstadoF ? 'Consultando a Cuentti…'
+                  : estadoF?.ok ? 'Leído de Cuentti ahora'
+                  : txSel ? 'No se pudo leer el estado en Cuentti. Lo de arriba es solo lo hecho en esta pestaña.'
+                  : 'Aún sin factura: muestra lo que va a pasar al enviar.'}
+              </div>
             </div>
           </div>
 
