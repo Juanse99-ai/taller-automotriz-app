@@ -441,7 +441,7 @@ export default function EstadoCuenta({ prestamos, tecnicos, notify, tabs = null,
             <div className="ec-fig__v">{fmt(totalPorCobrar)}</div>
           </div>
           <div className="hd-head__div" />
-          {cuentaSel && <Button variant="outline" size="sm" onClick={() => exportarPDF(cuentaSel)}>Estado de cuenta · MDA</Button>}
+          {cuentaSel && <Button variant="outline" size="sm" onClick={() => exportarPDF(cuentaSel).catch(e => notify?.(`No se pudo generar el PDF: ${e?.message || e}`, 'error'))}>Estado de cuenta · MDA</Button>}
         </div>
       </div>
 

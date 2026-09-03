@@ -248,6 +248,10 @@ export default function PortalCliente() {
   const [firmandoCotiz, setFirmandoCotiz] = useState(null) // cotización que el cliente firma para aprobar
   const [aprobando, setAprobando] = useState(false)
   const [errorCotiz, setErrorCotiz] = useState('')
+  // Aviso propio del PDF. No se reusa `error` porque ese solo se pinta en la
+  // pantalla de entrada, y los dos botones de PDF viven en otras vistas: el
+  // cliente apretaba y no pasaba nada.
+  const [errorPdf, setErrorPdf] = useState('')
   const touchRef = useRef(null) // gesto de swipe en el visor de fotos
   const detalleRef = useRef(null) // detalle del vehículo (para hacer scroll al elegir uno)
 
@@ -507,6 +511,11 @@ export default function PortalCliente() {
     }
   }
 
+  const bajarPDF = (insp) => {
+    setErrorPdf('')
+    descargarPDF(insp).catch(e => setErrorPdf(e?.message || 'No se pudo generar el PDF. Intenta de nuevo.'))
+  }
+
   const descargarPDF = async (insp) => {
     // La libreria se pide aqui, no al abrir la pagina: son 419 kB que el cliente
     // solo necesita si de verdad pulsa Descargar.
@@ -639,9 +648,10 @@ export default function PortalCliente() {
         </div>
         <InspeccionDetalle inspeccion={vistaInspeccion} onVolver={() => setVistaInspeccion(null)} />
         <div style={{textAlign:'center',marginTop:8}}>
-          <button className="btn btn-primary" onClick={() => descargarPDF(vistaInspeccion)}>
+          <button className="btn btn-primary" onClick={() => bajarPDF(vistaInspeccion)}>
             Descargar Reporte PDF
           </button>
+          {errorPdf && <div className="pc-in__error" style={{ marginTop: 10 }}>{errorPdf}</div>}
         </div>
       </div>
     )
@@ -1196,10 +1206,11 @@ export default function PortalCliente() {
               )}
               <div className="pc-insp__acc">
                 <button type="button" className="pc-insp__ver" onClick={() => setVistaInspeccion(ultima)}>Ver la inspección completa</button>
-                <button type="button" className="pc-insp__pdf" onClick={() => descargarPDF(ultima)} aria-label="Descargar inspección en PDF">
+                <button type="button" className="pc-insp__pdf" onClick={() => bajarPDF(ultima)} aria-label="Descargar inspección en PDF">
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3v12M7 10l5 5 5-5M4 19h16" /></svg>
                 </button>
               </div>
+              {errorPdf && <div className="pc-in__error" style={{ marginTop: 8 }}>{errorPdf}</div>}
               {viejas.length > 0 && (
                 <div className="pc-insp__viejas">
                   {viejas.map((insp, idx) => {

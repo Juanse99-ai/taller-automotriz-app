@@ -61,6 +61,15 @@ export default function Cotizaciones({ notify, trabajos = [], onCrearTrabajo, co
     } catch { return null }
   }
 
+  // Los botones llaman por aqui, no a imprimirCotizacion directo: es async y se
+  // invocaba sin atrapar el error, asi que un fallo rompia la promesa en
+  // silencio y el usuario apretaba PDF sin que pasara NADA.
+  const descargarPdfCot = (c) => {
+    imprimirCotizacion(c).catch(e => {
+      notify?.(`No se pudo generar el PDF: ${e?.message || e}`, 'error')
+    })
+  }
+
   const imprimirCotizacion = async (c) => {
     // 419 kB que solo viajan si alguien pide un PDF de verdad.
     const { jsPDF, autoTable } = await cargarPdf()
@@ -448,7 +457,7 @@ export default function Cotizaciones({ notify, trabajos = [], onCrearTrabajo, co
                             etiqueta={`Más acciones de la cotización ${cotRef(c.id)}`}
                             opciones={[
                               ...(seEnfrio(c) ? [{ label: 'Revisar', onSelect: () => setDetalleId(c.id) }] : []),
-                              { label: 'Descargar PDF', icon: <IconPdf />, onSelect: () => imprimirCotizacion(c) },
+                              { label: 'Descargar PDF', icon: <IconPdf />, onSelect: () => descargarPdfCot(c) },
                               { label: 'Editar', icon: <IconEdit />, onSelect: () => { setEditId(c.id); setVista('editar') } },
                               { separador: true },
                               { label: 'Eliminar', icon: <IconTrash />, peligro: true, onSelect: () => eliminar(c.id) },
@@ -473,7 +482,7 @@ export default function Cotizaciones({ notify, trabajos = [], onCrearTrabajo, co
         creando={creandoTrabajoId === detalle.id}
         creandoAlguna={creandoTrabajoId !== null}
         onClose={() => setDetalleId(null)}
-        onPdf={() => imprimirCotizacion(detalle)}
+        onPdf={() => descargarPdfCot(detalle)}
         onEditar={() => { setDetalleId(null); setEditId(detalle.id); setVista('editar') }}
         onAprobar={() => { setDetalleId(null); cambiarEstado(detalle.id, ESTADO_COT.APROBADA) }}
         onRechazar={() => { setDetalleId(null); cambiarEstado(detalle.id, ESTADO_COT.RECHAZADA) }}

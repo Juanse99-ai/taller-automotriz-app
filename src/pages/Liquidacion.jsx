@@ -896,7 +896,8 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
     const difMsg = pagado !== netoCalc ? ` (pagado ${fmt(pagado)}, diferencia a Estado de cuenta)` : ''
     notify(`Pago #${liqRef(nuevoId)} generado: ${fmt(pagado)} para ${tecData.tecnico.nombre}${difMsg} · copia la ref en Cuentti`, 'success')
     // Descargar automáticamente el comprobante del pago recién generado
-    exportPdfHistorial(registro).catch(() => {})
+    // Antes: .catch(() => {}) — se tragaba el fallo y el usuario no se enteraba.
+      exportPdfHistorial(registro).catch(e => notify?.(`No se pudo generar el PDF: ${e?.message || e}`, 'error'))
     } finally {
       pagandoRef.current = false
     }
@@ -2555,7 +2556,7 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
                             </Button>
                           </>
                         )}
-                        <Button variant="outline" size="sm" onClick={() => exportPdfHistorial(reg)}>PDF</Button>
+                        <Button variant="outline" size="sm" onClick={() => exportPdfHistorial(reg).catch(e => notify?.(`No se pudo generar el PDF: ${e?.message || e}`, 'error'))}>PDF</Button>
                         {/* Anular: la salida que faltaba. Antes, un pago equivocado
                            solo se podía quitar borrando los 48 de una vez. */}
                         <Button variant="ghost" size="sm" style={{ color: 'var(--red-600)' }} onClick={() => pedirAnular(reg)}>Anular</Button>

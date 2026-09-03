@@ -6,25 +6,10 @@ import Login from './components/Login'
 // Páginas por demanda (React.lazy): cada una es su propio chunk, así el bundle
 // inicial baja y las libs pesadas (jspdf, gsap) viajan solo con la página que las usa.
 // Cada seccion se descarga aparte, con el numero de version en el nombre del
-// archivo. Cuando se publica una version nueva, una pestaña que lleve horas
-// abierta sigue pidiendo los nombres VIEJOS, que ya no existen en el servidor:
-// el navegador falla con "Importing a module script failed" y la seccion no
-// abre. La app no esta rota, la pestaña quedo vieja.
-//
-// Asi que se recarga sola UNA vez por seccion. La marca lleva el nombre de la
-// seccion a proposito: con una marca global, la recarga cargaba bien el
-// Dashboard, eso borraba la marca, y volver a entrar a la seccion rota
-// recargaba otra vez. Bucle infinito de recargas. Con marca por seccion, que
-// el Dashboard cargue no dice nada sobre Vehiculos.
-//
-// Va en sessionStorage y no en una variable porque tiene que sobrevivir justo
-// a la recarga que ella misma provoca.
-const marca = {
-  clave: (nombre) => `taller_recarga:${nombre}`,
-  hay: (n) => { try { return !!sessionStorage.getItem(marca.clave(n)) } catch { return false } },
-  poner: (n) => { try { sessionStorage.setItem(marca.clave(n), '1') } catch { /* modo privado */ } },
-  quitar: (n) => { try { sessionStorage.removeItem(marca.clave(n)) } catch { /* modo privado */ } },
-}
+// archivo, asi que una pestaña vieja pide nombres que ya no existen. El guardia
+// (recargar una vez, con marca POR seccion para no entrar en bucle) vive en
+// utils/recargaVersion, compartido con el generador de PDF.
+import { recargarSiEsVersionVieja, marca } from './utils/recargaVersion'
 
 function seccion(nombre, importar) {
   return lazy(() => importar().then(mod => {
@@ -33,11 +18,8 @@ function seccion(nombre, importar) {
     marca.quitar(nombre)
     return mod
   }).catch(err => {
-    if (!marca.hay(nombre)) {
-      marca.poner(nombre)
-      window.location.reload()
-      // A proposito no se resuelve: la pagina se esta yendo y resolver aqui
-      // alcanzaria a pintar un error que el usuario no necesita ver.
+    if (recargarSiEsVersionVieja(nombre, err)) {
+      // A proposito no se resuelve: la pagina se esta yendo.
       return new Promise(() => {})
     }
     // Ya se recargo por esta seccion y sigue fallando: es un fallo de verdad
