@@ -3598,7 +3598,28 @@ tbody tr:active{background:var(--fill-2)}
   /* Quitar la linea: boton propio, ancho completo, con su rotulo visible. */
   .tbl-cards--items tbody td.td-quitar{ justify-content:flex-end }
   .tbl-cards--items tbody td.td-quitar::before{ content:'Quitar' }
+  /* En tarjeta las flechas van en fila, no apiladas, y a 44px de dedo. */
+  .tbl-cards--items tbody td.td-mover::before{ content:'Mover' }
+  .tbl-cards--items tbody td.td-mover .cot-mover-grupo{ flex-direction:row; gap:8px }
+  .tbl-cards--items tbody td.td-mover .cot-mover{
+    width:var(--tap); height:var(--tap); border:1px solid var(--border-strong); border-radius:var(--r-md);
+  }
 }
+
+/* ── Subir / bajar una linea de la cotizacion ────────────────────────────── */
+/* Dos botones de 26px apilados dentro de la fila: la fila mide ~75px, asi que
+   los dos caben sin estirarla. No son botones del sistema (44/38) porque viven
+   DENTRO de una celda de tabla densa, igual que la papelera de al lado. */
+.cot-mover-grupo{ display:inline-flex; flex-direction:column; gap:2px }
+.cot-mover{
+  width:26px; height:26px; flex:none; display:grid; place-items:center;
+  border:0; background:none; cursor:pointer; color:var(--text-4);
+  border-radius:var(--r-xs); transition:background .16s var(--ease-out), color .16s var(--ease-out);
+}
+.cot-mover:hover:not(:disabled){ background:var(--chip); color:var(--text-2) }
+/* --text-5 es justamente el token de "icono que no se pulsa". */
+.cot-mover:disabled{ color:var(--text-5); cursor:default }
+.cot-mover:focus-visible{ outline:2px solid var(--accent); outline-offset:1px }
 
 /* ── Items dentro de la hoja de detalle de una cotizacion ─────────────────
    Misma causa raiz que el editor: sin .tbl-cards la tabla hereda

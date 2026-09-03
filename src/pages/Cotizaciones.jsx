@@ -819,6 +819,19 @@ function CotizacionForm({ cotizacion, trabajos = [], onSave, onCancel }) {
   const addItem = () => setItems(prev => [...prev, { id: uid(), nombre: '', precio: 0, cantidad: 1, iva: IVA_DEFAULT }])
   const updateItem = (id, field, value) => setItems(prev => prev.map(i => i.id === id ? { ...i, [field]: value } : i))
   const removeItem = (id) => setItems(prev => prev.filter(i => i.id !== id))
+  // Subir o bajar una linea. No es cosmetico: el orden del arreglo es el que
+  // sale impreso en el PDF que ve el cliente y en la hoja de detalle, asi que
+  // aqui se decide como queda agrupada la cotizacion (repuestos juntos, la mano
+  // de obra al final).
+  const moverItem = (id, dir) => setItems(prev => {
+    const i = prev.findIndex(x => x.id === id)
+    const j = i + dir
+    if (i < 0 || j < 0 || j >= prev.length) return prev
+    const copia = [...prev]
+    copia[i] = prev[j]
+    copia[j] = prev[i]
+    return copia
+  })
 
   const totales = useMemo(() => {
     let subtotal = 0, iva = 0, total = 0
@@ -1039,15 +1052,18 @@ function CotizacionForm({ cotizacion, trabajos = [], onSave, onCancel }) {
                 <thead>
                   <tr>
                     <th style={{ width: '38%' }}>Descripción</th>
-                    <th style={{ width: '16%' }}>Precio</th>
+                    {/* El ancho de la columna nueva sale de Precio y Total, no de
+                        Descripción: los nombres del inventario ya se cortan ahí. */}
+                    <th style={{ width: '13%' }}>Precio</th>
                     <th style={{ width: '10%' }}>Cant.</th>
                     <th style={{ width: '10%' }}>IVA %</th>
-                    <th style={{ width: '16%' }} className="text-right">Total</th>
+                    <th style={{ width: '14%' }} className="text-right">Total</th>
+                    <th style={{ width: '5%' }}><span className="sr-only">Orden</span></th>
                     <th style={{ width: '5%' }}><span className="sr-only">Acciones</span></th>
                   </tr>
                 </thead>
                 <tbody>
-                  {items.map(item => {
+                  {items.map((item, idx) => {
                     const lineTotal = (parseFloat(item.precio) || 0) * (cantidadItem(item))
                     const search = itemSearch[item.id] || {}
                     return (
@@ -1149,6 +1165,22 @@ function CotizacionForm({ cotizacion, trabajos = [], onSave, onCancel }) {
                         <td data-label="IVA %"><input className="form-input" type="number" value={item.iva} min="0"
                           onChange={e => updateItem(item.id, 'iva', e.target.value)} style={{ padding: '6px 10px', fontSize: 13, textAlign: 'center', width: 60 }} /></td>
                         <td className="text-right text-mono td-total-linea" data-label="Total" style={{ fontWeight: 600 }}>{fmt(lineTotal)}</td>
+                        <td className="td-mover" data-label="Orden">
+                          <span className="cot-mover-grupo">
+                            <button type="button" className="cot-mover" disabled={idx === 0}
+                              aria-label={`Subir ${item.nombre || 'esta línea'}`}
+                              title={idx === 0 ? 'Ya es la primera línea' : 'Subir esta línea'}
+                              onClick={() => moverItem(item.id, -1)}>
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m18 15-6-6-6 6"/></svg>
+                            </button>
+                            <button type="button" className="cot-mover" disabled={idx === items.length - 1}
+                              aria-label={`Bajar ${item.nombre || 'esta línea'}`}
+                              title={idx === items.length - 1 ? 'Ya es la última línea' : 'Bajar esta línea'}
+                              onClick={() => moverItem(item.id, 1)}>
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+                            </button>
+                          </span>
+                        </td>
                         <td className="td-quitar"><Button type="button" variant="ghost" size="sm" aria-label="Eliminar ítem" onClick={() => removeItem(item.id)}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg></Button></td>
                       </tr>
                     )
