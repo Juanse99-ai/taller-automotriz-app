@@ -592,7 +592,9 @@ export default function Reportes({ trabajos, loading = false, notify }) {
           <div className="rep-band__v">{fmt(stats.facturado)}</div>
         </div>
         <div className="rep-band__div" />
-        <div className="rep-band__c rep-band__c--margen">
+        <div className="rep-band__c rep-band__c--margen"
+          title={`${netoLabel} = ventas sin IVA − comisiones − costo de repuestos, antes de gastos fijos e IVA.`
+            + ((netoParcial || netoIncompletoVerde) ? ` El costo cubre ${stats.coberturaMargen}% de las ventas de repuestos; el real es algo menor.` : '')}>
           <div className="ec-fig__l rep-band__la">{netoLabel.toUpperCase()}</div>
           <div className="rep-band__r">
             <span className="rep-band__v rep-band__v--acc">{fmt(stats.facturado ? stats.neto : 0)}</span>
@@ -603,14 +605,9 @@ export default function Reportes({ trabajos, loading = false, notify }) {
             )}
             {netoSinCosto && <span className="hd-chip hd-chip--warn">sin costo de repuestos</span>}
           </div>
-          {/* La formula se conserva palabra por palabra: es lo que hace
-              entendible la cifra. */}
-          <div className="rep-band__f">
-            {netoLabel} = ventas sin IVA − comisiones − costo de repuestos, antes de gastos fijos e IVA.
-          </div>
-          {(netoParcial || netoIncompletoVerde) && (
-            <div className="rep-band__f">El costo cubre {stats.coberturaMargen}% de las ventas de repuestos; el real es algo menor.</div>
-          )}
+          {/* La formula ya NO se imprime debajo de la cifra: era prosa
+              explicando una cuenta a quien la lee veinte veces al dia. Vive en
+              el titulo, asi que sigue disponible al pasar el cursor. */}
         </div>
         <div className="rep-band__div" />
         <div className="rep-band__kpis">
@@ -657,15 +654,15 @@ export default function Reportes({ trabajos, loading = false, notify }) {
                   <div className="rep-marg__cv">{fmt(mo)}</div>
                   <div className="rep-marg__cn">
                     Utilidad por mano de obra {fmt(stats.utilidadMO)} · {mo > 0 ? Math.round(stats.utilidadMO / mo * 100) : 0}%
-                    {' · '}el técnico se lleva el {Math.round(COMISION.TOTAL * 100)}%
                   </div>
                 </div>
                 <div className="rep-marg__c">
                   <div className="rep-marg__cl">COSTO DE REPUESTOS</div>
                   <div className="rep-marg__cv">{fmt(Math.round(stats.repCosto))}</div>
                   <div className="rep-marg__cn">
-                    Lo que se pagó al proveedor
-                    {stats.coberturaMargen > 0 && stats.coberturaMargen < 100 && ` · cubre ${stats.coberturaMargen}% de la venta`}
+                    {stats.coberturaMargen > 0 && stats.coberturaMargen < 100
+                      ? `Cubre ${stats.coberturaMargen}% de la venta`
+                      : ''}
                   </div>
                 </div>
               </div>

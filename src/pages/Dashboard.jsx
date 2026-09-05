@@ -303,7 +303,7 @@ export default function Dashboard({ trabajos = [], onNavigate, user, ultimaSync 
 .dsh-kpi__ic svg{width:14px;height:14px;stroke:var(--text-3);fill:none;stroke-width:2}
 .dsh-kpi--a .dsh-kpi__ic{background:var(--accent-soft)}
 .dsh-kpi--a .dsh-kpi__ic svg{stroke:var(--accent)}
-.dsh-kpi__l{font-size:10.5px;line-height:1;font-weight:700;letter-spacing:.5px;color:var(--text-3);
+.dsh-kpi__l{font-size:9.5px;line-height:1;font-weight:700;letter-spacing:.9px;color:var(--text-4);
   min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .dsh-kpi__v{font-size:21px;line-height:1.05;font-weight:700;color:var(--text-2);margin-top:9px;
   font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -426,7 +426,7 @@ export default function Dashboard({ trabajos = [], onNavigate, user, ultimaSync 
   /* En las tres celdas 2-up el mockup móvil (:209-218) no dibuja icono: sin él
      caben los rótulos largos. El rótulo puede doblar antes que recortarse. */
   .dsh-kpi:not(.dsh-kpi--a) .dsh-kpi__ic{display:none}
-  .dsh-kpi__l{font-size:10px;letter-spacing:.6px;line-height:1.25;white-space:normal}
+  .dsh-kpi__l{font-size:9.5px;letter-spacing:.9px;line-height:1.25;white-space:normal}
   .dsh-alert__s{white-space:normal;flex:1 1 100%}
   /* La grafica es contexto, no la razon por la que se abre el dashboard en
      el celular: nueve de los doce meses estan en cero. */

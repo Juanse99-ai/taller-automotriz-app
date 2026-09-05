@@ -1408,7 +1408,10 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
            texto de adentro. Cuando "Mano de obra facturada" se parte en dos
            renglones, sin esto la segunda línea quedaba pegada a la izquierda. */
         .liq-cifras__i{ display:flex; flex-direction:column; align-items:flex-end; text-align:right; }
-        .liq-cifras__v{ font-weight:600; font-size:18px; color:var(--text-2); margin-top:3px; }
+        /* Mismo papel que la banda de Reportes (cifra de resumen de pagina):
+           mismas medidas. Estaba en 18/600/margen 3 frente a 17/700/margen 7. */
+        .liq-cifras__v{ font-weight:700; font-size:17px; color:var(--text); margin-top:7px;
+          font-variant-numeric:tabular-nums; letter-spacing:-.2px; }
         /* Hasta 960px, no 560: el drawer de esta app es móvil hasta 960, así que
            entre 561 y 960 (tablet, celular apaisado) quedaba el layout de
            escritorio — justo el que partía "Mano de obra facturada" en dos. */

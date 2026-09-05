@@ -609,7 +609,10 @@ a,button,[role=button],.navlink,.mob-tab,.icobtn{-webkit-tap-highlight-color:tra
    inline con tamaños y letter-spacing ligeramente distintos cada vez, que es de
    dónde salen las inconsistencias). Se adopta por página al tocarla.
    Modificadores de color: .eyebrow--warn (ámbar), .eyebrow--soft (más tenue). */
-.eyebrow{font-size:11px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--text-3)}
+/* El rotulo en versalita del sistema (DESIGN.md: 9.5 / 700 / +0.9 / tinta 4).
+   Estaba en 11 / +0.5 / tinta 3, un cuarto tratamiento distinto del que usan
+   Reportes y Estado de cuenta para exactamente lo mismo. */
+.eyebrow{font-size:9.5px;font-weight:700;letter-spacing:.9px;text-transform:uppercase;color:var(--text-4)}
 .eyebrow--warn{color:var(--amber-700)}
 .eyebrow--soft{color:var(--text-4)}
 
@@ -2736,9 +2739,11 @@ tbody tr:active{background:var(--fill-2)}
 .ec-cta__debe-v{font-size:26px;line-height:1;font-weight:700;color:var(--text);margin-top:6px;white-space:nowrap}
 
 .ec-cta__nums{display:flex;align-items:center;gap:12px;padding:0 18px 13px}
-.ec-num{flex:1;min-width:0;padding:8px 12px 9px;background:var(--bg-subtle);border-radius:var(--r-md)}
-.ec-num__l{font-size:9.5px;line-height:1;font-weight:700;letter-spacing:.7px;color:var(--text-4);white-space:nowrap}
-.ec-num__v{font-size:14.5px;line-height:1;font-weight:700;color:var(--text);margin-top:7px;white-space:nowrap}
+.ec-num{flex:1;min-width:0;padding:8px 14px 9px;border-left:1px solid var(--row-line)}
+.ec-num:first-child{padding-left:0;border-left:0}
+.ec-num__l{font-size:9.5px;line-height:1;font-weight:700;letter-spacing:.9px;color:var(--text-4);white-space:nowrap}
+.ec-num__v{font-size:15px;line-height:1;font-weight:700;color:var(--text);margin-top:7px;white-space:nowrap;
+  font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.2px}
 .ec-num__v.ok{color:var(--ok-fg)}
 /* MAS ANTIGUO es el dato que dice si hay que insistir: en rojo pasado
    el mes, no gris entre otros tres numeros. */
@@ -2886,8 +2891,12 @@ tbody tr:active{background:var(--fill-2)}
   .ec-cta__desde{white-space:normal}
   .ec-cta__debe{flex-basis:100%;text-align:left}
   .ec-cta__debe-v{font-size:30px}
-  .ec-cta__nums{flex-wrap:wrap;gap:7px}
-  .ec-num{flex:1 1 40%}
+  .ec-cta__nums{flex-wrap:wrap;gap:0 0}
+  .ec-num{flex:1 1 40%;padding:8px 12px 9px}
+  /* Al envolver en dos por fila, la 3.ª abre fila: su filete izquierdo caeria
+     pegado al borde de la tarjeta. */
+  .ec-num:nth-child(odd){padding-left:0;border-left:0}
+  .ec-num:nth-child(n+3){border-top:1px solid var(--row-line);margin-top:8px;padding-top:10px}
   .ec-cta__saldar{flex-basis:100%;width:100%}
 
   /* La captura se apila: cada control a lo ancho y tactil. */
@@ -2955,7 +2964,8 @@ tbody tr:active{background:var(--fill-2)}
 .rep-band__r{display:flex;align-items:baseline;gap:11px;flex-wrap:wrap;margin-top:8px}
 .rep-band__f{font-size:11.5px;line-height:1.4;color:var(--text-4);margin-top:8px}
 .rep-band__kpis{flex:none;display:grid;grid-template-columns:auto auto;gap:12px 26px;align-content:center}
-.rep-band__kv{font-size:17px;line-height:1.05;font-weight:700;color:var(--text);margin-top:5px}
+.rep-band__kv{font-size:17px;line-height:1.05;font-weight:700;color:var(--text);margin-top:7px;
+  font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.2px}
 .rep-band__kv.ok{color:var(--ok-fg)}
 
 .rep-book{display:grid;grid-template-columns:minmax(0,1fr) 432px;gap:10px;align-items:start;margin-top:10px}
@@ -3100,7 +3110,7 @@ tbody tr:active{background:var(--fill-2)}
 .ec-form__r{display:flex;align-items:flex-end;gap:10px;flex-wrap:wrap}
 .ec-form__l{font-size:9.5px;line-height:1;font-weight:700;letter-spacing:.9px;
   color:var(--text-2);margin-bottom:6px;display:block}
-.ec-band__gl{font-size:9.5px;line-height:1;font-weight:700;letter-spacing:.7px;
+.ec-band__gl{font-size:9.5px;line-height:1;font-weight:700;letter-spacing:.9px;
   color:var(--text-4);white-space:nowrap}
 .ec-aside__t{font-size:13.5px;line-height:1;font-weight:700;color:var(--text)}
 @media (max-width:900px){
