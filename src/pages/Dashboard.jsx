@@ -515,7 +515,6 @@ export default function Dashboard({ trabajos = [], onNavigate, user, ultimaSync 
           <div className="dsh-alert" style={{ background: 'var(--ok-bg)' }}>
             <span className="hd-chip hd-chip--ok-solid">CRM</span>
             <b>{total} {total === 1 ? 'cliente para contactar' : 'clientes para contactar'}</b>
-            <span className="dsh-alert__s">Vehículos que pasaron su intervalo de mantenimiento. Envíales un WhatsApp para reactivarlos.</span>
             {onNavigate && (
               <button type="button" className="dsh-alert__a" onClick={() => onNavigate('crm')}>
                 Abrir CRM <IcArrow />
@@ -546,7 +545,6 @@ export default function Dashboard({ trabajos = [], onNavigate, user, ultimaSync 
         <div className="dsh-alert" style={{ background: 'var(--info-bg)' }}>
           <span className="hd-chip hd-chip--info-solid">MANTENIMIENTO</span>
           <b>{porContactar} vehículo{porContactar !== 1 ? 's' : ''} sin volver hace 4+ meses</b>
-          <span className="dsh-alert__s">Envíales un recordatorio de mantenimiento (cambio de aceite) y hazlos regresar.</span>
           {onNavigate && (
             <button type="button" className="dsh-alert__a" onClick={() => onNavigate('crm')}>
               Ver recordatorios <IcArrow />

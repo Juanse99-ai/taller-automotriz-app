@@ -1049,18 +1049,12 @@ export default function CuenttiPanel({ trabajos, actualizarTrabajo, notify, trab
               <Paso n={4} titulo="Pago / Abono"
                 state={hasPago ? 'done' : hasFactura ? 'active' : 'pending'}
                 estado={hasPago ? 'LISTO' : hasFactura ? 'EN CURSO' : 'PENDIENTE'}>
-                <div className="hd-sub" style={{ lineHeight: 1.45 }}>
-                  El pago del método elegido entra a caja al enviar la factura. Con Crédito la factura queda pendiente de abono en Cuentti.
-                </div>
               </Paso>
 
               {/* PASO 5 — URL · QR */}
               <Paso n={5} titulo="URL · QR"
                 state={hasDoc ? 'done' : hasPago ? 'active' : 'pending'}
                 estado={hasDoc ? 'LISTO' : hasPago ? 'EN CURSO' : 'PENDIENTE'}>
-                <div className="hd-sub" style={{ lineHeight: 1.45 }}>
-                  Enlace del documento para el cliente.
-                </div>
               </Paso>
             </div>
 

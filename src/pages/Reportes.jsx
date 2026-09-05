@@ -364,14 +364,13 @@ export default function Reportes({ trabajos, loading = false, notify }) {
     doc.setTextColor(...PDF_COLORS.WHITE)
     doc.setFontSize(19)
     doc.text(fmt(stats.neto), rightX + rightW - 5, y + 19, { align: 'right' })
-    doc.setFontSize(6.5)
-    doc.setFont(undefined, 'normal')
-    const notaNeto = stats.coberturaMargen === 0
-      ? 'ventas s/IVA - comisiones (sin costo de repuestos aun)'
-      : !netoConfiablePDF
-        ? `ventas s/IVA - comis. - costo (solo ${stats.coberturaMargen}% de repuestos), el real es menor`
-        : 'ventas s/IVA - comisiones - costo, antes de gastos fijos e IVA'
-    doc.text(notaNeto, rightX + 5, y + cellH * 2 - 4)
+    // La formula tampoco se imprime en el PDF. Cuando el dato esta incompleto
+    // se avisa, pero en una advertencia, no en una cuenta escrita.
+    if (!netoConfiablePDF) {
+      doc.setFontSize(6.5)
+      doc.setFont(undefined, 'normal')
+      doc.text(stats.coberturaMargen === 0 ? 'Sin costo de repuestos' : 'Margen parcial', rightX + 5, y + cellH * 2 - 4)
+    }
 
     y += cellH * 2 + 8
 
@@ -592,9 +591,7 @@ export default function Reportes({ trabajos, loading = false, notify }) {
           <div className="rep-band__v">{fmt(stats.facturado)}</div>
         </div>
         <div className="rep-band__div" />
-        <div className="rep-band__c rep-band__c--margen"
-          title={`${netoLabel} = ventas sin IVA − comisiones − costo de repuestos, antes de gastos fijos e IVA.`
-            + ((netoParcial || netoIncompletoVerde) ? ` El costo cubre ${stats.coberturaMargen}% de las ventas de repuestos; el real es algo menor.` : '')}>
+        <div className="rep-band__c rep-band__c--margen">
           <div className="ec-fig__l rep-band__la">{netoLabel.toUpperCase()}</div>
           <div className="rep-band__r">
             <span className="rep-band__v rep-band__v--acc">{fmt(stats.facturado ? stats.neto : 0)}</span>
@@ -604,6 +601,10 @@ export default function Reportes({ trabajos, loading = false, notify }) {
               </span>
             )}
             {netoSinCosto && <span className="hd-chip hd-chip--warn">sin costo de repuestos</span>}
+            {/* La salvedad deja de ser una frase y pasa a ser pastilla, como las
+                de al lado. No es prosa: avisa que el costo esta incompleto y por
+                tanto la cifra sale algo mas alta de lo real. */}
+            {(netoParcial || netoIncompletoVerde) && <span className="hd-chip hd-chip--warn">margen parcial</span>}
           </div>
           {/* La formula ya NO se imprime debajo de la cifra: era prosa
               explicando una cuenta a quien la lee veinte veces al dia. Vive en
@@ -646,7 +647,7 @@ export default function Reportes({ trabajos, loading = false, notify }) {
                   <div className="rep-marg__cn">
                     {stats.coberturaMargen > 0
                       ? `Margen de repuestos ${fmt(Math.round(stats.margenRep))} · ${stats.margenPct}%`
-                      : 'Cuentti no devolvió el costo: sin margen calculable'}
+                      : ''}
                   </div>
                 </div>
                 <div className="rep-marg__c">

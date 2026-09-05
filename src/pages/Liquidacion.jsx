@@ -2320,13 +2320,13 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
                           const nRep = Object.keys(diarioRepTec).filter(id => diarioRepTec[id]).length
                           const totalDia = (Number(valorDiario) || 0) * (parseInt(diarioDias) || 0)
                           const parteDia = nRep > 0 ? Math.round(totalDia / nRep) : 0
-                          return <>Total <strong style={{ color: 'var(--amber-700)', fontFamily: 'var(--mono)' }}>{fmt(totalDia)}</strong>{nRep > 0 && <> ÷ {nRep} = <strong style={{ color: 'var(--amber-700)', fontFamily: 'var(--mono)' }}>{fmt(parteDia)}</strong> c/u</>}</>
+                          return <>Total <strong style={{ color: 'var(--amber-700)', fontFamily: 'var(--mono)' }}>{fmt(totalDia)}</strong>{nRep > 0 && <> · <strong style={{ color: 'var(--amber-700)', fontFamily: 'var(--mono)' }}>{fmt(parteDia)}</strong> a cada uno</>}</>
                         })()}
                       </div>
                     )}
                   </div>
                   <div className="field" style={{ marginTop: 12 }}>
-                    <label>Nota (lo que verá el técnico en su liquidación)</label>
+                    <label>Nota para el técnico</label>
                     <input className="input" value={diarioNota} onChange={e => setDiarioNota(e.target.value)} placeholder={DIARIO_NOTA_DEFAULT} />
                   </div>
                   {diarioReparto && (
