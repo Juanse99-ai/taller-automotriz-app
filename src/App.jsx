@@ -10,6 +10,8 @@ import Login from './components/Login'
 // (recargar una vez, con marca POR seccion para no entrar en bucle) vive en
 // utils/recargaVersion, compartido con el generador de PDF.
 import { recargarSiEsVersionVieja, marca } from './utils/recargaVersion'
+import { vigilarVersion } from './utils/nuevaVersion'
+import ConfirmDialog from './components/ConfirmDialog'
 
 function seccion(nombre, importar) {
   return lazy(() => importar().then(mod => {
@@ -124,6 +126,10 @@ export default function App() {
   const [user, setUser] = useState(() => getSession())
   // Mensaje para la pantalla de entrada cuando el servidor tumba la sesion.
   const [avisoSesion, setAvisoSesion] = useState('')
+  // Hay una version nueva publicada. Solo se AVISA: recargar lo decide quien
+  // esta usando la app, que puede tener una cotizacion a medio escribir.
+  const [versionNueva, setVersionNueva] = useState(false)
+  const [confirmCfg, setConfirmCfg] = useState(null)
   const [section, setSection] = useState('dashboard')
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
@@ -146,6 +152,8 @@ export default function App() {
     window.addEventListener(EVT_SESION_VENCIDA, alVencer)
     return () => window.removeEventListener(EVT_SESION_VENCIDA, alVencer)
   }, [])
+
+  useEffect(() => vigilarVersion(() => setVersionNueva(true)), [])
 
   const trabajosHook = useTrabajos()
   const clientesHook = useClientes()
@@ -442,6 +450,30 @@ export default function App() {
               <button onClick={() => trabajosHook.sincronizar()}>Reintentar</button>
             </div>
           )}
+          {versionNueva && (
+            <div className="version-nueva">
+              <span>Hay una versión nueva de la app.</span>
+              <button type="button" className="version-nueva__ok" onClick={() => {
+                // Si hay un formulario abierto, lo que se escribio se pierde al
+                // recargar: no hay autoguardado. Por eso aqui se pregunta, y
+                // solo aqui — recargar desde una lista no arriesga nada.
+                if (document.querySelector('form')) {
+                  setConfirmCfg({
+                    title: 'Actualizar ahora',
+                    lead: 'Tienes un formulario abierto. Lo que hayas escrito y no hayas guardado se pierde al actualizar.',
+                    confirmLabel: 'Actualizar igual',
+                    cancelLabel: 'Ahora no',
+                    tone: 'danger',
+                    onConfirm: () => window.location.reload(),
+                  })
+                  return
+                }
+                window.location.reload()
+              }}>Actualizar</button>
+              <button type="button" className="version-nueva__x" aria-label="Ahora no" title="Ahora no"
+                onClick={() => setVersionNueva(false)}>✕</button>
+            </div>
+          )}
           {(trabajosHook.connectionError || cotizacionesHook.connectionError || liquidacionHook.connectionError) && (
             <div className="connection-error">
               <span>No se pudo conectar con el servidor. Mostrando datos guardados localmente.</span>
@@ -458,6 +490,7 @@ export default function App() {
         </div>
       </div>
       {toast && <Toast message={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
+      <ConfirmDialog cfg={confirmCfg} onClose={() => setConfirmCfg(null)} />
       <div className={`scrim ${sidebarOpen ? 'on' : ''}`} onClick={() => setSidebarOpen(false)} />
 
       {/* Mobile bottom tab bar */}

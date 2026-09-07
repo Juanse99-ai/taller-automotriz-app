@@ -3740,3 +3740,29 @@ tbody tr:active{background:var(--fill-2)}
 @media (max-width:960px){
   .rep-toggle{min-height:var(--tap)}
 }
+
+/* ── Aviso de version nueva ──────────────────────────────────────────────── */
+/* Misma forma que el aviso de conexion, pero en el azul de orden: no es un
+   problema que arreglar, es un ofrecimiento. Nunca recarga sola. */
+.version-nueva{
+  display:flex; align-items:center; gap:12px; flex-wrap:wrap;
+  background:var(--accent-soft); border:1px solid var(--accent-soft-2);
+  border-radius:var(--r-md); padding:12px 16px; margin-bottom:18px;
+  font-size:13.5px; color:var(--text-2);
+}
+.version-nueva__ok{
+  margin-left:auto; height:38px; padding:0 16px; border:0; border-radius:var(--r-pill);
+  background:var(--primary); color:#fff; font-family:var(--font);
+  font-size:13.5px; font-weight:700; cursor:pointer; white-space:nowrap;
+}
+.version-nueva__ok:hover{ background:color-mix(in srgb, var(--primary) 90%, #000) }
+.version-nueva__x{
+  width:28px; height:28px; flex:none; display:grid; place-items:center;
+  border:0; background:none; color:var(--text-4); cursor:pointer;
+  border-radius:var(--r-xs); font-size:13px; line-height:1;
+}
+.version-nueva__x:hover{ background:var(--chip); color:var(--text-2) }
+@media(max-width:960px){
+  .version-nueva__ok{ min-height:var(--tap) }
+  .version-nueva__x{ width:var(--tap); height:var(--tap) }
+}
