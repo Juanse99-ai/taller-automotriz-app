@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import { useInstalar } from '../hooks/useInstalar'
 
 const ICONS = {
   dashboard: (
@@ -106,6 +107,12 @@ const ICONS = {
       <line x1="21" y1="12" x2="9" y2="12"/>
     </svg>
   ),
+  instalar: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="6" y="2" width="12" height="20" rx="2.5"/>
+      <path d="M12 8v7m0 0 2.5-2.5M12 15l-2.5-2.5"/>
+    </svg>
+  ),
 }
 
 // Estructura de navegacion en grupos (segun prototipo)
@@ -160,6 +167,8 @@ function useIsMobile() {
 }
 
 export default function Sidebar({ active, onNavigate, isOpen, collapsed, onCollapse, seccionesPermitidas, user, onLogout, trabajos = [], cotizaciones = [], liquidados = [] }) {
+  const instalable = useInstalar()
+  const [verComoIOS, setVerComoIOS] = useState(false)
   const allowed = seccionesPermitidas || []
 
   // Pill rojo en Trabajos: pendientes + en progreso (alerta de carga del taller)
@@ -265,6 +274,26 @@ export default function Sidebar({ active, onNavigate, isOpen, collapsed, onColla
           )
         })}
       </nav>
+
+      {/* La app se puede instalar desde hace meses y nada lo decia, asi que el
+         equipo la abre por el navegador todos los dias. Solo sale cuando de
+         verdad se puede: desaparece sola una vez instalada. */}
+      {instalable.puede && (
+        <button
+          type="button"
+          className="sidebar__inst"
+          onClick={() => { if (instalable.comoIOS) { setVerComoIOS(v => !v) } else { instalable.instalar() } }}
+          aria-expanded={instalable.comoIOS ? verComoIOS : undefined}
+        >
+          {ICONS.instalar}
+          <span>Instalar en el celular</span>
+        </button>
+      )}
+      {instalable.comoIOS && verComoIOS && (
+        <p className="sidebar__inst-ayuda">
+          Toca <b>Compartir</b> abajo y luego <b>Añadir a inicio</b>.
+        </p>
+      )}
 
       {user && (
         <div className="sidebar__foot">

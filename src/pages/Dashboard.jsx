@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from 'react'
+import { Fragment, useMemo, useState, useEffect } from 'react'
 import { fmt, fmtDate, whatsappLink } from '../utils/helpers'
 import { ESTADOS, TECNICOS, DIAS_ESTANCADO, TALLER, rotuloEstado } from '../utils/constants'
 import { Button } from '../components/ui'
@@ -245,6 +245,18 @@ export default function Dashboard({ trabajos = [], onNavigate, user, ultimaSync 
   // Los cuatro conteos que antes vivían apretados en el subtítulo vuelven a la
   // tira que dibuja el diseño. Ninguno se pierde: ingresos del mes (con lo de
   // hoy en la pastilla), listos, activos y el total del historial.
+  // Que esta haciendo el taller ahora mismo. La tira de KPI dice CUANTOS estan
+  // activos; esto dice EN QUE estan, que es lo que hace falta para decidir por
+  // donde empezar. Solo salen los estados con al menos una OT.
+  const reparto = useMemo(() => ([
+    { estado: ESTADOS.PENDIENTE, palabra: 'sin empezar' },
+    { estado: ESTADOS.EN_DIAGNOSTICO, palabra: 'en diagnóstico' },
+    { estado: ESTADOS.EN_PROGRESO, palabra: 'en reparación' },
+    { estado: ESTADOS.ESPERANDO_REPUESTOS, palabra: 'esperando repuestos' },
+    { estado: ESTADOS.EN_PRUEBA, palabra: 'en prueba' },
+  ].map(r => ({ ...r, n: trabajos.filter(t => t.estado === r.estado).length }))
+   .filter(r => r.n > 0)), [trabajos])
+
   const diaHoy = now.getDate()
   const mesHoy = now.toLocaleString('es-CO', { month: 'long' })
   const kpis = [
@@ -288,6 +300,17 @@ export default function Dashboard({ trabajos = [], onNavigate, user, ultimaSync 
          Todo va bajo `.dsh` para que no se escape a ninguna otra página. */}
       <style>{`
 .dsh{display:flex;flex-direction:column;gap:10px}
+/* Resumen del dia: el reparto del trabajo activo en palabras, y cada parte
+   entra a Trabajos ya filtrado por ese estado. */
+.dsh-hoy{display:flex;align-items:center;flex-wrap:wrap;gap:4px 7px;margin:7px 0 0}
+.dsh-hoy__p{color:var(--text-empty)}
+.dsh-hoy__i{border:none;background:none;padding:0;font-family:inherit;font-size:12.5px;line-height:1.4;
+  color:var(--text-3);cursor:pointer;white-space:nowrap}
+.dsh-hoy__i b{font-family:var(--mono);font-variant-numeric:tabular-nums;font-weight:700;color:var(--text)}
+.dsh-hoy__i:hover:not(:disabled){color:var(--text);text-decoration:underline}
+.dsh-hoy__i:disabled{cursor:default}
+.dsh-hoy__i:focus-visible{outline:2px solid var(--primary);outline-offset:3px;border-radius:var(--r-xs)}
+@media(max-width:960px){ .dsh-hoy__i{min-height:var(--tap);display:inline-flex;align-items:center} }
 /* El mockup dibuja TODAS sus tarjetas a 14px. --radius-card vale 16 y lo
    comparten las 12 pantallas restantes, así que aquí se ajusta sólo el
    Dashboard para que la tira de KPI, las tarjetas y el navy coincidan. */
@@ -437,6 +460,23 @@ export default function Dashboard({ trabajos = [], onNavigate, user, ultimaSync 
             {' · '}
             <SelloFrescura ultimaSync={ultimaSync} sinConexion={sinConexion} onRefrescar={onRefrescar} />
           </div>
+          {reparto.length > 0 && (
+            <p className="dsh-hoy">
+              {reparto.map((r, i) => (
+                <Fragment key={r.estado}>
+                  {i > 0 && <span className="dsh-hoy__p" aria-hidden="true">·</span>}
+                  <button
+                    type="button"
+                    className="dsh-hoy__i"
+                    onClick={() => onNavigate?.('trabajos', r.estado)}
+                    disabled={!onNavigate}
+                  >
+                    <b>{r.n}</b> {r.palabra}
+                  </button>
+                </Fragment>
+              ))}
+            </p>
+          )}
         </div>
         <div className="hd-head__sp" />
         {onNavigate && (

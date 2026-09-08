@@ -243,8 +243,13 @@ export default function App() {
   // de Cuentti para no tener que buscarla otra vez en el selector.
   const [cobrarTrabajoId, setCobrarTrabajoId] = useState(null)
 
-  const navigate = useCallback((s) => {
+  // Segundo argumento opcional: el estado con el que abrir Trabajos. Lo usa el
+  // resumen del dia del Dashboard, para que "2 esperando repuestos" lleve a esas
+  // dos y no a la lista entera.
+  const [filtroTrabajos, setFiltroTrabajos] = useState(null)
+  const navigate = useCallback((s, filtro) => {
     setSection(s)
+    setFiltroTrabajos(s === 'trabajos' ? (filtro || null) : null)
     setSidebarOpen(false)
     // El puente solo vale para el salto inmediato: si el usuario se va a otra
     // sección, la OT deja de estar preseleccionada.
@@ -355,7 +360,7 @@ export default function App() {
         {/* onAutoFacturar solo si el rol puede entrar a Cuentti: sin esto, el
            jefe de taller veía el botón "Cobrar" y aterrizaba en "No tienes
            acceso a este módulo", sin Cuentti en el menú para volver. */}
-        return <Trabajos hook={trabajosHook} vehiculosHook={vehiculosHook} clientesHook={clientesHook} notify={notify} onAutoFacturar={seccionesPermitidas.includes('cuentti') ? irACobrar : null} />
+        return <Trabajos hook={trabajosHook} estadoInicial={filtroTrabajos} vehiculosHook={vehiculosHook} clientesHook={clientesHook} notify={notify} onAutoFacturar={seccionesPermitidas.includes('cuentti') ? irACobrar : null} />
       case 'recepcion':
         return <Recepcion hook={trabajosHook} vehiculosHook={vehiculosHook} clientesHook={clientesHook} notify={notify} />
       case 'mecanicos':

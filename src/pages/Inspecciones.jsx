@@ -167,7 +167,7 @@ export default function Inspecciones({ trabajos, notify, onVincularInspeccion, i
                   <div style={{width:122,display:'flex',gap:4,justifyContent:'flex-end'}}>
                     <Button variant="outline" size="sm" className="btn-icon" aria-label="Editar" title="Editar" onClick={e => { e.stopPropagation(); setEditId(i.id); setVista('editar') }}><IconEdit /></Button>
                     <Button variant="outline" size="sm" onClick={e => { e.stopPropagation(); vincularATrabajo(i) }} title="Vincular al trabajo">OT</Button>
-                    <Button variant="ghost" size="sm" className="btn-icon" aria-label="Eliminar" title="Eliminar" onClick={e => { e.stopPropagation(); setConfirmCfg({ title: 'Eliminar inspección', lead: 'No se puede deshacer.', confirmLabel: 'Eliminar', tone: 'danger', onConfirm: () => { guardar(inspecciones.filter(x => x.id !== i.id)); notify('Inspeccion eliminada', 'info') } }); return }}><IconTrash /></Button>
+                    <Button variant="ghost" size="sm" className="btn-icon" aria-label="Eliminar" title="Eliminar" onClick={e => { e.stopPropagation(); setConfirmCfg({ title: 'Eliminar inspección', lead: `${i.placa || 'Sin placa'} · ${i.cliente || 'Sin cliente'} · ${fmtDate(i.fecha)}. No se puede deshacer.`, confirmLabel: 'Eliminar', tone: 'danger', onConfirm: () => { guardar(inspecciones.filter(x => x.id !== i.id)); notify('Inspección eliminada', 'info') } }); return }}><IconTrash /></Button>
                   </div>
                 </div>
               )

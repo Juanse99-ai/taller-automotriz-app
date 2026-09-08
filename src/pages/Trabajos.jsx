@@ -260,7 +260,7 @@ const CSS_TRABAJOS = `
 
 `
 
-export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, onAutoFacturar }) {
+export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, onAutoFacturar, estadoInicial }) {
   const { trabajos, agregarTrabajo, actualizarTrabajo, eliminarTrabajo, puedeCrearOT } = hook
   const [vista, setVista] = useState('lista') // lista | nuevo | editar | kanban
   const [editId, setEditId] = useState(null)
@@ -323,7 +323,11 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
   // Asi al abrir Trabajos solo ves los que estan en proceso, no los ya cerrados.
   // Los filtros se RECUERDAN entre navegaciones/recargas (localStorage). La
   // búsqueda de texto (filtroBusqueda) se deja transitoria a propósito.
-  const [filtroEstado, setFiltroEstado] = useState(() => lsGet('mda:trab_estado', 'activos'))
+  // Al entrar desde el resumen del dia del Dashboard ("2 esperando repuestos"),
+  // ese estado gana sobre el filtro que quedo guardado de la ultima visita. Va en
+  // el inicializador y no en un efecto: la pantalla se monta de cero en cada
+  // salto de seccion, asi que no hace falta sincronizar nada despues.
+  const [filtroEstado, setFiltroEstado] = useState(() => estadoInicial || lsGet('mda:trab_estado', 'activos'))
   const [filtroTecnico, setFiltroTecnico] = useState(() => lsGet('mda:trab_tecnico', 'todos'))
   const [filtroBusqueda, setFiltroBusqueda] = useState('')
   // Filtro de fecha de la LISTA (el kanban siempre muestra todo el trabajo activo).
