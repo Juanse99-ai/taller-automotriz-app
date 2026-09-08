@@ -3663,6 +3663,29 @@ tbody tr:active{background:var(--fill-2)}
 
    La barra gris solo sale cuando HAY nota. Medido en la base: 21 de 44 fotos
    la tienen, asi que una barra vacia en las otras 23 seria ruido. */
+/* Cotizacion del portal: el detalle viene plegado. Un presupuesto de repuestos
+   trae nombres larguisimos y dos cotizaciones llenaban la pantalla antes de que
+   el cliente viera nada mas. Lo que manda de un vistazo es el vehiculo, el total
+   y el boton de aprobar; el desglose se abre si lo quiere ver. */
+.pc-cot__items{display:flex;flex-direction:column;gap:5px;margin-top:12px;padding-top:11px;border-top:1px solid var(--row-line)}
+.pc-cot__it{display:flex;justify-content:space-between;gap:12px;font-size:13.5px;line-height:1.4}
+.pc-cot__it-n{color:var(--text-2);min-width:0}
+.pc-cot__it-v{color:var(--text-3);white-space:nowrap}
+.pc-cot__pie{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:14px}
+.pc-cot__ver{display:inline-flex;align-items:center;gap:5px;padding:0;border:none;background:none;
+  font-family:inherit;font-size:12.5px;font-weight:600;color:var(--text-3);cursor:pointer}
+.pc-cot__ver:hover{color:var(--text);text-decoration:underline}
+.pc-cot__ver:focus-visible{outline:2px solid var(--primary);outline-offset:3px;border-radius:var(--r-xs)}
+.pc-cot__ver svg{width:14px;height:14px;flex:none;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;transition:transform .18s var(--ease-out)}
+@media(max-width:960px){
+  .pc-cot__ver{min-height:var(--tap)}
+  /* El boton de aprobar es LA accion de esta pantalla: en el celular va a todo
+     el ancho y debajo, no compitiendo por sitio con el enlace del detalle. */
+  .pc-cot__pie{align-items:stretch}
+  .pc-cot__pie .btn{width:100%}
+}
+@media(prefers-reduced-motion:reduce){ .pc-cot__ver svg{transition:none} }
+
 .pc-fotos{ display:grid; grid-template-columns:repeat(2,1fr); gap:9px }
 .pc-foto{
   display:flex; flex-direction:column; padding:0; text-align:left; cursor:pointer;

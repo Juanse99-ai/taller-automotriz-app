@@ -249,6 +249,12 @@ export default function PortalCliente() {
   const [pagosIniciados, setPagosIniciados] = useState(leerPagosIniciados) // { trabajoId: timestamp }
   const [vehSel, setVehSel] = useState(null) // placa del vehículo enfocado (modo flota)
   const [firmandoCotiz, setFirmandoCotiz] = useState(null) // cotización que el cliente firma para aprobar
+  // Detalle de cada cotizacion: cerrado de entrada. Un presupuesto de repuestos
+  // trae nombres larguisimos ("FILTRO DE COMBUSTIBLE ORIGINAL NISSAN NISSAN
+  // FRONTIER NP300 2016-2024/ 2.5 LTS...") y dos cotizaciones llenaban la
+  // pantalla entera antes de que el cliente viera nada mas. Lo que tiene que
+  // ver de un vistazo es el vehiculo, el total y el boton de aprobar.
+  const [cotAbierta, setCotAbierta] = useState({})
   const [aprobando, setAprobando] = useState(false)
   const [errorCotiz, setErrorCotiz] = useState('')
   // Aviso propio del PDF. No se reusa `error` porque ese solo se pinta en la
@@ -1004,7 +1010,10 @@ export default function PortalCliente() {
             {cotizPendientes.length>0 && <div style={{fontSize:12.5,color:'var(--text-3)',marginTop:2}}>Revísala y apruébala firmando desde tu celular.</div>}
           </div>
           <div>
-            {cotizaciones.map((c,i)=>(
+            {cotizaciones.map((c,i)=>{
+              const nItems = (c.items||[]).length
+              const abierta = !!cotAbierta[c.id]
+              return (
               <div key={c.id} style={{padding:'14px 20px',borderTop:i>0?'1px solid var(--border)':'none'}}>
                 <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',gap:12,flexWrap:'wrap'}}>
                   <div style={{minWidth:0}}>
@@ -1024,24 +1033,32 @@ export default function PortalCliente() {
                     <div style={{fontSize:11,color:'var(--text-4)'}}>IVA incluido</div>
                   </div>
                 </div>
-                <div style={{marginTop:10,display:'flex',flexDirection:'column',gap:4}}>
-                  {(c.items||[]).slice(0,6).map((it,k)=>(
-                    <div key={k} style={{display:'flex',justifyContent:'space-between',gap:12,fontSize:13.5}}>
-                      {/* !== 1 (no > 1): una cantidad de 0,5 hay que MOSTRARLA, es
-                         justo la que explica por qué la línea cuesta la mitad. */}
-                      <span style={{color:'var(--text-2)',minWidth:0}}>{it.nombre||it.codigo||'Ítem'}{cantidadItem(it)!==1?` × ${fmtCant(it)}`:''}</span>
-                      <span className="mono" style={{color:'var(--text-3)',whiteSpace:'nowrap'}}>{fmt(Math.round((parseFloat(it.precio)||0)*(cantidadItem(it))))}</span>
-                    </div>
-                  ))}
-                  {(c.items||[]).length>6 && <div style={{fontSize:12.5,color:'var(--text-4)'}}>+ {(c.items||[]).length-6} más…</div>}
-                </div>
-                <div style={{marginTop:12,display:'flex',justifyContent:'flex-end'}}>
+                {abierta && (
+                  <div className="pc-cot__items">
+                    {(c.items||[]).map((it,k)=>(
+                      <div key={k} className="pc-cot__it">
+                        {/* !== 1 (no > 1): una cantidad de 0,5 hay que MOSTRARLA, es
+                           justo la que explica por qué la línea cuesta la mitad. */}
+                        <span className="pc-cot__it-n">{it.nombre||it.codigo||'Ítem'}{cantidadItem(it)!==1?` × ${fmtCant(it)}`:''}</span>
+                        <span className="mono pc-cot__it-v">{fmt(Math.round((parseFloat(it.precio)||0)*(cantidadItem(it))))}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <div className="pc-cot__pie">
+                  {nItems > 0 && (
+                    <button type="button" className="pc-cot__ver" aria-expanded={abierta}
+                      onClick={()=>setCotAbierta(o=>({...o,[c.id]:!o[c.id]}))}>
+                      {abierta ? 'Ocultar el detalle' : `Ver el detalle · ${nItems} ${nItems===1?'ítem':'ítems'}`}
+                      <svg viewBox="0 0 24 24" aria-hidden="true" style={{transform:abierta?'rotate(180deg)':'none'}}><path d="m6 9 6 6 6-6"/></svg>
+                    </button>
+                  )}
                   {c.aprobada
                     ? <span className="badge badge-s" style={{textTransform:'none',letterSpacing:0}}>Aprobada ✓{c.aprobadaEn?` · ${fmtDate(c.aprobadaEn)}`:''}</span>
                     : <Button variant="success" onClick={()=>{setErrorCotiz('');setFirmandoCotiz(c)}}>Aprobar cotización</Button>}
                 </div>
               </div>
-            ))}
+            )})}
           </div>
         </div>
       )}
