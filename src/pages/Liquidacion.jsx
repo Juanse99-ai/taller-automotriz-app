@@ -478,7 +478,7 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
       }
     })
     const cargos = tecMovs.reduce((s, m) => s + (parseFloat(m.monto) || 0), 0)
-    // Descuento real al pago: el "diario" se comparte (50/50), el resto se
+    // Descuento real al pago: el "diario" se comparte (40/60), el resto se
     // descuenta completo. Ver cargoEfectivo(). neto = comisión − cargos efectivos.
     const cargosMovsEf = Math.round(tecMovs.reduce((s, m) => s + cargoEfectivo(m), 0))
     // CUENTA del técnico (Estado de cuenta), según el signo del saldo:
@@ -2209,7 +2209,12 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
                     <strong>{tipoLabel(m.tipo)}</strong>
                     <span style={{ color: 'var(--text-3)' }}> · {fechaCorta(m.fecha)}{m.nota ? ` · ${m.nota}` : ''}</span>
                   </span>
-                  <span className="liq-aj__val mono" style={{ color: 'var(--amber-700)' }}>− {fmt(m.monto)}</span>
+                  <span className="liq-aj__val mono" style={{ color: 'var(--amber-700)' }}>
+                    − {fmt(cargoEfectivo(m))}
+                    {cargoEfectivo(m) !== Math.round(parseFloat(m.monto) || 0) && (
+                      <span style={{ fontWeight: 500, fontSize: 11.5, color: 'var(--text-4)' }}> de {fmt(m.monto)}</span>
+                    )}
+                  </span>
                   <Button variant="ghost" size="sm" className="btn-icon liq-aj__x" aria-label="Quitar ajuste" title="Quitar" onClick={() => setDialog({
                     title: 'Eliminar movimiento',
                     lead: `${tipoLabel(m.tipo)} · ${fmt(m.monto)} · ${fechaCorta(m.fecha)}`,
@@ -2360,15 +2365,6 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
               {/* El neto ya NO va aquí: sube al carril derecho, en el navy, con
                  el botón de pagar dentro (ver más abajo). Aquí quedan los
                  ajustes que lo forman y los avisos que hay que leer antes. */}
-                {totalSeleccion.cargos > 0 && (
-                  <div style={{ padding: '9px 13px', background: 'rgba(245,158,11,.07)', border: '1px solid rgba(245,158,11,.25)', borderRadius: 9, fontSize: 12.5, color: 'var(--text-2)', marginBottom: 14 }}>
-                    {totalSeleccion.cargos !== totalSeleccion.cargosEfectivos ? (
-                      <>Cargos <strong>{fmt(totalSeleccion.cargos)}</strong> — descuento real <strong>{fmt(totalSeleccion.cargosEfectivos)}</strong> (el diario se comparte {APORTE_ADMIN_SPLIT * 100}/{100 - APORTE_ADMIN_SPLIT * 100}; el resto completo{totalSeleccion.descuentoCuenta > 0 ? <>, incluye <strong className="mono">{fmt(totalSeleccion.descuentoCuenta)}</strong> de su cuenta</> : null}). Neto = comisión − {fmt(totalSeleccion.cargosEfectivos)}.</>
-                    ) : (
-                      <>Cargos <strong>{fmt(totalSeleccion.cargosEfectivos)}</strong>{totalSeleccion.descuentoCuenta > 0 ? <> (incluye <strong className="mono">{fmt(totalSeleccion.descuentoCuenta)}</strong> de su cuenta)</> : null}. Neto = comisión − {fmt(totalSeleccion.cargosEfectivos)}.</>
-                    )}
-                  </div>
-                )}
                 {totalSeleccion.neto < 0 && (
                   <div style={{ padding: '10px 14px', background: 'rgba(220,38,38,.07)', border: '1px solid rgba(220,38,38,.28)', borderRadius: 9, fontSize: 13, color: 'var(--red-700)', fontWeight: 600, marginBottom: 14 }}>
                     Los cargos superan la comisión. Al generar el pago, la deuda restante se arrastrará como "saldo anterior".
