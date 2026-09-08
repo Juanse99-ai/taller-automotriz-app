@@ -332,7 +332,7 @@ export default function Recepcion({ hook, vehiculosHook, clientesHook, notify })
 
             {/* ---------- 1 · CLIENTE ---------- */}
             <section id="rc-cliente">
-              <SecHead n={1} titulo="CLIENTE" apoyo="Busca por documento y se llena solo" />
+              <SecHead n={1} titulo="CLIENTE" />
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(158px,1fr))', gap: 10 }}>
                 <div className="field" style={{ position: 'relative' }}>
                   <label>Cédula / NIT<span className="req">*</span></label>
@@ -371,7 +371,7 @@ export default function Recepcion({ hook, vehiculosHook, clientesHook, notify })
 
             {/* ---------- 2 · VEHÍCULO ---------- */}
             <section id="rc-vehiculo">
-              <SecHead n={2} titulo="VEHÍCULO" apoyo="La placa es por lo que se busca después" />
+              <SecHead n={2} titulo="VEHÍCULO" />
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(158px,1fr))', gap: 10 }}>
                 <div className="field">
                   <label>Placa<span className="req">*</span></label>

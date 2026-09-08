@@ -1452,7 +1452,7 @@ tbody tr:active{background:var(--fill-2)}
 /* La cifra grande. `--fg` la pinta cada pantalla según lo que signifique. */
 .hd-fig{text-align:right}
 .hd-fig__l{font-size:9.5px;line-height:1;font-weight:700;letter-spacing:.9px;color:var(--text-4)}
-.hd-fig__v{font-size:26px;line-height:1.05;font-weight:700;color:var(--fg,var(--text));margin-top:4px}
+.hd-fig__v{font-size:26px;line-height:1.05;font-weight:700;color:var(--fg,var(--text));margin-top:4px;font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.2px}
 .hd-fig__s{font-size:11.5px;line-height:1.3;color:var(--text-3);margin-top:3px}
 
 /* --- Tarjeta contenedora (tabla o bloque) --- */
@@ -1696,6 +1696,9 @@ tbody tr:active{background:var(--fill-2)}
 @media (max-width:960px){
   .topbar__menu{width:var(--tap);height:var(--tap)}
   .topbar .btn-sm{width:var(--tap)}
+  /* Salir ya vive en el pie del cajon, junto al nombre. En el topbar caia
+     solo en una segunda fila y estiraba la cabecera a 181px. */
+  .topbar__salir{display:none}
   .m3switch{min-height:var(--tap)}
   .hd-seg{height:auto;padding:4px}
   .hd-seg__i{height:var(--tap)}
@@ -2959,7 +2962,8 @@ tbody tr:active{background:var(--fill-2)}
 .rep-band__c{flex:none}
 .rep-band__c--margen{flex:1;min-width:260px}
 .rep-band__la{color:var(--accent)}
-.rep-band__v{font-size:27px;line-height:1.05;font-weight:700;color:var(--text);margin-top:8px}
+.rep-band__v{font-size:27px;line-height:1.05;font-weight:700;color:var(--text);margin-top:8px;
+  font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.2px}
 .rep-band__v--acc{color:var(--accent);margin-top:0}
 .rep-band__r{display:flex;align-items:baseline;gap:11px;flex-wrap:wrap;margin-top:8px}
 .rep-band__f{font-size:11.5px;line-height:1.4;color:var(--text-4);margin-top:8px}
@@ -2983,7 +2987,8 @@ tbody tr:active{background:var(--fill-2)}
 .rep-marg__cl{display:flex;align-items:center;gap:7px;font-size:9.5px;line-height:1;font-weight:700;
   letter-spacing:.7px;color:var(--text-4);white-space:nowrap}
 .rep-marg__dot{width:8px;height:8px;flex:none;border-radius:2px}
-.rep-marg__cv{font-size:19px;line-height:1.05;font-weight:700;color:var(--text);margin-top:7px}
+.rep-marg__cv{font-size:19px;line-height:1.05;font-weight:700;color:var(--text);margin-top:7px;
+  font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.2px}
 .rep-marg__cn{font-size:11.5px;line-height:1.35;color:var(--text-3);margin-top:4px}
 
 .rep-consulta{font-size:9.5px;line-height:1;font-weight:700;letter-spacing:.9px;color:var(--text-4);padding:6px 4px 0}
@@ -3112,7 +3117,7 @@ tbody tr:active{background:var(--fill-2)}
   color:var(--text-2);margin-bottom:6px;display:block}
 .ec-band__gl{font-size:9.5px;line-height:1;font-weight:700;letter-spacing:.9px;
   color:var(--text-4);white-space:nowrap}
-.ec-aside__t{font-size:13.5px;line-height:1;font-weight:700;color:var(--text)}
+.ec-aside__t{font-size:15px;line-height:1;font-weight:700;color:var(--text)}  /* mismo escalon que .card__h h3 */
 @media (max-width:900px){
   .ec-form__r{flex-direction:column;align-items:stretch;gap:13px}
   .ec-form__r .ec-form__c{width:auto!important;min-width:0!important;flex:none!important}
@@ -3275,10 +3280,6 @@ tbody tr:active{background:var(--fill-2)}
 @media (max-width:960px){
   .rep-ico{width:var(--tap);height:var(--tap)}
   .rep-rango{height:var(--tap)}
-  /* Este va dentro de una frase, así que no puede crecer de verdad sin mover
-     el renglón: crece el área de toque con padding y se compensa con margen
-     negativo. El texto no se mueve un pixel. */
-  .liq-aviso{padding:12px 6px !important;margin:-12px -2px !important}
 }
 
 /* ═══ Opciones de PERSONA (Estado de cuenta) ═══
@@ -3765,4 +3766,19 @@ tbody tr:active{background:var(--fill-2)}
 @media(max-width:960px){
   .version-nueva__ok{ min-height:var(--tap) }
   .version-nueva__x{ width:var(--tap); height:var(--tap) }
+}
+
+/* ── Aviso con accion: pastilla · titular · accion ───────────────────────── */
+/* Una fila, no una tarjeta: el fondo lo pone quien lo usa (ok-bg, info-bg,
+   warn-bg) segun el estado. Lo comparten Dashboard y Liquidacion. */
+.aviso-fila{display:flex;align-items:center;flex-wrap:wrap;gap:9px;row-gap:4px;
+  min-height:36px;padding:7px 12px;border-radius:var(--r-md)}
+.aviso-fila b{font-size:12.5px;line-height:1.2;font-weight:700;color:var(--text);white-space:nowrap}
+.aviso-fila__a{display:inline-flex;align-items:center;gap:5px;flex:none;height:26px;padding:0;
+  margin-left:auto;border:none;background:none;font-family:inherit;font-size:11.5px;line-height:1;
+  font-weight:700;color:var(--text);cursor:pointer;white-space:nowrap}
+.aviso-fila__a:hover{text-decoration:underline}
+.aviso-fila__a svg{width:13px;height:13px;flex:none}
+@media(max-width:960px){
+  .aviso-fila__a{min-height:var(--tap)}
 }

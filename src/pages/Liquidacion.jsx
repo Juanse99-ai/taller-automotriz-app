@@ -1394,10 +1394,6 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
            por eso NO puede heredar la transición de .15s — un toque dura ~100ms y
            el gris apenas empezaba a asomar. Instantáneo al presionar. */
         .liq-roster-row:active,.liq-roster-mini:active{ background:var(--fill); transition-duration:0s; }
-        /* Aviso de OTs huérfanas: es un enlace de verdad, con blanco suficiente
-           para el dedo (los 44px de alto los da el padding + el interlineado). */
-        .liq-aviso{ display:inline-flex; align-items:center; gap:5px; font:inherit; font-weight:600; color:var(--red-700); background:none; border:none; padding:4px 6px; margin:-4px -2px; cursor:pointer; text-decoration:underline; text-underline-offset:3px; -webkit-user-select:none; user-select:none; touch-action:manipulation; }
-        .liq-aviso:active{ opacity:.6; }
         /* Trío de cifras del cierre. En pantalla ancha van en columna a la
            derecha del total. En el celular no caben en fila: "Mano de obra
            facturada" se partía en dos renglones y "Utilidad taller" quedaba
@@ -1728,17 +1724,32 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
           </div>
           <div style={{ fontSize: 13.5, color: 'var(--text-3)' }}>
             {tecnicosConPendientes.length} técnico{tecnicosConPendientes.length !== 1 ? 's' : ''} · {trabajosPendientes.length} OT{trabajosPendientes.length !== 1 ? 's' : ''} pendiente{trabajosPendientes.length !== 1 ? 's' : ''}
-            {/* Avisos que se pueden ABRIR: antes eran un número en rojo sin salida. */}
-            {kpis.sinTecnico > 0 && (
-              <> · <button type="button" className="liq-aviso" onClick={() => setVerSinTecnico(v => !v)} aria-expanded={verSinTecnico}>
-                <span aria-hidden="true">{verSinTecnico ? '▾' : '▸'}</span>
-                {/* "6 sin técnico" a secas no decía que se pudiera abrir ni qué
-                   hacer con ellas; el jefe lo leía como un dato muerto. */}
-                {kpis.sinTecnico} sin técnico · {verSinTecnico ? 'ocultar' : 'ver cuáles'}
-              </button></>
-            )}
-            {kpis.sinPartner > 0 && <span style={{ color: 'var(--amber-700)', fontWeight: 600 }}> · {kpis.sinPartner} compartido{kpis.sinPartner !== 1 ? 's' : ''} sin compañero</span>}
           </div>
+          {/* Los avisos ya NO van dentro de la frase. Eran un enlace rojo
+              subrayado con un triangulo de texto, y necesitaban !important para
+              alcanzar el tamaño tactil: tres señales de estar donde no toca.
+              Ahora usan .aviso-fila, el mismo que el Dashboard (pastilla ·
+              titular · accion), y en ambar: "sin tecnico" es un estado por
+              revisar, no plata que se debe (Regla del Color Contable). */}
+          {(kpis.sinTecnico > 0 || kpis.sinPartner > 0) && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 10 }}>
+              {kpis.sinTecnico > 0 && (
+                <div className="aviso-fila" style={{ background: 'var(--warn-bg)' }}>
+                  <span className="hd-chip hd-chip--warn-solid">REVISAR</span>
+                  <b>{kpis.sinTecnico} OT{kpis.sinTecnico !== 1 ? 's' : ''} sin técnico</b>
+                  <button type="button" className="aviso-fila__a" onClick={() => setVerSinTecnico(v => !v)} aria-expanded={verSinTecnico}>
+                    {verSinTecnico ? 'Ocultar' : 'Ver cuáles'}
+                  </button>
+                </div>
+              )}
+              {kpis.sinPartner > 0 && (
+                <div className="aviso-fila" style={{ background: 'var(--warn-bg)' }}>
+                  <span className="hd-chip hd-chip--warn-solid">REVISAR</span>
+                  <b>{kpis.sinPartner} compartido{kpis.sinPartner !== 1 ? 's' : ''} sin compañero</b>
+                </div>
+              )}
+            </div>
+          )}
         </div>
         <div className="liq-cifras">
           {[['Comisiones', fmt(kpis.comisiones)], ['Mano de obra facturada', fmt(kpis.facturado)], ['Utilidad taller', fmt(kpis.utilidad)]].map(([l, v]) => (
@@ -1752,9 +1763,9 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
 
       {/* Detalle de las OTs huérfanas: qué son y a qué OT ir a arreglarlas */}
       {verSinTecnico && trabajosSinTecnico.length > 0 && (
-        <div className="card" style={{ marginBottom: 14, borderColor: 'rgba(220,38,38,.3)' }}>
+        <div className="card" style={{ marginBottom: 14, borderColor: 'var(--amber-400)' }}>
           <div className="card__h">
-            <h3 style={{ color: 'var(--red-700)' }}>OTs sin técnico asignado</h3>
+            <h3 style={{ color: 'var(--amber-700)' }}>OTs sin técnico asignado</h3>
             <Button variant="ghost" size="sm" onClick={() => setVerSinTecnico(false)}>Cerrar</Button>
           </div>
           <div className="card__b">

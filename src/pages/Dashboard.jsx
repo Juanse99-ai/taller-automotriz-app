@@ -324,16 +324,8 @@ export default function Dashboard({ trabajos = [], onNavigate, user, ultimaSync 
 /* --- Tiras de aviso: el mockup no dibuja ninguna, así que aquí bajan de
    jerarquía a un renglón. No se borra ni una palabra: rótulo, contador,
    explicación y acción siguen todos visibles. --- */
-.dsh-alert{display:flex;align-items:center;flex-wrap:wrap;gap:9px;row-gap:4px;
-  min-height:36px;padding:7px 12px;border-radius:var(--r-md)}
-.dsh-alert b{font-size:12.5px;line-height:1.2;font-weight:700;color:var(--text);white-space:nowrap}
-.dsh-alert__s{flex:1;min-width:120px;font-size:11.5px;line-height:1.3;color:var(--text-2);
-  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.dsh-alert__a{display:inline-flex;align-items:center;gap:5px;flex:none;height:26px;padding:0;
-  border:none;background:none;font-family:inherit;font-size:11.5px;line-height:1;font-weight:700;
-  color:var(--text);cursor:pointer;white-space:nowrap}
-.dsh-alert__a:hover{text-decoration:underline}
-.dsh-alert__a svg{width:13px;height:13px;flex:none}
+/* .aviso-fila (pastilla · titular · accion) vive en index.css: lo comparten
+   Dashboard y Liquidacion. */
 
 /* --- Fila principal: columna flexible + rail fijo de 288px (mockup :91-170) --- */
 .dsh-main{display:flex;gap:10px;align-items:stretch}
@@ -427,12 +419,11 @@ export default function Dashboard({ trabajos = [], onNavigate, user, ultimaSync 
      caben los rótulos largos. El rótulo puede doblar antes que recortarse. */
   .dsh-kpi:not(.dsh-kpi--a) .dsh-kpi__ic{display:none}
   .dsh-kpi__l{font-size:9.5px;letter-spacing:.9px;line-height:1.25;white-space:normal}
-  .dsh-alert__s{white-space:normal;flex:1 1 100%}
   /* La grafica es contexto, no la razon por la que se abre el dashboard en
      el celular: nueve de los doce meses estan en cero. */
   .dsh-chart{height:160px;gap:4px;padding:0 14px 14px}
   .dsh-chart__x{font-size:8.5px;letter-spacing:.3px}
-  .dsh-alert__a,.dsh-link,.dsh-pr__ico,.dsh-navy__btn{min-height:var(--tap)}
+  .aviso-fila__a,.dsh-link,.dsh-pr__ico,.dsh-navy__btn{min-height:var(--tap)}
   .dsh-pr__ico{min-width:var(--tap)}
 }
       `}</style>
@@ -512,11 +503,11 @@ export default function Dashboard({ trabajos = [], onNavigate, user, ultimaSync 
         const total = vencidos.size
         if (total === 0) return null
         return (
-          <div className="dsh-alert" style={{ background: 'var(--ok-bg)' }}>
+          <div className="aviso-fila" style={{ background: 'var(--ok-bg)' }}>
             <span className="hd-chip hd-chip--ok-solid">CRM</span>
             <b>{total} {total === 1 ? 'cliente para contactar' : 'clientes para contactar'}</b>
             {onNavigate && (
-              <button type="button" className="dsh-alert__a" onClick={() => onNavigate('crm')}>
+              <button type="button" className="aviso-fila__a" onClick={() => onNavigate('crm')}>
                 Abrir CRM <IcArrow />
               </button>
             )}
@@ -525,15 +516,15 @@ export default function Dashboard({ trabajos = [], onNavigate, user, ultimaSync 
       })()}
 
       {/* ── Alerta de trabajos estancados (>3 dias sin moverse) ───────────── */}
+      {/* Ambar y no rojo: un trabajo detenido es un estado por revisar, no
+          plata que se debe (Regla del Color Contable). Y sin la frase larga:
+          pastilla, titular y boton ya lo dicen todo. */}
       {estancados.length > 0 && (
-        <div className="dsh-alert" style={{ background: 'var(--bad-bg)' }}>
-          <span className="hd-chip hd-chip--bad-solid">ESTANCADOS</span>
-          <b>{estancados.length} {estancados.length === 1 ? 'trabajo estancado' : 'trabajos estancados'}</b>
-          <span className="dsh-alert__s">
-            {estancados.length === 1 ? 'Lleva' : 'Llevan'} más de {DIAS_ESTANCADO} días sin actualizarse. Revísalos para mover el avance o cambiar estado.
-          </span>
+        <div className="aviso-fila" style={{ background: 'var(--warn-bg)' }}>
+          <span className="hd-chip hd-chip--warn-solid">ESTANCADOS</span>
+          <b>{estancados.length} {estancados.length === 1 ? 'trabajo estancado' : 'trabajos estancados'} · más de {DIAS_ESTANCADO} días</b>
           {onNavigate && (
-            <button type="button" className="dsh-alert__a" onClick={() => onNavigate('trabajos')}>
+            <button type="button" className="aviso-fila__a" onClick={() => onNavigate('trabajos')}>
               Ver estancados <IcArrow />
             </button>
           )}
@@ -542,11 +533,11 @@ export default function Dashboard({ trabajos = [], onNavigate, user, ultimaSync 
 
       {/* ── Nudge: vehículos por contactar (mantenimiento) → CRM ──────────── */}
       {porContactar > 0 && (
-        <div className="dsh-alert" style={{ background: 'var(--info-bg)' }}>
+        <div className="aviso-fila" style={{ background: 'var(--info-bg)' }}>
           <span className="hd-chip hd-chip--info-solid">MANTENIMIENTO</span>
           <b>{porContactar} vehículo{porContactar !== 1 ? 's' : ''} sin volver hace 4+ meses</b>
           {onNavigate && (
-            <button type="button" className="dsh-alert__a" onClick={() => onNavigate('crm')}>
+            <button type="button" className="aviso-fila__a" onClick={() => onNavigate('crm')}>
               Ver recordatorios <IcArrow />
             </button>
           )}
@@ -649,7 +640,7 @@ export default function Dashboard({ trabajos = [], onNavigate, user, ultimaSync 
                         </span>
                         <span className="hd-bar__sp" />
                         {isVencido
-                          ? <span className="hd-chip hd-chip--bad">Estancado</span>
+                          ? <span className="hd-chip hd-chip--warn">Estancado</span>
                           : <span className={`hd-chip hd-chip--${chipEstado(t.estado)}`}>{t.estado}</span>}
                         {onNavigate && (
                           <button type="button" className="dsh-pr__ico" aria-label="Ver trabajos" title="Ver trabajos" onClick={() => onNavigate('trabajos')}>
@@ -781,7 +772,7 @@ export default function Dashboard({ trabajos = [], onNavigate, user, ultimaSync 
         <div className="hd-card dsh-lc">
           <div className="hd-bar">
             <span className="dsh-t">Trabajos estancados</span>
-            <span className="hd-chip hd-chip--bad">{estancados.length}</span>
+            <span className="hd-chip hd-chip--warn">{estancados.length}</span>
           </div>
           <div className="hd-tbl" style={{ marginTop: 12 }}>
             <div className="hd-tbl__h">

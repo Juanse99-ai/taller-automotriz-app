@@ -1260,7 +1260,7 @@ export default function CuenttiPanel({ trabajos, actualizarTrabajo, notify, trab
                 {cargandoEstadoF ? 'Consultando a Cuentti…'
                   : estadoF?.ok ? 'Leído de Cuentti ahora'
                   : txSel ? 'No se pudo leer el estado en Cuentti. Lo de arriba es solo lo hecho en esta pestaña.'
-                  : 'Aún sin factura: muestra lo que va a pasar al enviar.'}
+                  : ''}
               </div>
             </div>
           </div>

@@ -485,7 +485,7 @@ const ESTILOS = `
 .mec-esp{display:block;font-size:11.5px;line-height:1.3;margin-top:2px}
 .hd-chip.mec-chip{font-size:10.5px;letter-spacing:.5px;padding:6px 10px}
 .mec-tel{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-variant-numeric:tabular-nums;font-size:12.5px;color:var(--text-3)}
-.mec-num{font-size:15px}
+.mec-num{font-size:15px;font-family:var(--mono);font-variant-numeric:tabular-nums}
 .mec-lbl{display:none;font-family:var(--font);font-size:9.5px;line-height:1;font-weight:700;letter-spacing:.7px;text-transform:uppercase;color:var(--text-4)}
 .mec-f__v{font-size:13px;font-weight:700;color:var(--text)}
 .mec-f__v--com{font-size:13.5px}

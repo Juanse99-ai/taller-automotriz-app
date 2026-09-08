@@ -455,7 +455,7 @@ function InspeccionForm({ inspeccion, trabajos, onSave, onCancel }) {
                       </div>
                       {item.comentario && (
                         <div style={{display:'flex',gap:8,margin:'0 0 8px',padding:'9px 11px',background:'var(--warn-bg-2)',border:'1px solid var(--warn-bg)',borderRadius:10}}>
-                          <span style={{flex:'none',fontSize:9,fontWeight:700,letterSpacing:'.4px',color:'var(--warn-fg-2)',paddingTop:2}}>NOTA</span>
+                          <span style={{flex:'none',fontSize:9.5,fontWeight:700,letterSpacing:'.4px',color:'var(--warn-fg-2)',paddingTop:2}}>NOTA</span>
                           <span style={{fontSize:12.5,lineHeight:1.4,color:'var(--text-2)'}}>{item.comentario}</span>
                         </div>
                       )}

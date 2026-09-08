@@ -1036,7 +1036,7 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
                           FACTURAR' en mayusculas la pastilla desbordaba la celda. */}
                       <div style={{ width: 104, display: 'flex', alignItems: 'center', gap: 4, minWidth: 0 }}>
                         <span className={`hd-chip hd-chip--${chipEstado(t.estado)} hd-clip`} title={t.estado}>{t.estado}</span>
-                        {estancado && <span className="hd-chip hd-chip--bad" style={{ flex: 'none' }}>{dias}d</span>}
+                        {estancado && <span className="hd-chip hd-chip--warn" style={{ flex: 'none' }}>{dias}d</span>}
                       </div>
                       <div style={{ width: 104, minWidth: 0, display: 'flex', alignItems: 'center' }}>
                         {cob ? <span className={`hd-chip hd-chip--${chipTono(cob.tone)} hd-clip`} title={cob.label}>{cob.label}</span> : <span className="hd-empty" style={{ fontSize: 12 }}>—</span>}
@@ -1226,7 +1226,8 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
                       </td>
                       <td data-label="Estado">
                         <span className={`badge ${bc}`}>{t.estado}</span>
-                        {estancado && <Badge tone="d" style={{ marginLeft: 4, fontSize: 10 }}>{diasSinMover}d</Badge>}
+                        {/* Ambar: dias sin moverse es "revisar", no plata que se debe. */}
+                        {estancado && <Badge tone="w" style={{ marginLeft: 4, fontSize: 10 }}>{diasSinMover}d</Badge>}
                         {/* En celular esta tabla ES la ficha: sin este badge no hay
                             dónde ver si a la OT ya se le cobró. */}
                         {(() => { const c = estadoCobro(t); return c ? <Badge tone={c.tone} style={{ marginLeft: 4, fontSize: 10 }}>{c.label}</Badge> : null })()}

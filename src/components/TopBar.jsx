@@ -275,10 +275,10 @@ export default function TopBar({ title, subtitle, onToggleSidebar, sidebarOpen, 
 
         {onLogout && (
           <button
-            className="btn btn-outline btn-sm"
+            className="btn btn-outline btn-sm topbar__salir"
             onClick={() => { setConfirmCfg({ title: 'Cerrar sesion', confirmLabel: 'Cerrar sesion', tone: 'primary', onConfirm: () => onLogout() }); return }}
             title="Cerrar sesion"
-            style={{ gap: 6, color: 'var(--red-600)', borderColor: 'rgba(220,38,38,.35)' }}
+            style={{ gap: 6 }}
           >
             <LogoutIcon /> <span className="btn-label">Salir</span>
           </button>
