@@ -3831,7 +3831,7 @@ tbody tr:active{background:var(--fill-2)}
 }
 .dsh-frescura:hover{ filter:brightness(.94) }
 .dsh-frescura:focus-visible{ outline:2px solid var(--accent); outline-offset:2px }
-@media(max-width:600px){
+@media(max-width:960px){
   /* La fecha y el sello pueden partirse en dos lineas. */
   .dsh .hd-head__sub{ line-height:1.9 }
   /* El sello mide 24px y debe seguir midiendolos: agrandarlo a 44 romperia la

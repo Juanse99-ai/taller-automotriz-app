@@ -25,7 +25,9 @@ function SelloFrescura({ ultimaSync, sinConexion, onRefrescar }) {
   const edad = ultimaSync ? ahora - ultimaSync : null
   const viejo = edad == null || edad > VIEJO_MS
   // El tono no decora: dice si puedes confiar en la cifra de al lado.
-  const tono = sinConexion ? 'bad' : viejo ? 'warn' : 'mute'
+  // Ambar y no rojo: 'sin conexion' no es un estado de plata, y arriba ya hay
+  // una banda ambar diciendo lo mismo. Dos colores para el mismo hecho confunden.
+  const tono = (sinConexion || viejo) ? 'warn' : 'mute'
   // formatCacheAge devuelve "sin sincronizar" tanto si no hay fecha como si la
   // fecha es absurda (cache roto). Sin esta comprobacion saldria el sinsentido
   // "Actualizado sin sincronizar".

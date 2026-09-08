@@ -454,7 +454,7 @@ const ESTILOS = `
 .mec-card{margin-top:10px}
 .mec-panel{margin-top:10px;padding:15px 20px}
 .btn.mec-add{padding:0 18px;gap:8px;box-shadow:var(--accent-shadow)}  /* alto y letra: los del primario (44 / 15) */
-.btn.mec-add svg{width:17px;height:17px;stroke-width:2.4}
+.btn.mec-add svg{width:17px;height:17px;stroke-width:2}
 /* El riel del segmentado tiene que HUNDIRSE respecto al fondo de la
    pagina: --chip (#f1f5f9) es mas claro que --bg (#e9edf2) y brillaba.
    --border es el token mas cercano al #e6eaf0 del mockup. */

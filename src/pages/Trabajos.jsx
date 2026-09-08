@@ -176,7 +176,7 @@ const CSS_TRABAJOS = `
   /* size="sm" como el resto de acciones de barra; 34px era un tercer alto. */
   .trab-page .trab-new{padding:0 16px;gap:6px;box-shadow:none}  /* alto y letra: los de .btn-sm (38 / 13.5) */
   .trab-page .trab-new:hover{transform:none}
-  .trab-page .trab-new svg{width:14px;height:14px;stroke-width:2.4}
+  .trab-page .trab-new svg{width:14px;height:14px;stroke-width:2.5}
 
   /* Segmentados: riel --border (el --chip casi no se distinguia del blanco
      de al lado) e inactivos en 400, no en 600 */
