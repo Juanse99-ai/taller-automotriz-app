@@ -3670,20 +3670,42 @@ tbody tr:active{background:var(--fill-2)}
   color:rgba(255,255,255,.92); padding:7px 12px; border-radius:var(--r-pill);
   background:rgba(255,255,255,.10); pointer-events:none;
 }
+/* La tira se separa de los botones con una linea: sin ella, las miniaturas y las
+   pastillas de Anterior/Siguiente se leian como un mismo monton de cosas
+   pulsables. Arriba se elige QUE ver; abajo se pasa una a una. */
 .lb-tiras{
   display:flex; gap:8px; margin-top:16px; max-width:100%;
-  overflow-x:auto; padding:2px 2px 6px; scrollbar-width:thin;
+  overflow-x:auto; padding:14px 2px 6px; scrollbar-width:thin;
+  border-top:1px solid rgba(255,255,255,.14);
 }
 .lb-tira{
-  flex:none; width:56px; height:56px; padding:0; cursor:pointer; overflow:hidden;
+  position:relative; flex:none; width:56px; height:56px; padding:0; cursor:pointer; overflow:hidden;
   border:2px solid transparent; border-radius:7px; background:rgba(255,255,255,.10);
   opacity:.5; transition:opacity .15s var(--ease-out), border-color .15s var(--ease-out);
 }
 .lb-tira:hover{ opacity:.85 }
 .lb-tira.es{ opacity:1; border-color:#fff }
 .lb-tira:focus-visible{ outline:2px solid #fff; outline-offset:2px }
-.lb-tira img{ width:100%; height:100%; object-fit:cover; display:block }
-.lb-tira__play{ width:100%; height:100%; display:flex; align-items:center; justify-content:center }
+@media(max-width:960px){ .lb-tira{ width:var(--tap); height:var(--tap) } }
+
+/* Miniatura de una evidencia. El video ensena su primer frame y lleva la
+   insignia encima; asi dos videos seguidos se distinguen entre si y ninguno se
+   confunde con un boton de reproducir. */
+.mini-evid__v{ width:100%; height:100%; object-fit:cover; display:block }
+.mini-evid__play{
+  position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+  pointer-events:none; color:#fff;
+}
+.mini-evid__play svg{ width:14px; height:14px }
+.mini-evid__play::before{
+  content:''; position:absolute; width:30px; height:30px; border-radius:50%; background:rgba(0,0,0,.55);
+}
+.mini-evid__play svg{ position:relative }
+/* En la tira del visor la insignia va a una esquina: centrada y de 30px tapaba
+   el frame entero, que es justo lo que hay que poder ver para elegir. */
+.mini-evid__play.es-chico{ inset:auto 3px 3px auto; align-items:flex-end; justify-content:flex-end }
+.mini-evid__play.es-chico svg{ width:9px; height:9px }
+.mini-evid__play.es-chico::before{ width:18px; height:18px; background:rgba(0,0,0,.62) }
 /* visibility en vez de display: asi el boton no reaparece de golpe al cerrar. */
 .pc-wa--oculto{ opacity:0; visibility:hidden; transition:opacity .15s var(--ease-out) }
 

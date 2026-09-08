@@ -23,22 +23,25 @@ const esVideoEvid = (f) => {
   return /\.(mp4|mov|m4v|webm|avi|mkv)(\?|$)/i.test(f?.url || '')
 }
 
-// Miniatura de una evidencia (foto o video). El video muestra su primer frame
-// con un ▶ encima; la foto, la imagen.
-function MiniEvid({ f }) {
+// Miniatura de una evidencia (foto o video). El video muestra SU PRIMER FRAME
+// con una insignia de video encima; la foto, la imagen. Nunca un cuadro vacio
+// con un ▶ en medio: eso se lee como un boton de reproducir, no como "esta es
+// la miniatura numero 5", y dos videos seguidos parecen el mismo boton dos veces.
+//
+//   chico  version de la tira del visor: insignia en la esquina y mas pequeña,
+//          porque en 56px una insignia centrada tapa el frame entero.
+function MiniEvid({ f, chico = false }) {
   if (esVideoEvid(f)) return (
     <>
-      <video src={f.url} muted preload="metadata" playsInline style={{width:'100%',height:'100%',objectFit:'cover',display:'block'}}/>
-      <span style={{position:'absolute',inset:0,display:'flex',alignItems:'center',justifyContent:'center',pointerEvents:'none'}}>
-        <span style={{width:30,height:30,borderRadius:'50%',background:'rgba(0,0,0,.55)',display:'flex',alignItems:'center',justifyContent:'center'}}>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="#fff"><path d="M8 5v14l11-7z"/></svg>
-        </span>
+      <video className="mini-evid__v" src={f.url} muted preload="metadata" playsInline />
+      <span className={`mini-evid__play${chico ? ' es-chico' : ''}`} aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
       </span>
     </>
   )
   // dataUrl es la foto incrustada; url es la que ya vive en Storage. Sin este
   // respaldo las segundas salen rotas en el portal.
-  return <img src={f.dataUrl || f.url} alt={f.nota||'Evidencia'} loading="lazy" style={{width:'100%',height:'100%',objectFit:'cover',display:'block'}}/>
+  return <img className="mini-evid__v" src={f.dataUrl || f.url} alt={f.nota||'Evidencia'} loading="lazy" />
 }
 
 // color = acento vivo para barras de progreso y círculos de paso.
@@ -1491,9 +1494,9 @@ export default function PortalCliente() {
             style={{margin:'auto',display:'flex',flexDirection:'column',alignItems:'center',maxWidth:'100%'}}>
             {esVideoEvid(galeria[galIdx])
               ? <video key={galeria[galIdx]?.url} src={galeria[galIdx]?.url} controls autoPlay playsInline onClick={e=>e.stopPropagation()}
-                  style={{maxWidth:'100%',maxHeight:'72vh',borderRadius:8,boxShadow:'0 10px 40px rgba(0,0,0,.5)',background:'#000'}}/>
+                  style={{maxWidth:'100%',maxHeight:'min(72vh, calc(100vh - 232px))',borderRadius:8,boxShadow:'0 10px 40px rgba(0,0,0,.5)',background:'#000'}}/>
               : <img src={galeria[galIdx]?.dataUrl || galeria[galIdx]?.url} alt={galeria[galIdx]?.nota||''} onClick={e=>e.stopPropagation()}
-                  style={{maxWidth:'100%',maxHeight:'72vh',objectFit:'contain',borderRadius:8,boxShadow:'0 10px 40px rgba(0,0,0,.5)'}}/>}
+                  style={{maxWidth:'100%',maxHeight:'min(72vh, calc(100vh - 232px))',objectFit:'contain',borderRadius:8,boxShadow:'0 10px 40px rgba(0,0,0,.5)'}}/>}
             {galeria[galIdx]?.nota && (
               <div style={{color:'#fff',marginTop:12,fontSize:14,textAlign:'center',maxWidth:600}}>{galeria[galIdx].nota}</div>
             )}
@@ -1509,13 +1512,12 @@ export default function PortalCliente() {
             {galeria.length > 1 && (
               <div className="lb-tiras" onClick={e=>e.stopPropagation()}>
                 {galeria.map((f,i)=>(
-                  <button key={f.id||i} type="button" aria-label={`Foto ${i+1} de ${galeria.length}`}
+                  <button key={f.id||i} type="button"
+                    aria-label={`${esVideoEvid(f) ? 'Video' : 'Foto'} ${i+1} de ${galeria.length}`}
                     aria-current={i===galIdx} className={`lb-tira${i===galIdx?' es':''}`}
                     onClick={()=>setGalIdx(i)}
                     ref={i===galIdx ? el => el?.scrollIntoView({block:'nearest',inline:'nearest'}) : undefined}>
-                    {esVideoEvid(f)
-                      ? <span className="lb-tira__play"><svg width="15" height="15" viewBox="0 0 24 24" fill="#fff"><path d="M8 5v14l11-7z"/></svg></span>
-                      : <img src={f.dataUrl || f.url} alt="" loading="lazy" />}
+                    <MiniEvid f={f} chico />
                   </button>
                 ))}
               </div>
