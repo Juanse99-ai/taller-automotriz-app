@@ -758,7 +758,7 @@ export default function CRM({ trabajos = [], clientes, vehiculos, notify, actual
                 </svg>
                 Clientes inactivos · <strong>{filtrados.length}</strong> de {recordatoriosImportar.length}
               </h3>
-              <Button variant="ghost" size="sm" onClick={() => setShowImportar(false)} aria-label="Cerrar"><IconX /></Button>
+              <button className="icobtn" onClick={() => setShowImportar(false)} aria-label="Cerrar"><IconX /></button>
             </div>
 
             {/* Filtros y búsqueda — siempre visibles */}
