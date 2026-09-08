@@ -79,7 +79,7 @@ const KB_TOPE = 25
 const KCOLS = [
   { estado: ESTADOS.PENDIENTE, rotulo: 'PENDIENTE', corto: 'Pend.', tono: 'warn' },
   { estado: ESTADOS.EN_DIAGNOSTICO, rotulo: 'DIAGNÓSTICO', corto: 'Diagnóstico', tono: 'purple' },
-  { estado: ESTADOS.EN_PROGRESO, rotulo: 'EN PROGRESO', corto: 'En Progreso', tono: 'info' },
+  { estado: ESTADOS.EN_PROGRESO, rotulo: 'EN PROGRESO', corto: 'En progreso', tono: 'info' },
   { estado: ESTADOS.ESPERANDO_REPUESTOS, rotulo: 'ESPERANDO REP.', corto: 'Esperando', tono: 'orange' },
   { estado: ESTADOS.EN_PRUEBA, rotulo: 'EN PRUEBA', corto: 'Prueba', tono: 'neutral' },
   { estado: ESTADOS.COMPLETADO, rotulo: 'COMPLETADO', corto: 'Listo', tono: 'ok' },
@@ -301,8 +301,14 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
       // Soltar en "Completados" debe ofrecer facturar, igual que "Marcar listo":
       // antes el kanban solo cambiaba el estado y no aparecía la opción de factura.
       if (estado === ESTADOS.COMPLETADO) { handleCompletar(id); return }
+      const antes = t.estado
       actualizarTrabajo(id, { estado })
-      notify?.(`${t.otCodigo || 'OT'} → ${estado}`, 'info')
+      // Arrastrar una tarjeta a la columna de al lado es facil de hacer sin querer,
+      // sobre todo en el celular. El aviso trae la vuelta atras.
+      notify?.(`${t.otCodigo || 'OT'} → ${rotuloEstado(estado)}`, 'info', {
+        label: 'Deshacer',
+        onClick: () => actualizarTrabajo(id, { estado: antes }),
+      })
     }
   }
   const dropEnColumna = (estado) => {
@@ -743,9 +749,9 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
     ['activos', 'Activos'],
     [ESTADOS.PENDIENTE, 'Pendientes'],
     [ESTADOS.EN_DIAGNOSTICO, 'Diagnóstico'],
-    [ESTADOS.EN_PROGRESO, 'En Progreso'],
-    [ESTADOS.ESPERANDO_REPUESTOS, 'Esperando Rep.'],
-    [ESTADOS.EN_PRUEBA, 'En Prueba'],
+    [ESTADOS.EN_PROGRESO, 'En progreso'],
+    [ESTADOS.ESPERANDO_REPUESTOS, 'Esperando rep.'],
+    [ESTADOS.EN_PRUEBA, 'En prueba'],
     [ESTADOS.COMPLETADO, 'Completados'],
     [ESTADOS.CANCELADO, 'Cancelados'],
     ['todos', 'Todas'],
@@ -777,7 +783,7 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
         {siguiente && (
           <div className="kb-mover" onClick={e => e.stopPropagation()}>
             <button type="button" className="kb-mover__go" onClick={() => moverEstado(t.id, siguiente.estado)}>
-              Pasar a {siguiente.estado}
+              Pasar a {rotuloEstado(siguiente.estado)}
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6" /></svg>
             </button>
             <button type="button" className="kb-mover__mas" aria-label={`Editar ${t.otCodigo || t.placa || 'OT'}`} onClick={() => handleEditar(t.id)}>
@@ -917,7 +923,7 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
               ))}
             </div>
             <div className="kb-uno__h">
-              <span className="kb-uno__t">{col.estado}</span>
+              <span className="kb-uno__t">{rotuloEstado(col.estado)}</span>
               <span className="kb-uno__s">{cards.length} OT · {fmt(cards.reduce((a, t) => a + (t.total || 0), 0))}</span>
             </div>
             <div className="kb-uno__b">
@@ -1130,7 +1136,16 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
                           [ESTADOS.EN_PRUEBA, 'En prueba'],
                         ].map(([k, l]) => (
                           <button key={k} type="button" className={selTrabajo.estado === k ? 'on' : ''}
-                            onClick={() => { if (selTrabajo.estado !== k) { actualizarTrabajo(selTrabajo.id, { estado: k }); notify?.(`OT ${selTrabajo.otCodigo || ''} → ${l}`, 'info') } }}>{l}</button>
+                            onClick={() => {
+                              if (selTrabajo.estado === k) return
+                              const antes = selTrabajo.estado
+                              const id = selTrabajo.id
+                              actualizarTrabajo(id, { estado: k })
+                              notify?.(`OT ${selTrabajo.otCodigo || ''} → ${l}`, 'info', {
+                                label: 'Deshacer',
+                                onClick: () => actualizarTrabajo(id, { estado: antes }),
+                              })
+                            }}>{l}</button>
                         ))}
                       </div>
                     </div>

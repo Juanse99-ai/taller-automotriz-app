@@ -49,8 +49,8 @@ const ESTADO_TRABAJO_DISPLAY = {
   [ESTADOS.EN_DIAGNOSTICO]: { label: 'En diagnóstico', color: '#2563eb', cls: 'badge-i', ink: 'var(--blue-600)', icon: '2', pct: 30 },
   [ESTADOS.ESPERANDO_REPUESTOS]: { label: 'Esperando repuestos', color: '#d97706', cls: 'badge-w', ink: 'var(--amber-700)', icon: '3', pct: 45 },
   [ESTADOS.EN_PROGRESO]: { label: 'En reparación', color: '#2563eb', cls: 'badge-i', ink: 'var(--blue-600)', icon: '4', pct: 60 },
-  [ESTADOS.EN_PRUEBA]: { label: 'En Prueba', color: '#7c3aed', cls: 'badge-p', ink: 'var(--purple-700)', icon: '5', pct: 80 },
-  [ESTADOS.COMPLETADO]: { label: 'Listo para Entrega', color: '#16a34a', cls: 'badge-s', ink: 'var(--green-700)', icon: '6', pct: 100 },
+  [ESTADOS.EN_PRUEBA]: { label: 'En prueba', color: '#7c3aed', cls: 'badge-p', ink: 'var(--purple-700)', icon: '5', pct: 80 },
+  [ESTADOS.COMPLETADO]: { label: 'Listo para entrega', color: '#16a34a', cls: 'badge-s', ink: 'var(--green-700)', icon: '6', pct: 100 },
   [ESTADOS.PROGRAMADO]: { label: 'Programado', color: '#64748b', cls: 'badge-n', ink: 'var(--text)', icon: '—', pct: 10 },
   [ESTADOS.CANCELADO]: { label: 'Cancelado', color: '#dc2626', cls: 'badge-d', ink: 'var(--red-700)', icon: '✕', pct: 0 },
 }

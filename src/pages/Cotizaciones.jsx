@@ -374,7 +374,7 @@ export default function Cotizaciones({ notify, trabajos = [], onCrearTrabajo, co
               </div>
             </div>
           )}
-          <Button variant="primary" onClick={() => setVista('nueva')}>+ Nueva cotizacion</Button>
+          <Button variant="primary" onClick={() => setVista('nueva')}>Nueva cotización</Button>
         </div>
       </div>
 
@@ -386,8 +386,10 @@ export default function Cotizaciones({ notify, trabajos = [], onCrearTrabajo, co
               en vez de 7 pares etiqueta/valor apilados. Las clases td-* son solo
               anclajes de CSS: ningun dato cambia de contenido ni de orden. */}
           {sorted.length === 0 ? (
-            <div style={{ padding: 32, textAlign: 'center', color: 'var(--text-4)' }}>
-              <p>No hay cotizaciones registradas.</p>
+            <div className="hd-void">
+              <div className="hd-void__t">Sin cotizaciones</div>
+              <div className="hd-void__s">Aquí van las cotizaciones que le pases a un cliente.</div>
+              <Button variant="outline" size="sm" onClick={() => setVista('nueva')}>Nueva cotización</Button>
             </div>
           ) : (
             <table className="tbl tbl-cards tbl-cards--cot">

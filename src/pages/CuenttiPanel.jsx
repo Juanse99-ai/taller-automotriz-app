@@ -1273,8 +1273,8 @@ export default function CuenttiPanel({ trabajos, actualizarTrabajo, notify, trab
             </div>
             {ultimasFacturas.length === 0 ? (
               <div className="hd-void" style={{ padding: '26px 20px' }}>
-                <div className="hd-void__t">Sin facturas registradas</div>
-                <div className="hd-void__s">Las facturas emitidas aparecen aquí.</div>
+                <div className="hd-void__t">Sin facturas</div>
+                <div className="hd-void__s">Al facturar una OT desde arriba, queda aquí con su número y su estado.</div>
               </div>
             ) : (
               <>

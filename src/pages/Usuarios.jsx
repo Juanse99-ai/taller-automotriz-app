@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { Button, IconX, IconEdit } from '../components/ui'
+import { Button, IconX, IconEdit, Esqueleto } from '../components/ui'
 
 const ROLES = [
   { value: 'admin', label: 'Administrador', desc: 'Acceso completo (todas las secciones)' },
@@ -210,9 +210,13 @@ export default function Usuarios({ notify, currentUser }) {
 
       <div className="hd-card usr" style={{ padding: 0, overflow: 'hidden' }}>
         {loading ? (
-          <div className="hd-void">Cargando…</div>
+          <Esqueleto filas={4} figuras={0} />
         ) : usuarios.length === 0 ? (
-          <div className="hd-void">Sin usuarios registrados</div>
+          <div className="hd-void">
+            <div className="hd-void__t">Sin usuarios</div>
+            <div className="hd-void__s">Cada persona del taller entra con su propio usuario.</div>
+            <Button variant="outline" size="sm" onClick={abrirCrear}>Nuevo usuario</Button>
+          </div>
         ) : (
           <>
             <div className="usr__cab">

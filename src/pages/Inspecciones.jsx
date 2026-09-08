@@ -128,7 +128,8 @@ export default function Inspecciones({ trabajos, notify, onVincularInspeccion, i
             {sorted.length === 0 ? (
               <div className="hd-void">
                 <div className="hd-void__t">Sin inspecciones</div>
-                <div className="hd-void__s">No hay inspecciones registradas.</div>
+                <div className="hd-void__s">Revisa un vehículo punto por punto y queda el registro con fotos.</div>
+                <Button variant="outline" size="sm" onClick={() => setVista('nueva')}>Nueva inspección</Button>
               </div>
             ) : sorted.map(i => {
               const urgentes = (i.items || []).filter(it => it.estado === ESTADO_ITEM.URGENTE).length

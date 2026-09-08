@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect, useRef, Component, lazy, Suspense } f
 import Sidebar from './components/Sidebar'
 import TopBar from './components/TopBar'
 import Toast from './components/Toast'
+import { Esqueleto } from './components/ui'
 import Login from './components/Login'
 // Páginas por demanda (React.lazy): cada una es su propio chunk, así el bundle
 // inicial baja y las libs pesadas (jspdf, gsap) viajan solo con la página que las usa.
@@ -47,7 +48,7 @@ const CRM = seccion('CRM', () => import('./pages/CRM'))
 
 // Fallback mientras carga el chunk de una página.
 function CargandoPagina() {
-  return <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-3)', fontSize: 14 }}>Cargando…</div>
+  return <Esqueleto />
 }
 import { useTrabajos } from './hooks/useTrabajos'
 import { useClientes } from './hooks/useClientes'
@@ -207,9 +208,13 @@ export default function App() {
     })
   }, [trabajosHook.loading, trabajosHook.trabajos])
 
-  const notify = useCallback((msg, type = 'info') => {
-    setToast({ msg, type })
-    setTimeout(() => setToast(null), 3500)
+  // Un aviso puede traer una salida: notify('OT movida', 'info', { label: 'Deshacer',
+  // onClick: revertir }). Con accion dura mas, porque hay que leerlo Y decidir.
+  const relojToast = useRef(null)
+  const notify = useCallback((msg, type = 'info', accion) => {
+    setToast({ msg, type, accion })
+    clearTimeout(relojToast.current)
+    relojToast.current = setTimeout(() => setToast(null), accion ? 6000 : 3500)
   }, [])
 
   // Pre-cargar inventario de Cuentti en background al iniciar la app y luego
@@ -493,7 +498,7 @@ export default function App() {
           </ErrorBoundary>
         </div>
       </div>
-      {toast && <Toast message={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
+      {toast && <Toast message={toast.msg} type={toast.type} accion={toast.accion} onClose={() => setToast(null)} />}
       <ConfirmDialog cfg={confirmCfg} onClose={() => setConfirmCfg(null)} />
       <div className={`scrim ${sidebarOpen ? 'on' : ''}`} onClick={() => setSidebarOpen(false)} />
 
