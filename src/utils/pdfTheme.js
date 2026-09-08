@@ -14,7 +14,7 @@
 //   - tableStyles                  → estilos para autoTable consistentes
 // =====================================================================
 
-import { TALLER } from './constants'
+import { TALLER, rotuloEstado } from './constants'
 
 // El logo se descarga UNA sola vez en toda la sesión y se guarda aquí.
 //
@@ -109,11 +109,14 @@ export const PDF_LAYOUT = {
 // Mapa de colores de badges por estado
 const BADGE_COLOR_MAP = {
   'Completado':           { bg: PDF_COLORS.GREEN_100, fg: PDF_COLORS.GREEN_TEXT, bd: [134, 239, 172] },
+  // Mismos pares que chipEstado() en pantalla: diagnostico morado y espera de
+  // repuestos naranja. Antes los dos caian en ambar junto con "pendiente", asi
+  // que tres estados distintos se veian iguales en el papel.
   'En Progreso':          { bg: PDF_COLORS.BLUE_100,  fg: PDF_COLORS.BLUE_TEXT,  bd: [147, 197, 253] },
   'En Prueba':            { bg: PDF_COLORS.BLUE_100,  fg: PDF_COLORS.BLUE_TEXT,  bd: [147, 197, 253] },
   'Pendiente':            { bg: PDF_COLORS.AMBER_100, fg: PDF_COLORS.AMBER_TEXT, bd: [253, 230, 138] },
-  'En Diagnostico':       { bg: PDF_COLORS.AMBER_100, fg: PDF_COLORS.AMBER_TEXT, bd: [253, 230, 138] },
-  'Esperando Repuestos':  { bg: PDF_COLORS.AMBER_100, fg: PDF_COLORS.AMBER_TEXT, bd: [253, 230, 138] },
+  'En Diagnostico':       { bg: [237, 233, 254],      fg: [91, 33, 182],         bd: [196, 181, 253] },
+  'Esperando Repuestos':  { bg: [255, 237, 213],      fg: [154, 52, 18],         bd: [253, 186, 116] },
   'Cancelado':            { bg: PDF_COLORS.RED_100,   fg: PDF_COLORS.RED_TEXT,   bd: [252, 165, 165] },
 }
 
@@ -148,9 +151,11 @@ export function drawHeader(doc, opts = {}) {
       logoBoxW = w
     } catch { /* si falla, sin logo */ }
   } else {
-    doc.setFillColor(...AMBER)
+    // Respaldo cuando el logo no carga. Va en navy y no en ambar: el ambar es un
+    // estado de plata en este sistema, no un color de marca.
+    doc.setFillColor(...NAVY)
     doc.roundedRect(MARGIN, logoY, 20, 20, 2, 2, 'F')
-    doc.setTextColor(...NAVY)
+    doc.setTextColor(255, 255, 255)
     doc.setFontSize(11)
     doc.setFont(undefined, 'bold')
     doc.text('MDA', MARGIN + 10, logoY + 11.5, { align: 'center' })
@@ -166,7 +171,7 @@ export function drawHeader(doc, opts = {}) {
   doc.setFontSize(7)
   doc.setTextColor(...SLATE_500)
   doc.setFont(undefined, 'bold')
-  doc.text('TALLER AUTOMOTRIZ', infoX, 20.5)
+  doc.text('TALLER AUTOMOTRIZ', infoX, 20.5, { charSpace: 0.35 })
   doc.setFont(undefined, 'normal')
   doc.text(`NIT ${TALLER.nit}`, infoX, 24)
   doc.text(TALLER.direccion, infoX, 27.5)
@@ -192,7 +197,9 @@ export function drawHeader(doc, opts = {}) {
     const colors = badge.estado
       ? (BADGE_COLOR_MAP[badge.estado] || DEFAULT_BADGE)
       : (badge.color ? colorFromName(badge.color) : DEFAULT_BADGE)
-    const label = badge.label.toUpperCase()
+    // Misma ortografia que en pantalla: 'En Diagnostico' se guarda asi en la base,
+    // pero se lee "EN DIAGNOSTICO" mal escrito en un papel que ve el cliente.
+    const label = rotuloEstado(badge.label).toUpperCase()
     doc.setFontSize(7)
     doc.setFont(undefined, 'bold')
     const w = doc.getTextWidth(label) + 8
@@ -240,12 +247,12 @@ function colorFromName(name) {
 
 // ----- SECTION HEADER -------------------------------------------------
 export function drawSectionHeader(doc, title, y, width = PDF_LAYOUT.CONTENT_W) {
-  const { NAVY, AMBER, SLATE_300 } = PDF_COLORS
+  const { NAVY, SLATE_300 } = PDF_COLORS
   const { MARGIN } = PDF_LAYOUT
   const label = (title || '').toUpperCase()
-  // Título navy con guion ámbar + regla fina (en vez de barra navy llena):
-  // separa igual de claro pero pesa menos con varias secciones seguidas.
-  doc.setFillColor(...AMBER)
+  // Titulo navy con un guion del mismo navy y regla fina al lado. Era ambar: en
+  // este sistema el ambar dice "plata por revisar", no "aqui empieza un apartado".
+  doc.setFillColor(...NAVY)
   doc.rect(MARGIN, y + 1.2, 4.5, 1.7, 'F')
   doc.setTextColor(...NAVY)
   doc.setFontSize(8)
@@ -396,20 +403,32 @@ export function drawFooter(doc, { page = 1, total = 1, leftText = '' } = {}) {
 }
 
 // ----- ESTILOS PARA autoTable ----------------------------------------
-// Estilo "factura" para tablas de items (productos / servicios)
-export const tableStylesItems = {
-  styles: { fontSize: 8.5, cellPadding: 3, lineColor: PDF_COLORS.SLATE_100, lineWidth: 0.1 },
-  headStyles: {
-    fillColor: PDF_COLORS.SLATE_50,
-    textColor: PDF_COLORS.SLATE_600,
-    fontSize: 7,
-    fontStyle: 'bold',
-    lineColor: PDF_COLORS.NAVY,
-    lineWidth: { bottom: 0.6 },
-  },
+//
+// UNA sola receta de tabla, la misma que la pantalla: cabecera en papel tenue con
+// el rotulo en versalita y una regla firme debajo, filas separadas por una linea
+// clara y ningun rayado alterno. Antes habia tres cabeceras distintas conviviendo
+// en el mismo documento (papel tenue, navy en negativo y gris medio), asi que dos
+// tablas de la misma hoja no parecian del mismo sistema.
+//
+// Los tres nombres siguen existiendo porque las siete pantallas los importan; lo
+// que cambia es que ahora solo se diferencian en la DENSIDAD, no en el color.
+const cabeceraTabla = {
+  fillColor: PDF_COLORS.SLATE_50,
+  textColor: PDF_COLORS.SLATE_600,
+  fontSize: 7,
+  fontStyle: 'bold',
+  lineColor: PDF_COLORS.SLATE_300,
+  lineWidth: { bottom: 0.5 },
 }
 
-// Estilo "data" para tablas de datos secundarios (resúmenes, listados)
+// Items de una factura o cotizacion: la tabla principal de la hoja.
+export const tableStylesItems = {
+  styles: { fontSize: 8.5, cellPadding: 3, lineColor: PDF_COLORS.SLATE_100, lineWidth: 0.1 },
+  headStyles: { ...cabeceraTabla },
+  alternateRowStyles: { fillColor: false },
+}
+
+// Datos secundarios (resumenes, listados). Misma cabecera, texto un punto mas oscuro.
 export const tableStylesData = {
   styles: {
     fontSize: 8.5,
@@ -418,27 +437,15 @@ export const tableStylesData = {
     lineWidth: 0.1,
     textColor: PDF_COLORS.SLATE_700,
   },
-  headStyles: {
-    fillColor: PDF_COLORS.NAVY,
-    textColor: PDF_COLORS.WHITE,
-    fontSize: 7.2,
-    fontStyle: 'bold',
-    lineWidth: 0,
-  },
-  alternateRowStyles: { fillColor: PDF_COLORS.SLATE_50 },
+  headStyles: { ...cabeceraTabla },
+  alternateRowStyles: { fillColor: false },
 }
 
-// Estilo "muted" para subtablas más sutiles
+// Subtablas: solo mas apretadas (2,5 de relleno y 8pt).
 export const tableStylesMuted = {
   styles: { fontSize: 8, cellPadding: 2.5, lineColor: PDF_COLORS.SLATE_100, lineWidth: 0.1, textColor: PDF_COLORS.SLATE_600 },
-  headStyles: {
-    fillColor: PDF_COLORS.SLATE_100,
-    textColor: PDF_COLORS.SLATE_700,
-    fontSize: 7,
-    fontStyle: 'bold',
-    lineColor: PDF_COLORS.SLATE_300,
-    lineWidth: { bottom: 0.4 },
-  },
+  headStyles: { ...cabeceraTabla },
+  alternateRowStyles: { fillColor: false },
 }
 
 // Helper rápido para badges con color por severidad

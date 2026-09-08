@@ -32,7 +32,7 @@ import { lsGet, lsSet, LS_KEYS } from '../services/storage'
 import { borrarVideoEvidencia, fetchEvidenciasTrabajo } from '../services/supabase'
 import SignaturePad from '../components/SignaturePad'
 import ConfirmDialog from '../components/ConfirmDialog'
-import { Button, Badge, IconX, IconEdit, IconTrash, IconPdf, IconPhone, IconChat, IconCheck } from '../components/ui'
+import { Button, Badge, IconX, IconEdit, IconTrash, IconPdf, IconPhone, IconChat, IconCheck, FotoOT } from '../components/ui'
 import TrabajoForm from './TrabajoForm'
 
 // ¿La fecha cae dentro del rango elegido? (hoy / semana = últimos 7 días / mes = mes actual)
@@ -772,6 +772,7 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
         onDragEnd={() => { dragIdRef.current = null; setDragOverCol(null) }}
         onClick={() => setPreviewId(t.id)}>
         <div className="kb-card__top">
+          <FotoOT trabajo={t} tam={34} />
           <span className={`kb-card__placa${t.placa ? '' : ' sin'}`}>{t.placa || 'SERVICIO'}</span>
           {alerta && <span className="kb-card__alert" style={{ background: alerta }} title={`${dias} días sin moverse`} />}
         </div>
@@ -1328,6 +1329,7 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
               </div>
 
               <div className="otd__head">
+                <FotoOT trabajo={t} tam={44} />
                 <div className="otd__id">
                   <div className="otd__idr">
                     {/* La placa manda: es por lo que se reconoce el registro. */}

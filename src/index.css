@@ -930,6 +930,11 @@ tbody tr:active{background:var(--fill-2)}
    (titulo, cifras, filas de 38px) en vez de encogerse a un "Cargando..." centrado
    y luego dar el salto. Es la misma silueta de todas las pantallas de lista. */
 .sk-page{display:flex;flex-direction:column;gap:18px;padding:2px 0 0}
+/* Miniatura del carro: se reconoce la OT sin leer la placa. Objeto plano, sin
+   sombra; el hueco de "sin foto" mantiene la alineacion de la fila. */
+.fotoot{flex:none;object-fit:cover;display:block;background:var(--bg-subtle);border:1px solid var(--border)}
+.fotoot--vacia{display:inline-flex;align-items:center;justify-content:center;color:var(--text-empty)}
+.fotoot--vacia svg{width:62%;height:62%;stroke:currentColor;fill:none}
 /* Solo para el lector de pantalla: quien no ve el esqueleto necesita oir que la
    pantalla esta cargando. */
 .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
