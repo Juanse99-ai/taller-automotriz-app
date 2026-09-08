@@ -216,7 +216,13 @@
 
   /* Bordes — cuatro pesos distintos, no uno solo */
   --border:#e2e8f0;          /* 1px, tarjeta y topbar */
-  --border-strong:#d7dee7;   /* 1.5px, botón secundario y divisores verticales */
+  --border-strong:#d7dee7;   /* 1.5px, divisores verticales y borde de tarjeta */
+  /* Limite de un boton contorneado. WCAG pide 3:1 para el borde de un control y
+     --border-strong daba 1,15 sobre la mesa gris y 1,36 sobre papel: el boton
+     secundario no tenia practicamente contorno. Este es el tono MAS CLARO que
+     llega a 3 sobre las dos superficies (3,18 y 3,74). Importa de verdad en un
+     taller, que es donde se usa la app: de pie, con luz mala. */
+  --border-btn:#78859a;
   --border-input:#dfe5ec;    /* 1px, campos y controles */
   --row-line:#f4f6f9;        /* 1px, separador entre filas */
   --head-line:#e8edf3;       /* 1.5px, bajo la cabecera de tabla */
@@ -284,6 +290,8 @@
   --chip:#26262a;
   --border:#2a2a2e;
   --border-strong:#3a3a40;
+  /* En oscuro el boton se recorta contra el negro del fondo: 3,08 sobre #000. */
+  --border-btn:#5a5a63;
   --border-input:#33333a;
   --row-line:#232327;
   --head-line:#2a2a2e;
@@ -598,7 +606,7 @@ a,button,[role=button],.navlink,.mob-tab,.icobtn{-webkit-tap-highlight-color:tra
 .btn-primary{background:var(--primary);color:#fff;border-color:transparent;box-shadow:0 1px 2px rgba(15,23,42,.12)}
 .btn-primary:hover:not(:active){background:color-mix(in srgb,var(--primary) 90%,#000)}
 /* Secundario: superficie limpia con borde fino (ya no vidrio esmerilado) */
-.btn-outline{background:var(--bg-raised);color:var(--text);border-color:var(--border-strong);box-shadow:0 1px 2px rgba(15,23,42,.05)}
+.btn-outline{background:var(--bg-raised);color:var(--text);border-color:var(--border-btn);box-shadow:0 1px 2px rgba(15,23,42,.05)}
 .btn-outline:hover:not(:active){background:var(--bg-subtle)}
 /* Ghost: el más liviano — sin relleno ni sombra hasta el hover */
 .btn-ghost{background:transparent;color:var(--text-2);border-color:transparent;box-shadow:none}
@@ -1209,11 +1217,28 @@ tbody tr:active{background:var(--fill-2)}
   .btn{height:44px;font-size:13.5px}
   .btn-sm{height:38px}
   .field label{font-size:13px}
-  .input,textarea.input,select.input{font-size:15px;min-height:44px}
-  .form-input,.form-select,.form-textarea{font-size:15px;min-height:44px}
+  .input,textarea.input,select.input{min-height:44px}
+  .form-input,.form-select,.form-textarea{min-height:44px}
   .form-row{grid-template-columns:repeat(auto-fit,minmax(180px,1fr))}
 
   .modal{max-width:90vw}
+}
+
+/* ── El zoom al tocar un campo en el iPhone ──────────────────────────────────
+   Safari en iOS ACERCA la pagina cuando enfocas un campo cuya letra mide menos
+   de 16px, y despues no la aleja: la aplicacion se queda ampliada y descuadrada
+   hasta que el usuario hace pinza. Toda la app escribia 13,5 en los campos, y la
+   regla movil los subia a 15, que sigue por debajo del limite y por eso no
+   servia de nada.
+   La otra salida seria `maximum-scale=1` en el viewport, pero eso le prohibe al
+   usuario acercar la pantalla a mano, y en un taller con las manos sucias y luz
+   mala eso hace mas daño que el zoom.
+   Solo en pantallas tactiles, y con !important porque 17 campos traen el tamaño
+   escrito en linea y el estilo en linea gana a cualquier clase. */
+@media (pointer:coarse){
+  input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=color]):not([type=button]):not([type=submit]):not([type=reset]),
+  textarea,
+  select{ font-size:16px !important }
 }
 
 /* RESPONSIVE — MOBILE (<=768px) */
