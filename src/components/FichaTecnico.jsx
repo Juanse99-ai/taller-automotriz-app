@@ -91,10 +91,10 @@ export default function FichaTecnico({ trabajo: t, tecNombre, onClose, guardar }
       <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 560, maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}>
         <div className="modal__h">
           <div>
-            <h3 style={{ margin: 0 }}>Ficha de trabajo</h3>
-            <div style={{ fontSize: 12.5, color: 'var(--text-3)', marginTop: 2 }}>
+            <h3>Ficha de trabajo</h3>
+            <p>
               {t.otCodigo || t.id} · Técnico: <strong style={{ color: 'var(--text-2)' }}>{tecNombre?.(t.tecnicoId) || '—'}</strong>
-            </div>
+            </p>
           </div>
           <button className="icobtn" onClick={onClose} aria-label="Cerrar"><IconX /></button>
         </div>

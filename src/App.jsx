@@ -273,6 +273,10 @@ export default function App() {
     setUser(null)
     setSection('dashboard')
   }, [])
+  // Salir pide confirmacion desde los dos sitios (topbar y pie del cajon del celular).
+  const pedirCerrarSesion = useCallback(() => {
+    setConfirmCfg({ title: 'Cerrar sesion', confirmLabel: 'Cerrar sesion', tone: 'primary', onConfirm: handleLogout })
+  }, [handleLogout])
 
   // Candado anti doble-click: el 23-jul-2026 clicks repetidos en "Crear trabajo"
   // generaron 22 OTs duplicadas (cada click era un agregarTrabajo nuevo). Mientras
@@ -413,7 +417,7 @@ export default function App() {
         onCollapse={toggleSidebarCollapse}
         seccionesPermitidas={seccionesPermitidas}
         user={user}
-        onLogout={handleLogout}
+        onLogout={pedirCerrarSesion}
         trabajos={trabajosHook.trabajos}
         cotizaciones={cotizacionesHook.cotizaciones}
         liquidados={liquidacionHook.liquidados}
@@ -426,7 +430,7 @@ export default function App() {
           sidebarOpen={sidebarOpen}
           sidebarCollapsed={sidebarCollapsed}
           user={user}
-          onLogout={handleLogout}
+          onLogout={pedirCerrarSesion}
           trabajos={trabajosHook.trabajos}
           onNavigate={navigate}
         />

@@ -34,8 +34,8 @@ export default function CompartirPortalModal({ cedula = '', cliente = '', telefo
       <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 520 }}>
         <div className="modal__h">
           <div>
-            <h3 style={{ margin: 0, fontSize: 17, fontWeight: 700 }}>Compartir Portal del Cliente</h3>
-            <p style={{ margin: '4px 0 0', fontSize: 12.5, color: 'var(--text-3)' }}>
+            <h3>Compartir portal del cliente</h3>
+            <p>
               {cliente ? `Para ${cliente}` : 'Genera un link para que el cliente vea el estado de su vehiculo'}
             </p>
           </div>

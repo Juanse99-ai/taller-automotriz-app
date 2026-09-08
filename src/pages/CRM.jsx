@@ -598,8 +598,8 @@ export default function CRM({ trabajos = [], clientes, vehiculos, notify, actual
         <div className="modal-overlay" onClick={() => setContactoActivo(null)}>
           <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 560 }}>
             <div className="modal__h">
-              <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700 }}>Contactar a {contactoActivo.cliente.nombre}</h3>
-              <Button variant="ghost" size="sm" onClick={() => setContactoActivo(null)}><IconX /></Button>
+              <h3>Contactar a {contactoActivo.cliente.nombre}</h3>
+              <button className="icobtn" onClick={() => setContactoActivo(null)} aria-label="Cerrar"><IconX /></button>
             </div>
             <div className="modal__b" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
               <div style={{ background: 'var(--bg-subtle)', borderRadius: 8, padding: '10px 14px', fontSize: 12.5 }}>
@@ -696,8 +696,8 @@ export default function CRM({ trabajos = [], clientes, vehiculos, notify, actual
         <div className="modal-overlay" onClick={() => setEditandoAceite(null)}>
           <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 480 }}>
             <div className="modal__h">
-              <h3 style={{ margin: 0 }}>Tipo de aceite</h3>
-              <Button variant="ghost" size="sm" onClick={() => setEditandoAceite(null)}><IconX /></Button>
+              <h3>Tipo de aceite</h3>
+              <button className="icobtn" onClick={() => setEditandoAceite(null)} aria-label="Cerrar"><IconX /></button>
             </div>
             <div className="modal__b" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               <div style={{ fontSize: 12.5, color: 'var(--text-2)' }}>
@@ -889,8 +889,8 @@ export default function CRM({ trabajos = [], clientes, vehiculos, notify, actual
         <div className="modal-overlay" onClick={() => setShowConfig(false)}>
           <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 640 }}>
             <div className="modal__h">
-              <h3 style={{ margin: 0 }}>⚙️ Servicios e intervalos</h3>
-              <Button variant="ghost" size="sm" onClick={() => setShowConfig(false)}><IconX /></Button>
+              <h3>Servicios e intervalos</h3>
+              <button className="icobtn" onClick={() => setShowConfig(false)} aria-label="Cerrar"><IconX /></button>
             </div>
             <div className="modal__b" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               <p style={{ margin: 0, fontSize: 12.5, color: 'var(--text-3)' }}>
@@ -925,8 +925,8 @@ export default function CRM({ trabajos = [], clientes, vehiculos, notify, actual
         <div className="modal-overlay" onClick={() => setShowTemplate(null)}>
           <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 720 }}>
             <div className="modal__h">
-              <h3 style={{ margin: 0 }}>📝 Plantillas de mensajes</h3>
-              <Button variant="ghost" size="sm" onClick={() => setShowTemplate(null)}><IconX /></Button>
+              <h3>Plantillas de mensajes</h3>
+              <button className="icobtn" onClick={() => setShowTemplate(null)} aria-label="Cerrar"><IconX /></button>
             </div>
             <div className="modal__b" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               <p style={{ margin: 0, fontSize: 12.5, color: 'var(--text-3)' }}>

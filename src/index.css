@@ -336,6 +336,16 @@ input,select,textarea{font-family:inherit;font-size:14px;color:inherit}
 .modal__h{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;padding:18px 22px;border-bottom:1px solid var(--border)}
 .modal__b{padding:20px 22px 22px}
 .modal__f{display:flex;gap:10px;justify-content:flex-end;padding:14px 22px;border-top:1px solid var(--border)}
+/* Cabecera de modal: un solo titulo (16/700) y una sola X (.icobtn) para todos.
+   Antes cada pantalla traia su propio tamano en linea (16, 17 o el 17.55 por defecto). */
+.modal__h h2,.modal__h h3{margin:0;font-size:16px;line-height:1.3;font-weight:700;letter-spacing:-.2px;color:var(--text)}
+.modal__h p{margin:4px 0 0;font-size:12.5px;line-height:1.4;color:var(--text-3)}
+.modal__h .icobtn{flex:none;margin:-6px -8px -6px 0}
+/* Confirmacion: la misma caja que el resto de modales, solo mas compacta */
+.modal--confirm{max-width:440px;padding:24px}
+.modal--confirm h3{margin:0;font-size:16px;line-height:1.3;font-weight:700;letter-spacing:-.2px}
+.modal--confirm__lead{margin:6px 0 18px;font-size:13.5px;line-height:1.5;color:var(--text-3)}
+.modal--confirm__f{display:flex;gap:10px;justify-content:flex-end;margin-top:20px}
 @keyframes fadeIn{from{opacity:0}to{opacity:1}}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
 /* Nada aparece desde scale(0): entra desde .97 + leve translateY (animations.dev) */
@@ -345,7 +355,8 @@ input,select,textarea{font-family:inherit;font-size:14px;color:inherit}
   .modal-overlay{align-items:flex-end;padding:0}
   .modal-overlay .modal{width:100%;max-width:100%;margin:0;border-radius:var(--r-lg) var(--r-lg) 0 0;max-height:92vh;animation:sheetIn .42s cubic-bezier(.32,.72,.35,1)}
   .modal::before{content:'';display:block;width:38px;height:5px;border-radius:var(--r-xs);background:var(--fill-2);margin:8px auto 0;flex-shrink:0}
-  .modal__f,.modal-footer{padding-bottom:calc(14px + env(safe-area-inset-bottom,0px))}
+  .modal__f{padding-bottom:calc(14px + env(safe-area-inset-bottom,0px))}
+  .modal--confirm{padding-bottom:calc(24px + env(safe-area-inset-bottom,0px))}
 }
 @keyframes sheetIn{from{transform:translateY(100%)}to{transform:translateY(0)}}
 /* navSectionIn removido: el stagger del menu ahora lo hace motion (Sidebar.jsx) */
@@ -353,7 +364,7 @@ input,select,textarea{font-family:inherit;font-size:14px;color:inherit}
 
 /* Command Palette — Product Search */
 .cmd-backdrop{position:fixed;inset:0;z-index:100;background:rgba(15,23,42,.72);display:grid;place-items:start center;padding-top:min(80px,10vh);animation:fadeIn .12s ease-out}
-.cmd-palette{width:min(720px,92%);max-height:calc(100vh - 120px);background:var(--bg-raised,#fff);border-radius:var(--radius-lg,12px);box-shadow:0 30px 80px rgba(0,0,0,.35),0 8px 24px rgba(0,0,0,.18);overflow:hidden;display:flex;flex-direction:column;animation:slideUp .15s ease-out}
+.cmd-palette{width:min(720px,92%);max-height:calc(100vh - 120px);background:var(--bg-raised,#fff);border-radius:var(--r-lg);box-shadow:0 30px 80px -20px rgba(0,0,0,.4);overflow:hidden;display:flex;flex-direction:column;animation:slideUp .15s ease-out}
 .cmd-header{display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid var(--border,#e2e8f0)}
 .cmd-header__query{flex:1;font-size:16px;font-weight:600;color:var(--text,#1e293b);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .cmd-header__count{font-size:11.5px;color:var(--text-2,#64748b);white-space:nowrap}
@@ -470,6 +481,10 @@ input,select,textarea{font-family:inherit;font-size:14px;color:inherit}
 .topbar .icobtn{width:40px;height:40px;border-radius:var(--r-md);display:flex;align-items:center;justify-content:center;color:var(--text-2);transition:background .12s,color .12s;position:relative}
 .topbar .icobtn:hover{background:var(--bg-subtle);color:var(--text)}
 .topbar .icobtn svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.8}
+/* Panel de actividad: desplegable del topbar. En movil se pega a la pantalla,
+   porque anclado a la campana (320px) se salia por la izquierda a 375. */
+.notif-panel{position:absolute;top:calc(100% + 8px);right:0;width:320px;max-height:400px;overflow-y:auto;background:var(--bg-raised);border:1px solid var(--border);border-radius:var(--r-md);box-shadow:var(--shadow-md);z-index:200}
+@media(max-width:960px){ .notif-panel{position:fixed;top:60px;left:12px;right:12px;width:auto;max-height:calc(100vh - 80px)} }
 .topbar .icobtn .dot{position:absolute;top:7px;right:7px;width:7px;height:7px;border-radius:50%;background:var(--red-500);box-shadow:0 0 0 2px var(--bg-raised)}
 /* Top bar minimalista (estilo Remote): las acciones (Portal Cliente, Salir)
    quedan solo-ícono a la derecha, en todas las pantallas. */
@@ -643,11 +658,15 @@ a,button,[role=button],.navlink,.mob-tab,.icobtn{-webkit-tap-highlight-color:tra
 
 /* table (prototipo class) — pulida al estilo iOS: encabezado sin bloque gris,
    separadores hairline (0.5px) y filas que responden al toque. */
-.tbl{width:100%;border-collapse:collapse;font-size:14px}
-.tbl thead th{text-align:left;padding:9px 16px;background:transparent;font-size:12px;font-weight:600;color:var(--text-3);text-transform:none;letter-spacing:0;border-bottom:.5px solid var(--separator);white-space:nowrap}
+/* Una sola receta de tabla para toda la app: cabecera de 28px en versalita
+   (rotulo 9.5/700/+.7) sobre papel tenue y filas de 38px con letra de 13.5.
+   Es la que ya usaban Clientes, Vehiculos y Liquidacion cada una por su lado;
+   Cotizaciones, Reportes, CRM e Inventario venian con la vieja (12/600, 42px). */
+.tbl{width:100%;border-collapse:collapse;font-size:13.5px}
+.tbl thead th{text-align:left;height:28px;padding:0 16px;background:var(--bg-subtle);font-size:9.5px;line-height:1;font-weight:700;letter-spacing:.7px;text-transform:uppercase;color:var(--text-4);border-top:1px solid var(--row-line);border-bottom:1.5px solid var(--head-line);white-space:nowrap}
 /* line-height 1.4 (no el 1.55 del body): en celdas densas, los nombres que
    envuelven a 2 líneas quedaban muy separados ("mucha sangría"). */
-.tbl tbody td{padding:11px 16px;line-height:1.4;border-bottom:.5px solid var(--separator);color:var(--text-2);vertical-align:middle}
+.tbl tbody td{padding:9px 16px;line-height:1.4;border-bottom:1px solid var(--row-line);color:var(--text-2);vertical-align:middle}
 .tbl tbody tr:hover{background:var(--fill)}
 .tbl tbody tr:active{background:var(--fill-2)}
 .tbl tbody tr:last-child td{border-bottom:none}
@@ -743,7 +762,7 @@ textarea.input{min-height:88px;resize:vertical;padding-top:11px}
    evita el scroll anidado, que en tactil es incomodo. */
 @media(min-width:961px){
   .card__b--flush:has(>.tbl--sticky){max-height:calc(100vh - 250px);overflow-y:auto}
-  .tbl--sticky thead th{position:sticky;top:0;z-index:2;background:var(--bg-raised);
+  .tbl--sticky thead th{position:sticky;top:0;z-index:2;background:var(--bg-subtle);
     box-shadow:inset 0 -.5px 0 var(--separator)}
 }
 .tbl--sticky tbody td{padding-top:11px;padding-bottom:11px}
@@ -1003,12 +1022,6 @@ tbody tr:active{background:var(--fill-2)}
 .form-textarea{resize:vertical;min-height:88px;padding-top:11px}
 .form-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px}
 .form-select{appearance:none;padding-right:34px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round'%3E%3Cpolyline points='1 1 6 6 11 1'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 13px center}
-
-/* legacy modal classes (pages use modal-header/body/footer) */
-.modal-header{display:flex;justify-content:space-between;align-items:center;padding:18px 22px;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--bg-raised);z-index:1}
-.modal-title{font-size:16px;font-weight:700;color:var(--text)}
-.modal-body{padding:22px}
-.modal-footer{display:flex;gap:10px;justify-content:flex-end;padding:14px 22px;border-top:1px solid var(--border);flex-wrap:wrap}
 
 /* legacy metric/shell/topbar/chart-bar — eliminados (no usados por el codigo vivo).
    El sistema vigente es: .kpi, .sidebar/.navlink/.sidebar__*, .topbar/.topbar__*, .chartbar. */
@@ -1700,6 +1713,10 @@ tbody tr:active{background:var(--fill-2)}
      solo en una segunda fila y estiraba la cabecera a 181px. */
   .topbar__salir{display:none}
   .m3switch{min-height:var(--tap)}
+  /* La X del detalle de OT mide 30px a proposito (vive en la franja de estado);
+     el area de toque se amplia sin cambiar el dibujo. */
+  .otd__x{position:relative}
+  .otd__x::after{content:'';position:absolute;inset:-7px;border-radius:50%}
   .hd-seg{height:auto;padding:4px}
   .hd-seg__i{height:var(--tap)}
 }

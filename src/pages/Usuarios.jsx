@@ -324,10 +324,8 @@ export default function Usuarios({ notify, currentUser }) {
         <div className="modal-overlay" onClick={cerrar}>
           <div className="modal" onClick={e => e.stopPropagation()}>
             <div className="modal__h">
-              <h3 style={{ margin: 0, fontSize: 17, fontWeight: 700 }}>
-                {editing === 'new' ? 'Nuevo usuario' : `Editar ${editing.usuario}`}
-              </h3>
-              <Button variant="ghost" size="sm" onClick={cerrar}><IconX /></Button>
+              <h3>{editing === 'new' ? 'Nuevo usuario' : `Editar ${editing.usuario}`}</h3>
+              <button className="icobtn" onClick={cerrar} aria-label="Cerrar"><IconX /></button>
             </div>
             <form onSubmit={guardar} className="modal__b" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
               <div className="field">
@@ -404,7 +402,7 @@ export default function Usuarios({ notify, currentUser }) {
         <div className="modal-overlay" onClick={() => setConfirmDel(null)}>
           <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 420 }}>
             <div className="modal__h">
-              <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: 'var(--red-700)' }}>Desactivar usuario</h3>
+              <h3>Desactivar usuario</h3>
             </div>
             <div className="modal__b">
               <p style={{ fontSize: 14, color: 'var(--text-2)', margin: 0 }}>

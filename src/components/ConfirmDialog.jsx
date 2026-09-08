@@ -40,28 +40,17 @@ export default function ConfirmDialog({ cfg, onClose }) {
   const danger = cfg.tone === 'danger'
 
   return (
-    <div
-      onClick={onClose}
-      role="presentation"
-      style={{
-        position: 'fixed', inset: 0, zIndex: 1000, display: 'grid', placeItems: 'center',
-        padding: 16, background: 'rgba(13,27,53,.72)', animation: 'cdlgIn .12s ease-out',
-      }}
-    >
-      <style>{`@keyframes cdlgIn{from{opacity:0}to{opacity:1}}`}</style>
+    <div className="modal-overlay" onClick={onClose} role="presentation" style={{ zIndex: 1000 }}>
       <div
         ref={cajaRef}
+        className="modal modal--confirm"
         role="alertdialog" aria-modal="true" aria-label={cfg.title}
         onClick={(e) => e.stopPropagation()}
-        style={{
-          width: 'min(440px, 100%)', background: 'var(--bg-raised)', borderRadius: 16, padding: 24,
-          boxShadow: 'var(--shadow-lg)', color: 'var(--text)', border: '1px solid var(--border)',
-        }}
       >
-        <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700, letterSpacing: '-.01em' }}>{cfg.title}</h3>
-        {cfg.lead && <p style={{ margin: '6px 0 18px', color: 'var(--text-3, #5b6472)', fontSize: 14, lineHeight: 1.45 }}>{cfg.lead}</p>}
+        <h3>{cfg.title}</h3>
+        {cfg.lead && <p className="modal--confirm__lead">{cfg.lead}</p>}
         {cfg.body}
-        <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 20 }}>
+        <div className="modal--confirm__f">
           <button className="btn btn-ghost" onClick={onClose}>{cfg.cancelLabel || 'Cancelar'}</button>
           <button
             ref={confirmRef}

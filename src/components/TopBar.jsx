@@ -2,7 +2,6 @@ import { useState, useRef, useEffect } from 'react'
 import { motion, useReducedMotion } from 'motion/react'
 import CompartirPortalModal from './CompartirPortalModal'
 import Switch from './Switch'
-import ConfirmDialog from './ConfirmDialog'
 
 const SunIcon = () => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -101,7 +100,6 @@ export default function TopBar({ title, subtitle, onToggleSidebar, sidebarOpen, 
   const [compartirOpen, setCompartirOpen] = useState(false)
   const [notifOpen, setNotifOpen] = useState(false)
   const notifRef = useRef(null)
-  const [confirmCfg, setConfirmCfg] = useState(null)
   // Navigation bar iOS: al hacer scroll aparecen el titulo chico y el hairline
   const [scrolled, setScrolled] = useState(false)
 
@@ -232,14 +230,9 @@ export default function TopBar({ title, subtitle, onToggleSidebar, sidebarOpen, 
             )}
           </button>
           {notifOpen && (
-            <div style={{
-              position: 'absolute', top: 'calc(100% + 8px)', right: 0, width: 320,
-              background: 'var(--bg-raised)', border: '1px solid var(--border)',
-              borderRadius: 12, boxShadow: 'var(--shadow-md)', zIndex: 200,
-              maxHeight: 400, overflowY: 'auto',
-            }}>
+            <div className="notif-panel">
               <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)', fontWeight: 700, fontSize: 14 }}>
-                Actividad Reciente
+                Actividad reciente
               </div>
               {notifications.length === 0 ? (
                 <div style={{ padding: 24, textAlign: 'center', color: 'var(--text-3)', fontSize: 13 }}>
@@ -276,7 +269,7 @@ export default function TopBar({ title, subtitle, onToggleSidebar, sidebarOpen, 
         {onLogout && (
           <button
             className="btn btn-outline btn-sm topbar__salir"
-            onClick={() => { setConfirmCfg({ title: 'Cerrar sesion', confirmLabel: 'Cerrar sesion', tone: 'primary', onConfirm: () => onLogout() }); return }}
+            onClick={onLogout}
             title="Cerrar sesion"
             style={{ gap: 6 }}
           >
@@ -288,7 +281,6 @@ export default function TopBar({ title, subtitle, onToggleSidebar, sidebarOpen, 
       {compartirOpen && (
         <CompartirPortalModal onClose={() => setCompartirOpen(false)} />
       )}
-      <ConfirmDialog cfg={confirmCfg} onClose={() => setConfirmCfg(null)} />
     </>
   )
 }

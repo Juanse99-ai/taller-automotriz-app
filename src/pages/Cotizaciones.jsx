@@ -620,7 +620,7 @@ function DetalleCotizacion({ cot, yaTieneOT, creando, creandoAlguna, onClose, on
         role="dialog" aria-modal="true" aria-label={`Cotización ${cotRef(cot.id)}`}>
         <div className="modal__h">
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', minWidth: 0 }}>
-            <span className="mono" title={cot.id} style={{ fontSize: 17, fontWeight: 700, color: 'var(--text)' }}>
+            <span className="mono" title={cot.id} style={{ fontSize: 16, fontWeight: 700, color: 'var(--text)' }}>
               COT · {cotRef(cot.id)}
             </span>
             <Badge tone={tone}>{cot.estado}</Badge>
@@ -669,8 +669,8 @@ function DetalleCotizacion({ cot, yaTieneOT, creando, creandoAlguna, onClose, on
         </div>
 
         <div className="modal__f" style={{ flexWrap: 'wrap' }}>
-          <Button variant="outline" size="sm" onClick={onPdf}><IconPdf /> PDF</Button>
-          <Button variant="outline" size="sm" onClick={onEditar}><IconEdit /> Editar</Button>
+          <Button variant="outline" onClick={onPdf}><IconPdf /> PDF</Button>
+          <Button variant="outline" onClick={onEditar}><IconEdit /> Editar</Button>
           <span style={{ flex: 1 }} />
           {cot.estado === ESTADO_COT.PENDIENTE && (
             <>

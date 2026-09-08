@@ -332,8 +332,8 @@ export default function Mecanicos({ trabajos, onNavigate, notify }) {
               </div>
             </div>
             <div className="modal__f">
-              <Button variant="outline" size="sm" onClick={() => setEditando(null)}>Cancelar</Button>
-              <Button variant="primary" size="sm" onClick={handleGuardarEdicion}>Guardar cambios</Button>
+              <Button variant="outline" onClick={() => setEditando(null)}>Cancelar</Button>
+              <Button variant="primary" onClick={handleGuardarEdicion}>Guardar cambios</Button>
             </div>
           </div>
         </div>
@@ -370,8 +370,8 @@ export default function Mecanicos({ trabajos, onNavigate, notify }) {
                 </p>
               </div>
               <div className="modal__f">
-                <Button type="button" variant="outline" size="sm" onClick={() => setAgregando(false)}>Cancelar</Button>
-                <Button type="submit" variant="primary" size="sm">Agregar al equipo</Button>
+                <Button type="button" variant="outline" onClick={() => setAgregando(false)}>Cancelar</Button>
+                <Button type="submit" variant="primary">Agregar al equipo</Button>
               </div>
             </form>
           </div>

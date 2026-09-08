@@ -1444,19 +1444,19 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
       {showFacturarModal && (
         <div className="modal-overlay" onClick={() => setShowFacturarModal(null)}>
           <div className="modal" style={{ maxWidth: 420 }} onClick={e => e.stopPropagation()}>
-            <div className="modal-header">
-              <div className="modal-title">Trabajo Completado</div>
+            <div className="modal__h">
+              <h3>Trabajo completado</h3>
             </div>
-            <div className="modal-body" style={{ textAlign: 'center' }}>
+            <div className="modal__b" style={{ textAlign: 'center' }}>
               <p style={{ fontSize: 15, marginBottom: 8 }}>
-                <strong>{showFacturarModal.placa}</strong> — {showFacturarModal.cliente || 'Sin cliente'}
+                <strong>{showFacturarModal.placa}</strong> · {showFacturarModal.cliente || 'Sin cliente'}
               </p>
               <p className="text-sm text-muted" style={{ marginBottom: 16 }}>
                 Total: <strong className="text-mono">{fmt(showFacturarModal.total)}</strong>
               </p>
               <p style={{ fontSize: 14 }}>¿Facturar este trabajo en Cuentti?</p>
             </div>
-            <div className="modal-footer">
+            <div className="modal__f">
               <Button variant="outline" onClick={() => setShowFacturarModal(null)}>Después</Button>
               <Button variant="primary" onClick={() => {
                 setShowFacturarModal(null)
