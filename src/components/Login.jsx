@@ -44,96 +44,44 @@ export default function Login({ onLogin, aviso = '' }) {
   }
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      display: 'grid',
-      gridTemplateColumns: '1fr 1.12fr',
-      background: 'var(--navy-900)',
-      color: '#fff',
-    }} className="login-shell">
+    <div className="login">
 
-      {/* Panel izquierdo: foto del taller (sin blur, sin gradients) */}
-      <div className="login-art" style={{
-        order: 2,
-        position: 'relative',
-        backgroundImage: 'url(/taller-fachada.jpg)',
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
-        minHeight: 240,
-      }}>
-        {/* Capa única plana para legibilidad — no es gradient decorativo, es un solo color con alpha */}
-        <div aria-hidden="true" style={{
-          position: 'absolute', inset: 0,
-          background: 'rgba(6, 11, 26, .58)',
-        }} />
-        <div style={{
-          position: 'relative', zIndex: 1,
-          height: '100%', display: 'flex', flexDirection: 'column',
-          justifyContent: 'space-between', padding: '40px 44px',
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-            <div style={{
-              width: 48, height: 48, borderRadius: 12,
-              background: '#fff', overflow: 'hidden', flexShrink: 0,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-            }}>
-              <img src="/logo.png" alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-            </div>
+      {/* Panel de la foto del taller. Plano: una sola capa de color con alpha
+         para que se lea el texto encima, ni desenfoque ni degradado. */}
+      <div className="login__art">
+        <div className="login__velo" aria-hidden="true" />
+        <div className="login__artb">
+          <div className="login__marca">
+            <div className="login__logo"><img src="/logo.png" alt="" /></div>
             <div style={{ minWidth: 0 }}>
-              <div style={{ fontSize: 16, fontWeight: 700, letterSpacing: .2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                {TALLER.razonSocial || TALLER.nombre}
-              </div>
-              <div style={{ fontSize: 11.5, color: 'rgba(255,255,255,.65)', textTransform: 'uppercase', letterSpacing: 1.2, marginTop: 3, fontWeight: 600 }}>
-                Taller Automotriz · Sabanalarga
-              </div>
+              <div className="login__razon">{TALLER.razonSocial || TALLER.nombre}</div>
+              <div className="login__sede">Taller automotriz · Sabanalarga</div>
             </div>
           </div>
 
-          <div style={{ maxWidth: 460 }}>
-            <h1 style={{
-              margin: 0, fontSize: 'clamp(32px, 4.4vw, 48px)',
-              fontWeight: 900, lineHeight: 1.05, letterSpacing: '-1px',
-            }}>
-              Operación del taller, en un solo lugar.
-            </h1>
-            <p style={{
-              margin: '16px 0 0', fontSize: 15.5, lineHeight: 1.55,
-              color: 'rgba(255,255,255,.72)', maxWidth: 420,
-            }}>
-              Recepción, trabajos, inventario, liquidación y facturación. Todo conectado, sin papeles sueltos.
+          <div>
+            <h1 className="login__lema">Todo el taller en un solo lugar.</h1>
+            <p className="login__sub">
+              Recepción, trabajos, inventario, liquidación y facturación. Sin papeles sueltos.
             </p>
           </div>
 
-          {/* El numeral se distingue por PESO, no por un ambar: el handoff fija un
-              solo acento y este era un segundo, colado en la pantalla de entrada. */}
-          <div style={{ display: 'flex', gap: 32, fontSize: 12.5, color: 'rgba(255,255,255,.55)', flexWrap: 'wrap' }}>
-            <span><span className="mono" style={{ color: '#fff', fontWeight: 700, marginRight: 6 }}>01</span> Recepción</span>
-            <span><span className="mono" style={{ color: '#fff', fontWeight: 700, marginRight: 6 }}>02</span> Diagnóstico</span>
-            <span><span className="mono" style={{ color: '#fff', fontWeight: 700, marginRight: 6 }}>03</span> Entrega</span>
-          </div>
+          {/* El recorrido real de un carro por el taller, en su orden. */}
+          <ul className="login__pasos">
+            <li><b className="mono">01</b>Recepción</li>
+            <li><b className="mono">02</b>Diagnóstico</li>
+            <li><b className="mono">03</b>Entrega</li>
+          </ul>
         </div>
       </div>
 
-      {/* Panel del formulario (izquierda, estilo Sana: limpio y aireado) */}
-      <div style={{
-        order: 1,
-        background: 'var(--bg-raised, #fff)',
-        color: 'var(--text, #0f172a)',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        padding: '48px 40px',
-      }}>
-        <div style={{ width: '100%', maxWidth: 400 }}>
-          {/* Aqui iba un segundo bloque de marca. El panel ya la trae en grande, y
-              en movil se apila justo encima: eran dos logos pegados. */}
-          <h2 style={{
-            margin: '0 0 8px', fontSize: 30, fontWeight: 700,
-            letterSpacing: '-.5px', color: 'var(--text)',
-          }}>Inicia sesión</h2>
-          <p style={{ margin: '0 0 30px', color: 'var(--text-3)', fontSize: 15, lineHeight: 1.5 }}>
-            Accede al panel de administración del taller.
-          </p>
+      {/* Panel del formulario */}
+      <div className="login__form">
+        <div className="login__caja">
+          <h2>Inicia sesión</h2>
+          <p>Entra con el usuario que te dieron en el taller.</p>
 
-          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <form onSubmit={handleSubmit} className="login__campos">
             <div className="field">
               <label htmlFor="login-user">Usuario</label>
               <input
@@ -150,7 +98,7 @@ export default function Login({ onLogin, aviso = '' }) {
 
             <div className="field">
               <label htmlFor="login-pass">Contraseña</label>
-              <div style={{ position: 'relative' }}>
+              <div className="login__pass">
                 <input
                   id="login-pass"
                   className="input"
@@ -159,50 +107,27 @@ export default function Login({ onLogin, aviso = '' }) {
                   onChange={e => setPassword(e.target.value)}
                   placeholder="Tu contraseña"
                   autoComplete="current-password"
-                  style={{ paddingRight: 44 }}
                 />
-                <button type="button" onClick={() => setShowPass(!showPass)}
-                  aria-label={showPass ? 'Ocultar contraseña' : 'Mostrar contraseña'}
-                  style={{
-                    position: 'absolute', right: 6, top: '50%', transform: 'translateY(-50%)',
-                    width: 32, height: 32,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    color: 'var(--text-3)', borderRadius: 6,
-                    background: 'none', border: 'none', cursor: 'pointer',
-                  }}>
+                <button type="button" className="login__ojo" onClick={() => setShowPass(!showPass)}
+                  aria-label={showPass ? 'Ocultar contraseña' : 'Mostrar contraseña'}>
                   <EyeIcon open={showPass} />
                 </button>
               </div>
             </div>
 
-            {error && (
-              <div role="alert" style={{
-                padding: '12px 14px',
-                background: 'var(--soft-red)',
-                border: '1px solid rgba(220,38,38,.32)',
-                color: 'var(--red-700)',
-                borderRadius: 9, fontSize: 13.5, fontWeight: 600,
-              }}>{error}</div>
-            )}
+            {error && <div role="alert" className="login__error">{error}</div>}
 
+            {/* El rotulo del boton apagado dice QUE FALTA, no se queda mudo. */}
             <button type="submit" disabled={loading || !usuario.trim() || !password}
-              className="btn btn-primary"
-              style={{
-                height: 50, fontSize: 15, marginTop: 8, width: '100%',
-                letterSpacing: .2,
-              }}
-            >
-              {loading ? 'Ingresando…' : <>Entrar al taller <ArrowRight /></>}
+              className="btn btn-primary login__entrar">
+              {loading ? 'Entrando…'
+                : !usuario.trim() ? 'Escribe tu usuario'
+                : !password ? 'Escribe tu contraseña'
+                : <>Entrar al taller <ArrowRight /></>}
             </button>
           </form>
 
-          <div style={{
-            marginTop: 32, paddingTop: 18,
-            borderTop: '1px solid var(--border)',
-            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            fontSize: 12.5, color: 'var(--text-3)',
-            gap: 12, flexWrap: 'wrap',
-          }}>
+          <div className="login__pie">
             <span>{new Date().getFullYear()} {TALLER.razonSocial || TALLER.nombre}</span>
             <span className="mono">{TALLER.celular}</span>
           </div>
