@@ -6,7 +6,7 @@
 // ============================================================
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { fmt, fmtDate, uid, hoyISO, normalizarDoc, normalizarNombre, fmtTelefono, cantidadItem, fmtCant } from '../utils/helpers'
-import { TECNICOS, ESTADOS, IVA_DEFAULT, COMISION } from '../utils/constants'
+import { TECNICOS, ESTADOS, IVA_DEFAULT, COMISION, rotuloEstado } from '../utils/constants'
 import IngresoVehiculo from '../components/IngresoVehiculo'
 // INVENTARIO_ITEMS y etiquetaCombustible: solo para el contador del bloque
 // plegado ("3 / 16 · 1/2"), no cambian nada de lo que se guarda.
@@ -665,7 +665,7 @@ export default function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [
                   trabajo.estado === ESTADOS.EN_PROGRESO ? 'info' :
                   trabajo.estado === ESTADOS.PENDIENTE ? 'warn' :
                   'mute'
-                }`}>{trabajo.estado}</span></>}
+                }`}>{rotuloEstado(trabajo.estado)}</span></>}
               </>
             ) : 'Guarda en estado Pendiente'}
           </div>
@@ -691,7 +691,7 @@ export default function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [
                     onClick={() => set('tecnicoId', String(t.id))}>
                     <span className={`av av-${((parseInt(t.id) || 1) - 1) % 5 + 1}`}>{ini}</span>
                     <span>{(t.nombre || '').split(' ')[0]}{t.activo === false ? ' (inactivo)' : ''}</span>
-                    {sel && <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" style={{ width: 16, height: 16, marginRight: 2 }}><path d="M20 6 9 17l-5-5" /></svg>}
+                    {sel && <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ width: 16, height: 16, marginRight: 2 }}><path d="M20 6 9 17l-5-5" /></svg>}
                   </button>
                 )
               })}
@@ -844,7 +844,7 @@ export default function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [
               <div className="field">
                 <label>Estado</label>
                 <select className="input" value={form.estado} onChange={e => set('estado', e.target.value)}>
-                  {Object.values(ESTADOS).map(e => <option key={e} value={e}>{e}</option>)}
+                  {Object.values(ESTADOS).map(e => <option key={e} value={e}>{rotuloEstado(e)}</option>)}
                 </select>
               </div>
             )}
@@ -1105,7 +1105,7 @@ export default function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [
                               <button type="button" onClick={() => cambiarProducto(item.id)}
                                 title={`Cambiar producto (actual: ${item.nombreInventario || item.sku || 'sin SKU'})`}
                                 style={{ position: 'absolute', right: 3, top: '50%', transform: 'translateY(-50%)', width: 30, height: 30, display: 'grid', placeItems: 'center', background: 'var(--chip)', border: 'none', cursor: 'pointer', color: 'var(--accent)', padding: 0, borderRadius: 'var(--radius-pill)' }}>
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                                   <path d="M3 12a9 9 0 0 1 15-6.7L21 8M21 3v5h-5" /><path d="M21 12a9 9 0 0 1-15 6.7L3 16M3 21v-5h5" />
                                 </svg>
                               </button>
@@ -1216,7 +1216,7 @@ export default function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [
                             title={item.esServicio ? 'Es mano de obra / servicio' : 'Es un repuesto'}
                             checkedIcon={
                               <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor"
-                                strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                                 <path d="m5 12 5 5L20 7" />
                               </svg>
                             }

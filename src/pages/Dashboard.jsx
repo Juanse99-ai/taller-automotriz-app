@@ -1,6 +1,6 @@
 import { useMemo, useState, useEffect } from 'react'
 import { fmt, fmtDate, whatsappLink } from '../utils/helpers'
-import { ESTADOS, TECNICOS, DIAS_ESTANCADO, TALLER } from '../utils/constants'
+import { ESTADOS, TECNICOS, DIAS_ESTANCADO, TALLER, rotuloEstado } from '../utils/constants'
 import { Button } from '../components/ui'
 import { formatCacheAge } from '../hooks/useInventario'
 
@@ -75,7 +75,7 @@ const IcCal = () => (
   </svg>
 )
 const IcArrow = () => (
-  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
     <line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/>
   </svg>
 )
@@ -91,7 +91,7 @@ const IcDownload = () => (
   </svg>
 )
 const IcPhone = () => (
-  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
     <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.41 2 2 0 0 1 3.6 1.23h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.82a16 16 0 0 0 6.29 6.29l.95-.95a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/>
   </svg>
 )
@@ -621,7 +621,7 @@ export default function Dashboard({ trabajos = [], onNavigate, user, ultimaSync 
               /* El diseño celebra este vacío concreto: es el único que dice que
                  no hay nada que hacer ahora mismo. */
               <div className="dsh-ok">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
                 <span><b>Todo al día.</b> No hay trabajos pendientes en este momento.</span>
               </div>
             ) : (
@@ -641,7 +641,7 @@ export default function Dashboard({ trabajos = [], onNavigate, user, ultimaSync 
                         <span className="hd-bar__sp" />
                         {isVencido
                           ? <span className="hd-chip hd-chip--warn">Estancado</span>
-                          : <span className={`hd-chip hd-chip--${chipEstado(t.estado)}`}>{t.estado}</span>}
+                          : <span className={`hd-chip hd-chip--${chipEstado(t.estado)}`}>{rotuloEstado(t.estado)}</span>}
                         {onNavigate && (
                           <button type="button" className="dsh-pr__ico" aria-label="Ver trabajos" title="Ver trabajos" onClick={() => onNavigate('trabajos')}>
                             <IcArrow />
@@ -791,7 +791,7 @@ export default function Dashboard({ trabajos = [], onNavigate, user, ultimaSync 
                       {t.placa || 'SERVICIO'}
                     </div>
                     <div className="hd-clip" style={{ flex: 1, minWidth: 140, paddingRight: 10, fontSize: 12.5, fontWeight: 700, color: 'var(--text)' }}>{t.cliente || '—'}</div>
-                    <div style={{ width: 120 }}><span className="hd-chip hd-chip--warn">{t.estado}</span></div>
+                    <div style={{ width: 120 }}><span className="hd-chip hd-chip--warn">{rotuloEstado(t.estado)}</span></div>
                     {/* Los días son el dato que decide: van en rojo y a la derecha. */}
                     <div className="hd-n" style={{ width: 60, fontSize: 13, fontWeight: 700, color: 'var(--bad-fg)' }}>{dias}d</div>
                     <div className="hd-clip" style={{ width: 130, paddingLeft: 14, fontSize: 11.5, color: 'var(--text-2)' }}>

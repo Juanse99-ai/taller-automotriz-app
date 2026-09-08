@@ -242,7 +242,7 @@ export default function Inventario({ notify }) {
             {/* Search bar iOS: relleno gris del sistema, sin borde, con botón de
                 limpiar cuando hay texto (antes tocaba borrar a mano). */}
             <div className="search" style={{ minWidth: 220 }}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, color: 'var(--text-4)' }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, color: 'var(--text-4)' }}>
                 <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
               </svg>
               <input
@@ -259,13 +259,13 @@ export default function Inventario({ notify }) {
             </div>
             {/* Reposición: filtrar a bajo/sin stock + compartir lista */}
             <button type="button" className={`btn btn-sm ${soloReponer ? 'btn-primary' : 'btn-outline'}`} onClick={() => setSoloReponer(v => !v)}>
-              {soloReponer && <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>}
+              {soloReponer && <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>}
               Por reponer ({porReponer.length})
             </button>
             {soloReponer && porReponer.length > 0 && (
               <button type="button" className="btn btn-sm" onClick={compartirReposicion}
                 style={{ background: 'var(--green-600)', color: '#fff', border: 'none', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
                 Copiar lista
               </button>
             )}

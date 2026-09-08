@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react'
 import { fmtDate, uid, hoyISO, normalizarDoc, normalizarNombre, fmtTelefono } from '../utils/helpers'
-import { TECNICOS, ESTADOS } from '../utils/constants'
+import { TECNICOS, ESTADOS, rotuloEstado } from '../utils/constants'
 import { MARCAS, getModelos } from '../utils/vehiculos'
 import { ANIOS } from '../components/ui'
 import { useClientes } from '../hooks/useClientes'
@@ -482,7 +482,7 @@ export default function Recepcion({ hook, vehiculosHook, clientesHook, notify })
                         taller usa el dedo y no hay hover en el que apoyarse. */}
                     <button type="button" onClick={() => quitarFoto(fv.id)} aria-label={`Quitar ${fv.nombre}`}
                       style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, minHeight: 'var(--tap)', border: 'none', borderRadius: 8, background: 'var(--bad-bg)', color: 'var(--bad-fg)', fontSize: 11.5, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' }}>
-                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6M10 11v6M14 11v6" /></svg>
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6M10 11v6M14 11v6" /></svg>
                       Eliminar
                     </button>
                   </div>
@@ -592,7 +592,7 @@ export default function Recepcion({ hook, vehiculosHook, clientesHook, notify })
                       <span className="hd-clip" style={{ flex: 1, minWidth: 0, fontSize: 10.5, color: 'var(--text-3)' }}>{[t.marca, t.modelo, t.ano].filter(Boolean).join(' ') || '—'}</span>
                       <span className={`hd-av av av-${(parseInt(t.tecnicoId) || 1) % 5 + 1}`}>{tecIniciales(t.tecnicoId)}</span>
                       <span className="hd-clip" style={{ flex: 'none', maxWidth: 84, fontSize: 10.5, color: 'var(--text-2)' }}>{TECNICOS.find(tc => tc.id === parseInt(t.tecnicoId))?.nombre || 'Sin asignar'}</span>
-                      <span className={`hd-chip hd-chip--${chipEstado(t.estado)}`} style={{ flex: 'none' }}>{t.estado}</span>
+                      <span className={`hd-chip hd-chip--${chipEstado(t.estado)}`} style={{ flex: 'none' }}>{rotuloEstado(t.estado)}</span>
                     </div>
                   </div>
                 ))}

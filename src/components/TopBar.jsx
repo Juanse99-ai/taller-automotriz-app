@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { motion, useReducedMotion } from 'motion/react'
 import CompartirPortalModal from './CompartirPortalModal'
 import Switch from './Switch'
+import { rotuloEstado } from '../utils/constants'
 
 const SunIcon = () => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -28,7 +29,7 @@ const BellIcon = () => (
   </svg>
 )
 const PortalIcon = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
     <rect x="5" y="2" width="14" height="20" rx="2" ry="2"/>
     <line x1="12" y1="18" x2="12.01" y2="18"/>
   </svg>
@@ -66,7 +67,7 @@ function useIsMobile() {
   return m
 }
 const LogoutIcon = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
     <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
     <polyline points="16 17 21 12 16 7"/>
     <line x1="21" y1="12" x2="9" y2="12"/>
@@ -200,7 +201,7 @@ export default function TopBar({ title, subtitle, onToggleSidebar, sidebarOpen, 
                   <span className="mono" style={{ fontWeight: 700 }}>{t.placa}</span>
                   <span style={{ color: 'var(--text-3)' }}>{t.cliente || 'Sin cliente'}</span>
                   {t.otCodigo && <span className="mono" style={{ fontSize: 11, color: 'var(--accent)' }}>{t.otCodigo}</span>}
-                  <span className="badge badge-n" style={{ fontSize: 10, marginLeft: 'auto' }}>{t.estado}</span>
+                  <span className="badge badge-n" style={{ fontSize: 10, marginLeft: 'auto' }}>{rotuloEstado(t.estado)}</span>
                 </div>
               ))}
             </div>
@@ -270,7 +271,7 @@ export default function TopBar({ title, subtitle, onToggleSidebar, sidebarOpen, 
           <button
             className="btn btn-outline btn-sm topbar__salir"
             onClick={onLogout}
-            title="Cerrar sesion"
+            title="Cerrar sesión"
             style={{ gap: 6 }}
           >
             <LogoutIcon /> <span className="btn-label">Salir</span>

@@ -22,7 +22,7 @@ function bloqueFecha(f) {
 }
 import { cargarPdf } from '../utils/pdfLazy'
 import { fmt, fmtDate, fmtTelefono, cantidadItem, fmtCant } from '../utils/helpers'
-import { TECNICOS, ESTADOS, DIAS_ESTANCADO, TALLER, SIN_FACTURA } from '../utils/constants'
+import { TECNICOS, ESTADOS, DIAS_ESTANCADO, TALLER, SIN_FACTURA, rotuloEstado } from '../utils/constants'
 import { loadLogo as loadPdfLogo, drawHeader, drawSectionHeader, drawDataBlock, drawTotalsBox, drawSignatures, drawFooter, tableStylesItems, PDF_LAYOUT, PDF_COLORS } from '../utils/pdfTheme'
 import FichaTecnico from '../components/FichaTecnico'
 import { labelInventario, etiquetaCombustible, ingresoTieneAlgo } from '../utils/ingreso'
@@ -499,7 +499,7 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
       if (ing.combustible != null) partes.push(`Combustible: ${etiquetaCombustible(ing.combustible)}.`)
       if (ing.estado && ing.estado.trim()) partes.push(`Danos/estado: ${ing.estado.trim()}.`)
       partes.push(`Inventario recibido: ${presentes.length ? presentes.join(', ') : 'ninguno marcado'}.`)
-      cursorY = drawSectionHeader(doc, 'Estado de ingreso del vehiculo', cursorY)
+      cursorY = drawSectionHeader(doc, 'Estado de ingreso del vehículo', cursorY)
       const inLines = doc.splitTextToSize(partes.join('   '), CONTENT_W - 6)
       const inH = Math.max(11, inLines.length * 3.8 + 6)
       doc.setDrawColor(...SLATE_300)
@@ -778,7 +778,7 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
           <div className="kb-mover" onClick={e => e.stopPropagation()}>
             <button type="button" className="kb-mover__go" onClick={() => moverEstado(t.id, siguiente.estado)}>
               Pasar a {siguiente.estado}
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6" /></svg>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6" /></svg>
             </button>
             <button type="button" className="kb-mover__mas" aria-label={`Editar ${t.otCodigo || t.placa || 'OT'}`} onClick={() => handleEditar(t.id)}>
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="1.5" /><circle cx="12" cy="5" r="1.5" /><circle cx="12" cy="19" r="1.5" /></svg>
@@ -847,7 +847,7 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
             </button>
           )}
           <Button variant="primary" size="sm" className="trab-new" onClick={() => setVista('nuevo')}
-            icon={<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>}>Nueva OT</Button>
+            icon={<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>}>Nueva OT</Button>
         </div>
       </div>
 
@@ -927,12 +927,12 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
             {/* Navegacion por nombre, no por flecha muda: se sabe a donde se va. */}
             <div className="kb-nav">
               <button type="button" disabled={!prev} onClick={() => prev && setKCol(prev.estado)}>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6" /></svg>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6" /></svg>
                 {prev ? prev.corto : ''}
               </button>
               <button type="button" disabled={!next} onClick={() => next && setKCol(next.estado)}>
                 {next ? next.corto : ''}
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6" /></svg>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6" /></svg>
               </button>
             </div>
           </div>
@@ -1035,7 +1035,7 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
                       {/* 104 y no 92: con 'ESPERANDO REPUESTOS' o 'SIN ITEMS PARA
                           FACTURAR' en mayusculas la pastilla desbordaba la celda. */}
                       <div style={{ width: 104, display: 'flex', alignItems: 'center', gap: 4, minWidth: 0 }}>
-                        <span className={`hd-chip hd-chip--${chipEstado(t.estado)} hd-clip`} title={t.estado}>{t.estado}</span>
+                        <span className={`hd-chip hd-chip--${chipEstado(t.estado)} hd-clip`} title={rotuloEstado(t.estado)}>{rotuloEstado(t.estado)}</span>
                         {estancado && <span className="hd-chip hd-chip--warn" style={{ flex: 'none' }}>{dias}d</span>}
                       </div>
                       <div style={{ width: 104, minWidth: 0, display: 'flex', alignItems: 'center' }}>
@@ -1225,7 +1225,7 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
                         </div>
                       </td>
                       <td data-label="Estado">
-                        <span className={`badge ${bc}`}>{t.estado}</span>
+                        <span className={`badge ${bc}`}>{rotuloEstado(t.estado)}</span>
                         {/* Ambar: dias sin moverse es "revisar", no plata que se debe. */}
                         {estancado && <Badge tone="w" style={{ marginLeft: 4, fontSize: 10 }}>{diasSinMover}d</Badge>}
                         {/* En celular esta tabla ES la ficha: sin este badge no hay
@@ -1239,7 +1239,7 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
                           <Button variant="ghost" size="sm" className="btn-icon" aria-label="Editar" title="Editar" onClick={() => handleEditar(t.id)}><IconEdit /></Button>
                           {t.otCodigo && <Button variant="ghost" size="sm" className="btn-icon" aria-label="Descargar PDF" title="Descargar PDF" onClick={() => descargarOT(t)}><IconPdf /></Button>}
                           {t.estado !== ESTADOS.COMPLETADO && (
-                            <Button variant="ghost" size="sm" aria-label="Marcar completado" style={{ color: 'var(--green-600)' }} onClick={() => handleCompletar(t.id)}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg></Button>
+                            <Button variant="ghost" size="sm" aria-label="Marcar completado" style={{ color: 'var(--green-600)' }} onClick={() => handleCompletar(t.id)}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg></Button>
                           )}
                           {onAutoFacturar && estadoCobro(t)?.porCobrar && (
                             <Button variant="primary" size="sm" title="Facturar y cobrar en Cuentti"
@@ -1256,7 +1256,7 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
                             </>
                           ) : (
                             <Button variant="ghost" size="sm" style={{ color: 'var(--red-500)' }} onClick={() => setConfirmDel(t.id)}>
-                              <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                              <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
                             </Button>
                           )}
                         </div>
@@ -1321,7 +1321,7 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
                   </div>
                 </div>
                 <div className="otd__chips">
-                  <span className={`hd-chip hd-chip--${chipEstado(t.estado)}`}>{t.estado}</span>
+                  <span className={`hd-chip hd-chip--${chipEstado(t.estado)}`}>{rotuloEstado(t.estado)}</span>
                   {cob && <span className={`hd-chip hd-chip--${chipTono(cob.tone)}`}>{cob.label}</span>}
                 </div>
               </div>
@@ -1410,7 +1410,7 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
                 <div className="otd__acc2">
                   {!t.firmaCliente && (
                     <button type="button" className="otd__b" onClick={() => setFirmando(true)}>
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 17s2-4 5-4 4 2 6 2 3-2 3-4-2-3-3-2-1 5 1 8 4 2 6 1" /></svg>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 17s2-4 5-4 4 2 6 2 3-2 3-4-2-3-3-2-1 5 1 8 4 2 6 1" /></svg>
                       Firmar recibido
                     </button>
                   )}

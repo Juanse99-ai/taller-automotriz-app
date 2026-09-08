@@ -73,7 +73,7 @@ class ErrorBoundary extends Component {
           <div className="card" style={{ background: 'var(--red-100)', border: '1px solid rgba(220,38,38,.32)' }}>
             <div className="card__b">
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--red-600)" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--red-600)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/>
                 </svg>
                 <h3 style={{ color: 'var(--red-700)', margin: 0, fontSize: 16, fontWeight: 700 }}>
@@ -275,7 +275,7 @@ export default function App() {
   }, [])
   // Salir pide confirmacion desde los dos sitios (topbar y pie del cajon del celular).
   const pedirCerrarSesion = useCallback(() => {
-    setConfirmCfg({ title: 'Cerrar sesion', confirmLabel: 'Cerrar sesion', tone: 'primary', onConfirm: handleLogout })
+    setConfirmCfg({ title: 'Cerrar sesión', confirmLabel: 'Cerrar sesión', tone: 'primary', onConfirm: handleLogout })
   }, [handleLogout])
 
   // Candado anti doble-click: el 23-jul-2026 clicks repetidos en "Crear trabajo"

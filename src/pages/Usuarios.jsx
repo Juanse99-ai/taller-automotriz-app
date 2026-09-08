@@ -199,10 +199,10 @@ export default function Usuarios({ notify, currentUser }) {
         <div className="hd-head__sp" />
         <div className="hd-head__right">
           <button type="button" className="rep-ico" onClick={() => setRefreshTick(t => t + 1)} title="Recargar la lista">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7M21 4v5h-5" /></svg>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7M21 4v5h-5" /></svg>
           </button>
           <Button variant="primary" onClick={abrirCrear}
-            icon={<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>}>
+            icon={<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>}>
             Nuevo usuario
           </Button>
         </div>
@@ -383,7 +383,7 @@ export default function Usuarios({ notify, currentUser }) {
                 <input type="checkbox" id="activo" checked={form.activo}
                   onChange={e => setForm(f => ({ ...f, activo: e.target.checked }))}
                   style={{ width: 16, height: 16 }} />
-                <label htmlFor="activo" style={{ marginBottom: 0, cursor: 'pointer' }}>Usuario activo (puede iniciar sesion)</label>
+                <label htmlFor="activo" style={{ marginBottom: 0, cursor: 'pointer' }}>Usuario activo (puede iniciar sesión)</label>
               </div>
 
               <div className="modal__f" style={{ marginLeft: -22, marginRight: -22, marginBottom: -22, paddingLeft: 22, paddingRight: 22, paddingTop: 14, paddingBottom: 14, marginTop: 8 }}>

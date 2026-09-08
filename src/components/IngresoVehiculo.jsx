@@ -70,7 +70,7 @@ export default function IngresoVehiculo({ value, onChange }) {
                 />
                 <span className={`ingreso-box${on ? ' on' : ''}`}>
                   {on && (
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M5 13l4 4L19 7" /></svg>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 13l4 4L19 7" /></svg>
                   )}
                 </span>
                 {it.label}

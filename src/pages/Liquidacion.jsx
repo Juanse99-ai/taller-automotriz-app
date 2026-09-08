@@ -1313,7 +1313,7 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
     const resumenTecnicos = cuentasTecnicos.length > 0 ? (
       <details className="ec-resumen">
         <summary>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="m9 18 6-6-6-6" /></svg>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="m9 18 6-6-6-6" /></svg>
           <span className="ec-resumen__t">Liquidado y entregado por técnico</span>
           <span className="ec-aside__n">{cuentasTecnicos.length}</span>
         </summary>
@@ -1928,7 +1928,7 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
             <div className="card__h" style={{ cursor: 'pointer' }} onClick={() => toggleColapso('trabajos')}>
               <h3>
                 <span className="liq-chev">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
                     style={{ transform: colapso.trabajos ? 'rotate(-90deg)' : 'rotate(0deg)', transition: 'transform 200ms var(--ease-out)' }}>
                     <polyline points="6 9 12 15 18 9"/>
                   </svg>
@@ -2132,7 +2132,7 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
                Un <button> y no un enlace: no navega, cambia el paso. */}
             <button type="button" className="liq-vuelta" onClick={() => setPaso(2)}>
               <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor"
-                strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                 <path d="m15 18-6-6 6-6" />
               </svg>
               <span className={`av av-${(Math.max(0, tecnicosConPendientes.findIndex(x => String(x.id) === String(tecData.tecnico.id))) % 5) + 1} liq-vuelta__av`}>
@@ -2183,7 +2183,7 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
                   )}
                   {tecCuenta.saldo !== 0 && (
                     <div className="liq-empty__note">
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M12 2v6M12 22v-6M2 12h6M22 12h-6"/></svg>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M12 2v6M12 22v-6M2 12h6M22 12h-6"/></svg>
                       {tecCuenta.saldo > 0
                         ? <>{tecData.tecnico.nombre.split(' ')[0]} tiene <strong className="mono">{fmt(tecCuenta.saldo)}</strong> pendientes en su cuenta — se podrán descontar aquí una vez elijas los trabajos.</>
                         : <>El taller le debe <strong className="mono">{fmt(-tecCuenta.saldo)}</strong> — se podrá sumar aquí una vez elijas los trabajos.</>}
@@ -2280,8 +2280,8 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
                     <button key={k} type="button" onClick={() => setAporteForm(on ? null : k)}
                       className={`btn btn-sm ${on ? 'btn-primary' : 'btn-outline'}`}>
                       {on
-                        ? <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
-                        : <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><path d="M12 5v14M5 12h14"/></svg>}
+                        ? <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+                        : <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M12 5v14M5 12h14"/></svg>}
                       {lbl}
                     </button>
                   )
@@ -2431,7 +2431,7 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
                    exactamente como se termina pagando dos veces. */}
                 {connectionError && (
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '11px 14px', marginBottom: 12, borderRadius: 9, background: 'var(--soft-red)', border: '1px solid rgba(220,38,38,.28)', fontSize: 13, color: 'var(--red-700)', fontWeight: 600 }}>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" style={{ flexShrink: 0 }}><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/></svg>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" style={{ flexShrink: 0 }}><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/></svg>
                     <span style={{ flex: 1 }}>Sin conexión: estos montos salen de la última copia guardada. Reconéctate antes de pagar.</span>
                     <Button variant="outline" size="sm" onClick={() => liquidacionHook.recargar()}>Reintentar</Button>
                   </div>

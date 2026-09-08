@@ -499,7 +499,7 @@ export default function EstadoCuenta({ prestamos, tecnicos, notify, tabs = null,
             {!cuentaSel && hoja && (
               <div className="ec-hoja__h">
                 <button type="button" className="ec-cta__back" onClick={() => setHoja(false)} aria-label="Volver a las cuentas">
-                  <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5M12 19l-7-7 7-7" /></svg>
+                  <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5M12 19l-7-7 7-7" /></svg>
                 </button>
                 <span className="ec-hoja__t">Registrar movimiento</span>
               </div>
@@ -508,7 +508,7 @@ export default function EstadoCuenta({ prestamos, tecnicos, notify, tabs = null,
               <>
                 <div className="ec-cta__id">
                   <button type="button" className="ec-cta__back" onClick={() => setSel(null)} aria-label="Volver a las cuentas">
-                    <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5M12 19l-7-7 7-7" /></svg>
+                    <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5M12 19l-7-7 7-7" /></svg>
                   </button>
                   <div className="ec-cta__idb">
                     <div className="ec-cta__nl">

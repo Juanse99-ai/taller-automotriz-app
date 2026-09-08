@@ -444,7 +444,7 @@ export default function CRM({ trabajos = [], clientes, vehiculos, notify, actual
         <div className="card__b" style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
           {/* Búsqueda */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 9, background: 'var(--bg-subtle)', border: '1px solid var(--border)', borderRadius: 9, padding: '7px 12px', flex: '1 1 200px', minWidth: 220 }}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-4)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-4)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
               <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
             </svg>
             <input value={filtroBusqueda} onChange={e => setFiltroBusqueda(e.target.value)} placeholder="Buscar cliente o placa..." style={{ border: 'none', outline: 'none', background: 'none', flex: 1, fontSize: 13.5 }} />
@@ -480,7 +480,7 @@ export default function CRM({ trabajos = [], clientes, vehiculos, notify, actual
         {filtrados.length === 0 ? (
           <div className="card__b">
             <div className="empty-state">
-              <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="var(--green-600)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ marginBottom: 10, opacity: .85 }}>
+              <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="var(--green-600)" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" style={{ marginBottom: 10, opacity: .85 }}>
                 <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
                 <polyline points="22 4 12 14.01 9 11.01"/>
               </svg>
@@ -555,10 +555,10 @@ export default function CRM({ trabajos = [], clientes, vehiculos, notify, actual
                       <td className="td-contacto" data-label="Contacto">
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 2, fontSize: 11.5 }}>
                           <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={r.cliente.telefono ? 'var(--green-600)' : 'var(--text-4)'} strokeOpacity={r.cliente.telefono ? 1 : 0.4} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-label={r.cliente.telefono ? 'Con teléfono' : 'Sin teléfono'}>
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={r.cliente.telefono ? 'var(--green-600)' : 'var(--text-4)'} strokeOpacity={r.cliente.telefono ? 1 : 0.4} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-label={r.cliente.telefono ? 'Con teléfono' : 'Sin teléfono'}>
                               <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.41 2 2 0 0 1 3.6 1.23h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.82a16 16 0 0 0 6.29 6.29l.95-.95a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/>
                             </svg>
-                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={r.cliente.email ? 'var(--blue-600)' : 'var(--text-4)'} strokeOpacity={r.cliente.email ? 1 : 0.4} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-label={r.cliente.email ? 'Con email' : 'Sin email'}>
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={r.cliente.email ? 'var(--blue-600)' : 'var(--text-4)'} strokeOpacity={r.cliente.email ? 1 : 0.4} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-label={r.cliente.email ? 'Con email' : 'Sin email'}>
                               <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/>
                             </svg>
                             {r.historial.length > 0 && <span title={`${r.historial.length} contactos previos`} style={{ color: 'var(--text-3)', fontSize: 11 }}>·{r.historial.length}</span>}
@@ -610,7 +610,7 @@ export default function CRM({ trabajos = [], clientes, vehiculos, notify, actual
                 </div>
                 {contactoActivo.historial.length > 0 && (
                   <div style={{ marginTop: 8, fontSize: 12.5, color: 'var(--amber-700)', display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
                       <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
                     </svg>
                     Ya contactado {contactoActivo.historial.length} {contactoActivo.historial.length === 1 ? 'vez' : 'veces'} antes (último: {fmtDate(contactoActivo.historial[contactoActivo.historial.length - 1].fecha)})
@@ -750,7 +750,7 @@ export default function CRM({ trabajos = [], clientes, vehiculos, notify, actual
           }}>
             <div className="modal__h" style={{ flexShrink: 0 }}>
               <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: 9 }}>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
                   <circle cx="9" cy="7" r="4"/>
                   <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
@@ -764,7 +764,7 @@ export default function CRM({ trabajos = [], clientes, vehiculos, notify, actual
             {/* Filtros y búsqueda — siempre visibles */}
             <div style={{ flexShrink: 0, padding: '12px 22px', borderBottom: '1px solid var(--border)', background: 'var(--bg-subtle)', display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
               <div style={{ flex: '1 1 240px', display: 'flex', alignItems: 'center', gap: 9, background: 'var(--bg-raised)', border: '1px solid var(--border)', borderRadius: 9, padding: '7px 12px' }}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-4)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-4)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
                   <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
                 </svg>
                 <input
@@ -795,7 +795,7 @@ export default function CRM({ trabajos = [], clientes, vehiculos, notify, actual
               {filtrados.length === 0 ? (
                 <div className="empty-state" style={{ padding: '24px 0' }}>
                   {recordatoriosImportar.length === 0 ? (
-                    <svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="var(--green-600)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ marginBottom: 10, opacity: .85 }}>
+                    <svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="var(--green-600)" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" style={{ marginBottom: 10, opacity: .85 }}>
                       <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>
                     </svg>
                   ) : (

@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { cargarPdf } from '../utils/pdfLazy'
 import { InspeccionDetalle } from './Inspecciones'
-import { ESTADOS, TECNICOS, TALLER } from '../utils/constants'
+import { ESTADOS, TECNICOS, TALLER, rotuloEstado } from '../utils/constants'
 import { fmtDate, fmt, tituloCliente, cantidadItem, fmtCant } from '../utils/helpers'
 import { labelInventario, etiquetaCombustible, ingresoTieneAlgo } from '../utils/ingreso'
 import { Button, IconX } from '../components/ui'
@@ -201,7 +201,7 @@ function HistorialLista({ trabajos, fila, tabla = false }) {
           // Cabecera de columnas. Solo existe en escritorio (CSS la oculta en
           // movil, donde cada servicio se lee como ficha y no como fila).
           <div className="pc-servs__cab" aria-hidden="true">
-            <span>Placa</span><span>Fecha</span><span>Vehiculo</span>
+            <span>Placa</span><span>Fecha</span><span>Vehículo</span>
             <span>Estado</span><span className="pc-servs__cab--der">Total</span><span />
           </div>
         )}
@@ -687,7 +687,7 @@ export default function PortalCliente() {
         </div>
         <div className="pc-in__pie">
           <a className="pc-in__tel" href={`tel:${TALLER.celular.replace(/\s/g, '')}`}>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2z" /></svg>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2z" /></svg>
             {TALLER.celular}
           </a>
           <div className="pc-in__ciudad">{TALLER.ciudad}</div>
@@ -811,7 +811,7 @@ export default function PortalCliente() {
               <a className="pc-serv__fac" href={facturas[t.id]} target="_blank" rel="noopener noreferrer"
                 onClick={e => e.stopPropagation()}
                 aria-label={`Ver la factura del servicio ${t.otCodigo || ''}`.trim()}>
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                   <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><path d="M14 2v6h6" /><path d="M9 13h6M9 17h4" />
                 </svg>
                 Factura
@@ -821,7 +821,7 @@ export default function PortalCliente() {
               <button type="button" className="pc-serv__fotos"
                 onClick={e => { e.stopPropagation(); setGaleria(t.evidencias); setGalOt(t.otCodigo || ''); setGalIdx(0) }}
                 aria-label={`Ver ${t.evidencias.length} fotos`}>
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" /><path d="m21 15-5-5L5 21" /></svg>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" /><path d="m21 15-5-5L5 21" /></svg>
                 {t.evidencias.length}
               </button>
             )}
@@ -1106,7 +1106,7 @@ export default function PortalCliente() {
                   return (
                     <div key={k} className={`pc-paso${done ? ' done' : active ? ' now' : ''}`}>
                       <span className="pc-paso__dot">
-                        {done && <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.4" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>}
+                        {done && <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>}
                       </span>
                       <span className="pc-paso__lbl">{p.lbl}</span>
                     </div>
@@ -1194,7 +1194,7 @@ export default function PortalCliente() {
                   {c.urgentes.slice(0, 2).map((i, k) => (
                     <div key={k} className="pc-hall">
                       <span className="pc-hall__ic">
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><path d="M18 6 6 18M6 6l12 12" /></svg>
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M18 6 6 18M6 6l12 12" /></svg>
                       </span>
                       <span className="pc-hall__b">
                         <span className="pc-hall__n">{i.categoria ? `${i.categoria} · ` : ''}{i.nombre}</span>
@@ -1226,7 +1226,7 @@ export default function PortalCliente() {
                           {v.sugeridos.length > 0 && <span className="badge badge-w">{v.sugeridos.length}</span>}
                           {v.buenos.length > 0 && <span className="badge badge-s">{v.buenos.length}</span>}
                         </span>
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="pc-serv__chev"><path d="m9 18 6-6-6-6" /></svg>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" className="pc-serv__chev"><path d="m9 18 6-6-6-6" /></svg>
                       </div>
                     )
                   })}
@@ -1358,9 +1358,9 @@ export default function PortalCliente() {
                   )}
                 </div>
                 <div style={{display:'flex',alignItems:'center',gap:8,flexShrink:0}}>
-                  <span className={`badge ${est.cls||'badge-n'}`}>{est.label || t.estado}</span>
+                  <span className={`badge ${est.cls||'badge-n'}`}>{est.label || rotuloEstado(t.estado)}</span>
                   <Button variant="ghost" aria-label="Cerrar" onClick={()=>setVistaServicio(null)}>
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
                   </Button>
                 </div>
               </div>
@@ -1426,7 +1426,7 @@ export default function PortalCliente() {
                     <a className="pc-serv__fac" style={{marginLeft:'auto'}} href={facturas[t.id]}
                       target="_blank" rel="noopener noreferrer">
                       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                        strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                         <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><path d="M14 2v6h6" />
                       </svg>
                       Ver factura
@@ -1485,7 +1485,7 @@ export default function PortalCliente() {
           {/* Cerrar (X) fija en la esquina superior derecha */}
           {galOt && <div className="lb-ot">{galOt}</div>}
           <button className="lb-ctl lb-close" aria-label="Cerrar" onClick={(e)=>{e.stopPropagation();setGaleria(null)}}>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
           </button>
           <div onTouchStart={onGalTouchStart} onTouchEnd={onGalTouchEnd}
             style={{margin:'auto',display:'flex',flexDirection:'column',alignItems:'center',maxWidth:'100%'}}>

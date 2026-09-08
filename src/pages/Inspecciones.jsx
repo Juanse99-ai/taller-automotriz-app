@@ -486,7 +486,7 @@ export function InspeccionDetalle({ inspeccion, onVolver }) {
       {onVolver && (
         <div className="pagehd">
           <div style={{display:'flex',alignItems:'center',gap:12}}>
-            <Button variant="outline" size="sm" onClick={onVolver}><svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg> Volver</Button>
+            <Button variant="outline" size="sm" onClick={onVolver}><svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path d="M19 12H5M12 19l-7-7 7-7"/></svg> Volver</Button>
             <div><h2>Inspeccion {inspeccion.id}</h2><p className="sub">{inspeccion.vehiculo || ''} · placa <span className="mono" style={{fontWeight:700}}>{inspeccion.placa}</span></p></div>
           </div>
         </div>
@@ -495,7 +495,7 @@ export function InspeccionDetalle({ inspeccion, onVolver }) {
       <div style={{display:'grid',gridTemplateColumns:'1.2fr 1fr',gap:18}}>
         <div className="card" style={{textAlign:'center',padding:'8px 0'}}>
           <div className="card__b" style={{display:'flex',flexDirection:'column',alignItems:'center',gap:6}}>
-            <div style={{fontSize:11,fontWeight:700,letterSpacing:'.1em',color:'var(--text-3)',textTransform:'uppercase'}}>Estado general del vehiculo</div>
+            <div style={{fontSize:11,fontWeight:700,letterSpacing:'.1em',color:'var(--text-3)',textTransform:'uppercase'}}>Estado general del vehículo</div>
             <div style={{position:'relative',width:160,height:160,marginTop:6}}>
               <svg viewBox="0 0 100 100" style={{transform:'rotate(-90deg)'}}>
                 <circle cx="50" cy="50" r="42" fill="none" stroke="var(--border)" strokeWidth="9"/>

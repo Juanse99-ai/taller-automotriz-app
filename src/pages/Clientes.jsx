@@ -60,12 +60,12 @@ const CLIENTES_COLS = [
 // secundario, 2.4 en el primario). Van aquí y no en components/ui porque son los
 // dos únicos de esta pantalla.
 const IconRefrescar = () => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
     <path d="M21 12a9 9 0 1 1-3-6.7L21 8" /><path d="M21 3v5h-5" />
   </svg>
 )
 const IconMas = () => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" aria-hidden="true">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
     <path d="M12 5v14M5 12h14" />
   </svg>
 )
@@ -748,7 +748,7 @@ export default function Clientes({ clientes, vehiculos, trabajos = [], notify })
         </div>
 
         <div className="card">
-          <div className="card__h"><h3>Informacion del Cliente</h3></div>
+          <div className="card__h"><h3>Información del cliente</h3></div>
           <div className="card__b">
             <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:14}}>
               <div className="field">
@@ -762,7 +762,7 @@ export default function Clientes({ clientes, vehiculos, trabajos = [], notify })
                   onChange={e => setNuevo('nombre', e.target.value)} />
               </div>
               <div className="field">
-                <label>Telefono</label>
+                <label>Teléfono</label>
                 <input className="input" value={nuevoForm.telefono} placeholder="300..."
                   onChange={e => setNuevo('telefono', e.target.value)} />
               </div>
@@ -813,7 +813,7 @@ export default function Clientes({ clientes, vehiculos, trabajos = [], notify })
         <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:16,alignItems:'start'}}>
           {/* Left column - Info */}
           <div className="card">
-            <div className="card__h"><h3>Informacion del cliente</h3></div>
+            <div className="card__h"><h3>Información del cliente</h3></div>
             <div className="card__b">
               <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:14}}>
                 <div className="field">
@@ -827,7 +827,7 @@ export default function Clientes({ clientes, vehiculos, trabajos = [], notify })
                     onChange={e => setEdit('nombre', e.target.value)} />
                 </div>
                 <div className="field">
-                  <label>Telefono</label>
+                  <label>Teléfono</label>
                   <input className="input" value={editForm.telefono}
                     onChange={e => setEdit('telefono', e.target.value)} />
                 </div>
@@ -856,7 +856,7 @@ export default function Clientes({ clientes, vehiculos, trabajos = [], notify })
           {/* Right column - Vehiculos */}
           <div className="card">
             <div className="card__h">
-              <h3>Vehiculos del cliente</h3>
+              <h3>Vehículos del cliente</h3>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                 <span className="count">{vehiculosCliente.length}</span>
                 <Button type="button" variant="outline" size="sm" onClick={() => setAgregandoVeh(v => !v)}>
@@ -899,7 +899,7 @@ export default function Clientes({ clientes, vehiculos, trabajos = [], notify })
             )}
             {vehiculosCliente.length === 0 ? (
               <div className="card__b">
-                <div className="empty"><h4>Sin vehiculos</h4><p>Este cliente no tiene vehiculos registrados.</p></div>
+                <div className="empty"><h4>Sin vehículos</h4><p>Este cliente no tiene vehículos registrados.</p></div>
               </div>
             ) : (
               <div className="card__b card__b--flush">
@@ -955,7 +955,7 @@ export default function Clientes({ clientes, vehiculos, trabajos = [], notify })
                     <tr>
                       <th>Fecha</th>
                       <th>OT</th>
-                      <th>Vehiculo</th>
+                      <th>Vehículo</th>
                       <th style={{ textAlign: 'right' }}>Total</th>
                       <th style={{ textAlign: 'center' }}>Pago</th>
                       <th></th>
@@ -1118,7 +1118,7 @@ export default function Clientes({ clientes, vehiculos, trabajos = [], notify })
               onClick={resetColWidths}
               title="Devuelve las columnas al ancho original de la tabla"
             >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>
               Restablecer columnas
             </Button>
           )}
@@ -1141,7 +1141,7 @@ export default function Clientes({ clientes, vehiculos, trabajos = [], notify })
               </div>
             </div>
             <Button variant="primary" size="sm" onClick={() => importarDeCuentti(resultadoCuentti)}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
               Importar a la app
             </Button>
           </div>
@@ -1150,7 +1150,7 @@ export default function Clientes({ clientes, vehiculos, trabajos = [], notify })
         {/* Banner: buscando en Cuentti */}
         {busqueda.trim() && clientesFiltrados.length === 0 && buscandoCuentti && !resultadoCuentti && (
           <div style={{padding:'11px 16px',margin:'0 16px 16px',background:'var(--bg-subtle)',border:'1px solid var(--border)',borderRadius:9,fontSize:13.5,color:'var(--text-3)',display:'flex',alignItems:'center',gap:9}}>
-            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{flexShrink:0,animation:'spin 1.4s linear infinite'}}><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{flexShrink:0,animation:'spin 1.4s linear infinite'}}><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
             Buscando "{busqueda}" en Cuentti…
           </div>
         )}

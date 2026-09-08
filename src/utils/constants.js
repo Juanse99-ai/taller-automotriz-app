@@ -49,6 +49,18 @@ export const ESTADOS = {
   CANCELADO: 'Cancelado',
 }
 
+// Como se ESCRIBE cada estado en pantalla. El valor de arriba es el que esta
+// guardado en Supabase (y en el historial de miles de OT): no se toca. Este mapa
+// solo arregla la ortografia al mostrarlo, y de paso baja el Title Case ingles
+// a mayuscula inicial, que es como se escribe en español.
+const ROTULO_ESTADO = {
+  'En Diagnostico': 'En diagnóstico',
+  'Esperando Repuestos': 'Esperando repuestos',
+  'En Progreso': 'En progreso',
+  'En Prueba': 'En prueba',
+}
+export const rotuloEstado = (estado) => ROTULO_ESTADO[estado] || estado || ''
+
 // Dias sin actividad para marcar trabajo como estancado
 export const DIAS_ESTANCADO = 3
 

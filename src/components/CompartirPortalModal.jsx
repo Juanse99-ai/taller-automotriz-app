@@ -36,7 +36,7 @@ export default function CompartirPortalModal({ cedula = '', cliente = '', telefo
           <div>
             <h3>Compartir portal del cliente</h3>
             <p>
-              {cliente ? `Para ${cliente}` : 'Genera un link para que el cliente vea el estado de su vehiculo'}
+              {cliente ? `Para ${cliente}` : 'Genera un enlace para que el cliente vea el estado de su vehículo'}
             </p>
           </div>
           <button className="icobtn" onClick={onClose} aria-label="Cerrar"><IconX /></button>
@@ -71,7 +71,7 @@ export default function CompartirPortalModal({ cedula = '', cliente = '', telefo
               <img src={qr} alt="QR del portal" style={{ width: '100%', height: 'auto', display: 'block' }} />
             </div>
             <div>
-              <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 6 }}>Codigo QR</div>
+              <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 6 }}>Código QR</div>
               <p style={{ fontSize: 12.5, color: 'var(--text-3)', margin: '0 0 10px', lineHeight: 1.5 }}>
                 Imprimelo y pegalo en recepcion para que los clientes escaneen con su celular.
               </p>

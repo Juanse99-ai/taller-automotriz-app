@@ -118,7 +118,7 @@ export default function Vehiculos({ vehiculos, clientes, trabajos = [], notify }
         {/* Info del vehiculo + Propietario */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(320px,1fr))', gap: 16, marginBottom: 16 }}>
           <div className="card">
-            <div className="card__h"><h3>Informacion del Vehiculo</h3></div>
+            <div className="card__h"><h3>Información del vehículo</h3></div>
             <div className="card__b">
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                 <div className="field"><label>Placa</label><div className="input" style={{ background: 'var(--bg-subtle)', cursor: 'default' }}>{vehiculoSeleccionado.placa || '--'}</div></div>
@@ -167,7 +167,7 @@ export default function Vehiculos({ vehiculos, clientes, trabajos = [], notify }
                     </div>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 8, fontSize: 13 }}>
                       <div><span style={{ color: 'var(--text-3)', fontWeight: 600 }}>Km: </span><span className="mono">{h.kilometraje != null ? h.kilometraje.toLocaleString('es-CO') : '--'}</span></div>
-                      <div><span style={{ color: 'var(--text-3)', fontWeight: 600 }}>Tecnico: </span><span>{h.tecnico || '--'}</span></div>
+                      <div><span style={{ color: 'var(--text-3)', fontWeight: 600 }}>Técnico: </span><span>{h.tecnico || '--'}</span></div>
                       <div><span style={{ color: 'var(--text-3)', fontWeight: 600 }}>Total: </span>{/* El total de un servicio es plata de consulta, no un estado "correcto". */}
                     <span className="mono" style={{ fontWeight: 700 }}>{fmt(h.total)}</span></div>
                     </div>
@@ -262,7 +262,7 @@ export default function Vehiculos({ vehiculos, clientes, trabajos = [], notify }
                           {ultimo ? fmtDate(ultimo.fecha) : fmtDate(v.fechaUltimoServicio)}
                         </td>
                         <td className="td-chevron">
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6" /></svg>
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6" /></svg>
                         </td>
                       </tr>
                     )

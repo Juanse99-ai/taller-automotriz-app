@@ -273,7 +273,7 @@ export default function Sidebar({ active, onNavigate, isOpen, collapsed, onColla
             <div className="n">{user.nombre || user.usuario}</div>
             <div className="r">{rolLabel}</div>
           </div>
-          <button className="icobtn" onClick={onLogout} title="Cerrar sesion">
+          <button className="icobtn" onClick={onLogout} title="Cerrar sesión">
             {ICONS.logout}
           </button>
         </div>

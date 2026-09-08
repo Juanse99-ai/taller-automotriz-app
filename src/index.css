@@ -427,7 +427,7 @@ input,select,textarea{font-family:inherit;font-size:14px;color:inherit}
    cumple el naranja). */
 .navlink.active{background:var(--accent-soft);color:var(--primary);font-weight:600}
 .navlink.active svg{stroke:var(--primary)}
-.navlink svg{width:17px;height:17px;flex-shrink:0;stroke:currentColor;fill:none;stroke-width:1.8}
+.navlink svg{width:17px;height:17px;flex-shrink:0;stroke:currentColor;fill:none;stroke-width:2}
 .navlink .pill{margin-left:auto;font-family:var(--mono);font-size:10px;background:var(--red-600);color:#fff;padding:1px 6px;border-radius:var(--r-pill);font-weight:700}
 .sidebar__foot{padding:14px 14px 18px;border-top:1px solid var(--border);display:flex;align-items:center;gap:10px;transition:padding .28s var(--ease)}
 .sidebar__foot .av{width:34px;height:34px;border-radius:50%;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px}
@@ -436,7 +436,7 @@ input,select,textarea{font-family:inherit;font-size:14px;color:inherit}
 .sidebar__foot .me .r{font-size:10.5px;color:var(--text-3);margin-top:1px}
 .sidebar__foot .icobtn{width:34px;height:34px;border-radius:var(--r-sm);display:flex;align-items:center;justify-content:center;color:var(--text-3);transition:background .12s,color .12s}
 .sidebar__foot .icobtn:hover{background:var(--fill);color:var(--text)}
-.sidebar__foot .icobtn svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:1.8}
+.sidebar__foot .icobtn svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2}
 
 /* sidebar collapsed state (desktop only) */
 .sidebar.collapsed{width:var(--sidebar-w-collapsed)}
@@ -480,7 +480,7 @@ input,select,textarea{font-family:inherit;font-size:14px;color:inherit}
 .topbar .search input{flex:1;border:none;outline:none;background:none;font-size:13px}
 .topbar .icobtn{width:40px;height:40px;border-radius:var(--r-md);display:flex;align-items:center;justify-content:center;color:var(--text-2);transition:background .12s,color .12s;position:relative}
 .topbar .icobtn:hover{background:var(--bg-subtle);color:var(--text)}
-.topbar .icobtn svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.8}
+.topbar .icobtn svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:2}
 /* Panel de actividad: desplegable del topbar. En movil se pega a la pantalla,
    porque anclado a la campana (320px) se salia por la izquierda a 375. */
 .notif-panel{position:absolute;top:calc(100% + 8px);right:0;width:320px;max-height:400px;overflow-y:auto;background:var(--bg-raised);border:1px solid var(--border);border-radius:var(--r-md);box-shadow:var(--shadow-md);z-index:200}
@@ -565,12 +565,15 @@ button:focus-visible,[role="button"]:focus-visible,a:focus-visible,select:focus-
 .input-clear:hover{background:var(--fill);color:var(--text-2)}
 .input-clear:active{transform:scale(.92)}
 .input-clear:focus-visible{outline:2px solid var(--primary);outline-offset:1px}
-.input-clear svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2.4;stroke-linecap:round}
+.input-clear svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2.5;stroke-linecap:round}
 /* Sin el flash gris al tocar en móvil (feel tipo iOS) en todo lo interactivo */
 a,button,[role=button],.navlink,.mob-tab,.icobtn{-webkit-tap-highlight-color:transparent;touch-action:manipulation}
 .m3switch{-webkit-tap-highlight-color:transparent;touch-action:manipulation}
 .m3switch:focus-visible{outline:2px solid var(--primary);outline-offset:2px}
-.m3switch svg{width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:2.2}
+.m3switch svg{width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:2.5}
+/* Grosor de trazo de los iconos: TRES pasos segun el tamano, no ocho valores
+   sueltos. Grande (>=32px, ilustracion de estado vacio) 1.6; normal (15-24px) 2;
+   chico (<=14px, dentro de chip, punto o interruptor) 2.5 por compensacion optica. */
 .btn svg{width:17px;height:17px;stroke:currentColor;fill:none;stroke-width:2}
 /* === Botones — superficie sólida y sobria (estilo iOS) ===
    Relleno pleno del color del rol, borde fino, sombra corta y baja. Un solo
@@ -846,7 +849,7 @@ textarea.input{min-height:88px;resize:vertical;padding-top:11px}
 .grow .tx .s{font-size:12.5px;color:var(--text-3);margin-top:1px}
 .grow .detail{font-size:13.5px;color:var(--text-3);font-variant-numeric:tabular-nums;flex-shrink:0}
 .grow .chev{color:var(--text-4);flex-shrink:0;display:flex}
-.grow .chev svg{width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:2.6}
+.grow .chev svg{width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:2.5}
 
 /* ============================================
    LEGACY COMPAT — clases que el codigo actual usa.
@@ -2616,12 +2619,12 @@ tbody tr:active{background:var(--fill-2)}
 .otd__franja--purple{background:var(--purple-bg);color:var(--purple-fg)}
 .otd__franja--orange{background:var(--orange-bg);color:var(--orange-fg)}
 .otd__franja--mute{background:var(--chip);color:var(--text-3)}
-.otd__franja svg{width:16px;height:16px;flex:none;stroke-width:2.6}
+.otd__franja svg{width:16px;height:16px;flex:none;stroke-width:2}
 .otd__franja-dot{width:8px;height:8px;flex:none;border-radius:50%;background:currentColor}
 .otd__franja-txt{flex:1;font-size:12.5px;line-height:1.3;font-weight:700}
 .otd__x{width:30px;height:30px;flex:none;display:grid;place-items:center;border:0;border-radius:50%;
   background:rgba(15,23,42,.07);color:inherit;cursor:pointer}
-.otd__x svg{width:14px;height:14px;stroke-width:2.4}
+.otd__x svg{width:14px;height:14px;stroke-width:2.5}
 
 .otd__head{flex:none;display:flex;align-items:flex-start;gap:12px;padding:16px 20px 14px;border-bottom:1px solid var(--row-line)}
 .otd__id{flex:1;min-width:0}
@@ -2663,7 +2666,7 @@ tbody tr:active{background:var(--fill-2)}
 .otd__acc{flex:none;padding:14px 20px 18px;display:flex;flex-direction:column;gap:9px}
 .otd__go{height:48px;display:flex;align-items:center;justify-content:center;gap:9px;border:0;border-radius:var(--r-lg);
   background:var(--accent);color:#fff;font-size:15px;font-weight:700;cursor:pointer;box-shadow:var(--accent-shadow)}
-.otd__go svg{width:18px;height:18px;stroke-width:2.2}
+.otd__go svg{width:18px;height:18px;stroke-width:2}
 .otd__acc2{display:flex;align-items:center;gap:8px}
 .otd__b{flex:1;height:42px;display:flex;align-items:center;justify-content:center;gap:8px;border-radius:var(--r-md);
   background:var(--bg-raised);border:1.5px solid var(--border-strong);font-size:13px;font-weight:700;
@@ -3190,7 +3193,7 @@ tbody tr:active{background:var(--fill-2)}
     font-family:inherit;font-size:14.5px;font-weight:700;
     box-shadow:0 2px 6px rgba(29,78,216,.25)}
   .ec-reg svg{width:18px;height:18px;flex:none;stroke:currentColor;fill:none;
-    stroke-width:2.4;stroke-linecap:round}
+    stroke-width:2;stroke-linecap:round}
   .ec-main--hoja .ec-hoja__h{display:flex;align-items:center;gap:11px;
     padding:14px 16px 12px;border-bottom:1px solid var(--border)}
   .ec-hoja__t{font-size:17px;line-height:1.15;font-weight:700;color:var(--text)}
