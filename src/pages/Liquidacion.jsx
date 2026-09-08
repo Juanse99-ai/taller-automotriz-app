@@ -1663,7 +1663,7 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
           bloque de abajo, con su desglose. Duplicarla aqui la ponia dos veces en
           la misma pantalla — y con distinto conteo de OT, que es peor que no
           ponerla. */}
-      <div className="hd-head" style={{ gap: 14, alignItems: 'center', marginBottom: 12 }}>
+      <div className="hd-head" style={{ gap: 14, alignItems: 'center' }}>
         <div className="hd-head__t"><h1>Liquidación de comisiones</h1></div>
         {tabsLiq}
         <div className="hd-head__sp" />

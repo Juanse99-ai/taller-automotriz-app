@@ -1015,7 +1015,7 @@ export default function Clientes({ clientes, vehiculos, trabajos = [], notify })
       {/* El mockup separa la barra de título de la tarjeta con 10px exactos (la
           columna que las contiene es un flex con gap:10). Aquí son hermanos en
           bloque sin gap, así que el hueco lo pone la barra. */}
-      <div className="hd-head" style={{ marginBottom: 10 }}>
+      <div className="hd-head">
         <div className="hd-head__t">
           <h1>Clientes</h1>
           <div className="hd-head__sub">

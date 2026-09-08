@@ -302,6 +302,9 @@ export default function Dashboard({ trabajos = [], onNavigate, user, ultimaSync 
          Todo va bajo `.dsh` para que no se escape a ninguna otra página. */}
       <style>{`
 .dsh{display:flex;flex-direction:column;gap:10px}
+/* La columna ya separa 10 entre bloques; el margen de la cabecera se ajusta para
+   que el hueco bajo el titulo sea el mismo 18 que en el resto de pantallas. */
+.dsh > .hd-head{margin-bottom:8px}
 /* Resumen del dia: el reparto del trabajo activo en palabras, y cada parte
    entra a Trabajos ya filtrado por ese estado. */
 .dsh-hoy{display:flex;align-items:center;flex-wrap:wrap;gap:4px 7px;margin:7px 0 0}

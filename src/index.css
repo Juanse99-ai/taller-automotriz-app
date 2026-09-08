@@ -1564,9 +1564,13 @@ tbody tr:active{background:var(--fill-2)}
 /* --- Barra de título: sustituye las tiras de tarjetas KPI ---
    Izquierda: h1 + subtítulo con los contadores que antes eran tarjetas.
    Derecha: la cifra que SÍ exige actuar, un divisor, y las acciones. */
-.hd-head{display:flex;align-items:flex-end;gap:26px;padding:0 4px;flex:none}
+/* La cabecera de pagina no traia margen abajo y cada pantalla ponia el hueco por
+   su cuenta: salia 0 en Cotizaciones, Inventario y CRM (el titulo pegado a la
+   tarjeta), 10 en Clientes y Vehiculos, 14 en Cuentti. Aqui se fija UNO y las
+   pantallas dejan de decidirlo. */
+.hd-head{display:flex;align-items:flex-end;gap:26px;padding:0 4px;margin-bottom:18px;flex:none}
 .hd-head__t h1{margin:0;font-size:22px;line-height:1.1;font-weight:700;color:var(--text);letter-spacing:-.3px}
-.hd-head__sub{font-size:12.5px;line-height:1.4;color:var(--text-3);margin-top:3px}
+.hd-head__sub{font-size:12.5px;line-height:1.4;color:var(--text-3);margin-top:5px}
 .hd-head__sp{flex:1}
 .hd-head__right{display:flex;align-items:flex-end;gap:20px}
 .hd-head__div{width:1px;height:44px;background:var(--border-strong)}
