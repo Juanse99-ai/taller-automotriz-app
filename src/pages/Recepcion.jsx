@@ -448,7 +448,7 @@ export default function Recepcion({ hook, vehiculosHook, clientesHook, notify })
               {/* Estado de ingreso: sub-bloque del mismo paso 2. Antes era una
                   tarjeta dentro de la tarjeta del paso. */}
               <div style={{ marginTop: 16 }}>
-                <SecHead titulo="ESTADO DE INGRESO DEL VEHÍCULO" apoyo="Combustible, daños e inventario" />
+                <SecHead titulo="ESTADO DE INGRESO DEL VEHÍCULO" />
                 <IngresoVehiculo value={form.ingreso} onChange={v => set('ingreso', v)} />
               </div>
             </section>

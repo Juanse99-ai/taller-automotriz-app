@@ -867,7 +867,7 @@ export default function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [
             + (danos ? ' · daños' : '')
           return (
             <div className="card">
-              <PlegHead titulo="Estado de ingreso del vehículo" sub="inventario · combustible · daños"
+              <PlegHead titulo="Estado de ingreso del vehículo"
                 chip={chip} tono={marcados === 0 && comb == null ? 'warn' : 'mute'}
                 open={showIngreso} onToggle={() => setShowIngreso(v => !v)} />
               {showIngreso && (
@@ -887,7 +887,7 @@ export default function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [
           if (!historial.length) return null
           return (
             <div className="card">
-              <PlegHead titulo={`Historial de ${form.placa.toUpperCase()}`} sub="OT anteriores de esta placa"
+              <PlegHead titulo={`Historial de ${form.placa.toUpperCase()}`}
                 chip={`${historial.length} anteriores`} tono="info"
                 open={showHistorial} onToggle={() => setShowHistorial(v => !v)} />
               {showHistorial && (
@@ -935,9 +935,7 @@ export default function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [
            pactada, o "Sin fecha" cuando el bloque sigue vacío. */}
         <div className="card">
           <PlegHead titulo="Próximo mantenimiento"
-            sub={faltaMant
-              ? 'este servicio lleva aceite: falta cuándo vuelve'
-              : 'opcional · alimenta CRM'}
+            sub={faltaMant ? 'Lleva aceite: falta cuándo vuelve' : null}
             chip={form.proximaVisita
               ? form.proximaVisita.split('-').reverse().join('/')
               : (faltaMant ? 'Falta' : 'Sin fecha')}
@@ -993,7 +991,7 @@ export default function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [
 
         {/* EVIDENCIAS */}
         <div className="card">
-          <PlegHead titulo="Evidencias del trabajo" sub="fotos y videos de la orden"
+          <PlegHead titulo="Evidencias del trabajo"
             chip={`${form.evidenciasIngreso.length} ${form.evidenciasIngreso.length === 1 ? 'archivo' : 'archivos'}`}
             tono={form.evidenciasIngreso.length === 0 ? 'warn' : 'ok'}
             open={showEvid} onToggle={() => setShowEvid(v => !v)} />
@@ -1058,7 +1056,6 @@ export default function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [
             /* Vacío seco: una etiqueta, sin ilustración ni frase de ánimo. */
             <div className="hd-void">
               <div className="hd-void__t">Sin repuestos ni servicios</div>
-              <div className="hd-void__s">Usa <strong>+ Agregar línea</strong> para añadir ítems.</div>
             </div>
           ) : (
             /* La lista del handoff: cabecera de 28px y filas con anchos fijos en

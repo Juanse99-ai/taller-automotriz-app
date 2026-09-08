@@ -332,7 +332,6 @@ function InspeccionForm({ inspeccion, trabajos, onSave, onCancel }) {
         <div className="hd-card" style={{margin:'14px 0 10px',padding:'14px 18px'}}>
           <div style={{display:'flex',alignItems:'baseline',gap:10,marginBottom:11,flexWrap:'wrap'}}>
             <span style={{fontSize:13.5,fontWeight:700,color:'var(--text)'}}>Datos del vehículo</span>
-            <span className="hd-sub">Solo la placa es obligatoria</span>
           </div>
           <div style={{display:'flex',flexWrap:'wrap',gap:10}}>
             <div style={{flex:'0 0 auto',width:168}}>
