@@ -1314,6 +1314,33 @@ export default function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [
   )
 }
 
+// Miniatura de un video en la rejilla de evidencias.
+//
+// Con `controls` el navegador pinta SU barra al tamaño de un reproductor
+// completo, y sobre una ficha de 120px eso tapaba el fotograma entero: se veian
+// tres iconos enormes (pantalla completa, imagen sobre imagen y pausa) y no se
+// adivinaba que habia detras. En reposo se ve el primer fotograma con la
+// insignia de play —la misma que el portal— y los controles aparecen solo
+// cuando se toca para verlo.
+function MiniVideo({ src, nombre }) {
+  const [viendo, setViendo] = useState(false)
+  if (viendo) {
+    return <video src={src} controls autoPlay playsInline className="mini-evid__v"
+      style={{ position: 'absolute', inset: 0 }} />
+  }
+  return (
+    <button type="button" className="thumb-play" onClick={() => setViendo(true)}
+      aria-label={`Ver el video${nombre ? ` ${nombre}` : ''}`}>
+      {/* `#t=0.1`: con preload="metadata" a secas el navegador no pinta ningun
+         fotograma y la ficha sale en blanco. Ver MiniEvid en PortalCliente. */}
+      <video src={`${src}#t=0.1`} muted preload="metadata" playsInline className="mini-evid__v" />
+      <span className="mini-evid__play" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z" /></svg>
+      </span>
+    </button>
+  )
+}
+
 function ThumbGrid({ fotos = [], onNota, onRemove }) {
   if (!fotos.length) return null
   return (
@@ -1322,7 +1349,7 @@ function ThumbGrid({ fotos = [], onNota, onRemove }) {
         <div key={fv.id} style={{ border: '1px solid var(--slate-200)', borderRadius: 8, padding: 6 }}>
           <div style={{ position: 'relative', paddingBottom: '70%', overflow: 'hidden', borderRadius: 6, marginBottom: 6, background: '#000' }}>
             {fv.tipo === 'video'
-              ? <video src={fv.url} controls preload="metadata" playsInline style={{ position: 'absolute', width: '100%', height: '100%', objectFit: 'cover' }} />
+              ? <MiniVideo src={fv.url} nombre={fv.nombre} />
               : <img src={fv.dataUrl || fv.url} alt={fv.nombre} style={{ position: 'absolute', width: '100%', height: '100%', objectFit: 'cover' }} />}
           </div>
           <input className="form-input text-xs" placeholder="Nota breve" value={fv.nota || ''}

@@ -33,7 +33,11 @@ const esVideoEvid = (f) => {
 function MiniEvid({ f, chico = false }) {
   if (esVideoEvid(f)) return (
     <>
-      <video className="mini-evid__v" src={f.url} muted preload="metadata" playsInline />
+      {/* `#t=0.1` no es un adorno: con solo preload="metadata" el navegador baja
+         la duracion y el tamaño pero NO pinta ningun fotograma, asi que la
+         miniatura salia en blanco con la insignia flotando sobre nada. El
+         fragmento le pide que se situe en el segundo 0,1 y ahi si dibuja. */}
+      <video className="mini-evid__v" src={`${f.url}#t=0.1`} muted preload="metadata" playsInline />
       <span className={`mini-evid__play${chico ? ' es-chico' : ''}`} aria-hidden="true">
         <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
       </span>
