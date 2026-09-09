@@ -2619,13 +2619,21 @@ tbody tr:active{background:var(--fill-2)}
    gastando 300px. Ahora dice de que carro se habla y en que va. */
 .pc-top{background:var(--navy);color:#fff}
 .pc-top__in{max-width:1080px;margin:0 auto;padding:16px 16px 20px}
-.pc-top__r{display:flex;align-items:center;gap:10px}
-.pc-top__logo{width:34px;height:26px;flex:none;object-fit:contain;background:#fff;border-radius:var(--r-sm);padding:2px}
-.pc-top__marca{flex:1;min-width:0;font-size:12.5px;font-weight:600;color:rgba(255,255,255,.75);
-  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.pc-top__salir{background:none;border:0;padding:8px 4px;font-size:12.5px;font-weight:600;
+/* La marca del taller tiene su propia banda, separada por una linea, como el
+   encabezado de una factura. Antes el logo media 34x26 y el nombre 12,5px al 75%
+   de blanco, compartiendo renglon con el cliente y con Salir: la marca era un
+   pie de pagina puesto arriba mientras el carro del cliente ocupaba 30px. */
+.pc-top__r{display:flex;align-items:center;flex-wrap:wrap;gap:10px;
+  padding-bottom:14px;border-bottom:1px solid rgba(255,255,255,.14)}
+.pc-top__logo{width:44px;height:34px;flex:none;object-fit:contain;background:#fff;border-radius:10px;padding:3px}
+.pc-top__marca{flex:none;min-width:0;font-size:17px;line-height:1.2;font-weight:700;letter-spacing:-.15px;color:#fff;
+  overflow:hidden;text-overflow:ellipsis}
+/* Salir siempre al borde derecho. Antes lo empujaba el nombre del taller con un
+   flex:1; ahora que ese nombre no crece, lo hace por su cuenta: en el celular el
+   nombre del cliente no esta en esta fila y Salir se quedaba pegado a la marca. */
+.pc-top__salir{margin-left:auto;background:none;border:0;padding:8px 4px;font-size:12.5px;font-weight:600;
   color:rgba(255,255,255,.55);cursor:pointer;min-height:var(--tap)}
-.pc-top__hola{font-size:13px;line-height:1.3;color:rgba(255,255,255,.6);margin-top:15px}
+.pc-top__hola{font-size:13px;line-height:1.3;color:rgba(255,255,255,.6);margin-top:16px}
 .pc-top__veh{font-size:24px;line-height:1.15;font-weight:700;color:#fff;margin-top:4px;text-wrap:balance}
 .pc-top__meta{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-top:8px;
   font-size:12.5px;color:rgba(255,255,255,.6)}
@@ -2635,7 +2643,8 @@ tbody tr:active{background:var(--fill-2)}
 .pc-top__flota b{font-size:17px;font-weight:700}
 @media (min-width:720px){
   .pc-top__in{padding:18px 40px 26px}
-    .pc-top__marca{flex:none}
+  .pc-top__logo{width:52px;height:40px;padding:4px}
+  .pc-top__marca{font-size:19px;letter-spacing:-.2px}
   .pc-top__r>.pc-top__marca+  .pc-top__veh{font-size:30px}
 }
 
@@ -3609,14 +3618,17 @@ tbody tr:active{background:var(--fill-2)}
      El nombre del cliente sube a la barra superior, al lado de Salir, y el
      estado se queda con la fecha del ultimo servicio en la MISMA linea. */
   .pc-top__in{ padding:14px 16px 18px }
-  .pc-top__r{ padding-bottom:15px }
   /* El nombre del cliente ocupa el hueco que sobra en la barra en vez de
      cortarse a 210px fijos: "Construcciones Y Servicios Marítimos" salia como
      "Construcciones Y Servicios Mari…" con media barra vacia a la derecha. Solo
      recorta cuando de verdad no cabe, y "Salir" nunca se mueve porque no crece. */
+  /* El nombre del cliente SIEMPRE entero. Tenia un tope de 210px fijos y salia
+     "Construcciones Y Servicios Mari…"; despues crecio con el hueco, pero seguia
+     cortando con puntos cuando la ventana se estrechaba. Aqui envuelve en dos
+     lineas antes que perder una letra: en una banda propia hay sitio de sobra. */
   .pc-top__quien{
-    display:block; flex:1; min-width:0; overflow:hidden; white-space:nowrap;
-    text-overflow:ellipsis; font-size:12.5px; font-weight:600; color:#fff;
+    display:block; flex:1 1 240px; min-width:0; font-size:12.5px; line-height:1.35;
+    font-weight:600; color:#fff; overflow-wrap:anywhere;
     padding-left:13px; border-left:1px solid rgba(255,255,255,.22);
   }
   .pc-top__salir{flex:none}
