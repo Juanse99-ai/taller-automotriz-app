@@ -1628,7 +1628,20 @@ tbody tr:active{background:var(--fill-2)}
 .hd-find input{border:none;background:none;outline:none;font-size:12.5px;color:var(--text);width:100%;font-family:inherit}
 .hd-find input::placeholder{color:var(--text-4)}
 .hd-drop{display:flex;align-items:center;gap:7px;height:36px;padding:0 13px;border:1px solid var(--border-input);
-  border-radius:var(--radius-pill);flex:none;background:var(--bg-raised);font-size:12.5px;color:var(--text);cursor:pointer}
+  border-radius:var(--radius-pill);flex:none;background:var(--bg-raised);font-size:12.5px;color:var(--text);cursor:pointer;
+  font-family:inherit;white-space:nowrap}
+.hd-drop:hover{border-color:var(--border-btn)}
+/* Filtro encendido. Antes cada pantalla lo resolvia con un boton distinto en
+   medio de la fila de campos, y ese boton no media ni lo mismo ni tenia la
+   misma esquina que sus vecinos. */
+.hd-drop.on{background:var(--accent-soft);border-color:var(--primary);color:var(--primary);font-weight:700}
+.hd-drop:focus-visible{outline:2px solid var(--primary);outline-offset:2px}
+/* Un <select> con .hd-drop necesita hueco para SU flecha (la del sistema la
+   dibuja el envoltorio de abajo, no el fondo del campo). */
+.hd-sel,.trab-drop{position:relative;display:inline-flex;align-items:center;flex:none}
+.hd-sel > .hd-drop{padding-right:32px;appearance:none;-webkit-appearance:none}
+.hd-sel > svg{position:absolute;right:12px;top:50%;margin-top:-6.5px;width:13px;height:13px;flex:none;
+  pointer-events:none;color:var(--text-4);stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round}
 
 /* --- Pestañas de estado (9 en Trabajos) --- */
 .hd-tabs{display:flex;align-items:center;gap:2px;border-bottom:1px solid var(--border-strong);margin-bottom:10px;
@@ -3296,7 +3309,8 @@ tbody tr:active{background:var(--fill-2)}
    ni alto declarados cae al tamano por defecto de un SVG reemplazado,
    300x150px, con el trazo heredando el color del texto. Eso es la mancha
    negra que salia flotando en el movil. */
-.trab-drop{position:relative;display:inline-flex;align-items:center;flex:none}
+/* .trab-drop era esto mismo, escrito solo para Trabajos. Ahora lo comparte
+   cualquier fila de filtros bajo el nombre .hd-sel (ver arriba). */
 .trab-drop .hd-drop{padding-right:32px;appearance:none;-webkit-appearance:none}
 .trab-drop > svg{position:absolute;right:12px;top:50%;margin-top:-6.5px;
   width:13px;height:13px;flex:none;pointer-events:none;

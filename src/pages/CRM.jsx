@@ -442,29 +442,30 @@ export default function CRM({ trabajos = [], clientes, vehiculos, notify, actual
       {/* Filtros */}
       <div className="card" style={{ marginBottom: 16 }}>
         <div className="card__b" style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
-          {/* Búsqueda */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 9, background: 'var(--bg-subtle)', border: '1px solid var(--border)', borderRadius: 9, padding: '7px 12px', flex: '1 1 200px', minWidth: 220 }}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-4)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
-              <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
-            </svg>
-            <input value={filtroBusqueda} onChange={e => setFiltroBusqueda(e.target.value)} placeholder="Buscar cliente o placa..." style={{ border: 'none', outline: 'none', background: 'none', flex: 1, fontSize: 13.5 }} />
+          {/* Los tres filtros con el vocabulario de fila del sistema: 36px y
+             pastilla los tres. Iban cada uno por su cuenta y median 34, 42 y 39,
+             con esquinas de 9, 12 y pastilla en la misma linea. */}
+          <div className="hd-find" style={{ flex: '1 1 200px', minWidth: 220 }}>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input value={filtroBusqueda} onChange={e => setFiltroBusqueda(e.target.value)} placeholder="Buscar cliente o placa..." aria-label="Buscar cliente o placa" />
           </div>
 
-          {/* Filtro por tipo de servicio */}
-          <select className="input" value={filtroTipo} onChange={e => setFiltroTipo(e.target.value)} style={{ width: 220 }}>
-            <option value="todos">Todos los servicios</option>
-            {config.servicios.map(s => <option key={s.key} value={s.key}>{s.nombre}</option>)}
-          </select>
+          <span className="hd-sel">
+            <select className="hd-drop" value={filtroTipo} onChange={e => setFiltroTipo(e.target.value)} aria-label="Filtrar por servicio" style={{ width: 220 }}>
+              <option value="todos">Todos los servicios</option>
+              {config.servicios.map(s => <option key={s.key} value={s.key}>{s.nombre}</option>)}
+            </select>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
+          </span>
 
-          {/* Filtro por urgencia */}
-          <div className="segctl">
+          <div className="hd-seg">
             {[
               ['vencidos', 'Vencidos'],
               ['esta_semana', 'Esta semana'],
               ['proximos_30', '30 días'],
               ['todos', 'Todos'],
             ].map(([k, l]) => (
-              <button key={k} className={filtroUrgencia === k ? 'on' : ''} onClick={() => setFiltroUrgencia(k)}>{l}</button>
+              <button key={k} type="button" className={`hd-seg__i${filtroUrgencia === k ? ' on' : ''}`} onClick={() => setFiltroUrgencia(k)}>{l}</button>
             ))}
           </div>
 

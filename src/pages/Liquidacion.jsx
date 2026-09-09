@@ -1451,7 +1451,13 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
         .c-asignado{ display:block; font-family:var(--font); font-size:10.5px; font-weight:600; color:var(--text-3); margin-top:1px; letter-spacing:0; }
         /* Filtros del historial: una sola fila que envuelve, sin caja propia */
         .liq-filtros{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; padding:0 0 14px; }
-        .liq-filtros .input{ width:auto; height:32px; min-height:32px; font-size:12.5px; padding:2px 9px; }
+        /* Quitar filtros no es una accion del taller, es deshacer lo que acabas
+           de tocar: texto callado a la misma altura que sus vecinos. */
+        .liq-filtros__x{ height:36px; padding:0 10px; border:0; background:none; font-family:inherit;
+          font-size:12.5px; font-weight:600; color:var(--text-3); cursor:pointer; }
+        .liq-filtros__x:hover{ color:var(--text); text-decoration:underline; }
+        .liq-filtros__x:focus-visible{ outline:2px solid var(--primary); outline-offset:2px; border-radius:var(--r-sm); }
+        @media(max-width:960px){ .liq-filtros__x{ height:var(--tap) } }
 
         /* ===== Mesa de trabajo: la lista a la izquierda, el pago a la derecha =====
            Antes eran tres tarjetas apiladas: para saber cuánto ibas a pagarle al
@@ -2493,23 +2499,35 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
               <>
                 {/* Filtros: 48 pagos en una lista plana no se podían recorrer. */}
                 <div className="liq-filtros">
-                  <select className="input" value={histTec} onChange={e => setHistTec(e.target.value)} aria-label="Filtrar por técnico">
-                    <option value="">Todos los técnicos</option>
-                    {TECNICOS.map(t => <option key={t.id} value={String(t.id)}>{t.nombre.split(' ').slice(0, 2).join(' ')}</option>)}
-                  </select>
-                  <select className="input" value={histMes} onChange={e => setHistMes(e.target.value)} aria-label="Filtrar por mes">
-                    <option value="">Todos los meses</option>
-                    {mesesHistorial.map(m => <option key={m} value={m}>{nombreMes(m)}</option>)}
-                  </select>
+                  {/* Los tres son filtros y van con el mismo vocabulario: campo de
+                     fila de 36px y pastilla. Antes los dos primeros eran campos de
+                     formulario (32px, esquina de 12) y el tercero un boton (38px,
+                     pastilla, letra mas grande y en negrita): tres alturas y dos
+                     esquinas en una fila de tres cosas. */}
+                  <span className="hd-sel">
+                    <select className="hd-drop" value={histTec} onChange={e => setHistTec(e.target.value)} aria-label="Filtrar por técnico">
+                      <option value="">Todos los técnicos</option>
+                      {TECNICOS.map(t => <option key={t.id} value={String(t.id)}>{t.nombre.split(' ').slice(0, 2).join(' ')}</option>)}
+                    </select>
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
+                  </span>
+                  <span className="hd-sel">
+                    <select className="hd-drop" value={histMes} onChange={e => setHistMes(e.target.value)} aria-label="Filtrar por mes">
+                      <option value="">Todos los meses</option>
+                      {mesesHistorial.map(m => <option key={m} value={m}>{nombreMes(m)}</option>)}
+                    </select>
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
+                  </span>
                   {sinCuenttiCount > 0 && (
                     <button type="button" onClick={() => setHistSinCuentti(v => !v)}
-                      className={`btn btn-sm ${histSinCuentti ? 'btn-primary' : 'btn-outline'}`}>
+                      aria-pressed={histSinCuentti}
+                      className={`hd-drop${histSinCuentti ? ' on' : ''}`}>
                       Sin registrar en Cuentti · {sinCuenttiCount}
                     </button>
                   )}
                   {hayFiltroHist && (
                     <>
-                      <Button variant="ghost" size="sm" onClick={() => { setHistTec(''); setHistMes(''); setHistSinCuentti(false) }}>Quitar filtros</Button>
+                      <button type="button" className="liq-filtros__x" onClick={() => { setHistTec(''); setHistMes(''); setHistSinCuentti(false) }}>Quitar filtros</button>
                       <span style={{ fontSize: 12.5, color: 'var(--text-3)', marginLeft: 'auto' }}>{historialFiltrado.length} de {historial.length}</span>
                     </>
                   )}
