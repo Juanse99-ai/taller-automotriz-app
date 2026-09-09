@@ -834,18 +834,18 @@ export default function PortalCliente() {
                 {t.evidencias.length}
               </button>
             )}
+            {/* Aqui NO va el boton de pagar. La tarjeta "Facturas por pagar" de
+               arriba usa exactamente la misma condicion que este `porPagar`, asi
+               que toda factura con boton aqui ya tiene el suyo alli: eran dos
+               botones azules identicos, con la misma cifra, a dos centimetros.
+               El historial es un registro; la accion vive en un solo sitio. Lo
+               que si hace falta es la marca de que esta sin pagar. */}
             {porPagar && (
-              <span onClick={e => e.stopPropagation()}>
-                {tieneAbono(t) ? (
-                  <span className="pc-pill">Abonada · falta {fmt(t.saldoCuentti)}</span>
-                ) : pagoPorConfirmar(t) ? (
-                  <button type="button" className="btn btn-outline btn-sm" disabled title="Estamos confirmando tu pago">Confirmando pago…</button>
-                ) : (
-                  <button type="button" className="btn btn-primary btn-sm" disabled={pagando === t.id} onClick={() => pagarConWompi(t)}>
-                    {pagando === t.id ? 'Abriendo…' : `Pagar ${fmt(t.total)}`}
-                  </button>
-                )}
-              </span>
+              tieneAbono(t)
+                ? <span className="pc-pill">Abonada · falta {fmt(t.saldoCuentti)}</span>
+                : pagoPorConfirmar(t)
+                  ? <span className="pc-pill">Confirmando pago…</span>
+                  : <span className="pc-pill">Por pagar</span>
             )}
           </div>
         </div>
@@ -946,8 +946,12 @@ export default function PortalCliente() {
       {/* Facturas por pagar — arriba y visible (es la acción de plata) */}
       {facturasPendientes.length > 0 && (
         <div className="card portal-full" style={{padding:0,overflow:'hidden'}}>
-          <div style={{padding:'15px 20px',display:'flex',justifyContent:'space-between',alignItems:'center',gap:12,borderBottom:'1px solid var(--border)'}}>
-            <h3 style={{margin:0}}>{facturasPendientes.length===1?'Factura por pagar':`Facturas por pagar · ${facturasPendientes.length}`}</h3>
+          {/* .card__h, la cabecera de tarjeta del sistema. Esta iba escrita a mano
+             con otro relleno, y en la misma pantalla convivia con la de
+             "Historial de servicios", que si la usa: dos tarjetas hermanas con
+             dos cabeceras distintas. El numero pasa al contador de siempre. */}
+          <div className="card__h">
+            <h3>Factura{facturasPendientes.length===1?'':'s'} por pagar{facturasPendientes.length>1 && <span className="count">{facturasPendientes.length}</span>}</h3>
             {/* Con una sola factura el total del encabezado repetiría la cifra de la
                 fila; solo suma cuando hay varias. */}
             {facturasPendientes.length > 1 && (
