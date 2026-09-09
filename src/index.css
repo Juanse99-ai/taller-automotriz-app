@@ -1351,7 +1351,11 @@ tbody tr:active{background:var(--fill-2)}
    El cliente lo ve sobre todo en el celular (una columna), pero en tablet/PC
    una sola columna de 780px dejaba todo muy vertical y con los lados vacíos.
    Ahora: hero e historial a lo ancho; en el medio, dos columnas. */
-.portal-main{max-width:1080px;margin:0 auto;padding:20px 16px;display:grid;gap:20px;grid-template-columns:1fr}
+/* Columna del portal: llena la pantalla y deja el pie apoyado abajo. Sin esto,
+   un cliente con poco historial veia la pagina terminar a media altura, con el
+   pie flotando y medio monitor gris debajo. */
+.pc-shell{display:flex;flex-direction:column;min-height:100vh;min-height:100dvh}
+.portal-main{flex:1;max-width:1080px;width:100%;margin:0 auto;padding:20px 16px;display:grid;gap:20px;grid-template-columns:1fr;align-content:start}
 .portal-col{display:flex;flex-direction:column;gap:20px;min-width:0}
 @media(min-width:900px){
   .portal-main{grid-template-columns:1.5fr 1fr;align-items:start}
