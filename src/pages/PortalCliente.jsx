@@ -424,6 +424,7 @@ export default function PortalCliente() {
     }
 
     setDatos({ trabajos: misTrab, inspecciones: misInsp, cotizaciones: misCotiz, cedula: cedulaLimpia })
+    anotarEntrada(cedulaLimpia)
     // Enlaces a las facturas, en segundo plano: si Cuentti tarda o falla, la
     // pantalla ya esta pintada y simplemente no sale el boton. Nunca bloquea.
     fetch(`/api/supabase?facturasPortal=${encodeURIComponent(cedulaLimpia)}`)
@@ -461,6 +462,32 @@ export default function PortalCliente() {
     } finally {
       setAprobando(false)
     }
+  }
+
+  // Deja constancia de que ESTE cliente abrio SU portal, para que en Clientes
+  // se vea quien entra y quien nunca lo hace. Una vez por cedula y por carga de
+  // pagina: ejecutarBusqueda se repite sola al volver de Wompi (sondeo) y con
+  // cada consulta de pago, y eso no son visitas nuevas. Nunca bloquea ni avisa:
+  // si falla, el cliente ni se entera.
+  const entradasAnotadas = useRef(new Set())
+  const anotarEntrada = (ced) => {
+    if (entradasAnotadas.current.has(ced)) return
+    entradasAnotadas.current.add(ced)
+    let origen = 'manual'
+    if (ced === cedulaInicial.replace(/[.\-\s]/g, '')) {
+      // Llego por el link: `v` dice por donde se le mando (ver portalLink).
+      origen = { wa: 'whatsapp', qr: 'qr', cot: 'cotizacion' }[urlParams.get('v')] || 'link'
+      if (urlParams.get('id')) origen = 'pago'   // volvio de pagar en Wompi
+    }
+    // Si en este aparato esta abierta la app del taller, es alguien del taller
+    // mirando el portal ("Ver asi"), no el cliente: se anota aparte.
+    try { if (localStorage.getItem('taller_session')) origen = 'taller' } catch { /* sin localStorage */ }
+    fetch('/api/supabase?portalEntrada=1', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ cedula: ced, origen }),
+      keepalive: true,
+    }).catch(() => { /* sin rastro esta vez; el portal sigue igual */ })
   }
 
   // Si vino con ?c= en URL, autobuscar al montar

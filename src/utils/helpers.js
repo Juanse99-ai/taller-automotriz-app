@@ -162,3 +162,22 @@ export function tituloCliente(s) {
     return w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()
   }).join(' ')
 }
+
+// "hoy", "ayer", "hace 3 días", "hace 2 semanas", "hace 3 meses": cuenta por
+// días de calendario, no por horas (algo de anoche es "ayer", no "hoy").
+export function fmtHace(iso) {
+  if (!iso) return ''
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return ''
+  const hoy = new Date()
+  const dias = Math.round(
+    (new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate()) - new Date(d.getFullYear(), d.getMonth(), d.getDate())) / 86400000,
+  )
+  if (dias <= 0) return 'hoy'
+  if (dias === 1) return 'ayer'
+  if (dias < 7) return `hace ${dias} días`
+  if (dias < 30) { const s = Math.floor(dias / 7); return s === 1 ? 'hace 1 semana' : `hace ${s} semanas` }
+  if (dias < 365) { const m = Math.floor(dias / 30); return m === 1 ? 'hace 1 mes' : `hace ${m} meses` }
+  const a = Math.floor(dias / 365)
+  return a === 1 ? 'hace 1 año' : `hace ${a} años`
+}

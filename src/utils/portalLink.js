@@ -1,14 +1,18 @@
 // Helpers para generar y compartir el link del Portal del Cliente.
 // Patron: tudominio.com/portal?c=<cedula>
 
-export function portalLink(cedula) {
+// `via` marca por donde se comparte (wa = WhatsApp, qr = codigo QR, cot =
+// recordatorio de una cotizacion). El portal lo lee al entrar y lo anota, y
+// asi el master de Clientes puede decir "entro por el QR" y no solo "entro".
+export function portalLink(cedula, via = '') {
   const limpia = String(cedula || '').replace(/[.\-\s]/g, '')
   const base = `${window.location.origin}/portal`
-  return limpia ? `${base}?c=${encodeURIComponent(limpia)}` : base
+  if (!limpia) return base
+  return `${base}?c=${encodeURIComponent(limpia)}${via ? `&v=${via}` : ''}`
 }
 
 export function mensajeWhatsApp(cliente, cedula) {
-  const link = portalLink(cedula)
+  const link = portalLink(cedula, 'wa')
   const nombre = cliente ? cliente.split(' ')[0] : 'cliente'
   return `Hola ${nombre}! Te comparto el link para que sigas el estado de tu vehiculo en Multidiagnosticos AS:\n\n${link}\n\nYa esta autenticado con tu cedula, solo entra y veras el progreso, las inspecciones y el historial.`
 }
@@ -35,7 +39,7 @@ export async function copiarPortalLink(cedula) {
 }
 
 export function portalQR(cedula, size = 220) {
-  const link = portalLink(cedula)
+  const link = portalLink(cedula, 'qr')
   return `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${encodeURIComponent(link)}&margin=10`
 }
 
@@ -60,7 +64,7 @@ export function mensajeCotizacion(cot) {
   const nombre = nombreParaSaludar(cot?.cliente)
   const veh = [cot?.marca, cot?.modelo].filter(Boolean).join(' ')
   const placa = cot?.placa ? ` de placa ${cot.placa}` : ''
-  const link = cot?.cedula ? portalLink(cot.cedula) : ''
+  const link = cot?.cedula ? portalLink(cot.cedula, 'cot') : ''
   // Sin cedula el enlace del portal no lleva a NINGUNA cotizacion concreta, asi
   // que no se promete "apruebela aqui" y se pide la respuesta a secas. Medido:
   // 3 de las 11 pendientes no tienen cedula guardada.

@@ -12,22 +12,36 @@ import {
   portalQR,
 } from '../utils/portalLink'
 import { IconX } from './ui'
+import { registrarEnvioPortal } from '../services/supabase'
 
-export default function CompartirPortalModal({ cedula = '', cliente = '', telefono = '', onClose }) {
+//   onEnviado  opcional: recibe la fila anotada de cada envio, para que la
+//              pantalla que abrio el modal la sume sin volver a pedir todo.
+export default function CompartirPortalModal({ cedula = '', cliente = '', telefono = '', onClose, onEnviado }) {
   const [ced, setCed] = useState(cedula)
   const [copiado, setCopiado] = useState(false)
   const link = portalLink(ced)
   const qr = portalQR(ced)
+
+  // Cada envio queda anotado (registrarEnvioPortal): asi Clientes distingue
+  // "no se le ha mandado el link" de "se le mando y no lo abrio". Sin cedula
+  // no hay a quien apuntarselo y no se anota nada.
+  const anotar = (medio) => {
+    registrarEnvioPortal(ced, medio).then(f => { if (f && onEnviado) onEnviado(f) })
+  }
 
   const copiar = async () => {
     const ok = await copiarPortalLink(ced)
     if (ok) {
       setCopiado(true)
       setTimeout(() => setCopiado(false), 1800)
+      anotar('copiar')
     }
   }
 
-  const whatsapp = () => enviarPortalWhatsApp(telefono, cliente, ced)
+  const whatsapp = () => {
+    enviarPortalWhatsApp(telefono, cliente, ced)
+    anotar('whatsapp')
+  }
 
   return (
     <div className="modal-overlay" onClick={onClose}>
@@ -75,7 +89,7 @@ export default function CompartirPortalModal({ cedula = '', cliente = '', telefo
               <p style={{ fontSize: 12.5, color: 'var(--text-3)', margin: '0 0 10px', lineHeight: 1.5 }}>
                 Imprimelo y pegalo en recepcion para que los clientes escaneen con su celular.
               </p>
-              <button className="btn btn-outline btn-sm" onClick={() => window.open(qr, '_blank')}>
+              <button className="btn btn-outline btn-sm" onClick={() => { window.open(qr, '_blank'); anotar('qr') }}>
                 Abrir para imprimir
               </button>
             </div>

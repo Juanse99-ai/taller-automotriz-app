@@ -307,6 +307,51 @@ export default async function handler(req, res) {
     return
   }
 
+  // ── Entrada al portal ─────────────────────────────────────────────
+  // El portal es publico y hasta hoy no dejaba huella: el dueno no tenia como
+  // saber que clientes lo abren y cuales nunca lo han hecho. Esto anota UNA
+  // fila por visita en portal_accesos (cedula, por donde llego, que aparato) y
+  // Clientes la lee para el master del portal.
+  // Va sin sesion a proposito: quien llama es el cliente. Por eso no se confia
+  // en el cuerpo: cedula saneada, origen de una lista cerrada, y solo se anota
+  // si esa cedula tiene algo suyo en la base (una OT o una cotizacion). Del
+  // navegador se guarda un resumen (iPhone/Android/Computador), nunca el
+  // user-agent entero.
+  if (req.query.portalEntrada) {
+    if (req.method !== 'POST') { res.status(405).json({ error: 'Solo POST' }); return }
+    const cuerpo = req.body || {}
+    const ced = String(cuerpo.cedula || '').replace(/[.\-\s]/g, '')
+    if (!/^[0-9A-Za-z]{4,20}$/.test(ced)) { res.status(400).json({ error: 'cedula invalida' }); return }
+    const ORIGENES = ['link', 'whatsapp', 'qr', 'cotizacion', 'manual', 'pago', 'taller']
+    const origen = ORIGENES.includes(cuerpo.origen) ? cuerpo.origen : 'link'
+    const ua = String(req.headers['user-agent'] || '')
+    const agente = /iPhone|iPad|iPod/.test(ua) ? 'iPhone'
+      : /Android/.test(ua) ? 'Android'
+      : /Windows|Macintosh|Linux|CrOS/.test(ua) ? 'Computador'
+      : 'Otro'
+    const cab = { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` }
+    try {
+      const [t, c] = await Promise.all([
+        fetch(`${SUPABASE_URL}/rest/v1/trabajos?cedula_cliente=eq.${encodeURIComponent(ced)}&select=id&limit=1`, { headers: cab })
+          .then(r => (r.ok ? r.json() : [])),
+        fetch(`${SUPABASE_URL}/rest/v1/cotizaciones?cedula=eq.${encodeURIComponent(ced)}&select=id&limit=1`, { headers: cab })
+          .then(r => (r.ok ? r.json() : [])),
+      ])
+      // Cedula sin nada en la base: no se anota. Misma respuesta que si se
+      // anotara, para no convertir esto en un buscador de cedulas.
+      if (!(t?.length || c?.length)) { res.status(204).end(); return }
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/portal_accesos`, {
+        method: 'POST',
+        headers: { ...cab, 'Content-Type': 'application/json', Prefer: 'return=minimal' },
+        body: JSON.stringify({ cedula: ced, tipo: 'entrada', origen, agente }),
+      })
+      res.status(r.ok ? 204 : 502).end()
+    } catch {
+      res.status(503).end()
+    }
+    return
+  }
+
   const table = req.query.table
   if (!table) { res.status(400).json({ error: 'table param requerido' }); return }
 
@@ -368,6 +413,7 @@ export default async function handler(req, res) {
     'trabajos', 'cotizaciones', 'clientes', 'vehiculos', 'inspecciones',
     'movimientos_tecnicos', 'liquidacion_historial', 'liquidados', 'trabajos_compartidos',
     'prestamos_movimientos', 'tecnicos',
+    'portal_accesos',   // rastro del portal: la app lo lee y anota los envios del link
   ]
   if (!ALLOWED_TABLES.includes(table)) { res.status(403).json({ error: 'Tabla no permitida' }); return }
 

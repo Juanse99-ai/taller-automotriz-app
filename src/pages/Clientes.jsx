@@ -1,8 +1,10 @@
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, useCallback } from 'react'
 import Fuse from 'fuse.js'
-import { fmtDate, fmtTelefono, fmt } from '../utils/helpers'
+import { fmtDate, fmtTelefono, fmt, fmtHace } from '../utils/helpers'
 import { TIPOS_IDENTIFICACION, TIPOS_PERSONA, REGIMENES, buscarClientePorCedula, obtenerUrlDocumento } from '../services/cuentti'
 import ConfirmDialog from '../components/ConfirmDialog'
+import CompartirPortalModal from '../components/CompartirPortalModal'
+import { fetchAccesosPortal } from '../services/supabase'
 import { SIN_FACTURA } from '../utils/constants'
 import { Button, Badge, ANIOS } from '../components/ui'
 
@@ -69,6 +71,53 @@ const IconMas = () => (
     <path d="M12 5v14M5 12h14" />
   </svg>
 )
+const IconPortal = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <rect x="5" y="2" width="14" height="20" rx="2.5" /><path d="M11 18h2" />
+  </svg>
+)
+const IconVolver = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M19 12H5M12 19l-7-7 7-7" />
+  </svg>
+)
+
+// ---------------------------------------------------------------------------
+// Master del portal: quien entra a su portal y quien nunca lo ha abierto.
+// El rastro vive en portal_accesos (una fila por entrada del cliente y una por
+// envio del link desde la app). Aqui se agrupa por cedula y se cruza con los
+// clientes que tienen ordenes, que son los unicos con algo que ver alli.
+// ---------------------------------------------------------------------------
+const ORIGEN_ENTRADA = {
+  link: 'por el link', whatsapp: 'por WhatsApp', qr: 'por el QR', cotizacion: 'desde la cotización',
+  manual: 'escribió su cédula', pago: 'al volver de pagar', taller: 'desde el taller',
+}
+const ORIGEN_CORTO = { link: 'link', whatsapp: 'WhatsApp', qr: 'QR', cotizacion: 'cotización', manual: 'cédula escrita', pago: 'pago' }
+const MEDIO_ENVIO = { whatsapp: 'por WhatsApp', copiar: 'link copiado', qr: 'con el QR' }
+const MEDIO_CORTO = { whatsapp: 'WhatsApp', copiar: 'copiado', qr: 'QR' }
+const ESTADO_PORTAL = {
+  entro:   { rotulo: 'Entró',            clase: 'cli-pt--si' },
+  enviado: { rotulo: 'Enviado, sin abrir', clase: 'cli-pt--env' },
+  nunca:   { rotulo: 'Nunca',            clase: 'cli-pt--no' },
+}
+const EstadoPortal = ({ estado }) => {
+  const e = ESTADO_PORTAL[estado] || ESTADO_PORTAL.nunca
+  return <span className={`cli-pt ${e.clase}`}>{e.rotulo}</span>
+}
+const ms = (x) => (x ? (new Date(x).getTime() || 0) : 0)
+// "08 sept · 20:55", sin el año (el rastro es reciente por definicion) y en
+// 24 h: el "p. m." del locale se comia media columna de la lista.
+const fmtDateTimeCorta = (iso) => {
+  if (!iso) return ''
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return ''
+  const hora = d.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit', hour12: false })
+  return `${fmtDate(iso).replace(/ \d{4}$/, '')} · ${hora}`
+}
+// "ayer · QR · 3 veces": lo que cabe en una celda de 190px.
+const rotuloEntrada = (f) => f.ultimaEntrada
+  ? [fmtHace(f.ultimaEntrada), ORIGEN_CORTO[f.ultimoOrigen], f.entradas > 1 ? `${f.entradas} veces` : ''].filter(Boolean).join(' · ')
+  : ''
 
 // ---------------------------------------------------------------------------
 // Métrica de la pantalla, tomada del mockup del handoff.
@@ -146,6 +195,59 @@ const CLIENTES_CSS = `
 @media(max-width:600px){
   .cli-pg .cli-seg__n{display:none}
 }
+
+/* --- Portal: el punto en el tono vivo y la palabra en el oscuro, como la
+   columna "En Cuentti": con los dos del mismo color el punto se apagaba. --- */
+.cli-pt{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;white-space:nowrap;color:var(--pt-fg,var(--text-3))}
+.cli-pt::before{content:'';width:7px;height:7px;border-radius:50%;flex:none;background:var(--pt-dot,var(--text-empty))}
+.cli-pt--si{--pt-fg:var(--ok-fg);--pt-dot:var(--green-500)}
+.cli-pt--env{--pt-fg:var(--warn-fg);--pt-dot:var(--amber-400)}
+.cli-pt--no{--pt-fg:var(--text-3);--pt-dot:var(--text-empty)}
+
+/* Tabla del master, misma metrica que la de clientes. */
+@media(min-width:601px){
+  .cli-pg .tbl--portal thead th{height:28px;padding:0 9px;background:var(--bg-subtle);font-size:9.5px;line-height:1;font-weight:700;letter-spacing:.7px;color:var(--text-4);text-transform:uppercase;border-top:1px solid var(--row-line);border-bottom:1.5px solid var(--head-line);box-shadow:none;white-space:nowrap}
+  .cli-pg .tbl--portal thead th:first-child,.cli-pg .tbl--portal tbody td:first-child{padding-left:18px}
+  .cli-pg .tbl--portal thead th:last-child,.cli-pg .tbl--portal tbody td:last-child{padding-right:18px}
+  .cli-pg .tbl--portal tbody tr{height:var(--row-h)}
+  .cli-pg .tbl--portal tbody td{padding:0 9px;font-size:12.5px;line-height:1.2;color:var(--text-3);border-bottom:1px solid var(--row-line);white-space:nowrap}
+  .cli-pg .tbl--portal tbody tr:last-child td{border-bottom:1px solid var(--row-line)}
+  .cli-pg .tbl--portal tbody tr:hover{background:var(--bg-subtle)}
+  /* El nombre es la columna flexible y va a dos lineas (nombre / cedula y
+     ordenes): 13/1.2 + 11/1.2 = 29px, cabe en la fila de 38 sin tocarla.
+     Con la cedula al lado, en 984px utiles los nombres salian cortados. */
+  .cli-pg .tbl--portal{table-layout:fixed;width:100%}
+  .cli-pg .tbl--portal tbody td.c-name{padding-right:14px;overflow:hidden}
+  .cli-pg .tbl--portal tbody td.c-name > div{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .cli-pg .tbl--portal .cli-nom{font-size:13px;line-height:1.2;font-weight:600;color:var(--text)}
+  .cli-pg .tbl--portal .cli-nom + .hd-sub{margin-top:2px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+  .cli-pg .tbl--portal tbody td.td-ot,.cli-pg .tbl--portal tbody td.td-ult,.cli-pg .tbl--portal tbody td.td-env{overflow:hidden;text-overflow:ellipsis}
+  .cli-pg .tbl--portal tbody td.td-acc{text-align:right}
+}
+@media(min-width:961px){ .cli-pg .tbl--portal thead th{position:sticky;top:0;z-index:2} }
+/* En celular, tarjeta de 4 lineas: nombre y estado arriba, y tres renglones
+   de apoyo con su rotulo. Telefono y "veces" se callan: el boton de enviar ya
+   lleva el numero, y las veces van dentro de "Ultimo acceso". */
+@media(max-width:600px){
+  .tbl.tbl-cards--portal tbody tr{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:baseline;column-gap:10px;row-gap:3px;padding:11px 14px}
+  .tbl.tbl-cards--portal tbody td{padding:0;border:none;display:block;text-align:left;min-width:0}
+  .tbl.tbl-cards--portal tbody td::before{display:none}
+  .tbl.tbl-cards--portal tbody td.c-name{grid-column:1;grid-row:1;font-size:13.5px;line-height:1.25;font-weight:600;color:var(--text);padding:0;margin:0;border:none}
+  .tbl.tbl-cards--portal tbody td.td-portal{grid-column:2;grid-row:1;justify-self:end}
+  .tbl.tbl-cards--portal tbody td.td-ult{grid-column:1/-1;grid-row:2}
+  .tbl.tbl-cards--portal tbody td.td-ot{grid-column:1/-1;grid-row:3}
+  .tbl.tbl-cards--portal tbody td.td-env{grid-column:1/-1;grid-row:4}
+  .tbl.tbl-cards--portal tbody td.td-ult,.tbl.tbl-cards--portal tbody td.td-ot,.tbl.tbl-cards--portal tbody td.td-env{font-size:11.5px;line-height:1.35;color:var(--text-4)}
+  .tbl.tbl-cards--portal tbody td.td-ult::before,.tbl.tbl-cards--portal tbody td.td-ot::before,.tbl.tbl-cards--portal tbody td.td-env::before{display:inline;content:attr(data-label) ' ';color:var(--text-4);font-size:inherit;font-weight:inherit}
+  .tbl.tbl-cards--portal tbody td.is-vacio{display:none}
+  .tbl.tbl-cards--portal tbody td.td-acc{grid-column:1/-1;grid-row:5;margin-top:8px}
+  .tbl.tbl-cards--portal tbody td.td-acc .btn{min-height:var(--tap)}
+}
+/* La lista de entradas en la ficha del cliente. */
+.cli-pg .cli-rastro{list-style:none;margin:12px 0 0;padding:0;display:flex;flex-direction:column;gap:6px}
+.cli-pg .cli-rastro li{display:flex;align-items:baseline;gap:8px;font-size:12.5px;line-height:1.35;color:var(--text-3)}
+.cli-pg .cli-rastro time{flex:none;font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:11.5px;color:var(--text-4);min-width:118px}
+.cli-pg .cli-rastro b{font-weight:600;color:var(--text-2)}
 `
 
 const CLIENTES_COL_LS = 'clientes_col_widths_v2'
@@ -173,6 +275,14 @@ export default function Clientes({ clientes, vehiculos, trabajos = [], notify })
   // 'todos', que es exactamente lo que la pantalla mostraba antes: no esconde nada
   // de entrada, solo deja recortar la lista sin escribir en el buscador.
   const [segmento, setSegmento] = useState('todos')
+  // Master del portal (ver ORIGEN_ENTRADA arriba).
+  const [vista, setVista] = useState('clientes')          // 'clientes' | 'portal'
+  const [accesos, setAccesos] = useState(null)             // null = todavia no se ha leido
+  const [accesosError, setAccesosError] = useState(false)
+  const [segPortal, setSegPortal] = useState('todos')      // todos | entraron | enviado | nunca
+  const [buscaPortal, setBuscaPortal] = useState('')
+  const [ordenPortal, setOrdenPortal] = useState({ key: 'ultimaOT', dir: 'desc' })
+  const [modalPortal, setModalPortal] = useState(null)     // { cedula, cliente, telefono }
   const [clienteSeleccionado, setClienteSeleccionado] = useState(null)
   const [editForm, setEditForm] = useState({ nombre: '', telefono: '', email: '', direccion: '' })
   const [guardandoCuentti, setGuardandoCuentti] = useState(false)
@@ -331,6 +441,132 @@ export default function Clientes({ clientes, vehiculos, trabajos = [], notify })
     return map
   }, [trabajos])
   const uvDe = (c) => ultimaVisitaPorCedula[(c.cedula || '').toString().trim()] || null
+
+  // ── Portal ────────────────────────────────────────────────────────────
+  const cargarAccesos = useCallback(() => {
+    fetchAccesosPortal()
+      .then(f => { setAccesos(Array.isArray(f) ? f : []); setAccesosError(false) })
+      .catch(() => { setAccesosError(true); setAccesos(a => a || []) })
+  }, [])
+  useEffect(() => { cargarAccesos() }, [cargarAccesos])
+  // Al abrir el master se vuelve a leer: las entradas llegan mientras la app
+  // sigue abierta, y el dueño entra aquí justamente para ver las de hoy.
+  useEffect(() => { if (vista === 'portal') cargarAccesos() }, [vista, cargarAccesos])
+
+  // Resumen del rastro por cedula. Las entradas hechas desde un aparato con la
+  // app abierta (origen 'taller') son del equipo mirando el portal, no del
+  // cliente: se guardan en la lista pero no cuentan como visita.
+  const portalPorCedula = useMemo(() => {
+    const map = {}
+    for (const a of accesos || []) {
+      const ced = _normCedula(a.cedula)
+      if (!ced) continue
+      const r = map[ced] || (map[ced] = {
+        entradas: 0, ultimaEntrada: null, ultimoOrigen: null, ultimoAgente: null,
+        envios: 0, ultimoEnvio: null, medioEnvio: null, filas: [],
+      })
+      r.filas.push(a)
+      if (a.tipo === 'envio') {
+        r.envios += 1
+        if (ms(a.fecha) > ms(r.ultimoEnvio)) { r.ultimoEnvio = a.fecha; r.medioEnvio = a.origen }
+      } else if (a.origen !== 'taller') {
+        r.entradas += 1
+        if (ms(a.fecha) > ms(r.ultimaEntrada)) { r.ultimaEntrada = a.fecha; r.ultimoOrigen = a.origen; r.ultimoAgente = a.agente }
+      }
+    }
+    return map
+  }, [accesos])
+
+  // Una fila por cliente CON ORDENES: los demas no tienen nada que ver en el
+  // portal (la busqueda les dice "sin registros"). Nombre y telefono salen de
+  // la ficha del cliente si existe; si no, de la propia orden.
+  const filasPortal = useMemo(() => {
+    const porCed = {}
+    for (const t of trabajos) {
+      if (t.deleted) continue
+      const ced = _normCedula(t.cedula)
+      if (!ced) continue
+      const r = porCed[ced] || (porCed[ced] = { cedula: (t.cedula || '').toString().trim(), nombre: '', telefono: '', ots: 0, ultimaOT: null })
+      r.ots += 1
+      if (!r.nombre && t.cliente) r.nombre = t.cliente
+      if (!r.telefono && t.telefonoCliente) r.telefono = t.telefonoCliente
+      if (ms(t.fecha) > ms(r.ultimaOT)) r.ultimaOT = t.fecha
+    }
+    const ficha = {}
+    for (const c of clientesTable) { const k = _normCedula(c.cedula); if (k && !ficha[k]) ficha[k] = c }
+    return Object.entries(porCed).map(([ced, r]) => {
+      const f = ficha[ced]
+      const p = portalPorCedula[ced]
+      const entradas = p?.entradas || 0
+      return {
+        ...r,
+        cedula: f?.cedula || r.cedula,
+        nombre: f?.nombre || r.nombre,
+        telefono: f?.telefono || r.telefono,
+        ficha: f || null,
+        entradas,
+        ultimaEntrada: p?.ultimaEntrada || null,
+        ultimoOrigen: p?.ultimoOrigen || null,
+        envios: p?.envios || 0,
+        ultimoEnvio: p?.ultimoEnvio || null,
+        medioEnvio: p?.medioEnvio || null,
+        estado: entradas > 0 ? 'entro' : (p?.envios ? 'enviado' : 'nunca'),
+      }
+    })
+  }, [trabajos, clientesTable, portalPorCedula])
+
+  const portalResumen = useMemo(() => {
+    const total = filasPortal.length
+    const entraron = filasPortal.filter(f => f.estado === 'entro').length
+    const enviado = filasPortal.filter(f => f.estado === 'enviado').length
+    const hace7 = Date.now() - 7 * 86400000
+    const semana = filasPortal.filter(f => ms(f.ultimaEntrada) >= hace7).length
+    // Desde cuando hay rastro: el primer apunte. De antes no se sabe nada, y
+    // decirlo evita leer "nunca" como "nunca en la vida".
+    let desde = null
+    for (const a of accesos || []) if (!desde || ms(a.fecha) < ms(desde)) desde = a.fecha
+    return { total, entraron, enviado, nunca: total - entraron - enviado, semana, desde }
+  }, [filasPortal, accesos])
+
+  const filasPortalVista = useMemo(() => {
+    let l = filasPortal
+    if (segPortal === 'entraron') l = l.filter(f => f.estado === 'entro')
+    else if (segPortal === 'enviado') l = l.filter(f => f.estado === 'enviado')
+    else if (segPortal === 'nunca') l = l.filter(f => f.estado === 'nunca')
+    const q = buscaPortal.trim()
+    if (q) {
+      const qn = _normNombre(q), qc = _normCedula(q)
+      l = l.filter(f => _normNombre(f.nombre).includes(qn) || (qc && _normCedula(f.cedula).includes(qc)))
+    }
+    const { key, dir } = ordenPortal
+    const val = (f) => key === 'nombre' ? _normNombre(f.nombre)
+      : key === 'ultimaEntrada' ? ms(f.ultimaEntrada)
+      : key === 'entradas' ? f.entradas
+      : ms(f.ultimaOT)
+    return [...l].sort((a, b) => {
+      const av = val(a), bv = val(b)
+      if (av < bv) return dir === 'asc' ? -1 : 1
+      if (av > bv) return dir === 'asc' ? 1 : -1
+      return 0
+    })
+  }, [filasPortal, segPortal, buscaPortal, ordenPortal])
+
+  const ordenarPortal = (key) => setOrdenPortal(o => (
+    o.key === key ? { key, dir: o.dir === 'asc' ? 'desc' : 'asc' } : { key, dir: key === 'nombre' ? 'asc' : 'desc' }
+  ))
+  const flechaPortal = (key) => ordenPortal.key !== key
+    ? <span style={{ color: 'var(--text-4)', fontSize: 9.5, marginLeft: 4 }}>↕</span>
+    : <span style={{ color: 'var(--accent)', fontSize: 9.5, marginLeft: 4 }}>{ordenPortal.dir === 'asc' ? '▲' : '▼'}</span>
+
+  // El modal de compartir se abre desde el master y desde la ficha; la fila
+  // del envio se suma en el acto, sin volver a pedir el rastro entero.
+  const modalCompartir = modalPortal && (
+    <CompartirPortalModal
+      {...modalPortal}
+      onClose={() => setModalPortal(null)}
+      onEnviado={(f) => setAccesos(a => [f, ...(a || [])])}
+    />
+  )
 
   // Historial de facturación del cliente seleccionado: las OT que se facturaron
   // (tienen fecha de facturación o id de transacción de Cuentti), por cédula, más
@@ -934,6 +1170,51 @@ export default function Clientes({ clientes, vehiculos, trabajos = [], notify })
           </div>
         </div>
 
+        {/* Portal del cliente: si ha entrado, cuando y por donde; si se le
+            mando el link. Es lo que hasta ahora habia que adivinar. */}
+        {(() => {
+          const p = portalPorCedula[_normCedula(clienteSeleccionado.cedula)]
+          const filas = (p?.filas || []).slice(0, 6)
+          let resumen
+          if (p?.entradas) {
+            resumen = <>Ha entrado <b>{p.entradas === 1 ? '1 vez' : `${p.entradas} veces`}</b>, la última {fmtHace(p.ultimaEntrada)}{ORIGEN_ENTRADA[p.ultimoOrigen] ? ` ${ORIGEN_ENTRADA[p.ultimoOrigen]}` : ''}{p.ultimoAgente ? ` desde ${p.ultimoAgente}` : ''}.</>
+          } else if (p?.envios) {
+            resumen = <>Se le mandó el link {fmtHace(p.ultimoEnvio)}{MEDIO_ENVIO[p.medioEnvio] ? ` (${MEDIO_ENVIO[p.medioEnvio]})` : ''} y <b>todavía no lo ha abierto</b>.</>
+          } else if (accesos === null) {
+            resumen = <>Leyendo el registro del portal…</>
+          } else {
+            resumen = <>Nunca ha entrado a su portal, y desde la app no se le ha mandado el link.</>
+          }
+          return (
+            <div className="card" style={{ marginTop: 16 }}>
+              <div className="card__h">
+                <h3>Portal del cliente</h3>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  icon={<IconPortal />}
+                  onClick={() => setModalPortal({ cedula: clienteSeleccionado.cedula, cliente: editForm.nombre || clienteSeleccionado.nombre, telefono: editForm.telefono || clienteSeleccionado.telefono })}
+                >Enviar link</Button>
+              </div>
+              <div className="card__b">
+                <p style={{ margin: 0, fontSize: 13.5, lineHeight: 1.5, color: 'var(--text-2)' }}>{resumen}</p>
+                {filas.length > 0 && (
+                  <ul className="cli-rastro">
+                    {filas.map(a => (
+                      <li key={a.id || `${a.fecha}-${a.tipo}-${a.origen}`}>
+                        <time dateTime={a.fecha}>{fmtDateTimeCorta(a.fecha)}</time>
+                        {a.tipo === 'envio'
+                          ? <span><b>Link enviado</b>{MEDIO_ENVIO[a.origen] ? ` ${MEDIO_ENVIO[a.origen]}` : ''}{a.usuario ? ` · ${a.usuario}` : ''}</span>
+                          : <span><b>{a.origen === 'taller' ? 'Abierto desde el taller' : 'Entró'}</b>{a.origen !== 'taller' && ORIGEN_ENTRADA[a.origen] ? ` ${ORIGEN_ENTRADA[a.origen]}` : ''}{a.agente ? ` · ${a.agente}` : ''}</span>}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            </div>
+          )
+        })()}
+
         {/* Historial de facturación del cliente */}
         <div className="card" style={{ marginTop: 16 }}>
           <div className="card__h">
@@ -1000,7 +1281,184 @@ export default function Clientes({ clientes, vehiculos, trabajos = [], notify })
             </>
           )}
         </div>
+        {modalCompartir}
       </div>
+    )
+  }
+
+  // --- MASTER DEL PORTAL ---
+  if (vista === 'portal') {
+    const R = portalResumen
+    const pct = R.total ? Math.round(R.entraron / R.total * 100) : 0
+    const hayRastro = (accesos || []).length > 0
+    return (
+      <>
+      <style>{CLIENTES_CSS}</style>
+      <div className="cli-pg">
+        <div className="hd-head">
+          <div className="hd-head__t" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <Button variant="outline" size="sm" onClick={() => setVista('clientes')} aria-label="Volver a clientes" title="Volver a clientes" style={{ padding: '0 11px' }}>
+              <IconVolver />
+            </Button>
+            <div>
+              <h1>Portal del cliente</h1>
+              <div className="hd-head__sub">
+                {R.total} clientes con órdenes
+                {hayRastro
+                  ? ` · el portal anota cada entrada desde el ${fmtDate(R.desde)}`
+                  : ' · el portal empieza a anotar las entradas desde hoy; de antes no hay registro'}
+              </div>
+            </div>
+          </div>
+          <div className="hd-head__sp" />
+          <div className="hd-head__right">
+            <div className="hd-fig" style={{ '--fg': 'var(--ok-fg)' }}>
+              <div className="hd-fig__l">ENTRARON</div>
+              <div className="hd-fig__v">{R.entraron}</div>
+              <div className="hd-fig__s">{pct} % de {R.total}</div>
+            </div>
+            <div className="hd-fig">
+              <div className="hd-fig__l">ÚLTIMOS 7 DÍAS</div>
+              <div className="hd-fig__v">{R.semana}</div>
+            </div>
+            <div className="hd-head__div" />
+            <div className="hd-fig" style={{ '--fg': 'var(--warn-fg-2)' }}>
+              <div className="hd-fig__l" style={{ color: 'var(--warn-fg)' }}>NUNCA</div>
+              <div className="hd-fig__v">{R.nunca}</div>
+            </div>
+          </div>
+        </div>
+
+        <div className="card" style={{ borderRadius: 'var(--radius-card)', overflow: 'hidden' }}>
+          <div className="card__h" style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', padding: '13px 18px 12px', borderBottom: 'none' }}>
+            <label className="hd-find" style={{ width: 280 }}>
+              <svg viewBox="0 0 24 24" strokeLinecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+              <input
+                placeholder="Buscar por nombre o cédula…"
+                value={buscaPortal}
+                onChange={e => setBuscaPortal(e.target.value)}
+                style={{ flex: 1, minWidth: 0 }}
+              />
+              {buscaPortal && <button type="button" className="input-clear" onClick={() => setBuscaPortal('')} aria-label="Limpiar búsqueda"><svg viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>}
+            </label>
+            <div className="hd-seg" role="group" aria-label="Filtrar por uso del portal">
+              {[['todos', 'Todos', R.total], ['entraron', 'Entraron', R.entraron], ['enviado', 'Enviado sin abrir', R.enviado], ['nunca', 'Nunca', R.nunca]].map(([k, l, n]) => (
+                <button
+                  key={k}
+                  type="button"
+                  className={`hd-seg__i${segPortal === k ? ' on' : ''}`}
+                  aria-pressed={segPortal === k}
+                  onClick={() => setSegPortal(k)}
+                >{l} <span className="cli-seg__n">{n}</span></button>
+              ))}
+            </div>
+            <div className="hd-bar__sp" />
+            <span className="hd-bar__n">
+              {segPortal !== 'todos' || buscaPortal.trim() ? `${filasPortalVista.length} de ${R.total} clientes` : `${filasPortalVista.length} clientes`}
+            </span>
+          </div>
+
+          {accesosError && (
+            <div className="aviso-fila" style={{ margin: '0 18px 12px' }}>
+              <b>No se pudo leer el registro del portal.</b>
+              <button type="button" className="aviso-fila__a" onClick={cargarAccesos}>Reintentar</button>
+            </div>
+          )}
+
+          <div className="card__b card__b--flush">
+            {accesos === null ? (
+              <div className="empty"><p>Leyendo el registro del portal…</p></div>
+            ) : filasPortalVista.length === 0 ? (
+              <div className="empty">
+                {segPortal === 'entraron' && !hayRastro ? (
+                  <>
+                    <h4>Todavía nadie ha entrado</h4>
+                    <p>Desde hoy el portal anota cada entrada. Manda el link a un cliente y aquí aparecerá cuando lo abra.</p>
+                  </>
+                ) : (
+                  <>
+                    <h4>Ningún cliente en este filtro</h4>
+                    <p>{buscaPortal.trim() ? 'Prueba con otro nombre o cédula.' : 'Toca «Todos» para ver la lista completa.'}</p>
+                  </>
+                )}
+              </div>
+            ) : (
+              <table className="tbl tbl-cards tbl-cards--portal tbl--sticky tbl--portal">
+                {/* Anchos fijos y el nombre con el sobrante: en 984px utiles (1280
+                    con el rail abierto) le quedan ~290px. */}
+                <colgroup>
+                  <col />
+                  <col style={{ width: 112 }} />
+                  <col style={{ width: 138 }} />
+                  <col style={{ width: 196 }} />
+                  <col style={{ width: 172 }} />
+                  <col style={{ width: 118 }} />
+                </colgroup>
+                <thead>
+                  <tr>
+                    <th onClick={() => ordenarPortal('nombre')} style={{ cursor: 'pointer', userSelect: 'none' }}>Cliente{flechaPortal('nombre')}</th>
+                    <th onClick={() => ordenarPortal('ultimaOT')} style={{ cursor: 'pointer', userSelect: 'none' }}>Última orden{flechaPortal('ultimaOT')}</th>
+                    <th>Portal</th>
+                    <th onClick={() => ordenarPortal('ultimaEntrada')} style={{ cursor: 'pointer', userSelect: 'none' }}>Último acceso{flechaPortal('ultimaEntrada')}</th>
+                    <th>Link enviado</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filasPortalVista.map(f => (
+                    <tr
+                      key={_normCedula(f.cedula)}
+                      style={{ cursor: 'pointer' }}
+                      onClick={() => seleccionar(f.ficha || { cedula: f.cedula, nombre: f.nombre, telefono: f.telefono, email: '', direccion: '', vehiculos: [] })}
+                    >
+                      <td className="c-name" title={`${f.nombre || 'Sin nombre'} · ${f.cedula}${fmtTelefono(f.telefono) ? ` · ${fmtTelefono(f.telefono)}` : ''}`}>
+                        <div className="cli-nom">{f.nombre || <span className="hd-empty">Sin nombre</span>}</div>
+                        <div className="hd-sub">{f.cedula} · {f.ots === 1 ? '1 orden' : `${f.ots} órdenes`}</div>
+                      </td>
+                      <td className="td-ot" data-label="Última orden">
+                        {f.ultimaOT ? fmtDate(f.ultimaOT) : <span className="hd-empty">—</span>}
+                      </td>
+                      <td className="td-portal"><EstadoPortal estado={f.estado} /></td>
+                      <td className={`td-ult${f.ultimaEntrada ? '' : ' is-vacio'}`} data-label="Último acceso">
+                        {f.ultimaEntrada
+                          ? <span title={fmtDateTimeCorta(f.ultimaEntrada)}>{rotuloEntrada(f)}</span>
+                          : <span className="hd-empty">—</span>}
+                      </td>
+                      <td className={`td-env${f.ultimoEnvio ? '' : ' is-vacio'}`} data-label="Link enviado">
+                        {f.ultimoEnvio
+                          ? <span title={fmtDateTimeCorta(f.ultimoEnvio)}>{fmtHace(f.ultimoEnvio)}{MEDIO_CORTO[f.medioEnvio] ? ` · ${MEDIO_CORTO[f.medioEnvio]}` : ''}</span>
+                          : <span className="hd-empty">—</span>}
+                      </td>
+                      <td className="td-acc">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={(e) => { e.stopPropagation(); setModalPortal({ cedula: f.cedula, cliente: f.nombre, telefono: f.telefono }) }}
+                          title={f.estado === 'entro' ? 'Volver a mandarle el link' : 'Mandarle el link del portal'}
+                        >Enviar link</Button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+
+          {filasPortalVista.length > 0 && (
+            <div className="hd-tbl__f">
+              <span>{segPortal !== 'todos' || buscaPortal.trim() ? `${filasPortalVista.length} de ${R.total} clientes` : `${filasPortalVista.length} clientes con órdenes`}</span>
+              <span className="hd-bar__sp" />
+              <span>Han entrado</span>
+              <b>{R.entraron}</b>
+              <span style={{ color: 'var(--text-4)' }}>·</span>
+              <span>Nunca</span>
+              <b>{R.nunca}</b>
+            </div>
+          )}
+        </div>
+      </div>
+      {modalCompartir}
+      </>
     )
   }
 
@@ -1020,6 +1478,7 @@ export default function Clientes({ clientes, vehiculos, trabajos = [], notify })
           <h1>Clientes</h1>
           <div className="hd-head__sub">
             {totalClientes} clientes · {conCuenttiId} verificados en Cuentti con id guardado · {conVehiculos} con vehículos
+            {accesos !== null && portalResumen.total > 0 && ` · ${portalResumen.entraron} de ${portalResumen.total} con órdenes han entrado a su portal`}
           </div>
         </div>
         <div className="hd-head__sp" />
@@ -1046,6 +1505,12 @@ export default function Clientes({ clientes, vehiculos, trabajos = [], notify })
           )}
           {/* El "+" era un carácter de texto: en el mockup es un icono de trazo 2.4
               del mismo alto que la línea, no un signo de la tipografía. */}
+          <Button
+            variant="outline"
+            onClick={() => setVista('portal')}
+            icon={<IconPortal />}
+            title="Quién ha entrado a su portal y quién nunca lo ha abierto"
+          >Portal</Button>
           <Button variant="primary" onClick={() => setCreando(true)} icon={<IconMas />}>Nuevo cliente</Button>
         </div>
       </div>
@@ -1296,6 +1761,7 @@ export default function Clientes({ clientes, vehiculos, trabajos = [], notify })
         )}
       </div>
     </div>
+    {modalCompartir}
     <ConfirmDialog cfg={confirmCfg} onClose={() => setConfirmCfg(null)} />
     </>
   )

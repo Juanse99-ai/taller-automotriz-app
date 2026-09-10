@@ -1,5 +1,5 @@
 // Cliente a traves de proxy backend para evitar CORS
-import { getToken, haySesion, avisarSesionVencida } from './auth'
+import { getToken, getSession, haySesion, avisarSesionVencida } from './auth'
 
 const proxy = (table) => `/api/supabase?table=${table}`
 
@@ -729,4 +729,35 @@ export async function datosFacturaCuentti(idTransacion) {
     const d = await r.json().catch(() => null)
     return d?.ok ? d : null
   } catch { return null }
+}
+
+// ---------- PORTAL: quien entra y a quien se le mando el link ----------
+
+// Todo el rastro del portal (entradas de clientes y envios del link), lo mas
+// reciente primero. Clientes lo agrupa por cedula para el master del portal.
+export async function fetchAccesosPortal() {
+  const res = await fetchWithTimeout(`${proxy('portal_accesos')}&select=cedula,fecha,tipo,origen,agente,usuario&order=fecha.desc&limit=5000`)
+  if (!res.ok) throw new Error(`Error ${res.status}`)
+  return res.json()
+}
+
+// Anota que desde la app se le mando el link a un cliente (whatsapp | copiar |
+// qr). Con esto "nunca entro" se parte en dos: no se le ha mandado, o se le
+// mando y no lo abrio. Devuelve la fila anotada, o null si no se pudo: fallar
+// aqui no puede frenar el envio.
+export async function registrarEnvioPortal(cedula, medio) {
+  const ced = String(cedula || '').replace(/[.\-\s]/g, '')
+  if (!ced) return null
+  try {
+    const res = await fetchWithTimeout(proxy('portal_accesos'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ cedula: ced, tipo: 'envio', origen: medio, usuario: getSession()?.usuario || null }),
+    })
+    if (!res.ok) return null
+    const filas = await res.json()
+    return Array.isArray(filas) ? (filas[0] || null) : null
+  } catch {
+    return null
+  }
 }
