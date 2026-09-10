@@ -17,7 +17,7 @@ import { useInventario, formatCacheAge } from '../hooks/useInventario'
 import { fotoParaSubir } from '../utils/imagen'
 import { subirVideoEvidencia, subirFotoEvidencia, borrarVideoEvidencia, fetchEvidenciasTrabajo } from '../services/supabase'
 import Switch from '../components/Switch'
-import { comprimirVideo } from '../utils/video'
+import { comprimirVideo, posterDeVideo } from '../utils/video'
 import MoneyInput from '../components/MoneyInput'
 import ConfirmDialog from '../components/ConfirmDialog'
 import { Button, ANIOS } from '../components/ui'
@@ -305,7 +305,20 @@ export default function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [
       const carpeta = trabajo?.otCodigo || trabajo?.id || form.placa || 'nueva'
       const { url, path } = await subirVideoEvidencia(file2, carpeta)
       archivosSesionRef.current.push({ url, path })
-      setForm(f => ({ ...f, [campo]: [...(f[campo] || []), { id: uid(), nombre: file.name, tipo: 'video', url, path, nota: '' }] }))
+      // Foto de portada: sin ella, la ficha de 120px se pinta con un <video> y
+      // el navegador se baja el archivo entero (5-38 MB) solo para enseñar un
+      // cuadro. Si el codec no se deja decodificar, posterDeVideo devuelve null
+      // y la ficha cae al <video> de siempre; no se bloquea la subida.
+      let poster = null
+      try {
+        const pb = await posterDeVideo(archivo)
+        if (pb) {
+          const sub = await subirFotoEvidencia(pb, carpeta)
+          poster = sub.url
+          archivosSesionRef.current.push(sub)
+        }
+      } catch { /* sin portada, la ficha usa el video */ }
+      setForm(f => ({ ...f, [campo]: [...(f[campo] || []), { id: uid(), nombre: file.name, tipo: 'video', url, path, poster, nota: '' }] }))
       notify?.('Video subido.', 'success')
     } catch (e) {
       notify?.(`No se pudo subir el video: ${e.message}`, 'error')
@@ -1322,7 +1335,7 @@ export default function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [
 // adivinaba que habia detras. En reposo se ve el primer fotograma con la
 // insignia de play —la misma que el portal— y los controles aparecen solo
 // cuando se toca para verlo.
-function MiniVideo({ src, nombre }) {
+function MiniVideo({ src, poster, nombre }) {
   const [viendo, setViendo] = useState(false)
   if (viendo) {
     return <video src={src} controls autoPlay playsInline className="mini-evid__v"
@@ -1331,9 +1344,12 @@ function MiniVideo({ src, nombre }) {
   return (
     <button type="button" className="thumb-play" onClick={() => setViendo(true)}
       aria-label={`Ver el video${nombre ? ` ${nombre}` : ''}`}>
-      {/* `#t=0.1`: con preload="metadata" a secas el navegador no pinta ningun
-         fotograma y la ficha sale en blanco. Ver MiniEvid en PortalCliente. */}
-      <video src={`${src}#t=0.1`} muted preload="metadata" playsInline className="mini-evid__v" />
+      {poster
+        ? <img className="mini-evid__v" src={poster} alt="" loading="lazy" />
+        /* Videos subidos antes de que se guardara la portada: se pinta el
+           <video>, que obliga a bajar el archivo entero. `#t=0.1` porque en el
+           segundo 0 muchos empiezan en negro. */
+        : <video src={`${src}#t=0.1`} muted preload="metadata" playsInline className="mini-evid__v" />}
       <span className="mini-evid__play" aria-hidden="true">
         <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z" /></svg>
       </span>
@@ -1349,7 +1365,7 @@ function ThumbGrid({ fotos = [], onNota, onRemove }) {
         <div key={fv.id} style={{ border: '1px solid var(--slate-200)', borderRadius: 8, padding: 6 }}>
           <div style={{ position: 'relative', paddingBottom: '70%', overflow: 'hidden', borderRadius: 6, marginBottom: 6, background: '#000' }}>
             {fv.tipo === 'video'
-              ? <MiniVideo src={fv.url} nombre={fv.nombre} />
+              ? <MiniVideo src={fv.url} poster={fv.poster} nombre={fv.nombre} />
               : <img src={fv.dataUrl || fv.url} alt={fv.nombre} style={{ position: 'absolute', width: '100%', height: '100%', objectFit: 'cover' }} />}
           </div>
           <input className="form-input text-xs" placeholder="Nota breve" value={fv.nota || ''}

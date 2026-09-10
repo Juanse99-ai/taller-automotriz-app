@@ -139,3 +139,61 @@ export async function comprimirVideo(file, { onProgreso } = {}) {
     try { document.querySelectorAll('video[data-comprimiendo]').forEach(v => v.remove()) } catch { /* ya no esta */ }
   }
 }
+
+// Foto de portada de un video, sacada en el propio navegador antes de subirlo.
+//
+// Por que existe: la miniatura de un video se pintaba con un <video> de verdad,
+// asi que para enseñar un cuadro de 120px el navegador se bajaba el archivo
+// entero. Medido con los videos que ya hay en el bucket: 5 MB el mp4 mas ligero
+// y 38 MB un .mov de iPhone, y entre 1,1 y 2,0 segundos hasta que aparecia algo.
+// En el celular del cliente eso son sus datos y su paciencia. Con la portada
+// guardada, la ficha es un JPEG de unos 40 kB y sale al instante; el video solo
+// se baja cuando alguien lo toca para verlo.
+//
+// Se toma el cuadro del segundo 0,1 y no el 0: muchos videos empiezan en negro
+// (el .mov de prueba lo hacia) y la portada saldria en negro tambien.
+//
+// REGLA, la misma que comprimirVideo: esto NUNCA debe impedir subir. Si el
+// navegador no puede decodificar ese codec —un .mov con HEVC en Chrome, por
+// ejemplo— devuelve null y la subida sigue sin portada.
+export function posterDeVideo(file, maxDim = 640, calidad = 0.72) {
+  return new Promise((resolve) => {
+    let url = null
+    let terminado = false
+    const acabar = (r) => {
+      if (terminado) return
+      terminado = true
+      if (url) URL.revokeObjectURL(url)
+      resolve(r)
+    }
+    // Tope duro: un video que no decodifica puede quedarse colgado sin lanzar
+    // error, y la subida no puede esperar a nadie.
+    const reloj = setTimeout(() => acabar(null), 8000)
+    try {
+      url = URL.createObjectURL(file)
+      const v = document.createElement('video')
+      v.muted = true
+      v.playsInline = true
+      v.preload = 'auto'
+      v.src = url
+      v.addEventListener('error', () => { clearTimeout(reloj); acabar(null) })
+      v.addEventListener('loadedmetadata', () => {
+        // Si dura menos de 0,1 s se coge el principio y ya.
+        v.currentTime = Math.min(0.1, (v.duration || 1) / 2)
+      })
+      v.addEventListener('seeked', () => {
+        clearTimeout(reloj)
+        try {
+          const { videoWidth: w, videoHeight: h } = v
+          if (!w || !h) return acabar(null)
+          const escala = Math.min(1, maxDim / Math.max(w, h))
+          const canvas = document.createElement('canvas')
+          canvas.width = Math.round(w * escala)
+          canvas.height = Math.round(h * escala)
+          canvas.getContext('2d').drawImage(v, 0, 0, canvas.width, canvas.height)
+          canvas.toBlob(b => acabar(b || null), 'image/jpeg', calidad)
+        } catch { acabar(null) }
+      })
+    } catch { clearTimeout(reloj); acabar(null) }
+  })
+}

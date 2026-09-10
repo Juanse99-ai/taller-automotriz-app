@@ -33,11 +33,15 @@ const esVideoEvid = (f) => {
 function MiniEvid({ f, chico = false }) {
   if (esVideoEvid(f)) return (
     <>
-      {/* `#t=0.1` no es un adorno: con solo preload="metadata" el navegador baja
-         la duracion y el tamaño pero NO pinta ningun fotograma, asi que la
-         miniatura salia en blanco con la insignia flotando sobre nada. El
-         fragmento le pide que se situe en el segundo 0,1 y ahi si dibuja. */}
-      <video className="mini-evid__v" src={`${f.url}#t=0.1`} muted preload="metadata" playsInline />
+      {/* Con portada, la miniatura es un JPEG de unos 40 kB. Sin ella hay que
+         pintar el <video>, y eso obliga al navegador a bajarse el archivo
+         ENTERO —medido en el bucket: de 5 a 38 MB— solo para enseñar un cuadro
+         de 120px. Los videos subidos desde ahora la traen; los 16 que ya
+         estaban, no. El `#t=0.1` es para esos: en el segundo 0 muchos empiezan
+         en negro y la miniatura salia negra. */}
+      {f.poster
+        ? <img className="mini-evid__v" src={f.poster} alt="" loading="lazy" />
+        : <video className="mini-evid__v" src={`${f.url}#t=0.1`} muted preload="metadata" playsInline />}
       <span className={`mini-evid__play${chico ? ' es-chico' : ''}`} aria-hidden="true">
         <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
       </span>
