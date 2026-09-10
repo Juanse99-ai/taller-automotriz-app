@@ -209,7 +209,10 @@ const CLIENTES_CSS = `
   .cli-pg .tbl--portal thead th{height:28px;padding:0 9px;background:var(--bg-subtle);font-size:9.5px;line-height:1;font-weight:700;letter-spacing:.7px;color:var(--text-4);text-transform:uppercase;border-top:1px solid var(--row-line);border-bottom:1.5px solid var(--head-line);box-shadow:none;white-space:nowrap}
   .cli-pg .tbl--portal thead th:first-child,.cli-pg .tbl--portal tbody td:first-child{padding-left:18px}
   .cli-pg .tbl--portal thead th:last-child,.cli-pg .tbl--portal tbody td:last-child{padding-right:18px}
-  .cli-pg .tbl--portal tbody tr{height:var(--row-h)}
+  /* 44px y no los 38 de la tabla de clientes: aqui el nombre va a dos lineas
+     y la accion mide 38; con 38 de fila las pildoras de "Enviar link" se
+     tocaban una con otra y la columna se leia como un solo bloque. */
+  .cli-pg .tbl--portal tbody tr{height:var(--tap)}
   .cli-pg .tbl--portal tbody td{padding:0 9px;font-size:12.5px;line-height:1.2;color:var(--text-3);border-bottom:1px solid var(--row-line);white-space:nowrap}
   .cli-pg .tbl--portal tbody tr:last-child td{border-bottom:1px solid var(--row-line)}
   .cli-pg .tbl--portal tbody tr:hover{background:var(--bg-subtle)}
@@ -223,6 +226,12 @@ const CLIENTES_CSS = `
   .cli-pg .tbl--portal .cli-nom + .hd-sub{margin-top:2px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
   .cli-pg .tbl--portal tbody td.td-ot,.cli-pg .tbl--portal tbody td.td-ult,.cli-pg .tbl--portal tbody td.td-env{overflow:hidden;text-overflow:ellipsis}
   .cli-pg .tbl--portal tbody td.td-acc{text-align:right}
+  /* En escritorio la accion es texto en azul, sin contorno: 110 pildoras
+     iguales una debajo de otra pesaban mas que los datos. Conserva sus 38px
+     de alto y el foco; en el celular sigue siendo el boton de contorno. */
+  .cli-pg .tbl--portal tbody td.td-acc .btn{border-color:transparent;background:transparent;box-shadow:none;color:var(--primary);font-weight:600;padding:0 10px}
+  .cli-pg .tbl--portal tbody td.td-acc .btn:hover{background:var(--accent-soft);border-color:transparent}
+  .cli-pg .tbl--portal tbody td.td-acc .btn svg{width:15px;height:15px}
 }
 @media(min-width:961px){ .cli-pg .tbl--portal thead th{position:sticky;top:0;z-index:2} }
 /* En celular, tarjeta de 4 lineas: nombre y estado arriba, y tres renglones
@@ -1433,6 +1442,7 @@ export default function Clientes({ clientes, vehiculos, trabajos = [], notify })
                         <Button
                           variant="outline"
                           size="sm"
+                          icon={<IconPortal />}
                           onClick={(e) => { e.stopPropagation(); setModalPortal({ cedula: f.cedula, cliente: f.nombre, telefono: f.telefono }) }}
                           title={f.estado === 'entro' ? 'Volver a mandarle el link' : 'Mandarle el link del portal'}
                         >Enviar link</Button>
