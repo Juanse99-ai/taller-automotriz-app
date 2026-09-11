@@ -69,6 +69,12 @@ const ICONS = {
       <line x1="2" y1="10" x2="22" y2="10"/>
     </svg>
   ),
+  cartera: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M4 4h16v16l-3-2-3 2-2-2-2 2-3-2-3 2z"/>
+      <path d="M8 9h8M8 13h5"/>
+    </svg>
+  ),
   reportes: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <line x1="18" y1="20" x2="18" y2="10"/>
@@ -135,6 +141,7 @@ const NAV = [
     { key: 'cotizaciones', label: 'Cotizaciones' },
     { key: 'inventario',   label: 'Inventario' },
     { key: 'liquidacion',  label: 'Liquidación' },
+    { key: 'cartera',      label: 'Cartera' },
   ]},
   { group: 'Análisis', items: [
     { key: 'reportes', label: 'Reportes' },

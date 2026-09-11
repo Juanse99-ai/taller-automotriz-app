@@ -76,7 +76,11 @@ async function buscarClienteEnCuentti(cedula) {
 const TABLES = [
   'trabajos', 'cotizaciones', 'clientes', 'vehiculos', 'inspecciones',
   'movimientos_tecnicos', 'liquidacion_historial', 'liquidados', 'trabajos_compartidos',
+  'pagos', 'trabajos_saldo',
 ]
+const METODOS_PAGO = ['efectivo', 'transferencia', 'credito', 'wompi', 'otro']
+// Fecha de hoy en la hora del taller (a las 10 de la noche en Colombia, en UTC ya es manana).
+const hoyTaller = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Bogota' }).format(new Date())
 
 async function supabase(table, { method = 'GET', query = '', body = null, upsert = false } = {}) {
   if (!SUPABASE_URL || !SUPABASE_KEY) throw new Error('SUPABASE_URL/SUPABASE_KEY no configurados en el servidor')
@@ -385,6 +389,47 @@ const tools = [
       if (filtro) query += `&${filtro}`
       const data = await supabase(tabla, { query })
       return `## ${tabla} (${data.length} registros)\n\n\`\`\`json\n${JSON.stringify(data, null, 2).slice(0, 8000)}\n\`\`\``
+    },
+  },
+  {
+    name: 'registrar_pago',
+    description: 'Registra un abono (pago parcial o total) de un cliente a una orden de trabajo. Valida que no supere el saldo de trabajos_saldo. Sin confirm es dry-run: muestra total, abonado y saldo antes y despues sin guardar nada.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        trabajo: { type: 'string', description: 'Id de la OT (TR-...) o su codigo (OT-0221)' },
+        monto: { type: 'number', description: 'Valor del abono en pesos' },
+        fecha: { type: 'string', description: 'YYYY-MM-DD (default: hoy)' },
+        metodo: { type: 'string', enum: METODOS_PAGO, default: 'efectivo' },
+        nota: { type: 'string' },
+        confirm: { type: 'boolean', description: 'true = guardar; false (default) = dry-run' },
+      },
+      required: ['trabajo', 'monto'],
+    },
+    handler: async ({ trabajo, monto, fecha, metodo = 'efectivo', nota = '', confirm = false }) => {
+      const ref = String(trabajo || '').trim()
+      if (!ref) return '❌ Falta la orden (id TR-... o codigo OT-...).'
+      const q = /^OT-/i.test(ref) ? `ot_codigo=eq.${encodeURIComponent(ref.toUpperCase())}` : `id=eq.${encodeURIComponent(ref)}`
+      const [s] = await supabase('trabajos_saldo', { query: `select=*&${q}` })
+      if (!s) return `❌ No existe la orden "${ref}" (o esta borrada).`
+      const valor = Math.round(Number(monto) || 0)
+      if (valor <= 0) return '❌ El monto debe ser mayor a 0.'
+      if (!METODOS_PAGO.includes(metodo)) return `❌ Metodo invalido. Usa uno de: ${METODOS_PAGO.join(', ')}.`
+      const saldo = Math.round(Number(s.saldo) || 0)
+      if (saldo <= 0) return `❌ La orden ${s.ot_codigo} ya esta pagada (total ${fmtCOP(s.total)}, abonado ${fmtCOP(s.abonado)}).`
+      if (valor > saldo + 1) return `❌ El abono (${fmtCOP(valor)}) supera el saldo (${fmtCOP(saldo)}) de ${s.ot_codigo}.`
+      const dia = fecha || hoyTaller()
+      const cabecera = [
+        `**${s.ot_codigo}** · ${s.cliente || 'sin cliente'}${s.placa ? ` · ${s.placa}` : ''}`,
+        `Total ${fmtCOP(s.total)} · abonado ${fmtCOP(s.abonado)} · saldo ${fmtCOP(saldo)}`,
+        ``, `Abono: **${fmtCOP(valor)}** · ${metodo} · ${dia}${nota ? ` · ${nota}` : ''}`,
+        `Saldo despues: **${fmtCOP(Math.max(saldo - valor, 0))}**${saldo - valor <= 1 ? ' → la orden queda PAGADA' : ''}`,
+      ]
+      if (!confirm) return [`## Dry-run: registrar abono`, ...cabecera, ``, `Pasa **confirm:true** para guardar.`].join('\n')
+      await supabase('pagos', { method: 'POST', body: { trabajo_id: s.id, fecha: dia, monto: valor, metodo, nota: nota || null, origen: 'manual' } })
+      const [s2] = await supabase('trabajos_saldo', { query: `select=abonado,saldo,estado_pago&id=eq.${encodeURIComponent(s.id)}` })
+      return [`## ✅ Abono registrado`, ...cabecera, ``,
+        `Ahora: abonado ${fmtCOP(s2?.abonado)} · saldo ${fmtCOP(s2?.saldo)} · estado **${s2?.estado_pago}**`].join('\n')
     },
   },
   {

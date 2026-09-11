@@ -761,3 +761,70 @@ export async function registrarEnvioPortal(cedula, medio) {
     return null
   }
 }
+
+// ---------- PAGOS: abonos de clientes a una orden ----------
+// La tabla `pagos` y la vista `trabajos_saldo` llegan con supabase/migrations.
+// Hasta que se apliquen, PostgREST responde que no existen: eso se convierte en
+// un error con code 'SIN_TABLA' para que la pantalla lo diga, en vez de fingir
+// que la cartera esta vacia.
+async function leerOFallar(res, que) {
+  if (res.ok) return res.json()
+  let detalle = ''
+  try { detalle = JSON.stringify(await res.json()) } catch { /* sin cuerpo */ }
+  const e = new Error(`${que}: error ${res.status}`)
+  if (/PGRST205|42P01|Could not find the table|does not exist/i.test(detalle)) e.code = 'SIN_TABLA'
+  throw e
+}
+
+// La cartera son las ordenes FACTURADAS con saldo (o con algun abono aunque
+// no tengan factura todavia): una OT en proceso sin factura no es deuda aun.
+export async function fetchSaldos({ soloPendientes = true } = {}) {
+  const q = `${proxy('trabajos_saldo')}&select=*${soloPendientes ? '&saldo=gt.0&or=(facturado_en.not.is.null,abonado.gt.0)' : ''}&order=saldo.desc&limit=1000`
+  return leerOFallar(await fetchWithTimeout(q), 'Cartera')
+}
+
+export async function fetchSaldoTrabajo(id) {
+  const filas = await leerOFallar(
+    await fetchWithTimeout(`${proxy('trabajos_saldo')}&select=*&id=eq.${encodeURIComponent(id)}`), 'Saldo')
+  return Array.isArray(filas) ? (filas[0] || null) : null
+}
+
+export async function fetchPagos(trabajoId) {
+  return leerOFallar(
+    await fetchWithTimeout(`${proxy('pagos')}&select=*&trabajo_id=eq.${encodeURIComponent(trabajoId)}&order=fecha.desc,created_at.desc`), 'Pagos')
+}
+
+export async function crearPago({ trabajoId, monto, fecha, metodo = 'efectivo', nota = '' }) {
+  const filas = await leerOFallar(await fetchWithTimeout(proxy('pagos'), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      trabajo_id: trabajoId, monto: Math.round(Number(monto) || 0), fecha, metodo,
+      nota: nota || null, origen: 'manual',
+    }),
+  }), 'Registrar abono')
+  return Array.isArray(filas) ? (filas[0] || null) : filas
+}
+
+export async function borrarPago(id) {
+  const res = await fetchWithTimeout(`${proxy('pagos')}&id=eq.${encodeURIComponent(id)}`, { method: 'DELETE' })
+  if (!res.ok) throw new Error(`No se pudo borrar el abono (${res.status})`)
+  return true
+}
+
+// Baja de Cuentti los recibos de las facturas sin pagar (todas, o una orden).
+// Tarda medio segundo por factura: no pasa por el tiempo de espera normal.
+export async function sincronizarPagos(trabajoId) {
+  if (!haySesion()) throw new Error('No hay sesion iniciada')
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), 60000)
+  try {
+    const res = await fetch(`/api/supabase?sincronizarPagos=${encodeURIComponent(trabajoId || '1')}`,
+      { ...conSesion(), signal: controller.signal })
+    if (res.status === 401) avisarSesionVencida()
+    if (!res.ok) throw new Error(`Error ${res.status}`)
+    return res.json()
+  } finally {
+    clearTimeout(timer)
+  }
+}

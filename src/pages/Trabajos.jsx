@@ -30,6 +30,7 @@ import { exportarFichasTecnico } from '../utils/fichaPdf'
 import { comisionTecnico, esServicioItem } from '../utils/comision'
 import { lsGet, lsSet, LS_KEYS } from '../services/storage'
 import { borrarVideoEvidencia, fetchEvidenciasTrabajo } from '../services/supabase'
+import PagosOT from '../components/PagosOT'
 import SignaturePad from '../components/SignaturePad'
 import ConfirmDialog from '../components/ConfirmDialog'
 import { Button, Badge, IconX, IconEdit, IconTrash, IconPdf, IconPhone, IconChat, IconCheck, FotoOT } from '../components/ui'
@@ -1385,6 +1386,12 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
                   <span>Total</span>
                   <span className="otd__total-v">{fmt(t.total)}</span>
                 </div>
+
+                {/* Total, abonado y saldo, con los abonos uno a uno. Antes la
+                    ficha solo sabia "cobrada" o "por cobrar". */}
+                {Number(t.total) > 0 && (
+                  <PagosOT trabajo={t} notify={notify} onPagado={(v) => actualizarTrabajo(t.id, { pagado: v })} />
+                )}
 
                 <div className="otd__tec">
                   <span className={`hd-av av av-${(parseInt(t.tecnicoId) || 1) % 5 + 1}`}>{tecIniciales(t.tecnicoId)}</span>

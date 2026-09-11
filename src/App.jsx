@@ -43,6 +43,7 @@ const Inspecciones = seccion('Inspecciones', () => import('./pages/Inspecciones'
 const CuenttiPanel = seccion('CuenttiPanel', () => import('./pages/CuenttiPanel'))
 const Clientes = seccion('Clientes', () => import('./pages/Clientes'))
 const Vehiculos = seccion('Vehiculos', () => import('./pages/Vehiculos'))
+const Cartera = seccion('Cartera', () => import('./pages/Cartera'))
 const Usuarios = seccion('Usuarios', () => import('./pages/Usuarios'))
 const CRM = seccion('CRM', () => import('./pages/CRM'))
 
@@ -112,6 +113,7 @@ const SECTIONS = {
   cotizaciones: { title: 'Cotizaciones', subtitle: 'Gestionar cotizaciones' },
   inventario: { title: 'Inventario', subtitle: 'Productos y repuestos' },
   liquidacion: { title: 'Liquidación', subtitle: 'Pagos a técnicos' },
+  cartera: { title: 'Cartera', subtitle: 'Lo que los clientes deben' },
   reportes: { title: 'Reportes', subtitle: 'Estadísticas y exportación' },
   inspecciones: { title: 'Inspecciones', subtitle: 'Inspecciones digitales DVI' },
   clientes: { title: 'Clientes', subtitle: 'Gestión de clientes' },
@@ -371,6 +373,8 @@ export default function App() {
         return <Inventario notify={notify} />
       case 'liquidacion':
         return <Liquidacion trabajos={trabajosHook.trabajos} notify={notify} liquidacionHook={liquidacionHook} />
+      case 'cartera':
+        return <Cartera notify={notify} actualizarTrabajo={trabajosHook.actualizarTrabajo} />
       case 'reportes':
         return <Reportes trabajos={trabajosHook.trabajos} loading={trabajosHook.loading} notify={notify} />
       case 'inspecciones':

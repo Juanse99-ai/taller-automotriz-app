@@ -4047,3 +4047,41 @@ tbody tr:active{background:var(--fill-2)}
 @media(max-width:960px){
   .aviso-fila__a{min-height:var(--tap)}
 }
+
+/* --- Pagos de una orden (PagosOT): en el detalle de la OT y en Cartera --- */
+.pg{padding:0 0 14px;border-top:1px solid var(--row-line)}
+.pg .otd__rot{margin-top:12px}
+.pg__cifras{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:10px 0 12px}
+.pg__cifras>div{display:flex;flex-direction:column;gap:4px;min-width:0}
+.pg__l{font-size:9.5px;line-height:1;font-weight:700;letter-spacing:.9px;color:var(--text-4)}
+.pg__v{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:16px;line-height:1.1;font-weight:700;color:var(--text);white-space:nowrap}
+.pg__v--debe{color:var(--warn-fg)}
+.pg__lista{list-style:none;margin:0;padding:0}
+.pg__item{display:flex;align-items:center;gap:10px;min-height:38px;padding:5px 0;border-bottom:1px solid var(--row-line);font-size:12.5px}
+.pg__fecha{flex:none;width:92px;color:var(--text-3);font-variant-numeric:tabular-nums}
+.pg__det{flex:1;min-width:0;display:flex;align-items:center;gap:6px;color:var(--text-2);overflow:hidden;white-space:nowrap}
+.pg__det b{font-weight:600;color:var(--text)}
+.pg__nota{color:var(--text-4);overflow:hidden;text-overflow:ellipsis}
+.pg__monto{flex:none;font-family:var(--mono);font-variant-numeric:tabular-nums;font-weight:700;color:var(--text)}
+.pg__x{flex:none;width:30px;height:30px;border:none;background:none;border-radius:var(--r-xs);color:var(--text-4);font-size:18px;line-height:1;cursor:pointer;font-family:inherit}
+.pg__x:hover{background:var(--chip);color:var(--bad-fg)}
+.pg__x--si{width:auto;padding:0 10px;font-size:12px;font-weight:700;color:#fff;background:var(--bad-fg)}
+.pg__x--si:hover{background:var(--bad-fg);color:#fff}
+.pg__vacio{padding:10px 0;font-size:12.5px;color:var(--text-4)}
+.pg__pie{display:flex;align-items:center;gap:10px;margin-top:12px}
+.pg__form{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px;padding:12px;background:var(--bg-subtle);border-radius:var(--r-md)}
+.pg__form .field{margin:0}
+.pg__acc{display:flex;gap:8px;justify-content:flex-end;grid-column:1/-1}
+.pg__sync{font-size:11px;font-weight:500;letter-spacing:0;text-transform:none;color:var(--text-4)}
+@media(max-width:600px){ .pg__form{grid-template-columns:1fr} .pg__fecha{width:78px} .pg__v{font-size:14px} }
+
+/* --- Cartera --- */
+.cart-pg .tbl th.th-num,.cart-pg .tbl td.td-num{text-align:right;font-variant-numeric:tabular-nums}
+.cart-pg .tbl td.td-saldo{font-weight:700;color:var(--text)}
+.cart-pg .tbl td.td-acc{text-align:right}
+.cart-pg .tbl tfoot td{font-weight:700;font-size:12.5px;background:var(--bg-subtle);border-top:1.5px solid var(--head-line);color:var(--text)}
+@media(max-width:600px){
+  .cart-pg .tbl tfoot{display:none}
+  .cart-pg .tbl.tbl-cards tbody td.td-acc{justify-content:flex-end}
+  .cart-pg .tbl.tbl-cards tbody td.td-acc::before{display:none}
+}
