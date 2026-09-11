@@ -3,6 +3,8 @@ import { fmt, fmtDate, whatsappLink } from '../utils/helpers'
 import { ESTADOS, TECNICOS, DIAS_ESTANCADO, TALLER, rotuloEstado } from '../utils/constants'
 import { Button } from '../components/ui'
 import { formatCacheAge } from '../hooks/useInventario'
+import { fetchSaldos } from '../services/supabase'
+import { getSeccionesPermitidas } from '../services/auth'
 
 // Cuando las cifras dejan de ser de fiar sin que nada falle: la app consulta
 // cada 60s, pero SOLO con la pestaña a la vista. Una pestaña olvidada toda la
@@ -163,6 +165,32 @@ export default function Dashboard({ trabajos = [], onNavigate, user, ultimaSync 
     return { activos, listoCount, ingresosMes, ingresosHoy, porCobrar, porCobrarCount: porCobrarList.length,
              ingresosMesAnt, mesAntNombre }
   }, [trabajos])
+
+  // Lo que de verdad falta por cobrar, con los abonos descontados (vista
+  // trabajos_saldo). El calculo de arriba cuenta cada factura sin pagar por su
+  // TOTAL: la OT-0221 ($6.704.000 con $5.635.000 abonados) sumaba entera.
+  // Mientras llega, o si falla, se muestra el calculo viejo. Se vuelve a pedir
+  // solo cuando cambia algo de lo facturado sin pagar, no en cada sondeo de 60s.
+  const [cartera, setCartera] = useState(null)   // { saldo, n, abonado }
+  const claveCartera = `${stats.porCobrarCount}:${stats.porCobrar}`
+  useEffect(() => {
+    let vivo = true
+    fetchSaldos()
+      .then(f => {
+        if (!vivo || !Array.isArray(f)) return
+        setCartera({
+          saldo: f.reduce((a, x) => a + (Number(x.saldo) || 0), 0),
+          abonado: f.reduce((a, x) => a + (Number(x.abonado) || 0), 0),
+          n: f.length,
+        })
+      })
+      .catch(() => { /* sin la vista o sin red: queda el calculo viejo */ })
+    return () => { vivo = false }
+  }, [claveCartera])
+  const porCobrarV = cartera ? cartera.saldo : stats.porCobrar
+  const porCobrarN = cartera ? cartera.n : stats.porCobrarCount
+  // Cartera es solo del admin; al jefe de taller el boton lo sigue llevando a Trabajos.
+  const destinoCartera = getSeccionesPermitidas(user?.rol).includes('cartera') ? 'cartera' : 'trabajos'
 
   // ── Estancados ─────────────────────────────────────────────────────────────
   const estancados = useMemo(() =>
@@ -793,16 +821,18 @@ export default function Dashboard({ trabajos = [], onNavigate, user, ultimaSync 
               para lo que exige actuar, y un día sin cartera el elemento más
               gritón de la pantalla estaría diciendo "POR COBRAR $ 0". Nada que
               cobrar es una buena noticia, no un titular. */}
-          {stats.porCobrar > 0 && (
+          {porCobrarV > 0 && (
             <div className="hd-neto dsh-navy" style={{ display: 'flex', flexDirection: 'column' }}>
               <div className="hd-neto__l dsh-navy__l">POR COBRAR</div>
-              <div className="hd-neto__v dsh-navy__v">{fmt(stats.porCobrar)}</div>
+              <div className="hd-neto__v dsh-navy__v">{fmt(porCobrarV)}</div>
               <div className="dsh-navy__s">
-                {stats.porCobrarCount} factura{stats.porCobrarCount !== 1 ? 's' : ''} facturada{stats.porCobrarCount !== 1 ? 's' : ''} sin pagar
+                {cartera
+                  ? `${porCobrarN} ${porCobrarN === 1 ? 'orden' : 'órdenes'} con saldo${cartera.abonado > 0 ? ` · ${fmt(cartera.abonado)} ya abonados` : ''}`
+                  : `${porCobrarN} factura${porCobrarN !== 1 ? 's' : ''} sin pagar`}
               </div>
               <div style={{ flex: 1, minHeight: 6 }} />
               {onNavigate && (
-                <button type="button" className="dsh-navy__btn" onClick={() => onNavigate('trabajos')}>
+                <button type="button" className="dsh-navy__btn" onClick={() => onNavigate(destinoCartera)}>
                   Ver cartera <IcArrow />
                 </button>
               )}

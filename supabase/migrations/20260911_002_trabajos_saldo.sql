@@ -7,8 +7,12 @@
 --
 -- `deleted is not true` y no `= false`: hoy no hay nulos, pero si mañana los
 -- hay, una fila con `deleted = null` es una orden viva y no debe desaparecer.
+--
+-- security_invoker: la vista se consulta con los permisos de QUIEN pregunta,
+-- no con los del dueño de la base. Sin esto, Supabase la marca como error de
+-- seguridad (una vista así se salta la RLS de las tablas que lee).
 
-create or replace view public.trabajos_saldo as
+create or replace view public.trabajos_saldo with (security_invoker = true) as
 select
   t.id,
   t.ot_codigo,

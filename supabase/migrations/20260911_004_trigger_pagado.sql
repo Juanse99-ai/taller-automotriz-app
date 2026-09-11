@@ -6,9 +6,12 @@
 -- haber dado la factura por saldada con un descuento que la app no conoce.
 -- Tolerancia de $1 por el redondeo de centavos de Cuentti.
 
+-- search_path vacío: la función usa nombres completos (public.pagos,
+-- public.trabajos), así que nadie puede colarle una tabla con el mismo nombre.
 create or replace function public.pagos_actualiza_pagado()
 returns trigger
 language plpgsql
+set search_path = ''
 as $$
 declare
   v_trabajo text;
