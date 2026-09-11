@@ -81,6 +81,16 @@ const TABLES = [
 const METODOS_PAGO = ['efectivo', 'transferencia', 'credito', 'wompi', 'otro']
 // Fecha de hoy en la hora del taller (a las 10 de la noche en Colombia, en UTC ya es manana).
 const hoyTaller = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Bogota' }).format(new Date())
+// Fecha (YYYY-MM-DD) de un timestamp en hora de Bogota. Una OT creada a las 9 pm
+// trae un ISO con fecha UTC de manana; sin esto "hoy" y "este mes" la cuentan mal.
+// Una fecha sin hora se deja tal cual.
+const FMT_BOGOTA = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Bogota' })
+const fechaBogota = (iso) => {
+  const s = String(iso || '')
+  if (s.length <= 10) return s
+  const d = new Date(s)
+  return Number.isNaN(d.getTime()) ? s.slice(0, 10) : FMT_BOGOTA.format(d)
+}
 
 async function supabase(table, { method = 'GET', query = '', body = null, upsert = false } = {}) {
   if (!SUPABASE_URL || !SUPABASE_KEY) throw new Error('SUPABASE_URL/SUPABASE_KEY no configurados en el servidor')
@@ -105,7 +115,7 @@ function fmtCOP(n) {
 }
 function fmtFecha(iso) {
   if (!iso) return '—'
-  return new Date(iso).toLocaleDateString('es-CO', { day: 'numeric', month: 'short', year: 'numeric' })
+  return new Date(iso).toLocaleDateString('es-CO', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'America/Bogota' })
 }
 
 // ID unico — mismo formato que la app (src/utils/helpers.js)
@@ -159,14 +169,14 @@ const tools = [
     inputSchema: { type: 'object', properties: {} },
     handler: async () => {
       const trabajos = await supabase('trabajos', { query: 'select=*&order=fecha.desc&limit=500' })
-      const hoy = new Date().toISOString().slice(0, 10)
-      const mesActual = new Date().toISOString().slice(0, 7)
+      const hoy = hoyTaller()          // en hora de Bogota: en UTC a las 7 pm ya es manana
+      const mesActual = hoy.slice(0, 7)
       const activos = trabajos.filter(t => t.estado === 'En Proceso' || t.estado === 'Pendiente')
       const listos = trabajos.filter(t => t.estado === 'Listo')
       const entregados = trabajos.filter(t => t.estado === 'Entregado')
-      const hoyIngresados = trabajos.filter(t => (t.fecha || '').startsWith(hoy))
+      const hoyIngresados = trabajos.filter(t => fechaBogota(t.fecha) === hoy)
       const ingresosMes = trabajos
-        .filter(t => t.estado === 'Entregado' && (t.fecha || '').startsWith(mesActual))
+        .filter(t => t.estado === 'Entregado' && fechaBogota(t.fecha).startsWith(mesActual))
         .reduce((s, t) => s + (parseFloat(t.total) || 0), 0)
       const totalHistorico = entregados.reduce((s, t) => s + (parseFloat(t.total) || 0), 0)
       return [
@@ -327,15 +337,15 @@ const tools = [
     handler: async ({ periodo = 'mes' }) => {
       const trabajos = await supabase('trabajos', { query: 'select=fecha,total,estado,placa,cliente&order=fecha.desc&limit=2000' })
       const entregados = trabajos.filter(t => t.estado === 'Entregado')
-      const ahora = new Date()
+      const hoy = hoyTaller()          // en hora de Bogota, no UTC
       let desde
       switch (periodo) {
-        case 'hoy': desde = ahora.toISOString().slice(0, 10); break
-        case 'semana': { const d = new Date(ahora); d.setDate(d.getDate() - 7); desde = d.toISOString().slice(0, 10); break }
-        case 'anio': desde = `${ahora.getFullYear()}-01-01`; break
-        default: desde = ahora.toISOString().slice(0, 7)
+        case 'hoy': desde = hoy; break
+        case 'semana': { const d = new Date(`${hoy}T12:00:00Z`); d.setUTCDate(d.getUTCDate() - 7); desde = d.toISOString().slice(0, 10); break }
+        case 'anio': desde = `${hoy.slice(0, 4)}-01-01`; break
+        default: desde = hoy.slice(0, 7)
       }
-      const enPeriodo = entregados.filter(t => (t.fecha || '') >= desde)
+      const enPeriodo = entregados.filter(t => fechaBogota(t.fecha) >= desde)
       const totalIngresos = enPeriodo.reduce((s, t) => s + (parseFloat(t.total) || 0), 0)
       const promedio = enPeriodo.length > 0 ? totalIngresos / enPeriodo.length : 0
       return [
