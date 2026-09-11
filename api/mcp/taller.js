@@ -155,7 +155,7 @@ async function nextOtCodigo() {
 const tools = [
   {
     name: 'dashboard',
-    description: 'Resumen general del taller: trabajos activos, ingresos, pendientes',
+    description: 'Resumen del taller calculado sobre las últimas 500 OT por fecha: activas (Pendiente y En Proceso), listas para entregar con placa, cliente y total, ingresadas hoy, ingresos del mes y total histórico. Los ingresos suman el total de las OT en estado Entregado según su fecha de ingreso; no son abonos cobrados ni lo facturado en Cuentti. No recibe parámetros.',
     inputSchema: { type: 'object', properties: {} },
     handler: async () => {
       const trabajos = await supabase('trabajos', { query: 'select=*&order=fecha.desc&limit=500' })
@@ -190,10 +190,10 @@ const tools = [
   },
   {
     name: 'buscar_trabajos',
-    description: 'Buscar ordenes de trabajo por placa, cliente, estado o ID',
+    description: 'Busca órdenes de trabajo entre las últimas 500 por fecha. El término se compara como subcadena contra placa, nombre del cliente, código OT (OT-0001), id interno y cédula, y como igualdad exacta contra el estado (Pendiente, En Proceso, Listo, Entregado). Devuelve hasta 20 filas con código, placa, cliente, estado, total y fecha; para ver los items y totales de una OT usa detalle_trabajo.',
     inputSchema: {
       type: 'object',
-      properties: { termino: { type: 'string', description: 'Placa, cliente, OT codigo o estado' } },
+      properties: { termino: { type: 'string', description: 'Placa, nombre del cliente, código OT, cédula o un estado exacto' } },
       required: ['termino'],
     },
     handler: async ({ termino }) => {
@@ -215,10 +215,10 @@ const tools = [
   },
   {
     name: 'detalle_trabajo',
-    description: 'Ver detalle completo de una orden de trabajo',
+    description: 'Devuelve una OT completa: estado, fecha, cliente (nombre, cédula, teléfono, email), vehículo (placa, marca, modelo, año, kilometraje), items con cantidad y precio, subtotal, IVA, total, si está pagada y con qué método, y observaciones. Acepta el id interno o el código OT-…. No incluye los abonos parciales: para el saldo pendiente consulta trabajos_saldo con consultar_tabla.',
     inputSchema: {
       type: 'object',
-      properties: { id: { type: 'string', description: 'ID o codigo OT' } },
+      properties: { id: { type: 'string', description: 'Id interno de la OT o su código (OT-0001)' } },
       required: ['id'],
     },
     handler: async ({ id }) => {
@@ -264,7 +264,7 @@ const tools = [
     description: 'Buscar clientes por cedula, nombre o telefono. Si el cliente no esta en la base del taller y buscas por cedula/NIT, tambien consulta Cuentti (muchos clientes se crean directo alla al facturar).',
     inputSchema: {
       type: 'object',
-      properties: { termino: { type: 'string' } },
+      properties: { termino: { type: 'string', description: 'Cédula o NIT, nombre o teléfono (busca por subcadena). Solo una cédula o NIT de 5 o más dígitos dispara la búsqueda en Cuentti.' } },
       required: ['termino'],
     },
     handler: async ({ termino }) => {
@@ -301,10 +301,10 @@ const tools = [
   },
   {
     name: 'listar_cotizaciones',
-    description: 'Ver cotizaciones recientes o filtrar por estado',
+    description: 'Lista las 50 cotizaciones más recientes del taller y muestra hasta 20, con id, cliente, placa, estado, total y fecha, más la suma de los totales de esas 50. Con estado filtra por ese estado exacto.',
     inputSchema: {
       type: 'object',
-      properties: { estado: { type: 'string', description: 'Pendiente, Aprobada, Rechazada' } },
+      properties: { estado: { type: 'string', enum: ['Pendiente', 'Aprobada', 'Rechazada', 'Facturada'], description: 'Filtra por estado exacto.' } },
     },
     handler: async ({ estado }) => {
       let query = 'select=*&order=fecha.desc&limit=50'
@@ -319,7 +319,7 @@ const tools = [
   },
   {
     name: 'stats_ingresos',
-    description: 'Estadisticas de ingresos por periodo (hoy/semana/mes/anio)',
+    description: 'Ingresos del taller en un periodo: cuenta las OT en estado Entregado cuya fecha de ingreso cae en el periodo y suma sus totales (total, cantidad y promedio por trabajo). semana = últimos 7 días; mes y anio = desde el primer día del mes o del año en curso. Revisa las últimas 2000 OT. No incluye abonos ni ventas de mostrador hechas solo en Cuentti.',
     inputSchema: {
       type: 'object',
       properties: { periodo: { type: 'string', enum: ['hoy', 'semana', 'mes', 'anio'], default: 'mes' } },
@@ -353,10 +353,10 @@ const tools = [
   },
   {
     name: 'buscar_vehiculos',
-    description: 'Buscar vehiculos por placa',
+    description: 'Busca vehículos del taller cuya placa contenga el texto (sin distinguir mayúsculas). Devuelve placa, marca, modelo, año, cédula del propietario y cuántas visitas tiene registradas. Para ver las OT de una placa usa buscar_trabajos.',
     inputSchema: {
       type: 'object',
-      properties: { placa: { type: 'string' } },
+      properties: { placa: { type: 'string', description: 'Placa completa o parte de ella' } },
       required: ['placa'],
     },
     handler: async ({ placa }) => {
@@ -373,13 +373,13 @@ const tools = [
   },
   {
     name: 'consultar_tabla',
-    description: 'Consultar datos de cualquier tabla del taller con filtro PostgREST',
+    description: 'Lee filas crudas (JSON) de una tabla del taller, ordenadas por fecha descendente. Solo lectura. Úsala cuando las otras herramientas no exponen el dato, por ejemplo los abonos en pagos o el saldo por OT en trabajos_saldo. La respuesta se recorta a 8000 caracteres: acota con filtro y limite.',
     inputSchema: {
       type: 'object',
       properties: {
         tabla: { type: 'string', enum: TABLES },
-        filtro: { type: 'string', description: 'Filtro PostgREST, ej: "estado=eq.Pendiente"' },
-        limite: { type: 'integer', default: 20 },
+        filtro: { type: 'string', description: 'Filtro PostgREST que se anexa tal cual a la consulta, ej: estado=eq.Pendiente o placa=eq.ABC123' },
+        limite: { type: 'integer', default: 20, description: 'Máximo de filas (default 20)' },
       },
       required: ['tabla'],
     },
@@ -456,7 +456,7 @@ const tools = [
               precio: { type: 'number', description: 'Precio unitario con IVA incluido' },
               cantidad: { type: 'number', default: 1 },
               iva: { type: 'number', default: 19 },
-              sku: { type: 'string', description: 'IMPORTANTE si es un repuesto del inventario: es la REFERENCIA del producto en Cuentti (buscar_producto_sku_cuentti / listar_inventario_cuentti). Viaja hasta la factura y es lo que hace que Cuentti descuente la existencia. Sin sku el item se factura contra un generico y el inventario NO se mueve. Dejalo vacio solo para mano de obra o cosas escritas a mano.' },
+              sku: { type: 'string', description: 'Referencia (SKU) del producto en el inventario de Cuentti. Viaja hasta la factura y es lo que descuenta la existencia: sin sku el item se factura contra un genérico y el inventario no se mueve. Vacío solo para mano de obra o items escritos a mano.' },
               esServicio: { type: 'boolean', default: false, description: 'true = mano de obra / servicio (no toca inventario, no lleva sku).' },
             },
             required: ['nombre', 'precio'],
@@ -632,7 +632,7 @@ const tools = [
               precio: { type: 'number', description: 'Precio unitario con IVA incluido' },
               cantidad: { type: 'number', default: 1 },
               iva: { type: 'number', default: 19 },
-              sku: { type: 'string', description: 'IMPORTANTE si es un repuesto del inventario: es la REFERENCIA del producto en Cuentti (buscar_producto_sku_cuentti / listar_inventario_cuentti). Viaja hasta la factura y es lo que hace que Cuentti descuente la existencia. Sin sku el item se factura contra un generico y el inventario NO se mueve. Dejalo vacio solo para mano de obra o cosas escritas a mano.' },
+              sku: { type: 'string', description: 'Referencia (SKU) del producto en el inventario de Cuentti. Viaja hasta la factura y es lo que descuenta la existencia: sin sku el item se factura contra un genérico y el inventario no se mueve. Vacío solo para mano de obra o items escritos a mano.' },
               esServicio: { type: 'boolean', default: false, description: 'true = mano de obra / servicio (no toca inventario, no lleva sku).' },
             },
             required: ['nombre', 'precio'],

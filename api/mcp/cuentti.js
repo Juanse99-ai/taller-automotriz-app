@@ -676,7 +676,7 @@ function buildCotizacionPayload(c) {
 const tools = [
   {
     name: 'estado_cuentti',
-    description: 'Diagnostico de la conexion con Cuentti: prueba el token, devuelve company/branch/employee configurados.',
+    description: 'Diagnóstico de la conexión con Cuentti: prueba el token y devuelve la empresa, sucursal y empleado configurados. No modifica nada; úsalo cuando otra herramienta de Cuentti falle por autenticación o conexión.',
     inputSchema: { type: 'object', properties: {} },
     handler: async () => {
       if (!CONFIG.token) return `❌ CUENTTI_TOKEN no configurado en el servidor.`
@@ -748,13 +748,13 @@ const tools = [
   },
   {
     name: 'listar_inventario_cuentti',
-    description: 'Lista o BUSCA productos del inventario de Cuentti. Con `filtro` recorre TODAS las paginas (el inventario son ~3.400 productos en 4 paginas de 1000), asi que no hay que ir pagina por pagina para encontrar algo. Sin `filtro` devuelve una pagina suelta e indica si quedan mas. Devuelve nombre, SKU, precio con IVA y existencias.',
+    description: 'Lista o busca productos del inventario de Cuentti. Con filtro busca el texto en nombre, SKU y código de barras de todo el inventario y devuelve solo las coincidencias; sin filtro devuelve una página (Cuentti pagina de a 1000) e indica si quedan más. Cada fila trae SKU, nombre, precio con IVA, existencias y porcentaje de IVA. Para un SKU o código de barras exacto usa buscar_producto_sku_cuentti.',
     inputSchema: {
       type: 'object',
       properties: {
         pagina: { type: 'integer', minimum: 0, default: 0, description: 'Numero de pagina (0 = primera). Se ignora si mandas filtro: ese busca en todo el inventario.' },
         limit: { type: 'integer', minimum: 1, maximum: 100, default: 50, description: 'Cuantos mostrar (default 50).' },
-        filtro: { type: 'string', description: 'Busca este texto en nombre/SKU/codigo de barras a lo largo de TODAS las paginas.' },
+        filtro: { type: 'string', description: 'Texto a buscar en nombre, SKU o código de barras; recorre todo el inventario.' },
       },
     },
     handler: async ({ pagina = 0, limit = 50, filtro }) => {
@@ -826,7 +826,7 @@ const tools = [
   },
   {
     name: 'buscar_producto_sku_cuentti',
-    description: 'Busca un producto especifico por SKU o codigo de barras en Cuentti.',
+    description: 'Busca un producto en Cuentti por SKU o código de barras exacto. Devuelve id_producto, SKU, código de barras, nombre, precio sin IVA, porcentaje de IVA, precio final y existencias. Para buscar por nombre o por parte del código usa listar_inventario_cuentti con filtro.',
     inputSchema: {
       type: 'object',
       properties: { sku: { type: 'string', description: 'SKU o codigo de barras' } },
@@ -861,10 +861,10 @@ const tools = [
   },
   {
     name: 'obtener_url_documento_cuentti',
-    description: 'Obtiene la URL/QR del documento (factura/remision) por id_transacion.',
+    description: 'Devuelve la URL pública (PDF y QR) de un documento de Cuentti a partir de su id_transacion: el id interno que devuelven facturar, facturar_directo, crear_cotizacion_cuentti y registrar_compra, no el número impreso en el documento. Sirve para facturas, cotizaciones, remisiones y egresos. Responde con el JSON crudo de Cuentti.',
     inputSchema: {
       type: 'object',
-      properties: { idTransacion: { type: ['string', 'number'], description: 'id_transacion' } },
+      properties: { idTransacion: { type: ['string', 'number'], description: 'id_transacion del documento (el id interno de Cuentti, no el número impreso).' } },
       required: ['idTransacion'],
     },
     handler: async ({ idTransacion }) => {
@@ -1056,17 +1056,17 @@ const tools = [
   },
   {
     name: 'facturar',
-    description: 'Factura una OT (OT-...) o cotizacion (COT-...) QUE YA EXISTE en el taller. Solo lee de Supabase: no sirve para facturar items sueltos. OJO: si te piden facturar algo que no viene de una OT/cotizacion (ej. una venta de mostrador), usa facturar_directo — NO inventes una cotizacion en el taller solo para poder facturarla. Por defecto hace DRY-RUN; confirm:true para emitir. Anti-duplicado: avisa si la OT ya fue facturada. Para factura electronica DIAN usa resolucion:"FEIC" y emitirFE:true. Tras facturar, marca la OT/cotizacion en Supabase con el id_transacion.',
+    description: 'Factura en Cuentti una OT (OT-…) o cotización (COT-…) que ya existe en el taller, leyendo sus items de Supabase. Para una venta sin OT ni cotización (mostrador) usa facturar_directo. Si la OT ya tiene factura la bloquea; permitirDuplicado:true crea un duplicado real. Con resolucion:FEIC y emitirFE:true la transmite a la DIAN. Al emitir guarda el id_transacion en la OT o marca la cotización como Facturada. Dry-run por defecto; confirm:true emite.',
     inputSchema: {
       type: 'object',
       properties: {
         origen: { type: 'string', description: 'ID o codigo de la OT (ej OT-0001) o de la cotizacion (ej COT-abc123) a facturar.' },
         // SIN default: decide si la factura se reporta a la DIAN. Suponerlo es
         // tan grave como suponer el medio de pago.
-        resolucion: { type: 'string', enum: ['MAS', 'FEIC'], description: 'OBLIGATORIO. FEIC = factura electronica (se reporta a la DIAN); MAS = factura interna (NO va a la DIAN). NO tiene default: si no lo sabes, PREGUNTA.' },
+        resolucion: { type: 'string', enum: ['MAS', 'FEIC'], description: 'FEIC = factura electrónica: con emitirFE:true se transmite a la DIAN y ya no se deshace (corregirla cuesta nota crédito). MAS = factura interna, no va a la DIAN. Es una decisión del negocio sin valor por defecto: si el usuario no la dijo, pregúntale en vez de suponerla.' },
         // SIN default: ver facturar_directo. Un default silencioso aqui emitio
         // una FEIC por transferencia como si fuera efectivo.
-        metodoPago: { type: 'string', enum: ['efectivo', 'transferencia', 'credito'], description: 'OBLIGATORIO. Como se pago de verdad: efectivo | transferencia | credito. NO tiene default: si no lo sabes, PREGUNTA antes de facturar. Queda en la factura y no se puede corregir despues.' },
+        metodoPago: { type: 'string', enum: ['efectivo', 'transferencia', 'credito'], description: 'Cómo se pagó de verdad. efectivo entra a Caja General, transferencia a Bancolombia y credito deja la factura como cartera sin pago. Queda en la factura y no se puede corregir después (en una FEIC toca nota crédito), así que si el usuario no lo dijo, pregúntale en vez de suponerlo.' },
         idMedioPago: { type: 'integer', description: 'Override del id_medio_pago de Cuentti. Por defecto se deriva de metodoPago: efectivo=1, transferencia=7.' },
         idBanco: { type: 'integer', description: 'Override del id_banco (1=Caja General, 2=Bancolombia, 3=Nequi). Por defecto se deriva de metodoPago.' },
         emitirFE: { type: 'boolean', description: 'Si resolucion=FEIC, emite ante la DIAN tras crear la factura.' },
@@ -1218,7 +1218,7 @@ const tools = [
   },
   {
     name: 'facturar_directo',
-    description: 'Factura DIRECTO en Cuentti a partir de los items, sin pasar por el taller. Es para ventas de mostrador: vender 2 llantas no es un flujo cotizacion->aprobacion->factura. Usa esto en vez de inventar una cotizacion en el taller solo para poder facturarla (la tool facturar solo sabe facturar una OT/COT que ya exista). NO crea ni toca nada en Supabase: la venta queda solo en Cuentti. El precio de cada item va CON IVA incluido. Pon el sku de cada repuesto o el inventario NO se descuenta. Dry-run por defecto; confirm:true para emitir.',
+    description: 'Factura en Cuentti directamente desde una lista de items, para ventas de mostrador que no pasan por OT ni cotización. No crea ni modifica nada en el taller (Supabase): la venta queda solo en Cuentti, así que conserva el id_transacion que devuelve. El precio de cada item va con IVA incluido. Cada repuesto necesita su sku de Cuentti para descontar inventario; sin sku se factura contra un genérico y el stock no se mueve. Con resolucion:FEIC y emitirFE:true se transmite a la DIAN. Dry-run por defecto; confirm:true emite.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -1243,11 +1243,11 @@ const tools = [
           },
         },
         // SIN default: decide si la factura se reporta a la DIAN.
-        resolucion: { type: 'string', enum: ['MAS', 'FEIC'], description: 'OBLIGATORIO. FEIC = factura electronica (se reporta a la DIAN); MAS = factura interna (NO va a la DIAN). NO tiene default: si no lo sabes, PREGUNTA.' },
+        resolucion: { type: 'string', enum: ['MAS', 'FEIC'], description: 'FEIC = factura electrónica: con emitirFE:true se transmite a la DIAN y ya no se deshace (corregirla cuesta nota crédito). MAS = factura interna, no va a la DIAN. Es una decisión del negocio sin valor por defecto: si el usuario no la dijo, pregúntale en vez de suponerla.' },
         // SIN default a proposito: un default silencioso ya facturo una venta
         // por transferencia como efectivo, y con CUFE emitido eso no se edita
         // (toca nota credito + reemision). Preguntar siempre.
-        metodoPago: { type: 'string', enum: ['efectivo', 'transferencia', 'credito'], description: 'OBLIGATORIO. Como se pago de verdad: efectivo | transferencia | credito. NO tiene default: si no lo sabes, PREGUNTA antes de facturar. Queda en la factura y no se puede corregir despues.' },
+        metodoPago: { type: 'string', enum: ['efectivo', 'transferencia', 'credito'], description: 'Cómo se pagó de verdad. efectivo entra a Caja General, transferencia a Bancolombia y credito deja la factura como cartera sin pago. Queda en la factura y no se puede corregir después (en una FEIC toca nota crédito), así que si el usuario no lo dijo, pregúntale en vez de suponerlo.' },
         idMedioPago: { type: 'integer', description: 'Override. Por defecto se deriva de metodoPago: efectivo=1, transferencia=7, credito=0.' },
         idBanco: { type: 'integer', description: 'Override. 1=Caja General, 2=Bancolombia, 3=Nequi. Por defecto se deriva de metodoPago.' },
         emitirFE: { type: 'boolean', default: false, description: 'Si resolucion=FEIC, emite ante la DIAN tras crear la factura.' },
@@ -1352,7 +1352,7 @@ const tools = [
   },
   {
     name: 'crear_cotizacion_cuentti',
-    description: 'Crea una COTIZACION real en Cuentti (tipoDocumento=5, verificado: PDF muestra "Documento de Cotizacion #N" con botones Aprobar/Rechazar). Recibe el cliente y los items directamente (no lee de Supabase). El precio_venta de cada item es SIN IVA. Dry-run por defecto; pasa confirm:true para emitir de verdad y obtener el PDF.',
+    description: 'Crea una cotización en Cuentti con el cliente y los items que le pases; no lee nada del taller ni crea nada en Supabase. El cliente recibe un PDF de cotización con botones Aprobar y Rechazar. El precio_venta de cada item va sin IVA. Si el cliente no existe en Cuentti lo crea por identificación. Dry-run por defecto; confirm:true la emite y devuelve el enlace al PDF.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -1381,7 +1381,7 @@ const tools = [
         },
         nota: { type: 'string', default: '' },
         observacion: { type: 'string', default: '' },
-        tipoDocumento: { type: 'integer', default: 5, description: 'Tipo de documento Cuentti. Default 5=Cotizacion (verificado). Otros: 1=Factura, 2=PlanSepare, 4=Pedido, 7=Egreso, 9=Remision.' },
+        tipoDocumento: { type: 'integer', default: 5, description: 'Tipo de documento Cuentti. 5 = Cotización (default). Otros: 1 = Factura, 2 = Plan separe, 4 = Pedido, 7 = Egreso, 9 = Remisión.' },
         idConsecutivo: { type: 'integer', default: 1, description: 'Override del id_consecutivo (default 1).' },
         confirm: { type: 'boolean', default: false, description: 'true = enviar a Cuentti; false (default) = dry-run' },
       },
@@ -1456,7 +1456,7 @@ const tools = [
   },
   {
     name: 'crear_producto',
-    description: 'Crea un producto nuevo en Cuentti (envuelve grabraProductoMovil). Por defecto: repuesto que MANEJA inventario (es_servicio=0, existencias>=0) con IVA 19% (idImpuesto=5). Para servicios pasa esServicio:true. dry-run por defecto; pasa confirm:true para crear de verdad.',
+    description: 'Crea un producto nuevo en Cuentti. Por defecto es un repuesto que maneja inventario, con las existencias iniciales que le pases e IVA 19%; para un servicio sin stock pasa esServicio:true. No revisa si ya existe un producto con ese SKU: búscalo antes con buscar_producto_sku_cuentti para no duplicarlo. Dry-run por defecto; confirm:true lo crea y devuelve el id_producto.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -1497,7 +1497,10 @@ const tools = [
     description: 'Busca el SKU interno de Cuentti equivalente a un codigo de proveedor (tabla compras_equivalencias). Sirve para emparejar items de facturas de compra.',
     inputSchema: {
       type: 'object',
-      properties: { proveedorNit: { type: 'string' }, codigoProveedor: { type: 'string' } },
+      properties: {
+        proveedorNit: { type: 'string', description: 'NIT del proveedor, en la misma forma en que se guardó la equivalencia (la comparación es exacta).' },
+        codigoProveedor: { type: 'string', description: 'Código del producto tal como aparece en la factura del proveedor.' },
+      },
       required: ['proveedorNit', 'codigoProveedor'],
     },
     handler: async ({ proveedorNit, codigoProveedor }) => {
@@ -1514,12 +1517,12 @@ const tools = [
     inputSchema: {
       type: 'object',
       properties: {
-        proveedorNit: { type: 'string' },
-        proveedorNombre: { type: 'string', default: '' },
-        codigoProveedor: { type: 'string' },
-        skuCuentti: { type: 'string' },
-        idProductoCuentti: { type: 'string', default: '' },
-        nombreProducto: { type: 'string', default: '' },
+        proveedorNit: { type: 'string', description: 'NIT del proveedor. Usa siempre la misma forma (con o sin dígito de verificación) para que buscar_equivalencia y emparejar_items la encuentren.' },
+        proveedorNombre: { type: 'string', default: '', description: 'Nombre del proveedor (opcional, informativo).' },
+        codigoProveedor: { type: 'string', description: 'Código del producto en la factura del proveedor.' },
+        skuCuentti: { type: 'string', description: 'SKU del producto en Cuentti al que equivale.' },
+        idProductoCuentti: { type: 'string', default: '', description: 'id_producto en Cuentti (opcional).' },
+        nombreProducto: { type: 'string', default: '', description: 'Nombre del producto en Cuentti (opcional).' },
       },
       required: ['proveedorNit', 'codigoProveedor', 'skuCuentti'],
     },
@@ -1542,18 +1545,20 @@ const tools = [
   },
   {
     name: 'emparejar_items',
-    description: 'Empareja los items de una factura de compra con productos de Cuentti. Por cada item busca primero la equivalencia guardada (proveedor+codigo) y luego el SKU exacto en Cuentti. Clasifica en "coinciden" y "nuevos". El emparejamiento por nombre (difuso) de los nuevos lo hace Claude.',
+    description: 'Empareja los items de una factura de compra con productos de Cuentti. Por cada item busca primero la equivalencia guardada (proveedor+codigo) y luego el SKU exacto en Cuentti. Clasifica en "coinciden" y "nuevos". Los que no coinciden por código quedan como nuevos, para emparejarlos por nombre a mano o crearlos con crear_producto y guardar la equivalencia.',
     inputSchema: {
       type: 'object',
       properties: {
-        proveedorNit: { type: 'string' },
+        proveedorNit: { type: 'string', description: 'NIT del proveedor, en la misma forma en que se guardaron sus equivalencias.' },
         items: {
           type: 'array',
+          description: 'Items de la factura de compra tal como vienen del proveedor.',
           items: {
             type: 'object',
             properties: {
-              codigo: { type: 'string' }, descripcion: { type: 'string' },
-              cantidad: { type: 'number' }, costo: { type: 'number' }, iva: { type: 'number' },
+              codigo: { type: 'string', description: 'Código del producto en la factura del proveedor; con él se busca la equivalencia guardada y luego el SKU exacto en Cuentti.' },
+              descripcion: { type: 'string', description: 'Descripción del item en la factura.' },
+              cantidad: { type: 'number' }, costo: { type: 'number', description: 'Costo unitario sin IVA.' }, iva: { type: 'number', description: 'Porcentaje de IVA.' },
             },
           },
         },
@@ -1592,7 +1597,7 @@ const tools = [
   },
   {
     name: 'registrar_gasto',
-    description: 'Registra un GASTO (egreso) en Cuentti contra una cuenta del plan contable. Es para lo que NO es autoparte y NO toca inventario: servicios comprados a otro taller, arriendo, comisiones, nomina, etc. (a diferencia de registrar_compra, que suma inventario). Usa el mismo motor probado del gasto de nomina: tipoDocumento=7 con id_producto=0 + id_plan_cuentas. El monto va CON IVA INCLUIDO; si pasas iva>0 se desglosa la base automaticamente. Dry-run por defecto: pasa confirm:true para grabar.',
+    description: 'Registra un gasto (egreso) en Cuentti contra una cuenta del plan contable: servicios comprados a otro taller, arriendo, comisiones, nómina y todo lo que no es autoparte. No toca inventario; para compras de repuestos que sí suman existencias usa registrar_compra. El monto va con IVA incluido y con iva>0 se desglosa la base. El proveedor se busca en Cuentti por NIT antes de grabar; si no existe se aborta, salvo crearProveedor:true. Bloquea el registro si ya existe un gasto con el mismo proveedor y número de factura (permitirDuplicado:true lo deja pasar). Guarda una bitácora con el id_transacion para poder anularlo después. Dry-run por defecto; confirm:true graba.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -1610,7 +1615,7 @@ const tools = [
         nota: { type: 'string', default: '', description: 'Nota del documento. Si se omite se usa el numeroFactura.' },
         // SIN default: decide contra que caja/banco entra el egreso, o sea el
         // cierre de caja. El codigo no puede saberlo.
-        metodoPago: { type: 'string', enum: ['efectivo', 'transferencia'], description: 'OBLIGATORIO. Como se pago de verdad: efectivo | transferencia. NO tiene default: si no lo sabes, PREGUNTA. Decide contra que caja/banco entra el egreso.' },
+        metodoPago: { type: 'string', enum: ['efectivo', 'transferencia'], description: 'Cómo se pagó de verdad: efectivo sale de Caja General, transferencia de Bancolombia. Decide contra qué caja o banco entra el egreso y afecta el cierre de caja, así que si el usuario no lo dijo, pregúntale en vez de suponerlo.' },
         fecha: { type: 'string', description: 'YYYY-MM-DD (default: hoy)' },
         confirm: { type: 'boolean', default: false, description: 'true = grabar en Cuentti; false (default) = dry-run' },
         permitirDuplicado: { type: 'boolean', default: false, description: 'true = registrar aunque ya exista un gasto con ese proveedor+numeroFactura. Default false (bloquea duplicados).' },
@@ -1709,7 +1714,7 @@ const tools = [
   },
   {
     name: 'registrar_compra',
-    description: 'Registra una factura de COMPRA (egreso) en Cuentti vía grabarFacturaSimple. Verificado con Cuentti: tipoDocumento=7, id_consecutivo=1, el costo de cada item va en precio_venta (base sin IVA). Suma inventario y actualiza costo. El proveedor se BUSCA en Cuentti por NIT antes de grabar; si no existe se aborta (no se crea en silencio) salvo crearProveedor:true. dry-run por defecto; pasa confirm:true para registrar de verdad.',
+    description: 'Registra una factura de compra (egreso) en Cuentti: suma las cantidades al inventario y actualiza el costo de cada producto. Usar cuando los items ya están emparejados con productos de Cuentti (sku o id_producto, ver emparejar_items); el costo de cada item va sin IVA. El proveedor se busca en Cuentti por NIT antes de grabar; si no existe se aborta, salvo crearProveedor:true. Bloquea la factura si ya se registró una con el mismo proveedor y número (permitirDuplicado:true la deja pasar). Si pasas fecha, el documento queda con la fecha real de la factura. Dry-run por defecto; confirm:true registra.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -1730,8 +1735,8 @@ const tools = [
             },
           },
         },
-        tipoDocumento: { type: 'integer', default: 7, description: '7 = egreso/compra (hipotesis)' },
-        idConsecutivo: { type: 'integer', description: 'Resolucion/consecutivo del egreso. PENDIENTE de confirmar con Cuentti.' },
+        tipoDocumento: { type: 'integer', default: 7, description: 'Tipo de documento Cuentti. 7 = egreso/compra (default).' },
+        idConsecutivo: { type: 'integer', default: 1, description: 'Consecutivo del egreso en Cuentti (default 1).' },
         aCredito: { type: 'boolean', default: true, description: 'true = cuenta por pagar (sin pago inmediato)' },
         idMedioPago: { type: 'integer' },
         idBanco: { type: 'integer' },
@@ -1838,7 +1843,7 @@ const tools = [
     inputSchema: {
       type: 'object',
       properties: {
-        idTransacion: { type: ['string', 'number'] },
+        idTransacion: { type: ['string', 'number'], description: 'id_transacion del documento (el id interno de Cuentti, no el número impreso).' },
         fecha: { type: 'string', description: 'Nueva fecha del documento en YYYY-MM-DD' },
         confirm: { type: 'boolean', description: 'true = aplicar; false (default) = dry-run' },
       },
@@ -1894,11 +1899,11 @@ const tools = [
   },
   {
     name: 'anular_transaccion',
-    description: 'Anula una transaccion en Cuentti por id_transacion (sirve para deshacer una compra/venta/prueba). dry-run por defecto; confirm:true para anular.',
+    description: 'Anula un documento de Cuentti (factura, cotización, compra o gasto) por su id_transacion. Es la forma de deshacer un documento ya emitido: la resolución (MAS o FEIC) no se cambia, hay que anular y volver a emitir. Si el documento estaba en la bitácora de gastos lo marca como anulado para que deje de contar en el anti-duplicado. Dry-run por defecto; confirm:true anula.',
     inputSchema: {
       type: 'object',
       properties: {
-        idTransacion: { type: ['string', 'number'] },
+        idTransacion: { type: ['string', 'number'], description: 'id_transacion del documento (el id interno de Cuentti, no el número impreso).' },
         observacion: { type: 'string', default: '' },
         confirm: { type: 'boolean' },
       },
