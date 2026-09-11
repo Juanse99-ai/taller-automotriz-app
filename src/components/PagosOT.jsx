@@ -1,6 +1,9 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { fmt, fmtDate, hoyISO } from '../utils/helpers'
 import { fetchPagos, fetchSaldoTrabajo, crearPago, borrarPago, sincronizarPagos } from '../services/supabase'
+import { registrarAbonoCuentti } from '../services/cuentti'
+import { getSession } from '../services/auth'
+import { SIN_FACTURA } from '../utils/constants'
 import MoneyInput from './MoneyInput'
 import { Button } from './ui'
 
@@ -16,6 +19,10 @@ import { Button } from './ui'
 //             lista de OTs (que lee trabajos.pagado) se entere
 //   onCambio  () => void      tras registrar o borrar un abono (Cartera recarga)
 const METODOS = [['efectivo', 'Efectivo'], ['transferencia', 'Transferencia'], ['wompi', 'Wompi'], ['otro', 'Otro']]
+// Con factura en Cuentti el abono se registra ALLA, y Cuentti necesita saber a
+// que caja o banco entra la plata (efectivo = Caja General, la del cierre).
+const METODOS_CUENTTI = [['efectivo', 'Efectivo · Caja General'], ['transferencia', 'Transferencia · Bancolombia'], ['nequi', 'Nequi']]
+const nuevaClave = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8)
 const METODO_ROTULO = { efectivo: 'Efectivo', transferencia: 'Transferencia', credito: 'Crédito', wompi: 'Wompi', otro: 'Otro' }
 const ESTADO = {
   pagado: ['PAGADA', 'hd-chip--ok'],
@@ -34,6 +41,10 @@ export default function PagosOT({ trabajo, notify, onPagado, onCambio }) {
   const [guardando, setGuardando] = useState(false)
   const [confirmando, setConfirmando] = useState(null) // id del abono a borrar
   const [sincronizando, setSincronizando] = useState(false)
+  // Orden facturada: el abono se registra en Cuentti (solo el admin) y vuelve.
+  const enCuentti = !!trabajo?.cuenttiTransacionId && trabajo.cuenttiTransacionId !== SIN_FACTURA
+  const esAdmin = getSession()?.rol === 'admin'
+  const claveRef = useRef(null)   // una por abono; la misma si se reintenta
 
   const cargar = useCallback(async () => {
     if (!id) return null
@@ -90,11 +101,18 @@ export default function PagosOT({ trabajo, notify, onPagado, onCambio }) {
     if (monto > falta + 1) { notify?.(`El abono supera el saldo (${fmt(falta)})`, 'error'); return }
     setGuardando(true)
     try {
-      await crearPago({ trabajoId: id, monto, fecha: form.fecha || hoyISO(), metodo: form.metodo, nota: form.nota })
+      if (enCuentti) {
+        if (!claveRef.current) claveRef.current = nuevaClave()
+        await registrarAbonoCuentti({ trabajoId: id, monto, fecha: form.fecha || hoyISO(), metodo: form.metodo, nota: form.nota, clave: claveRef.current })
+        claveRef.current = null
+      } else {
+        await crearPago({ trabajoId: id, monto, fecha: form.fecha || hoyISO(), metodo: form.metodo, nota: form.nota })
+      }
       setForm(formVacio()); setAbriendo(false)
       const s = await cargar()
       const quedaPagada = s ? s.estado_pago === 'pagado' : monto >= falta - 1
-      notify?.(quedaPagada ? 'Abono registrado: la orden queda pagada' : `Abono de ${fmt(monto)} registrado`, 'success')
+      const donde = enCuentti ? ' en Cuentti' : ''
+      notify?.(quedaPagada ? `Abono registrado${donde}: la orden queda pagada` : `Abono de ${fmt(monto)} registrado${donde}`, 'success')
       if (quedaPagada) onPagado?.(true)
       onCambio?.()
     } catch (e) {
@@ -163,13 +181,15 @@ export default function PagosOT({ trabajo, notify, onPagado, onCambio }) {
         </ul>
       )}
 
-      {falta > 0 && !abriendo && (
+      {falta > 0 && !abriendo && (enCuentti && !esAdmin ? (
+        <div className="pg__vacio">Los abonos de órdenes facturadas los registra el administrador.</div>
+      ) : (
         <div className="pg__pie">
-          <Button variant="outline" size="sm" onClick={() => setAbriendo(true)}>Registrar abono</Button>
+          <Button variant="outline" size="sm" onClick={() => { claveRef.current = nuevaClave(); setAbriendo(true) }}>Registrar abono</Button>
         </div>
-      )}
+      ))}
 
-      {falta > 0 && abriendo && (
+      {falta > 0 && abriendo && (!enCuentti || esAdmin) && (
         <div className="pg__form">
           <div className="field">
             <label>Monto (saldo {fmt(falta)})</label>
@@ -182,7 +202,7 @@ export default function PagosOT({ trabajo, notify, onPagado, onCambio }) {
           <div className="field">
             <label>Método</label>
             <select className="input" value={form.metodo} onChange={e => setForm(f => ({ ...f, metodo: e.target.value }))}>
-              {METODOS.map(([k, l]) => <option key={k} value={k}>{l}</option>)}
+              {(enCuentti ? METODOS_CUENTTI : METODOS).map(([k, l]) => <option key={k} value={k}>{l}</option>)}
             </select>
           </div>
           <div className="field">
@@ -190,7 +210,8 @@ export default function PagosOT({ trabajo, notify, onPagado, onCambio }) {
             <input className="input" value={form.nota} onChange={e => setForm(f => ({ ...f, nota: e.target.value }))} placeholder="Ej: recibido en caja" />
           </div>
           <div className="pg__acc">
-            <Button variant="outline" size="sm" onClick={() => { setAbriendo(false); setForm(formVacio()) }} disabled={guardando}>Cancelar</Button>
+            {enCuentti && <span className="pg__hint">Queda registrado también en Cuentti</span>}
+            <Button variant="outline" size="sm" onClick={() => { setAbriendo(false); setForm(formVacio()); claveRef.current = null }} disabled={guardando}>Cancelar</Button>
             <Button variant="primary" size="sm" onClick={guardar} disabled={guardando}>{guardando ? 'Guardando…' : 'Guardar abono'}</Button>
           </div>
         </div>

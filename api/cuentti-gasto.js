@@ -8,6 +8,7 @@
 // Requiere en Vercel (Sensitive): CUENTTI_USER (email) y CUENTTI_PASS (clave).
 
 import { login, enviarGasto, TIPO_PERSONA_NATURAL } from './_lib/gasto.js'
+import { sesionDeLaPeticion } from './_lib/sesion.js'
 
 const ALLOWED_ORIGINS = [
   'https://taller-multias.vercel.app',
@@ -42,8 +43,15 @@ export default async function handler(req, res) {
   const origin = req.headers.origin || ''
   res.setHeader('Access-Control-Allow-Origin', ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[1])
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS')
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type')
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-Sesion')
   if (req.method === 'OPTIONS') { res.status(200).end(); return }
+
+  // Graba plata en Cuentti con las credenciales del negocio: solo con sesion de
+  // admin (la nomina es suya). Antes el POST y el GET de prueba (que ademas
+  // devolvia el inicio del token) respondian a cualquiera.
+  const ses = sesionDeLaPeticion(req)
+  if (!ses) { res.status(401).json({ ok: false, error: 'Sesion requerida' }); return }
+  if (ses.r !== 'admin') { res.status(403).json({ ok: false, error: 'Solo el administrador' }); return }
 
   // Modo prueba: GET → solo hace login y confirma que consiguió el token (NO graba gasto).
   if (req.method === 'GET') {

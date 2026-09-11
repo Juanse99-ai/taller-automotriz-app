@@ -1,4 +1,5 @@
 import { RESOLUCIONES } from '../utils/constants'
+import { getToken, haySesion, avisarSesionVencida } from './auth'
 
 // Configuracion de Cuentti
 //
@@ -50,7 +51,9 @@ const CONFIG = {
 // Headers de la peticion al proxy. NO llevan credenciales a proposito: el proxy
 // las inyecta en el servidor e ignora las que mande el navegador.
 function buildHeaders() {
-  return { 'Content-Type': 'application/json' }
+  // La sesion de la app: el proxy ya no deja pasar a nadie sin ella.
+  const t = getToken()
+  return t ? { 'Content-Type': 'application/json', 'X-Sesion': t } : { 'Content-Type': 'application/json' }
 }
 
 // Request generico al proxy de Cuentti
@@ -83,6 +86,8 @@ export function errorDeCuentti(data) {
 }
 
 async function cuenttiRequest(endpoint, method = 'GET', body = null, timeout = CONFIG.timeout) {
+  // Sin sesion el proxy responde 401 a todo: ni se sale a la red.
+  if (!haySesion()) { const e = new Error('No hay sesion iniciada'); e.sinSesion = true; throw e }
   const url = `${CONFIG.baseUrl}?path=${encodeURIComponent(endpoint)}`
   const headers = buildHeaders()
 
@@ -95,6 +100,8 @@ async function cuenttiRequest(endpoint, method = 'GET', body = null, timeout = C
   try {
     const res = await fetch(url, { ...opts, signal: controller.signal })
     clearTimeout(timer)
+    // 401 con token puesto = la sesion dejo de valer: a la pantalla de entrada.
+    if (res.status === 401) avisarSesionVencida()
     if (!res.ok) {
       const errText = await res.text()
       let parsed = null
@@ -228,7 +235,7 @@ export async function registrarGastoNomina(opts = {}) {
 export async function registrarGastoNominaBackend({ proveedorId, proveedorCedula, proveedorNombre, monto, idMedioPago = 1, idBanco = 1, nota = '', aCredito = false, idemKey = '' }) {
   const res = await fetch('/api/cuentti-gasto', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: buildHeaders(),
     body: JSON.stringify({ proveedorId, proveedorCedula, proveedorNombre, monto, idMedioPago, idBanco, nota, aCredito, idemKey }),
   })
   const data = await res.json().catch(() => null)
@@ -242,7 +249,9 @@ export async function registrarGastoNominaBackend({ proveedorId, proveedorCedula
 // Headers que manda el navegador. Ya no hay token que enmascarar aqui: las
 // credenciales las pone el proxy en el servidor y nunca llegan al bundle.
 export function getCuenttiDebugHeaders() {
-  return { ...buildHeaders(), 'Authorization': '(lo pone el servidor: CUENTTI_TOKEN)' }
+  const h = { ...buildHeaders(), 'Authorization': '(lo pone el servidor: CUENTTI_TOKEN)' }
+  if (h['X-Sesion']) h['X-Sesion'] = '(la sesión de la app)'
+  return h
 }
 
 // ---------- CLIENTES ----------
@@ -942,3 +951,20 @@ export async function grabarProductoMovil(producto) {
 }
 
 export { CONFIG as cuenttiConfig }
+
+// Registra un abono en la factura de Cuentti de la orden; el servidor lo baja
+// despues a `pagos`. `clave` identifica ESTE abono: si la respuesta se pierde y
+// se reintenta con la misma clave, el servidor lo encuentra en Cuentti y no lo
+// registra dos veces.
+export async function registrarAbonoCuentti({ trabajoId, monto, fecha, metodo, nota = '', clave }) {
+  if (!haySesion()) throw new Error('No hay sesion iniciada')
+  const res = await fetch('/api/cuentti?abono=1', {
+    method: 'POST',
+    headers: buildHeaders(),
+    body: JSON.stringify({ trabajoId, monto, fecha, metodo, nota, clave }),
+  })
+  if (res.status === 401) avisarSesionVencida()
+  const data = await res.json().catch(() => null)
+  if (!res.ok || !data?.ok) throw new Error(data?.error || `Error ${res.status}`)
+  return data
+}

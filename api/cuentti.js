@@ -1,4 +1,6 @@
 import crypto from 'node:crypto';
+import { sesionDeLaPeticion } from './_lib/sesion.js';
+import { registrarAbonoEnCuentti } from './_lib/cuentti.js';
 
 const ALLOWED_ORIGINS = [
   'https://taller-multias.vercel.app',
@@ -40,7 +42,7 @@ export default async function handler(req, res) {
   const origin = getCorsOrigin(req.headers.origin || '');
   res.setHeader('Access-Control-Allow-Origin', origin);
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-api-key, x-auth-token, x-auth-token-api, x-auth-token-empresa, x-id-sucursal, x-id-empleado, x-gtm, X-Auth-Token-id-usuario, token, X-Auth-Token-usuario, usuario');
+  res.setHeader('Access-Control-Allow-Headers', 'x-sesion, Content-Type, Authorization, x-api-key, x-auth-token, x-auth-token-api, x-auth-token-empresa, x-id-sucursal, x-id-empleado, x-gtm, X-Auth-Token-id-usuario, token, X-Auth-Token-usuario, usuario');
 
   if (req.method === 'OPTIONS') { res.status(200).end(); return; }
 
@@ -207,6 +209,27 @@ export default async function handler(req, res) {
       return;
     }
   }
+
+  // === Abono desde la app: se registra en la factura de Cuentti y vuelve a `pagos` ===
+  // Solo el admin: es plata que entra a la contabilidad (caja o banco).
+  if (req.query.abono === '1') {
+    if (req.method !== 'POST') { res.status(405).json({ ok: false, error: 'Solo POST' }); return; }
+    const ses = sesionDeLaPeticion(req);
+    if (!ses) { res.status(401).json({ ok: false, error: 'Sesion requerida' }); return; }
+    if (ses.r !== 'admin') { res.status(403).json({ ok: false, error: 'Solo el administrador registra abonos en Cuentti' }); return; }
+    const b = req.body || {};
+    const r = await registrarAbonoEnCuentti({ trabajoId: b.trabajoId, monto: b.monto, fecha: b.fecha, metodo: b.metodo, nota: b.nota, clave: b.clave });
+    res.status(r.status).json(r.body);
+    return;
+  }
+
+  // El proxy reenvia con la llave del negocio, asi que sin sesion no pasa nada.
+  // Antes no la pedia: cualquiera con la direccion podia registrar pagos, anular
+  // facturas o facturar en el Cuentti del taller (comprobado el 11/09/2026 con
+  // una ruta inexistente: la peticion sin sesion llegaba hasta Cuentti).
+  // Wompi (firma y webhook) va arriba y no pasa por aqui: la firma la pide el
+  // portal publico y el webhook lo firma Wompi.
+  if (!sesionDeLaPeticion(req)) { res.status(401).json({ error: 'Sesion requerida' }); return; }
 
   try {
     const path = req.query.path || '';

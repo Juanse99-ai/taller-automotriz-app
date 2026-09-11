@@ -8,6 +8,7 @@ const ALLOWED_ORIGINS = [
 import { sesionDeLaPeticion } from './_lib/sesion.js'
 
 import { SUPABASE_URL, SUPABASE_KEY, SUPABASE_HEAD } from './_lib/supabase.js'
+import { sincronizarConCuentti } from './_lib/cuentti.js'
 
 function getOrigin(reqOrigin = '') {
   if (ALLOWED_ORIGINS.includes(reqOrigin)) return reqOrigin
@@ -32,108 +33,6 @@ const tituloNombre = (n) => String(n || '').trim().split(/\s+/).map(w =>
     ? w.toUpperCase()
     : w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()
 ).join(' ')
-
-// ---- Pagos: los recibos de Cuentti bajan a la tabla `pagos` ----
-// Cuentti es donde se cobra de verdad (mostrador, transferencias). Hasta ahora
-// la app solo se enteraba del TOTAL abonado y lo usaba para marcar pagado; los
-// abonos parciales no quedaban en ninguna parte. Cada recibo de caja de la
-// factura (seccion ComprobanteCaja) se copia UNA vez a `pagos` con su numero de
-// recibo como cuentti_ref: sincronizar dos veces no duplica. Los abonos que se
-// registren a mano en la app conviven en la misma tabla.
-function medioDesdeCuentti(nombre) {
-  const n = String(nombre || '').toLowerCase()
-  if (n.includes('efectivo')) return 'efectivo'
-  if (n.includes('transfer') || n.includes('consigna')) return 'transferencia'
-  if (n.includes('wompi')) return 'wompi'
-  return 'otro'
-}
-// DateKey_hora viene como 20260908120000 (hora del taller); fecha_registro en ms.
-function fechaDesdeCuentti(r) {
-  const k = String(r?.DateKey_hora || r?.DateKey || '')
-  if (/^\d{8}/.test(k)) return `${k.slice(0, 4)}-${k.slice(4, 6)}-${k.slice(6, 8)}`
-  if (r?.fecha_registro) return new Date(Number(r.fecha_registro)).toISOString().slice(0, 10)
-  return new Date().toISOString().slice(0, 10)
-}
-async function consultarCuentti(tx) {
-  // Este endpoint del portal de Cuentti no pide token: basta la empresa.
-  const url = `https://transaciones.cuenti.com/jServerj4ErpPro/com/j4ErpPro/server/transacion/consultarTransacionIdExterno/${encodeURIComponent(tx)}`
-  const d = await fetch(url, { headers: { 'X-Auth-Token-empresa': '11464' } }).then(r => r.json())
-  const seccion = (n) => ((Array.isArray(d) ? d : []).find(x => x.consulta === n) || {}).resultado || []
-  return {
-    enc: seccion('Encabezados')[0] || null,
-    recibos: seccion('ComprobanteCaja').filter(r => r && r.es_activo !== 0 && Number(r.valor) > 0),
-  }
-}
-// Baja a `pagos` los recibos de UNA orden y devuelve lo que dice Cuentti:
-// { pendiente, abonado, nuevos }. null si Cuentti no contesto (nunca se asume
-// nada). Si la tabla `pagos` aun no existe, solo se pierde la copia: el resto
-// (marcar pagado) sigue funcionando como siempre.
-async function bajarPagosCuentti(t) {
-  const tx = String(t.cuentti_id_transacion || '').trim()
-  if (!tx) return null
-  const { enc, recibos } = await consultarCuentti(tx)
-  if (!enc) return null
-  const pendiente = Math.round(Number(enc.total_deuda || 0) - Number(enc.total_abono || 0))
-  const abonado = Math.round(Number(enc.total_abono || 0))
-  let nuevos = 0
-  if (recibos.length) {
-    const refs = recibos.map(r => `cuentti:${r.id_comprobante_caja}`)
-    const ya = await fetch(`${SUPABASE_URL}/rest/v1/pagos?select=cuentti_ref&trabajo_id=eq.${encodeURIComponent(t.id)}&cuentti_ref=in.(${refs.map(encodeURIComponent).join(',')})`,
-      { headers: SUPABASE_HEAD }).then(r => (r.ok ? r.json() : [])).catch(() => [])
-    const tengo = new Set((Array.isArray(ya) ? ya : []).map(x => x.cuentti_ref))
-    const filas = recibos
-      .filter(r => !tengo.has(`cuentti:${r.id_comprobante_caja}`))
-      .map(r => ({
-        trabajo_id: t.id,
-        fecha: fechaDesdeCuentti(r),
-        monto: Math.round(Number(r.valor)),
-        metodo: medioDesdeCuentti(r.nombre_medio_pago),
-        origen: 'cuentti',
-        cuentti_ref: `cuentti:${r.id_comprobante_caja}`,
-        nota: `Recibo ${r.n_caja || r.id_comprobante_caja} de Cuentti${r.nombre_banco ? ` · ${r.nombre_banco}` : ''}`,
-      }))
-    if (filas.length) {
-      const r = await fetch(`${SUPABASE_URL}/rest/v1/pagos`, {
-        method: 'POST',
-        headers: { ...SUPABASE_HEAD, 'Content-Type': 'application/json', Prefer: 'return=minimal' },
-        body: JSON.stringify(filas),
-      }).catch(() => null)
-      if (r && r.ok) nuevos = filas.length
-    }
-  }
-  return { pendiente, abonado, nuevos }
-}
-async function marcarPagada(id) {
-  await fetch(`${SUPABASE_URL}/rest/v1/trabajos?id=eq.${encodeURIComponent(id)}`, {
-    method: 'PATCH',
-    headers: { ...SUPABASE_HEAD, 'Content-Type': 'application/json', Prefer: 'return=minimal' },
-    body: JSON.stringify({ pagado: true }),
-  })
-}
-// De a 5 a la vez: Cuentti tarda ~medio segundo por factura y la cartera tiene
-// decenas; en serie se pasaba del tiempo de espera del navegador.
-async function sincronizarConCuentti(rows) {
-  const marcados = [], saldos = {}, abonos = {}
-  let nuevos = 0, revisadas = 0
-  const lista = Array.isArray(rows) ? rows : []
-  for (let i = 0; i < lista.length; i += 5) {
-    await Promise.all(lista.slice(i, i + 5).map(async (t) => {
-      try {
-        const r = await bajarPagosCuentti(t)
-        if (!r) return // sin datos: se deja como estaba (nunca se asume pagado)
-        revisadas++
-        saldos[t.id] = r.pendiente
-        abonos[t.id] = r.abonado
-        nuevos += r.nuevos
-        if (r.pendiente <= 1) { // <=1 por el redondeo de centavos de Cuentti
-          await marcarPagada(t.id)
-          marcados.push(t.id)
-        }
-      } catch { /* Cuentti caido o lento: se deja como esta */ }
-    }))
-  }
-  return { marcados, saldos, abonos, nuevos, revisadas }
-}
 
 async function servirPortal(req, res) {
   const host = req.headers['x-forwarded-host'] || req.headers.host

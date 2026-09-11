@@ -4071,7 +4071,8 @@ tbody tr:active{background:var(--fill-2)}
 .pg__pie{display:flex;align-items:center;gap:10px;margin-top:12px}
 .pg__form{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px;padding:12px;background:var(--bg-subtle);border-radius:var(--r-md)}
 .pg__form .field{margin:0}
-.pg__acc{display:flex;gap:8px;justify-content:flex-end;grid-column:1/-1}
+.pg__acc{display:flex;gap:8px;justify-content:flex-end;align-items:center;flex-wrap:wrap;grid-column:1/-1}
+.pg__hint{margin-right:auto;font-size:11.5px;color:var(--text-4)}
 .pg__sync{font-size:11px;font-weight:500;letter-spacing:0;text-transform:none;color:var(--text-4)}
 @media(max-width:600px){ .pg__form{grid-template-columns:1fr} .pg__fecha{width:78px} .pg__v{font-size:14px} }
 
