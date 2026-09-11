@@ -422,14 +422,56 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
     }
   }, [trabajosPendientes, compartidos, moMap, TECNICOS])
 
+  // ── Aportes YA COBRADOS ───────────────────────────────────────────────
+  // Un aporte que ya salió en un pago no se puede volver a descontar. Pasó de
+  // verdad: el 9 de sept el MISMO diario de $40.000 (MV-mtt2kkwevot99) se cobró
+  // en dos pagos seguidos de Pedro (LQ-PB260909 y LQ-PB260909-2) y al día
+  // siguiente seguía en la lista para cobrarse una tercera vez. Al pagar, el
+  // movimiento se borra del servidor, pero una copia vieja en otro navegador (o
+  // en otra pestaña abierta) lo resucita: aplicarSyncMovs re-sube el caché local
+  // cuando el servidor viene vacío, y así vuelve a nacer la fila que el pago
+  // acababa de consumir.
+  //
+  // El historial es la prueba de lo ya cobrado y vive en el servidor, así que
+  // manda sobre la lista de pendientes: lo que aparezca ahí no se cobra ni se
+  // muestra, aunque reaparezca.
+  const movsYaCobrados = useMemo(() => {
+    const m = new Map()
+    for (const h of historial) {
+      for (const mv of (h.movimientos || [])) {
+        // 'cuenta' es una fila sintética del PDF, no un movimiento real.
+        if (!mv?.id || mv.tipo === 'cuenta') continue
+        if (!m.has(mv.id)) m.set(mv.id, h.id)
+      }
+    }
+    return m
+  }, [historial])
+  // Lo que de verdad está pendiente. Se usa en TODA la pantalla: si un aporte
+  // resucitado se colara aquí, se descontaría dos veces.
+  const movsVivos = useMemo(() =>
+    movimientos.filter(m => !movsYaCobrados.has(m.id)),
+  [movimientos, movsYaCobrados])
+
+  // Y se limpia el fantasma: si el historial dice que ya se cobró, la fila que
+  // quedó suelta se borra (una vez por id) para que no siga reapareciendo ni
+  // volviendo a subirse al servidor en cada sincronización.
+  const purgados = useRef(new Set())
+  useEffect(() => {
+    for (const m of movimientos) {
+      if (!movsYaCobrados.has(m.id) || purgados.current.has(m.id)) continue
+      purgados.current.add(m.id)
+      hookEliminarMov(m.id)
+    }
+  }, [movimientos, movsYaCobrados, hookEliminarMov])
+
   // Datos del tecnico seleccionado
   const tecData = tecnicoSel ? porTecnico[parseInt(tecnicoSel)] : null
   const tecTrabajos = tecData?.trabajos || []
   const tecMovs = useMemo(() =>
-    movimientos
+    movsVivos
       .filter(m => m.tecnicoId === parseInt(tecnicoSel))
       .sort((a, b) => new Date(b.fecha) - new Date(a.fecha)),
-  [movimientos, tecnicoSel])
+  [movsVivos, tecnicoSel])
 
   // Cuenta del técnico (Estado de cuenta): préstamos/adelantos pendientes.
   // saldo > 0 = el técnico debe. Es el MISMO libro de la pestaña Estado de
@@ -522,7 +564,7 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
     // Cargos por técnico. cargos = bruto (informativo); cargosEf = descuento real
     // al pago (diario 40%, resto 100% — ver cargoEfectivo).
     const cargosBy = {}, cargosEfBy = {}
-    for (const m of movimientos) {
+    for (const m of movsVivos) {
       cargosBy[m.tecnicoId] = (cargosBy[m.tecnicoId] || 0) + (parseFloat(m.monto) || 0)
       cargosEfBy[m.tecnicoId] = (cargosEfBy[m.tecnicoId] || 0) + cargoEfectivo(m)
     }
@@ -546,7 +588,7 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
       // Muestra técnicos activos, PLUS cualquiera (inactivo o eliminado) que aún
       // tenga trabajos pendientes por liquidar, para no dejar comisiones huérfanas.
     }).filter(t => (t.activo !== false && !t.eliminado) || t.pendientes > 0)
-  }, [porTecnico, TECNICOS, movimientos, prestamosHook.movimientos])
+  }, [porTecnico, TECNICOS, movsVivos, prestamosHook.movimientos])
 
   // Total de la nómina (lo que se debe pagar a los técnicos con trabajos pendientes)
   const totalNomina = useMemo(

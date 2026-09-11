@@ -69,7 +69,19 @@ export function useLiquidacion() {
     const cached = lsGet(LS_KEYS.MOVIMIENTOS_TECNICOS, [])
     if (sbMovs.length === 0 && cached.length > 0) {
       // Servidor vacío pero hay local: NO borrar; re-subir (no perder datos).
-      cached.forEach(m => upsertMovimiento(m))
+      // PERO nunca lo que se borró a propósito. Al pagar, el aporte se consume y
+      // se borra de los dos lados; si aquí se re-sube una copia vieja (otra
+      // pestaña que se quedó con el estado de antes del pago), la fila RENACE en
+      // el servidor y el siguiente pago la vuelve a descontar. Pasó de verdad: el
+      // mismo diario de $40.000 se cobró en dos pagos de Pedro el 9 de sept.
+      const tumbados = new Set(getLS(MOV_TOMBS_KEY, []).map(t => t.id))
+      const vivos = cached.filter(m => !tumbados.has(m.id))
+      setLS(MOV_PENDING_KEY, getLS(MOV_PENDING_KEY, []).filter(r => !tumbados.has(r.id)))
+      vivos.forEach(m => upsertMovimiento(m))
+      if (vivos.length !== cached.length) {
+        setMovimientos(vivos)
+        lsSet(LS_KEYS.MOVIMIENTOS_TECNICOS, vivos)
+      }
       return
     }
     const norm = sbMovs.map(normalizarMov)
