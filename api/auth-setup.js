@@ -5,6 +5,7 @@ import bcrypt from 'bcryptjs'
 
 import { SUPABASE_URL, SUPABASE_KEY } from './_lib/supabase.js'
 import { sesionDeLaPeticion } from './_lib/sesion.js'
+import { ROLES_VALIDOS } from './_lib/mecanico.js'
 
 const SB_HEADERS = {
   'apikey': SUPABASE_KEY,
@@ -47,6 +48,11 @@ export default async function handler(req, res) {
   }
 
   const { action, password, usuario, nombre, rol, activo, id } = req.body || {}
+
+  // Un rol desconocido no se guarda: la app le daria acceso por defecto.
+  if (rol !== undefined && !ROLES_VALIDOS.includes(rol)) {
+    return res.status(400).json({ error: `Rol no válido. Usa: ${ROLES_VALIDOS.join(', ')}` })
+  }
 
   // Generar hash (utilidad)
   if (action === 'hash') {

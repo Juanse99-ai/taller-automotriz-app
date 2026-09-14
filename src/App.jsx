@@ -44,6 +44,7 @@ const Inspecciones = seccion('Inspecciones', () => import('./pages/Inspecciones'
 const CuenttiPanel = seccion('CuenttiPanel', () => import('./pages/CuenttiPanel'))
 const Clientes = seccion('Clientes', () => import('./pages/Clientes'))
 const Vehiculos = seccion('Vehiculos', () => import('./pages/Vehiculos'))
+const TrabajosMecanico = seccion('TrabajosMecanico', () => import('./pages/TrabajosMecanico'))
 const Cartera = seccion('Cartera', () => import('./pages/Cartera'))
 const Usuarios = seccion('Usuarios', () => import('./pages/Usuarios'))
 const CRM = seccion('CRM', () => import('./pages/CRM'))
@@ -160,6 +161,14 @@ export default function App() {
 
   useEffect(() => vigilarVersion(() => setVersionNueva(true)), [])
 
+  // Cada rol aterriza en una seccion que puede abrir. Un mecanico no tiene
+  // Dashboard: sin esto entraba a "No tienes acceso a este módulo".
+  useEffect(() => {
+    if (!user) return
+    const permitidas = getSeccionesPermitidas(user.rol)
+    if (permitidas.length && !permitidas.includes(section)) setSection(permitidas[0])
+  }, [user, section])
+
   const trabajosHook = useTrabajos()
   const clientesHook = useClientes()
   const vehiculosHook = useVehiculos()
@@ -171,6 +180,9 @@ export default function App() {
   const syncDone = useRef(false)
   useEffect(() => {
     if (syncDone.current || trabajosHook.loading || !trabajosHook.trabajos.length) return
+    // Un mecanico no crea clientes ni vehiculos (el servidor se lo niega): sin
+    // esto, cada OT disparaba un intento de alta que terminaba en 403.
+    if (user?.rol === 'mecanico') return
     syncDone.current = true
     const vehiculosExistentes = new Set(vehiculosHook.vehiculos.map(v => v.placa))
     const clientesExistentes = new Set(
@@ -210,7 +222,7 @@ export default function App() {
         clientesHook.vincularVehiculo(cedula, placa)
       }
     })
-  }, [trabajosHook.loading, trabajosHook.trabajos])
+  }, [trabajosHook.loading, trabajosHook.trabajos, user?.rol])
 
   // Un aviso puede traer una salida: notify('OT movida', 'info', { label: 'Deshacer',
   // onClick: revertir }). Con accion dura mas, porque hay que leerlo Y decidir.
@@ -361,6 +373,7 @@ export default function App() {
           sinConexion={trabajosHook.connectionError}
           onRefrescar={() => trabajosHook.sincronizar()} />
       case 'trabajos':
+        if (user.rol === 'mecanico') return <TrabajosMecanico trabajosHook={trabajosHook} notify={notify} user={user} />
         {/* onAutoFacturar solo si el rol puede entrar a Cuentti: sin esto, el
            jefe de taller veía el botón "Cobrar" y aterrizaba en "No tienes
            acceso a este módulo", sin Cuentti en el menú para volver. */}
@@ -382,7 +395,9 @@ export default function App() {
       case 'inspecciones':
         return <Inspecciones trabajos={trabajosHook.trabajos} notify={notify}
           inspeccionesHook={inspeccionesHook}
-          onVincularInspeccion={(trabajoId, inspeccion) => {
+          // Vincular reescribe la OT entera, y un mecanico no puede. La inspeccion
+          // igual queda guardada con su placa.
+          onVincularInspeccion={user.rol === 'mecanico' ? undefined : (trabajoId, inspeccion) => {
             trabajosHook.actualizarTrabajo(trabajoId, { inspeccion })
           }} />
       case 'clientes':

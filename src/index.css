@@ -2534,6 +2534,7 @@ tbody tr:active{background:var(--fill-2)}
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .kb-card__veh{font-size:10.5px;line-height:1.3;color:var(--text-4);margin-top:2px;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.kb-card__rev{margin-top:6px;display:flex}
 .kb-card__foot{display:flex;align-items:center;gap:6px;margin-top:8px;padding-top:7px;border-top:1px solid var(--row-line)}
 .kb-card__foot .av{width:21px;height:21px;font-size:8.5px;flex:none}
 .kb-card__dias{flex:1;min-width:0;font-size:10px;line-height:1;color:var(--text-4);
@@ -4085,4 +4086,132 @@ tbody tr:active{background:var(--fill-2)}
   .cart-pg .tbl tfoot{display:none}
   .cart-pg .tbl.tbl-cards tbody td.td-acc{justify-content:flex-end}
   .cart-pg .tbl.tbl-cards tbody td.td-acc::before{display:none}
+}
+
+/* --- Vista del mecanico (TrabajosMecanico) ---
+   Se usa en el celular, en el taller y con las manos ocupadas: toques de 44px o
+   mas, poco texto y nada que haya que escribir si se puede tocar. */
+.tm-pg{max-width:760px;margin:0 auto}
+.tm-bar{display:flex;flex-direction:column;gap:10px;margin-bottom:14px}
+.tm-find{height:var(--tap)}
+.tm-seg{width:100%}
+.tm-seg .hd-seg__i{flex:1 0 auto;justify-content:center;gap:6px;padding:0 12px}
+/* En el celular las cuatro no caben en una fila: dos y dos, todas a la vista. */
+@media(max-width:560px){
+  .hd-seg.tm-seg{display:grid;grid-template-columns:1fr 1fr;height:auto;padding:4px;border-radius:18px}
+}
+.tm-seg__n{font-family:var(--mono);font-size:11px;font-weight:600;color:var(--text-4)}
+.hd-seg__i.on .tm-seg__n{color:var(--text-2)}
+.tm-lista{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.tm-card{width:100%;display:flex;flex-direction:column;gap:3px;padding:13px 15px;text-align:left;font-family:inherit;color:var(--text);
+  background:var(--bg-raised);border:1px solid var(--border);border-radius:var(--radius-card);cursor:pointer;transition:border-color .12s,background .12s}
+.tm-card:hover{border-color:var(--border-strong)}
+.tm-card:active{background:var(--chip)}
+.tm-card:focus-visible{outline:2px solid var(--primary);outline-offset:2px}
+.tm-card__top{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.tm-card__placa{font-family:var(--mono);font-size:19px;line-height:1.1;font-weight:700;letter-spacing:.5px}
+.tm-card__veh{font-size:14px;line-height:1.3;font-weight:600}
+.tm-card__meta{font-size:12.5px;line-height:1.35;color:var(--text-3)}
+.tm-card__rev{margin-top:6px}
+
+.modal.tm-sheet{max-width:640px;display:flex;flex-direction:column;overflow:hidden;max-height:92vh}
+.tm-sheet__h{flex:none;display:flex;align-items:flex-start;gap:12px;padding:16px 18px 13px;border-bottom:1px solid var(--border)}
+.tm-sheet__id{flex:1;min-width:0}
+.tm-sheet__placa{display:flex;align-items:center;flex-wrap:wrap;gap:6px 10px;font-family:var(--mono);font-size:22px;line-height:1.1;font-weight:700;letter-spacing:.5px;color:var(--text)}
+.tm-sheet__veh{font-size:13.5px;line-height:1.3;font-weight:600;color:var(--text);margin:5px 0 3px}
+.tm-sheet__b{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:0 18px calc(22px + env(safe-area-inset-bottom,0px))}
+@media(max-width:600px){
+  .modal-overlay .modal.tm-sheet{height:92vh}
+}
+
+.tm-estado{display:flex;align-items:center;gap:10px;padding:14px 0;border-bottom:1px solid var(--row-line)}
+.tm-estado .btn-primary{flex:1;min-height:50px;font-size:15px}
+.tm-estado__nota{flex:1;font-size:13px;line-height:1.4;color:var(--text-3)}
+.tm-blq{padding:16px 0;border-bottom:1px solid var(--row-line)}
+.tm-blq:last-child{border-bottom:none}
+.tm-blq>.otd__rot{justify-content:space-between;margin-bottom:11px}
+.tm-obs{margin:0 0 11px;font-size:14px;line-height:1.45;color:var(--text-2);white-space:pre-wrap}
+
+.tm-tareas{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.tm-tarea{display:flex;align-items:center;gap:11px;min-height:50px;padding:8px 12px;border:1px solid var(--border);border-radius:var(--r-md);cursor:pointer;transition:background .12s}
+.tm-tarea input{width:22px;height:22px;flex:none;margin:0;accent-color:var(--primary)}
+.tm-tarea__n{flex:1;min-width:0;font-size:14px;line-height:1.3;font-weight:600;color:var(--text)}
+.tm-tarea__d{flex:none;font-family:var(--mono);font-size:12px;color:var(--text-4);white-space:nowrap}
+.tm-tarea.is-hecha{background:var(--accent-soft)}
+.tm-tarea.is-hecha .tm-tarea__n{text-decoration:line-through;color:var(--text-3)}
+.tm-crono{display:flex;align-items:center;gap:12px;margin-top:12px;padding:10px 12px;background:var(--chip);border-radius:var(--r-md)}
+.tm-crono__t{font-family:var(--mono);font-size:22px;line-height:1;font-weight:700;font-variant-numeric:tabular-nums;color:var(--text)}
+.tm-crono__t.is-on{color:var(--primary)}
+.tm-crono__l{flex:1;min-width:0;font-size:12.5px;color:var(--text-3)}
+.tm-crono .btn{min-height:var(--tap)}
+
+.tm-evid__acc{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+.tm-file{position:relative;flex:1;min-height:50px;gap:8px;cursor:pointer}
+.tm-file svg{width:18px;height:18px}
+.tm-file input{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
+.tm-file:focus-within{outline:2px solid var(--primary);outline-offset:2px}
+.tm-file.is-off{opacity:.5;pointer-events:none}
+.tm-sync{flex-basis:100%;font-size:12.5px;color:var(--text-3)}
+.tm-evid{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px}
+.tm-evid__i{position:relative;display:flex;flex-direction:column;gap:5px;min-width:0}
+.tm-evid__m{position:relative;display:block;aspect-ratio:1;border-radius:var(--r-md);overflow:hidden;background:var(--chip)}
+.tm-evid__m img,.tm-evid__m video{width:100%;height:100%;object-fit:cover;display:block}
+.tm-evid__play{position:absolute;inset:0;display:grid;place-items:center;color:#fff;pointer-events:none}
+.tm-evid__play svg{width:30px;height:30px;filter:drop-shadow(0 1px 3px rgba(13,27,53,.55))}
+.tm-evid__x{position:absolute;top:5px;right:5px;min-width:34px;height:34px;padding:0 9px;border:none;border-radius:var(--radius-pill);
+  background:rgba(13,27,53,.72);color:#fff;font-size:19px;line-height:1;font-family:inherit;cursor:pointer}
+.tm-evid__x--si{background:var(--bad-fg);font-size:12px;font-weight:700}
+.tm-evid__nota{width:100%;min-width:0;padding:6px 8px;border:1px solid var(--border);border-radius:var(--r-sm);background:var(--bg-raised);
+  font-family:inherit;font-size:12px;color:var(--text)}
+.tm-evid__nota:focus{outline:none;border-color:var(--primary)}
+.tm-evid__nota--ro{border-color:transparent;padding:2px;color:var(--text-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+.tm-res{list-style:none;margin:6px 0 0;padding:4px;display:flex;flex-direction:column;border:1px solid var(--border);border-radius:var(--r-md);background:var(--bg-raised)}
+.tm-res__i{width:100%;min-height:50px;display:flex;flex-direction:column;justify-content:center;gap:3px;padding:8px 10px;text-align:left;font-family:inherit;color:var(--text);
+  background:none;border:none;border-radius:var(--r-sm);cursor:pointer}
+.tm-res__i:hover,.tm-res__i:active{background:var(--chip)}
+.tm-res__n{font-size:13.5px;line-height:1.3;font-weight:600}
+.tm-res__d{font-family:var(--mono);font-size:11.5px;color:var(--text-4)}
+.tm-res__i--libre .tm-res__n{font-weight:600;color:var(--accent)}
+.tm-cargar{display:flex;flex-wrap:wrap;align-items:flex-end;gap:10px;padding:12px;background:var(--chip);border-radius:var(--r-md)}
+.tm-cargar__p{flex-basis:100%;display:flex;flex-direction:column;gap:4px}
+.tm-cargar__p b{font-size:14px;line-height:1.3;color:var(--text)}
+.tm-cargar__c{display:flex;flex-direction:column;gap:4px;font-size:12px;font-weight:600;color:var(--text-3)}
+.tm-cargar__c .input{width:110px;min-height:var(--tap)}
+.tm-cargar__acc{flex:1;display:flex;justify-content:flex-end;gap:8px}
+.tm-cargar__acc .btn{min-height:var(--tap)}
+.tm-ins{list-style:none;margin:12px 0 0;padding:0}
+.tm-ins__i{padding:11px 0;border-bottom:1px solid var(--row-line)}
+.tm-ins__i:last-child{border-bottom:none}
+.tm-ins__t{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.tm-ins__n{flex:1;min-width:0;font-size:13.5px;line-height:1.3;font-weight:600;color:var(--text)}
+.tm-ins__d{margin-top:3px;font-size:12px;line-height:1.35;color:var(--text-4)}
+.tm-ins__i.is-descartado .tm-ins__n{text-decoration:line-through;color:var(--text-3)}
+.tm-ins__acc{display:flex;align-items:center;gap:6px;margin-top:8px}
+.tm-paso{width:var(--tap);height:var(--tap);flex:none;border:1px solid var(--border-strong);border-radius:var(--radius-pill);background:var(--bg-raised);
+  font-family:inherit;font-size:20px;line-height:1;color:var(--text);cursor:pointer}
+.tm-paso:disabled{opacity:.4;cursor:default}
+.tm-ins__c{min-width:38px;text-align:center;font-family:var(--mono);font-size:15px;font-weight:700;color:var(--text)}
+.tm-ins__q{margin-left:auto;min-height:var(--tap);padding:0 10px;border:none;background:none;font-family:inherit;font-size:13px;font-weight:600;color:var(--bad-fg);cursor:pointer}
+
+/* --- Revision de los insumos del taller, dentro del formulario de la OT --- */
+.rvi__lista{list-style:none;margin:0;padding:0 18px}
+.rvi__i{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;padding:12px 0;border-bottom:1px solid var(--row-line)}
+.rvi__i:last-child{border-bottom:none}
+.rvi__b{flex:1;min-width:190px}
+.rvi__n{font-size:13.5px;line-height:1.3;font-weight:600;color:var(--text)}
+.rvi__s{margin-top:3px;font-size:11.5px;line-height:1.35;color:var(--text-4)}
+.rvi__v{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:13px;font-weight:700;color:var(--text);white-space:nowrap}
+.rvi__acc{display:flex;align-items:center;flex-wrap:wrap;gap:6px}
+.rvi__acc .btn{min-height:36px}
+.rvi__i.is-descartada .rvi__n{text-decoration:line-through;color:var(--text-3)}
+.rvi__fix{flex-basis:100%;display:flex;flex-wrap:wrap;align-items:flex-end;gap:8px;padding:10px 12px;background:var(--bg-subtle);border-radius:var(--r-md)}
+.rvi__fix label{display:flex;flex-direction:column;gap:4px;font-size:11.5px;font-weight:600;color:var(--text-3)}
+.rvi__fix .input{min-height:40px}
+.rvi__fix-c .input{width:90px}
+.rvi__fix-p{width:150px}
+@media(max-width:600px){
+  .rvi__lista{padding:0 14px}
+  .rvi__acc{width:100%}
+  .rvi__acc .btn{flex:1;min-height:var(--tap)}
 }

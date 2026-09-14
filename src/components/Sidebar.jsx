@@ -204,7 +204,7 @@ export default function Sidebar({ active, onNavigate, isOpen, collapsed, onColla
   }
 
   const inicial = (user?.nombre || user?.usuario || '?')[0].toUpperCase()
-  const rolLabel = user?.rol === 'admin' ? 'Administrador' : 'Jefe de taller'
+  const rolLabel = user?.rol === 'admin' ? 'Administrador' : user?.rol === 'mecanico' ? 'Mecánico' : 'Jefe de taller'
 
   const isMobile = useIsMobile()
 

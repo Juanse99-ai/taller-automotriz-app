@@ -24,7 +24,7 @@ import { useEffect, useState } from 'react'
 
 const LS_KEY = 'mda_tecnicos'
 const EVT = 'mda:tecnicos-changed'
-import { getToken, haySesion, avisarSesionVencida } from './auth'
+import { getToken, haySesion, avisarSesionVencida, esMecanico } from './auth'
 
 const API = '/api/supabase?table=tecnicos'
 
@@ -106,8 +106,11 @@ export async function syncTecnicos() {
     const rows = await res.json()
     if (!Array.isArray(rows)) return
     const byId = new Map(rows.map(r => [r.id, fromDB(r)]))
+    // Un mecanico no escribe el equipo (el servidor le responde 403): en su
+    // celular lo local solo se muestra.
+    const puedeSubir = !esMecanico()
     for (const t of TECNICOS) {
-      if (!byId.has(t.id)) { byId.set(t.id, t); dbUpsert(t) }
+      if (!byId.has(t.id)) { byId.set(t.id, t); if (puedeSubir) dbUpsert(t) }
     }
     TECNICOS.splice(0, TECNICOS.length, ...byId.values())
     persist()

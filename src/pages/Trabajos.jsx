@@ -29,7 +29,8 @@ import { labelInventario, etiquetaCombustible, ingresoTieneAlgo } from '../utils
 import { exportarFichasTecnico } from '../utils/fichaPdf'
 import { comisionTecnico, esServicioItem } from '../utils/comision'
 import { lsGet, lsSet, LS_KEYS } from '../services/storage'
-import { borrarVideoEvidencia, fetchEvidenciasTrabajo } from '../services/supabase'
+import { borrarVideoEvidencia, fetchEvidenciasTrabajo, resolverPropuestas } from '../services/supabase'
+import { propuestasPendientes } from '../utils/insumosPropuestos'
 import PagosOT from '../components/PagosOT'
 import SignaturePad from '../components/SignaturePad'
 import ConfirmDialog from '../components/ConfirmDialog'
@@ -148,6 +149,20 @@ function chipTono(tone) {
   return 'mute'
 }
 
+// Insumos que un mecanico cargo desde el taller y nadie ha revisado. Mientras
+// esten asi no suman a la orden: si no se ven desde la lista, se factura sin
+// ellos. `corto` para la fila de la tabla, donde no cabe la frase.
+function ChipInsumosTaller({ trabajo, corto = false, className }) {
+  const n = propuestasPendientes(trabajo).length
+  if (!n) return null
+  const chip = (
+    <span className="hd-chip hd-chip--warn" style={{ flex: 'none' }} title={`${n} ${n === 1 ? 'insumo cargado' : 'insumos cargados'} desde el taller, por revisar`}>
+      {corto ? `${n} POR REVISAR` : `${n} ${n === 1 ? 'INSUMO' : 'INSUMOS'} POR REVISAR`}
+    </span>
+  )
+  return className ? <div className={className}>{chip}</div> : chip
+}
+
 // Maquetacion exacta del mockup "Ordenes de trabajo" (marco de 1280px). Vive
 // aqui y no en index.css porque solo aplica a esta pantalla: todos los
 // selectores cuelgan de .trab-page. Solo colores por token, nunca hex sueltos.
@@ -262,7 +277,7 @@ const CSS_TRABAJOS = `
 `
 
 export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, onAutoFacturar, estadoInicial }) {
-  const { trabajos, agregarTrabajo, actualizarTrabajo, eliminarTrabajo, puedeCrearOT } = hook
+  const { trabajos, agregarTrabajo, actualizarTrabajo, eliminarTrabajo, puedeCrearOT, aplicarCambiosLocales } = hook
   const [vista, setVista] = useState('lista') // lista | nuevo | editar | kanban
   const [editId, setEditId] = useState(null)
   const [confirmDel, setConfirmDel] = useState(null)
@@ -675,7 +690,8 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
         onSave={async (dataForm) => {
           // _evidAntes (lista de evidencias del servidor al abrir el form) solo
           // sirve para el diff de videos de aquí abajo: NO debe persistirse.
-          const { _evidAntes, ...data } = dataForm
+          // _decisionesInsumos tampoco: se escribe aparte, ya guardada la orden.
+          const { _evidAntes, _decisionesInsumos, ...data } = dataForm
           // Helper: registrar/actualizar cliente y vehiculo en BD local
           // (se ejecuta tanto al crear como al editar)
           const sincronizarClienteVehiculo = () => {
@@ -718,6 +734,13 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
             videosAntes.forEach(v => { if (!urlsAhora.has(v.url)) borrarVideoEvidencia(v) })
             sincronizarClienteVehiculo()
             notify('Trabajo actualizado', 'success')
+            // Insumos del taller revisados. Si esto falla, las lineas aprobadas ya
+            // estan en la orden y la revision se vuelve a mandar al guardar otra vez.
+            if (_decisionesInsumos && Object.keys(_decisionesInsumos).length) {
+              resolverPropuestas(editId, _decisionesInsumos)
+                .then(f => { if (f) aplicarCambiosLocales?.(editId, { insumosPropuestos: Array.isArray(f.insumos_propuestos) ? f.insumos_propuestos : [] }) })
+                .catch(() => notify('La orden se guardó, pero no se pudo marcar la revisión de los insumos del taller. Ábrela y guarda otra vez.', 'error'))
+            }
           } else {
             // No numerar una OT nueva si aún no sabemos el consecutivo real del
             // servidor (arrancaría en OT-0001 y pisaría códigos existentes).
@@ -779,6 +802,7 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
         </div>
         <div className="kb-card__cli">{t.cliente || 'Sin cliente'}</div>
         <div className="kb-card__veh">{[t.marca, t.modelo, t.ano].filter(Boolean).join(' ') || (t.placa ? 'Ficha incompleta' : 'Servicio sin vehículo')}</div>
+        <ChipInsumosTaller trabajo={t} className="kb-card__rev" />
         <div className="kb-card__foot">
           <span className={`av av-${(parseInt(t.tecnicoId) || 1) % 5 + 1}`} title={tecNombre(t.tecnicoId)}>{tecIniciales(t.tecnicoId)}</span>
           {/* El codigo de OT no cabe arriba (ahi manda la placa) pero no se
@@ -1035,7 +1059,10 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
                         <div className="hd-sub">{t.otCodigo || '—'}</div>
                       </div>
                       <div style={{ flex: 1, minWidth: 0, paddingRight: 10 }}>
-                        <div className="hd-clip" style={{ fontSize: 12.5, lineHeight: 1.15, fontWeight: 700, color: 'var(--text)' }}>{t.cliente || '—'}</div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
+                          <div className="hd-clip" style={{ fontSize: 12.5, lineHeight: 1.15, fontWeight: 700, color: 'var(--text)' }}>{t.cliente || '—'}</div>
+                          <ChipInsumosTaller trabajo={t} corto />
+                        </div>
                         <div className="hd-clip hd-sub" style={{ fontSize: 10.5 }}>{[t.marca, t.modelo].filter(Boolean).join(' ') || '—'}</div>
                       </div>
                       {/* av-1..av-4: cuatro pares como el mockup. El quinto era
@@ -1099,6 +1126,7 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
                   <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
                     <span className={`badge ${estadoBadge(selTrabajo.estado)}`}>{selTrabajo.estado}</span>
                     {(() => { const c = estadoCobro(selTrabajo); return c ? <Badge tone={c.tone}>{c.label}</Badge> : null })()}
+                    <ChipInsumosTaller trabajo={selTrabajo} />
                     <span style={{ fontSize: 12.5, color: 'var(--text-3)' }}>{fmtDate(selTrabajo.fecha)}</span>
                   </div>
                   {selTrabajo.cuenttiTransacionId && selTrabajo.cuenttiTransacionId !== SIN_FACTURA && (
@@ -1345,6 +1373,7 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
                 <div className="otd__chips">
                   <span className={`hd-chip hd-chip--${chipEstado(t.estado)}`}>{rotuloEstado(t.estado)}</span>
                   {cob && <span className={`hd-chip hd-chip--${chipTono(cob.tone)}`}>{cob.label}</span>}
+                  <ChipInsumosTaller trabajo={t} />
                 </div>
               </div>
 

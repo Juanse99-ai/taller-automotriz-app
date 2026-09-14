@@ -166,8 +166,10 @@ export default function Inspecciones({ trabajos, notify, onVincularInspeccion, i
                   <div className="hd-n" style={{width:78,fontSize:12,color:'var(--text-3)'}}>{fmtDate(i.fecha)}</div>
                   <div style={{width:122,display:'flex',gap:4,justifyContent:'flex-end'}}>
                     <Button variant="outline" size="sm" className="btn-icon" aria-label="Editar" title="Editar" onClick={e => { e.stopPropagation(); setEditId(i.id); setVista('editar') }}><IconEdit /></Button>
-                    <Button variant="outline" size="sm" onClick={e => { e.stopPropagation(); vincularATrabajo(i) }} title="Vincular al trabajo">OT</Button>
-                    <Button variant="ghost" size="sm" className="btn-icon" aria-label="Eliminar" title="Eliminar" onClick={e => { e.stopPropagation(); setConfirmCfg({ title: 'Eliminar inspección', lead: `${i.placa || 'Sin placa'} · ${i.cliente || 'Sin cliente'} · ${fmtDate(i.fecha)}. No se puede deshacer.`, confirmLabel: 'Eliminar', tone: 'danger', onConfirm: () => { guardar(inspecciones.filter(x => x.id !== i.id)); notify('Inspección eliminada', 'info') } }); return }}><IconTrash /></Button>
+                    {/* Sin onVincularInspeccion (mecanico) vincular y borrar no hacen
+                        nada: el servidor no le deja reescribir la OT ni borrar. */}
+                    {onVincularInspeccion && <Button variant="outline" size="sm" onClick={e => { e.stopPropagation(); vincularATrabajo(i) }} title="Vincular al trabajo">OT</Button>}
+                    {onVincularInspeccion && <Button variant="ghost" size="sm" className="btn-icon" aria-label="Eliminar" title="Eliminar" onClick={e => { e.stopPropagation(); setConfirmCfg({ title: 'Eliminar inspección', lead: `${i.placa || 'Sin placa'} · ${i.cliente || 'Sin cliente'} · ${fmtDate(i.fecha)}. No se puede deshacer.`, confirmLabel: 'Eliminar', tone: 'danger', onConfirm: () => { guardar(inspecciones.filter(x => x.id !== i.id)); notify('Inspección eliminada', 'info') } }); return }}><IconTrash /></Button>}
                   </div>
                 </div>
               )

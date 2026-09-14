@@ -1,6 +1,7 @@
 // Cliente a traves de proxy backend para evitar CORS
 import { getToken, getSession, haySesion, avisarSesionVencida } from './auth'
 import { ESTADOS, ESTADOS_COTIZACION } from '../utils/estados'
+import { aplicarDecision } from '../utils/insumosPropuestos'
 
 const proxy = (table) => `/api/supabase?table=${table}`
 
@@ -78,11 +79,28 @@ export async function borrarVideoEvidencia(evid) {
   } catch { return false }
 }
 
+// Lo que un mecanico puede pedir. El servidor niega el resto con 403
+// (api/_lib/mecanico.js); aqui ni se sale a la red, porque App monta para todos
+// los mismos hooks (clientes, cotizaciones, liquidacion) y cada 403 encendia el
+// aviso de "sin conexion" y repetia peticiones inutiles cada minuto.
+const TABLAS_MECANICO = ['trabajos', 'inspecciones', 'tecnicos']
+function respuestaFueraDelRol(url, method = 'GET') {
+  if (getSession()?.rol !== 'mecanico') return null
+  const tabla = /[?&]table=([a-z_]+)/.exec(String(url))?.[1]
+  if (!tabla || TABLAS_MECANICO.includes(tabla)) return null
+  const json = { 'Content-Type': 'application/json' }
+  return String(method || 'GET').toUpperCase() === 'GET'
+    ? new Response('[]', { status: 200, headers: json })
+    : new Response(JSON.stringify({ error: 'No disponible para mecánicos' }), { status: 403, headers: json })
+}
+
 async function fetchWithTimeout(url, options = {}) {
   // Sin sesion ni se sale a la red: la API responde 401 a todo. Pasaba en la
   // pantalla de entrada, porque App monta los hooks de datos antes de decidir
   // si toca mostrar el login.
   if (!haySesion()) throw new Error('No hay sesion iniciada')
+  const fueraDelRol = respuestaFueraDelRol(url, options.method)
+  if (fueraDelRol) return fueraDelRol
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS)
   try {
@@ -116,7 +134,7 @@ const TRABAJOS_COLS = [
   'cuentti_id_transacion', 'facturado_en', 'cuentti_resolucion', 'firma_cliente',
   'tipo_aceite', 'proximo_km', 'proxima_visita', 'notas_proximo_mant',
   'sin_vehiculo', 'deleted', 'tareas_hechas', 'crono_inicio', 'crono_acumulado',
-  'ingreso',
+  'ingreso', 'insumos_propuestos',
 ].join(',')
 
 export async function fetchTrabajos() {
@@ -828,4 +846,39 @@ export async function sincronizarPagos(trabajoId) {
   } finally {
     clearTimeout(timer)
   }
+}
+
+// ---------- TALLER: cambios puntuales a una OT ----------
+// Lo que usa la vista del mecanico, que no puede guardar la OT entera (el
+// servidor solo le deja evidencias, tareas, cronometro, insumos por revisar y
+// dos estados), y la revision de insumos de la oficina. Nunca pisa el resto.
+const COLS_TALLER = 'id,ot_codigo,estado,placa,marca,modelo,ano,cliente,kilometraje,tecnico_id,observaciones,items,evidencias,insumos_propuestos,tareas_hechas,crono_inicio,crono_acumulado'
+
+export async function fetchTrabajoTaller(id) {
+  const res = await fetchWithTimeout(`${baseProxy}&id=eq.${encodeURIComponent(id)}&select=${COLS_TALLER}&limit=1`)
+  const data = await res.json().catch(() => null)
+  if (!res.ok) throw new Error(data?.error || `No se pudo abrir la orden (${res.status})`)
+  return Array.isArray(data) ? (data[0] || null) : null
+}
+
+export async function patchTrabajo(id, campos, select = COLS_TALLER) {
+  const res = await fetchWithTimeout(`${baseProxy}&id=eq.${encodeURIComponent(id)}&select=${select}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(campos),
+  })
+  const data = await res.json().catch(() => null)
+  if (!res.ok) throw new Error(data?.error || data?.detail || `No se pudo guardar (${res.status})`)
+  return Array.isArray(data) ? (data[0] || null) : data
+}
+
+// Aplica las decisiones de la oficina (utils/insumosPropuestos) sobre la lista
+// FRESCA de la base: lo que el mecanico cargo o corrigio mientras tanto no se
+// pierde, y lo que ya reviso otra persona no se pisa.
+export async function resolverPropuestas(id, decisiones) {
+  if (!id || !decisiones || !Object.keys(decisiones).length) return null
+  const fila = await fetchTrabajoTaller(id)
+  const actuales = Array.isArray(fila?.insumos_propuestos) ? fila.insumos_propuestos : []
+  const nuevas = actuales.map(p => aplicarDecision(p, decisiones[p.id]))
+  return patchTrabajo(id, { insumos_propuestos: nuevas }, 'id,insumos_propuestos')
 }

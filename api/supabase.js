@@ -10,6 +10,7 @@ import { sesionDeLaPeticion } from './_lib/sesion.js'
 import { SUPABASE_URL, SUPABASE_KEY, SUPABASE_HEAD } from './_lib/supabase.js'
 import { sincronizarConCuentti } from './_lib/cuentti.js'
 import { ESTADOS_COTIZACION } from '../src/utils/estados.js'
+import { esMecanico, permisoMecanico, selectMecanico, limpiarTrabajosParaMecanico, prepararPatchMecanico } from './_lib/mecanico.js'
 
 function getOrigin(reqOrigin = '') {
   if (ALLOWED_ORIGINS.includes(reqOrigin)) return reqOrigin
@@ -123,7 +124,9 @@ export default async function handler(req, res) {
   // sin pagar (?sincronizarPagos=1) o una orden (?sincronizarPagos=<id>). Baja
   // los recibos a `pagos` y marca pagada la que Cuentti da por saldada.
   if (req.query.sincronizarPagos) {
-    if (!sesionDeLaPeticion(req)) { res.status(401).json({ error: 'Sesion requerida' }); return }
+    const sesPagos = sesionDeLaPeticion(req)
+    if (!sesPagos) { res.status(401).json({ error: 'Sesion requerida' }); return }
+    if (esMecanico(sesPagos)) { res.status(403).json({ error: 'Los pagos no están disponibles para mecánicos' }); return }
     const cual = String(req.query.sincronizarPagos)
     const filtro = cual === '1'
       ? 'pagado=is.false&deleted=not.is.true'
@@ -182,7 +185,9 @@ export default async function handler(req, res) {
 
   if (req.query.estadoPago) {
     // Subir, borrar y consultar pagos es cosa de la app. El portal no pasa por aqui.
-    if (!sesionDeLaPeticion(req)) { res.status(401).json({ error: 'Sesion requerida' }); return }
+    const sesEstado = sesionDeLaPeticion(req)
+    if (!sesEstado) { res.status(401).json({ error: 'Sesion requerida' }); return }
+    if (esMecanico(sesEstado)) { res.status(403).json({ error: 'Los pagos no están disponibles para mecánicos' }); return }
     const tx = String(req.query.estadoPago).replace(/[^\w-]/g, '')
     if (!tx) { res.status(400).json({ error: 'falta id_transacion' }); return }
     try {
@@ -405,6 +410,12 @@ export default async function handler(req, res) {
     res.status(403).json({ error: 'Esta seccion es solo para administradores' })
     return
   }
+  // Un mecanico solo pasa por lo que su trabajo pide (api/_lib/mecanico.js).
+  const comoMecanico = !esPublico && esMecanico(sesion)
+  if (comoMecanico) {
+    const p = permisoMecanico(table, req.method, req.query)
+    if (!p.ok) { res.status(p.status).json({ error: p.error }); return }
+  }
   const ALLOWED_TABLES = [
     'trabajos', 'cotizaciones', 'clientes', 'vehiculos', 'inspecciones',
     'movimientos_tecnicos', 'liquidacion_historial', 'liquidados', 'trabajos_compartidos',
@@ -424,6 +435,9 @@ export default async function handler(req, res) {
     if (esPublico && COLUMNAS_PORTAL[table]) {
       qs.searchParams.set('select', COLUMNAS_PORTAL[table])
     }
+    if (comoMecanico) {
+      qs.searchParams.set('select', selectMecanico(table, qs.searchParams.get('select')))
+    }
     const queryString = qs.searchParams.toString()
     const url = `${SUPABASE_URL}/rest/v1/${table}${queryString ? `?${queryString}` : ''}`
     const headers = {
@@ -439,6 +453,12 @@ export default async function handler(req, res) {
     if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method) && req.body) {
       options.body = JSON.stringify(req.body)
     }
+    if (comoMecanico && table === 'trabajos' && req.method === 'PATCH') {
+      const id = String(req.query.id).slice(3)
+      const r = await prepararPatchMecanico({ id, cuerpo: req.body, usuario: sesion.u })
+      if (!r.cuerpo) { res.status(r.status).json({ error: r.error }); return }
+      options.body = JSON.stringify(r.cuerpo)
+    }
     const response = await fetch(url, options)
     const text = await response.text()
 
@@ -453,6 +473,12 @@ export default async function handler(req, res) {
     }
 
     res.status(response.status)
+    if (comoMecanico && table === 'trabajos') {
+      let filas = null
+      try { filas = JSON.parse(text) } catch { /* sin cuerpo */ }
+      res.json(Array.isArray(filas) ? limpiarTrabajosParaMecanico(filas) : (filas ?? []))
+      return
+    }
     try { res.json(JSON.parse(text)) } catch { res.send(text) }
   } catch (err) {
     console.error('Supabase proxy error:', err.message || err)

@@ -48,6 +48,8 @@ function normalizar(r) {
     cronoInicio: r.crono_inicio ?? r.cronoInicio ?? null,
     cronoAcumulado: parseInt(r.crono_acumulado ?? r.cronoAcumulado) || 0,
     deleted: r.deleted === true, // borrado suave: la fila sigue en Supabase pero se oculta
+    // Insumos cargados por un mecanico que la oficina revisa (utils/insumosPropuestos).
+    insumosPropuestos: Array.isArray(r.insumos_propuestos) ? r.insumos_propuestos : (r.insumosPropuestos || []),
     inspeccion: typeof r.inspeccion === 'string' ? JSON.parse(r.inspeccion) : (r.inspeccion || null),
     // Estado de ingreso: { inventario: string[], combustible: 0-100, estado: text }
     ingreso: typeof r.ingreso === 'string' ? JSON.parse(r.ingreso) : (r.ingreso || null),
@@ -437,6 +439,15 @@ export function useTrabajos() {
     return true
   }, [nextOtCodigo, marcarDirty, marcarSinSubir])
 
+  // Refleja en la lista un cambio que YA se guardo en el servidor por otra via
+  // (patchTrabajo desde la vista del taller). No sube nada: la OT entera no se
+  // reescribe, que es justo lo que un mecanico no puede hacer.
+  const aplicarCambiosLocales = useCallback((id, cambios) => {
+    if (!id || !cambios) return
+    marcarDirty(id)
+    setTrabajos(prev => prev.map(t => (t.id === id ? { ...t, ...cambios } : t)))
+  }, [marcarDirty])
+
   const eliminarTrabajo = useCallback(async (id) => {
     setTrabajos(prev => prev.filter(t => t.id !== id))
     if (id) {
@@ -446,7 +457,7 @@ export function useTrabajos() {
 
   return {
     trabajos, loading, connectionError, sinSubir, ultimaSync,
-    agregarTrabajo, actualizarTrabajo, eliminarTrabajo,
+    agregarTrabajo, actualizarTrabajo, eliminarTrabajo, aplicarCambiosLocales,
     recargar: cargarInicial,
     sincronizar,
     puedeCrearOT,

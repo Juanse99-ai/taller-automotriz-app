@@ -15,6 +15,7 @@ async function llamarUsuarios(opciones = {}) {
 const ROLES = [
   { value: 'admin', label: 'Administrador', desc: 'Acceso completo (todas las secciones)' },
   { value: 'jefe_taller', label: 'Jefe de taller', desc: 'Operacion: Trabajos, Clientes, Cotizaciones (sin Liquidacion/Reportes/Cuentti)' },
+  { value: 'mecanico', label: 'Mecánico', desc: 'Solo Trabajos e Inspecciones: sube evidencias, marca tareas y carga insumos para que la oficina los revise. No ve mano de obra, totales ni clientes.' },
 ]
 
 export default function Usuarios({ notify, currentUser }) {
@@ -185,6 +186,7 @@ export default function Usuarios({ notify, currentUser }) {
   const rolBadge = (rol) => {
     if (rol === 'admin') return { chip: 'info', l: 'ADMINISTRADOR' }
     if (rol === 'jefe_taller') return { chip: 'ok', l: 'JEFE DE TALLER' }
+    if (rol === 'mecanico') return { chip: 'warn', l: 'MECÁNICO' }
     return { chip: 'mute', l: (rol || '—').toUpperCase() }
   }
   const activos = usuarios.filter(u => u.activo).length

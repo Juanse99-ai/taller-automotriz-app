@@ -15,7 +15,11 @@ import { MARCAS, getModelos, CILINDRAJES } from '../utils/vehiculos'
 import { useClientes } from '../hooks/useClientes'
 import { useInventario, formatCacheAge } from '../hooks/useInventario'
 import { fotoParaSubir } from '../utils/imagen'
-import { subirVideoEvidencia, subirFotoEvidencia, borrarVideoEvidencia, fetchEvidenciasTrabajo } from '../services/supabase'
+import { subirVideoEvidencia, subirFotoEvidencia, borrarVideoEvidencia, fetchEvidenciasTrabajo, fetchTrabajoTaller } from '../services/supabase'
+import { getSession } from '../services/auth'
+import RevisionInsumos from '../components/RevisionInsumos'
+import { decisionesDeRevision } from '../utils/insumosPropuestos'
+import { fusionarEvidencias } from '../utils/fusionEvidencias'
 import Switch from '../components/Switch'
 import { comprimirVideo, posterDeVideo } from '../utils/video'
 import MoneyInput from '../components/MoneyInput'
@@ -104,6 +108,12 @@ export default function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [
   })
 
   const [items, setItems] = useState(trabajo?.items || [])
+  // Insumos que cargo un mecanico (RevisionInsumos): aprobar agrega la linea a
+  // `items`; descartar solo se anota aqui. Se escriben al guardar.
+  const [descartadas, setDescartadas] = useState(() => new Set())
+  // El estado con que se abrio: si al guardar sigue igual, manda el de la base,
+  // que el mecanico pudo cambiar mientras tanto (Empezar / Listo para revisar).
+  const estadoAlAbrirRef = useRef(trabajo?.estado || ESTADOS.PENDIENTE)
   // Bloques que se llenan poco: cerrados, pero con contador visible en la cabecera
   // (fotos, ítems marcados, fecha), así se sabe qué hay dentro sin abrirlos.
   const [showEvid, setShowEvid] = useState(false)
@@ -572,6 +582,26 @@ export default function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [
     guardandoRef.current = true
     setGuardando(true)
     try {
+    // Lo que cambio en la base mientras el formulario estaba abierto: desde el
+    // taller se suben fotos, se marcan tareas y se empieza el trabajo. Este
+    // formulario no edita nada de eso, asi que no debe devolverlo a como estaba
+    // al abrir. Sin red se guarda como siempre.
+    const fresca = trabajo?.id ? await fetchTrabajoTaller(trabajo.id).catch(() => null) : null
+    const deLaBase = {}
+    if (fresca) {
+      if (evidCargadas && evidAntesRef.current) {
+        const frescas = Array.isArray(fresca.evidencias) ? fresca.evidencias
+          : (() => { try { const a = JSON.parse(fresca.evidencias || '[]'); return Array.isArray(a) ? a : null } catch { return null } })()
+        if (frescas) deLaBase.evidenciasIngreso = fusionarEvidencias(evidAntesRef.current, form.evidenciasIngreso, frescas)
+      }
+      if (form.estado === estadoAlAbrirRef.current && fresca.estado) deLaBase.estado = fresca.estado
+      if (Array.isArray(fresca.tareas_hechas)) deLaBase.tareasHechas = fresca.tareas_hechas
+      if ('crono_inicio' in fresca) deLaBase.cronoInicio = fresca.crono_inicio || null
+      if (fresca.crono_acumulado != null) deLaBase.cronoAcumulado = parseInt(fresca.crono_acumulado) || 0
+    }
+    const decisionesInsumos = isEdit
+      ? decisionesDeRevision(fresca?.insumos_propuestos ?? trabajo?.insumosPropuestos, items, descartadas, getSession())
+      : {}
     await onSave({
       ...form,
       placa: (form.placa || (form.sinVehiculo ? 'SERVICIO' : '')).toUpperCase(),
@@ -596,6 +626,10 @@ export default function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [
       // videos quitados; se descarta antes de persistir).
       _evidCargadas: evidCargadas,
       _evidAntes: evidAntesRef.current,
+      ...deLaBase,
+      // Lo revisado de los insumos del taller: el padre lo escribe DESPUES de
+      // guardar la orden, para no marcar aprobada una linea que no se guardo.
+      _decisionesInsumos: decisionesInsumos,
       // Próximo mantenimiento (CRM)
       tipoAceite: form.tipoAceite || null,
       proximoKm: form.proximoKm ? parseInt(form.proximoKm) : null,
@@ -1037,6 +1071,18 @@ export default function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [
 
         {/* Columna IZQUIERDA — la orden y la plata */}
         <div className="ot-col ot-col--main">
+
+        {/* INSUMOS DEL TALLER: lo que cargo el mecanico, antes de las lineas */}
+        {isEdit && (
+          <RevisionInsumos
+            propuestas={trabajo?.insumosPropuestos}
+            items={items}
+            descartadas={descartadas}
+            onDescartar={(id, si) => setDescartadas(prev => { const n = new Set(prev); if (si) n.add(id); else n.delete(id); return n })}
+            onAgregarLinea={(linea) => setItems(prev => [...prev, linea])}
+            onQuitarLinea={(propuestaId) => setItems(prev => prev.filter(i => i.propuestaId !== propuestaId))}
+          />
+        )}
 
         {/* ITEMS */}
         <div className="card">

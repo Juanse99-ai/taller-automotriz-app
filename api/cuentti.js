@@ -1,6 +1,7 @@
 import crypto from 'node:crypto';
 import { sesionDeLaPeticion } from './_lib/sesion.js';
 import { registrarAbonoEnCuentti } from './_lib/cuentti.js';
+import { esMecanico, cuenttiPermitidoMecanico, quitarCostosCuentti } from './_lib/mecanico.js';
 
 const ALLOWED_ORIGINS = [
   'https://taller-multias.vercel.app',
@@ -229,7 +230,9 @@ export default async function handler(req, res) {
   // una ruta inexistente: la peticion sin sesion llegaba hasta Cuentti).
   // Wompi (firma y webhook) va arriba y no pasa por aqui: la firma la pide el
   // portal publico y el webhook lo firma Wompi.
-  if (!sesionDeLaPeticion(req)) { res.status(401).json({ error: 'Sesion requerida' }); return; }
+  const sesProxy = sesionDeLaPeticion(req);
+  if (!sesProxy) { res.status(401).json({ error: 'Sesion requerida' }); return; }
+  const proxyMecanico = esMecanico(sesProxy);
 
   try {
     const path = req.query.path || '';
@@ -250,6 +253,11 @@ export default async function handler(req, res) {
       '/jServerj4ErpPro/com/j4ErpPro/server/factura/',      // factura · medio de pago
     ];
     const pathSolo = path.split('?')[0];
+    // Un mecanico solo consulta el inventario (api/_lib/mecanico.js).
+    if (proxyMecanico && !cuenttiPermitidoMecanico(req.method, pathSolo)) {
+      res.status(403).json({ error: 'Esta parte de Cuentti no está disponible para mecánicos' });
+      return;
+    }
     if (!CUENTTI_ALLOWED_PREFIXES.some(p => pathSolo.startsWith(p))) {
       console.warn('[Cuentti proxy] path no permitido:', pathSolo);
       res.status(403).json({ error: 'Endpoint de Cuentti no permitido' });
@@ -306,6 +314,11 @@ export default async function handler(req, res) {
       })
     }
     res.status(response.status)
+    if (proxyMecanico) {
+      // Sin costos de compra: el mecanico ve precios de venta, no margenes.
+      try { res.json(quitarCostosCuentti(JSON.parse(data))) } catch { res.json([]) }
+      return
+    }
     try { res.json(JSON.parse(data)) } catch { res.send(data) }
   } catch (error) {
     console.error('Proxy error:', error);

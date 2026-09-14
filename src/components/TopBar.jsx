@@ -208,14 +208,17 @@ export default function TopBar({ title, subtitle, onToggleSidebar, sidebarOpen, 
           )}
         </div>
 
-        <button
-          className="btn btn-outline btn-sm"
-          onClick={() => setCompartirOpen(true)}
-          title="Compartir Portal del Cliente"
-          style={{ gap: 6 }}
-        >
-          <PortalIcon /> <span className="btn-label">Portal Cliente</span>
-        </button>
+        {/* Compartir el portal es trato con el cliente: no es del taller. */}
+        {user?.rol !== 'mecanico' && (
+          <button
+            className="btn btn-outline btn-sm"
+            onClick={() => setCompartirOpen(true)}
+            title="Compartir Portal del Cliente"
+            style={{ gap: 6 }}
+          >
+            <PortalIcon /> <span className="btn-label">Portal Cliente</span>
+          </button>
+        )}
 
         {/* Notifications */}
         <div style={{ position: 'relative' }} ref={notifRef}>

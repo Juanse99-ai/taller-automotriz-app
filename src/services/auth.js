@@ -73,11 +73,19 @@ export function getSession() {
 const PERMISOS = {
   admin: ['dashboard', 'recepcion', 'trabajos', 'mecanicos', 'cotizaciones', 'inspecciones', 'inventario', 'clientes', 'vehiculos', 'crm', 'liquidacion', 'cartera', 'reportes', 'cuentti', 'usuarios'],
   jefe_taller: ['dashboard', 'recepcion', 'trabajos', 'mecanicos', 'cotizaciones', 'inspecciones', 'inventario', 'clientes', 'vehiculos', 'crm'],
+  // Trabajos le abre la vista del taller (TrabajosMecanico): evidencias, tareas,
+  // cronometro e insumos por revisar, sin mano de obra ni totales. El servidor
+  // aplica lo mismo por su lado (api/_lib/mecanico.js).
+  mecanico: ['trabajos', 'inspecciones'],
 }
 
+// Un rol desconocido no ve nada. Antes caia en los permisos de jefe de taller:
+// un rol mal escrito abria clientes, cotizaciones e inventario.
 export function getSeccionesPermitidas(rol) {
-  return PERMISOS[rol] || PERMISOS.jefe_taller
+  return PERMISOS[rol] || []
 }
+
+export const esMecanico = (sesion = getSession()) => sesion?.rol === 'mecanico'
 
 // El token que /api/supabase exige. Se lee de la sesion en cada llamada y no se
 // cachea: al cerrar sesion tiene que dejar de servir de inmediato.

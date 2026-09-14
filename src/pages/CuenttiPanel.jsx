@@ -17,6 +17,7 @@ import {
   anularTransacion,
 } from '../services/cuentti'
 import { RESOLUCIONES, SIN_FACTURA, ESTADOS } from '../utils/constants'
+import { propuestasPendientes } from '../utils/insumosPropuestos'
 import ConfirmDialog from '../components/ConfirmDialog'
 import { Button } from '../components/ui'
 
@@ -760,6 +761,7 @@ export default function CuenttiPanel({ trabajos, actualizarTrabajo, notify, trab
     ? facturablesAll
     : facturablesAll.filter(t => !t.cuenttiTransacionId)
   const trabajoFacturaSel = trabajos.find(t => t.id === (facturaId || '').trim())
+  const pendientesTaller = trabajoFacturaSel ? propuestasPendientes(trabajoFacturaSel).length : 0
   const porFacturarCount = facturablesAll.length - yaFacturadosCount
   const conexionOK = !!testResult && testResult.clientes?.startsWith('OK')
 
@@ -962,6 +964,13 @@ export default function CuenttiPanel({ trabajos, actualizarTrabajo, notify, trab
                 {!verFacturados && yaFacturadosCount > 0 && (
                   <div className="hd-sub" style={{ marginTop: 4, lineHeight: 1.45 }}>
                     Los {yaFacturadosCount} trabajos ya facturados están ocultos.
+                  </div>
+                )}
+                {/* Lo que el mecanico cargo y nadie reviso no esta en la factura. */}
+                {trabajoFacturaSel && !trabajoFacturaSel.cuenttiTransacionId && pendientesTaller > 0 && (
+                  <div role="status" style={{ marginTop: 9, padding: '9px 12px', borderRadius: 10, background: 'var(--warn-bg)', color: 'var(--warn-fg)', fontSize: 12.5, lineHeight: 1.45 }}>
+                    <b>{pendientesTaller === 1 ? 'Hay 1 insumo del taller sin revisar' : `Hay ${pendientesTaller} insumos del taller sin revisar`}.</b>{' '}
+                    No va{pendientesTaller === 1 ? '' : 'n'} en esta factura hasta que lo{pendientesTaller === 1 ? '' : 's'} apruebes en la orden (Trabajos → editar).
                   </div>
                 )}
                 {trabajoFacturaSel?.cuenttiTransacionId && (
