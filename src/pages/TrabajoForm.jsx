@@ -269,13 +269,36 @@ export default function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [
     return () => { vivo = false }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [trabajo?.id])
-  const addVideo = async (campo, file) => {
-    if (!file) return
-    if (!file.type?.startsWith('video/')) { notify?.('Ese archivo no es un video.', 'error'); return }
+  // Varios videos de una vez, UNO DETRAS DE OTRO. En paralelo no: comprimir
+  // reproduce el video entero en tiempo real y al terminar retira los <video>
+  // de apoyo de la pagina, asi que dos a la vez se pisarian. Si uno falla se
+  // avisa y se sigue con el resto.
+  const addVideos = async (campo, archivos) => {
+    const lista = Array.from(archivos || []).filter(Boolean)
+    if (!lista.length) return
+    setSubiendoVideo(true)
+    let subidos = 0
+    try {
+      for (const [n, file] of lista.entries()) {
+        const cual = lista.length > 1 ? { prefijo: `Video ${n + 1} de ${lista.length} · `, nombre: `${file.name}: ` } : { prefijo: '', nombre: '' }
+        if (await addVideo(campo, file, cual)) subidos++
+      }
+    } finally {
+      setSubiendoVideo(false)
+      setEstadoVideo('')
+    }
+    if (subidos) notify?.(subidos === 1 ? 'Video subido.' : `${subidos} videos subidos.`, 'success')
+  }
+
+  // Un video. Devuelve true si quedo en la orden; los errores los avisa aqui.
+  const addVideo = async (campo, file, { prefijo = '', nombre = '' } = {}) => {
+    if (!file) return false
+    if (!file.type?.startsWith('video/')) { notify?.(`${nombre}No es un video.`, 'error'); return false }
     // El limite se comprueba DESPUES de comprimir: un clip de 10s en 4K pesa
     // ~60MB y a 1080p queda en 8-12, asi que rechazarlo antes seria rechazar
     // videos que si caben. Solo se corta lo que ni comprimido entra.
     // Duración: se lee del propio archivo antes de subir.
+    setEstadoVideo(`${prefijo}Revisando…`)
     const dur = await new Promise(resolve => {
       const v = document.createElement('video')
       v.preload = 'metadata'
@@ -283,30 +306,28 @@ export default function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [
       v.onerror = () => { URL.revokeObjectURL(v.src); resolve(0) }
       v.src = URL.createObjectURL(file)
     })
-    if (dur > MAX_VIDEO_SEG + 0.5) { notify?.(`El video dura ${Math.round(dur)}s. El máximo son ${MAX_VIDEO_SEG} segundos.`, 'error'); return }
-    setSubiendoVideo(true)
+    if (dur > MAX_VIDEO_SEG + 0.5) { notify?.(`${nombre}El video dura ${Math.round(dur)}s. El máximo son ${MAX_VIDEO_SEG} segundos.`, 'error'); return false }
     try {
       // Los telefonos graban en 4K por defecto. Se baja a 1080p en el propio
       // navegador antes de subir: mismo clip, ~5 veces menos peso, y en la
       // pantalla de un telefono no se nota. Si el navegador no puede, devuelve
       // el original y la subida sigue.
-      setEstadoVideo('Preparando el video…')
+      setEstadoVideo(`${prefijo}Preparando el video…`)
       const r = await comprimirVideo(file, {
-        onProgreso: p => setEstadoVideo(`Preparando el video… ${Math.round(p * 100)}%`),
+        onProgreso: p => setEstadoVideo(`${prefijo}Preparando el video… ${Math.round(p * 100)}%`),
       })
       const archivo = r.file
       if (archivo.size > MAX_VIDEO_BYTES) {
         const mb = Math.round(archivo.size / 1024 / 1024)
         notify?.(r.comprimido
-          ? `Aún comprimido pesa ${mb} MB y el máximo son 50. Grábalo más corto.`
-          : `El video pesa ${mb} MB y el máximo son 50. No se pudo comprimir: ${r.motivo || 'motivo desconocido'}.`,
+          ? `${nombre}Aún comprimido pesa ${mb} MB y el máximo son 50. Grábalo más corto.`
+          : `${nombre}El video pesa ${mb} MB y el máximo son 50. No se pudo comprimir: ${r.motivo || 'motivo desconocido'}.`,
           'error')
-        setSubiendoVideo(false); setEstadoVideo('')
-        return
+        return false
       }
       setEstadoVideo(r.comprimido
-        ? `Subiendo… (${Math.round(r.de / 1024 / 1024)} MB → ${Math.round(r.a / 1024 / 1024)} MB)`
-        : 'Subiendo…')
+        ? `${prefijo}Subiendo… (${Math.round(r.de / 1024 / 1024)} MB → ${Math.round(r.a / 1024 / 1024)} MB)`
+        : `${prefijo}Subiendo…`)
       // Si no comprimio pero igual cabe, se sube y se deja constancia del motivo
       // en la consola: sin esto no hay forma de saber por que no comprimio.
       if (!r.comprimido && r.motivo) console.warn('[video] sin comprimir:', r.motivo)
@@ -329,12 +350,10 @@ export default function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [
         }
       } catch { /* sin portada, la ficha usa el video */ }
       setForm(f => ({ ...f, [campo]: [...(f[campo] || []), { id: uid(), nombre: file.name, tipo: 'video', url, path, poster, nota: '' }] }))
-      notify?.('Video subido.', 'success')
+      return true
     } catch (e) {
-      notify?.(`No se pudo subir el video: ${e.message}`, 'error')
-    } finally {
-      setSubiendoVideo(false)
-      setEstadoVideo('')
+      notify?.(`${nombre}No se pudo subir el video: ${e.message}`, 'error')
+      return false
     }
   }
 
@@ -565,6 +584,10 @@ export default function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [
   const [guardando, setGuardando] = useState(false)
   const guardar = async (skipAviso = false) => {
     if (guardandoRef.current) return
+    // Con videos subiendo no se guarda: el que va en camino no alcanzaria a
+    // entrar a la orden, y la limpieza de despues de guardar lo borraria del
+    // bucket por huerfano. Con varios en fila la espera es larga y tentaba.
+    if (subiendoVideo) { notify?.('Espera a que terminen de subir los videos.', 'error'); return }
     if ((!form.placa && !form.sinVehiculo) || !form.cliente) return
     // Aviso: OT con valor pero sin mano de obra (ninguna línea "Servicio" ni M.O.
     // manual) → el técnico asignado quedaría con comisión $0, que solo se descubre
@@ -1053,13 +1076,17 @@ export default function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [
               <label>Fotos y videos de la orden de trabajo</label>
               <input type="file" accept="image/*" multiple onChange={e => addFotos('evidenciasIngreso', e.target.files)} />
               <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                {/* Sin capture: con capture el celular abria directo la camara y no
+                    dejaba elegir videos ya grabados, y menos varios. Sin el, el
+                    telefono ofrece galeria o grabar. La lista se copia ANTES de
+                    vaciar el input: vaciarlo borra tambien los archivos. */}
                 <label className="btn btn-outline btn-sm" style={{ cursor: subiendoVideo ? 'wait' : 'pointer', margin: 0, minHeight: 'var(--tap)' }}>
-                  {subiendoVideo ? (estadoVideo || 'Subiendo video…') : '+ Agregar video (máx 30s)'}
-                  <input type="file" accept="video/*" capture="environment" disabled={subiendoVideo}
-                    onChange={e => { const file = e.target.files?.[0]; e.target.value = ''; addVideo('evidenciasIngreso', file) }}
+                  {subiendoVideo ? (estadoVideo || 'Subiendo video…') : '+ Agregar videos (máx 30s c/u)'}
+                  <input type="file" accept="video/*" multiple disabled={subiendoVideo}
+                    onChange={e => { const archivos = Array.from(e.target.files || []); e.target.value = ''; addVideos('evidenciasIngreso', archivos) }}
                     style={{ display: 'none' }} />
                 </label>
-                {subiendoVideo && <span style={{ fontSize: 12.5, color: 'var(--text-3)' }}>No cierres esta ventana hasta que termine.</span>}
+                {subiendoVideo && <span style={{ fontSize: 12.5, color: 'var(--text-3)' }}>No cierres esta ventana ni bloquees el celular hasta que termine.</span>}
               </div>
               <ThumbGrid fotos={form.evidenciasIngreso} onNota={(id, nota) => actualizarNotaFoto('evidenciasIngreso', id, nota)} onRemove={id => quitarFoto('evidenciasIngreso', id)} />
             </div>
@@ -1363,9 +1390,9 @@ export default function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <Button variant="outline" type="button" onClick={cancelar}
               style={{ minHeight: 46, background: 'transparent', borderColor: 'rgba(255,255,255,.25)', color: '#fff' }}>Cancelar</Button>
-            <Button variant="primary" type="submit" disabled={guardando}
+            <Button variant="primary" type="submit" disabled={guardando || subiendoVideo}
               style={{ flex: 1, minHeight: 46, justifyContent: 'center', background: '#fff', borderColor: '#fff', color: 'var(--navy)' }}>
-              {guardando ? 'Guardando…' : isEdit ? 'Actualizar OT' : `Guardar OT · ${fmt(totales.total)}`}
+              {guardando ? 'Guardando…' : subiendoVideo ? 'Subiendo videos…' : isEdit ? 'Actualizar OT' : `Guardar OT · ${fmt(totales.total)}`}
             </Button>
           </div>
         </div>

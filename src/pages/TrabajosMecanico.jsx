@@ -387,18 +387,34 @@ function BloqueEvidencias({ fila, trabajo, usuario, guardar, notify, ocupado }) 
     setSubiendo('')
   }
 
-  const subirVideo = async (file) => {
-    if (!file) return
-    if (!file.type?.startsWith('video/')) { notify?.('Ese archivo no es un video.', 'error'); return }
+  // Varios videos de una vez, uno detras de otro (comprimir en paralelo se
+  // pisaria: ver TrabajoForm.addVideos). Cada uno se guarda apenas sube, asi un
+  // fallo en el tercero no se lleva los dos primeros.
+  const subirVideos = async (archivos) => {
+    const lista = Array.from(archivos || []).filter(Boolean)
+    if (!lista.length) return
+    try {
+      for (const [n, file] of lista.entries()) {
+        await subirVideo(file, lista.length > 1 ? `Video ${n + 1} de ${lista.length} · ` : '')
+      }
+    } finally {
+      setSubiendo('')
+    }
+  }
+
+  const subirVideo = async (file, prefijo = '') => {
+    const nombre = prefijo ? `${file.name}: ` : ''
+    if (!file.type?.startsWith('video/')) { notify?.(`${nombre}No es un video.`, 'error'); return }
+    setSubiendo(`${prefijo}Revisando…`)
     const dur = await duracionVideo(file)
-    if (dur > MAX_VIDEO_SEG + 0.5) { notify?.(`El video dura ${Math.round(dur)} s y el máximo son ${MAX_VIDEO_SEG}.`, 'error'); return }
-    setSubiendo('Preparando el video…')
+    if (dur > MAX_VIDEO_SEG + 0.5) { notify?.(`${nombre}El video dura ${Math.round(dur)} s y el máximo son ${MAX_VIDEO_SEG}.`, 'error'); return }
+    setSubiendo(`${prefijo}Preparando el video…`)
     // Lo que ya llego al bucket, para no dejarlo huerfano si algo falla despues.
     const subidos = []
     try {
-      const r = await comprimirVideo(file, { onProgreso: p => setSubiendo(`Preparando el video… ${Math.round(p * 100)} %`) })
+      const r = await comprimirVideo(file, { onProgreso: p => setSubiendo(`${prefijo}Preparando el video… ${Math.round(p * 100)} %`) })
       if (r.file.size > MAX_VIDEO_BYTES) throw new Error(`pesa ${Math.round(r.file.size / 1048576)} MB y el máximo son 50: grábalo más corto`)
-      setSubiendo('Subiendo el video…')
+      setSubiendo(`${prefijo}Subiendo el video…`)
       const video = await subirVideoEvidencia(r.file, carpeta)
       subidos.push(video)
       let poster = null
@@ -406,14 +422,12 @@ function BloqueEvidencias({ fila, trabajo, usuario, guardar, notify, ocupado }) 
         const pb = await posterDeVideo(r.file)
         if (pb) { const sub = await subirFotoEvidencia(pb, carpeta); subidos.push(sub); poster = sub.url }
       } catch { /* sin portada: se ve el primer cuadro del video */ }
-      setSubiendo('Guardando…')
+      setSubiendo(`${prefijo}Guardando…`)
       const ok = await agregar([{ id: uid(), nombre: file.name, tipo: 'video', url: video.url, path: video.path, poster, nota: '', subidoPor: usuario, subidoEn: new Date().toISOString() }])
       if (!ok) subidos.forEach(s => borrarVideoEvidencia(s))
     } catch (e) {
-      notify?.(`El video ${e.message || 'no se pudo subir'}`, 'error')
+      notify?.(`${nombre}El video ${e.message || 'no se pudo subir'}`, 'error')
       subidos.forEach(s => borrarVideoEvidencia(s))
-    } finally {
-      setSubiendo('')
     }
   }
 
@@ -444,10 +458,16 @@ function BloqueEvidencias({ fila, trabajo, usuario, guardar, notify, ocupado }) 
           <IcCamara />Foto
         </label>
         <label className={`btn btn-outline tm-file${bloqueado ? ' is-off' : ''}`}>
-          <input type="file" accept="video/*" disabled={bloqueado} onChange={e => { const f = e.target.files?.[0]; e.target.value = ''; subirVideo(f) }} />
-          <IcVideo />Video
+          {/* La lista se copia antes de vaciar el input: vaciarlo borra los archivos. */}
+          <input type="file" accept="video/*" multiple disabled={bloqueado} onChange={e => { const archivos = Array.from(e.target.files || []); e.target.value = ''; subirVideos(archivos) }} />
+          <IcVideo />Videos
         </label>
-        {subiendo && <span className="tm-sync" role="status">{subiendo}</span>}
+        {subiendo && (
+          <span className="tm-sync" role="status">
+            {subiendo}
+            <span className="tm-sync__nota">No cierres la orden ni bloquees el celular hasta que termine.</span>
+          </span>
+        )}
       </div>
       {todas.length === 0 ? (
         <div className="pg__vacio">Todavía no hay fotos ni videos de esta orden.</div>

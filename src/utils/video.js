@@ -112,8 +112,9 @@ export async function comprimirVideo(file, { onProgreso } = {}) {
     await video.play()
     dibujar()
 
+    let llegoAlFinal = false
     await new Promise(res => {
-      video.onended = res
+      video.onended = () => { llegoAlFinal = true; res() }
       // Red de seguridad: nunca colgarse. El doble de la duración + 10s.
       setTimeout(res, Math.min(180000, (dur * 2 + 10) * 1000))
     })
@@ -121,6 +122,12 @@ export async function comprimirVideo(file, { onProgreso } = {}) {
     dibujando = false
     rec.stop()
     await terminado
+
+    // Si salto la red de seguridad, lo grabado es un PEDAZO del video. Pasa si se
+    // bloquea el celular o la app se va al fondo: Safari pausa el video y el
+    // reloj sigue. Antes ese pedazo pesaba menos y se subia como si fuera el
+    // video entero; con varios videos en fila es mucho mas facil que pase.
+    if (!llegoAlFinal && !(dur && video.currentTime >= dur - 0.3)) return sinCambios('la compresion no llego al final del video')
 
     const blob = new Blob(trozos, { type: mimeType })
     if (!blob.size) return sinCambios('la grabacion salio vacia')
