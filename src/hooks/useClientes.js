@@ -70,10 +70,15 @@ export function useClientes() {
             totalVisitas: r.total_visitas, totalGastado: r.total_gastado,
           }, null))
           // Merge: Supabase records win, add locals not in DB
+          // Un local con el MISMO id que una fila de la base es ese mismo cliente,
+          // aunque su cedula haya cambiado (se corrigio en Cuentti y en la base).
+          // Comparando solo por cedula, la copia vieja volvia a salir como un
+          // cliente aparte, y editarla reescribia la fila con la cedula mala.
           const cedDb = new Set(norm.map(c => c.cedula))
+          const idsDb = new Set(norm.map(c => String(c.id)))
           const cached = lsGet(LS_KEYS.CLIENTES, [])
           const merged = [...norm]
-          cached.forEach(c => { if (!cedDb.has(c.cedula)) merged.push(c) })
+          cached.forEach(c => { if (!cedDb.has(c.cedula) && !idsDb.has(String(c.id))) merged.push(c) })
           clientesRef.current = merged
           setClientesTable(merged)
           lsSet(LS_KEYS.CLIENTES, merged)
@@ -100,9 +105,10 @@ export function useClientes() {
             totalVisitas: r.total_visitas, totalGastado: r.total_gastado,
           }, null))
           const cedDb = new Set(norm.map(c => c.cedula))
+          const idsDb = new Set(norm.map(c => String(c.id)))
           const cached = clientesRef.current
           const merged = [...norm]
-          cached.forEach(c => { if (!cedDb.has(c.cedula)) merged.push(c) })
+          cached.forEach(c => { if (!cedDb.has(c.cedula) && !idsDb.has(String(c.id))) merged.push(c) })
           if (merged.length !== clientesRef.current.length || merged.some((m, i) => m.cedula !== (clientesRef.current[i]?.cedula))) {
             clientesRef.current = merged
             setClientesTable(merged)
