@@ -109,6 +109,12 @@ const IcWa = () => (
 // El mismo grupo que usa el MCP del taller: todo lo que no esta Completado ni Cancelado.
 const ACTIVOS = ESTADOS_ACTIVOS
 
+// Ingreso = OT COMPLETADA, por su fecha: lo mismo que suma Reportes en "Facturado"
+// y lo que cuenta el MCP del taller. La tarjeta y la grafica de 12 meses usan esta
+// misma regla; antes la tarjeta sumaba todo lo no cancelado y la grafica sumaba
+// todo, canceladas incluidas, y ninguna cuadraba con Reportes.
+const esIngreso = (t) => t.estado === ESTADOS.COMPLETADO
+
 function tecNombre(id) {
   const t = TECNICOS.find(t => t.id === parseInt(id))
   return t ? t.nombre : null
@@ -138,15 +144,14 @@ export default function Dashboard({ trabajos = [], onNavigate, user, ultimaSync 
     // Listo para entregar = completado pero AÚN NO facturado (facturar = entregado/cobrado).
     const listoCount = trabajos.filter(t => t.estado === ESTADOS.COMPLETADO && !t.cuenttiTransacionId).length
     const inicioMes = new Date(now.getFullYear(), now.getMonth(), 1)
-    // Los ingresos NO cuentan OTs canceladas (no son plata) — así cuadra con Reportes.
     const ingresosMes = trabajos
-      .filter(t => t.estado !== ESTADOS.CANCELADO && new Date(t.fecha) >= inicioMes)
+      .filter(t => esIngreso(t) && new Date(t.fecha) >= inicioMes)
       .reduce((s, t) => s + (t.total || 0), 0)
     // Hoy
     const hoyStart = new Date(now); hoyStart.setHours(0,0,0,0)
     const hoyEnd = new Date(now); hoyEnd.setHours(23,59,59,999)
     const ingresosHoy = trabajos
-      .filter(t => { const f = new Date(t.fecha); return t.estado !== ESTADOS.CANCELADO && f >= hoyStart && f <= hoyEnd })
+      .filter(t => { const f = new Date(t.fecha); return esIngreso(t) && f >= hoyStart && f <= hoyEnd })
       .reduce((s, t) => s + (t.total || 0), 0)
     // Por cobrar = facturado (tiene factura en Cuentti) pero AÚN sin pagar
     const porCobrarList = trabajos.filter(t => t.cuenttiTransacionId && !t.pagado)
@@ -160,7 +165,7 @@ export default function Dashboard({ trabajos = [], onNavigate, user, ultimaSync 
     const iniAnt = new Date(now.getFullYear(), now.getMonth() - 1, 1)
     const finAnt = new Date(now.getFullYear(), now.getMonth() - 1, corte, 23, 59, 59, 999)
     const ingresosMesAnt = trabajos
-      .filter(t => { const f = new Date(t.fecha); return t.estado !== ESTADOS.CANCELADO && f >= iniAnt && f <= finAnt })
+      .filter(t => { const f = new Date(t.fecha); return esIngreso(t) && f >= iniAnt && f <= finAnt })
       .reduce((s, t) => s + (t.total || 0), 0)
     const mesAntNombre = iniAnt.toLocaleString('es-CO', { month: 'long' })
     return { activos, listoCount, ingresosMes, ingresosHoy, porCobrar, porCobrarCount: porCobrarList.length,
@@ -246,7 +251,7 @@ export default function Dashboard({ trabajos = [], onNavigate, user, ultimaSync 
       const inicio = new Date(d.getFullYear(), d.getMonth(), 1)
       const fin = new Date(d.getFullYear(), d.getMonth() + 1, 0, 23, 59, 59)
       const total = trabajos
-        .filter(t => { const f = new Date(t.fecha); return f >= inicio && f <= fin })
+        .filter(t => { const f = new Date(t.fecha); return esIngreso(t) && f >= inicio && f <= fin })
         .reduce((s, t) => s + (t.total || 0), 0)
       meses.push(total)
       labels.push(MESES[d.getMonth()])
