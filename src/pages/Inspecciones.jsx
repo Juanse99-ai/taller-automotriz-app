@@ -2,7 +2,6 @@ import { useState, useMemo } from 'react'
 import { uid, fmtDate } from '../utils/helpers'
 import { INSPECCION_CATEGORIAS } from '../utils/vehiculos'
 import { TECNICOS } from '../utils/constants'
-import { lsGet, lsSet, LS_KEYS } from '../services/storage'
 import ConfirmDialog from '../components/ConfirmDialog'
 import { Button, IconEdit, IconTrash } from '../components/ui'
 import { fotoParaSubir } from '../utils/imagen'
@@ -33,7 +32,11 @@ const ESTADO_COLORS = {
 }
 
 export default function Inspecciones({ trabajos, notify, onVincularInspeccion, inspeccionesHook }) {
-  const { inspecciones, guardar } = inspeccionesHook || {}
+  const { inspecciones, guardarUna, eliminar } = inspeccionesHook || {}
+  const borrar = async (i) => {
+    const enLaBase = await eliminar(i.id)
+    notify(enLaBase ? 'Inspección eliminada' : 'Inspección quitada. Aún no se pudo borrar del servidor: se reintenta al volver a abrir.', 'info')
+  }
   const [vista, setVista] = useState('lista')
   const [editId, setEditId] = useState(null)
   const [confirmCfg, setConfirmCfg] = useState(null)
@@ -66,10 +69,10 @@ export default function Inspecciones({ trabajos, notify, onVincularInspeccion, i
         trabajos={trabajos}
         onSave={(data) => {
           if (vista === 'editar') {
-            guardar(inspecciones.map(i => i.id === editId ? { ...i, ...data } : i))
+            guardarUna({ ...insp, ...data })
             notify('Inspeccion actualizada', 'success')
           } else {
-            guardar([{ ...data, id: `INS-${uid()}`, fecha: new Date().toISOString() }, ...inspecciones])
+            guardarUna({ ...data, id: `INS-${uid()}`, fecha: new Date().toISOString() })
             notify('Inspeccion creada', 'success')
           }
           setVista('lista')
@@ -169,7 +172,7 @@ export default function Inspecciones({ trabajos, notify, onVincularInspeccion, i
                     {/* Sin onVincularInspeccion (mecanico) vincular y borrar no hacen
                         nada: el servidor no le deja reescribir la OT ni borrar. */}
                     {onVincularInspeccion && <Button variant="outline" size="sm" onClick={e => { e.stopPropagation(); vincularATrabajo(i) }} title="Vincular al trabajo">OT</Button>}
-                    {onVincularInspeccion && <Button variant="ghost" size="sm" className="btn-icon" aria-label="Eliminar" title="Eliminar" onClick={e => { e.stopPropagation(); setConfirmCfg({ title: 'Eliminar inspección', lead: `${i.placa || 'Sin placa'} · ${i.cliente || 'Sin cliente'} · ${fmtDate(i.fecha)}. No se puede deshacer.`, confirmLabel: 'Eliminar', tone: 'danger', onConfirm: () => { guardar(inspecciones.filter(x => x.id !== i.id)); notify('Inspección eliminada', 'info') } }); return }}><IconTrash /></Button>}
+                    {onVincularInspeccion && <Button variant="ghost" size="sm" className="btn-icon" aria-label="Eliminar" title="Eliminar" onClick={e => { e.stopPropagation(); setConfirmCfg({ title: 'Eliminar inspección', lead: `${i.placa || 'Sin placa'} · ${i.cliente || 'Sin cliente'} · ${fmtDate(i.fecha)}. No se puede deshacer.`, confirmLabel: 'Eliminar', tone: 'danger', onConfirm: () => borrar(i) }); return }}><IconTrash /></Button>}
                   </div>
                 </div>
               )

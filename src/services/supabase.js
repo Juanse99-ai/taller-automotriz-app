@@ -443,6 +443,20 @@ export async function upsertInspeccion(insp) {
   }
 }
 
+// Borra una inspeccion de la base. No existia: eliminar solo la quitaba de la
+// pantalla y al recargar volvia a salir. Devuelve true si la base la soltó; si
+// no, useInspecciones deja una lapida y reintenta.
+export async function borrarInspeccion(id) {
+  try {
+    const res = await fetchWithTimeout(`${proxy('inspecciones')}&id=eq.${encodeURIComponent(id)}`, { method: 'DELETE' })
+    if (!res.ok) throw new Error(await res.text())
+    return true
+  } catch (e) {
+    console.warn('Supabase borrarInspeccion:', e.message)
+    return false
+  }
+}
+
 // ---------- MOVIMIENTOS TECNICOS ----------
 
 export async function fetchMovimientos() {
