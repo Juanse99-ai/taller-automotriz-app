@@ -1,5 +1,16 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Button, IconX, IconEdit, Esqueleto } from '../components/ui'
+import { getToken, avisarSesionVencida } from '../services/auth'
+
+// La gestion de usuarios exige la sesion del administrador (api/auth-setup.js).
+async function llamarUsuarios(opciones = {}) {
+  const res = await fetch('/api/auth-setup', {
+    ...opciones,
+    headers: { 'Content-Type': 'application/json', ...(opciones.headers || {}), 'X-Sesion': getToken() },
+  })
+  if (res.status === 401) avisarSesionVencida()
+  return res
+}
 
 const ROLES = [
   { value: 'admin', label: 'Administrador', desc: 'Acceso completo (todas las secciones)' },
@@ -33,7 +44,7 @@ export default function Usuarios({ notify, currentUser }) {
   const cargar = useCallback(async () => {
     setLoading(true)
     try {
-      const res = await fetch('/api/auth-setup', { method: 'GET' })
+      const res = await llamarUsuarios({ method: 'GET' })
       const data = await res.json()
       if (data.ok) setUsuarios(data.usuarios || [])
       else throw new Error(data.error || 'Error desconocido')
@@ -88,9 +99,8 @@ export default function Usuarios({ notify, currentUser }) {
             activo: form.activo,
             ...(form.password ? { password: form.password } : {}),
           }
-      const res = await fetch('/api/auth-setup', {
+      const res = await llamarUsuarios({
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       })
       const data = await res.json()
@@ -114,9 +124,8 @@ export default function Usuarios({ notify, currentUser }) {
     if (!nuevo.password) { notify('La contraseña es obligatoria al crear', 'error'); return }
     setCreando(true)
     try {
-      const res = await fetch('/api/auth-setup', {
+      const res = await llamarUsuarios({
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'create', usuario, password: nuevo.password, nombre: nuevo.nombre.trim(), rol: nuevo.rol, activo: true }),
       })
       const data = await res.json()
@@ -138,9 +147,8 @@ export default function Usuarios({ notify, currentUser }) {
   const desactivar = async (u) => {
     setConfirmDel(null)
     try {
-      const res = await fetch('/api/auth-setup', {
+      const res = await llamarUsuarios({
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'delete', id: u.id }),
       })
       const data = await res.json()
@@ -157,9 +165,8 @@ export default function Usuarios({ notify, currentUser }) {
 
   const reactivar = async (u) => {
     try {
-      const res = await fetch('/api/auth-setup', {
+      const res = await llamarUsuarios({
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'update', id: u.id, activo: true }),
       })
       const data = await res.json()

@@ -1,9 +1,10 @@
 // Endpoint de gestion de usuarios: hash | create | list | update | delete
-// Requiere proteccion adicional en produccion (ver TODO al final)
+// Solo el administrador, con su sesion (X-Sesion).
 
 import bcrypt from 'bcryptjs'
 
 import { SUPABASE_URL, SUPABASE_KEY } from './_lib/supabase.js'
+import { sesionDeLaPeticion } from './_lib/sesion.js'
 
 const SB_HEADERS = {
   'apikey': SUPABASE_KEY,
@@ -19,6 +20,16 @@ async function hashPassword(password) {
 }
 
 export default async function handler(req, res) {
+  if (req.method === 'OPTIONS') return res.status(200).end()
+
+  // Crear, borrar y cambiar claves o roles es cosa del administrador. Hasta el
+  // 14/09/2026 no se pedia nada: cualquiera con la direccion (y el repo es
+  // publico) podia listar los usuarios, crearse un admin o cambiarle la clave
+  // al dueño. Comprobado ese dia con un GET sin sesion que devolvia la lista.
+  const ses = sesionDeLaPeticion(req)
+  if (!ses) return res.status(401).json({ error: 'Sesion requerida' })
+  if (ses.r !== 'admin') return res.status(403).json({ error: 'Solo el administrador gestiona usuarios' })
+
   // GET → listar usuarios (sin password_hash)
   if (req.method === 'GET') {
     const url = `${SUPABASE_URL}/rest/v1/usuarios?select=id,usuario,nombre,rol,activo,created_at&order=usuario.asc`
@@ -139,6 +150,4 @@ export default async function handler(req, res) {
   res.status(400).json({ error: 'Accion no reconocida. Usa action: hash | list | create | update | delete' })
 }
 
-// TODO en produccion: anteponer un middleware que valide que el caller es admin
-// (ej. token de sesion en header). Hoy cualquiera con la URL puede gestionar.
 export const config = { runtime: 'nodejs' }
