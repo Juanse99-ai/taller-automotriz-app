@@ -8,6 +8,11 @@
 //   SUPABASE_KEY       - Anon key del proyecto Supabase del taller
 
 import { handleMcp } from '../_mcp/shared.js'
+import { ESTADOS, ESTADOS_COTIZACION, esEstadoOT, esEstadoCotizacion } from '../../src/utils/estados.js'
+import {
+  SIN_BORRADAS, borrada, estadoDe, hoyTaller, fechaBogota, desdePeriodo, sumaTotal,
+  resumirTrabajos, avisoEstadosDesconocidos, avisoFiltroEstado,
+} from '../_mcp/trabajos.js'
 
 const SUPABASE_URL = process.env.MCP_SUPABASE_URL || ''
 const SUPABASE_KEY = process.env.SUPABASE_KEY || ''
@@ -79,18 +84,12 @@ const TABLES = [
   'pagos', 'trabajos_saldo',
 ]
 const METODOS_PAGO = ['efectivo', 'transferencia', 'credito', 'wompi', 'otro']
-// Fecha de hoy en la hora del taller (a las 10 de la noche en Colombia, en UTC ya es manana).
-const hoyTaller = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Bogota' }).format(new Date())
-// Fecha (YYYY-MM-DD) de un timestamp en hora de Bogota. Una OT creada a las 9 pm
-// trae un ISO con fecha UTC de manana; sin esto "hoy" y "este mes" la cuentan mal.
-// Una fecha sin hora se deja tal cual.
-const FMT_BOGOTA = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Bogota' })
-const fechaBogota = (iso) => {
-  const s = String(iso || '')
-  if (s.length <= 10) return s
-  const d = new Date(s)
-  return Number.isNaN(d.getTime()) ? s.slice(0, 10) : FMT_BOGOTA.format(d)
-}
+// consultar_tabla ordena por fecha solo donde esa columna existe: en clientes,
+// vehiculos y trabajos_compartidos el order=fecha hacia fallar la consulta.
+const TABLAS_CON_FECHA = new Set([
+  'trabajos', 'cotizaciones', 'inspecciones', 'movimientos_tecnicos',
+  'liquidacion_historial', 'liquidados', 'pagos', 'trabajos_saldo',
+])
 
 async function supabase(table, { method = 'GET', query = '', body = null, upsert = false } = {}) {
   if (!SUPABASE_URL || !SUPABASE_KEY) throw new Error('SUPABASE_URL/SUPABASE_KEY no configurados en el servidor')
@@ -152,6 +151,8 @@ function calcularTotales(items) {
 
 // Siguiente codigo OT segun el maximo existente en Supabase (fuente de verdad
 // multi-dispositivo). La app usa un contador local; aqui derivamos del max real.
+// Es la unica lectura de trabajos que incluye las borradas, a proposito: si no
+// las contara, podria volver a emitir el codigo de una OT borrada.
 async function nextOtCodigo() {
   const rows = await supabase('trabajos', { query: 'select=ot_codigo&limit=2000' })
   let max = 0
@@ -162,45 +163,62 @@ async function nextOtCodigo() {
   return `OT-${String(max + 1).padStart(4, '0')}`
 }
 
+// Todas las OT vivas, por lotes hasta que llegue uno vacio. Antes cada herramienta
+// pedia limit=500 o 2000: el historico se habria cortado sin aviso al pasar de ahi.
+// Solo las columnas del resumen: select=* bajaba tambien las fotos en base64 que
+// todavia viven dentro de algunas filas.
+const COLS_RESUMEN = 'id,ot_codigo,estado,total,fecha,placa,cliente,cedula_cliente,cuentti_id_transacion,deleted'
+async function trabajosVivos(select = COLS_RESUMEN) {
+  const LOTE = 1000
+  const MAX_LOTES = 50
+  const filas = []
+  for (let i = 0; i < MAX_LOTES; i++) {
+    const lote = await supabase('trabajos', {
+      query: `select=${select}&${SIN_BORRADAS}&order=fecha.desc,id.asc&limit=${LOTE}&offset=${filas.length}`,
+    })
+    if (!Array.isArray(lote) || lote.length === 0) return filas
+    filas.push(...lote)
+  }
+  throw new Error(`trabajos tiene mas de ${LOTE * MAX_LOTES} OT vivas: sube MAX_LOTES en trabajosVivos`)
+}
+
+const listaOT = (filas, max = 20) => [
+  ...filas.slice(0, max).map(t =>
+    `- **${t.placa || '—'}** — ${t.cliente || '—'} — ${estadoDe(t)} — ${fmtCOP(t.total)} (${t.ot_codigo || t.id})`),
+  ...(filas.length > max ? [`- … y ${filas.length - max} más`] : []),
+].join('\n')
+
 const tools = [
   {
     name: 'dashboard',
-    description: 'Resumen del taller calculado sobre las últimas 500 OT por fecha: activas (Pendiente y En Proceso), listas para entregar con placa, cliente y total, ingresadas hoy, ingresos del mes y total histórico. Los ingresos suman el total de las OT en estado Entregado según su fecha de ingreso; no son abonos cobrados ni lo facturado en Cuentti. No recibe parámetros.',
+    description: `Resumen del taller sobre todas las OT no borradas: OT activas (cualquier estado distinto de ${ESTADOS.COMPLETADO} y ${ESTADOS.CANCELADO}) con placa, cliente y estado; OT completadas que aún no tienen factura en Cuentti (listas para entregar); OT ingresadas hoy; ingresos del mes y total histórico. Los ingresos suman el total de las OT en estado ${ESTADOS.COMPLETADO} según su fecha de ingreso en hora de Bogotá; no son abonos cobrados. Si alguna OT tiene un estado que no está en el catálogo, lo avisa con su cantidad y valor. No recibe parámetros.`,
     inputSchema: { type: 'object', properties: {} },
     handler: async () => {
-      const trabajos = await supabase('trabajos', { query: 'select=*&order=fecha.desc&limit=500' })
-      const hoy = hoyTaller()          // en hora de Bogota: en UTC a las 7 pm ya es manana
-      const mesActual = hoy.slice(0, 7)
-      const activos = trabajos.filter(t => t.estado === 'En Proceso' || t.estado === 'Pendiente')
-      const listos = trabajos.filter(t => t.estado === 'Listo')
-      const entregados = trabajos.filter(t => t.estado === 'Entregado')
-      const hoyIngresados = trabajos.filter(t => fechaBogota(t.fecha) === hoy)
-      const ingresosMes = trabajos
-        .filter(t => t.estado === 'Entregado' && fechaBogota(t.fecha).startsWith(mesActual))
-        .reduce((s, t) => s + (parseFloat(t.total) || 0), 0)
-      const totalHistorico = entregados.reduce((s, t) => s + (parseFloat(t.total) || 0), 0)
-      return [
+      const hoy = hoyTaller()
+      const r = resumirTrabajos(await trabajosVivos(), { hoy, desde: hoy.slice(0, 7) })
+      const salida = [
         `## Dashboard Taller MultiAS`,
         `**Fecha:** ${fmtFecha(new Date().toISOString())}`,
         ``,
         `| Metrica | Valor |`,
         `|---------|-------|`,
-        `| Trabajos activos (Pendiente + En Proceso) | ${activos.length} |`,
-        `| Listos para entregar | ${listos.length} |`,
-        `| Ingresados hoy | ${hoyIngresados.length} |`,
-        `| Total OTs historicas | ${trabajos.length} |`,
-        `| Ingresos del mes | ${fmtCOP(ingresosMes)} |`,
-        `| Total historico facturado | ${fmtCOP(totalHistorico)} |`,
+        `| OT activas (sin completar ni cancelar) | ${r.activas.length} |`,
+        `| Listas para entregar (completadas sin factura) | ${r.sinFacturar.length} |`,
+        `| Ingresadas hoy | ${r.ingresadasHoy.length} |`,
+        `| Ingresos del mes (${r.delPeriodo.length} OT completadas) | ${fmtCOP(sumaTotal(r.delPeriodo))} |`,
+        `| Historico completado (${r.completadas.length} OT) | ${fmtCOP(sumaTotal(r.completadas))} |`,
+        `| OT registradas (sin borradas) | ${r.vivas.length} |`,
         ``,
-        listos.length > 0
-          ? `### Listos para entregar:\n${listos.map(t => `- **${t.placa}** — ${t.cliente} — ${fmtCOP(t.total)} (${t.ot_codigo || t.id})`).join('\n')}`
-          : '✅ No hay vehiculos listos para entregar.',
-      ].join('\n')
+        r.activas.length ? `### En el taller\n${listaOT(r.activas)}` : 'No hay OT activas.',
+      ]
+      if (r.sinFacturar.length) salida.push('', `### Listas para entregar\n${listaOT(r.sinFacturar)}`)
+      const aviso = avisoEstadosDesconocidos(r.desconocidas, fmtCOP)
+      if (aviso) salida.push('', aviso)
+      return salida.join('\n')
     },
   },
-  {
-    name: 'buscar_trabajos',
-    description: 'Busca órdenes de trabajo entre las últimas 500 por fecha. El término se compara como subcadena contra placa, nombre del cliente, código OT (OT-0001), id interno y cédula, y como igualdad exacta contra el estado (Pendiente, En Proceso, Listo, Entregado). Devuelve hasta 20 filas con código, placa, cliente, estado, total y fecha; para ver los items y totales de una OT usa detalle_trabajo.',
+  {    name: 'buscar_trabajos',
+    description: `Busca órdenes de trabajo no borradas. El término se compara como subcadena contra placa, nombre del cliente, código OT (OT-0001), id interno y cédula, y como igualdad exacta sin distinguir mayúsculas contra el estado (${Object.values(ESTADOS).join(', ')}). Devuelve hasta 20 filas con código, placa, cliente, estado, total y fecha, y cuántas coincidieron; para ver los items de una OT usa detalle_trabajo.`,
     inputSchema: {
       type: 'object',
       properties: { termino: { type: 'string', description: 'Placa, nombre del cliente, código OT, cédula o un estado exacto' } },
@@ -208,40 +226,42 @@ const tools = [
     },
     handler: async ({ termino }) => {
       const t = String(termino || '').trim()
-      const trabajos = await supabase('trabajos', { query: 'select=*&order=fecha.desc&limit=500' })
+      const trabajos = (await trabajosVivos()).filter(tr => !borrada(tr))
       const tLow = t.toLowerCase()
       const filtrados = trabajos.filter(tr =>
         (tr.placa || '').toLowerCase().includes(tLow) ||
         (tr.cliente || '').toLowerCase().includes(tLow) ||
         (tr.ot_codigo || '').toLowerCase().includes(tLow) ||
-        (tr.id || '').toLowerCase().includes(tLow) ||
-        (tr.estado || '').toLowerCase() === tLow ||
+        String(tr.id || '').toLowerCase().includes(tLow) ||
+        estadoDe(tr).toLowerCase() === tLow ||
         (tr.cedula_cliente || '').includes(t))
-      if (filtrados.length === 0) return `No se encontraron trabajos para "${t}".`
+      if (filtrados.length === 0) {
+        return `No se encontraron trabajos para "${t}" (las OT borradas no se buscan). Si buscabas por estado, los que existen son: ${Object.values(ESTADOS).join(', ')}.`
+      }
       const lineas = filtrados.slice(0, 20).map(tr =>
-        `- **${tr.ot_codigo || tr.id}** | ${tr.placa || '—'} | ${tr.cliente || '—'} | ${tr.estado} | ${fmtCOP(tr.total)} | ${fmtFecha(tr.fecha)}`)
+        `- **${tr.ot_codigo || tr.id}** | ${tr.placa || '—'} | ${tr.cliente || '—'} | ${estadoDe(tr)} | ${fmtCOP(tr.total)} | ${fmtFecha(tr.fecha)}`)
       return `## Trabajos encontrados (${filtrados.length})\n\n${lineas.join('\n')}${filtrados.length > 20 ? `\n\n... y ${filtrados.length - 20} mas` : ''}`
     },
   },
-  {
-    name: 'detalle_trabajo',
-    description: 'Devuelve una OT completa: estado, fecha, cliente (nombre, cédula, teléfono, email), vehículo (placa, marca, modelo, año, kilometraje), items con cantidad y precio, subtotal, IVA, total, si está pagada y con qué método, y observaciones. Acepta el id interno o el código OT-…. No incluye los abonos parciales: para el saldo pendiente consulta trabajos_saldo con consultar_tabla.',
+  {    name: 'detalle_trabajo',
+    description: 'Devuelve una OT completa: estado, fecha, cliente (nombre, cédula, teléfono, email), vehículo (placa, marca, modelo, año, kilometraje), items con cantidad y precio, subtotal, IVA, total, si está pagada y con qué método, y observaciones. Acepta el id interno o el código OT-…. No incluye los abonos parciales: para el saldo pendiente consulta trabajos_saldo con consultar_tabla. Una OT borrada no se devuelve.',
     inputSchema: {
       type: 'object',
       properties: { id: { type: 'string', description: 'Id interno de la OT o su código (OT-0001)' } },
       required: ['id'],
     },
     handler: async ({ id }) => {
-      const trabajos = await supabase('trabajos', { query: `select=*&or=(id.eq.${id},ot_codigo.eq.${id})` })
-      const t = trabajos[0]
-      if (!t) return `No se encontro trabajo con ID "${id}".`
+      const ref = encodeURIComponent(String(id || '').trim())
+      const trabajos = await supabase('trabajos', { query: `select=*&${SIN_BORRADAS}&or=(id.eq.${ref},ot_codigo.eq.${ref})` })
+      const t = trabajos.find(x => !borrada(x))
+      if (!t) return `No existe la OT "${id}" (o está borrada).`
       const items = typeof t.items === 'string' ? JSON.parse(t.items) : (t.items || [])
       const itemsText = items.length > 0
         ? items.map((i, idx) => `  ${idx + 1}. ${i.nombre || '—'} x${i.cantidad || 1} — ${fmtCOP(i.precio || 0)}`).join('\n')
         : '  (sin items)'
       return [
         `## Orden de Trabajo: ${t.ot_codigo || t.id}`,
-        `**Estado:** ${t.estado} | **Fecha:** ${fmtFecha(t.fecha)}`,
+        `**Estado:** ${estadoDe(t)} | **Fecha:** ${fmtFecha(t.fecha)}`,
         ``,
         `### Cliente`,
         `- Nombre: ${t.cliente || '—'}`,
@@ -314,11 +334,14 @@ const tools = [
     description: 'Lista las 50 cotizaciones más recientes del taller y muestra hasta 20, con id, cliente, placa, estado, total y fecha, más la suma de los totales de esas 50. Con estado filtra por ese estado exacto.',
     inputSchema: {
       type: 'object',
-      properties: { estado: { type: 'string', enum: ['Pendiente', 'Aprobada', 'Rechazada', 'Facturada'], description: 'Filtra por estado exacto.' } },
+      properties: { estado: { type: 'string', enum: Object.values(ESTADOS_COTIZACION), description: 'Filtra por estado exacto.' } },
     },
     handler: async ({ estado }) => {
+      if (estado && !esEstadoCotizacion(estado)) {
+        return `❌ "${estado}" no es un estado de cotización. Usa uno de: ${Object.values(ESTADOS_COTIZACION).join(', ')}.`
+      }
       let query = 'select=*&order=fecha.desc&limit=50'
-      if (estado) query += `&estado=eq.${estado}`
+      if (estado) query += `&estado=eq.${encodeURIComponent(estado)}`
       const cotizaciones = await supabase('cotizaciones', { query })
       if (cotizaciones.length === 0) return estado ? `No hay cotizaciones con estado "${estado}".` : 'No hay cotizaciones.'
       const total = cotizaciones.reduce((s, c) => s + (parseFloat(c.total) || 0), 0)
@@ -329,40 +352,32 @@ const tools = [
   },
   {
     name: 'stats_ingresos',
-    description: 'Ingresos del taller en un periodo: cuenta las OT en estado Entregado cuya fecha de ingreso cae en el periodo y suma sus totales (total, cantidad y promedio por trabajo). semana = últimos 7 días; mes y anio = desde el primer día del mes o del año en curso. Revisa las últimas 2000 OT. No incluye abonos ni ventas de mostrador hechas solo en Cuentti.',
+    description: `Ingresos del taller en un periodo: cuenta las OT no borradas en estado ${ESTADOS.COMPLETADO} cuya fecha de ingreso (hora de Bogotá) cae en el periodo y suma sus totales, con la cantidad y el promedio por OT. semana = últimos 7 días; mes y anio = desde el primer día del mes o del año en curso. No incluye abonos cobrados (tabla pagos) ni ventas de mostrador hechas solo en Cuentti. Si alguna OT del periodo tiene un estado que no está en el catálogo, lo avisa.`,
     inputSchema: {
       type: 'object',
       properties: { periodo: { type: 'string', enum: ['hoy', 'semana', 'mes', 'anio'], default: 'mes' } },
     },
     handler: async ({ periodo = 'mes' }) => {
-      const trabajos = await supabase('trabajos', { query: 'select=fecha,total,estado,placa,cliente&order=fecha.desc&limit=2000' })
-      const entregados = trabajos.filter(t => t.estado === 'Entregado')
-      const hoy = hoyTaller()          // en hora de Bogota, no UTC
-      let desde
-      switch (periodo) {
-        case 'hoy': desde = hoy; break
-        case 'semana': { const d = new Date(`${hoy}T12:00:00Z`); d.setUTCDate(d.getUTCDate() - 7); desde = d.toISOString().slice(0, 10); break }
-        case 'anio': desde = `${hoy.slice(0, 4)}-01-01`; break
-        default: desde = hoy.slice(0, 7)
-      }
-      const enPeriodo = entregados.filter(t => fechaBogota(t.fecha) >= desde)
-      const totalIngresos = enPeriodo.reduce((s, t) => s + (parseFloat(t.total) || 0), 0)
-      const promedio = enPeriodo.length > 0 ? totalIngresos / enPeriodo.length : 0
+      const desde = desdePeriodo(periodo, hoyTaller())
+      const r = resumirTrabajos(await trabajosVivos('id,estado,total,fecha,cuentti_id_transacion,deleted'), { desde })
+      const total = sumaTotal(r.delPeriodo)
+      const promedio = r.delPeriodo.length ? total / r.delPeriodo.length : 0
+      const aviso = avisoEstadosDesconocidos(r.desconocidas.filter(t => fechaBogota(t.fecha) >= desde), fmtCOP)
       return [
         `## Ingresos — ${periodo}`,
         `**Desde:** ${desde}`,
         ``,
         `| Metrica | Valor |`,
         `|---------|-------|`,
-        `| Trabajos entregados | ${enPeriodo.length} |`,
-        `| Total ingresos | ${fmtCOP(totalIngresos)} |`,
-        `| Promedio por trabajo | ${fmtCOP(promedio)} |`,
-        `| Total trabajos (todos los estados) | ${trabajos.length} |`,
+        `| OT completadas | ${r.delPeriodo.length} |`,
+        `| Total ingresos | ${fmtCOP(total)} |`,
+        `| Promedio por OT | ${fmtCOP(promedio)} |`,
+        `| OT registradas (sin borradas, todos los estados) | ${r.vivas.length} |`,
+        ...(aviso ? ['', aviso] : []),
       ].join('\n')
     },
   },
-  {
-    name: 'buscar_vehiculos',
+  {    name: 'buscar_vehiculos',
     description: 'Busca vehículos del taller cuya placa contenga el texto (sin distinguir mayúsculas). Devuelve placa, marca, modelo, año, cédula del propietario y cuántas visitas tiene registradas. Para ver las OT de una placa usa buscar_trabajos.',
     inputSchema: {
       type: 'object',
@@ -383,26 +398,29 @@ const tools = [
   },
   {
     name: 'consultar_tabla',
-    description: 'Lee filas crudas (JSON) de una tabla del taller, ordenadas por fecha descendente. Solo lectura. Úsala cuando las otras herramientas no exponen el dato, por ejemplo los abonos en pagos o el saldo por OT en trabajos_saldo. La respuesta se recorta a 8000 caracteres: acota con filtro y limite.',
+    description: 'Lee filas crudas (JSON) de una tabla del taller, las más recientes primero cuando la tabla tiene fecha. Solo lectura. Úsala cuando las otras herramientas no exponen el dato, por ejemplo los abonos en pagos o el saldo por OT en trabajos_saldo. En trabajos nunca devuelve OT borradas (trabajos_saldo ya las excluye). Si el filtro compara el estado con un valor que no existe en esa tabla, lo avisa. La respuesta se recorta a 8000 caracteres: acota con filtro y limite.',
     inputSchema: {
       type: 'object',
       properties: {
         tabla: { type: 'string', enum: TABLES },
-        filtro: { type: 'string', description: 'Filtro PostgREST que se anexa tal cual a la consulta, ej: estado=eq.Pendiente o placa=eq.ABC123' },
+        filtro: { type: 'string', description: 'Filtro PostgREST que se anexa tal cual a la consulta, ej: estado=eq.Completado o placa=eq.ABC123' },
         limite: { type: 'integer', default: 20, description: 'Máximo de filas (default 20)' },
       },
       required: ['tabla'],
     },
     handler: async ({ tabla, filtro, limite = 20 }) => {
       if (!TABLES.includes(tabla)) return `❌ Tabla "${tabla}" no permitida.`
-      let query = `select=*&order=fecha.desc&limit=${limite}`
-      if (filtro) query += `&${filtro}`
-      const data = await supabase(tabla, { query })
-      return `## ${tabla} (${data.length} registros)\n\n\`\`\`json\n${JSON.stringify(data, null, 2).slice(0, 8000)}\n\`\`\``
+      const partes = ['select=*']
+      if (tabla === 'trabajos') partes.push(SIN_BORRADAS)
+      if (TABLAS_CON_FECHA.has(tabla)) partes.push('order=fecha.desc')
+      partes.push(`limit=${limite}`)
+      if (filtro) partes.push(filtro)
+      const data = await supabase(tabla, { query: partes.join('&') })
+      const filas = tabla === 'trabajos' ? data.filter(x => !borrada(x)) : data
+      return `${avisoFiltroEstado(tabla, filtro)}## ${tabla} (${filas.length} registros)\n\n\`\`\`json\n${JSON.stringify(filas, null, 2).slice(0, 8000)}\n\`\`\``
     },
   },
-  {
-    name: 'registrar_pago',
+  {    name: 'registrar_pago',
     description: 'Registra un abono (pago parcial o total) de un cliente a una orden de trabajo. Valida que no supere el saldo de trabajos_saldo. Sin confirm es dry-run: muestra total, abonado y saldo antes y despues sin guardar nada.',
     inputSchema: {
       type: 'object',
@@ -516,7 +534,7 @@ const tools = [
         placa, marca, modelo, ano: ano || null, cilindraje,
         items: JSON.stringify(t.items),
         subtotal: t.subtotal, iva: t.iva, total: t.total,
-        observaciones, validez_dias: validezDias, estado: 'Pendiente',
+        observaciones, validez_dias: validezDias, estado: ESTADOS_COTIZACION.PENDIENTE,
       }
       await supabase('cotizaciones', { method: 'POST', body: row, upsert: true })
 
@@ -556,12 +574,12 @@ const tools = [
   },
   {
     name: 'actualizar_cotizacion',
-    description: 'Cambia el estado de una cotizacion (Pendiente, Aprobada, Rechazada, Facturada) y/o sus observaciones. Pasa confirm:true para aplicar.',
+    description: `Cambia el estado de una cotizacion (${Object.values(ESTADOS_COTIZACION).join(', ')}) y/o sus observaciones. Pasa confirm:true para aplicar.`,
     inputSchema: {
       type: 'object',
       properties: {
         id: { type: 'string', description: 'ID de la cotizacion (COT-...)' },
-        estado: { type: 'string', enum: ['Pendiente', 'Aprobada', 'Rechazada', 'Facturada'] },
+        estado: { type: 'string', enum: Object.values(ESTADOS_COTIZACION) },
         observaciones: { type: 'string' },
         items: {
           type: 'array',
@@ -584,6 +602,9 @@ const tools = [
       required: ['id'],
     },
     handler: async ({ id, estado, observaciones, items, confirm = false }) => {
+      if (estado && !esEstadoCotizacion(estado)) {
+        return `❌ "${estado}" no es un estado de cotización. Usa uno de: ${Object.values(ESTADOS_COTIZACION).join(', ')}.`
+      }
       const found = await supabase('cotizaciones', { query: `select=*&id=eq.${encodeURIComponent(id)}` })
       const cot = found[0]
       if (!cot) return `❌ No existe la cotizacion "${id}".`
@@ -648,14 +669,15 @@ const tools = [
             required: ['nombre', 'precio'],
           },
         },
-        estado: { type: 'string', default: 'Pendiente' },
+        estado: { type: 'string', enum: Object.values(ESTADOS), default: ESTADOS.PENDIENTE, description: 'Estado inicial de la OT (default Pendiente).' },
         observaciones: { type: 'string', default: '' },
         confirm: { type: 'boolean', description: 'true = guardar; false (default) = dry-run' },
       },
     },
     handler: async (a) => {
       let { desdeCotizacion, cliente, cedula = '', telefono = '', placa = '', marca = '', modelo = '',
-            ano, kilometraje = '', items = [], estado = 'Pendiente', observaciones = '', confirm = false } = a
+            ano, kilometraje = '', items = [], estado = ESTADOS.PENDIENTE, observaciones = '', confirm = false } = a
+      if (!esEstadoOT(estado)) return `❌ "${estado}" no es un estado de OT. Usa uno de: ${Object.values(ESTADOS).join(', ')}.`
       let origenCot = null
       if (desdeCotizacion) {
         const found = await supabase('cotizaciones', { query: `select=*&id=eq.${encodeURIComponent(desdeCotizacion)}` })
@@ -696,7 +718,7 @@ const tools = [
       }
       await supabase('trabajos', { method: 'POST', body: row, upsert: true })
       if (origenCot) {
-        try { await supabase('cotizaciones', { method: 'PATCH', query: `id=eq.${encodeURIComponent(origenCot)}`, body: { estado: 'Aprobada' } }) } catch { /* no-fatal */ }
+        try { await supabase('cotizaciones', { method: 'PATCH', query: `id=eq.${encodeURIComponent(origenCot)}`, body: { estado: ESTADOS_COTIZACION.APROBADA } }) } catch { /* no-fatal */ }
       }
       return [
         `## ✅ OT creada: ${otCodigo}`, ``,

@@ -11,6 +11,8 @@
 
 import { handleMcp } from '../_mcp/shared.js'
 import { enviarGasto, desglosarIva, inferirTipoPersona, TIPO_PERSONA_JURIDICA } from '../_lib/gasto.js'
+import { ESTADOS_COTIZACION } from '../../src/utils/estados.js'
+import { SIN_BORRADAS } from '../_mcp/trabajos.js'
 
 const CONFIG = {
   baseUrl: process.env.CUENTTI_BASE_URL || 'https://app.cuenti.com',
@@ -1088,10 +1090,10 @@ const tools = [
         const found = await supabaseTaller('cotizaciones', { query: `select=*&id=eq.${encodeURIComponent(key)}` })
         registro = found[0]
       } else {
-        const found = await supabaseTaller('trabajos', { query: `select=*&or=(id.eq.${encodeURIComponent(key)},ot_codigo.eq.${encodeURIComponent(key)})` })
+        const found = await supabaseTaller('trabajos', { query: `select=*&${SIN_BORRADAS}&or=(id.eq.${encodeURIComponent(key)},ot_codigo.eq.${encodeURIComponent(key)})` })
         registro = found[0]
       }
-      if (!registro) return `❌ No se encontro ${esCotizacion ? 'cotizacion' : 'OT'} "${key}".`
+      if (!registro) return `❌ No se encontro ${esCotizacion ? 'cotizacion' : 'OT'} "${key}"${esCotizacion ? '' : ' (o esta borrada)'}.`
 
       const items = typeof registro.items === 'string' ? JSON.parse(registro.items) : (registro.items || [])
       if (!items.length) return `❌ "${key}" no tiene items para facturar.`
@@ -1106,7 +1108,7 @@ const tools = [
           ``, `Si de verdad quieres crear un DUPLICADO, llama de nuevo con permitirDuplicado:true.`,
         ].filter(Boolean).join('\n')
       }
-      if (esCotizacion && registro.estado === 'Facturada' && !permitirDuplicado) {
+      if (esCotizacion && registro.estado === ESTADOS_COTIZACION.FACTURADA && !permitirDuplicado) {
         return `⚠️ La cotizacion ${key} ya esta marcada como Facturada. Para facturar de nuevo (duplicado) usa permitirDuplicado:true.`
       }
 
@@ -1183,7 +1185,7 @@ const tools = [
       if (txId) {
         try {
           if (esCotizacion) {
-            await supabaseTaller('cotizaciones', { method: 'PATCH', query: `id=eq.${encodeURIComponent(registro.id)}`, body: { estado: 'Facturada' } })
+            await supabaseTaller('cotizaciones', { method: 'PATCH', query: `id=eq.${encodeURIComponent(registro.id)}`, body: { estado: ESTADOS_COTIZACION.FACTURADA } })
           } else {
             await supabaseTaller('trabajos', {
               method: 'PATCH', query: `id=eq.${encodeURIComponent(registro.id)}`,
