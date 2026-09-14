@@ -13,9 +13,11 @@
  * Para forzar una actualizacion del propio SW, sube VERSION: el handler de
  * 'activate' borra toda cache cuya clave no sea la de la version actual, asi
  * que subirla limpia de un golpe cualquier copia envenenada en el navegador
- * de un usuario. v1 -> v2 el 2026-08-21 por eso mismo.
+ * de un usuario. v1 -> v2 el 2026-08-21 por eso mismo. v2 -> v3 el 2026-09-14:
+ * despues de horas con el firewall de Vercel bloqueando al taller, un Safari
+ * quedo sin poder abrir Cotizaciones ni recargando, con el servidor sano.
  */
-const VERSION = 'v2'
+const VERSION = 'v3'
 const SHELL = 'mda-shell-' + VERSION
 const ASSETS = 'mda-assets-' + VERSION
 

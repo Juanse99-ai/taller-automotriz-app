@@ -12,7 +12,12 @@
 
 // Los navegadores redactan este fallo cada uno a su manera; se mira por trozos.
 export function esVersionVieja(err) {
-  return /importing a module script failed|failed to fetch dynamically imported module|error loading dynamically imported module|dynamically imported module/i
+  // Los tres ultimos son el mismo problema visto desde otro lado: lo que llego
+  // no es JavaScript (una copia guardada dañada, o una pagina de error en su
+  // lugar). Tambien se arregla pidiendo la version de verdad, no reintentando.
+  // WebKit: "'text/html' is not a valid JavaScript MIME type"; Chrome:
+  // "Expected a JavaScript-or-Wasm module script"; Firefox: "disallowed MIME type".
+  return /importing a module script failed|failed to fetch dynamically imported module|error loading dynamically imported module|dynamically imported module|is not a valid javascript mime type|expected a javascript[\w-]* module script|disallowed mime type/i
     .test(String(err?.message || err))
 }
 
@@ -32,6 +37,34 @@ export const marca = {
 // Devuelve true si se hizo cargo (la pagina se esta recargando) y false si el
 // error hay que propagarlo: o no es de version, o ya se recargo una vez por
 // esta misma cosa y sigue fallando, que es un fallo de verdad.
+// Recarga a fondo: suelta el service worker y borra SUS copias antes de pedir
+// la pagina otra vez.
+//
+// Existe porque recargar a secas no alcanza cuando lo que esta dañado es la
+// copia guardada: el service worker vuelve a servir lo mismo y la seccion
+// sigue sin abrir, recargue quien recargue. Paso el 2026-09-14 en Safari, tras
+// el bloqueo del firewall: el servidor estaba sano y Cotizaciones no abria.
+//
+// Solo borra las caches del service worker (mda-shell-*, mda-assets-*). La
+// sesion y los datos guardados viven en localStorage y no se tocan: nadie
+// tiene que volver a entrar. El service worker se registra de nuevo solo al
+// cargar (main.jsx), ya limpio.
+export async function limpiarYRecargar() {
+  const limpiar = async () => {
+    try {
+      const regs = (await navigator.serviceWorker?.getRegistrations?.()) || []
+      await Promise.all(regs.map(r => r.unregister()))
+    } catch { /* sin service worker: nada que soltar */ }
+    try {
+      const claves = (await window.caches?.keys?.()) || []
+      await Promise.all(claves.filter(k => k.startsWith('mda-')).map(k => window.caches.delete(k)))
+    } catch { /* sin Cache Storage: nada que borrar */ }
+  }
+  // Safari a veces no contesta getRegistrations: pase lo que pase, se recarga.
+  await Promise.race([limpiar(), new Promise(r => setTimeout(r, 2500))])
+  window.location.reload()
+}
+
 export function recargarSiEsVersionVieja(nombre, err) {
   if (!esVersionVieja(err) || marca.hay(nombre)) return false
   marca.poner(nombre)

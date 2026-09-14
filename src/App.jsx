@@ -10,7 +10,7 @@ import Login from './components/Login'
 // archivo, asi que una pestaña vieja pide nombres que ya no existen. El guardia
 // (recargar una vez, con marca POR seccion para no entrar en bucle) vive en
 // utils/recargaVersion, compartido con el generador de PDF.
-import { recargarSiEsVersionVieja, marca } from './utils/recargaVersion'
+import { recargarSiEsVersionVieja, marca, limpiarYRecargar, esVersionVieja as esFalloDeVersion } from './utils/recargaVersion'
 import { vigilarVersion } from './utils/nuevaVersion'
 import ConfirmDialog from './components/ConfirmDialog'
 import { ESTADOS } from './utils/constants'
@@ -67,10 +67,9 @@ class ErrorBoundary extends Component {
   static getDerivedStateFromError(error) { return { error } }
   render() {
     if (this.state.error) {
-      // Los navegadores redactan este fallo cada uno a su manera; se mira por
-      // trozos en vez de por texto exacto.
-      const msg = String(this.state.error?.message || '')
-      const esVersionVieja = /importing a module script failed|failed to fetch dynamically imported module|error loading dynamically imported module|dynamically imported module/i.test(msg)
+      // La misma regla que la recarga automatica (utils/recargaVersion): con dos
+      // copias de la expresion, la de aqui ya se habia quedado atras.
+      const esVersionVieja = esFalloDeVersion(this.state.error)
       return (
         <div style={{ padding: 24 }}>
           <div className="card" style={{ background: 'var(--red-100)', border: '1px solid rgba(220,38,38,.32)' }}>
@@ -93,7 +92,9 @@ class ErrorBoundary extends Component {
                   recarga en vez de limpiar el estado. */}
               <button className="btn btn-primary btn-sm"
                 onClick={() => esVersionVieja
-                  ? window.location.reload()
+                  // A fondo y no a secas: si llegaste a este boton, la recarga
+                  // automatica ya se intento y no arreglo nada.
+                  ? limpiarYRecargar()
                   : this.setState({ error: null })}>
                 {esVersionVieja ? 'Recargar' : 'Reintentar'}
               </button>
