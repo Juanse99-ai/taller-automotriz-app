@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { motion, useReducedMotion } from 'motion/react'
 import CompartirPortalModal from './CompartirPortalModal'
 import Switch from './Switch'
-import { rotuloEstado } from '../utils/constants'
+import { rotuloEstado, ESTADOS } from '../utils/constants'
 
 const SunIcon = () => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -161,7 +161,7 @@ export default function TopBar({ title, subtitle, onToggleSidebar, sidebarOpen, 
     }))
 
   const pendientesCount = (trabajos || []).filter(t =>
-    t.estado === 'Pendiente' || t.estado === 'En Diagnostico'
+    t.estado === ESTADOS.PENDIENTE || t.estado === ESTADOS.EN_DIAGNOSTICO
   ).length
 
   return (

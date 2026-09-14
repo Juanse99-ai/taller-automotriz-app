@@ -1,6 +1,6 @@
 import { Fragment, useMemo, useState, useEffect } from 'react'
 import { fmt, fmtDate, whatsappLink } from '../utils/helpers'
-import { ESTADOS, TECNICOS, DIAS_ESTANCADO, TALLER, rotuloEstado } from '../utils/constants'
+import { ESTADOS, ESTADOS_ACTIVOS, TECNICOS, DIAS_ESTANCADO, TALLER, rotuloEstado } from '../utils/constants'
 import { Button } from '../components/ui'
 import { formatCacheAge } from '../hooks/useInventario'
 import { fetchSaldos } from '../services/supabase'
@@ -106,7 +106,8 @@ const IcWa = () => (
 )
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-const ACTIVOS = [ESTADOS.PENDIENTE, ESTADOS.EN_DIAGNOSTICO, ESTADOS.EN_PROGRESO, ESTADOS.ESPERANDO_REPUESTOS, ESTADOS.EN_PRUEBA, ESTADOS.PROGRAMADO]
+// El mismo grupo que usa el MCP del taller: todo lo que no esta Completado ni Cancelado.
+const ACTIVOS = ESTADOS_ACTIVOS
 
 function tecNombre(id) {
   const t = TECNICOS.find(t => t.id === parseInt(id))

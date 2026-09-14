@@ -1,7 +1,7 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react'
 import { cargarPdf } from '../utils/pdfLazy'
 import { fmt, fmtDate, uid, hoyISO, normalizarDoc, normalizarNombre, fmtTelefono, cantidadItem, fmtCant } from '../utils/helpers'
-import { TECNICOS, IVA_DEFAULT, TALLER } from '../utils/constants'
+import { TECNICOS, IVA_DEFAULT, TALLER, ESTADOS_COTIZACION as ESTADO_COT } from '../utils/constants'
 import { loadLogo as loadPdfLogo, drawHeader, drawSectionHeader, drawDataBlock, drawTotalsBox, drawSignatures, drawFooter, tableStylesItems, PDF_LAYOUT, PDF_COLORS } from '../utils/pdfTheme'
 import { MARCAS, getModelos, CILINDRAJES } from '../utils/vehiculos'
 import MoneyInput from '../components/MoneyInput'
@@ -11,8 +11,6 @@ import { useInventario, formatCacheAge } from '../hooks/useInventario'
 import { lsGet, lsSet, LS_KEYS } from '../services/storage'
 import { Button, Badge, IconX, IconEdit, IconTrash, IconPdf, ANIOS } from '../components/ui'
 import { recordarCotizacionWhatsApp } from '../utils/portalLink'
-
-const ESTADO_COT = { PENDIENTE: 'Pendiente', APROBADA: 'Aprobada', RECHAZADA: 'Rechazada' }
 
 // Dias que lleva esperando respuesta una cotizacion. Se cuenta desde su fecha,
 // no desde created_at: la fecha es la que el cliente vio en el documento.
@@ -79,10 +77,10 @@ export default function Cotizaciones({ notify, trabajos = [], onCrearTrabajo, co
     const logoData = await loadPdfLogo()
 
     // ============= HEADER (logo real + tildes) =============
-    const estado = c.estado || 'Pendiente'
-    const badge = estado === 'Aprobada'
+    const estado = c.estado || ESTADO_COT.PENDIENTE
+    const badge = estado === ESTADO_COT.APROBADA
       ? { label: 'Aprobada', color: 'green' }
-      : estado === 'Rechazada'
+      : estado === ESTADO_COT.RECHAZADA
         ? { label: 'Rechazada', color: 'red' }
         : { label: `Vigente · ${c.validezDias || 15} días`, color: 'amber' }
 

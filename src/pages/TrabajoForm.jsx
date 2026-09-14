@@ -925,7 +925,7 @@ export default function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [
                       {historial.slice(0, 5).map(h => (
                         <tr key={h.id}>
                           <td className="text-mono text-sm">{h.otCodigo || '—'}</td>
-                          <td><span className={`hd-chip hd-chip--${h.estado === 'Completado' ? 'ok' : 'warn'}`}>{h.estado}</span></td>
+                          <td><span className={`hd-chip hd-chip--${h.estado === ESTADOS.COMPLETADO ? 'ok' : 'warn'}`}>{h.estado}</span></td>
                           <td className="text-sm">{TECNICOS.find(t => t.id === parseInt(h.tecnicoId))?.nombre || '—'}</td>
                           <td className="text-right text-mono">{fmt(h.total)}</td>
                           <td className="text-sm text-muted">{fmtDate(h.fecha)}</td>

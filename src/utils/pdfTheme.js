@@ -14,7 +14,7 @@
 //   - tableStyles                  → estilos para autoTable consistentes
 // =====================================================================
 
-import { TALLER, rotuloEstado } from './constants'
+import { TALLER, rotuloEstado, ESTADOS } from './constants'
 
 // El logo se descarga UNA sola vez en toda la sesión y se guarda aquí.
 //
@@ -108,16 +108,16 @@ export const PDF_LAYOUT = {
 
 // Mapa de colores de badges por estado
 const BADGE_COLOR_MAP = {
-  'Completado':           { bg: PDF_COLORS.GREEN_100, fg: PDF_COLORS.GREEN_TEXT, bd: [134, 239, 172] },
+  [ESTADOS.COMPLETADO]:          { bg: PDF_COLORS.GREEN_100, fg: PDF_COLORS.GREEN_TEXT, bd: [134, 239, 172] },
   // Mismos pares que chipEstado() en pantalla: diagnostico morado y espera de
   // repuestos naranja. Antes los dos caian en ambar junto con "pendiente", asi
   // que tres estados distintos se veian iguales en el papel.
-  'En Progreso':          { bg: PDF_COLORS.BLUE_100,  fg: PDF_COLORS.BLUE_TEXT,  bd: [147, 197, 253] },
-  'En Prueba':            { bg: PDF_COLORS.BLUE_100,  fg: PDF_COLORS.BLUE_TEXT,  bd: [147, 197, 253] },
-  'Pendiente':            { bg: PDF_COLORS.AMBER_100, fg: PDF_COLORS.AMBER_TEXT, bd: [253, 230, 138] },
-  'En Diagnostico':       { bg: [237, 233, 254],      fg: [91, 33, 182],         bd: [196, 181, 253] },
-  'Esperando Repuestos':  { bg: [255, 237, 213],      fg: [154, 52, 18],         bd: [253, 186, 116] },
-  'Cancelado':            { bg: PDF_COLORS.RED_100,   fg: PDF_COLORS.RED_TEXT,   bd: [252, 165, 165] },
+  [ESTADOS.EN_PROGRESO]:         { bg: PDF_COLORS.BLUE_100,  fg: PDF_COLORS.BLUE_TEXT,  bd: [147, 197, 253] },
+  [ESTADOS.EN_PRUEBA]:           { bg: PDF_COLORS.BLUE_100,  fg: PDF_COLORS.BLUE_TEXT,  bd: [147, 197, 253] },
+  [ESTADOS.PENDIENTE]:           { bg: PDF_COLORS.AMBER_100, fg: PDF_COLORS.AMBER_TEXT, bd: [253, 230, 138] },
+  [ESTADOS.EN_DIAGNOSTICO]:      { bg: [237, 233, 254],      fg: [91, 33, 182],         bd: [196, 181, 253] },
+  [ESTADOS.ESPERANDO_REPUESTOS]: { bg: [255, 237, 213],      fg: [154, 52, 18],         bd: [253, 186, 116] },
+  [ESTADOS.CANCELADO]:           { bg: PDF_COLORS.RED_100,   fg: PDF_COLORS.RED_TEXT,   bd: [252, 165, 165] },
 }
 
 const DEFAULT_BADGE = { bg: PDF_COLORS.SLATE_100, fg: PDF_COLORS.SLATE_700, bd: PDF_COLORS.SLATE_300 }

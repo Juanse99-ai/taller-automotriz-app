@@ -7,6 +7,7 @@ import { cargarPdf } from './pdfLazy'
 import { fmtCant } from './helpers'
 import { loadLogo, drawHeader, drawSectionHeader, drawDataBlock, drawSignatures, drawFooter, tableStylesItems, PDF_LAYOUT, PDF_COLORS } from './pdfTheme'
 import { fmtDate } from './helpers'
+import { ESTADOS } from './estados'
 
 // Dibuja UNA ficha (sin precios) en el doc. hechasSet = índices de tareas hechas.
 // Con esPrimera=false agrega una página nueva antes (para varias OT en un PDF).
@@ -24,7 +25,7 @@ export async function dibujarUnaFicha(doc, t, tecNombre, hechasSet, logoData, es
     logoData,
     docType: 'ORDEN DE TRABAJO',
     docNumber: t.otCodigo || '—',
-    badge: { label: t.estado || 'Pendiente', estado: t.estado || 'Pendiente' },
+    badge: { label: t.estado || ESTADOS.PENDIENTE, estado: t.estado || ESTADOS.PENDIENTE },
     dateRows: [
       { lbl: 'Fecha', val: fmtDate(t.fecha) },
       { lbl: 'Técnico', val: tecNombre?.(t.tecnicoId) || '—' },

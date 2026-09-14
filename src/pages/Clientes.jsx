@@ -5,7 +5,7 @@ import { TIPOS_IDENTIFICACION, TIPOS_PERSONA, REGIMENES, buscarClientePorCedula,
 import ConfirmDialog from '../components/ConfirmDialog'
 import CompartirPortalModal from '../components/CompartirPortalModal'
 import { fetchAccesosPortal } from '../services/supabase'
-import { SIN_FACTURA } from '../utils/constants'
+import { SIN_FACTURA, ESTADOS } from '../utils/constants'
 import { Button, Badge, ANIOS } from '../components/ui'
 
 // Quita acentos: "FERNÁNDEZ" → "fernandez"
@@ -442,7 +442,7 @@ export default function Clientes({ clientes, vehiculos, trabajos = [], notify })
   const ultimaVisitaPorCedula = useMemo(() => {
     const map = {}
     for (const t of trabajos) {
-      if (t.estado !== 'Completado') continue
+      if (t.estado !== ESTADOS.COMPLETADO) continue
       const ced = (t.cedula || '').toString().trim()
       if (!ced || !t.fecha) continue
       if (!map[ced] || new Date(t.fecha) > new Date(map[ced])) map[ced] = t.fecha

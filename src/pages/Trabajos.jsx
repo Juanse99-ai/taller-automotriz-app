@@ -438,7 +438,7 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
       logoData,
       docType: 'ORDEN DE TRABAJO',
       docNumber: t.otCodigo || '—',
-      badge: { label: t.estado || 'Pendiente', estado: t.estado || 'Pendiente' },
+      badge: { label: t.estado || ESTADOS.PENDIENTE, estado: t.estado || ESTADOS.PENDIENTE },
       dateRows,
     })
 

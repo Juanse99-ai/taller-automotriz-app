@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { fetchCotizaciones, upsertCotizacion, deleteCotizacion } from '../services/supabase'
 import { lsGet, lsSet, LS_KEYS } from '../services/storage'
 import { haySesion } from '../services/auth'
+import { ESTADOS_COTIZACION } from '../utils/estados'
 
 function normalizarRow(r) {
   return {
@@ -21,7 +22,7 @@ function normalizarRow(r) {
     total: parseFloat(r.total) || 0,
     observaciones: r.observaciones || '',
     validezDias: r.validez_dias || 15,
-    estado: r.estado || 'Pendiente',
+    estado: r.estado || ESTADOS_COTIZACION.PENDIENTE,
   }
 }
 

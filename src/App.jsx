@@ -13,6 +13,7 @@ import Login from './components/Login'
 import { recargarSiEsVersionVieja, marca } from './utils/recargaVersion'
 import { vigilarVersion } from './utils/nuevaVersion'
 import ConfirmDialog from './components/ConfirmDialog'
+import { ESTADOS } from './utils/constants'
 
 function seccion(nombre, importar) {
   return lazy(() => importar().then(mod => {
@@ -311,7 +312,7 @@ export default function App() {
       total: cot.total || 0,
       subtotalSinIva: cot.subtotal || 0,
       totalIva: cot.iva || 0,
-      estado: 'Pendiente',
+      estado: ESTADOS.PENDIENTE,
       fecha: new Date().toISOString(),
     }
     await trabajosHook.agregarTrabajo(data)

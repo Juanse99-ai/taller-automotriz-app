@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useInstalar } from '../hooks/useInstalar'
+import { ESTADOS, ESTADOS_COTIZACION } from '../utils/constants'
 
 const ICONS = {
   dashboard: (
@@ -179,19 +180,19 @@ export default function Sidebar({ active, onNavigate, isOpen, collapsed, onColla
   const allowed = seccionesPermitidas || []
 
   // Pill rojo en Trabajos: pendientes + en progreso (alerta de carga del taller)
-  const pendientes = trabajos.filter(t => t.estado === 'Pendiente' || t.estado === 'En Diagnostico').length
-  const enProgreso = trabajos.filter(t => t.estado === 'En Progreso' || t.estado === 'Esperando Repuestos' || t.estado === 'En Prueba').length
+  const pendientes = trabajos.filter(t => t.estado === ESTADOS.PENDIENTE || t.estado === ESTADOS.EN_DIAGNOSTICO).length
+  const enProgreso = trabajos.filter(t => t.estado === ESTADOS.EN_PROGRESO || t.estado === ESTADOS.ESPERANDO_REPUESTOS || t.estado === ESTADOS.EN_PRUEBA).length
   // Cuentti: facturado sin pagar. Sale de los mismos trabajos que ya recibe el
   // rail, asi que no cuesta datos nuevos — y es la cifra que el dueño persigue.
   const porCobrar = trabajos.filter(t => t.cuenttiTransacionId && !t.pagado).length
   // Cotizaciones: las que estan por aprobar.
-  const cotizPendientes = cotizaciones.filter(c => c.estado === 'Pendiente').length
+  const cotizPendientes = cotizaciones.filter(c => c.estado === ESTADOS_COTIZACION.PENDIENTE).length
   // Liquidacion: cuantos tecnicos tienen trabajo terminado sin liquidar. No es
   // la plata (esa la calcula la pantalla con los compartidos y los descuentos):
   // es a cuantas personas hay que pagarles, que es lo que el rail debe avisar.
   const tecnicosPorLiquidar = new Set(
     trabajos
-      .filter(t => t.estado === 'Completado' && t.tecnicoId &&
+      .filter(t => t.estado === ESTADOS.COMPLETADO && t.tecnicoId &&
         !liquidados.some(x => x === t.id || String(x).startsWith(`${t.id}#`)))
       .map(t => String(t.tecnicoId))
   ).size

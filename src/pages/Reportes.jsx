@@ -852,7 +852,7 @@ export default function Reportes({ trabajos, loading = false, notify }) {
           // Un token que falta no puede volver a borrar un estado del grafico.
           // Los tres colores corregidos son los que el handoff asigna a esos
           // estados: Diagnostico morado, Esperando Rep. naranja, En Prueba cyan.
-          const colors = {'Completado':'var(--green-500,#22c55e)','Cancelado':'var(--red-500,#ef4444)','En Progreso':'var(--blue-500,#1e40af)','Pendiente':'var(--amber-400,#fbbf24)','En Diagnostico':'var(--purple-500,#5b21b6)','Esperando Repuestos':'var(--orange-600,#9a3412)','En Prueba':'var(--cyan-700,#155e75)','Programado':'var(--slate-400,#94a3b8)'}
+          const colors = {[ESTADOS.COMPLETADO]:'var(--green-500,#22c55e)',[ESTADOS.CANCELADO]:'var(--red-500,#ef4444)',[ESTADOS.EN_PROGRESO]:'var(--blue-500,#1e40af)',[ESTADOS.PENDIENTE]:'var(--amber-400,#fbbf24)',[ESTADOS.EN_DIAGNOSTICO]:'var(--purple-500,#5b21b6)',[ESTADOS.ESPERANDO_REPUESTOS]:'var(--orange-600,#9a3412)',[ESTADOS.EN_PRUEBA]:'var(--cyan-700,#155e75)',[ESTADOS.PROGRAMADO]:'var(--slate-400,#94a3b8)'}
           if (activos.length <= 1) {
             const e = activos[0]
             return (

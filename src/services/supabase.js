@@ -1,5 +1,6 @@
 // Cliente a traves de proxy backend para evitar CORS
 import { getToken, getSession, haySesion, avisarSesionVencida } from './auth'
+import { ESTADOS, ESTADOS_COTIZACION } from '../utils/estados'
 
 const proxy = (table) => `/api/supabase?table=${table}`
 
@@ -168,7 +169,7 @@ export async function upsertTrabajo(trabajo, opts = {}) {
     cilindraje: trabajo.cilindraje || null,
     kilometraje: trabajo.kilometraje || null,
     tecnico_id: trabajo.tecnicoId || null,
-    estado: trabajo.estado || 'Pendiente',
+    estado: trabajo.estado || ESTADOS.PENDIENTE,
     observaciones: trabajo.observaciones || '',
     items: JSON.stringify(trabajo.items || []),
     mano_obra: trabajo.manoObra || 0,
@@ -282,7 +283,7 @@ export async function upsertCotizacion(cot) {
     total: cot.total || 0,
     observaciones: cot.observaciones || '',
     validez_dias: cot.validezDias || 15,
-    estado: cot.estado || 'Pendiente',
+    estado: cot.estado || ESTADOS_COTIZACION.PENDIENTE,
   }
   const res = await fetchWithTimeout(`${proxy('cotizaciones')}&upsert=true`, {
     method: 'POST',

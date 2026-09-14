@@ -9,6 +9,7 @@ import { sesionDeLaPeticion } from './_lib/sesion.js'
 
 import { SUPABASE_URL, SUPABASE_KEY, SUPABASE_HEAD } from './_lib/supabase.js'
 import { sincronizarConCuentti } from './_lib/cuentti.js'
+import { ESTADOS_COTIZACION } from '../src/utils/estados.js'
 
 function getOrigin(reqOrigin = '') {
   if (ALLOWED_ORIGINS.includes(reqOrigin)) return reqOrigin
@@ -390,7 +391,7 @@ export default async function handler(req, res) {
       // se podria cambiar el TOTAL de una cotizacion, no solo aprobarla.
       return claves.length > 0
         && claves.every(k => CAMPOS.includes(k))
-        && cuerpo.estado === 'Aprobada'
+        && cuerpo.estado === ESTADOS_COTIZACION.APROBADA
     }
     return false
   }

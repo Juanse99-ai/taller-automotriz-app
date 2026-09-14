@@ -22,7 +22,7 @@ function normalizar(r) {
     cilindraje: r.cilindraje || '',
     kilometraje: r.kilometraje || null,
     tecnicoId: r.tecnico_id || r.tecnicoId || null,
-    estado: r.estado || 'Pendiente',
+    estado: r.estado || ESTADOS.PENDIENTE,
     observaciones: r.observaciones || '',
     items: typeof r.items === 'string' ? JSON.parse(r.items) : (r.items || []),
     manoObra: parseFloat(r.mano_obra ?? r.manoObra) || 0,

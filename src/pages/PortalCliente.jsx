@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { cargarPdf } from '../utils/pdfLazy'
 import { InspeccionDetalle } from './Inspecciones'
-import { ESTADOS, TECNICOS, TALLER, rotuloEstado } from '../utils/constants'
+import { ESTADOS, ESTADOS_COTIZACION, TECNICOS, TALLER, rotuloEstado } from '../utils/constants'
 import { fmtDate, fmt, tituloCliente, cantidadItem, fmtCant } from '../utils/helpers'
 import { labelInventario, etiquetaCombustible, ingresoTieneAlgo } from '../utils/ingreso'
 import { Button, IconX } from '../components/ui'
@@ -120,7 +120,7 @@ async function buscarTrabajosPorCedula(cedula) {
       ano: r.ano,
       kilometraje: r.kilometraje,
       tecnicoId: r.tecnico_id,
-      estado: r.estado || 'Pendiente',
+      estado: r.estado || ESTADOS.PENDIENTE,
       observaciones: r.observaciones,
       items: typeof r.items === 'string' ? JSON.parse(r.items) : (r.items || []),
       total: parseFloat(r.total) || 0,
@@ -167,7 +167,7 @@ async function buscarCotizacionesPorCedula(cedula) {
       total: parseFloat(r.total) || 0,
       observaciones: r.observaciones || '',
       validezDias: parseInt(r.validez_dias) || 0,
-      estado: r.estado || 'Pendiente',
+      estado: r.estado || ESTADOS_COTIZACION.PENDIENTE,
       aprobada: !!r.aprobada_en,
       aprobadaEn: r.aprobada_en || null,
     }))
@@ -447,13 +447,13 @@ export default function PortalCliente() {
       const res = await fetch(`/api/supabase?table=cotizaciones&id=eq.${encodeURIComponent(cotiz.id)}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ estado: 'Aprobada', firma_aprobacion: firmaDataUrl, aprobada_en: ahora }),
+        body: JSON.stringify({ estado: ESTADOS_COTIZACION.APROBADA, firma_aprobacion: firmaDataUrl, aprobada_en: ahora }),
       })
       if (!res.ok) throw new Error(`No se pudo guardar (${res.status})`)
       setDatos(d => ({
         ...d,
         cotizaciones: (d.cotizaciones || []).map(c =>
-          c.id === cotiz.id ? { ...c, aprobada: true, estado: 'Aprobada', aprobadaEn: ahora } : c),
+          c.id === cotiz.id ? { ...c, aprobada: true, estado: ESTADOS_COTIZACION.APROBADA, aprobadaEn: ahora } : c),
       }))
       setFirmandoCotiz(null)
     } catch (e) {
@@ -794,7 +794,7 @@ export default function PortalCliente() {
   // la firma del portal, así que NO puede ser el único criterio (antes, cotizaciones
   // ya aprobadas en el admin —y hasta ya trabajadas y pagadas— seguían saliendo
   // "por aprobar" al cliente).
-  const esCotizPendiente = (c) => c.estado === 'Pendiente' && !c.aprobadaEn
+  const esCotizPendiente = (c) => c.estado === ESTADOS_COTIZACION.PENDIENTE && !c.aprobadaEn
   const todasCotiz = (datos.cotizaciones || []).slice().sort((a, b) => new Date(b.fecha) - new Date(a.fecha))
   // Mostramos las pendientes + la que el cliente acabe de firmar en esta sesión
   // (aprobadaEn local) para darle el "Aprobada ✓"; las viejas resueltas se ocultan.

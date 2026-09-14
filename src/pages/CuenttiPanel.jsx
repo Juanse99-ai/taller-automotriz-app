@@ -16,7 +16,7 @@ import {
   probarIdMedioPago,
   anularTransacion,
 } from '../services/cuentti'
-import { RESOLUCIONES, SIN_FACTURA } from '../utils/constants'
+import { RESOLUCIONES, SIN_FACTURA, ESTADOS } from '../utils/constants'
 import ConfirmDialog from '../components/ConfirmDialog'
 import { Button } from '../components/ui'
 
@@ -753,7 +753,7 @@ export default function CuenttiPanel({ trabajos, actualizarTrabajo, notify, trab
   // Trabajos facturables (completados con items). Excluye los ya facturados
   // por defecto, salvo que el usuario active "ver ya facturados" para reenviar.
   const facturablesAll = trabajos.filter(t =>
-    t.estado === 'Completado' && t.items && t.items.length > 0
+    t.estado === ESTADOS.COMPLETADO && t.items && t.items.length > 0
   )
   const yaFacturadosCount = facturablesAll.filter(t => t.cuenttiTransacionId).length
   const facturables = verFacturados
