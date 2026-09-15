@@ -892,14 +892,6 @@ textarea.input{min-height:88px;resize:vertical;padding-top:11px}
 [data-theme="dark"] .btn-ghost{box-shadow:0 3px 10px rgba(0,0,0,.35),inset 0 1px 1px rgba(255,255,255,.10)}
 [data-theme="dark"] .btn-primary,[data-theme="dark"] .btn-danger,[data-theme="dark"] .btn-success,[data-theme="dark"] .btn-warning{border-color:rgba(255,255,255,.22)}
 .btn:disabled,.btn.disabled{opacity:.52;cursor:not-allowed;pointer-events:none}
-/* Controles del visor de fotos (superficie SIEMPRE oscura: no usan tokens de tema) */
-.lb-ctl{display:inline-flex;align-items:center;justify-content:center;border-radius:var(--r-md);background:rgba(255,255,255,.13);border:1px solid rgba(255,255,255,.22);color:#fff;cursor:pointer;font-weight:600;transition:background .15s,transform .15s;-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
-.lb-ctl:hover{background:rgba(255,255,255,.24)}
-.lb-ctl:active{transform:scale(.94)}
-.lb-ctl:focus-visible{outline:2px solid #fff;outline-offset:2px}
-.lb-close{position:fixed;top:max(14px,env(safe-area-inset-top,14px));right:14px;z-index:1001;width:44px;height:44px;border-radius:50%}
-.lb-nav{padding:9px 18px;font-size:13px;gap:6px}
-.lb-nav:disabled{opacity:.4;cursor:default}
 
 /* alias badges (legacy) */
 .badge-success{background:var(--green-100);color:#166534}
@@ -3940,34 +3932,156 @@ input.input[type="date"]::-webkit-datetime-edit{display:block;padding:0}
   .pc-fotos{ grid-template-columns:repeat(3,1fr) }
 }
 
-/* ── Visor de fotos: contexto y salto directo ──────────────────────────────
-   El visor tapa la pantalla entera y solo decia "1/3" sobre negro. Ahora dice
-   de que orden son las fotos, y la tira de abajo deja saltar a cualquiera sin
-   pasar por todas. El pie de foto ya iba antes de los botones, que es lo que
-   hay que leer sin bajar la vista; eso se queda como estaba. */
-.lb-ot{
-  position:fixed; top:16px; left:18px; z-index:2;
-  font-family:var(--mono); font-size:13px; font-weight:700; letter-spacing:.4px;
-  color:rgba(255,255,255,.92); padding:7px 12px; border-radius:var(--r-pill);
-  background:rgba(255,255,255,.10); pointer-events:none;
+/* ── Visor de fotos y videos del portal, al estilo de las historias ────────
+   Es la unica superficie de la app con fondo difuminado, y es a proposito: el
+   fondo es la misma foto que el cliente esta mirando, apagada y difuminada,
+   para que la pantalla entera acompane la evidencia. No hay vidrio sobre
+   contenido: los controles son solidos. Siempre oscuro, no sigue el tema.
+   El difuminado sale de un canvas de 64px estirado (ver VisorEvidencias.jsx):
+   no hay `filter: blur`, que a pantalla completa le cuesta a un iPhone. */
+.hv{
+  position:fixed; inset:0; z-index:1000; display:flex; align-items:center; justify-content:center;
+  background:#05070c; color:#fff; outline:none; overflow:hidden;
+  overscroll-behavior:contain; -webkit-tap-highlight-color:transparent;
+  opacity:1; transition:opacity .22s var(--ease-out);
 }
-/* La tira se separa de los botones con una linea: sin ella, las miniaturas y las
-   pastillas de Anterior/Siguiente se leian como un mismo monton de cosas
-   pulsables. Arriba se elige QUE ver; abajo se pasa una a una. */
-.lb-tiras{
-  display:flex; gap:8px; margin-top:16px; max-width:100%;
-  overflow-x:auto; padding:14px 2px 6px; scrollbar-width:thin;
-  border-top:1px solid rgba(255,255,255,.14);
+@starting-style{ .hv{ opacity:0 } }
+.hv__fondo{ position:absolute; inset:0; pointer-events:none }
+.hv__fondo-capa{
+  position:absolute; inset:0; width:100%; height:100%; object-fit:cover;
+  opacity:0; transition:opacity .45s var(--ease-out);
 }
-.lb-tira{
-  position:relative; flex:none; width:56px; height:56px; padding:0; cursor:pointer; overflow:hidden;
-  border:2px solid transparent; border-radius:7px; background:rgba(255,255,255,.10);
-  opacity:.5; transition:opacity .15s var(--ease-out), border-color .15s var(--ease-out);
+.hv__fondo-capa.es-activa{ opacity:1 }
+
+.hv__cerrar{
+  position:absolute; top:max(18px, env(safe-area-inset-top)); right:18px; z-index:4;
+  width:48px; height:48px; display:grid; place-items:center; border-radius:50%;
+  border:1px solid rgba(255,255,255,.14); background:#20242e; color:#fff; cursor:pointer;
+  transition:transform .16s var(--ease-out), opacity .16s var(--ease-out), background-color .16s;
 }
-.lb-tira:hover{ opacity:.85 }
-.lb-tira.es{ opacity:1; border-color:#fff }
-.lb-tira:focus-visible{ outline:2px solid #fff; outline-offset:2px }
-@media(max-width:960px){ .lb-tira{ width:var(--tap); height:var(--tap) } }
+.hv__cerrar svg{ width:22px; height:22px }
+
+.hv__escena{
+  position:relative; z-index:1; height:100%;
+  display:flex; align-items:center; justify-content:center; gap:clamp(12px, 2.4vw, 28px);
+}
+.hv__lado{ display:flex; align-items:center; gap:10px; transition:opacity .16s var(--ease-out) }
+.hv__flecha{
+  width:56px; height:56px; display:grid; place-items:center; border:0; border-radius:50%;
+  background:#fff; color:var(--navy-900); cursor:pointer;
+  transition:transform .16s var(--ease-out), opacity .16s var(--ease-out);
+}
+.hv__flecha svg{ width:24px; height:24px }
+.hv__flecha:disabled{ opacity:.35; cursor:default }
+.hv__saltar{
+  width:40px; height:40px; display:grid; place-items:center; border:0; border-radius:50%;
+  background:none; color:rgba(255,255,255,.86); cursor:pointer;
+  transition:transform .16s var(--ease-out), opacity .16s var(--ease-out);
+}
+.hv__saltar svg{ width:22px; height:22px }
+.hv__saltar:disabled{ opacity:.28; cursor:default }
+
+.hv__tarjeta{
+  position:relative; flex:none; display:flex; flex-direction:column;
+  height:min(calc(100vh - 48px), 880px); height:min(calc(100dvh - 48px), 880px);
+  aspect-ratio:9 / 16; max-width:calc(100vw - 32px);
+  /* Sin fondo propio: donde la foto no llena la tarjeta se ve la misma neblina
+     de color, y la foto parece ocupar la tarjeta entera. El filo de 1px la
+     separa del fondo. */
+  border-radius:22px; overflow:hidden; background:transparent;
+  box-shadow:0 30px 80px -20px rgba(0,0,0,.4), 0 0 0 1px rgba(255,255,255,.08);
+  touch-action:none; user-select:none; -webkit-user-select:none; -webkit-touch-callout:none;
+  transition:transform .26s var(--ease-out), opacity .26s var(--ease-out);
+}
+@starting-style{ .hv__tarjeta{ transform:scale(.96); opacity:0 } }
+
+.hv__medio{ position:relative; flex:1; min-height:0; display:flex; align-items:center; justify-content:center }
+.hv__media{ display:block; width:100%; height:100%; object-fit:contain; pointer-events:none; -webkit-user-drag:none }
+.hv__cargando{ position:absolute; inset:0; display:grid; place-items:center; pointer-events:none }
+/* Aparece tarde a proposito: una foto que ya estaba en cache no alcanza a mostrarlo. */
+.hv__cargando::after{
+  content:''; width:34px; height:34px; border-radius:50%;
+  border:3px solid rgba(255,255,255,.25); border-top-color:#fff;
+  animation:hv-gira .7s linear infinite, hv-aparece .2s var(--ease-out) .3s both;
+}
+@keyframes hv-gira{ to{ transform:rotate(360deg) } }
+@keyframes hv-aparece{ from{ opacity:0 } }
+.hv__fallo{
+  position:absolute; left:20px; right:20px; top:50%; transform:translateY(-50%);
+  text-align:center; font-size:15px; line-height:1.4; color:rgba(255,255,255,.86);
+}
+
+/* La franja oscura de arriba es para leer el titulo y los iconos sobre
+   cualquier foto, incluida una muy clara. */
+.hv__cabeza{
+  position:absolute; inset:0 0 auto 0; z-index:2; padding:6px 12px 46px;
+  background:linear-gradient(rgba(0,0,0,.62), rgba(0,0,0,.3) 62%, rgba(0,0,0,0));
+  transition:opacity .16s var(--ease-out);
+}
+.hv__segs{ display:flex; gap:4px; padding:0 2px }
+.hv__seg{ flex:1; min-width:0; padding:8px 0; border:0; background:none; cursor:pointer }
+.hv__seg-pista{ display:block; height:3px; border-radius:2px; overflow:hidden; background:rgba(255,255,255,.34) }
+.hv__seg-relleno{ display:block; height:100%; background:#fff; transform:scaleX(0); transform-origin:left center; will-change:transform }
+.hv__seg.es-visto .hv__seg-relleno{ transform:scaleX(1) }
+.hv__fila{ display:flex; align-items:flex-start; justify-content:space-between; gap:10px; padding:2px 0 0 6px }
+.hv__titulo{ display:flex; flex-direction:column; gap:2px; min-width:0; padding-top:8px }
+.hv__tit{ font-size:16px; font-weight:650; line-height:1.25; overflow:hidden; white-space:nowrap; text-overflow:ellipsis }
+.hv__det{
+  font-size:13.5px; line-height:1.3; color:rgba(255,255,255,.8); font-variant-numeric:tabular-nums;
+  overflow:hidden; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical;
+}
+/* Si no cabe en una linea, corta entre la placa y la fecha, nunca dentro de "14 sep 2026". */
+.hv__det-parte{ white-space:nowrap }
+.hv__acciones{ display:flex; flex-direction:column; align-items:center; flex:none }
+.hv__ico{
+  width:44px; height:44px; display:grid; place-items:center; border:0; border-radius:50%;
+  background:none; color:#fff; cursor:pointer; transition:transform .16s var(--ease-out), background-color .16s;
+}
+.hv__ico svg{ width:24px; height:24px; filter:drop-shadow(0 1px 2px rgba(0,0,0,.45)) }
+
+.hv__pie{
+  flex:none; padding:14px 18px; padding-bottom:max(16px, env(safe-area-inset-bottom));
+  background:var(--navy-900); transition:opacity .16s var(--ease-out);
+}
+.hv__nota{
+  margin:0 0 6px; font-size:16px; line-height:1.45; overflow:hidden;
+  display:-webkit-box; -webkit-line-clamp:4; -webkit-box-orient:vertical;
+}
+.hv__cuenta{ margin:0; font-size:13.5px; font-weight:600; color:rgba(255,255,255,.72); font-variant-numeric:tabular-nums }
+
+/* Mantener apretado: queda solo la foto. */
+.hv.es-limpio .hv__cabeza, .hv.es-limpio .hv__pie,
+.hv.es-limpio .hv__lado, .hv.es-limpio .hv__cerrar{ opacity:0; pointer-events:none }
+
+.hv__ico:active, .hv__cerrar:active,
+.hv__flecha:not(:disabled):active, .hv__saltar:not(:disabled):active{ transform:scale(.94) }
+@media (hover:hover) and (pointer:fine){
+  .hv__ico:hover{ background:rgba(255,255,255,.14) }
+  .hv__cerrar:hover{ background:#2b303b }
+  .hv__saltar:not(:disabled):hover{ color:#fff }
+}
+.hv__cerrar:focus-visible, .hv__flecha:focus-visible, .hv__saltar:focus-visible,
+.hv__ico:focus-visible, .hv__seg:focus-visible{ outline:2px solid #fff; outline-offset:2px }
+
+@media (max-width:899px){ .hv__saltar{ display:none } }
+/* Telefono: la tarjeta es la pantalla y se navega tocando los lados. */
+@media (max-width:719px){
+  .hv__lado{ display:none }
+  .hv__escena{ width:100% }
+  .hv__tarjeta{
+    width:100vw; height:100vh; height:100dvh; max-width:none; aspect-ratio:auto;
+    border-radius:0; box-shadow:none;
+  }
+  .hv__cabeza{ padding-top:calc(6px + env(safe-area-inset-top)) }
+  .hv__cerrar{ top:calc(27px + env(safe-area-inset-top)); right:6px; width:44px; height:44px; background:none; border:0 }
+  .hv__cerrar svg{ width:26px; height:26px; filter:drop-shadow(0 1px 2px rgba(0,0,0,.45)) }
+  .hv__fila{ padding-right:44px }
+  .hv__acciones{ flex-direction:row }
+}
+@media (prefers-reduced-motion:reduce){
+  @starting-style{ .hv__tarjeta{ transform:none } }
+  .hv__fondo-capa{ transition:none }
+}
 
 /* Miniatura de una evidencia. El video ensena su primer frame y lleva la
    insignia encima; asi dos videos seguidos se distinguen entre si y ninguno se
@@ -3982,11 +4096,6 @@ input.input[type="date"]::-webkit-datetime-edit{display:block;padding:0}
   content:''; position:absolute; width:30px; height:30px; border-radius:50%; background:rgba(0,0,0,.55);
 }
 .mini-evid__play svg{ position:relative }
-/* En la tira del visor la insignia va a una esquina: centrada y de 30px tapaba
-   el frame entero, que es justo lo que hay que poder ver para elegir. */
-.mini-evid__play.es-chico{ inset:auto 3px 3px auto; align-items:flex-end; justify-content:flex-end }
-.mini-evid__play.es-chico svg{ width:9px; height:9px }
-.mini-evid__play.es-chico::before{ width:18px; height:18px; background:rgba(0,0,0,.62) }
 /* La ficha entera es el boton de reproducir: no hay sitio en 120px para una
    barra de controles, y tocar la miniatura es el gesto que ya espera cualquiera. */
 .thumb-play{position:absolute;inset:0;display:block;padding:0;border:0;background:none;cursor:pointer}
