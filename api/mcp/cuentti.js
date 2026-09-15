@@ -261,6 +261,10 @@ function costosDeProducto(p) {
   }
 }
 const pct = (m) => `${(Math.round(m) || 0).toLocaleString('es-CO')}%`
+// Texto de Cuentti dentro de una celda. Hay nombres con saltos de linea ("...RODEO
+// 2.6⏎3.2...") y un salto parte la fila en dos: el costo y el margen de ese
+// producto quedaban en la linea siguiente, corridos de columna.
+const celda = (v, vacio = '—') => String(v ?? '').replace(/\s+/g, ' ').replace(/\|/g, '/').trim() || vacio
 
 // Celda corta para las tablas. Un hueco dice por que esta vacio: "sin costo" es
 // un dato que falta cargar en Cuentti; un servicio no tiene costo que cargar.
@@ -818,7 +822,7 @@ const tools = [
       const fila = (p) => {
         const c = costosDeProducto(p)
         const costo = c.costo > 0 ? fmtCOP(c.conIva(c.costo)) : '—'
-        return `| ${p.sku || '—'} | ${(p.nombre || '').slice(0, 60)} | ${fmtCOP(c.conIva(c.precio))} | ${costo} | ${celdaMargen(c)} | ${parseFloat(p.existencias || 0)} | ${c.iva}% |`
+        return `| ${celda(p.sku)} | ${celda(p.nombre, '').slice(0, 60)} | ${fmtCOP(c.conIva(c.precio))} | ${costo} | ${celdaMargen(c)} | ${parseFloat(p.existencias || 0)} | ${c.iva}% |`
       }
       const CABECERA = [`| SKU | Nombre | Precio c/IVA | Costo c/IVA | Margen | Stock | IVA |`, `|---|---|---|---|---|---|---|`]
       // Cuantas filas mostradas no tienen margen porque falta el costo en Cuentti:
@@ -903,9 +907,9 @@ const tools = [
         `| Campo | Valor |`,
         `|---|---|`,
         `| **id_producto** | ${p.id_producto} |`,
-        `| **SKU** | ${p.sku || '—'} |`,
-        `| **Codigo barras** | ${p.codigo_barras || '—'} |`,
-        `| **Nombre** | ${p.nombre || '—'} |`,
+        `| **SKU** | ${celda(p.sku)} |`,
+        `| **Codigo barras** | ${celda(p.codigo_barras)} |`,
+        `| **Nombre** | ${celda(p.nombre)} |`,
         `| **Precio sin IVA** | ${fmtCOP(c.precio)} |`,
         `| **IVA** | ${c.iva}% |`,
         `| **Precio final** | ${fmtCOP(c.conIva(c.precio))} |`,

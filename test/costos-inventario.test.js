@@ -31,6 +31,8 @@ const PRODUCTOS = [
   producto({ id_producto: 506, sku: 'ACE-2050', nombre: 'ACEITE 20W50 MINERAL', precio_venta: 25000, costo: 20000, existencias: 20 }),
   producto({ id_producto: 507, sku: 'PROMO', nombre: 'OBSEQUIO LLAVERO', precio_venta: 0, precio_compra: 3000, costo: 3000, existencias: 40 }),
   producto({ id_producto: 508, sku: 'EMP-01', nombre: 'EMPAQUE CARTER', precio_venta: 100, precio_compra: 45000, costo: 45000, existencias: 2 }),
+  // Nombre con salto de linea y barra, como los hay en Cuentti.
+  producto({ id_producto: 509, sku: 'FO323', nombre: 'FILTRO ACEITE MZ 323 /CH RODEO 2.6\n3.2 | TROOPER', precio_venta: 16806.72, precio_compra: 9511, costo: 9511, existencias: 1 }),
 ]
 
 // ---------- logica pura ----------------------------------------------------
@@ -116,7 +118,14 @@ test('listar_inventario_cuentti: columnas de costo y margen', async () => {
   assert.deepEqual(celdas(out, 'ACE-2050').slice(3, 5), ['$ 23.800', '20%'])
   assert.deepEqual(celdas(out, 'PROMO').slice(2, 5), ['$ 0', '$ 3.570', 'sin precio'])
   // El servicio no cuenta como hueco: no tiene costo que registrar.
-  assert.match(out, /1 de 8 sin costo registrado en Cuentti/)
+  assert.match(out, /1 de 9 sin costo registrado en Cuentti/)
+})
+
+test('un nombre con salto de linea o barra no parte la fila', async () => {
+  const out = await llamar('listar_inventario_cuentti', { filtro: 'rodeo' })
+  assert.deepEqual(celdas(out, 'FO323'), ['FO323', 'FILTRO ACEITE MZ 323 /CH RODEO 2.6 3.2 / TROOPER', '$ 20.000', '$ 11.318', '43%', '1', '19%'])
+  const ficha = (await llamar('buscar_producto_sku_cuentti', { sku: 'FO323' })).replace(/\s/g, ' ')
+  assert.match(ficha, /\| \*\*Nombre\*\* \| FILTRO ACEITE MZ 323 \/CH RODEO 2\.6 3\.2 \/ TROOPER \|/)
 })
 
 test('listar_inventario_cuentti con filtro: la misma tabla', async () => {
