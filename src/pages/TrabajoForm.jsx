@@ -967,10 +967,12 @@ export default function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [
             </div>
           ) : (
             /* La lista del handoff: cabecera de 28px y filas con anchos fijos en
-               el MISMO orden. El contenedor scrollea en horizontal cuando la
-               pantalla es angosta; ninguna columna se cae. */
-            <div style={{ overflowX: 'auto' }}>
-              <div className="hd-tbl__h" style={{ display: 'flex', minWidth: 570 }}>
+               el MISMO orden. Cuando la lista mide menos de 600px (celular, o la
+               columna izquierda de una tablet acostada) cada linea se reparte en
+               tres renglones: ver .ot-items en index.css. Sin soporte de
+               container queries el contenedor sigue scrolleando en horizontal. */
+            <div className="ot-items" style={{ overflowX: 'auto' }}>
+              <div className="hd-tbl__h ot-items__h" style={{ display: 'flex', minWidth: 570 }}>
                 <span style={{ flex: 1, minWidth: 140 }}>DESCRIPCIÓN</span>
                 <span style={{ width: 96, flexShrink: 0, textAlign: 'right' }}>PRECIO</span>
                 <span style={{ width: 58, flexShrink: 0, textAlign: 'center' }}>CANT.</span>
@@ -984,9 +986,9 @@ export default function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [
                     const lineTotal = (parseFloat(item.precio) || 0) * (cantidadItem(item))
                     const searchState = itemSearch[item.id]
                     return (
-                      <div className="hd-row" key={item.id}
+                      <div className="hd-row ot-it" key={item.id}
                         style={{ minWidth: 570, height: 'auto', minHeight: 60, padding: '8px 18px', alignItems: 'center', cursor: 'default' }}>
-                        <div style={{ flex: 1, minWidth: 140, paddingRight: 12, position: 'relative' }}>
+                        <div className="ot-it__desc" style={{ flex: 1, minWidth: 140, paddingRight: 12, position: 'relative' }}>
                           <div style={{ position: 'relative' }}>
                             <input className="form-input" value={item.nombre} placeholder={item._bloqueado ? 'Edita la descripción libremente...' : 'Producto, código o referencia...'}
                               autoComplete="off" autoCorrect="off" autoCapitalize="off" spellCheck={false} name={`it-desc-${item.id}`}
@@ -1086,12 +1088,12 @@ export default function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [
                             </div>
                           )}
                         </div>
-                        <div style={{ width: 96, flexShrink: 0 }}>
+                        <div className="ot-it__precio" data-label="Precio" style={{ width: 96, flexShrink: 0 }}>
                           <MoneyInput className="form-input" value={Math.round(parseFloat(item.precio) || 0)}
                             onChange={v => updateItem(item.id, 'precio', v)}
                             inputStyle={{ padding: '6px 8px 6px 20px', fontSize: 13, textAlign: 'right', minHeight: 38 }} />
                         </div>
-                        <div style={{ width: 58, flexShrink: 0, paddingLeft: 6 }}>
+                        <div className="ot-it__cant" data-label="Cant." style={{ width: 58, flexShrink: 0, paddingLeft: 6 }}>
                           {/* Se puede facturar media silicona (0,5) o un cuarto de
                              galón. Texto con teclado decimal y no type="number": en
                              Safari un campo numérico se TRAGA la coma, "0,5" quedaba
@@ -1102,12 +1104,12 @@ export default function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [
                             onChange={e => updateItem(item.id, 'cantidad', cantidadEscrita(e.target.value))}
                             style={{ padding: '6px 4px', fontSize: 13, textAlign: 'center', width: '100%', minHeight: 38 }} />
                         </div>
-                        <div style={{ width: 56, flexShrink: 0, paddingLeft: 6 }}>
+                        <div className="ot-it__iva" data-label="IVA %" style={{ width: 56, flexShrink: 0, paddingLeft: 6 }}>
                           <input className="form-input" type="number" inputMode="numeric" value={item.iva} min="0"
                             onChange={e => updateItem(item.id, 'iva', e.target.value)}
                             style={{ padding: '6px 4px', fontSize: 13, textAlign: 'center', width: '100%', minHeight: 38 }} />
                         </div>
-                        <div style={{ width: 74, flexShrink: 0, paddingLeft: 6, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                        <div className="ot-it__serv" data-label="Servicio" style={{ width: 74, flexShrink: 0, paddingLeft: 6, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
                           {/* Interruptor, no pastilla. La pastilla medía 70px dentro de una
                              columna de 74 (2px de aire contra los 6 de sus vecinos) y 44px
                              de alto contra los 38 de los campos: sobresalía y apiñaba la
@@ -1129,8 +1131,8 @@ export default function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [
                             }
                           />
                         </div>
-                        <div className="hd-n hd-strong hd-mono" style={{ width: 96, flexShrink: 0 }}>{fmt(lineTotal)}</div>
-                        <div style={{ width: 46, flexShrink: 0, display: 'flex', justifyContent: 'flex-end' }}>
+                        <div className="hd-n hd-strong hd-mono ot-it__total" style={{ width: 96, flexShrink: 0 }}>{fmt(lineTotal)}</div>
+                        <div className="ot-it__del" style={{ width: 46, flexShrink: 0, display: 'flex', justifyContent: 'flex-end' }}>
                           <Button variant="ghost" size="sm" type="button" aria-label="Eliminar ítem" onClick={() => removeItem(item.id)}
                             style={{ width: 44, height: 44, padding: 0, borderRadius: 'var(--radius-pill)', background: 'var(--bad-bg)', color: 'var(--bad-fg)' }}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg></Button>
                         </div>

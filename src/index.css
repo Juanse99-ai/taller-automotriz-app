@@ -1017,6 +1017,37 @@ tbody tr:active{background:var(--fill-2)}
 .ot-col--side{grid-column:2;grid-row:1 / span 2}
 .ot-total{grid-column:1;grid-row:2;min-width:0}
 @media(max-width:900px){.ot-grid{grid-template-columns:minmax(0,1fr);grid-template-rows:none}.ot-col--main,.ot-col--side,.ot-total{grid-column:1;grid-row:auto}}
+/* --- Lineas de la OT en angosto ---
+   Cada linea son 570px de anchos fijos (descripcion, precio, cant., IVA,
+   servicio, total, borrar). En el celular la lista mide ~330: de la descripcion
+   se leian 9 letras ("LIQUIDO D") y el total y el boton de borrar quedaban
+   detras de un scroll lateral; en una tablet acostada la columna izquierda mide
+   ~530 y el de borrar tambien se escondia. Cuando la LISTA (no la pantalla: su
+   ancho cambia con el rail y con la rejilla de dos columnas) mide menos de 600,
+   cada linea va en tres renglones y los rotulos bajan encima de cada campo:
+       descripcion .......................................
+       PRECIO                    CANT.     IVA %
+       Servicio ◯ ........................ $ total  [borrar]
+   !important: los anchos y rellenos de las celdas vienen en linea. */
+.ot-items{container:otitems / inline-size}
+@container otitems (max-width:599px){
+  .ot-items__h{display:none !important}
+  .ot-it{min-width:0 !important;flex-wrap:wrap;column-gap:8px;row-gap:10px;padding:12px 14px !important}
+  .ot-it > div{padding-left:0 !important;padding-right:0 !important}
+  .ot-it__desc{order:1;flex:1 1 100% !important;min-width:0 !important}
+  .ot-it__precio{order:2;flex:1 1 0 !important;width:auto !important;min-width:0}
+  .ot-it__cant{order:3;width:72px !important}
+  .ot-it__iva{order:4;width:64px !important}
+  /* salto de renglon: el pseudo-elemento de la fila es un item flex de 0 de alto */
+  .ot-it::after{content:'';order:5;flex:1 0 100%;height:0}
+  .ot-it__serv{order:6;width:auto !important;gap:8px}
+  .ot-it__total{order:7;flex:1 1 auto;width:auto !important;font-size:15px}
+  .ot-it__del{order:8;width:auto !important}
+  .ot-it__precio::before,.ot-it__cant::before,.ot-it__iva::before{
+    content:attr(data-label);display:block;margin-bottom:5px;
+    font-size:9.5px;line-height:1;font-weight:700;letter-spacing:.7px;text-transform:uppercase;color:var(--text-4)}
+  .ot-it__serv::before{content:attr(data-label);font-size:12.5px;font-weight:600;color:var(--text-3)}
+}
 /* Fecha en el iPhone: con la apariencia nativa Safari le pone su propio ancho y
    el campo se salia de la tarjeta (Observaciones de la OT, 15 sep). Es el
    arreglo de Bootstrap para Safari; el selector de fecha abre igual. */
