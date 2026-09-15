@@ -1882,7 +1882,12 @@ input.input[type="date"]::-webkit-datetime-edit{display:block;padding:0}
   /* Salir ya vive en el pie del cajon, junto al nombre. En el topbar caia
      solo en una segunda fila y estiraba la cabecera a 181px. */
   .topbar__salir{display:none}
-  .m3switch{min-height:var(--tap)}
+  /* El interruptor se dibuja siempre de 52x32 y en tactil crece solo el area de
+     toque, a 44 de alto. Con min-height:44 el boton se estiraba a 52x44: el de
+     tema y el de "Servicio sin vehiculo" parecian una mancha deforme que se
+     salia de su pastilla (visto en el iPhone del dueño, 15 sep). */
+  .m3switch{position:relative}
+  .m3switch::after{content:'';position:absolute;inset:-8px -6px;border-radius:22px}
   /* La X del detalle de OT mide 30px a proposito (vive en la franja de estado);
      el area de toque se amplia sin cambiar el dibujo. */
   .otd__x{position:relative}

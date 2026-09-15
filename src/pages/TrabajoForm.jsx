@@ -836,9 +836,15 @@ export default function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [
         <div className="card">
           <div className="card__h" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
             <h3 style={H3}>Vehículo</h3>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, height: 36, padding: '0 13px 0 8px', borderRadius: 'var(--radius-pill)', background: 'var(--chip)', fontSize: 12.5, fontWeight: 600, color: 'var(--text-2)' }}>
+            {/* La pastilla puede encoger y partir el texto: con alto fijo y el
+                rotulo en una sola linea, en el iPhone se salia por la derecha y
+                corria la pagina. "(no entra carro)" baja entero si no cabe. */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, minHeight: 40, minWidth: 0, padding: '4px 14px 4px 5px', borderRadius: 20, background: 'var(--chip)', fontSize: 12.5, lineHeight: 1.3, fontWeight: 600, color: 'var(--text-2)' }}>
               <Switch checked={!!form.sinVehiculo} onChange={v => set('sinVehiculo', v)} ariaLabel="Servicio sin vehículo" />
-              <span style={{ cursor: 'pointer' }} onClick={() => set('sinVehiculo', !form.sinVehiculo)}>Servicio sin vehículo (no entra carro)</span>
+              <span style={{ minWidth: 0, cursor: 'pointer' }} onClick={() => set('sinVehiculo', !form.sinVehiculo)}>
+                Servicio sin vehículo{' '}
+                <span style={{ fontWeight: 400, color: 'var(--text-3)', whiteSpace: 'nowrap' }}>(no entra carro)</span>
+              </span>
             </div>
           </div>
           <div className="card__b" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 14 }}>
@@ -1193,7 +1199,7 @@ export default function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [
            estado se tocan en casi toda OT, así que dejan de estar al final. */}
         <div className="card">
           <div className="card__h"><h3 style={H3}>Observaciones</h3></div>
-          <div className="card__b" style={{ display: 'grid', gridTemplateColumns: isEdit ? 'minmax(0, 1fr) minmax(0, 1fr)' : 'minmax(0, 1fr)', gap: 14 }}>
+          <div className="card__b" style={{ display: 'grid', gridTemplateColumns: isEdit ? '1fr 1fr' : '1fr', gap: 14 }}>
             <div className="field">
               <label>Fecha {form.fecha === hoyISO() && <span className="hd-chip hd-chip--info" style={{ marginLeft: 4 }}>HOY</span>}</label>
               <input className="input" type="date" value={form.fecha} onChange={e => set('fecha', e.target.value)} />
