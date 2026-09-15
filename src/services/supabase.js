@@ -845,6 +845,70 @@ export async function borrarPago(id) {
   return true
 }
 
+// ---------- GASTOS: los fijos del mes y los sueltos ----------
+// La tabla `gastos` llega con supabase/migrations/20260915_001_gastos.sql; hasta
+// que se aplique, las lecturas dan SIN_TABLA (igual que la cartera). Es poca
+// data (unos gastos fijos y unos pocos pagos al mes): se trae entera y las
+// cuentas del mes se hacen en utils/gastos.js.
+export async function fetchGastos() {
+  return leerOFallar(await fetchWithTimeout(`${proxy('gastos')}&select=*&order=fecha.desc&limit=5000`), 'Gastos')
+}
+
+// Supabase envuelve sus errores en el 502 del proxy; aqui se leen los dos que
+// la pantalla sabe explicar.
+async function errorDeGasto(res, que) {
+  let detalle = ''
+  try { detalle = JSON.stringify(await res.json()) } catch { /* sin cuerpo */ }
+  const e = new Error(`${que}: error ${res.status}`)
+  if (/PGRST205|42P01|Could not find the table|does not exist/i.test(detalle)) e.code = 'SIN_TABLA'
+  else if (/23505|gastos_un_pago_por_mes|duplicate key/i.test(detalle)) e.code = 'YA_PAGADO'
+  else if (/23503|foreign key/i.test(detalle)) e.code = 'TIENE_PAGOS'
+  return e
+}
+
+export async function crearGasto(fila) {
+  const res = await fetchWithTimeout(proxy('gastos'), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(fila),
+  })
+  if (!res.ok) throw await errorDeGasto(res, 'Guardar gasto')
+  const filas = await res.json()
+  return Array.isArray(filas) ? (filas[0] || null) : filas
+}
+
+export async function actualizarGasto(id, campos) {
+  const res = await fetchWithTimeout(`${proxy('gastos')}&id=eq.${encodeURIComponent(id)}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(campos),
+  })
+  if (!res.ok) throw await errorDeGasto(res, 'Actualizar gasto')
+  const filas = await res.json()
+  return Array.isArray(filas) ? (filas[0] || null) : filas
+}
+
+export async function borrarGasto(id) {
+  const res = await fetchWithTimeout(`${proxy('gastos')}&id=eq.${encodeURIComponent(id)}`, { method: 'DELETE' })
+  if (!res.ok) throw await errorDeGasto(res, 'Borrar gasto')
+  return true
+}
+
+// Las cuentas del plan contable que ya se usaron para registrar gastos en
+// Cuentti, con el concepto mas reciente de cada una: es lo unico cierto que la
+// app sabe de una cuenta cuyo nombre no conoce. [{ id, concepto }]
+export async function fetchCuentasUsadas() {
+  const res = await fetchWithTimeout(`${proxy('gastos_registrados')}&select=id_plan_cuentas,concepto,registrado_en&anulado_en=is.null&order=registrado_en.desc&limit=500`)
+  if (!res.ok) return []
+  const filas = await res.json().catch(() => [])
+  const vistas = new Map()
+  for (const f of Array.isArray(filas) ? filas : []) {
+    const id = parseInt(f.id_plan_cuentas, 10)
+    if (id > 0 && !vistas.has(id)) vistas.set(id, String(f.concepto || '').trim())
+  }
+  return [...vistas].map(([id, concepto]) => ({ id, concepto }))
+}
+
 // Baja de Cuentti los recibos de las facturas sin pagar (todas, o una orden).
 // Tarda medio segundo por factura: no pasa por el tiempo de espera normal.
 export async function sincronizarPagos(trabajoId) {

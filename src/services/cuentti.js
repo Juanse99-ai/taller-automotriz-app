@@ -247,6 +247,28 @@ export async function registrarGastoNominaBackend({ proveedorId, proveedorCedula
   return data
 }
 
+// Registra en Cuentti un gasto de la pantalla Gastos (arriendo, servicios,
+// sueltos). El servidor resuelve el proveedor por NIT, graba el egreso y lo
+// anota en la bitacora con `idemKey` (utils/gastos claveCuentti): un reintento
+// con la misma clave devuelve el documento que ya existe ({ dedup: true }).
+// Un 409 trae `codigo`: PROVEEDOR_NO_EXISTE o PROVEEDOR_DUPLICADO.
+export async function registrarGastoCuentti({ proveedorNit, proveedorNombre, monto, iva = 0, idPlanCuentas, metodoPago, fecha, concepto, nota = '', idemKey }) {
+  if (!haySesion()) throw new Error('No hay sesion iniciada')
+  const res = await fetch('/api/cuentti-gasto', {
+    method: 'POST',
+    headers: buildHeaders(),
+    body: JSON.stringify({ tipo: 'gasto', proveedorNit, proveedorNombre, monto, iva, idPlanCuentas, metodoPago, fecha, concepto, nota, idemKey }),
+  })
+  if (res.status === 401) avisarSesionVencida()
+  const data = await res.json().catch(() => null)
+  if (!res.ok || !data?.ok) {
+    const e = new Error(data?.error || (data?.cuentti ? `Cuentti lo rechazó: ${JSON.stringify(data.cuentti).slice(0, 160)}` : `Error ${res.status}`))
+    if (data?.codigo) e.code = data.codigo
+    throw e
+  }
+  return data
+}
+
 // Headers que manda el navegador. Ya no hay token que enmascarar aqui: las
 // credenciales las pone el proxy en el servidor y nunca llegan al bundle.
 export function getCuenttiDebugHeaders() {

@@ -71,7 +71,7 @@ export function getSession() {
 
 // Roles y permisos
 const PERMISOS = {
-  admin: ['dashboard', 'recepcion', 'trabajos', 'mecanicos', 'cotizaciones', 'inspecciones', 'inventario', 'clientes', 'vehiculos', 'crm', 'liquidacion', 'cartera', 'reportes', 'cuentti', 'usuarios'],
+  admin: ['dashboard', 'recepcion', 'trabajos', 'mecanicos', 'cotizaciones', 'inspecciones', 'inventario', 'clientes', 'vehiculos', 'crm', 'liquidacion', 'cartera', 'gastos', 'reportes', 'cuentti', 'usuarios'],
   jefe_taller: ['dashboard', 'recepcion', 'trabajos', 'mecanicos', 'cotizaciones', 'inspecciones', 'inventario', 'clientes', 'vehiculos', 'crm'],
   // Trabajos le abre la vista del taller (TrabajosMecanico): evidencias, tareas,
   // cronometro e insumos por revisar, sin mano de obra ni totales. El servidor

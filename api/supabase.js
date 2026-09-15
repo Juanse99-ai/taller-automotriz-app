@@ -372,7 +372,8 @@ export default async function handler(req, res) {
   // Tablas que solo un admin puede tocar: son la plata que se le debe a los
   // tecnicos. El rol se comprobaba SOLO en el navegador (getSeccionesPermitidas),
   // asi que un jefe_taller con sesion valida podia leerlas y escribirlas por curl.
-  const TABLAS_SOLO_ADMIN = ['liquidados', 'liquidacion_historial', 'movimientos_tecnicos', 'prestamos_movimientos']
+  // Los gastos del taller y su bitacora en Cuentti tambien: son la plata que sale.
+  const TABLAS_SOLO_ADMIN = ['liquidados', 'liquidacion_historial', 'movimientos_tecnicos', 'prestamos_movimientos', 'gastos', 'gastos_registrados']
 
   // ── Quien puede pasar ────────────────────────────────────────────────────
   // El portal del cliente es publico y no tiene sesion, asi que necesita una
@@ -422,8 +423,13 @@ export default async function handler(req, res) {
     'prestamos_movimientos', 'tecnicos',
     'portal_accesos',   // rastro del portal: la app lo lee y anota los envios del link
     'pagos', 'trabajos_saldo',   // abonos de clientes y la vista con el saldo por orden
+    'gastos',                    // gastos fijos del mes y sueltos (pantalla Gastos)
+    'gastos_registrados',        // bitacora de egresos en Cuentti: Gastos la lee para ofrecer las cuentas ya usadas
   ]
   if (!ALLOWED_TABLES.includes(table)) { res.status(403).json({ error: 'Tabla no permitida' }); return }
+  // La bitacora solo la escribe el servidor al registrar en Cuentti: es lo que
+  // impide grabar un egreso dos veces, y desde el navegador solo se lee.
+  if (table === 'gastos_registrados' && req.method !== 'GET') { res.status(403).json({ error: 'La bitácora de Cuentti es de solo lectura' }); return }
 
   try {
     const qs = new URL(req.url, 'http://localhost')

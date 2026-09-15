@@ -82,13 +82,14 @@ const TABLES = [
   'trabajos', 'cotizaciones', 'clientes', 'vehiculos', 'inspecciones',
   'movimientos_tecnicos', 'liquidacion_historial', 'liquidados', 'trabajos_compartidos',
   'pagos', 'trabajos_saldo',
+  'gastos',
 ]
 const METODOS_PAGO = ['efectivo', 'transferencia', 'credito', 'wompi', 'otro']
 // consultar_tabla ordena por fecha solo donde esa columna existe: en clientes,
 // vehiculos y trabajos_compartidos el order=fecha hacia fallar la consulta.
 const TABLAS_CON_FECHA = new Set([
   'trabajos', 'cotizaciones', 'inspecciones', 'movimientos_tecnicos',
-  'liquidacion_historial', 'liquidados', 'pagos', 'trabajos_saldo',
+  'liquidacion_historial', 'liquidados', 'pagos', 'trabajos_saldo', 'gastos',
 ])
 
 async function supabase(table, { method = 'GET', query = '', body = null, upsert = false } = {}) {
@@ -398,7 +399,7 @@ const tools = [
   },
   {
     name: 'consultar_tabla',
-    description: 'Lee filas crudas (JSON) de una tabla del taller, las más recientes primero cuando la tabla tiene fecha. Solo lectura. Úsala cuando las otras herramientas no exponen el dato, por ejemplo los abonos en pagos o el saldo por OT en trabajos_saldo. En trabajos nunca devuelve OT borradas (trabajos_saldo ya las excluye). Si el filtro compara el estado con un valor que no existe en esa tabla, lo avisa. La respuesta se recorta a 8000 caracteres: acota con filtro y limite.',
+    description: 'Lee filas crudas (JSON) de una tabla del taller, las más recientes primero cuando la tabla tiene fecha. Solo lectura. Úsala cuando las otras herramientas no exponen el dato, por ejemplo los abonos en pagos, el saldo por OT en trabajos_saldo o los gastos del taller en gastos (recurrente=true es un gasto fijo; con gasto_fijo_id y periodo, el pago de ese mes; sin ninguno, un gasto suelto). En trabajos nunca devuelve OT borradas (trabajos_saldo ya las excluye). Si el filtro compara el estado con un valor que no existe en esa tabla, lo avisa. La respuesta se recorta a 8000 caracteres: acota con filtro y limite.',
     inputSchema: {
       type: 'object',
       properties: {

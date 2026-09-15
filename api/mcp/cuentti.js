@@ -11,6 +11,7 @@
 
 import { handleMcp } from '../_mcp/shared.js'
 import { enviarGasto, desglosarIva, inferirTipoPersona, TIPO_PERSONA_JURIDICA } from '../_lib/gasto.js'
+import { candidatosNit, resolverProveedor as resolverProveedorBase } from '../_lib/proveedor.js'
 import { ESTADOS_COTIZACION } from '../../src/utils/estados.js'
 import { costoDeProducto, margenSobreVenta, MARGEN_MINIMO_CREIBLE } from '../../src/utils/costos.js'
 import {
@@ -148,65 +149,9 @@ const CAT_REGIMEN_IMP = { 1: 'Impuesto sobre las ventas – IVA', 2: 'No respons
 const CAT_REGIMEN = { 0: 'Ninguno', 1: 'Regimen ordinario', 2: 'Regimen simple' }            // regimen
 
 // --- Proveedores: resolucion segura por NIT ---------------------------------
-// En Colombia el NIT de una empresa es <numero>-<DV> (ej. 902045058-2) y Cuentti
-// guarda SOLO el numero, sin el digito de verificacion (el campo se llama
-// literalmente "Identificacion sin digito de verificacion"). Las facturas lo
-// imprimen pegado (9020450582), asi que si se manda tal cual NO calza con el
-// proveedor que ya existe y el endpoint lo CREA duplicado, en silencio.
-// Por eso nunca se manda id_cliente:-1 a ciegas: primero se resuelve.
-
-// Candidatos a probar, en orden: como viene y sin el DV.
-function candidatosNit(nit) {
-  const limpio = String(nit || '').replace(/\D/g, '')
-  const cands = [limpio]
-  // 10+ digitos en un NIT empresarial = numero + DV pegado.
-  if (limpio.length >= 10) cands.push(limpio.slice(0, -1))
-  return [...new Set(cands.filter(Boolean))]
-}
-
-async function buscarClienteCuentti(ident) {
-  const data = await cuenttiRequest(`/jServerj4ErpPro/api/token/consultarClienteIdentificacion/${encodeURIComponent(ident)}`).catch(() => null)
-  if (!data || data.message || data.type === 0) return null
-  const items = Array.isArray(data) ? data : (data?.data ? data.data : [data])
-  const c = items.find(r => r && Object.keys(r).length > 0 && !r.message)
-  if (!c) return null
-  const id = parseInt(c.id_cliente || c.id, 10)
-  if (!id) return null
-  return {
-    id,
-    identificacion: String(c.identificacion || ident),
-    nombre: c.nombre_cliente
-      || [c.primer_nombre, c.segundo_nombre, c.primer_apellido, c.segundo_apellido].filter(Boolean).join(' ')
-      || '',
-    activo: Number(c.es_activo) === 1, // llega como numero, no como texto
-    tipoPersona: Number(c.id_tipo_persona) || null,
-  }
-}
-
-// Devuelve el proveedor existente { id, identificacion, nombre, viaDV, ... } o null.
-// Se prueba el NIT tal como viene ANTES que sin el DV: una cedula de 10 digitos es
-// legitima, y recortarla de entrada podria pegar con OTRA persona.
-//
-// Desempate por estado: Cuentti NO borra de verdad — la X deja el registro con
-// es_activo 0 y consultarClienteIdentificacion lo sigue devolviendo. Asi que un
-// inactivo casi siempre es un duplicado ya descartado y el ACTIVO gana. Sin esto
-// un NIT con un duplicado muerto quedaria bloqueado para siempre.
-// Solo se aborta si hay dos o mas ACTIVOS: ahi si tiene que elegir un humano.
-async function resolverProveedor(nit) {
-  const cands = candidatosNit(nit)
-  const hits = []
-  for (const c of cands) {
-    const hit = await buscarClienteCuentti(c)
-    if (hit && !hits.some(h => h.id === hit.id)) hits.push({ ...hit, viaDV: c !== cands[0] })
-  }
-  if (!hits.length) return null
-
-  const activos = hits.filter(h => h.activo)
-  if (activos.length === 1) return { ...activos[0], descartados: hits.filter(h => !h.activo) }
-  if (activos.length > 1) return { ...activos[0], ambiguo: activos }
-  // Ninguno activo: se reusa igual. Reciclar un inactivo es mejor que crear otro duplicado.
-  return { ...hits[0], inactivo: true, ambiguo: hits.length > 1 ? hits : null }
-}
+// Las reglas (NIT sin DV, el activo gana) viven en api/_lib/proveedor.js, que
+// comparte con los gastos de la app. Aqui se piden con cuenttiRequest.
+const resolverProveedor = (nit) => resolverProveedorBase(nit, cuenttiRequest)
 
 // Dos o mas clientes ACTIVOS para el mismo NIT (tipico: uno con DV y otro sin).
 function avisoProveedorAmbiguo(nit, hits) {
