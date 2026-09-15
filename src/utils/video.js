@@ -166,30 +166,33 @@ export async function comprimirVideo(file, { onProgreso } = {}) {
 export function posterDeVideo(file, maxDim = 640, calidad = 0.72) {
   return new Promise((resolve) => {
     let url = null
+    let v = null
+    let reloj = 0
     let terminado = false
     const acabar = (r) => {
       if (terminado) return
       terminado = true
+      clearTimeout(reloj)
+      v?.pause()
       if (url) URL.revokeObjectURL(url)
       resolve(r)
     }
     // Tope duro: un video que no decodifica puede quedarse colgado sin lanzar
     // error, y la subida no puede esperar a nadie.
-    const reloj = setTimeout(() => acabar(null), 8000)
+    reloj = setTimeout(() => acabar(null), 8000)
     try {
       url = URL.createObjectURL(file)
-      const v = document.createElement('video')
+      v = document.createElement('video')
       v.muted = true
       v.playsInline = true
       v.preload = 'auto'
       v.src = url
-      v.addEventListener('error', () => { clearTimeout(reloj); acabar(null) })
+      v.addEventListener('error', () => acabar(null))
       v.addEventListener('loadedmetadata', () => {
         // Si dura menos de 0,1 s se coge el principio y ya.
         v.currentTime = Math.min(0.1, (v.duration || 1) / 2)
-      })
-      v.addEventListener('seeked', () => {
-        clearTimeout(reloj)
+      }, { once: true })
+      v.addEventListener('seeked', async () => {
         try {
           const { videoWidth: w, videoHeight: h } = v
           if (!w || !h) return acabar(null)
@@ -197,10 +200,48 @@ export function posterDeVideo(file, maxDim = 640, calidad = 0.72) {
           const canvas = document.createElement('canvas')
           canvas.width = Math.round(w * escala)
           canvas.height = Math.round(h * escala)
-          canvas.getContext('2d').drawImage(v, 0, 0, canvas.width, canvas.height)
-          canvas.toBlob(b => acabar(b || null), 'image/jpeg', calidad)
+          const ctx = canvas.getContext('2d')
+          // Chrome ya tiene el cuadro cuando avisa `seeked`. Safari NO: pintado
+          // ahi sale negro, y asi quedaron las portadas subidas desde Safari hasta
+          // el 15 sep 2026 (JPEG de 4,6 kB, todo negro). Si sale negro se espera
+          // a que el cuadro se presente y, si ni asi, se reproduce un instante.
+          const esperas = [
+            async () => {},
+            () => cuadroPresentado(v),
+            async () => { await v.play(); await cuadroPresentado(v); v.pause() },
+          ]
+          for (const esperar of esperas) {
+            await esperar()
+            if (terminado) return
+            ctx.drawImage(v, 0, 0, canvas.width, canvas.height)
+            if (!esNegro(canvas)) return canvas.toBlob(b => acabar(b || null), 'image/jpeg', calidad)
+          }
+          // Mejor sin portada (la ficha cae al <video>) que una portada negra.
+          acabar(null)
         } catch { acabar(null) }
-      })
-    } catch { clearTimeout(reloj); acabar(null) }
+      }, { once: true })
+    } catch { acabar(null) }
   })
+}
+
+// Espera a que el video presente un cuadro. Sin requestVideoFrameCallback, o si
+// no llega, sigue a los 700 ms.
+function cuadroPresentado(v) {
+  return new Promise((listo) => {
+    const t = setTimeout(listo, 700)
+    v.requestVideoFrameCallback?.(() => { clearTimeout(t); listo() })
+  })
+}
+
+// Negro entero: ningun punto de una muestra de 16x16 pasa de 16.
+function esNegro(canvas) {
+  const muestra = document.createElement('canvas')
+  muestra.width = muestra.height = 16
+  const c = muestra.getContext('2d')
+  c.drawImage(canvas, 0, 0, 16, 16)
+  const d = c.getImageData(0, 0, 16, 16).data
+  for (let i = 0; i < d.length; i += 4) {
+    if (d[i] > 16 || d[i + 1] > 16 || d[i + 2] > 16) return false
+  }
+  return true
 }

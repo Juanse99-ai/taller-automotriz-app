@@ -3934,10 +3934,10 @@ input.input[type="date"]::-webkit-datetime-edit{display:block;padding:0}
 
 /* ── Visor de fotos y videos del portal, al estilo de las historias ────────
    Es la unica superficie de la app con fondo difuminado, y es a proposito: el
-   fondo es la misma foto que el cliente esta mirando, apagada y difuminada,
-   para que la pantalla entera acompane la evidencia. No hay vidrio sobre
-   contenido: los controles son solidos. Siempre oscuro, no sigue el tema.
-   El difuminado sale de un canvas de 64px estirado (ver VisorEvidencias.jsx):
+   fondo es la misma foto o video que el cliente esta mirando, apagado y
+   difuminado, para que la pantalla entera acompane la evidencia. No hay vidrio
+   sobre contenido: los controles son solidos. Siempre oscuro, no sigue el tema.
+   El difuminado sale de un canvas de 64px estirado (ver useFondoDifuso.js):
    no hay `filter: blur`, que a pantalla completa le cuesta a un iPhone. */
 .hv{
   position:fixed; inset:0; z-index:1000; display:flex; align-items:center; justify-content:center;
@@ -3947,11 +3947,8 @@ input.input[type="date"]::-webkit-datetime-edit{display:block;padding:0}
 }
 @starting-style{ .hv{ opacity:0 } }
 .hv__fondo{ position:absolute; inset:0; pointer-events:none }
-.hv__fondo-capa{
-  position:absolute; inset:0; width:100%; height:100%; object-fit:cover;
-  opacity:0; transition:opacity .45s var(--ease-out);
-}
-.hv__fondo-capa.es-activa{ opacity:1 }
+/* El fundido de una evidencia a otra lo hace el propio lienzo, sin transiciones. */
+.hv__fondo-lienzo{ position:absolute; inset:0; width:100%; height:100%; object-fit:cover }
 
 .hv__cerrar{
   position:absolute; top:max(18px, env(safe-area-inset-top)); right:18px; z-index:4;
@@ -4080,7 +4077,6 @@ input.input[type="date"]::-webkit-datetime-edit{display:block;padding:0}
 }
 @media (prefers-reduced-motion:reduce){
   @starting-style{ .hv__tarjeta{ transform:none } }
-  .hv__fondo-capa{ transition:none }
 }
 
 /* Miniatura de una evidencia. El video ensena su primer frame y lleva la

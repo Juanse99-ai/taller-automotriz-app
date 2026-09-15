@@ -1,8 +1,9 @@
-import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { esVideoEvid, srcFotoEvid } from '../utils/evidencias'
+import { Fragment, useCallback, useEffect, useRef, useState } from 'react'
+import { esVideoEvid, imagenEvid, srcFotoEvid } from '../utils/evidencias'
+import useFondoDifuso from '../hooks/useFondoDifuso'
 
 // Visor de fotos y videos del portal, al estilo de las historias: la evidencia
-// en una tarjeta vertical, el fondo hecho con la misma foto difuminada, barras
+// en una tarjeta vertical, el fondo hecho con la misma foto o video, barras
 // de progreso arriba y avance solo. Es el UNICO sitio de la app con fondo
 // difuminado: aqui no separa contenido ni decora tarjetas, llena la pantalla
 // alrededor de la foto que el cliente vino a ver.
@@ -22,69 +23,6 @@ const MS_MANTENER = 180      // apretado mas que esto ya no es un toque: es paus
 const PX_CERRAR = 120        // arrastre hacia abajo que cierra aunque sea lento
 const PX_MIN_CERRAR = 40     // un tiron corto y rapido tambien cierra...
 const VEL_CERRAR = 0.45      // ...si va a mas de esto (px por ms)
-
-const srcFondo = (f) => (esVideoEvid(f) ? (f?.poster || '') : srcFotoEvid(f))
-
-// El fondo de un video sin portada toma la foto mas cercana, para no saltar a
-// negro en medio de la tanda.
-function fondoPara(items, i) {
-  for (let d = 0; d < items.length; d++) {
-    const atras = srcFondo(items[i - d]); if (atras) return atras
-    const adelante = srcFondo(items[i + d]); if (adelante) return adelante
-  }
-  return ''
-}
-
-// El fondo difuso NO usa `filter: blur`: un blur de pantalla entera le cuesta a
-// un iPhone, y ampliado deja manchas con forma (las ruedas se volvian dos
-// sombras enormes). Aqui la foto se reduce a unos pocos pixeles en un canvas,
-// se agranda y se vuelve a reducir varias veces, y el navegador estira ese
-// canvas diminuto a la pantalla: queda una neblina de color que no cuesta nada.
-// Pintar una imagen de otro dominio en un canvas esta permitido; lo prohibido
-// es leer sus pixeles, y aqui no se leen.
-const LADO_FONDO = 64
-const LADO_CHICO = 8
-const PASADAS = 3
-function pintarDifuso(canvas, im) {
-  const lado = Math.min(im.naturalWidth, im.naturalHeight)
-  const trabajo = document.createElement('canvas')
-  const chico = document.createElement('canvas')
-  trabajo.width = trabajo.height = LADO_FONDO
-  chico.width = chico.height = LADO_CHICO
-  const ct = trabajo.getContext('2d')
-  const cc = chico.getContext('2d')
-  const cv = canvas.getContext('2d')
-  if (!lado || !ct || !cc || !cv) return
-  for (const c of [ct, cc, cv]) { c.imageSmoothingEnabled = true; c.imageSmoothingQuality = 'high' }
-  ct.drawImage(im, (im.naturalWidth - lado) / 2, (im.naturalHeight - lado) / 2, lado, lado, 0, 0, LADO_FONDO, LADO_FONDO)
-  for (let i = 0; i < PASADAS; i++) {
-    cc.clearRect(0, 0, LADO_CHICO, LADO_CHICO)
-    cc.drawImage(trabajo, 0, 0, LADO_CHICO, LADO_CHICO)
-    ct.clearRect(0, 0, LADO_FONDO, LADO_FONDO)
-    ct.drawImage(chico, 0, 0, LADO_FONDO, LADO_FONDO)
-  }
-  cv.clearRect(0, 0, LADO_FONDO, LADO_FONDO)
-  cv.drawImage(trabajo, 0, 0)
-  // Apagado para que la foto y los controles resalten encima.
-  cv.fillStyle = 'rgba(4, 6, 12, 0.42)'
-  cv.fillRect(0, 0, LADO_FONDO, LADO_FONDO)
-}
-
-function CapaDifusa({ src, activa }) {
-  const ref = useRef(null)
-  useEffect(() => {
-    let vigente = true
-    const im = new Image()
-    im.decoding = 'async'
-    im.onload = () => { if (vigente && ref.current) pintarDifuso(ref.current, im) }
-    im.src = src
-    return () => { vigente = false }
-  }, [src])
-  return (
-    <canvas ref={ref} className={`hv__fondo-capa${activa ? ' es-activa' : ''}`}
-      width={LADO_FONDO} height={LADO_FONDO} data-src={src} aria-hidden="true" />
-  )
-}
 
 const Icono = ({ d, relleno = false }) => (
   <svg viewBox="0 0 24 24" aria-hidden="true" fill={relleno ? 'currentColor' : 'none'}
@@ -126,6 +64,9 @@ export default function VisorEvidencias({ items = [], inicio = 0, titulo = '', d
   const estadoRef = useRef({})
   const silencioRef = useRef(silencio)
   const gestoRef = useRef(null)
+  const lienzoRef = useRef(null)
+
+  useFondoDifuso(lienzoRef, videoRef, items, idx)
 
   // ── Navegacion ──────────────────────────────────────────────────────────
   const ir = useCallback((n) => {
@@ -249,7 +190,7 @@ export default function VisorEvidencias({ items = [], inicio = 0, titulo = '', d
   // ── Precarga de las vecinas: el cambio se siente instantaneo ─────────────
   useEffect(() => {
     for (const n of [idx + 1, idx - 1]) {
-      const src = srcFondo(items[n])
+      const src = imagenEvid(items[n])
       if (src) { const im = new Image(); im.decoding = 'async'; im.src = src }
     }
   }, [idx, items])
@@ -318,19 +259,6 @@ export default function VisorEvidencias({ items = [], inicio = 0, titulo = '', d
     else siguiente(e.pointerType !== 'mouse')
   }
 
-  // Fondos de la actual y sus vecinas, montados a la vez: al pasar de una a
-  // otra el fondo se funde en vez de apagarse y volver a encender.
-  const fondos = useMemo(() => {
-    const lista = []
-    for (const n of [idx - 1, idx, idx + 1]) {
-      if (n < 0 || n >= total) continue
-      const src = fondoPara(items, n)
-      if (src && !lista.some(x => x.src === src)) lista.push({ src, activo: false })
-    }
-    const activo = fondoPara(items, idx)
-    return lista.map(x => ({ ...x, activo: x.src === activo }))
-  }, [items, idx, total])
-
   if (!actual) return null
   const tipo = esVideo ? 'Video' : 'Foto'
   const src = esVideo ? actual.url : srcFotoEvid(actual)
@@ -339,7 +267,7 @@ export default function VisorEvidencias({ items = [], inicio = 0, titulo = '', d
     <div ref={raizRef} className={`hv${manteniendo ? ' es-limpio' : ''}`} role="dialog" aria-modal="true"
       aria-label={titulo ? `Fotos y videos · ${titulo}` : 'Fotos y videos'} tabIndex={-1}>
       <div className="hv__fondo" ref={fondoRef} aria-hidden="true">
-        {fondos.map(f => <CapaDifusa key={f.src} src={f.src} activa={f.activo} />)}
+        <canvas ref={lienzoRef} className="hv__fondo-lienzo" />
       </div>
 
       <button type="button" className="hv__cerrar" onClick={() => onCerrar?.()} aria-label="Cerrar">

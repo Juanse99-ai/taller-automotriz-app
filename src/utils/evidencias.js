@@ -11,3 +11,8 @@ export const esVideoEvid = (f) => {
 // dataUrl es la foto incrustada en la fila (las viejas); url es la que ya vive
 // en Storage.
 export const srcFotoEvid = (f) => f?.dataUrl || f?.url || ''
+
+// La imagen de una evidencia: la foto, o la portada si es un video. Hay videos
+// sin portada, y las subidas desde Safari hasta el 15 sep 2026 son negras (ver
+// posterDeVideo en utils/video.js).
+export const imagenEvid = (f) => (esVideoEvid(f) ? (f?.poster || '') : srcFotoEvid(f))
