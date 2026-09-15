@@ -2388,6 +2388,29 @@ input.input[type="date"]::-webkit-datetime-edit{display:block;padding:0}
   .tbl.tbl-cards.tbl-cards--inactivos tbody td.td-actions .btn{flex:1 1 auto;min-height:var(--tap)}
 }
 
+/* --- Inventario: Productos | Salud del inventario ---
+   El segmentado del sistema es un flex de bloque: sin width:max-content se
+   estiraba a todo el ancho con los dos botones pegados a la izquierda. */
+.inv-vista{width:max-content;max-width:100%;margin:0 0 12px}
+.inv-vista__n{margin-left:7px;font-family:var(--mono);font-size:11px;font-weight:700;color:var(--bad-fg)}
+.inv-salud__cuenta{font-size:12px;line-height:1.3;color:var(--text-3);text-align:right}
+.inv-salud__tabs{margin:0;padding:0 12px}
+.inv-salud__guia{display:flex;align-items:flex-start;gap:16px;padding:12px 18px 14px;border-bottom:1px solid var(--row-line)}
+.inv-salud__txt{flex:1;min-width:0;max-width:80ch}
+.inv-salud__txt p{margin:0;font-size:13px;line-height:1.45;color:var(--text-2)}
+.inv-salud__txt p + p{margin-top:6px;font-size:12.5px;color:var(--text-3)}
+.inv-salud__txt strong{color:var(--text)}
+.inv-salud__guia > .btn{margin-left:auto;flex:none}
+.inv-salud__nom{display:block;font-weight:600;color:var(--text)}
+.inv-salud__sku{display:block;margin-top:2px;font-family:var(--mono);font-size:11px;color:var(--text-4)}
+.inv-salud__det{color:var(--text-2)}
+@media (max-width:960px){
+  .inv-vista{width:100%}
+  .inv-salud__guia{flex-direction:column;gap:10px;padding:12px 14px}
+}
+/* En el celular "Salud del inventario 1.234" no cabia en medio segmentado. */
+@media (max-width:480px){ .inv-vista__largo{display:none} }
+
 /* Inventario: la lista del celular llega hasta 960, como Cotizaciones. En una
    tablet vertical la tabla de 9 columnas no cabia (908px en 738): o escondia
    Utilidad, IVA y Estado detras de un scroll lateral, o —quitando columnas— el

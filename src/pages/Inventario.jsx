@@ -2,12 +2,14 @@ import { useState, useEffect, useMemo } from 'react'
 import { fmt, fmtCompact } from '../utils/helpers'
 import { TALLER } from '../utils/constants'
 import { margenSobreVenta, MARGEN_MINIMO_CREIBLE } from '../utils/costos'
+import { CATEGORIAS_SALUD, DIAS_VENTAS, haceDias, resumirSalud, unidadesVendidas, detalleProblema } from '../utils/saludInventario'
 import { useInventario } from '../hooks/useInventario'
 import { Button, Badge } from '../components/ui'
 
 const STOCK_BAJO_UMBRAL = 3
+const PAGE_SIZE_SALUD = 100
 
-export default function Inventario({ notify }) {
+export default function Inventario({ notify, trabajos = [] }) {
   const {
     inventario: productos,
     loading,
@@ -127,6 +129,43 @@ export default function Inventario({ notify }) {
     }
   }
 
+  // ── Salud del inventario ──────────────────────────────────────────────
+  // Los productos de Cuentti con datos que no cuadran (utils/saludInventario,
+  // la misma lectura que salud_inventario_cuentti del MCP). Solo diagnostica:
+  // corregir es cambiar el ERP y se hace en Cuentti; al sincronizar, lo
+  // arreglado sale de la lista.
+  const [vista, setVista] = useState('productos') // productos | salud
+  const [catSalud, setCatSalud] = useState(null)   // null = la primera que tenga productos
+  const [paginaSalud, setPaginaSalud] = useState(1)
+  const vendidos = useMemo(() => unidadesVendidas(trabajos, haceDias(DIAS_VENTAS)), [trabajos])
+  const salud = useMemo(() => resumirSalud(productos, vendidos), [productos, vendidos])
+  const catActiva = CATEGORIAS_SALUD.find(c => c.clave === catSalud)
+    || CATEGORIAS_SALUD.find(c => salud.porCategoria[c.clave].length > 0)
+    || CATEGORIAS_SALUD[0]
+  const listaSalud = salud.porCategoria[catActiva.clave]
+  const totalPaginasSalud = Math.max(1, Math.ceil(listaSalud.length / PAGE_SIZE_SALUD))
+  const paginaSaludActual = Math.min(paginaSalud, totalPaginasSalud)
+  const paginadosSalud = listaSalud.slice((paginaSaludActual - 1) * PAGE_SIZE_SALUD, paginaSaludActual * PAGE_SIZE_SALUD)
+  const vendidosDe = (p) => vendidos.get(String(p.sku || '').trim().toUpperCase()) || 0
+
+  // Toda la categoria, no solo la pagina: es la lista de trabajo para ir
+  // corrigiendo en Cuentti.
+  const copiarSalud = async () => {
+    if (!listaSalud.length) return
+    const texto = [
+      `*Salud del inventario · ${catActiva.titulo} (${listaSalud.length})*`,
+      `Qué hacer: ${catActiva.arreglo}`,
+      '',
+      ...listaSalud.map(p => `• ${p.nombre}${p.sku ? ` [${p.sku}]` : ''} — ${detalleProblema(catActiva.clave, p, fmt)}`),
+    ].join('\n')
+    try {
+      await navigator.clipboard.writeText(texto)
+      notify(`Lista copiada: ${listaSalud.length} producto${listaSalud.length === 1 ? '' : 's'}`, 'success')
+    } catch {
+      notify('No se pudo copiar la lista', 'error')
+    }
+  }
+
   // Volver a la página 1 al cambiar la búsqueda o la reposición
   useEffect(() => { setPagina(1) }, [busqueda, soloReponer])
   const totalPaginas = Math.max(1, Math.ceil(filtrados.length / PAGE_SIZE))
@@ -234,7 +273,95 @@ export default function Inventario({ notify }) {
         </div>
       )}
 
+      <div className="hd-seg inv-vista" role="group" aria-label="Qué ver del inventario">
+        <button type="button" className={`hd-seg__i${vista === 'productos' ? ' on' : ''}`} aria-pressed={vista === 'productos'} onClick={() => setVista('productos')}>
+          Productos
+        </button>
+        <button type="button" className={`hd-seg__i${vista === 'salud' ? ' on' : ''}`} aria-pressed={vista === 'salud'} onClick={() => setVista('salud')}>
+          {/* nbsp: el boton es flex y un espacio normal al borde del span se pierde ("Saluddel") */}
+          Salud<span className="inv-vista__largo">{' '}del inventario</span>{salud.afectados > 0 && <span className="inv-vista__n">{salud.afectados.toLocaleString('es-CO')}</span>}
+        </button>
+      </div>
+
+      {/* Salud: una pestaña por problema, qué pasa, qué hacer en Cuentti y la lista. */}
+      {vista === 'salud' && (
+        <div className="card inv-salud">
+          <div className="card__h">
+            <h3>Salud del inventario</h3>
+            <span className="inv-salud__cuenta">
+              {salud.afectados.toLocaleString('es-CO')} de {salud.revisados.toLocaleString('es-CO')} productos con algo por corregir
+            </span>
+          </div>
+          <div className="hd-tabs inv-salud__tabs" role="tablist" aria-label="Problemas del inventario">
+            {CATEGORIAS_SALUD.map(c => {
+              const n = salud.porCategoria[c.clave].length
+              const on = c.clave === catActiva.clave
+              return (
+                <button key={c.clave} type="button" role="tab" aria-selected={on}
+                  className={`hd-tab${on ? ' on' : ''}`}
+                  onClick={() => { setCatSalud(c.clave); setPaginaSalud(1) }}>
+                  {c.titulo} <span className="hd-tab__n">{n.toLocaleString('es-CO')}</span>
+                </button>
+              )
+            })}
+          </div>
+          <div className="inv-salud__guia">
+            <div className="inv-salud__txt">
+              <p>{catActiva.que}</p>
+              <p><strong>Qué hacer:</strong> {catActiva.arreglo} Precio y costo van sin IVA, como están en Cuentti; al corregir, toca <em>Sincronizar Cuentti</em> y el producto sale de la lista.</p>
+            </div>
+            {listaSalud.length > 0 && (
+              <Button variant="outline" size="sm" onClick={copiarSalud}>Copiar lista</Button>
+            )}
+          </div>
+          {listaSalud.length === 0 ? (
+            <div className="hd-void">
+              <div className="hd-void__t">{productos.length ? 'Ningún producto con este problema' : 'Todavía no hay inventario cargado'}</div>
+            </div>
+          ) : (
+            <div className="card__b card__b--flush">
+              <table className="tbl tbl-cards inv-salud__tbl">
+                <thead>
+                  <tr>
+                    <th className="col-left">Producto</th>
+                    <th>Qué está mal</th>
+                    <th className="c-right">Stock</th>
+                    <th className="c-right" title={`Unidades en OT completadas de los últimos ${DIAS_VENTAS} días`}>Vendido {DIAS_VENTAS} días</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {paginadosSalud.map(p => {
+                    const v = vendidosDe(p)
+                    return (
+                      <tr key={p.id || p.codigo}>
+                        <td className="c-name col-left">
+                          <span className="inv-salud__nom">{p.nombre}</span>
+                          <span className="inv-salud__sku">{p.sku || 'sin SKU'}</span>
+                        </td>
+                        <td data-label="Qué está mal" className="inv-salud__det">{detalleProblema(catActiva.clave, p, fmt)}</td>
+                        <td data-label="Stock" className="c-mono c-right">{p.esServicio ? '—' : (parseFloat(p.stock) || 0).toLocaleString('es-CO')}</td>
+                        <td data-label={`Vendido ${DIAS_VENTAS} días`} className="c-mono c-right">{v ? v.toLocaleString('es-CO') : '—'}</td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+              {totalPaginasSalud > 1 && (
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, padding: 14, flexWrap: 'wrap' }}>
+                  <Button type="button" variant="outline" size="sm" disabled={paginaSaludActual <= 1} onClick={() => setPaginaSalud(x => Math.max(1, x - 1))}>← Anterior</Button>
+                  <span style={{ fontSize: 13, color: 'var(--text-3)' }}>
+                    Página <strong style={{ color: 'var(--text)' }}>{paginaSaludActual}</strong> de {totalPaginasSalud} · {listaSalud.length} productos
+                  </span>
+                  <Button type="button" variant="outline" size="sm" disabled={paginaSaludActual >= totalPaginasSalud} onClick={() => setPaginaSalud(x => Math.min(totalPaginasSalud, x + 1))}>Siguiente →</Button>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Tabla de productos */}
+      {vista === 'productos' && (
       <div className="card">
         <div className="card__h" style={{ gap: 12 }}>
           <h3>Productos ({filtrados.length})</h3>
@@ -382,6 +509,7 @@ export default function Inventario({ notify }) {
           </div>
         )}
       </div>
+      )}
     </div>
   )
 }

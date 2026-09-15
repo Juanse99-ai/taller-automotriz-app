@@ -13,6 +13,10 @@ import { handleMcp } from '../_mcp/shared.js'
 import { enviarGasto, desglosarIva, inferirTipoPersona, TIPO_PERSONA_JURIDICA } from '../_lib/gasto.js'
 import { ESTADOS_COTIZACION } from '../../src/utils/estados.js'
 import { costoDeProducto, margenSobreVenta, MARGEN_MINIMO_CREIBLE } from '../../src/utils/costos.js'
+import {
+  CATEGORIAS_SALUD, DIAS_VENTAS, PRECIO_SIMBOLICO,
+  resumirSalud, unidadesVendidas, detalleProblema,
+} from '../../src/utils/saludInventario.js'
 import { SIN_BORRADAS } from '../_mcp/trabajos.js'
 
 const CONFIG = {
@@ -921,6 +925,68 @@ const tools = [
     },
   },
   {
+    name: 'salud_inventario_cuentti',
+    description: 'Revisa todo el inventario de Cuentti y lista los productos con datos que no cuadran, por problema: servicios con costo (incluye MO1, el código con que se facturan las líneas escritas a mano), precio menor al costo, precio simbólico, margen fuera de rango, sin costo y stock negativo. Por cada problema da cuántos productos hay, qué hacer en Cuentti y los primeros de la lista, con lo vendido en las OT completadas de los últimos 90 días (lo que se vende sale primero). Es la misma lectura de la vista Salud del inventario de la app. Solo lectura: corregir se hace en Cuentti.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        categoria: { type: 'string', enum: CATEGORIAS_SALUD.map(c => c.clave), description: 'Un solo problema. Sin esto trae el resumen de todos con los primeros de cada uno.' },
+        limit: { type: 'integer', minimum: 1, maximum: 100, default: 10, description: 'Cuántos productos mostrar por problema.' },
+      },
+    },
+    handler: async ({ categoria, limit = 10 }) => {
+      const PAGE_SIZE = 1000
+      const productos = []
+      for (let n = 0; n < 25; n++) {
+        const data = await cuenttiRequest(`/jServerj4ErpPro/com/j4ErpPro/server/vent/factura/consultaProductoPaginadaMovil/${CONFIG.branchId}/${n}?tomar_precio_online=0`)
+        const items = Array.isArray(data) ? data : (data?.data || [])
+        productos.push(...items.map(p => ({
+          id: p.id_producto, sku: p.sku || '', nombre: celda(p.nombre, 'Sin nombre'),
+          precioBase: parseFloat(p.precio_venta || 0), costoBase: costoDeProducto(p),
+          stock: parseFloat(p.existencias || 0), esServicio: Number(p.es_servicio) === 1,
+        })))
+        if (items.length < PAGE_SIZE) break
+      }
+      if (!productos.length) return 'Cuentti no devolvió productos: no se pudo revisar el inventario.'
+
+      // Lo vendido es lo que ordena: sin la base del taller la lista sale igual,
+      // solo que sin esa columna.
+      let vendidos = null
+      try {
+        const desde = new Date(Date.now() - DIAS_VENTAS * 86400000).toISOString()
+        const trabajos = await supabaseTaller('trabajos', {
+          query: `select=estado,fecha,items,deleted&estado=eq.Completado&fecha=gte.${encodeURIComponent(desde)}&${SIN_BORRADAS}&limit=2000`,
+        })
+        vendidos = unidadesVendidas(Array.isArray(trabajos) ? trabajos : [], desde)
+      } catch { vendidos = null }
+
+      const r = resumirSalud(productos, vendidos)
+      const pesos = (n) => fmtCOP(n)
+      const cats = categoria ? CATEGORIAS_SALUD.filter(c => c.clave === categoria) : CATEGORIAS_SALUD
+      const tope = Math.min(Math.max(parseInt(limit, 10) || 10, 1), 100)
+      const lineas = [
+        `## Salud del inventario de Cuentti`,
+        `Revisados **${r.revisados.toLocaleString('es-CO')}** productos · con algún problema: **${r.afectados.toLocaleString('es-CO')}** (un producto puede tener más de uno). Precio y costo sin IVA.`,
+        ``,
+        `| Problema | Productos | Qué hacer en Cuentti |`,
+        `|---|---|---|`,
+        ...CATEGORIAS_SALUD.map(c => `| ${c.titulo} | ${r.porCategoria[c.clave].length.toLocaleString('es-CO')} | ${c.arreglo} |`),
+      ]
+      for (const c of cats) {
+        const lista = r.porCategoria[c.clave]
+        lineas.push('', `### ${c.titulo} (${lista.length.toLocaleString('es-CO')})`, c.que)
+        if (!lista.length) { lineas.push('', '_Ninguno._'); continue }
+        lineas.push('', `| SKU | Nombre | Detalle | Vendido ${DIAS_VENTAS} días |`, `|---|---|---|---|`)
+        for (const p of lista.slice(0, tope)) {
+          const v = vendidos ? (vendidos.get(String(p.sku).trim().toUpperCase()) || 0).toLocaleString('es-CO') : '—'
+          lineas.push(`| ${celda(p.sku)} | ${p.nombre.slice(0, 60)} | ${detalleProblema(c.clave, p, pesos)} | ${v} |`)
+        }
+        if (lista.length > tope) lineas.push(`_Hay ${(lista.length - tope).toLocaleString('es-CO')} más: pide \`categoria: '${c.clave}'\` con un \`limit\` mayor._`)
+      }
+      return lineas.join('\n')
+    },
+  },
+  {
     name: 'obtener_url_documento_cuentti',
     description: 'Devuelve la URL pública (PDF y QR) de un documento de Cuentti a partir de su id_transacion: el id interno que devuelven facturar, facturar_directo, crear_cotizacion_cuentti y registrar_compra, no el número impreso en el documento. Sirve para facturas, cotizaciones, remisiones y egresos. Responde con el JSON crudo de Cuentti.',
     inputSchema: {
@@ -1529,12 +1595,20 @@ const tools = [
         idCategoria: { type: 'integer', default: 1 },
         esServicio: { type: 'boolean', default: false, description: 'false (default) = repuesto/autoparte que maneja inventario; true = servicio (sin stock).' },
         existencias: { type: 'number', default: 0, description: 'Stock inicial del repuesto (>=0). Se ignora para servicios.' },
+        permitirPrecioBajo: { type: 'boolean', default: false, description: `true = crear un repuesto con precio de venta de menos de $${PRECIO_SIMBOLICO} sin IVA. Sin esto se bloquea: así quedaron la bolsa a $20 y el juego de llaves a $1.` },
         confirm: { type: 'boolean', description: 'true = crear; false (default) = dry-run' },
       },
       required: ['nombre', 'confirm'],
     },
     handler: async (a) => {
       if (!a.nombre) return '❌ nombre es obligatorio'
+      // Un precio simbolico en un repuesto casi siempre es un error de digitacion,
+      // y despues no salta en ningun reporte: con costo $1 y precio $2 el margen
+      // se ve sano. Es el mismo umbral de la salud del inventario.
+      const precioVenta = parseFloat(a.precioVenta) || 0
+      if (!a.esServicio && precioVenta > 0 && precioVenta < PRECIO_SIMBOLICO && !a.permitirPrecioBajo) {
+        return `🛑 No se creó: el precio de venta es ${fmtCOP(precioVenta)} sin IVA, menos de ${fmtCOP(PRECIO_SIMBOLICO)}. Revisa si falta algún cero; si de verdad vale eso, repite con **permitirPrecioBajo:true**.`
+      }
       const body = buildProductoPayload(a)
       const resumen = [
         `- Tipo: ${body.es_servicio === 1 ? 'Servicio (sin inventario)' : 'Repuesto · **maneja inventario = SÍ**'}`,

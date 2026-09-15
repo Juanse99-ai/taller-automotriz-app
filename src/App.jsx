@@ -385,7 +385,7 @@ export default function App() {
       case 'cotizaciones':
         return <Cotizaciones notify={notify} trabajos={trabajosHook.trabajos} onCrearTrabajo={handleCrearTrabajoDesdeCotizacion} cotizacionesHook={cotizacionesHook} />
       case 'inventario':
-        return <Inventario notify={notify} />
+        return <Inventario notify={notify} trabajos={trabajosHook.trabajos} />
       case 'liquidacion':
         return <Liquidacion trabajos={trabajosHook.trabajos} notify={notify} liquidacionHook={liquidacionHook} />
       case 'cartera':

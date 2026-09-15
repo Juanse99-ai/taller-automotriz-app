@@ -158,3 +158,33 @@ test('buscar_producto_sku_cuentti: sin costo, con perdida y con datos imposibles
   const servicio = (await llamar('buscar_producto_sku_cuentti', { sku: '0' })).replace(/\s/g, ' ')
   assert.match(servicio, /\| \*\*Margen\*\* \| no aplica: es un servicio sin costo \|/)
 })
+
+test('salud_inventario_cuentti: cuantos hay por problema y los peores primero', async () => {
+  const out = (await llamar('salud_inventario_cuentti', {})).replace(/\s/g, ' ')
+  assert.match(out, /Revisados \*\*9\*\* productos · con algún problema: \*\*4\*\*/)
+  assert.match(out, /\| Precio menor al costo \| 3 \| Revisa en Cuentti cuál de los dos está mal y corrígelo\. \|/)
+  assert.match(out, /\| Precio simbólico \| 1 \|/)
+  assert.match(out, /\| Sin costo \| 1 \|/)
+  assert.match(out, /\| Servicio con costo \| 0 \|/)
+  // Sin la base del taller no hay columna de ventas, pero la lista sale igual.
+  const bajo = out.slice(out.indexOf('### Precio menor al costo'))
+  const orden = ['Bolsa', 'EMPAQUE CARTER', 'BUJIA NGK'].map(n => bajo.indexOf(n))
+  assert.ok(orden.every(i => i > 0) && orden[0] < orden[1] && orden[1] < orden[2], `orden por perdida: ${orden}`)
+  assert.match(bajo, /Pierde \$ 63\.849 por unidad/)
+})
+
+test('salud_inventario_cuentti con categoria: solo ese problema', async () => {
+  const out = (await llamar('salud_inventario_cuentti', { categoria: 'sin_costo', limit: 5 })).replace(/\s/g, ' ')
+  assert.match(out, /### Sin costo \(1\)/)
+  assert.match(out, /SIL-GRIS \| SILICONA GRIS \| Se vende a \$ 10\.000 sin costo/)
+  assert.doesNotMatch(out, /### Precio menor al costo/)
+})
+
+test('crear_producto frena un repuesto con precio simbolico', async () => {
+  const frenado = (await llamar('crear_producto', { nombre: 'JUEGO LLAVE COMBINADA', precioVenta: 1, confirm: true })).replace(/\s/g, ' ')
+  assert.match(frenado, /No se creó: el precio de venta es \$ 1 sin IVA/)
+  const servicio = await llamar('crear_producto', { nombre: 'REVISION', precioVenta: 1, esServicio: true, confirm: false })
+  assert.match(servicio, /Dry-run: crear producto/)
+  const forzado = await llamar('crear_producto', { nombre: 'ARANDELA', precioVenta: 50, permitirPrecioBajo: true, confirm: false })
+  assert.match(forzado, /Dry-run: crear producto/)
+})
