@@ -900,202 +900,13 @@ export default function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [
         </div>
         </div>{/* /form-grid-2 */}
 
-        {/* ===== Dos paneles: contexto (derecha) + plata (izquierda) ===== */}
+        {/* ===== Dos paneles: plata (izquierda) + contexto (derecha), y el TOTAL
+           al final. El orden del codigo es el del celular, donde todo va en una
+           columna: lineas, contexto y de ultimo el total con Guardar. El dueño
+           lo pidio asi (15 sep): con el total a mitad de pagina quedaban campos
+           despues del boton de guardar. En computador, .ot-grid lo acomoda en
+           dos columnas con el total bajo las lineas (ver index.css). */}
         <div className="ot-grid">
-        {/* Columna DERECHA — contexto y cierre. Todo lo que se llena poco queda
-           plegado con su contador a la vista, y abajo el TOTAL en navy. */}
-        <div className="ot-col ot-col--side">
-
-        {/* OBSERVACIONES — sube desde el fondo del formulario: la fecha y el
-           estado se tocan en casi toda OT, así que dejan de estar al final. */}
-        <div className="card">
-          <div className="card__h"><h3 style={H3}>Observaciones</h3></div>
-          <div className="card__b" style={{ display: 'grid', gridTemplateColumns: isEdit ? '1fr 1fr' : '1fr', gap: 14 }}>
-            <div className="field">
-              <label>Fecha {form.fecha === hoyISO() && <span className="hd-chip hd-chip--info" style={{ marginLeft: 4 }}>HOY</span>}</label>
-              <input className="input" type="date" value={form.fecha} onChange={e => set('fecha', e.target.value)} />
-            </div>
-            {isEdit && (
-              <div className="field">
-                <label>Estado</label>
-                <select className="input" value={form.estado} onChange={e => set('estado', e.target.value)}>
-                  {Object.values(ESTADOS).map(e => <option key={e} value={e}>{rotuloEstado(e)}</option>)}
-                </select>
-              </div>
-            )}
-            <div className="field" style={{ gridColumn: '1 / -1' }}>
-              <label>Diagnóstico / Notas</label>
-              <textarea className="input" value={form.observaciones} placeholder="Diagnóstico, notas, recomendaciones..."
-                onChange={e => set('observaciones', e.target.value)} style={{ minHeight: 88, resize: 'vertical' }} />
-            </div>
-          </div>
-        </div>
-
-        {/* ESTADO DE INGRESO — plegado, pero el contador dice qué hay dentro:
-           ítems marcados sobre 16, nivel de tanque y si hay daños escritos. */}
-        {!form.sinVehiculo && (() => {
-          const marcados = (form.ingreso?.inventario || []).length
-          const comb = form.ingreso?.combustible
-          const danos = (form.ingreso?.estado || '').trim() !== ''
-          const chip = `${marcados} / ${INVENTARIO_ITEMS.length}`
-            + (comb != null ? ` · ${etiquetaCombustible(comb)}` : '')
-            + (danos ? ' · daños' : '')
-          return (
-            <div className="card">
-              <PlegHead titulo="Estado de ingreso del vehículo"
-                chip={chip} tono={marcados === 0 && comb == null ? 'warn' : 'mute'}
-                open={showIngreso} onToggle={() => setShowIngreso(v => !v)} />
-              {showIngreso && (
-                <div className="card__b">
-                  <IngresoVehiculo value={form.ingreso} onChange={v => set('ingreso', v)} />
-                </div>
-              )}
-            </div>
-          )
-        })()}
-
-        {/* HISTORIAL POR PLACA */}
-        {form.placa.length >= 6 && (() => {
-          const historial = allTrabajos.filter(t =>
-            (t.placa || '').toUpperCase() === form.placa.toUpperCase() && t.id !== trabajo?.id
-          ).sort((a, b) => new Date(b.fecha) - new Date(a.fecha))
-          if (!historial.length) return null
-          return (
-            <div className="card">
-              <PlegHead titulo={`Historial de ${form.placa.toUpperCase()}`}
-                chip={`${historial.length} anteriores`} tono="info"
-                open={showHistorial} onToggle={() => setShowHistorial(v => !v)} />
-              {showHistorial && (
-                <div className="table-wrap">
-                  <table>
-                    <thead>
-                      <tr>
-                        <th>OT</th>
-                        <th>Estado</th>
-                        <th>Técnico</th>
-                        <th className="text-right">Total</th>
-                        <th>Fecha</th>
-                        <th></th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {historial.slice(0, 5).map(h => (
-                        <tr key={h.id}>
-                          <td className="text-mono text-sm">{h.otCodigo || '—'}</td>
-                          <td><span className={`hd-chip hd-chip--${h.estado === ESTADOS.COMPLETADO ? 'ok' : 'warn'}`}>{h.estado}</span></td>
-                          <td className="text-sm">{TECNICOS.find(t => t.id === parseInt(h.tecnicoId))?.nombre || '—'}</td>
-                          <td className="text-right text-mono">{fmt(h.total)}</td>
-                          <td className="text-sm text-muted">{fmtDate(h.fecha)}</td>
-                          <td className="text-right">
-                            {(h.items || []).length > 0 && (
-                              <button type="button" className="btn btn-outline btn-sm"
-                                title={`Traer las ${h.items.length} lineas de ${h.otCodigo || 'esta orden'} a la OT actual`}
-                                onClick={() => repetirServicio(h)}>
-                                Repetir
-                              </button>
-                            )}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
-          )
-        })()}
-
-        {/* PROXIMO MANTENIMIENTO (opcional, alimenta CRM) — baja de la columna de
-           la plata: no se toca en la mayoría de OT. El contador muestra la fecha
-           pactada, o "Sin fecha" cuando el bloque sigue vacío. */}
-        <div className="card">
-          <PlegHead titulo="Próximo mantenimiento"
-            sub={faltaMant ? 'Lleva aceite: falta cuándo vuelve' : null}
-            chip={form.proximaVisita
-              ? form.proximaVisita.split('-').reverse().join('/')
-              : (faltaMant ? 'Falta' : 'Sin fecha')}
-            tono={form.proximaVisita ? 'ok' : (faltaMant ? 'warn' : 'mute')}
-            open={showMant} onToggle={() => setShowMant(v => !v)} />
-          {showMant && (
-          <div className="card__b" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(200px,1fr))', gap: 14 }}>
-            <div className="field" style={{ gridColumn: '1 / -1' }}>
-              <label>Tipo de aceite usado en este servicio</label>
-              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                {[
-                  ['', 'Sin especificar'],
-                  ['mineral', 'Mineral / Semisintético (5,000 km)'],
-                  ['sintetico', 'Full sintético (10,000 km)'],
-                  ['no_aplica', 'No se cambió aceite'],
-                ].map(([val, lbl]) => (
-                  <label key={val || 'none'} style={{
-                    flex: '1 1 200px', minHeight: 'var(--tap)',
-                    display: 'flex', alignItems: 'center', gap: 8, padding: '9px 12px',
-                    border: `1.5px solid ${form.tipoAceite === val ? 'var(--accent)' : 'var(--border-input)'}`,
-                    background: form.tipoAceite === val ? 'var(--accent-soft)' : 'var(--bg-raised)',
-                    borderRadius: 10, cursor: 'pointer', fontSize: 12.5, fontWeight: 600,
-                  }}>
-                    <input type="radio" name="tipoAceite" value={val} checked={form.tipoAceite === val}
-                      onChange={() => setTipoAceite(val)} style={{ margin: 0 }} />
-                    {lbl}
-                  </label>
-                ))}
-              </div>
-              <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 6 }}>
-                Si no eliges nada, el CRM detecta el tipo automáticamente leyendo los items facturados.
-              </div>
-            </div>
-            <div className="field">
-              <label>Próximo cambio (km)</label>
-              <input className="input" type="number" inputMode="numeric" value={form.proximoKm}
-                onChange={e => set('proximoKm', e.target.value)}
-                placeholder={form.kilometraje ? `Sugerido: ${(parseInt(form.kilometraje) || 0) + 5000}` : 'Ej: 95000'} />
-            </div>
-            <div className="field">
-              <label>Próxima visita estimada</label>
-              <input className="input" type="date" value={form.proximaVisita} onChange={e => set('proximaVisita', e.target.value)} />
-            </div>
-            <div className="field" style={{ gridColumn: '1 / -1' }}>
-              <label>Notas para el próximo servicio (opcional)</label>
-              <input className="input" value={form.notasProximoMant}
-                onChange={e => set('notasProximoMant', e.target.value)}
-                placeholder="Ej: revisar pastillas, alineación pendiente..." />
-            </div>
-          </div>
-          )}
-        </div>
-
-        {/* EVIDENCIAS */}
-        <div className="card">
-          <PlegHead titulo="Evidencias del trabajo"
-            chip={`${form.evidenciasIngreso.length} ${form.evidenciasIngreso.length === 1 ? 'archivo' : 'archivos'}`}
-            tono={form.evidenciasIngreso.length === 0 ? 'warn' : 'ok'}
-            open={showEvid} onToggle={() => setShowEvid(v => !v)} />
-          {showEvid && (
-          <div className="card__b">
-            <div className="field">
-              <label>Fotos y videos de la orden de trabajo</label>
-              <input type="file" accept="image/*" multiple onChange={e => addFotos('evidenciasIngreso', e.target.files)} />
-              <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-                {/* Sin capture: con capture el celular abria directo la camara y no
-                    dejaba elegir videos ya grabados, y menos varios. Sin el, el
-                    telefono ofrece galeria o grabar. La lista se copia ANTES de
-                    vaciar el input: vaciarlo borra tambien los archivos. */}
-                <label className="btn btn-outline btn-sm" style={{ cursor: subiendoVideo ? 'wait' : 'pointer', margin: 0, minHeight: 'var(--tap)' }}>
-                  {subiendoVideo ? (estadoVideo || 'Subiendo video…') : '+ Agregar videos (máx 30s c/u)'}
-                  <input type="file" accept="video/*" multiple disabled={subiendoVideo}
-                    onChange={e => { const archivos = Array.from(e.target.files || []); e.target.value = ''; addVideos('evidenciasIngreso', archivos) }}
-                    style={{ display: 'none' }} />
-                </label>
-                {subiendoVideo && <span style={{ fontSize: 12.5, color: 'var(--text-3)' }}>No cierres esta ventana ni bloquees el celular hasta que termine.</span>}
-              </div>
-              <ThumbGrid fotos={form.evidenciasIngreso} onNota={(id, nota) => actualizarNotaFoto('evidenciasIngreso', id, nota)} onRemove={id => quitarFoto('evidenciasIngreso', id)} />
-            </div>
-          </div>
-          )}
-        </div>
-
-        </div>{/* /ot-col side */}
-
         {/* Columna IZQUIERDA — la orden y la plata */}
         <div className="ot-col ot-col--main">
 
@@ -1372,14 +1183,210 @@ export default function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [
             </div>
           </div>
         </div>
+        </div>{/* /ot-col main */}
 
-        {/* TOTAL OT — va al pie de la columna izquierda, bajo las lineas que
-           lo producen: a la derecha quedaba colgando y el hueco de abajo a la
-           izquierda se quedaba vacio.
-           TOTAL OT — la única cifra en navy de la pantalla, porque es sobre la
-           que se aprieta Guardar. El desglose (M.O., repuestos, subtotal, IVA)
-           queda bajo la lista, junto a las líneas que lo producen. */}
-        <div className="hd-neto" style={{ margin: 0 }}>
+        {/* Columna DERECHA — contexto. Todo lo que se llena poco queda plegado
+           con su contador a la vista. */}
+        <div className="ot-col ot-col--side">
+
+        {/* OBSERVACIONES — sube desde el fondo del formulario: la fecha y el
+           estado se tocan en casi toda OT, así que dejan de estar al final. */}
+        <div className="card">
+          <div className="card__h"><h3 style={H3}>Observaciones</h3></div>
+          <div className="card__b" style={{ display: 'grid', gridTemplateColumns: isEdit ? 'minmax(0, 1fr) minmax(0, 1fr)' : 'minmax(0, 1fr)', gap: 14 }}>
+            <div className="field">
+              <label>Fecha {form.fecha === hoyISO() && <span className="hd-chip hd-chip--info" style={{ marginLeft: 4 }}>HOY</span>}</label>
+              <input className="input" type="date" value={form.fecha} onChange={e => set('fecha', e.target.value)} />
+            </div>
+            {isEdit && (
+              <div className="field">
+                <label>Estado</label>
+                <select className="input" value={form.estado} onChange={e => set('estado', e.target.value)}>
+                  {Object.values(ESTADOS).map(e => <option key={e} value={e}>{rotuloEstado(e)}</option>)}
+                </select>
+              </div>
+            )}
+            <div className="field" style={{ gridColumn: '1 / -1' }}>
+              <label>Diagnóstico / Notas</label>
+              <textarea className="input" value={form.observaciones} placeholder="Diagnóstico, notas, recomendaciones..."
+                onChange={e => set('observaciones', e.target.value)} style={{ minHeight: 88, resize: 'vertical' }} />
+            </div>
+          </div>
+        </div>
+
+        {/* ESTADO DE INGRESO — plegado, pero el contador dice qué hay dentro:
+           ítems marcados sobre 16, nivel de tanque y si hay daños escritos. */}
+        {!form.sinVehiculo && (() => {
+          const marcados = (form.ingreso?.inventario || []).length
+          const comb = form.ingreso?.combustible
+          const danos = (form.ingreso?.estado || '').trim() !== ''
+          const chip = `${marcados} / ${INVENTARIO_ITEMS.length}`
+            + (comb != null ? ` · ${etiquetaCombustible(comb)}` : '')
+            + (danos ? ' · daños' : '')
+          return (
+            <div className="card">
+              <PlegHead titulo="Estado de ingreso del vehículo"
+                chip={chip} tono={marcados === 0 && comb == null ? 'warn' : 'mute'}
+                open={showIngreso} onToggle={() => setShowIngreso(v => !v)} />
+              {showIngreso && (
+                <div className="card__b">
+                  <IngresoVehiculo value={form.ingreso} onChange={v => set('ingreso', v)} />
+                </div>
+              )}
+            </div>
+          )
+        })()}
+
+        {/* HISTORIAL POR PLACA */}
+        {form.placa.length >= 6 && (() => {
+          const historial = allTrabajos.filter(t =>
+            (t.placa || '').toUpperCase() === form.placa.toUpperCase() && t.id !== trabajo?.id
+          ).sort((a, b) => new Date(b.fecha) - new Date(a.fecha))
+          if (!historial.length) return null
+          return (
+            <div className="card">
+              <PlegHead titulo={`Historial de ${form.placa.toUpperCase()}`}
+                chip={`${historial.length} anteriores`} tono="info"
+                open={showHistorial} onToggle={() => setShowHistorial(v => !v)} />
+              {showHistorial && (
+                <div className="table-wrap">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>OT</th>
+                        <th>Estado</th>
+                        <th>Técnico</th>
+                        <th className="text-right">Total</th>
+                        <th>Fecha</th>
+                        <th></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {historial.slice(0, 5).map(h => (
+                        <tr key={h.id}>
+                          <td className="text-mono text-sm">{h.otCodigo || '—'}</td>
+                          <td><span className={`hd-chip hd-chip--${h.estado === ESTADOS.COMPLETADO ? 'ok' : 'warn'}`}>{h.estado}</span></td>
+                          <td className="text-sm">{TECNICOS.find(t => t.id === parseInt(h.tecnicoId))?.nombre || '—'}</td>
+                          <td className="text-right text-mono">{fmt(h.total)}</td>
+                          <td className="text-sm text-muted">{fmtDate(h.fecha)}</td>
+                          <td className="text-right">
+                            {(h.items || []).length > 0 && (
+                              <button type="button" className="btn btn-outline btn-sm"
+                                title={`Traer las ${h.items.length} lineas de ${h.otCodigo || 'esta orden'} a la OT actual`}
+                                onClick={() => repetirServicio(h)}>
+                                Repetir
+                              </button>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )
+        })()}
+
+        {/* PROXIMO MANTENIMIENTO (opcional, alimenta CRM) — baja de la columna de
+           la plata: no se toca en la mayoría de OT. El contador muestra la fecha
+           pactada, o "Sin fecha" cuando el bloque sigue vacío. */}
+        <div className="card">
+          <PlegHead titulo="Próximo mantenimiento"
+            sub={faltaMant ? 'Lleva aceite: falta cuándo vuelve' : null}
+            chip={form.proximaVisita
+              ? form.proximaVisita.split('-').reverse().join('/')
+              : (faltaMant ? 'Falta' : 'Sin fecha')}
+            tono={form.proximaVisita ? 'ok' : (faltaMant ? 'warn' : 'mute')}
+            open={showMant} onToggle={() => setShowMant(v => !v)} />
+          {showMant && (
+          <div className="card__b" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(200px,1fr))', gap: 14 }}>
+            <div className="field" style={{ gridColumn: '1 / -1' }}>
+              <label>Tipo de aceite usado en este servicio</label>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                {[
+                  ['', 'Sin especificar'],
+                  ['mineral', 'Mineral / Semisintético (5,000 km)'],
+                  ['sintetico', 'Full sintético (10,000 km)'],
+                  ['no_aplica', 'No se cambió aceite'],
+                ].map(([val, lbl]) => (
+                  <label key={val || 'none'} style={{
+                    flex: '1 1 200px', minHeight: 'var(--tap)',
+                    display: 'flex', alignItems: 'center', gap: 8, padding: '9px 12px',
+                    border: `1.5px solid ${form.tipoAceite === val ? 'var(--accent)' : 'var(--border-input)'}`,
+                    background: form.tipoAceite === val ? 'var(--accent-soft)' : 'var(--bg-raised)',
+                    borderRadius: 10, cursor: 'pointer', fontSize: 12.5, fontWeight: 600,
+                  }}>
+                    <input type="radio" name="tipoAceite" value={val} checked={form.tipoAceite === val}
+                      onChange={() => setTipoAceite(val)} style={{ margin: 0 }} />
+                    {lbl}
+                  </label>
+                ))}
+              </div>
+              <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 6 }}>
+                Si no eliges nada, el CRM detecta el tipo automáticamente leyendo los items facturados.
+              </div>
+            </div>
+            <div className="field">
+              <label>Próximo cambio (km)</label>
+              <input className="input" type="number" inputMode="numeric" value={form.proximoKm}
+                onChange={e => set('proximoKm', e.target.value)}
+                placeholder={form.kilometraje ? `Sugerido: ${(parseInt(form.kilometraje) || 0) + 5000}` : 'Ej: 95000'} />
+            </div>
+            <div className="field">
+              <label>Próxima visita estimada</label>
+              <input className="input" type="date" value={form.proximaVisita} onChange={e => set('proximaVisita', e.target.value)} />
+            </div>
+            <div className="field" style={{ gridColumn: '1 / -1' }}>
+              <label>Notas para el próximo servicio (opcional)</label>
+              <input className="input" value={form.notasProximoMant}
+                onChange={e => set('notasProximoMant', e.target.value)}
+                placeholder="Ej: revisar pastillas, alineación pendiente..." />
+            </div>
+          </div>
+          )}
+        </div>
+
+        {/* EVIDENCIAS */}
+        <div className="card">
+          <PlegHead titulo="Evidencias del trabajo"
+            chip={`${form.evidenciasIngreso.length} ${form.evidenciasIngreso.length === 1 ? 'archivo' : 'archivos'}`}
+            tono={form.evidenciasIngreso.length === 0 ? 'warn' : 'ok'}
+            open={showEvid} onToggle={() => setShowEvid(v => !v)} />
+          {showEvid && (
+          <div className="card__b">
+            <div className="field">
+              <label>Fotos y videos de la orden de trabajo</label>
+              <input type="file" accept="image/*" multiple onChange={e => addFotos('evidenciasIngreso', e.target.files)} />
+              <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                {/* Sin capture: con capture el celular abria directo la camara y no
+                    dejaba elegir videos ya grabados, y menos varios. Sin el, el
+                    telefono ofrece galeria o grabar. La lista se copia ANTES de
+                    vaciar el input: vaciarlo borra tambien los archivos. */}
+                <label className="btn btn-outline btn-sm" style={{ cursor: subiendoVideo ? 'wait' : 'pointer', margin: 0, minHeight: 'var(--tap)' }}>
+                  {subiendoVideo ? (estadoVideo || 'Subiendo video…') : '+ Agregar videos (máx 30s c/u)'}
+                  <input type="file" accept="video/*" multiple disabled={subiendoVideo}
+                    onChange={e => { const archivos = Array.from(e.target.files || []); e.target.value = ''; addVideos('evidenciasIngreso', archivos) }}
+                    style={{ display: 'none' }} />
+                </label>
+                {subiendoVideo && <span style={{ fontSize: 12.5, color: 'var(--text-3)' }}>No cierres esta ventana ni bloquees el celular hasta que termine.</span>}
+              </div>
+              <ThumbGrid fotos={form.evidenciasIngreso} onNota={(id, nota) => actualizarNotaFoto('evidenciasIngreso', id, nota)} onRemove={id => quitarFoto('evidenciasIngreso', id)} />
+            </div>
+          </div>
+          )}
+        </div>
+
+        </div>{/* /ot-col side */}
+
+        {/* TOTAL OT — lo ultimo del formulario: en el celular cierra la pagina,
+           y en computador va al pie de la columna izquierda, bajo las lineas
+           que lo producen (a la derecha quedaba colgando y el hueco de abajo a
+           la izquierda se quedaba vacio).
+           Es la única cifra en navy de la pantalla, porque es sobre la que se
+           aprieta Guardar. El desglose (M.O., repuestos, subtotal, IVA) queda
+           bajo la lista, junto a las líneas que lo producen. */}
+        <div className="hd-neto ot-total" style={{ margin: 0 }}>
           <div className="hd-neto__l">TOTAL OT</div>
           <div className="hd-neto__v">{fmt(totales.total)}</div>
           <div style={{ fontSize: 11.5, lineHeight: 1.4, color: 'rgba(255,255,255,.6)', marginTop: 6 }}>
@@ -1398,8 +1405,6 @@ export default function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [
             </Button>
           </div>
         </div>
-
-        </div>{/* /ot-col main */}
         </div>{/* /ot-grid */}
       </form>
       <ConfirmDialog cfg={confirmCfg} onClose={() => setConfirmCfg(null)} />

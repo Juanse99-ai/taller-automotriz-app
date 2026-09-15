@@ -1006,11 +1006,23 @@ tbody tr:active{background:var(--fill-2)}
 /* OT en dos paneles: la plata a la izquierda (más ancha), vehículo/contexto a la
    derecha. Cada columna es un contenedor independiente (alturas independientes).
    El grid coloca --main en col 1 y --side en col 2 sin importar el orden del DOM. */
-.ot-grid{display:grid;grid-template-columns:1.55fr 1fr;gap:16px;align-items:start;margin-top:16px}
+/* Formulario de la OT. En el codigo va lineas, contexto y total, que es el orden
+   del celular (una columna, el total con Guardar de ultimo). En computador son
+   dos columnas y el total sube al pie de la izquierda: la derecha ocupa las dos
+   filas, y la segunda es 1fr para que si la derecha es mas alta el sobrante
+   caiga ahi y no abra un hueco entre las lineas y el total. */
+.ot-grid{display:grid;grid-template-columns:1.55fr 1fr;grid-template-rows:auto 1fr;gap:16px;align-items:start;margin-top:16px}
 .ot-col{display:flex;flex-direction:column;gap:16px;min-width:0}
 .ot-col--main{grid-column:1;grid-row:1}
-.ot-col--side{grid-column:2;grid-row:1}
-@media(max-width:900px){.ot-grid{grid-template-columns:1fr}.ot-col--main,.ot-col--side{grid-column:1;grid-row:auto}.ot-col--main{order:-1}}
+.ot-col--side{grid-column:2;grid-row:1 / span 2}
+.ot-total{grid-column:1;grid-row:2;min-width:0}
+@media(max-width:900px){.ot-grid{grid-template-columns:minmax(0,1fr);grid-template-rows:none}.ot-col--main,.ot-col--side,.ot-total{grid-column:1;grid-row:auto}}
+/* Fecha en el iPhone: con la apariencia nativa Safari le pone su propio ancho y
+   el campo se salia de la tarjeta (Observaciones de la OT, 15 sep). Es el
+   arreglo de Bootstrap para Safari; el selector de fecha abre igual. */
+input.input[type="date"]{-webkit-appearance:none;appearance:none;min-width:0}
+input.input[type="date"]::-webkit-date-and-time-value{min-width:85px;height:1.5em;margin:0}
+input.input[type="date"]::-webkit-datetime-edit{display:block;padding:0}
 /* Variante full-width para muchos ítems en columna angosta (ej. "Cambiar estado"
    del detalle de una OT: 5 estados). Los botones reparten el ancho parejo. */
 .segctl--full{display:flex;width:100%}
