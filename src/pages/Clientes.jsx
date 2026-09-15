@@ -1058,9 +1058,14 @@ export default function Clientes({ clientes, vehiculos, trabajos = [], notify })
           </div>
         </div>
 
-        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:16,alignItems:'start'}}>
+        {/* minWidth 0 en las dos tarjetas: la tabla de vehiculos mide 580px como
+            minimo y, sin eso, la columna crecia hasta ese ancho y arrastraba la
+            pagina (624px en un celular de 390, 996 en una tablet de 820). Y bajo
+            1100px (cli-det-grid, index.css) las dos tarjetas van una sobre otra:
+            en media pantalla la tabla escondia Visitas y Ultimo servicio. */}
+        <div className="cli-det-grid" style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:16,alignItems:'start'}}>
           {/* Left column - Info */}
-          <div className="card">
+          <div className="card" style={{ minWidth: 0 }}>
             <div className="card__h"><h3>Información del cliente</h3></div>
             <div className="card__b">
               <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:14}}>
@@ -1102,7 +1107,7 @@ export default function Clientes({ clientes, vehiculos, trabajos = [], notify })
           </div>
 
           {/* Right column - Vehiculos */}
-          <div className="card">
+          <div className="card" style={{ minWidth: 0 }}>
             <div className="card__h">
               <h3>Vehículos del cliente</h3>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>

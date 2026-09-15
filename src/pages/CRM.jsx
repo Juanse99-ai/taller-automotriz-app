@@ -419,7 +419,7 @@ export default function CRM({ trabajos = [], clientes, vehiculos, notify, actual
           cromo para cuatro numeros de un digito que ademas se repiten en los
           filtros de abajo. Bajan a linea de apoyo; lo vencido, que es lo unico
           accionable, queda como cifra grande. */}
-      <div className="hd-head">
+      <div className="hd-head crm-head">
         <div className="hd-head__t">
           <h1>CRM · Recordatorios</h1>
           <div className="hd-head__sub">

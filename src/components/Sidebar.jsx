@@ -220,8 +220,13 @@ export default function Sidebar({ active, onNavigate, isOpen, collapsed, onColla
   // el rail a 86px pero SIN hover: la compuerta lo apagaba y no habia forma de
   // abrirlo. El ancho ya lo fija .sidebar del bloque de escritorio.
   const puedeHover = !isMobile
-  const onHoverEnter = () => {
-    if (!puedeHover) return
+  // Solo un cursor de verdad abre el rail. En una tablet acostada (mas de 960px)
+  // el dedo tambien dispara mouseenter y nunca llega el mouseleave: el rail se
+  // quedaba abierto en 212px despues de cada toque y le robaba ese ancho a la
+  // pantalla, que ya no cabia (tablas cortadas, cabeceras montadas). Con
+  // pointerType el toque se ignora; el mouse y el trackpad siguen igual.
+  const onHoverEnter = (e) => {
+    if (!puedeHover || e.pointerType !== 'mouse') return
     clearTimeout(hoverTimer.current)
     hoverTimer.current = setTimeout(() => setHoverExpand(true), 150)
   }
@@ -238,8 +243,8 @@ export default function Sidebar({ active, onNavigate, isOpen, collapsed, onColla
   return (
     <aside
       className={`sidebar ${isOpen ? 'open' : ''}${effectiveCollapsed ? ' collapsed' : ''}${overlayExpand ? ' hover-expand' : ''}`}
-      onMouseEnter={onHoverEnter}
-      onMouseLeave={onHoverLeave}
+      onPointerEnter={onHoverEnter}
+      onPointerLeave={onHoverLeave}
     >
       <div className="sidebar__brand">
         <div className="logo">

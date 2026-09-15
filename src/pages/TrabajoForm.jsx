@@ -950,7 +950,7 @@ export default function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [
                   animation: invRefreshing ? 'pulse 1s infinite' : 'none',
                 }} />
                 <span>{invRefreshing ? 'Sincronizando…' : `Cuentti ${formatCacheAge(invCacheAge)}`}</span>
-                <button type="button"
+                <button type="button" className="inv-refrescar"
                   onClick={refrescarInventario}
                   disabled={invRefreshing}
                   style={{ background: 'none', border: 'none', color: 'var(--accent)', cursor: 'pointer', fontWeight: 700, padding: 0, fontSize: 11.5 }}>

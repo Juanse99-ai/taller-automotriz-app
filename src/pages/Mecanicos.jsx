@@ -548,6 +548,10 @@ const ESTILOS = `
 
   /* Pie: los subtotales se etiquetan porque la cabecera ya no esta. */
   .mec-tbl .mec-f{height:auto;min-height:40px;flex-wrap:wrap;row-gap:6px;padding:10px 14px}
+  /* "3 tecnicos" en su propio renglon. Con flex:1 (base 0) y el pie sin gap
+     horizontal, 0 + 100% cabia en una linea: el rotulo quedaba en 0px de ancho
+     y sus dos palabras se montaban encima de ACTIVOS. */
+  .mec-f .mec-col-tec{flex:1 0 100%}
   .mec-f .mec-col-nums{width:auto;flex:1 0 100%;gap:12px;justify-content:space-between}
   .mec-f .mec-col-nums > *{width:auto;flex:none;text-align:right}
   .mec-f .mec-lbl{display:inline;margin-right:6px}

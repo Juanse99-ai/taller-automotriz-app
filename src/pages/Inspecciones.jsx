@@ -125,7 +125,7 @@ export default function Inspecciones({ trabajos, notify, onVincularInspeccion, i
             <span style={{width:132}}>ESTADO</span>
             <span style={{width:58,textAlign:'right'}}>% BIEN</span>
             <span style={{width:78,textAlign:'right'}}>FECHA</span>
-            <span style={{width:122}} />
+            <span style={{width:146}} />
           </div>
           <div className="hd-tbl__b">
             {sorted.length === 0 ? (
@@ -167,7 +167,13 @@ export default function Inspecciones({ trabajos, notify, onVincularInspeccion, i
                   </div>
                   <div className="hd-n hd-strong" style={{width:58,color:pct >= 80 ? 'var(--ok-fg)' : pct >= 50 ? 'var(--warn-fg)' : 'var(--bad-fg)'}}>{pct}%</div>
                   <div className="hd-n" style={{width:78,fontSize:12,color:'var(--text-3)'}}>{fmtDate(i.fecha)}</div>
-                  <div style={{width:122,display:'flex',gap:4,justifyContent:'flex-end'}}>
+                  {/* minWidth y no width: los tres botones miden 135px en computador
+                      y 171 en tactil (44px cada uno). En una caja fija de 122 se
+                      salian por la IZQUIERDA (justify flex-end) y tapaban la fecha;
+                      en tablet el de Editar quedaba fuera de la tarjeta. marginLeft
+                      auto los pega a la derecha cuando la fila baja de renglon, y
+                      los 10px de la izquierda los separan de la fecha. */}
+                  <div style={{flex:'none',minWidth:146,paddingLeft:10,marginLeft:'auto',display:'flex',gap:4,justifyContent:'flex-end'}}>
                     <Button variant="outline" size="sm" className="btn-icon" aria-label="Editar" title="Editar" onClick={e => { e.stopPropagation(); setEditId(i.id); setVista('editar') }}><IconEdit /></Button>
                     {/* Sin onVincularInspeccion (mecanico) vincular y borrar no hacen
                         nada: el servidor no le deja reescribir la OT ni borrar. */}

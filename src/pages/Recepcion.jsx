@@ -333,7 +333,9 @@ export default function Recepcion({ hook, vehiculosHook, clientesHook, notify })
             {/* ---------- 1 · CLIENTE ---------- */}
             <section id="rc-cliente">
               <SecHead n={1} titulo="CLIENTE" />
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(158px,1fr))', gap: 10 }}>
+              {/* 190 y no 158: en una tablet vertical cabian cuatro campos de 167px
+                  y "Buscar por documento" salia cortado. Con 190 van tres. */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(190px,1fr))', gap: 10 }}>
                 <div className="field" style={{ position: 'relative' }}>
                   <label>Cédula / NIT<span className="req">*</span></label>
                   <input className="input" value={form.cedula} placeholder="Buscar por documento..." inputMode="numeric"
@@ -372,7 +374,7 @@ export default function Recepcion({ hook, vehiculosHook, clientesHook, notify })
             {/* ---------- 2 · VEHÍCULO ---------- */}
             <section id="rc-vehiculo">
               <SecHead n={2} titulo="VEHÍCULO" />
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(158px,1fr))', gap: 10 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(190px,1fr))', gap: 10 }}>
                 <div className="field">
                   <label>Placa<span className="req">*</span></label>
                   {/* La placa manda en toda la app: mono, mas grande y en pastilla. */}

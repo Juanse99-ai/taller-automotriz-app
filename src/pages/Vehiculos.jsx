@@ -298,6 +298,11 @@ export default function Vehiculos({ vehiculos, clientes, trabajos = [], notify }
            860 = los 602 fijos + 258, que es lo que ocupa a 12.5px/600 el nombre
            mas largo de la base ("DALGYS PATRICIA ARENAS BUSTAMANTE"). */
         @media (min-width:601px){ .veh-scroll .tbl{min-width:860px} }
+        /* ...salvo en tablet vertical, donde esos 860 escondian Ultimo servicio
+           detras de un scroll lateral sin pista (122px a 768, 70 a 820). Ahi se
+           prefiere cortar con puntos el nombre mas largo: con 720 el propietario
+           aun conserva 118px a 768 y la tabla entera se ve. */
+        @media (min-width:740px) and (max-width:960px){ .veh-scroll .tbl{min-width:720px} }
 
         /* La placa es un codigo: monoespaciada en las dos vistas. */
         .tbl.tbl-cards--veh tbody td.td-placa{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}

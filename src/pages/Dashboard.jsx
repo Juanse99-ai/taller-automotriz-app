@@ -349,7 +349,18 @@ export default function Dashboard({ trabajos = [], onNavigate, user, ultimaSync 
 .dsh-hoy__i:hover:not(:disabled){color:var(--text);text-decoration:underline}
 .dsh-hoy__i:disabled{cursor:default}
 .dsh-hoy__i:focus-visible{outline:2px solid var(--primary);outline-offset:3px;border-radius:var(--r-xs)}
-@media(max-width:960px){ .dsh-hoy__i{min-height:var(--tap);display:inline-flex;align-items:center} }
+/* Tactil: cada parte es una pastilla. Como texto suelto de 44px de alto (el
+   minimo tactil) los renglones quedaban a doble espacio y el punto separador
+   colgaba al final de la primera linea. La pastilla mide 36 y la zona que
+   responde al dedo sigue en 44 (::after). gap: con inline-flex la cifra y la
+   palabra son dos items y el espacio entre ellas se perdia ("2sin empezar"). */
+@media(max-width:960px){
+  .dsh-hoy{gap:6px}
+  .dsh-hoy__p{display:none}
+  .dsh-hoy__i{position:relative;min-height:36px;display:inline-flex;align-items:center;gap:.3em;
+    padding:0 12px;border-radius:var(--radius-pill);background:var(--chip)}
+  .dsh-hoy__i::after{content:'';position:absolute;left:0;right:0;top:50%;height:var(--tap);transform:translateY(-50%)}
+}
 /* El mockup dibuja TODAS sus tarjetas a 14px. --radius-card vale 16 y lo
    comparten las 12 pantallas restantes, así que aquí se ajusta sólo el
    Dashboard para que la tira de KPI, las tarjetas y el navy coincidan. */

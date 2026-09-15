@@ -787,7 +787,7 @@ export default function Reportes({ trabajos, loading = false, notify }) {
       {stats.topClientes.length > 0 && (
         <div className="card" style={{marginBottom:16}}>
           {cabezal('clientes', 'Top clientes', <span className="count">{stats.topClientes.length}</span>)}
-        {dentro('clientes', stats.topClientes[0] ? `${stats.topClientes[0].nombre} encabeza con ${fmt(stats.topClientes[0].total)} en ${stats.topClientes[0].ots} trabajos` : 'Sin clientes facturados en el periodo')}
+        {dentro('clientes', stats.topClientes[0] ? `${stats.topClientes[0].nombre} encabeza con ${fmt(stats.topClientes[0].total)} en ${stats.topClientes[0].ots} ${stats.topClientes[0].ots === 1 ? 'trabajo' : 'trabajos'}` : 'Sin clientes facturados en el periodo')}
           {!colapso.clientes && (
           <div className="card__b card__b--flush">
             <table className="tbl tbl-cards">
@@ -820,7 +820,7 @@ export default function Reportes({ trabajos, loading = false, notify }) {
       {stats.topVehiculos.length > 0 && (
         <div className="card">
           {cabezal('vehiculos', 'Vehículos frecuentes', <span className="count">{stats.topVehiculos.length}</span>)}
-        {dentro('vehiculos', stats.topVehiculos[0] ? `${stats.topVehiculos[0].placa} con ${stats.topVehiculos[0].visitas} visitas · ${stats.topVehiculos.length} placas en el periodo` : 'Sin placas repetidas en el periodo')}
+        {dentro('vehiculos', stats.topVehiculos[0] ? `${stats.topVehiculos[0].placa} con ${stats.topVehiculos[0].visitas} ${stats.topVehiculos[0].visitas === 1 ? 'visita' : 'visitas'} · ${stats.topVehiculos.length} ${stats.topVehiculos.length === 1 ? 'placa' : 'placas'} en el periodo` : 'Sin placas repetidas en el periodo')}
           {!colapso.vehiculos && (
           <div className="card__b card__b--flush">
             <table className="tbl tbl-cards">

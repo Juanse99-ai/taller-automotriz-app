@@ -1265,7 +1265,10 @@ input.input[type="date"]::-webkit-datetime-edit{display:block;padding:0}
   .content [style*="grid-template-columns"][style*="1.3fr 1fr"],
   .content [style*="grid-template-columns"][style*="1fr 1fr 1fr"],
   .content [style*="grid-template-columns"][style*="repeat(3,1fr)"]
-  {grid-template-columns:1fr !important}
+  /* minmax(0,1fr) y no 1fr: una columna 1fr no baja del ancho minimo de lo que
+     lleva dentro, y una tabla de 580px (la regla de <=960) estiraba la columna
+     y con ella toda la pagina. Asi la tabla desliza en su tarjeta. */
+  {grid-template-columns:minmax(0,1fr) !important}
   .card-title{font-size:13px}
   /* En el celular el aviso baja: arriba tapaba la campana y el buscador, y queda
      lejos del pulgar justo cuando trae un boton que hay que poder tocar. */
@@ -1301,7 +1304,7 @@ input.input[type="date"]::-webkit-datetime-edit{display:block;padding:0}
   .content [style*="grid-template-columns"][style*="repeat(2,1fr)"],
   .content [style*="grid-template-columns"][style*="repeat(3,1fr)"],
   .content [style*="grid-template-columns"][style*="minmax("]
-  { grid-template-columns:1fr !important; gap:10px !important }
+  { grid-template-columns:minmax(0,1fr) !important; gap:10px !important }
 
   /* Cabecera de tarjeta en celular: el título y su fila de controles se apilan.
      En horizontal (Inventario: buscador + categorías + "Por reponer") los
@@ -1342,6 +1345,20 @@ input.input[type="date"]::-webkit-datetime-edit{display:block;padding:0}
 .rc-thumb--add{display:flex;align-items:center;justify-content:center;border:1.5px dashed var(--border-strong);color:var(--text-4);cursor:pointer;font-size:20px;transition:border-color .12s,color .12s}
 .rc-thumb--add:hover{border-color:var(--primary);color:var(--primary)}
 @media(max-width:960px){.rc-side{position:static}}
+/* Cuando la columna del taller baja debajo del formulario seguia topada en 330px:
+   una tira angosta pegada a la izquierda y el resto vacio. Baja por debajo de
+   ~832px (460 del formulario + 14 + los 330 que pide la lista de vehiculos), asi
+   que hasta 860 se baja siempre y toma el ancho entero; en tablet vertical, cifra
+   y resumen lado a lado y la lista debajo. !important: el tope viene en linea. */
+@media(max-width:860px){
+  /* min-width:0: sin el tope de 330, la lista de vehiculos (filas nowrap) le
+     imponia su ancho minimo a la columna y a 360px la pagina se iba a 391. */
+  .rc-side{max-width:none !important;flex-basis:100% !important;min-width:0}
+}
+@media(min-width:601px) and (max-width:860px){
+  .rc-side{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);align-items:stretch}
+  .rc-side > :nth-child(n+3){grid-column:1 / -1}
+}
 
 /* === Recepcion stepper (parche-correcciones-tablet) === */
 .rc-stepper{display:flex;align-items:center;gap:8px;background:var(--bg-raised);border:1px solid var(--border);border-radius:var(--r-md);padding:10px 14px;margin-bottom:16px;box-shadow:0 1px 2px rgba(0,0,0,.04);overflow-x:auto;scrollbar-width:none}
@@ -1736,6 +1753,20 @@ input.input[type="date"]::-webkit-datetime-edit{display:block;padding:0}
   .hd-seg{width:100%}
   .hd-seg__i{flex:1;justify-content:center;padding:0 8px}
 }
+/* Detalle de cliente: informacion y vehiculos lado a lado solo cuando caben. En
+   una tablet cada tarjeta quedaba de ~370px y la tabla de vehiculos (580 de
+   minimo) escondia 224px detras de un scroll lateral. !important: la rejilla
+   viene en linea. */
+@media (max-width:1100px){
+  .cli-det-grid{grid-template-columns:minmax(0,1fr) !important}
+}
+/* CRM en celular: la cifra de vencidos y "Plantillas" cabian en un renglon y
+   "Servicios" quedaba solo en el siguiente. La cifra va arriba y los dos botones
+   comparten la fila de abajo, del mismo ancho. */
+@media (max-width:600px){
+  .crm-head .hd-head__right{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px}
+  .crm-head .hd-fig{grid-column:1 / -1;text-align:left}
+}
 
 /* --- Tarjeta navy del neto (Liquidación, Cuentti, Dashboard) ---
    El handoff reserva el navy para UNA cifra por pantalla: aquella sobre la
@@ -1784,6 +1815,10 @@ input.input[type="date"]::-webkit-datetime-edit{display:block;padding:0}
    prohiba crecer o arrastra al padre igual. */
 @media (max-width:960px){
   .hd-bar{flex-wrap:wrap;row-gap:8px;padding-left:0;padding-right:0}
+  /* ...pero una barra DENTRO de una tarjeta es su cabecera, no la fila de filtros
+     de la pagina: sin relleno el titulo quedaba pegado al borde (Cuentti:
+     "Facturar trabajo", "Estado de envío", "Últimas facturas"). */
+  .hd-card > .hd-bar{padding-left:14px;padding-right:14px}
   .hd-bar > *{max-width:100%}
   .hd-find{flex:1 1 100%;width:auto !important}
   .hd-drop{flex:1 1 auto}
@@ -1811,8 +1846,12 @@ input.input[type="date"]::-webkit-datetime-edit{display:block;padding:0}
      linea 3   [estado] [cobro]   tecnico        fecha
 
    No se pierde ningun dato: los mismos 8 campos siguen, solo cambian de sitio.
-   Las demas tablas conservan el par etiqueta/valor. */
-@media(max-width:600px){
+   Las demas tablas conservan el par etiqueta/valor.
+   Llega hasta 1199px y no hasta 600: por debajo de 1200 no hay cockpit
+   (Trabajos.jsx, isWide) y la tabla de 9 columnas no cabia en una tablet. A 768
+   escondia 423px detras de un scroll lateral sin pista (Total, Fecha y los
+   botones), a 1024 200px y a 1180 44px. El bloque de abajo pone la rejilla. */
+@media(max-width:1199px){
   .tbl.tbl-cards--ot tbody tr{
     /* La regla generica de arriba pone flex-direction:column (una celda por
        linea). Aqui se vuelve a fila para poder componer las 3 lineas. */
@@ -1846,19 +1885,43 @@ input.input[type="date"]::-webkit-datetime-edit{display:block;padding:0}
   .tbl.tbl-cards--ot tbody td[data-label="Fecha"]{
     order:6;margin-left:auto;font-size:11.5px;color:var(--text-4);white-space:nowrap;
   }
+  /* Salto de linea forzado entre la linea 3 y la 4. Sin el, estado y tecnico
+     cabian al lado de la fecha y el vehiculo —el unico que encoge— quedaba en
+     una letra: "( 15 sep 2026 PENDIENTE AD Anderson Díaz". El pseudo-elemento
+     de la fila cuenta como item flex, mide 0 de alto y parte el renglon. */
+  .tbl.tbl-cards--ot tbody tr::after{content:'';order:7;flex:1 0 100%;height:0}
   /* linea 4: estados ................................... tecnico */
   .tbl.tbl-cards--ot tbody td[data-label="Estado"]{
-    order:7;display:flex;flex-wrap:wrap;gap:5px;align-items:center;margin-top:5px;
+    order:8;display:flex;flex-wrap:wrap;gap:5px;align-items:center;margin-top:5px;
   }
   .tbl.tbl-cards--ot tbody td[data-label="Técnico"]{
-    order:8;margin-left:auto;margin-top:5px;font-size:12px;color:var(--text-3);
+    order:9;margin-left:auto;margin-top:5px;font-size:12px;color:var(--text-3);
     white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:45%;
   }
   .tbl.tbl-cards--ot tbody td[data-label="Técnico"] > div{flex-wrap:nowrap}
   /* las acciones cierran la tarjeta, con objetivos de 44px */
-  .tbl.tbl-cards--ot tbody td.td-actions{order:9;flex:1 0 100%;margin-top:8px}
+  .tbl.tbl-cards--ot tbody td.td-actions{order:10;flex:1 0 100%;margin-top:8px}
   .tbl.tbl-cards--ot tbody td.td-actions > div{justify-content:flex-start;gap:8px}
   .tbl.tbl-cards--ot tbody td.td-actions .btn{min-height:44px}
+}
+/* Andamiaje de la tarjeta de OT entre 601 y 1199. Por debajo de 600 se lo presta
+   el bloque generico de .tbl-cards; aqui hay que declararlo o la tabla no
+   colapsa. En vez de una tarjeta por renglon (a 1024 mediria 880px de ancho con
+   la placa en una punta y el total en la otra) van dos o tres por fila, del
+   ancho de la del celular. Los rotulos de bloque (Hoy, Ayer...) cruzan la fila. */
+@media(min-width:601px) and (max-width:1199px){
+  .tbl.tbl-cards--ot{min-width:0;width:100%;display:block}
+  .tbl.tbl-cards--ot thead{display:none}
+  .tbl.tbl-cards--ot tbody{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));
+    gap:10px;align-items:start;padding:4px 14px 14px}
+  .tbl.tbl-cards--ot tbody tr{background:var(--bg-raised);border:1px solid var(--border);border-radius:var(--r-md);margin:0}
+  .tbl.tbl-cards--ot tbody tr:hover{background:var(--bg-raised)}
+  .tbl.tbl-cards--ot tbody td:empty{display:none}
+  .tbl.tbl-cards--ot tbody td.td-actions{padding-top:8px;border-top:1px solid var(--border)}
+  .tbl.tbl-cards--ot tbody td.td-actions > div{flex-wrap:wrap;justify-content:flex-start !important}
+  .tbl.tbl-cards--ot tbody tr.tbl-grp{grid-column:1 / -1;display:block;background:none;border:0;
+    border-radius:0;padding:0;margin:10px 0 -2px;box-shadow:none}
+  .tbl.tbl-cards--ot tbody tr.tbl-grp > td{display:block;height:auto;padding:0 2px;background:none;border:0}
 }
 
 /* --- Objetivos tactiles en movil ---
@@ -2294,7 +2357,19 @@ input.input[type="date"]::-webkit-datetime-edit{display:block;padding:0}
   .tbl.tbl-cards.tbl-cards--inactivos tbody td.td-actions .btn{flex:1 1 auto;min-height:var(--tap)}
 }
 
-@media(max-width:600px){
+/* Inventario: la lista del celular llega hasta 960, como Cotizaciones. En una
+   tablet vertical la tabla de 9 columnas no cabia (908px en 738): o escondia
+   Utilidad, IVA y Estado detras de un scroll lateral, o —quitando columnas— el
+   nombre del producto quedaba en 90px y partido en 9 renglones. La lista le da
+   al nombre casi todo el ancho y conserva los nueve datos. Por encima de 600 el
+   bloque generico de .tbl-cards no aplica: su andamiaje va aqui. */
+@media(min-width:601px) and (max-width:960px){
+  .tbl.tbl-cards--inv{min-width:0;width:100%;display:block}
+  .tbl.tbl-cards--inv thead{display:none}
+  .tbl.tbl-cards--inv tbody{display:block}
+  .tbl.tbl-cards--inv tbody td:empty{display:none}
+}
+@media(max-width:960px){
   /* Hoja continua en vez de tarjetas sueltas: los 10px de margen y los 2 bordes
      por fila costaban una de las 5 filas visibles. El fondo blanco y el redondeo
      ya los pone la .card que envuelve la tabla. */
@@ -2562,6 +2637,19 @@ input.input[type="date"]::-webkit-datetime-edit{display:block;padding:0}
 [data-theme="dark"] .kb-more{background:rgba(255,255,255,.06)}
 .kb-void{flex:none;display:flex;align-items:center;justify-content:center;height:36px;
   font-size:11px;color:var(--text-4)}
+/* La pastilla de insumos por revisar no parte linea: en una columna angosta se
+   salia por el borde de la tarjeta. Se corta con puntos antes que desbordar. */
+.kb-card__rev{min-width:0}
+.kb-card__rev .hd-chip{max-width:100%;overflow:hidden;text-overflow:ellipsis}
+/* Tablet (701-1199, antes del cockpit): las seis columnas repartidas a lo ancho
+   median 115px a 768 y 140 a 1024, y todo salia cortado ("DIAGNÓSTI…",
+   "1 d… $ 60.000"). Aqui cada columna guarda 216px, las ~186 del mockup mas el
+   aire que pide el dedo, y el tablero desliza de lado. La columna que asoma a
+   la derecha es la pista de que hay mas. Arrastrar entre columnas sigue igual. */
+@media (min-width:701px) and (max-width:1199px){
+  .kb{overflow-x:auto;scroll-snap-type:x proximity;scrollbar-width:thin;-webkit-overflow-scrolling:touch}
+  .kb-col{flex:0 0 216px;scroll-snap-align:start}
+}
 
 /* Movil: seis columnas no se manejan con el dedo. Se ve una a la vez, se elige
    por pastilla y se navega por nombre a la anterior y la siguiente. */
@@ -2850,6 +2938,9 @@ input.input[type="date"]::-webkit-datetime-edit{display:block;padding:0}
 .otd__tel-n{flex:1;font-family:var(--mono);font-size:12.5px;color:var(--text-3)}
 .otd__tel-b{width:var(--tap);height:var(--tap);flex:none;display:grid;place-items:center;border-radius:var(--r-md);
   background:var(--chip);color:var(--text-2)}
+/* El icono no trae tamaño (icons.jsx lo deja a `.btn svg`) y este enlace no es
+   .btn: el svg llenaba los 44px del boton y el telefono se veia gigante. */
+.otd__tel-b svg{width:18px;height:18px}
 .otd__firma{padding:12px 0}
 .otd__firma-img{width:100%;max-height:130px;object-fit:contain;background:#fff;border:1px solid var(--border);
   border-radius:var(--r-sm);margin-top:8px}
@@ -2868,6 +2959,12 @@ input.input[type="date"]::-webkit-datetime-edit{display:block;padding:0}
 .otd__acc3{display:flex;align-items:center;gap:14px;padding-top:4px;flex-wrap:wrap}
 .otd__t{border:0;background:none;padding:0;font-size:12.5px;font-weight:600;color:var(--text-3);cursor:pointer}
 .otd__t--mute{color:var(--text-4)}
+/* En tactil "PDF" y "Después" median 16px de alto: se tocaban de milagro. Crecen
+   al minimo de 44 sin cambiar como se ven (siguen siendo texto). */
+@media (max-width:960px){
+  .otd__acc3{gap:4px}
+  .otd__t{min-height:var(--tap);padding:0 12px}
+}
 .otd__sp{flex:1}
 
 /* Movil: no es el modal encogido, es pantalla completa. */
@@ -3204,6 +3301,10 @@ input.input[type="date"]::-webkit-datetime-edit{display:block;padding:0}
 
 .rep-consulta{font-size:9.5px;line-height:1;font-weight:700;letter-spacing:.9px;color:var(--text-4);padding:6px 4px 0}
 .rep-dentro{font-size:11.5px;line-height:1.4;color:var(--text-3);padding:0 16px 13px 38px;margin-top:-6px}
+/* Recogida, la linea de resumen es parte de la cabecera: con el borde inferior
+   de .card__h puesto, el margen de -6px la subia justo encima y la raya le
+   cruzaba el texto. */
+.card__h:has(+ .rep-dentro){border-bottom-color:transparent}
 
 @media (max-width:1100px){
   .rep-book{grid-template-columns:1fr}
@@ -3997,6 +4098,13 @@ input.input[type="date"]::-webkit-datetime-edit{display:block;padding:0}
     content:''; position:absolute; left:0; right:0;
     top:50%; transform:translateY(-50%); height:var(--tap);
   }
+  /* Lo mismo para "Refrescar" del inventario en la OT: 52x15 dentro de la
+     pastilla de Cuentti. El dibujo no cambia; la zona tocable si. */
+  .inv-refrescar{ position:relative }
+  .inv-refrescar::after{
+    content:''; position:absolute; left:-8px; right:-10px;
+    top:50%; transform:translateY(-50%); height:var(--tap);
+  }
 }
 
 /* ── Quitar un ajuste en Liquidacion ─────────────────────────────────────── */
@@ -4103,6 +4211,28 @@ input.input[type="date"]::-webkit-datetime-edit{display:block;padding:0}
   .cart-pg .tbl tfoot{display:none}
   .cart-pg .tbl.tbl-cards tbody td.td-acc{justify-content:flex-end}
   .cart-pg .tbl.tbl-cards tbody td.td-acc::before{display:none}
+}
+/* El contador del segmentado salia pegado a su palabra ("Todas2", "Con abono1"):
+   el boton es flex y el espacio entre el texto y el <span> no cuenta. Clientes
+   ya lo resolvia con su propia regla; Cartera reusa la clase y no la tenia. */
+.cart-pg .cli-seg__n{margin-left:4px}
+/* Tactil: las dos cifras con 12px entre ellas se leian como un solo numero largo
+   ("$ 4.307.000 $ 4.200.000"). Con aire son dos; en el celular, ademas, a la
+   izquierda, que es donde empieza a leerse. */
+@media(max-width:960px){
+  .cart-pg .hd-head__right{column-gap:28px}
+}
+@media(max-width:600px){
+  .cart-pg .hd-fig{text-align:left}
+  .cart-pg .hd-seg__i{padding:0 6px}
+}
+/* Tablet vertical: la tabla media 766px en una tarjeta de 738 y el boton Abono
+   quedaba detras de un scroll lateral sin pista. 8px de relleno por lado en vez
+   de 13 le devuelven 80px y cabe desde los 744 de un iPad mini. */
+@media(min-width:601px) and (max-width:960px){
+  .cart-pg .tbl thead th,.cart-pg .tbl tbody td,.cart-pg .tbl tfoot td{padding-left:8px;padding-right:8px}
+  .cart-pg .tbl thead th:first-child,.cart-pg .tbl tbody td:first-child,.cart-pg .tbl tfoot td:first-child{padding-left:14px}
+  .cart-pg .tbl thead th:last-child,.cart-pg .tbl tbody td:last-child,.cart-pg .tbl tfoot td:last-child{padding-right:14px}
 }
 
 /* --- Vista del mecanico (TrabajosMecanico) ---
