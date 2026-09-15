@@ -235,6 +235,22 @@ export default function App() {
     relojToast.current = setTimeout(() => setToast(null), accion ? 6000 : 3500)
   }, [])
 
+  // Portadas de video que quedaron negras (ver utils/repararPortadas.js). Va un
+  // rato despues de entrar, para no competir con la carga de la app. El mecanico
+  // no: el servidor no le deja cambiar evidencias ajenas.
+  useEffect(() => {
+    if (!user || user.rol === 'mecanico') return
+    const t = setTimeout(() => {
+      import('./utils/repararPortadas')
+        .then(m => m.repararPortadasNegras())
+        .then(r => {
+          if (r?.reparadas) notify(`Se arreglaron ${r.reparadas} portadas de video que estaban en negro.`, 'success')
+        })
+        .catch(e => console.warn('[portadas]', e?.message || e))
+    }, 8000)
+    return () => clearTimeout(t)
+  }, [user, notify])
+
   // Pre-cargar inventario de Cuentti en background al iniciar la app y luego
   // cada 15 minutos (antes 2: paginaba TODO el inventario por /api/cuentti en cada
   // ciclo y sumaba Fast Origin Transfer). Con la pestaña oculta no se consulta.

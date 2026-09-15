@@ -164,8 +164,24 @@ export async function comprimirVideo(file, { onProgreso } = {}) {
 // navegador no puede decodificar ese codec —un .mov con HEVC en Chrome, por
 // ejemplo— devuelve null y la subida sigue sin portada.
 export function posterDeVideo(file, maxDim = 640, calidad = 0.72) {
+  let url
+  try { url = URL.createObjectURL(file) } catch { return Promise.resolve(null) }
+  // Tope duro: un video que no decodifica puede quedarse colgado sin lanzar
+  // error, y la subida no puede esperar a nadie.
+  return cuadroDeVideo(url, { maxDim, calidad, tope: 8000 })
+    .finally(() => URL.revokeObjectURL(url))
+}
+
+// Portada de un video que YA esta en el bucket (ver utils/repararPortadas.js).
+// Con CORS, para que el lienzo se deje exportar a JPEG (Supabase lo permite), y
+// sin bajarse el archivo entero: con preload=metadata el navegador pide solo
+// los pedazos que necesita para mostrar el segundo 0,1.
+export function portadaDeUrl(src, maxDim = 640, calidad = 0.72) {
+  return cuadroDeVideo(src, { maxDim, calidad, tope: 20000, remoto: true })
+}
+
+function cuadroDeVideo(src, { maxDim, calidad, tope, remoto = false }) {
   return new Promise((resolve) => {
-    let url = null
     let v = null
     let reloj = 0
     let terminado = false
@@ -173,20 +189,17 @@ export function posterDeVideo(file, maxDim = 640, calidad = 0.72) {
       if (terminado) return
       terminado = true
       clearTimeout(reloj)
-      v?.pause()
-      if (url) URL.revokeObjectURL(url)
+      // Soltar el video corta la descarga que quede pendiente.
+      if (v) { v.pause(); v.removeAttribute('src'); v.load() }
       resolve(r)
     }
-    // Tope duro: un video que no decodifica puede quedarse colgado sin lanzar
-    // error, y la subida no puede esperar a nadie.
-    reloj = setTimeout(() => acabar(null), 8000)
+    reloj = setTimeout(() => acabar(null), tope)
     try {
-      url = URL.createObjectURL(file)
       v = document.createElement('video')
       v.muted = true
       v.playsInline = true
-      v.preload = 'auto'
-      v.src = url
+      if (remoto) v.crossOrigin = 'anonymous'
+      v.preload = remoto ? 'metadata' : 'auto'
       v.addEventListener('error', () => acabar(null))
       v.addEventListener('loadedmetadata', () => {
         // Si dura menos de 0,1 s se coge el principio y ya.
@@ -220,6 +233,7 @@ export function posterDeVideo(file, maxDim = 640, calidad = 0.72) {
           acabar(null)
         } catch { acabar(null) }
       }, { once: true })
+      v.src = src
     } catch { acabar(null) }
   })
 }

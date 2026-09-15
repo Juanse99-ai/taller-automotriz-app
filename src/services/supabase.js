@@ -169,6 +169,37 @@ export async function fetchEvidenciasTrabajo(id) {
   try { const arr = JSON.parse(val); return Array.isArray(arr) ? arr : [] } catch { return [] }
 }
 
+// Las OT vivas que tienen alguna portada de video, con sus evidencias. Solo la
+// usa utils/repararPortadas.js.
+export async function fetchTrabajosConPortadas() {
+  const res = await fetchWithTimeout(`${baseProxy}&deleted=not.is.true&evidencias=like.*poster*&select=id,ot_codigo,evidencias&limit=500`)
+  if (!res.ok) throw new Error(`Supabase portadas error (${res.status})`)
+  const filas = await res.json()
+  return Array.isArray(filas) ? filas : []
+}
+
+// Cambia la portada de UNA evidencia de una OT, y nada mas. Lee la OT recien
+// traida (no la copia de la pantalla) y solo toca la evidencia si su portada
+// sigue siendo `portadaVieja`: si alguien la cambio mientras tanto, no se pisa.
+// Devuelve true si la cambio.
+export async function cambiarPortadaEvidencia(trabajoId, evidenciaId, portadaVieja, portadaNueva) {
+  const actuales = await fetchEvidenciasTrabajo(trabajoId)
+  let cambio = false
+  const nuevas = actuales.map(e => {
+    if (e?.id !== evidenciaId || e.poster !== portadaVieja) return e
+    cambio = true
+    return { ...e, poster: portadaNueva }
+  })
+  if (!cambio) return false
+  const res = await fetchWithTimeout(`${baseProxy}&id=eq.${encodeURIComponent(trabajoId)}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ evidencias: JSON.stringify(nuevas) }),
+  })
+  if (!res.ok) throw new Error(`No se pudo guardar la portada (${res.status})`)
+  return true
+}
+
 export async function upsertTrabajo(trabajo, opts = {}) {
   const maxRetries = opts.retries ?? 2
   // Despues de migracion: id es text — enviar id del front directamente
