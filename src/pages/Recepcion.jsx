@@ -336,7 +336,7 @@ export default function Recepcion({ hook, vehiculosHook, clientesHook, notify })
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(158px,1fr))', gap: 10 }}>
                 <div className="field" style={{ position: 'relative' }}>
                   <label>Cédula / NIT<span className="req">*</span></label>
-                  <input className="input" value={form.cedula} placeholder="Buscar por documento..."
+                  <input className="input" value={form.cedula} placeholder="Buscar por documento..." inputMode="numeric"
                     onChange={e => { set('cedula', e.target.value); buscarDebounced(e.target.value) }} />
                   {resultados.length > 0 && (
                     <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 20, background: 'var(--bg-raised)', border: '1px solid var(--border)', borderRadius: 12, maxHeight: 230, overflowY: 'auto', boxShadow: 'var(--shadow-md)' }}>
@@ -358,7 +358,7 @@ export default function Recepcion({ hook, vehiculosHook, clientesHook, notify })
                 </div>
                 <div className="field">
                   <label>Teléfono<span className="req">*</span></label>
-                  <input className="input" value={form.telefonoCliente} placeholder="300 ..."
+                  <input className="input" value={form.telefonoCliente} placeholder="300 ..." inputMode="tel"
                     onChange={e => set('telefonoCliente', e.target.value)} />
                 </div>
                 <div className="field">
@@ -403,7 +403,9 @@ export default function Recepcion({ hook, vehiculosHook, clientesHook, notify })
                 </div>
                 <div className="field">
                   <label>Kilometraje <span style={{ fontWeight: 400, color: 'var(--text-4)' }}>km</span></label>
-                  <input className="input" type="number" value={form.kilometraje} min="0" placeholder="85.000"
+                  {/* Sin punto en el ejemplo: "85.000" invitaba a escribirlo asi, y
+                      el campo lo guarda como 85. El teclado numerico ni lo trae. */}
+                  <input className="input" type="number" inputMode="numeric" value={form.kilometraje} min="0" placeholder="85000"
                     onChange={e => set('kilometraje', e.target.value)} />
                 </div>
                 <div className="field">

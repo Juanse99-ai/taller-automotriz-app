@@ -13,6 +13,16 @@ export function cantidadItem(i) {
   return Number.isFinite(n) && n > 0 ? n : 1
 }
 
+// Lo que se escribe en el campo de cantidad. En el celular ese campo abre el
+// teclado decimal, y en Colombia su separador es la COMA: se guarda con punto
+// (0,5 → "0.5"), porque la factura de Cuentti lee la cantidad con parseFloat y
+// "0,5" le daba 0, o sea una unidad entera. Solo digitos y un separador.
+export function cantidadEscrita(texto) {
+  const s = String(texto ?? '').replace(/,/g, '.').replace(/[^\d.]/g, '')
+  const punto = s.indexOf('.')
+  return punto < 0 ? s : s.slice(0, punto + 1) + s.slice(punto + 1).replace(/\./g, '')
+}
+
 // Cantidad para MOSTRAR: entera se ve "2", fraccionaria se ve "0,5" (coma, como
 // se escriben los decimales en Colombia). Sin ceros de relleno.
 export function fmtCant(v) {

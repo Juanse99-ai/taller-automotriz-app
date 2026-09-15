@@ -1143,7 +1143,7 @@ export default function CuenttiPanel({ trabajos, actualizarTrabajo, notify, trab
                             </div>
                           )}
                         </div>
-                        <input type="number" min="0" max="50" className="input hd-mono"
+                        <input type="number" inputMode="numeric" min="0" max="50" className="input hd-mono"
                           value={m.id}
                           onChange={e => guardarMetodoId(m.key, parseInt(e.target.value) || 0)}
                           style={{ width: 62, fontWeight: 700, textAlign: 'center', fontSize: 13, padding: '5px 6px' }}
@@ -1166,7 +1166,7 @@ export default function CuenttiPanel({ trabajos, actualizarTrabajo, notify, trab
                       <div className="hd-strong">Banco para transferencia/tarjetas</div>
                       <div className="hd-sub">id_banco</div>
                     </div>
-                    <input type="number" min="1" className="input hd-mono"
+                    <input type="number" inputMode="numeric" min="1" className="input hd-mono"
                       value={idBancoConfig}
                       onChange={e => guardarIdBanco(parseInt(e.target.value) || 1)}
                       style={{ width: 62, fontWeight: 700, textAlign: 'center', fontSize: 13, padding: '5px 6px' }}

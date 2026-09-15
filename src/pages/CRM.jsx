@@ -902,10 +902,10 @@ export default function CRM({ trabajos = [], clientes, vehiculos, notify, actual
                   <input type="text" className="input" value={s.nombre}
                     onChange={e => setConfig(c => ({ ...c, servicios: c.servicios.map((x, i) => i === idx ? { ...x, nombre: e.target.value } : x) }))}
                     style={{ fontSize: 12.5 }} />
-                  <input type="number" className="input" value={s.km}
+                  <input type="number" inputMode="numeric" className="input" value={s.km}
                     onChange={e => setConfig(c => ({ ...c, servicios: c.servicios.map((x, i) => i === idx ? { ...x, km: parseInt(e.target.value) || 0 } : x) }))}
                     style={{ fontSize: 12.5 }} placeholder="km" />
-                  <input type="number" className="input" value={s.meses}
+                  <input type="number" inputMode="numeric" className="input" value={s.meses}
                     onChange={e => setConfig(c => ({ ...c, servicios: c.servicios.map((x, i) => i === idx ? { ...x, meses: parseInt(e.target.value) || 0 } : x) }))}
                     style={{ fontSize: 12.5 }} placeholder="meses" />
                   <Button variant="ghost" size="sm" onClick={() => setConfig(c => ({ ...c, servicios: c.servicios.filter((_, i) => i !== idx) }))} style={{ color: 'var(--red-600)' }}><IconX /></Button>

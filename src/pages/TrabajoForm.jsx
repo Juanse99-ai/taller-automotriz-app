@@ -5,7 +5,7 @@
 // dos ayudantes de UI (Chevron y ThumbGrid), que no usa nadie más.
 // ============================================================
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
-import { fmt, fmtDate, uid, hoyISO, normalizarDoc, normalizarNombre, fmtTelefono, cantidadItem, fmtCant } from '../utils/helpers'
+import { fmt, fmtDate, uid, hoyISO, normalizarDoc, normalizarNombre, fmtTelefono, cantidadItem, cantidadEscrita, fmtCant } from '../utils/helpers'
 import { TECNICOS, ESTADOS, IVA_DEFAULT, COMISION, rotuloEstado } from '../utils/constants'
 import IngresoVehiculo from '../components/IngresoVehiculo'
 // INVENTARIO_ITEMS y etiquetaCombustible: solo para el contador del bloque
@@ -788,7 +788,7 @@ export default function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [
           <div className="card__b" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
             <div className="field" style={{ position: 'relative' }}>
               <label>Cédula / NIT <span className="req">*</span></label>
-              <input className="input" value={form.cedula} placeholder="Buscar por documento..."
+              <input className="input" value={form.cedula} placeholder="Buscar por documento..." inputMode="numeric"
                 onFocus={() => setCampoActivo('cedula')}
                 onChange={e => { set('cedula', e.target.value); buscarDebounced(e.target.value) }} />
               {resultados.length > 0 && campoActivo === 'cedula' && (
@@ -823,7 +823,7 @@ export default function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [
             </div>
             <div className="field">
               <label>Teléfono</label>
-              <input className="input" value={form.telefonoCliente} placeholder="300..." onChange={e => set('telefonoCliente', e.target.value)} />
+              <input className="input" value={form.telefonoCliente} placeholder="300..." inputMode="tel" onChange={e => set('telefonoCliente', e.target.value)} />
             </div>
             <div className="field">
               <label>Email</label>
@@ -894,7 +894,7 @@ export default function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [
             </div>
             <div className="field">
               <label>Kilometraje</label>
-              <input className="input" type="number" value={form.kilometraje} min="0" placeholder="45000" disabled={form.sinVehiculo} onChange={e => set('kilometraje', e.target.value)} />
+              <input className="input" type="number" inputMode="numeric" value={form.kilometraje} min="0" placeholder="45000" disabled={form.sinVehiculo} onChange={e => set('kilometraje', e.target.value)} />
             </div>
           </div>
         </div>
@@ -1046,7 +1046,7 @@ export default function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [
             </div>
             <div className="field">
               <label>Próximo cambio (km)</label>
-              <input className="input" type="number" value={form.proximoKm}
+              <input className="input" type="number" inputMode="numeric" value={form.proximoKm}
                 onChange={e => set('proximoKm', e.target.value)}
                 placeholder={form.kilometraje ? `Sugerido: ${(parseInt(form.kilometraje) || 0) + 5000}` : 'Ej: 95000'} />
             </div>
@@ -1275,16 +1275,18 @@ export default function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [
                             inputStyle={{ padding: '6px 8px 6px 20px', fontSize: 13, textAlign: 'right', minHeight: 38 }} />
                         </div>
                         <div style={{ width: 58, flexShrink: 0, paddingLeft: 6 }}>
-                          {/* step="any": se puede facturar media silicona (0,5) o un
-                             cuarto de galón. min="1" y el paso entero por defecto
-                             marcaban 0,5 como inválido. */}
-                          <input className="form-input" type="number" value={item.cantidad} min="0" step="any"
+                          {/* Se puede facturar media silicona (0,5) o un cuarto de
+                             galón. Texto con teclado decimal y no type="number": en
+                             Safari un campo numérico se TRAGA la coma, "0,5" quedaba
+                             "05" (cinco unidades), y la coma es el único separador
+                             del teclado decimal en Colombia. */}
+                          <input className="form-input" type="text" inputMode="decimal" value={item.cantidad}
                             title="Acepta decimales: 0,5 = media unidad"
-                            onChange={e => updateItem(item.id, 'cantidad', e.target.value)}
+                            onChange={e => updateItem(item.id, 'cantidad', cantidadEscrita(e.target.value))}
                             style={{ padding: '6px 4px', fontSize: 13, textAlign: 'center', width: '100%', minHeight: 38 }} />
                         </div>
                         <div style={{ width: 56, flexShrink: 0, paddingLeft: 6 }}>
-                          <input className="form-input" type="number" value={item.iva} min="0"
+                          <input className="form-input" type="number" inputMode="numeric" value={item.iva} min="0"
                             onChange={e => updateItem(item.id, 'iva', e.target.value)}
                             style={{ padding: '6px 4px', fontSize: 13, textAlign: 'center', width: '100%', minHeight: 38 }} />
                         </div>

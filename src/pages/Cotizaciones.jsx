@@ -1,6 +1,6 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react'
 import { cargarPdf } from '../utils/pdfLazy'
-import { fmt, fmtDate, uid, hoyISO, normalizarDoc, normalizarNombre, fmtTelefono, cantidadItem, fmtCant } from '../utils/helpers'
+import { fmt, fmtDate, uid, hoyISO, normalizarDoc, normalizarNombre, fmtTelefono, cantidadItem, cantidadEscrita, fmtCant } from '../utils/helpers'
 import { TECNICOS, IVA_DEFAULT, TALLER, ESTADOS_COTIZACION as ESTADO_COT } from '../utils/constants'
 import { loadLogo as loadPdfLogo, drawHeader, drawSectionHeader, drawDataBlock, drawTotalsBox, drawSignatures, drawFooter, tableStylesItems, PDF_LAYOUT, PDF_COLORS } from '../utils/pdfTheme'
 import { MARCAS, getModelos, CILINDRAJES } from '../utils/vehiculos'
@@ -930,7 +930,7 @@ function CotizacionForm({ cotizacion, trabajos = [], onSave, onCancel }) {
                   siempre bajo "Cedula / NIT" aunque la busqueda viniera del nombre. */}
               <div className="field" style={{ position: 'relative' }}>
                 <label>Cédula / NIT</label>
-                <input className="input" value={form.cedula} placeholder="Buscar por documento..."
+                <input className="input" value={form.cedula} placeholder="Buscar por documento..." inputMode="numeric"
                   onFocus={() => setCampoActivo('cedula')}
                   onChange={e => { set('cedula', e.target.value); buscarDebounced(e.target.value) }} />
                 {resultados.length > 0 && campoActivo === 'cedula' && (
@@ -965,7 +965,7 @@ function CotizacionForm({ cotizacion, trabajos = [], onSave, onCancel }) {
               </div>
               <div className="field">
                 <label>Teléfono</label>
-                <input className="input" value={form.telefonoCliente} placeholder="3001234567" onChange={e => set('telefonoCliente', e.target.value)} />
+                <input className="input" value={form.telefonoCliente} placeholder="3001234567" inputMode="tel" onChange={e => set('telefonoCliente', e.target.value)} />
               </div>
             </div>
           </div>
@@ -1168,11 +1168,13 @@ function CotizacionForm({ cotizacion, trabajos = [], onSave, onCancel }) {
                         </td>
                         <td data-label="Precio"><MoneyInput className="form-input" value={Math.round(parseFloat(item.precio) || 0)}
                           onChange={v => updateItem(item.id, 'precio', v)} inputStyle={{ padding: '6px 10px 6px 22px', fontSize: 13, textAlign: 'right' }} /></td>
-                        {/* step="any": acepta media unidad (0,5), igual que la OT. */}
-                        <td data-label="Cantidad"><input className="form-input" type="number" value={item.cantidad} min="0" step="any"
+                        {/* Acepta media unidad (0,5), igual que la OT: texto con
+                            teclado decimal, porque en Safari un type="number" se
+                            traga la coma y "0,5" quedaba "05". */}
+                        <td data-label="Cantidad"><input className="form-input" type="text" inputMode="decimal" value={item.cantidad}
                           title="Acepta decimales: 0,5 = media unidad"
-                          onChange={e => updateItem(item.id, 'cantidad', e.target.value)} style={{ padding: '6px 10px', fontSize: 13, textAlign: 'center', width: 60 }} /></td>
-                        <td data-label="IVA %"><input className="form-input" type="number" value={item.iva} min="0"
+                          onChange={e => updateItem(item.id, 'cantidad', cantidadEscrita(e.target.value))} style={{ padding: '6px 10px', fontSize: 13, textAlign: 'center', width: 60 }} /></td>
+                        <td data-label="IVA %"><input className="form-input" type="number" inputMode="numeric" value={item.iva} min="0"
                           onChange={e => updateItem(item.id, 'iva', e.target.value)} style={{ padding: '6px 10px', fontSize: 13, textAlign: 'center', width: 60 }} /></td>
                         <td className="text-right text-mono td-total-linea" data-label="Total" style={{ fontWeight: 600 }}>{fmt(lineTotal)}</td>
                         <td className="td-mover" data-label="Orden">
@@ -1232,7 +1234,7 @@ function CotizacionForm({ cotizacion, trabajos = [], onSave, onCancel }) {
             <div className="card__b">
               <div className="field">
                 <label>Días de vigencia</label>
-                <input className="input" type="number" value={form.validezDias} min="1"
+                <input className="input" type="number" inputMode="numeric" value={form.validezDias} min="1"
                   onChange={e => set('validezDias', parseInt(e.target.value) || 15)} />
               </div>
             </div>

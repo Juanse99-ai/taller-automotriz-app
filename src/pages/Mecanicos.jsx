@@ -308,11 +308,11 @@ export default function Mecanicos({ trabajos, onNavigate, notify }) {
               </div>
               <div className="field">
                 <label>Teléfono</label>
-                <input className="input" value={editForm.telefono || ''} onChange={e => setEditForm(f => ({ ...f, telefono: e.target.value }))} placeholder="300 000 0000" />
+                <input className="input" inputMode="tel" value={editForm.telefono || ''} onChange={e => setEditForm(f => ({ ...f, telefono: e.target.value }))} placeholder="300 000 0000" />
               </div>
               <div className="field">
                 <label>Cédula <span style={{ fontWeight: 400, color: 'var(--text-3)' }}>(para registrar el gasto en Cuentti)</span></label>
-                <input className="input" value={editForm.cedula || ''} onChange={e => setEditForm(f => ({ ...f, cedula: e.target.value }))} placeholder="Sin puntos ni comas" />
+                <input className="input" inputMode="numeric" value={editForm.cedula || ''} onChange={e => setEditForm(f => ({ ...f, cedula: e.target.value }))} placeholder="Sin puntos ni comas" />
               </div>
 
               <div style={{ borderTop: '1px solid var(--border)', paddingTop: 14, display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -359,11 +359,11 @@ export default function Mecanicos({ trabajos, onNavigate, notify }) {
                 </div>
                 <div className="field">
                   <label>Teléfono</label>
-                  <input className="input" value={nuevoForm.telefono} onChange={e => setNuevoForm(f => ({ ...f, telefono: e.target.value }))} placeholder="300 000 0000" />
+                  <input className="input" inputMode="tel" value={nuevoForm.telefono} onChange={e => setNuevoForm(f => ({ ...f, telefono: e.target.value }))} placeholder="300 000 0000" />
                 </div>
                 <div className="field">
                   <label>Cédula <span style={{ fontWeight: 400, color: 'var(--text-3)' }}>(para Cuentti)</span></label>
-                  <input className="input" value={nuevoForm.cedula} onChange={e => setNuevoForm(f => ({ ...f, cedula: e.target.value }))} placeholder="Sin puntos ni comas" />
+                  <input className="input" inputMode="numeric" value={nuevoForm.cedula} onChange={e => setNuevoForm(f => ({ ...f, cedula: e.target.value }))} placeholder="Sin puntos ni comas" />
                 </div>
                 <p style={{ fontSize: 12.5, color: 'var(--text-3)', margin: 0 }}>
                   Quedará disponible de inmediato para asignar trabajos y liquidar comisiones ({COMISION.TOTAL * 100}%).

@@ -60,7 +60,8 @@ export default function CompartirPortalModal({ cedula = '', cliente = '', telefo
             <label>Cedula del cliente <span style={{ color: 'var(--text-3)', fontWeight: 400 }}>(opcional)</span></label>
             <input
               className="input mono"
-              placeholder="1.045.678.234"
+              placeholder="1045678234"
+              inputMode="numeric"
               value={ced}
               onChange={e => setCed(e.target.value)}
             />

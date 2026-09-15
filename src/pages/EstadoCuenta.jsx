@@ -406,7 +406,7 @@ export default function EstadoCuenta({ prestamos, tecnicos, notify, tabs = null,
             <span className="ec-cta__l">POR DÍAS</span>
             <MoneyInput value={form.valorDia} onChange={v => setDia({ valorDia: v })} placeholder="Valor/día" style={{ width: 116 }} />
             <span className="ec-dias__x">×</span>
-            <input className="hd-drop" type="number" min="0" value={form.dias} onChange={e => setDia({ dias: e.target.value })} placeholder="Días" style={{ width: 78 }} />
+            <input className="hd-drop" type="number" inputMode="numeric" min="0" value={form.dias} onChange={e => setDia({ dias: e.target.value })} placeholder="Días" style={{ width: 78 }} />
             {(parseFloat(form.valorDia) || 0) > 0 && (parseInt(form.dias) || 0) > 0 && (
               <span className="ec-dias__eq">= <b>{fmt((parseFloat(form.valorDia) || 0) * (parseInt(form.dias) || 0))}</b></span>
             )}

@@ -2366,7 +2366,7 @@ export default function Liquidacion({ trabajos, notify, liquidacionHook }) {
                   </div>
                   <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-end', gap: 12 }}>
                     <div className="field" style={{ flex: '0 0 150px' }}><label>Valor diario</label><MoneyInput value={valorDiario} onChange={cambiarValorDiario} /></div>
-                    <div className="field" style={{ flex: '0 0 110px' }}><label>Días</label><input className="input" type="number" min="0" value={diarioDias} onChange={e => setDiarioDias(e.target.value)} placeholder="Ej. 6" /></div>
+                    <div className="field" style={{ flex: '0 0 110px' }}><label>Días</label><input className="input" type="number" inputMode="numeric" min="0" value={diarioDias} onChange={e => setDiarioDias(e.target.value)} placeholder="Ej. 6" /></div>
                     {!diarioReparto ? (
                       <>
                         {/* Sin días escritos no se muestra "$0": es un cálculo que

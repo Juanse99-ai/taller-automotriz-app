@@ -351,7 +351,7 @@ function InspeccionForm({ inspeccion, trabajos, onSave, onCancel }) {
             </div>
             <div style={{flex:'1 1 140px',minWidth:0}}>
               <div style={LBL}>CÉDULA {deLaFicha(cedula, fichaTrabajo?.cedula) && chipFicha}</div>
-              <input value={cedula} placeholder="Cédula cliente" style={CAMPO} onChange={e => setCedula(e.target.value)}/>
+              <input value={cedula} placeholder="Cédula cliente" inputMode="numeric" style={CAMPO} onChange={e => setCedula(e.target.value)}/>
             </div>
             <div style={{flex:'1 1 180px',minWidth:0}}>
               <div style={LBL}>VEHÍCULO {deLaFicha(vehiculo, fichaVehiculo) && chipFicha}</div>
@@ -366,7 +366,7 @@ function InspeccionForm({ inspeccion, trabajos, onSave, onCancel }) {
             </div>
             <div style={{flex:'1 1 130px',minWidth:0}}>
               <div style={LBL}>KILOMETRAJE</div>
-              <input type="number" value={km} placeholder="45000" style={{...CAMPO, fontVariantNumeric:'tabular-nums'}} onChange={e => setKm(e.target.value)}/>
+              <input type="number" inputMode="numeric" value={km} placeholder="45000" style={{...CAMPO, fontVariantNumeric:'tabular-nums'}} onChange={e => setKm(e.target.value)}/>
             </div>
           </div>
         </div>

@@ -998,7 +998,10 @@ export default function Clientes({ clientes, vehiculos, trabajos = [], notify })
             <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:14}}>
               <div className="field">
                 <label>Identificacion *</label>
+                {/* Teclado numerico, salvo cedula de extranjeria (2) y pasaporte (6),
+                    que pueden traer letras: el teclado numerico del celular no las tiene. */}
                 <input className="input" value={nuevoForm.cedula} placeholder="Numero de documento"
+                  inputMode={['2', '6'].includes(String(nuevoForm.tipoIdentificacion)) ? 'text' : 'numeric'}
                   onChange={e => setNuevo('cedula', e.target.value)} />
               </div>
               <div className="field">
@@ -1008,7 +1011,7 @@ export default function Clientes({ clientes, vehiculos, trabajos = [], notify })
               </div>
               <div className="field">
                 <label>Teléfono</label>
-                <input className="input" value={nuevoForm.telefono} placeholder="300..."
+                <input className="input" value={nuevoForm.telefono} placeholder="300..." inputMode="tel"
                   onChange={e => setNuevo('telefono', e.target.value)} />
               </div>
               <div className="field">
@@ -1073,7 +1076,7 @@ export default function Clientes({ clientes, vehiculos, trabajos = [], notify })
                 </div>
                 <div className="field">
                   <label>Teléfono</label>
-                  <input className="input" value={editForm.telefono}
+                  <input className="input" value={editForm.telefono} inputMode="tel"
                     onChange={e => setEdit('telefono', e.target.value)} />
                 </div>
                 <div className="field">
