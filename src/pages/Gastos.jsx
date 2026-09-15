@@ -10,8 +10,10 @@ import {
 import { Button, IconX, IconEdit, IconTrash } from '../components/ui'
 import MoneyInput from '../components/MoneyInput'
 import ConfirmDialog from '../components/ConfirmDialog'
+import FlujoCaja from '../components/FlujoCaja'
 
 // Gastos: los fijos de cada mes (arriendo, nomina, credito...) y los sueltos.
+// La vista "Flujo de caja" junta con ellos lo que entró y lo demás que salió.
 //
 // Los gastos fijos vivian en un Excel y la app no registraba egresos. Aqui un
 // gasto fijo se carga UNA vez y cada mes aparece para confirmar el pago; el
@@ -39,7 +41,8 @@ function formNuevo(tipo, periodo, hoy) {
   }
 }
 
-export default function Gastos({ notify }) {
+export default function Gastos({ notify, trabajos = [] }) {
+  const [vista, setVista] = useState('gastos')   // 'gastos' | 'flujo'
   const [filas, setFilas] = useState(null)       // null = cargando
   const [error, setError] = useState(null)       // 'SIN_TABLA' | texto
   const [hoy] = useState(hoyTaller)
@@ -276,21 +279,27 @@ export default function Gastos({ notify }) {
       <div className="hd-head">
         <div className="hd-head__t">
           <h1>Gastos</h1>
-          <div className="hd-head__sub">Los fijos de cada mes y los sueltos · lo que sale de la caja</div>
+          <div className="hd-head__sub">{vista === 'flujo'
+            ? 'Lo que entró y lo que salió de la caja, mes a mes'
+            : 'Los fijos de cada mes y los sueltos · lo que sale de la caja'}</div>
         </div>
         <div className="hd-head__sp" />
         <div className="hd-head__right">
-          <div className="hd-fig" style={{ '--fg': T.vencido > 0 ? 'var(--bad-fg)' : 'var(--text)' }}>
-            <div className="hd-fig__l">POR PAGAR · {mesCorto.toUpperCase()}</div>
-            <div className="hd-fig__v">{fmt(T.falta)}</div>
-            <div className="hd-fig__s">{T.vencido > 0 ? `${fmt(T.vencido)} ya vencido` : `de ${fmt(T.esperado)} en fijos`}</div>
-          </div>
-          <div className="hd-fig">
-            <div className="hd-fig__l">SALIDAS · {mesCorto.toUpperCase()}</div>
-            <div className="hd-fig__v">{fmt(T.salidas)}</div>
-            <div className="hd-fig__s">{fmt(T.pagadoFijos)} fijos · {fmt(T.sueltos)} sueltos</div>
-          </div>
-          <div className="hd-head__div" />
+          {vista === 'gastos' && (
+            <>
+              <div className="hd-fig" style={{ '--fg': T.vencido > 0 ? 'var(--bad-fg)' : 'var(--text)' }}>
+                <div className="hd-fig__l">POR PAGAR · {mesCorto.toUpperCase()}</div>
+                <div className="hd-fig__v">{fmt(T.falta)}</div>
+                <div className="hd-fig__s">{T.vencido > 0 ? `${fmt(T.vencido)} ya vencido` : `de ${fmt(T.esperado)} en fijos`}</div>
+              </div>
+              <div className="hd-fig">
+                <div className="hd-fig__l">SALIDAS · {mesCorto.toUpperCase()}</div>
+                <div className="hd-fig__v">{fmt(T.salidas)}</div>
+                <div className="hd-fig__s">{fmt(T.pagadoFijos)} fijos · {fmt(T.sueltos)} sueltos</div>
+              </div>
+              <div className="hd-head__div" />
+            </>
+          )}
           <Button variant="primary" onClick={() => abrirEditor('suelto')} disabled={error === 'SIN_TABLA'}>+ Gasto suelto</Button>
         </div>
       </div>
@@ -306,9 +315,23 @@ export default function Gastos({ notify }) {
         {periodo !== periodoDe(hoy) && (
           <button type="button" className="gst-mes__hoy" onClick={() => setPeriodo(periodoDe(hoy))}>Volver a este mes</button>
         )}
+        <div className="hd-seg gst-vista" role="group" aria-label="Qué ver">
+          <button type="button" className={`hd-seg__i${vista === 'gastos' ? ' on' : ''}`} aria-pressed={vista === 'gastos'} onClick={() => setVista('gastos')}>Gastos</button>
+          <button type="button" className={`hd-seg__i${vista === 'flujo' ? ' on' : ''}`} aria-pressed={vista === 'flujo'} onClick={() => setVista('flujo')}>Flujo de caja</button>
+        </div>
       </div>
 
-      {error === 'SIN_TABLA' ? (
+      {vista === 'flujo' ? (
+        <FlujoCaja
+          periodo={periodo}
+          hoy={hoy}
+          gastos={filas}
+          trabajos={trabajos}
+          porPagar={T.falta}
+          vencido={T.vencido}
+          onVerGastos={() => setVista('gastos')}
+        />
+      ) : error === 'SIN_TABLA' ? (
         <div className="card">
           <div className="empty">
             <h4>Falta crear la tabla de gastos</h4>

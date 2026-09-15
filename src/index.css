@@ -4609,3 +4609,74 @@ input.input[type="date"]::-webkit-datetime-edit{display:block;padding:0}
   .cp-existe .btn{width:100%;min-height:var(--tap)}
   .ot-it__crear{min-height:var(--tap)}
 }
+
+/* ── Flujo de caja (Gastos → Flujo de caja; components/FlujoCaja.jsx) ─────
+   Tres cifras, lo que entró y lo que salió por fuente (cada fuente se abre en
+   sus movimientos), lo que falta y los últimos meses. */
+.gst-vista{margin-left:auto}
+.flj{display:flex;flex-direction:column;gap:14px}
+.flj .gst-aviso{margin:0}
+.flj-resumen{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;padding:16px 18px}
+.flj-fig{text-align:left;min-width:0}
+.flj-fig .hd-fig__v{color:var(--fg,var(--text))}
+.flj-cols{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.25fr);gap:14px;align-items:start}
+.flj-col{overflow:hidden}
+.flj-grupo{border-bottom:1px solid var(--row-line)}
+.flj-grupo:last-child{border-bottom:0}
+.flj-grupo__s{display:flex;align-items:center;gap:12px;min-height:56px;padding:10px 18px;cursor:pointer;list-style:none}
+.flj-grupo__s::-webkit-details-marker{display:none}
+.flj-grupo__s::before{content:"";flex:none;width:7px;height:7px;border-right:2px solid var(--text-4);border-bottom:2px solid var(--text-4);transform:rotate(-45deg);transition:transform .18s var(--ease)}
+.flj-grupo[open] .flj-grupo__s::before{transform:rotate(45deg)}
+.flj-grupo__t{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.flj-grupo__n{font-size:13.5px;font-weight:700;color:var(--text)}
+.flj-grupo__de{font-size:11.5px;line-height:1.35;color:var(--text-3)}
+.flj-grupo__v{flex:none;font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:14px;font-weight:700;color:var(--text)}
+.flj-grupo--cero .flj-grupo__v,.flj-grupo--cero .flj-grupo__n{color:var(--text-3);font-weight:600}
+.flj-vacio{margin:0;padding:0 18px 12px 37px;font-size:12px;color:var(--text-3)}
+.flj-movs{list-style:none;margin:0;padding:0 0 8px}
+.flj-mov{display:flex;align-items:baseline;gap:10px;padding:6px 18px 6px 37px;font-size:12.5px;line-height:1.35}
+.flj-mov__f{flex:none;width:86px;color:var(--text-3);font-variant-numeric:tabular-nums}
+.flj-mov__c{flex:1;min-width:0;color:var(--text-2);overflow-wrap:anywhere}
+.flj-mov__v{flex:none;font-family:var(--mono);font-variant-numeric:tabular-nums;color:var(--text)}
+.flj-falta__fila{display:flex;align-items:center;gap:12px;min-height:56px;padding:10px 18px;border-bottom:1px solid var(--row-line)}
+.flj-falta__fila:last-child{border-bottom:0}
+.flj-falta__t{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;font-size:13.5px;font-weight:600;color:var(--text)}
+.flj-falta__s{font-size:11.5px;font-weight:400;color:var(--text-3)}
+.flj-falta__v{flex:none;font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:14px;font-weight:700}
+.flj-meses__scroll{overflow-x:auto}
+.flj-tabla{width:100%;border-collapse:collapse;font-size:13px}
+/* La regla general del celular y la tablet (.tbl,table{min-width:580px}) deja las
+   tablas viejas rígidas para deslizarlas; esta cabe entera en 390px y no la necesita. */
+.flj-meses .flj-tabla{min-width:0}
+.flj-tabla th{height:30px;padding:0 18px;text-align:right;font-size:9.5px;font-weight:700;letter-spacing:.9px;text-transform:uppercase;color:var(--text-4);background:var(--bg-subtle);white-space:nowrap}
+.flj-tabla th:first-child,.flj-tabla td:first-child{text-align:left}
+.flj-tabla td{height:44px;padding:0 18px;text-align:right;border-top:1px solid var(--row-line);font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:nowrap;color:var(--text)}
+.flj-tabla td:first-child{font-family:inherit;font-weight:600;text-transform:capitalize}
+.flj-tabla__actual td{background:var(--bg-subtle)}
+.flj-tabla__va{font-size:11px;font-weight:400;color:var(--text-3);text-transform:none}
+.flj-tabla__corto{display:none}
+.flj-neg{color:var(--bad-fg)!important}
+.flj-nota{padding:0 4px;font-size:12px;line-height:1.5;color:var(--text-3);max-width:75ch}
+@media (max-width:960px){
+  .flj-cols{grid-template-columns:minmax(0,1fr)}
+}
+@media (max-width:600px){
+  .gst-vista{width:100%;margin-left:0}
+  .gst-mes{flex-wrap:wrap}
+  /* Tres renglones, rótulo a la izquierda y cifra a la derecha: dos cifras de
+     26px lado a lado se pegaban en 390px. */
+  .flj-resumen{grid-template-columns:minmax(0,1fr);row-gap:10px;padding:14px}
+  .flj-fig{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
+  .flj-fig .hd-fig__v{font-size:21px;margin-top:0}
+  .flj-tabla th,.flj-tabla td{padding:0 6px}
+  .flj-tabla th:first-child,.flj-tabla td:first-child{padding-left:14px}
+  .flj-tabla th:last-child,.flj-tabla td:last-child{padding-right:14px}
+  .flj-tabla td{font-size:12px}
+  .flj-tabla__largo,.flj-tabla__va{display:none}
+  .flj-tabla__corto{display:inline}
+  .flj-grupo__s,.flj-falta__fila{padding:10px 14px}
+  .flj-mov{padding-left:33px;padding-right:14px;flex-wrap:wrap}
+  .flj-mov__f{width:auto}
+  .flj-mov__c{flex-basis:100%;order:3}
+  .flj-mov__v{margin-left:auto}
+}

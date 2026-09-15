@@ -409,7 +409,7 @@ export default function App() {
       case 'cartera':
         return <Cartera notify={notify} actualizarTrabajo={trabajosHook.actualizarTrabajo} />
       case 'gastos':
-        return <Gastos notify={notify} />
+        return <Gastos notify={notify} trabajos={trabajosHook.trabajos} />
       case 'reportes':
         return <Reportes trabajos={trabajosHook.trabajos} loading={trabajosHook.loading} notify={notify} />
       case 'inspecciones':

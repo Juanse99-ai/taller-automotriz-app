@@ -940,6 +940,36 @@ export async function fetchCuentasUsadas() {
   return [...vistas].map(([id, concepto]) => ({ id, concepto }))
 }
 
+// ---------- FLUJO DE CAJA: lo que entró y lo que salió (utils/flujoCaja.js) ----------
+// Solo las columnas que el flujo usa, desde `desde` (YYYY-MM-DD): la liquidación
+// trae el detalle de cada OT en JSON y aquí sobra. Una fuente que falla no tumba
+// las demás: el flujo sale con lo que hay y dice qué faltó.
+export async function fetchDatosFlujo(desde) {
+  const d = encodeURIComponent(desde)
+  const fuentes = [
+    ['pagos', 'Cobros', `${proxy('pagos')}&select=trabajo_id,fecha,monto,metodo&fecha=gte.${d}&limit=5000`],
+    ['liquidaciones', 'Liquidaciones', `${proxy('liquidacion_historial')}&select=id,fecha,tecnico,pagado,neto&fecha=gte.${d}&limit=2000`],
+    ['prestamos', 'Estado de cuenta', `${proxy('prestamos_movimientos')}&select=persona,tecnico_id,tipo,monto,nota,fecha&fecha=gte.${d}&limit=5000`],
+    ['compras', 'Compras', `${proxy('compras_registradas')}&select=proveedor_nombre,numero_factura,fecha,total&fecha=gte.${d}&limit=5000`],
+    ['bitacora', 'Gastos en Cuentti', `${proxy('gastos_registrados')}&select=numero_factura,concepto,proveedor_nombre,fecha,total,anulado_en&fecha=gte.${d}&limit=5000`],
+  ]
+  const resultados = await Promise.allSettled(fuentes.map(async ([, que, url]) => leerOFallar(await fetchWithTimeout(url), que)))
+  const datos = {}
+  const faltan = []
+  resultados.forEach((r, i) => {
+    const [clave, que] = fuentes[i]
+    if (r.status === 'fulfilled' && Array.isArray(r.value)) datos[clave] = r.value
+    else { datos[clave] = []; faltan.push(que) }
+  })
+  return { datos, faltan }
+}
+
+// Lo que los clientes deben hoy, el mismo total de Cartera.
+export async function fetchTotalCartera() {
+  const filas = await fetchSaldos()
+  return (Array.isArray(filas) ? filas : []).reduce((s, f) => s + (parseFloat(f.saldo) || 0), 0)
+}
+
 // Baja de Cuentti los recibos de las facturas sin pagar (todas, o una orden).
 // Tarda medio segundo por factura: no pasa por el tiempo de espera normal.
 export async function sincronizarPagos(trabajoId) {
