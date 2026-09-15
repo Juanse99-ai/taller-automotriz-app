@@ -460,6 +460,44 @@ export async function grabarCliente(clienteData) {
 
 // ---------- INVENTARIO ----------
 
+// Un producto crudo de Cuentti con la forma que usa la app.
+function productoDeCuentti(p) {
+  const precioSinIva = parseFloat(p.precio_venta || 0)
+  const iva = parseFloat(p.valor_impuesto || 0)
+  return {
+    id: p.id_producto || p.idProductoSucursal,
+    // OJO: en Cuentti `sku` es la REFERENCIA del producto (ej. HCF5719) y
+    // `codigo_barras` es el EAN (ej. FGFII0330). Se muestra la referencia,
+    // que es la que usa el taller; el EAN queda solo como respaldo.
+    codigo: p.sku || p.codigo_barras || `PROD-${p.id_producto}`,
+    sku: p.sku || '',
+    codigoBarras: p.codigo_barras || '',
+    nombre: p.nombre || 'Sin nombre',
+    categoria: p.id_categoria ? `Cat-${p.id_categoria}` : 'General',
+    precio: precioSinIva * (1 + iva / 100),
+    precioBase: precioSinIva,
+    stock: parseFloat(p.existencias || 0),
+    iva,
+    costoBase: costoDeProducto(p), // precio_compra / costo (sin IVA)
+    esServicio: Number(p.es_servicio) === 1,
+    vendeSinExistencia: Number(p.vende_sin_existencia) === 1,
+  }
+}
+
+// Producto por referencia o código de barras exactos. A diferencia de
+// buscarProductoPorSku, un fallo de red LANZA en vez de parecer "no existe":
+// antes de crear un producto no se pueden confundir las dos cosas, o sale un
+// segundo producto con la misma referencia. null = Cuentti dice que no existe.
+export async function productoPorReferencia(referencia) {
+  const s = String(referencia || '').trim()
+  if (!s) return null
+  const data = await cuenttiRequest(`/jServerj4ErpPro/com/j4ErpPro/server/inv/producto/obtenerProductoSku/${CONFIG.branchId}/${encodeURIComponent(s)}`)
+  if (!data || data.message) return null
+  const p = Array.isArray(data) ? data[0] : data
+  if (!p || !p.id_producto) return null
+  return derivarCosto(productoDeCuentti(p))
+}
+
 export async function cargarInventario(pagina = 0) {
   // Endpoint "Movil": trae el dato REAL y completo de cada producto, incluido el
   // costo de compra (campos precio_compra / costo, sin IVA) — necesario para mostrar
@@ -473,28 +511,7 @@ export async function cargarInventario(pagina = 0) {
     try {
       const data = await cuenttiRequest(path, 'GET', null, 45000)
       const items = Array.isArray(data) ? data : (data?.data || [])
-      return items.map(p => {
-        const precioSinIva = parseFloat(p.precio_venta || 0)
-        const iva = parseFloat(p.valor_impuesto || 0)
-        return {
-          id: p.id_producto || p.idProductoSucursal,
-          // OJO: en Cuentti `sku` es la REFERENCIA del producto (ej. HCF5719) y
-          // `codigo_barras` es el EAN (ej. FGFII0330). Se muestra la referencia,
-          // que es la que usa el taller; el EAN queda solo como respaldo.
-          codigo: p.sku || p.codigo_barras || `PROD-${p.id_producto}`,
-          sku: p.sku || '',
-          codigoBarras: p.codigo_barras || '',
-          nombre: p.nombre || 'Sin nombre',
-          categoria: p.id_categoria ? `Cat-${p.id_categoria}` : 'General',
-          precio: precioSinIva * (1 + iva / 100),
-          precioBase: precioSinIva,
-          stock: parseFloat(p.existencias || 0),
-          iva,
-          costoBase: costoDeProducto(p), // precio_compra / costo (sin IVA)
-          esServicio: p.es_servicio === 1,
-          vendeSinExistencia: p.vende_sin_existencia === 1,
-        }
-      })
+      return items.map(productoDeCuentti)
     } catch (e) {
       ultimoError = e
       console.warn(`Cuentti cargarInventario p${pagina} intento ${intento + 1}:`, e.message)

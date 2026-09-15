@@ -11,6 +11,7 @@ import { useInventario, formatCacheAge } from '../hooks/useInventario'
 import { lsGet, lsSet, LS_KEYS } from '../services/storage'
 import { Button, Badge, IconX, IconEdit, IconTrash, IconPdf, ANIOS } from '../components/ui'
 import { recordarCotizacionWhatsApp } from '../utils/portalLink'
+import { esGenerico } from '../utils/referenciaRepuesto'
 
 // Dias que lleva esperando respuesta una cotizacion. Se cuenta desde su fecha,
 // no desde created_at: la fecha es la que el cliente vio en el documento.
@@ -315,6 +316,7 @@ export default function Cotizaciones({ notify, trabajos = [], onCrearTrabajo, co
       <CotizacionForm
         cotizacion={cot}
         trabajos={trabajos}
+        notify={notify}
         onSave={async (data) => {
           try {
             if (vista === 'editar') {
@@ -711,7 +713,7 @@ const ESTILOS = `
 .cot-total .mono{font-size:22px;font-weight:700;color:var(--text);letter-spacing:-.02em}
 `
 
-function CotizacionForm({ cotizacion, trabajos = [], onSave, onCancel }) {
+function CotizacionForm({ cotizacion, trabajos = [], onSave, onCancel, notify }) {
   const isEdit = !!cotizacion
   const { resultados, buscando, buscarDebounced, setResultados } = useClientes()
 
@@ -1132,8 +1134,14 @@ function CotizacionForm({ cotizacion, trabajos = [], onSave, onCancel }) {
                                     const q = (search.query || item.nombre || '').toLowerCase()
                                     const nombre = p.nombre || ''
                                     const idx = nombre.toLowerCase().indexOf(q)
+                                    // Una cotizacion se vuelve OT y se factura: el generico
+                                    // SALDO REPUESTO tampoco entra aqui (regla del dueño).
+                                    const generico = esGenerico(p.sku || p.codigo)
                                     return (
-                                      <div key={p.id || p.codigo} className="cmd-row" onClick={() => seleccionarProducto(item.id, p)}>
+                                      <div key={p.id || p.codigo} className={`cmd-row${generico ? ' cmd-row--off' : ''}`} aria-disabled={generico || undefined}
+                                        onClick={() => generico
+                                          ? notify?.('SALDO REPUESTO ya no se usa en líneas nuevas: elige la pieza real.', 'error')
+                                          : seleccionarProducto(item.id, p)}>
                                         <div className="cmd-row__info">
                                           <div className="cmd-row__name">
                                             {idx >= 0 && q.length >= 2
@@ -1141,6 +1149,7 @@ function CotizacionForm({ cotizacion, trabajos = [], onSave, onCancel }) {
                                               : nombre}
                                           </div>
                                           <div className="cmd-row__meta">
+                                            {generico && <span className="cmd-row__off">Genérico: ya no se usa</span>}
                                             {p.codigoBarras && <span>Cod: {p.codigoBarras}</span>}
                                             {p.sku && <span>SKU: {p.sku}</span>}
                                             {(!p.codigoBarras && !p.sku && p.codigo) && <span>Ref: {p.codigo}</span>}

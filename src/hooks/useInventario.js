@@ -72,6 +72,20 @@ export function useInventario({ autoSyncMs = 0 } = {}) {
     return () => clearInterval(id)
   }, [autoSyncMs, refresh])
 
+  // Un producto recién creado en Cuentti entra al caché sin esperar la
+  // sincronización completa (4 páginas de ~1 MB): la línea que lo pidió lo
+  // necesita ya, y la próxima sincronización lo trae igual.
+  const agregarProducto = useCallback((producto) => {
+    if (!producto) return
+    const ref = String(producto.sku || '').trim().toUpperCase()
+    setInventario(prev => {
+      const next = [producto, ...prev.filter(p => String(p.id) !== String(producto.id)
+        && !(ref && String(p.sku || '').trim().toUpperCase() === ref))]
+      lsSet(LS_KEYS.INVENTARIO_CACHE, next)
+      return next
+    })
+  }, [])
+
   // null = nunca sincronizado (evita mostrar edades absurdas tipo "495093h")
   const cacheAge = lastSyncAt ? Date.now() - lastSyncAt : null
   const isStale = cacheAge == null || cacheAge > STALE_MS
@@ -85,6 +99,7 @@ export function useInventario({ autoSyncMs = 0 } = {}) {
     cacheAge,
     isStale,
     refresh,
+    agregarProducto,
   }
 }
 

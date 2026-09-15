@@ -24,6 +24,8 @@ import Switch from '../components/Switch'
 import { comprimirVideo, posterDeVideo } from '../utils/video'
 import MoneyInput from '../components/MoneyInput'
 import ConfirmDialog from '../components/ConfirmDialog'
+import CrearProducto from '../components/CrearProducto'
+import { faltaProducto, esGenerico, lineasSinProducto } from '../utils/referenciaRepuesto'
 import { Button, ANIOS } from '../components/ui'
 
 // Título de tarjeta del handoff (13.5px/700). Las clases viejas (.card__h h3)
@@ -377,8 +379,11 @@ export default function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [
     cacheAge: invCacheAge,
     isStale: invIsStale,
     refresh: refrescarInventario,
+    agregarProducto,
   } = useInventario()
   const [itemSearch, setItemSearch] = useState({}) // { [itemId]: { query, results, show } }
+  // Línea que pidió crear su producto en Cuentti (CrearProducto); null = cerrado.
+  const [crearPara, setCrearPara] = useState(null)
   // Tick para que el "hace Xs" se actualice cada 10s sin re-fetch
   const [, setNowTick] = useState(0)
   useEffect(() => {
@@ -465,6 +470,29 @@ export default function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [
     updateItem(itemId, 'nombreInventario', '')
     updateItem(itemId, 'sku', '')
     updateItem(itemId, 'codigo', '')
+  }
+
+  // El producto que se creó (o que ya existía) desde CrearProducto queda puesto
+  // en la línea. La descripción no se toca: puede decir más que el nombre del
+  // inventario. Un producto que ya existía tampoco cambia el precio escrito, que
+  // es lo que se le cobra al cliente; uno nuevo nace con el precio de la línea.
+  const productoListo = (producto, { creado }) => {
+    const itemId = crearPara
+    setCrearPara(null)
+    if (!itemId || !producto) return
+    setItems(prev => prev.map(i => i.id !== itemId ? i : {
+      ...i,
+      nombreInventario: producto.nombre,
+      codigo: producto.codigo || producto.sku || '',
+      sku: producto.sku || '',
+      esServicio: false,
+      _bloqueado: true,
+      ...(creado ? { precio: Math.round(producto.precio), iva: producto.iva } : {}),
+    }))
+    agregarProducto(producto)
+    notify?.(creado
+      ? `Producto ${producto.sku} creado en Cuentti y puesto en la línea.`
+      : `Línea enlazada a ${producto.sku || producto.nombre}.`, 'success')
   }
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
@@ -582,13 +610,27 @@ export default function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [
   // duplicadas): mientras el guardado está en vuelo, los demás clicks se ignoran.
   const guardandoRef = useRef(false)
   const [guardando, setGuardando] = useState(false)
-  const guardar = async (skipAviso = false) => {
+  const guardar = async (skipAviso = false, skipSinProducto = false) => {
     if (guardandoRef.current) return
     // Con videos subiendo no se guarda: el que va en camino no alcanzaria a
     // entrar a la orden, y la limpieza de despues de guardar lo borraria del
     // bucket por huerfano. Con varios en fila la espera es larga y tentaba.
     if (subiendoVideo) { notify?.('Espera a que terminen de subir los videos.', 'error'); return }
     if ((!form.placa && !form.sinVehiculo) || !form.cliente) return
+    // Aviso: al dejarla Completada, la OT queda lista para cobrar, y un repuesto
+    // sin su producto del inventario no se deja facturar. Se puede guardar igual
+    // (la pieza puede no haber llegado), pero que se sepa ahora y no en caja.
+    const sinProducto = lineasSinProducto(items)
+    if (!skipSinProducto && form.estado === ESTADOS.COMPLETADO && sinProducto.length) {
+      setConfirmCfg({
+        title: sinProducto.length === 1 ? 'Un repuesto sin producto' : `${sinProducto.length} repuestos sin producto`,
+        lead: `${sinProducto.map(x => x.item.nombre || 'Línea sin nombre').join(', ')}: sin su producto del inventario la OT no se podrá facturar. Búscalos en el inventario o créalos con "Crear producto" en la línea.`,
+        confirmLabel: 'Guardar igual',
+        tone: 'danger',
+        onConfirm: () => guardar(skipAviso, true),
+      })
+      return
+    }
     // Aviso: OT con valor pero sin mano de obra (ninguna línea "Servicio" ni M.O.
     // manual) → el técnico asignado quedaría con comisión $0, que solo se descubre
     // al liquidar días después.
@@ -598,7 +640,7 @@ export default function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [
         lead: 'El técnico no recibirá comisión.',
         confirmLabel: 'Guardar igual',
         tone: 'danger',
-        onConfirm: () => guardar(true),
+        onConfirm: () => guardar(true, true),
       })
       return
     }
@@ -985,6 +1027,10 @@ export default function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [
                   {items.map(item => {
                     const lineTotal = (parseFloat(item.precio) || 0) * (cantidadItem(item))
                     const searchState = itemSearch[item.id]
+                    // Mientras se escribe (o con la búsqueda abierta) el aviso sobra:
+                    // aparece cuando la línea ya dice algo y no tiene producto.
+                    const falta = faltaProducto(item)
+                    const verFalta = falta && !searchState?.show && String(item.nombre || '').trim().length >= 3
                     return (
                       <div className="hd-row ot-it" key={item.id}
                         style={{ minWidth: 570, height: 'auto', minHeight: 60, padding: '8px 18px', alignItems: 'center', cursor: 'default' }}>
@@ -1023,6 +1069,15 @@ export default function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [
                               SKU: {item.sku}{item.nombreInventario && item.nombreInventario !== item.nombre ? ` · ${item.nombreInventario}` : ''}
                             </div>
                           )}
+                          {verFalta && (
+                            <div className="ot-it__falta">
+                              <span>{falta === 'generico' ? 'Genérico SALDO REPUESTO: no se podrá facturar.' : 'Sin producto del inventario: no se podrá facturar.'}</span>
+                              <button type="button" className="ot-it__crear" onClick={() => setCrearPara(item.id)}>Crear producto</button>
+                              {falta === 'sin_referencia' && (
+                                <button type="button" className="ot-it__crear" onClick={() => updateItem(item.id, 'esServicio', true)}>Es mano de obra</button>
+                              )}
+                            </div>
+                          )}
                           {/* Command Palette — Product Search */}
                           {searchState?.show && searchState.results.length > 0 && (
                             <div className="cmd-backdrop" onClick={() => setItemSearch(prev => ({ ...prev, [item.id]: { ...prev[item.id], show: false } }))}>
@@ -1046,9 +1101,14 @@ export default function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [
                                     const q = (searchState.query || '').toLowerCase()
                                     const nombre = p.nombre || ''
                                     const idx = nombre.toLowerCase().indexOf(q)
+                                    // El genérico SALDO REPUESTO ya no entra en líneas nuevas
+                                    // (regla del dueño): se ve, para que no parezca que se perdió.
+                                    const generico = esGenerico(p.sku || p.codigo)
                                     return (
-                                      <div key={p.id} className="cmd-row"
-                                        onClick={() => seleccionarProducto(item.id, p)}>
+                                      <div key={p.id} className={`cmd-row${generico ? ' cmd-row--off' : ''}`} aria-disabled={generico || undefined}
+                                        onClick={() => generico
+                                          ? notify?.('SALDO REPUESTO ya no se usa en líneas nuevas: elige la pieza real o créala con "Crear producto".', 'error')
+                                          : seleccionarProducto(item.id, p)}>
                                         <div className="cmd-row__info">
                                           <div className="cmd-row__name">
                                             {idx >= 0 && q.length >= 2
@@ -1056,6 +1116,7 @@ export default function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [
                                               : nombre}
                                           </div>
                                           <div className="cmd-row__meta">
+                                            {generico && <span className="cmd-row__off">Genérico: ya no se usa</span>}
                                             {p.codigoBarras && <span>Cod: {p.codigoBarras}</span>}
                                             {p.sku && <span>SKU: {p.sku}</span>}
                                             {(!p.codigoBarras && !p.sku && p.codigo) && <span>Ref: {p.codigo}</span>}
@@ -1416,6 +1477,15 @@ export default function TrabajoForm({ trabajo, onSave, onCancel, allTrabajos = [
         </div>{/* /ot-grid */}
       </form>
       <ConfirmDialog cfg={confirmCfg} onClose={() => setConfirmCfg(null)} />
+      {crearPara && (
+        <CrearProducto
+          linea={items.find(i => i.id === crearPara)}
+          inventario={inventario}
+          ot={trabajo?.otCodigo || ''}
+          onListo={productoListo}
+          onClose={() => setCrearPara(null)}
+        />
+      )}
     </div>
   )
 }

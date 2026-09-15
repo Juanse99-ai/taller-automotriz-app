@@ -18,6 +18,10 @@ import {
   CATEGORIAS_SALUD, DIAS_VENTAS, PRECIO_SIMBOLICO,
   resumirSalud, unidadesVendidas, detalleProblema,
 } from '../../src/utils/saludInventario.js'
+import {
+  FUERA_DEL_MARGEN, margenDelMes, compararMeses, indexarInventario, mesActual, mesAnterior, mesSiguiente, esMes,
+} from '../../src/utils/margenRepuestos.js'
+import { lineasSinProducto, MOTIVO_SIN_PRODUCTO } from '../../src/utils/referenciaRepuesto.js'
 import { SIN_BORRADAS } from '../_mcp/trabajos.js'
 
 const CONFIG = {
@@ -240,6 +244,50 @@ function detalleMargen(c) {
     ? `⚠️ ${pct(c.margen)}: se vende por debajo del costo (pierde ${fmtCOP(-utilidad)} por unidad, sin IVA)`
     : `${pct(c.margen)} (utilidad de ${fmtCOP(utilidad)} por unidad, sin IVA)`
 }
+
+// Todo el inventario de Cuentti con la forma de producto de la app (precio y
+// costo sin IVA). Cuentti pagina de a 1000: una pagina con menos es la ultima.
+async function inventarioCompleto() {
+  const productos = []
+  for (let n = 0; n < 25; n++) {
+    const data = await cuenttiRequest(`/jServerj4ErpPro/com/j4ErpPro/server/vent/factura/consultaProductoPaginadaMovil/${CONFIG.branchId}/${n}?tomar_precio_online=0`)
+    const items = Array.isArray(data) ? data : (data?.data || [])
+    productos.push(...items.map(p => ({
+      id: p.id_producto, sku: p.sku || '', codigoBarras: p.codigo_barras || '', nombre: celda(p.nombre, 'Sin nombre'),
+      precioBase: parseFloat(p.precio_venta || 0), costoBase: costoDeProducto(p),
+      stock: parseFloat(p.existencias || 0), esServicio: Number(p.es_servicio) === 1,
+    })))
+    if (items.length < 1000) break
+  }
+  return productos
+}
+
+// Regla del taller: un repuesto no se factura sin su producto del inventario
+// (src/utils/referenciaRepuesto.js). Una OT se corrige en la app, que es donde
+// se elige o se crea el producto; una cotizacion, con actualizar_cotizacion.
+function avisoSinProducto(lista, { origen = '', esCotizacion = false } = {}) {
+  const arreglo = !origen
+    ? 'ponle a cada repuesto su `sku` (búscalo con `listar_inventario_cuentti`; si la pieza no existe, créala con `crear_producto`)'
+    : esCotizacion
+      ? `ponle a cada repuesto su \`sku\` con \`actualizar_cotizacion\` (búscalo con \`listar_inventario_cuentti\`; si la pieza no existe, créala con \`crear_producto\`)`
+      : `abre ${origen} en la app y elige cada pieza del inventario, o créala ahí mismo con **Crear producto**`
+  return [
+    `## 🛑 Hay repuestos sin su producto del inventario: no se facturó nada`,
+    ``,
+    `Un repuesto escrito a mano se factura con MO1, el código de la mano de obra, y uno por el genérico SALDO REPUESTO no dice qué pieza fue. En los dos casos Cuentti no descuenta inventario y el margen de esa venta no se puede medir, por eso el taller no los factura.`,
+    ``,
+    `| Línea | Precio c/IVA | Qué pasa |`,
+    `|---|---|---|`,
+    ...lista.map(({ item, motivo }) => `| ${celda(item.nombre)} | ${fmtCOP(item.precio)} | ${MOTIVO_SIN_PRODUCTO[motivo]} |`),
+    ``,
+    `**Qué hacer:** ${arreglo}. Si una línea es mano de obra o un servicio, va marcada como servicio (\`esServicio: true\`) y no necesita producto.`,
+  ].join('\n')
+}
+
+const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre']
+const nombreMes = (mes) => `${MESES[Number(mes.slice(5, 7)) - 1]} ${mes.slice(0, 4)}`
+const pct1 = (m) => (m == null ? '—' : `${(Math.round(m * 10) / 10).toLocaleString('es-CO')}%`)
+const conSigno = (n, sufijo) => (n == null ? '—' : `${n > 0 ? '+' : n < 0 ? '−' : ''}${(Math.round(Math.abs(n) * 10) / 10).toLocaleString('es-CO')}${sufijo}`)
 
 // ---------- Acceso a Supabase del taller (lectura de OT/cotizacion + writeback) ----------
 // Reutiliza las mismas env vars del MCP Taller (compartidas en el proyecto Vercel).
@@ -880,18 +928,7 @@ const tools = [
       },
     },
     handler: async ({ categoria, limit = 10 }) => {
-      const PAGE_SIZE = 1000
-      const productos = []
-      for (let n = 0; n < 25; n++) {
-        const data = await cuenttiRequest(`/jServerj4ErpPro/com/j4ErpPro/server/vent/factura/consultaProductoPaginadaMovil/${CONFIG.branchId}/${n}?tomar_precio_online=0`)
-        const items = Array.isArray(data) ? data : (data?.data || [])
-        productos.push(...items.map(p => ({
-          id: p.id_producto, sku: p.sku || '', nombre: celda(p.nombre, 'Sin nombre'),
-          precioBase: parseFloat(p.precio_venta || 0), costoBase: costoDeProducto(p),
-          stock: parseFloat(p.existencias || 0), esServicio: Number(p.es_servicio) === 1,
-        })))
-        if (items.length < PAGE_SIZE) break
-      }
+      const productos = await inventarioCompleto()
       if (!productos.length) return 'Cuentti no devolvió productos: no se pudo revisar el inventario.'
 
       // Lo vendido es lo que ordena: sin la base del taller la lista sale igual,
@@ -927,6 +964,103 @@ const tools = [
           lineas.push(`| ${celda(p.sku)} | ${p.nombre.slice(0, 60)} | ${detalleProblema(c.clave, p, pesos)} | ${v} |`)
         }
         if (lista.length > tope) lineas.push(`_Hay ${(lista.length - tope).toLocaleString('es-CO')} más: pide \`categoria: '${c.clave}'\` con un \`limit\` mayor._`)
+      }
+      return lineas.join('\n')
+    },
+  },
+  {
+    name: 'margen_repuestos_cuentti',
+    description: 'Margen real de los repuestos vendidos en un mes, comparado con el mes anterior. Cuenta las líneas de repuesto de las OT completadas del mes por su fecha (el mismo criterio de ingresos del Dashboard) y les pone el costo que el producto tiene hoy en Cuentti; Cuentti no guarda el costo de cada venta, así que en meses viejos la cifra se desvía. Precios y costos sin IVA. El margen se pondera por los pesos vendidos, con el detalle por producto ordenado por lo que más pesa. Lo que no tiene costo real va aparte y nunca se promedia: el genérico SALDO REPUESTO, las líneas escritas a mano, los servicios marcados como repuesto, los productos sin costo o que ya no están en Cuentti y los costos imposibles; por eso trae también qué parte de la venta se pudo medir. Solo lectura.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        mes: { type: 'string', pattern: '^\\d{4}-(0[1-9]|1[0-2])$', description: 'Mes a medir, YYYY-MM. Sin esto, el mes en curso (hasta hoy).' },
+        limit: { type: 'integer', minimum: 1, maximum: 100, default: 15, description: 'Cuántos productos mostrar en el detalle por producto.' },
+        detalle: { type: 'integer', minimum: 0, maximum: 50, default: 10, description: 'Cuántas líneas mostrar de cada grupo que no entra en el margen (0 = solo el resumen).' },
+      },
+    },
+    handler: async ({ mes, limit = 15, detalle = 10 }) => {
+      const hoyMes = mesActual()
+      const m = mes ? String(mes).trim() : hoyMes
+      if (!esMes(m)) return `❌ \`mes\` va como YYYY-MM (ej. ${hoyMes}).`
+      if (m > hoyMes) return `❌ ${nombreMes(m)} todavía no empieza.`
+      const anterior = mesAnterior(m)
+      const siguiente = mesSiguiente(m)
+
+      let trabajos
+      try {
+        // Un dia de holgura a cada lado: el corte fino por mes lo hace margenDelMes en hora de Colombia.
+        const desde = new Date(new Date(`${anterior}-01T00:00:00-05:00`).getTime() - 86400000).toISOString()
+        const hasta = new Date(new Date(`${siguiente}-01T00:00:00-05:00`).getTime() + 86400000).toISOString()
+        trabajos = await supabaseTaller('trabajos', {
+          query: `select=id,ot_codigo,estado,fecha,items,deleted&estado=eq.Completado&fecha=gte.${encodeURIComponent(desde)}&fecha=lt.${encodeURIComponent(hasta)}&${SIN_BORRADAS}&limit=5000`,
+        })
+      } catch (e) {
+        return `❌ No se pudieron leer las OT del taller: ${e.message}`
+      }
+      const productos = await inventarioCompleto()
+      if (!productos.length) return 'Cuentti no devolvió productos: sin costos no se puede medir el margen.'
+      const inventario = indexarInventario(productos)
+      const filas = Array.isArray(trabajos) ? trabajos : []
+      const act = margenDelMes(filas, m, inventario)
+      const ant = margenDelMes(filas, anterior, inventario)
+      const cmp = compararMeses(act, ant)
+
+      const tope = Math.min(Math.max(parseInt(limit, 10) || 15, 1), 100)
+      const topeDetalle = Math.min(Math.max(parseInt(detalle, 10) || 0, 0), 50)
+      const cobertura = (r) => (r.cobertura == null ? '' : ` (${pct1(r.cobertura * 100)})`)
+      const cambioPct = (n) => (n == null ? '—' : conSigno(n * 100, '%'))
+      const lineas = [
+        `## Margen real de repuestos · ${nombreMes(m)}`,
+        `OT completadas del mes por su fecha · precios y costos sin IVA · costo de hoy en Cuentti.${m === hoyMes ? ' Mes en curso: va hasta hoy.' : ''}`,
+        ``,
+        `| | ${nombreMes(m)} | ${nombreMes(anterior)} | Cambio |`,
+        `|---|---|---|---|`,
+        `| OT completadas | ${act.ots} | ${ant.ots} | |`,
+        `| Venta de repuestos | ${fmtCOP(act.venta)} | ${fmtCOP(ant.venta)} | ${cambioPct(cmp.venta)} |`,
+        `| Venta con costo medible | ${fmtCOP(act.medido.venta)}${cobertura(act)} | ${fmtCOP(ant.medido.venta)}${cobertura(ant)} | ${conSigno(cmp.coberturaPuntos, ' pts')} |`,
+        `| Costo | ${fmtCOP(act.medido.costo)} | ${fmtCOP(ant.medido.costo)} | |`,
+        `| Utilidad | ${fmtCOP(act.medido.utilidad)} | ${fmtCOP(ant.medido.utilidad)} | ${cambioPct(cmp.utilidad)} |`,
+        `| **Margen real** | **${pct1(act.medido.margen)}** | ${pct1(ant.medido.margen)} | ${conSigno(cmp.margenPuntos, ' pts')} |`,
+      ]
+      if (act.cobertura != null && act.cobertura < 0.8) {
+        lineas.push('', `> ⚠️ Solo el ${pct1(act.cobertura * 100)} de la venta de repuestos tiene costo medible: el margen vale para esa parte, no para todo el almacén.`)
+      }
+
+      const grupos = FUERA_DEL_MARGEN.filter(c => act.fuera[c.clave].lineas.length)
+      lineas.push('', `### Lo que no entra en el margen · ${nombreMes(m)}`)
+      if (!grupos.length) {
+        lineas.push('', '_Nada: toda la venta de repuestos tiene costo medible._')
+      } else {
+        lineas.push('', `| Qué | Venta | Líneas | Por qué no entra |`, `|---|---|---|---|`)
+        for (const c of grupos) {
+          const g = act.fuera[c.clave]
+          lineas.push(`| ${c.titulo} | ${fmtCOP(g.venta)} | ${g.lineas.length} | ${c.por} |`)
+        }
+      }
+
+      lineas.push('', `### Margen por producto · lo que más pesa en pesos`)
+      if (!act.productos.length) {
+        lineas.push('', '_Ninguna venta con costo medible en el mes._')
+      } else {
+        lineas.push('', `| Referencia | Producto | Und | Venta | Costo | Margen | Peso |`, `|---|---|---|---|---|---|---|`)
+        for (const p of act.productos.slice(0, tope)) {
+          const margen = p.margen != null && p.margen < 0 ? `⚠️ ${pct1(p.margen)}` : pct1(p.margen)
+          lineas.push(`| ${celda(p.referencia)} | ${celda(p.nombre).slice(0, 50)} | ${p.unidades.toLocaleString('es-CO')} | ${fmtCOP(p.venta)} | ${fmtCOP(p.costo)} | ${margen} | ${pct1(p.peso * 100)} |`)
+        }
+        if (act.productos.length > tope) lineas.push(`_Hay ${act.productos.length - tope} productos más: sube \`limit\` para verlos._`)
+      }
+
+      if (topeDetalle && grupos.length) {
+        lineas.push('', `### Detalle de lo que no entra`)
+        for (const c of grupos) {
+          const g = act.fuera[c.clave]
+          lineas.push('', `#### ${c.titulo} (${g.lineas.length})`, '', `| OT | Línea | Referencia | Und | Venta |`, `|---|---|---|---|---|`)
+          for (const l of g.lineas.slice(0, topeDetalle)) {
+            lineas.push(`| ${celda(l.ot)} | ${celda(l.nombre).slice(0, 50)} | ${celda(l.referencia)} | ${l.cantidad.toLocaleString('es-CO')} | ${fmtCOP(l.venta)} |`)
+          }
+          if (g.lineas.length > topeDetalle) lineas.push(`_Y ${g.lineas.length - topeDetalle} más._`)
+        }
       }
       return lineas.join('\n')
     },
@@ -1128,7 +1262,7 @@ const tools = [
   },
   {
     name: 'facturar',
-    description: 'Factura en Cuentti una OT (OT-…) o cotización (COT-…) que ya existe en el taller, leyendo sus items de Supabase. Para una venta sin OT ni cotización (mostrador) usa facturar_directo. Si la OT ya tiene factura la bloquea; permitirDuplicado:true crea un duplicado real. Con resolucion:FEIC y emitirFE:true la transmite a la DIAN. Al emitir guarda el id_transacion en la OT o marca la cotización como Facturada. Dry-run por defecto; confirm:true emite.',
+    description: 'Factura en Cuentti una OT (OT-…) o cotización (COT-…) que ya existe en el taller, leyendo sus items de Supabase. Para una venta sin OT ni cotización (mostrador) usa facturar_directo. Si la OT ya tiene factura la bloquea; permitirDuplicado:true crea un duplicado real. No factura si algún repuesto no tiene su producto del inventario (escrito a mano o por el genérico SALDO REPUESTO): así Cuentti descuenta la pieza y su margen se puede medir; la mano de obra y los servicios no lo necesitan. Con resolucion:FEIC y emitirFE:true la transmite a la DIAN. Al emitir guarda el id_transacion en la OT o marca la cotización como Facturada. Dry-run por defecto; confirm:true emite.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -1182,6 +1316,9 @@ const tools = [
         return `⚠️ La cotizacion ${key} ya esta marcada como Facturada. Para facturar de nuevo (duplicado) usa permitirDuplicado:true.`
       }
 
+      const sinProducto = lineasSinProducto(items)
+      if (sinProducto.length) return avisoSinProducto(sinProducto, { origen: registro.ot_codigo || key, esCotizacion })
+
       // Mapeo de medio de pago. 1=Caja General, 2=Bancolombia, 3=Nequi (verificado).
       const aCredito = metodoPago === 'credito'
       const { medio, banco } = idsMedioPago(metodoPago, idMedioPago, idBanco)
@@ -1227,9 +1364,9 @@ const tools = [
           `**Items:** ${items.length} · **Total:** ${fmtCOP(payload.total_neto)}`,
           ``,
           `### Enlace con el inventario`,
-          ...payload.objDetalle.map(d => `- ${d.descripcion} x${d.cantidad} — ${d.sku === 'MO1' ? '⚠️ **genérico MO1**: NO descuenta inventario' : `ref \`${d.sku}\` → descuenta`}`),
+          ...payload.objDetalle.map(d => `- ${d.descripcion} x${d.cantidad} — ${d.sku === 'MO1' ? 'MO1, mano de obra o servicio: no mueve inventario' : `ref \`${d.sku}\` → descuenta`}`),
           payload.objDetalle.some(d => d.sku === 'MO1')
-            ? `\n> ⚠️ Hay items sin referencia. Si alguno es un repuesto real, el stock de Cuentti va a quedar mal (se factura contra un genérico). Corrige el \`sku\` del item en la OT/cotización antes de emitir. Si es mano de obra, está bien así.`
+            ? `\n> Las líneas con MO1 son mano de obra o servicios (también el trabajo de un técnico externo): no mueven inventario. Los repuestos tienen todos su producto.`
             : `\n> ✅ Todos los items tienen referencia: el inventario se va a descontar.`,
           ``, '<details><summary>Payload Cuentti</summary>', '', '```json',
           JSON.stringify(payload, null, 2).slice(0, 4000), '```', '</details>',
@@ -1290,7 +1427,7 @@ const tools = [
   },
   {
     name: 'facturar_directo',
-    description: 'Factura en Cuentti directamente desde una lista de items, para ventas de mostrador que no pasan por OT ni cotización. No crea ni modifica nada en el taller (Supabase): la venta queda solo en Cuentti, así que conserva el id_transacion que devuelve. El precio de cada item va con IVA incluido. Cada repuesto necesita su sku de Cuentti para descontar inventario; sin sku se factura contra un genérico y el stock no se mueve. Con resolucion:FEIC y emitirFE:true se transmite a la DIAN. Dry-run por defecto; confirm:true emite.',
+    description: 'Factura en Cuentti directamente desde una lista de items, para ventas de mostrador que no pasan por OT ni cotización. No crea ni modifica nada en el taller (Supabase): la venta queda solo en Cuentti, así que conserva el id_transacion que devuelve. El precio de cada item va con IVA incluido. Cada repuesto necesita su sku de Cuentti: sin sku, o con el genérico SALDO REPUESTO (PROD-1105), no factura, porque el stock no se movería y el margen de esa venta no se podría medir. Con resolucion:FEIC y emitirFE:true se transmite a la DIAN. Dry-run por defecto; confirm:true emite.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -1308,7 +1445,7 @@ const tools = [
               precio: { type: 'number', description: 'Precio unitario CON IVA incluido' },
               cantidad: { type: 'number', default: 1 },
               iva: { type: 'number', default: 19, description: 'Porcentaje de IVA. 0 = exento.' },
-              sku: { type: 'string', description: 'REFERENCIA del producto en Cuentti. Es lo que hace que se descuente la existencia. Sin sku se factura contra un generico y el inventario NO se mueve. Vacio solo para mano de obra.' },
+              sku: { type: 'string', description: 'REFERENCIA del producto en Cuentti; es lo que descuenta la existencia. Un repuesto sin sku o con el genérico PROD-1105 no se factura. Vacío solo en mano de obra o servicios (esServicio: true).' },
               esServicio: { type: 'boolean', default: false, description: 'true = mano de obra / servicio (no lleva sku ni toca inventario).' },
             },
             required: ['nombre', 'precio'],
@@ -1336,6 +1473,8 @@ const tools = [
       // Sin default: asumir efectivo ya emitio una FEIC equivocada.
       if (!METODOS_PAGO.includes(metodoPago)) return avisoMetodoPago(metodoPago)
       if (!RESOLUCIONES.includes(resolucion)) return avisoResolucion(resolucion)
+      const sinProducto = lineasSinProducto(items)
+      if (sinProducto.length) return avisoSinProducto(sinProducto)
 
       // Resolver el cliente: con su id_cliente real Cuentti no toca el registro;
       // con -1 lo crea por NIT, que es como nacen los terceros mal configurados.
@@ -1372,9 +1511,9 @@ const tools = [
       // tiene que verse, no deducirse del total.
       const bloqueInv = [
         ``, `### Items — IVA y enlace con el inventario`,
-        ...payload.objDetalle.map(d => `- ${d.descripcion} x${d.cantidad} · **IVA ${d.impuesto}%** — ${d.sku === 'MO1' ? '⚠️ **genérico MO1**: NO descuenta inventario' : `ref \`${d.sku}\` → descuenta`}`),
+        ...payload.objDetalle.map(d => `- ${d.descripcion} x${d.cantidad} · **IVA ${d.impuesto}%** — ${d.sku === 'MO1' ? 'MO1, mano de obra o servicio: no mueve inventario' : `ref \`${d.sku}\` → descuenta`}`),
         sinRef.length
-          ? `\n> ⚠️ Hay ${sinRef.length} item(s) sin referencia. Si alguno es un repuesto real el stock va a quedar mal. Si es mano de obra, está bien así.`
+          ? `\n> ${sinRef.length} línea(s) con MO1: mano de obra o servicios, no mueven inventario. Los repuestos tienen todos su producto.`
           : `\n> ✅ Todos los items tienen referencia: el inventario se va a descontar.`,
       ].join('\n')
 

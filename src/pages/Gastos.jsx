@@ -192,7 +192,7 @@ export default function Gastos({ notify }) {
   const setForm = (k, v) => setEditor(ed => {
     const form = { ...ed.form, [k]: v }
     // Al cambiar de categoria un gasto suelto nuevo, "registrar en Cuentti"
-    // sigue la regla de esa categoria (nomina y credito, apagado).
+    // sigue la regla de esa categoria (nomina y arriendo, apagado).
     if (k === 'categoria' && ed.tipo === 'suelto' && !ed.fila) form.cuenttiAl = cuenttiPorDefecto(v)
     return { ...ed, form }
   })

@@ -18,6 +18,7 @@ import {
 } from '../services/cuentti'
 import { RESOLUCIONES, SIN_FACTURA, ESTADOS } from '../utils/constants'
 import { propuestasPendientes } from '../utils/insumosPropuestos'
+import { lineasSinProducto } from '../utils/referenciaRepuesto'
 import ConfirmDialog from '../components/ConfirmDialog'
 import { Button } from '../components/ui'
 
@@ -451,6 +452,13 @@ export default function CuenttiPanel({ trabajos, actualizarTrabajo, notify, trab
       notify('El trabajo no tiene items para facturar', 'error')
       return
     }
+    // Regla del dueño: un repuesto sin su producto del inventario no se factura
+    // (utils/referenciaRepuesto.js). Se arregla en la OT, donde se elige o se crea.
+    const sinProducto = lineasSinProducto(trabajo.items)
+    if (sinProducto.length) {
+      notify(`No se factura: ${sinProducto.map(x => x.item.nombre || 'una línea sin nombre').join(', ')} sin producto del inventario. Arréglalo en la orden con "Crear producto".`, 'error')
+      return
+    }
     // Anti-duplicado: si ya fue facturado, pedir confirmacion explicita
     if (trabajo.cuenttiTransacionId) {
       const fechaFmt = trabajo.facturadoEn ? new Date(trabajo.facturadoEn).toLocaleString('es-CO') : 'fecha desconocida'
@@ -762,6 +770,7 @@ export default function CuenttiPanel({ trabajos, actualizarTrabajo, notify, trab
     : facturablesAll.filter(t => !t.cuenttiTransacionId)
   const trabajoFacturaSel = trabajos.find(t => t.id === (facturaId || '').trim())
   const pendientesTaller = trabajoFacturaSel ? propuestasPendientes(trabajoFacturaSel).length : 0
+  const sinProductoSel = trabajoFacturaSel && !trabajoFacturaSel.cuenttiTransacionId ? lineasSinProducto(trabajoFacturaSel.items) : []
   const porFacturarCount = facturablesAll.length - yaFacturadosCount
   const conexionOK = !!testResult && testResult.clientes?.startsWith('OK')
 
@@ -973,6 +982,12 @@ export default function CuenttiPanel({ trabajos, actualizarTrabajo, notify, trab
                     No va{pendientesTaller === 1 ? '' : 'n'} en esta factura hasta que lo{pendientesTaller === 1 ? '' : 's'} apruebes en la orden (Trabajos → editar).
                   </div>
                 )}
+                {sinProductoSel.length > 0 && (
+                  <div role="alert" style={{ marginTop: 9, padding: '9px 12px', borderRadius: 10, background: 'var(--bad-bg)', color: 'var(--bad-fg)', fontSize: 12.5, lineHeight: 1.45 }}>
+                    <b>{sinProductoSel.length === 1 ? '1 repuesto sin producto del inventario' : `${sinProductoSel.length} repuestos sin producto del inventario`}:</b>{' '}
+                    {sinProductoSel.map(x => x.item.nombre || 'línea sin nombre').join(', ')}. No se puede facturar hasta que cada uno tenga su producto: en la orden (Trabajos → editar) búscalo en el inventario o créalo con &quot;Crear producto&quot;.
+                  </div>
+                )}
                 {trabajoFacturaSel?.cuenttiTransacionId && (
                   <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginTop: 9, padding: '9px 12px', borderRadius: 10, background: 'var(--ok-bg)' }}>
                     <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--ok-fg)', flexShrink: 0 }}>
@@ -1000,7 +1015,7 @@ export default function CuenttiPanel({ trabajos, actualizarTrabajo, notify, trab
                 state={hasFactura ? 'done' : hasTrabajo ? 'active' : 'pending'}
                 estado={hasFactura ? 'LISTO' : hasTrabajo ? 'EN CURSO' : 'ESPERA EL TRABAJO'}
                 accion={
-                  <Button variant="primary" onClick={facturarTrabajo} disabled={!facturaId || facturando}>
+                  <Button variant="primary" onClick={facturarTrabajo} disabled={!facturaId || facturando || sinProductoSel.length > 0}>
                     {facturando ? 'Enviando...' : 'Enviar a Cuentti'}
                   </Button>
                 }>

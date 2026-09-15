@@ -9,6 +9,7 @@
 
 import { handleMcp } from '../_mcp/shared.js'
 import { ESTADOS, ESTADOS_COTIZACION, esEstadoOT, esEstadoCotizacion } from '../../src/utils/estados.js'
+import { faltaProducto } from '../../src/utils/referenciaRepuesto.js'
 import {
   SIN_BORRADAS, borrada, estadoDe, hoyTaller, fechaBogota, desdePeriodo, sumaTotal,
   resumirTrabajos, avisoEstadosDesconocidos, avisoFiltroEstado,
@@ -126,13 +127,15 @@ function uid() {
 // Calcula subtotal/IVA/total de una lista de items. El precio de cada item
 // INCLUYE IVA (misma convencion que Cotizaciones.jsx y buildFacturaPayload).
 // El sku del item viaja hasta la factura de Cuentti y es lo que hace que se
-// descuente el inventario. Sin el, facturar cae al generico 'MO1' y la
-// existencia NO se mueve. Se muestra en el dry-run para que el hueco se vea
-// ANTES de guardar, no cuando el stock ya quedo mal.
+// descuente el inventario. Un repuesto sin el, o con el generico SALDO
+// REPUESTO, no se deja facturar (src/utils/referenciaRepuesto.js). Se muestra
+// en el dry-run para que el hueco se vea al crear, no cuando toque cobrar.
 function etiquetaSku(i) {
-  if (i.sku) return ` · ref ${i.sku}`
+  const falta = faltaProducto(i)
+  if (falta === 'generico') return ` · ⚠️ GENÉRICO SALDO REPUESTO: no se podrá facturar hasta cambiarlo por el producto real`
+  if (falta === 'sin_referencia') return ` · ⚠️ SIN PRODUCTO: no se podrá facturar hasta ponerle su sku`
   if (i.esServicio) return ` · servicio (no toca inventario)`
-  return ` · ⚠️ SIN REFERENCIA: no va a descontar del inventario`
+  return ` · ref ${i.sku}`
 }
 
 function calcularTotales(items) {
@@ -485,7 +488,7 @@ const tools = [
               precio: { type: 'number', description: 'Precio unitario con IVA incluido' },
               cantidad: { type: 'number', default: 1 },
               iva: { type: 'number', default: 19 },
-              sku: { type: 'string', description: 'Referencia (SKU) del producto en el inventario de Cuentti. Viaja hasta la factura y es lo que descuenta la existencia: sin sku el item se factura contra un genérico y el inventario no se mueve. Vacío solo para mano de obra o items escritos a mano.' },
+              sku: { type: 'string', description: 'Referencia (SKU) del producto en el inventario de Cuentti. Viaja hasta la factura y es lo que descuenta la existencia. Un repuesto sin sku, o con el genérico PROD-1105, se guarda pero no se puede facturar hasta tener su producto. Vacío solo en mano de obra o servicios (esServicio: true).' },
               esServicio: { type: 'boolean', default: false, description: 'true = mano de obra / servicio (no toca inventario, no lleva sku).' },
             },
             required: ['nombre', 'precio'],
@@ -592,7 +595,7 @@ const tools = [
               precio: { type: 'number', description: 'Precio unitario con IVA incluido' },
               cantidad: { type: 'number', default: 1 },
               iva: { type: 'number', default: 19 },
-              sku: { type: 'string', description: 'Referencia del producto en Cuentti. Sin ella el item no descuenta inventario al facturar.' },
+              sku: { type: 'string', description: 'Referencia del producto en Cuentti. Un repuesto sin ella, o con el genérico PROD-1105, no se puede facturar.' },
               esServicio: { type: 'boolean', default: false },
             },
             required: ['nombre', 'precio'],
@@ -664,7 +667,7 @@ const tools = [
               precio: { type: 'number', description: 'Precio unitario con IVA incluido' },
               cantidad: { type: 'number', default: 1 },
               iva: { type: 'number', default: 19 },
-              sku: { type: 'string', description: 'Referencia (SKU) del producto en el inventario de Cuentti. Viaja hasta la factura y es lo que descuenta la existencia: sin sku el item se factura contra un genérico y el inventario no se mueve. Vacío solo para mano de obra o items escritos a mano.' },
+              sku: { type: 'string', description: 'Referencia (SKU) del producto en el inventario de Cuentti. Viaja hasta la factura y es lo que descuenta la existencia. Un repuesto sin sku, o con el genérico PROD-1105, se guarda pero no se puede facturar hasta tener su producto. Vacío solo en mano de obra o servicios (esServicio: true).' },
               esServicio: { type: 'boolean', default: false, description: 'true = mano de obra / servicio (no toca inventario, no lleva sku).' },
             },
             required: ['nombre', 'precio'],

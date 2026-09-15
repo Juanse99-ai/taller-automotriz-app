@@ -129,16 +129,19 @@ export const claveCuentti = (fila) => (fila?.gasto_fijo_id
   ? `gasto:${fila.gasto_fijo_id}:${fila.periodo}`
   : `gasto:${fila?.id}`)
 
-// Registrar en Cuentti viene marcado salvo en dos categorias donde casi siempre
-// es un error hacerlo desde aqui.
-export const cuenttiPorDefecto = (categoria) => !['nomina', 'credito'].includes(categoria)
+// Registrar en Cuentti viene marcado salvo donde casi siempre es un error
+// hacerlo desde aqui: la nomina ya sale de Liquidacion y el arriendo lo crea
+// Cuentti solo, una compra recurrente al arrendador cada mes (visto el 15 sep
+// 2026). El credito va entero como gasto financiero, sin separar intereses:
+// decision del dueño del 15 sep 2026.
+export const cuenttiPorDefecto = (categoria) => !['nomina', 'arriendo'].includes(categoria)
 
 export function avisoCuentti(categoria) {
+  if (categoria === 'arriendo') {
+    return 'Cuentti ya crea el arriendo solo, cada mes, como una compra al arrendador. Anótalo aquí para controlar el pago; mandarlo a Cuentti desde aquí lo deja doble.'
+  }
   if (categoria === 'nomina') {
     return 'La nómina de los técnicos ya se registra en Cuentti desde Liquidación. Regístrala aquí solo si es otra (sueldos fijos); si es la misma, queda doble.'
-  }
-  if (categoria === 'credito') {
-    return 'La cuota de un crédito no es toda gasto: el abono a capital no lo es, solo los intereses. Pregúntale a tu contador en qué cuenta va antes de registrarla en Cuentti.'
   }
   return ''
 }

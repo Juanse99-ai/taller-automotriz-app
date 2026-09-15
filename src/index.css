@@ -4574,3 +4574,25 @@ input.input[type="date"]::-webkit-datetime-edit{display:block;padding:0}
   .rvi__acc{width:100%}
   .rvi__acc .btn{flex:1;min-height:var(--tap)}
 }
+
+/* ── Repuesto sin producto del inventario (referenciaRepuesto.js) ─────────
+   Aviso dentro de la línea de la OT y ventana para crear el producto en
+   Cuentti. El aviso va en texto, sin caja: la fila ya es una caja. */
+.ot-it__falta{display:flex;flex-wrap:wrap;align-items:center;gap:2px 10px;margin-top:4px;font-size:11.5px;line-height:1.35;font-weight:600;color:var(--warn-fg)}
+.ot-it__crear{min-height:30px;padding:0 2px;border:0;background:none;font:inherit;font-weight:700;color:var(--accent);cursor:pointer;text-decoration:underline;text-underline-offset:3px}
+.cmd-row--off{cursor:not-allowed;opacity:.62}
+.cmd-row--off:hover{background:transparent}
+.cmd-row__off{font-family:var(--font, inherit);font-weight:700;color:var(--warn-fg)}
+.cp-form{display:flex;flex-direction:column;gap:14px}
+.cp-form__2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px}
+.cp-form__opc{font-weight:400;color:var(--text-4)}
+.cp-seg{width:100%}
+.cp-seg .hd-seg__i{flex:1;justify-content:center}
+.cp-existe{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px 12px;padding:10px 12px;border-radius:var(--r-md);background:var(--ok-bg);color:var(--ok-fg);font-size:12.5px;line-height:1.4}
+.cp-nota{margin:0;font-size:12px;line-height:1.45;color:var(--text-3)}
+.cp-error{margin:0;padding:10px 12px;border-radius:var(--r-md);background:var(--bad-bg);color:var(--bad-fg);font-size:12.5px;line-height:1.45}
+@media (max-width:600px){
+  .cp-form__2{grid-template-columns:minmax(0,1fr)}
+  .cp-existe .btn{width:100%;min-height:var(--tap)}
+  .ot-it__crear{min-height:var(--tap)}
+}

@@ -7,7 +7,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import {
   fijosDelMes, sueltosDelMes, totalesDelMes, vencimiento, sumarMeses, nombreMes,
-  claveCuentti, cuenttiPorDefecto, faltaParaCuentti, validarGasto,
+  claveCuentti, cuenttiPorDefecto, avisoCuentti, faltaParaCuentti, validarGasto,
 } from '../src/utils/gastos.js'
 
 const FIJOS = [
@@ -76,10 +76,14 @@ test('clave para Cuentti: un pago por fijo y mes, o el id del suelto', () => {
   assert.equal(claveCuentti(SUELTOS[0]), 'gasto:s1')
 })
 
-test('nomina y credito no se registran en Cuentti por defecto', () => {
-  assert.equal(cuenttiPorDefecto('arriendo'), true)
+test('nomina y arriendo no se registran en Cuentti por defecto; el credito si', () => {
+  // Cuentti ya crea el arriendo como compra recurrente: desde aqui quedaria doble.
+  assert.equal(cuenttiPorDefecto('arriendo'), false)
   assert.equal(cuenttiPorDefecto('nomina'), false)
-  assert.equal(cuenttiPorDefecto('credito'), false)
+  // La cuota entera como gasto financiero, decision del dueño.
+  assert.equal(cuenttiPorDefecto('credito'), true)
+  assert.equal(cuenttiPorDefecto('servicios'), true)
+  assert.equal(avisoCuentti('credito'), '')
   assert.deepEqual(faltaParaCuentti({ proveedor_nit: '900.111.222-3', id_plan_cuentas: 39 }), [])
   assert.deepEqual(faltaParaCuentti({ proveedor_nit: '', id_plan_cuentas: null }), ['el NIT o la cédula del proveedor', 'la cuenta de Cuentti'])
 })
