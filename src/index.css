@@ -2770,6 +2770,16 @@ input.input[type="date"]::-webkit-datetime-edit{display:block;padding:0}
    dentro del gris, y repetia el nombre del cliente y el titulo de la seccion
    gastando 300px. Ahora dice de que carro se habla y en que va. */
 .pc-top{background:var(--navy);color:#fff}
+/* Portal de demostracion (?c=demo, ver demo/portalDemo.js): una franja que no
+   deja dudas de que los datos son de ejemplo. Sin ambar ni verde: esos colores
+   dicen estado de plata, y esto no lo es. */
+.pc-demo{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:6px 10px;
+  padding:9px 16px;background:var(--navy-900);color:rgba(255,255,255,.85);
+  font-size:13px;line-height:1.4;text-align:center;border-bottom:1px solid rgba(255,255,255,.12)}
+.pc-demo__tag{flex:none;padding:3px 9px;border-radius:var(--r-pill);background:#fff;color:#0d1b35;
+  font-size:11.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase}
+.pc-demo-aviso{padding:12px 20px;border-top:1px solid var(--soft-blue-bd);background:var(--soft-blue);
+  color:var(--text);font-size:13.5px;line-height:1.45}
 .pc-top__in{max-width:1080px;margin:0 auto;padding:16px 16px 20px}
 /* La marca del taller tiene su propia banda, separada por una linea, como el
    encabezado de una factura. Antes el logo media 34x26 y el nombre 12,5px al 75%
@@ -3923,9 +3933,12 @@ input.input[type="date"]::-webkit-datetime-edit{display:block;padding:0}
    6px de relleno arriba y abajo: el relleno se sumaba al alto y la segunda linea
    quedaba cortada por la mitad ("Esféricas / Superi—"). El recorte por lineas
    corta donde debe y avisa con los puntos de que hay mas. */
+/* Sin relleno abajo: el recorte de overflow llega hasta el borde del relleno, y
+   en esos 6px asomaba la mitad de arriba de la tercera linea. El aire de abajo
+   lo da el margen, que no muestra texto. */
 .pc-foto__pie{
   display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;
-  padding:6px 8px; font-size:11.5px; line-height:1.35;
+  padding:6px 8px 0; margin-bottom:6px; font-size:11.5px; line-height:1.35;
   color:var(--text-2); border-top:1px solid var(--border);
 }
 @media(min-width:900px){

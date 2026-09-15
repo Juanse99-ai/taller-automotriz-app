@@ -8,6 +8,7 @@ import { Button, IconX } from '../components/ui'
 import SignaturePad from '../components/SignaturePad'
 import VisorEvidencias from '../components/VisorEvidencias'
 import { esVideoEvid } from '../utils/evidencias'
+import { esDemo, trabajosDemo, cotizacionesDemo } from '../demo/portalDemo'
 import { drawHeader, drawSectionHeader, drawDataBlock, drawFooter, tableStylesItems, PDF_LAYOUT, PDF_COLORS, SEVERITY_HEAD } from '../utils/pdfTheme'
 
 // Capitaliza el nombre del cliente que viene en MAYÚSCULAS ("TRANSPORTES
@@ -93,10 +94,15 @@ const SELECT_PORTAL = [
 // Consulta directa a Supabase via proxy (funciona desde cualquier dispositivo)
 async function buscarTrabajosPorCedula(cedula) {
   try {
-    const url = `/api/supabase?table=trabajos&cedula_cliente=eq.${encodeURIComponent(cedula)}&select=${SELECT_PORTAL}&order=fecha.desc`
-    const res = await fetch(url)
-    if (!res.ok) throw new Error('Error consultando')
-    const rows = await res.json()
+    let rows
+    // La demostracion no consulta la base: trae sus propias filas (demo/portalDemo.js).
+    if (esDemo(cedula)) rows = trabajosDemo()
+    else {
+      const url = `/api/supabase?table=trabajos&cedula_cliente=eq.${encodeURIComponent(cedula)}&select=${SELECT_PORTAL}&order=fecha.desc`
+      const res = await fetch(url)
+      if (!res.ok) throw new Error('Error consultando')
+      rows = await res.json()
+    }
     return rows.map(r => ({
       id: r.id,
       fecha: r.fecha || r.created_at,
@@ -137,11 +143,15 @@ async function buscarTrabajosPorCedula(cedula) {
 // NO se trae la firma (dataURL grande): solo el estado y la fecha de aprobación.
 async function buscarCotizacionesPorCedula(cedula) {
   try {
-    const sel = 'id,fecha,cliente,placa,marca,modelo,ano,items,subtotal,iva,total,observaciones,validez_dias,estado,aprobada_en'
-    const url = `/api/supabase?table=cotizaciones&cedula=eq.${encodeURIComponent(cedula)}&select=${sel}&order=fecha.desc`
-    const res = await fetch(url)
-    if (!res.ok) throw new Error('Error consultando cotizaciones')
-    const rows = await res.json()
+    let rows
+    if (esDemo(cedula)) rows = cotizacionesDemo()
+    else {
+      const sel = 'id,fecha,cliente,placa,marca,modelo,ano,items,subtotal,iva,total,observaciones,validez_dias,estado,aprobada_en'
+      const url = `/api/supabase?table=cotizaciones&cedula=eq.${encodeURIComponent(cedula)}&select=${sel}&order=fecha.desc`
+      const res = await fetch(url)
+      if (!res.ok) throw new Error('Error consultando cotizaciones')
+      rows = await res.json()
+    }
     return rows.map(r => ({
       id: r.id,
       fecha: r.fecha,
@@ -255,6 +265,8 @@ export default function PortalCliente() {
   // pantalla de entrada, y los dos botones de PDF viven en otras vistas: el
   // cliente apretaba y no pasaba nada.
   const [errorPdf, setErrorPdf] = useState('')
+  // En la demostracion, lo que pasaria al pagar (ahi no se cobra nada).
+  const [avisoDemo, setAvisoDemo] = useState('')
   const detalleRef = useRef(null) // detalle del vehículo (para hacer scroll al elegir uno)
 
   // Abre el visor con las evidencias de un servicio. El encabezado dice de que
@@ -287,6 +299,10 @@ export default function PortalCliente() {
 
   const pagarConWompi = async (t) => {
     if (!((t.total || 0) > 0)) { setError('Esta factura no tiene un valor a pagar.'); return }
+    if (datos?.demo) {
+      setAvisoDemo('En la demostración no se cobra nada. Un cliente real paga su factura aquí mismo, en la página segura de Wompi.')
+      return
+    }
     setPagando(t.id)
     try {
       // Última verificación antes de mandar a Wompi: entre que abrió el portal y le
@@ -355,18 +371,21 @@ export default function PortalCliente() {
 
     setCargando(true)
     setError('')
+    // La demostracion no toca el servidor: ni Cuentti, ni el registro de entradas.
+    const demo = esDemo(cedulaLimpia)
 
     // El estado de pago se contrasta contra Cuentti EN PARALELO con la consulta:
     // si el cliente pagó en caja o por transferencia, la app no se entera sola y
     // le seguiría mostrando "Pagar" sobre una factura ya cancelada. El servidor
     // devuelve cuáles quedaron saldadas (y ya las corrigió en la base) y cuánto
     // debe cada una, para no cobrar de nuevo lo que tiene abono.
+    const sinChequeo = { marcados: [], saldos: {}, abonos: {} }
     const [misTrab, misCotiz, chequeo] = await Promise.all([
       buscarTrabajosPorCedula(cedulaLimpia),
       buscarCotizacionesPorCedula(cedulaLimpia),
-      fetch(`/api/supabase?verificarPagos=${encodeURIComponent(cedulaLimpia)}`)
+      demo ? sinChequeo : fetch(`/api/supabase?verificarPagos=${encodeURIComponent(cedulaLimpia)}`)
         .then(r => r.json())
-        .catch(() => ({ marcados: [], saldos: {}, abonos: {} })), // Cuentti caído: se sigue como siempre
+        .catch(() => sinChequeo), // Cuentti caído: se sigue como siempre
     ])
 
     // La consulta salió en paralelo, así que trae el "pagado" viejo: se aplica aquí
@@ -402,14 +421,16 @@ export default function PortalCliente() {
       return
     }
 
-    setDatos({ trabajos: misTrab, inspecciones: misInsp, cotizaciones: misCotiz, cedula: cedulaLimpia })
-    anotarEntrada(cedulaLimpia)
-    // Enlaces a las facturas, en segundo plano: si Cuentti tarda o falla, la
-    // pantalla ya esta pintada y simplemente no sale el boton. Nunca bloquea.
-    fetch(`/api/supabase?facturasPortal=${encodeURIComponent(cedulaLimpia)}`)
-      .then(r => r.json())
-      .then(d => { if (d?.ok && d.urls) setFacturas(d.urls) })
-      .catch(() => { /* sin facturas: el resto del portal funciona igual */ })
+    setDatos({ trabajos: misTrab, inspecciones: misInsp, cotizaciones: misCotiz, cedula: cedulaLimpia, demo })
+    if (!demo) {
+      anotarEntrada(cedulaLimpia)
+      // Enlaces a las facturas, en segundo plano: si Cuentti tarda o falla, la
+      // pantalla ya esta pintada y simplemente no sale el boton. Nunca bloquea.
+      fetch(`/api/supabase?facturasPortal=${encodeURIComponent(cedulaLimpia)}`)
+        .then(r => r.json())
+        .then(d => { if (d?.ok && d.urls) setFacturas(d.urls) })
+        .catch(() => { /* sin facturas: el resto del portal funciona igual */ })
+    }
     setAutenticado(true)
     // Un pago ya confirmado (trabajo.pagado) deja de estar "por confirmar".
     const yaPagados = misTrab.filter(t => t.pagado).map(t => t.id)
@@ -423,12 +444,17 @@ export default function PortalCliente() {
     setErrorCotiz('')
     try {
       const ahora = new Date().toISOString()
-      const res = await fetch(`/api/supabase?table=cotizaciones&id=eq.${encodeURIComponent(cotiz.id)}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ estado: ESTADOS_COTIZACION.APROBADA, firma_aprobacion: firmaDataUrl, aprobada_en: ahora }),
-      })
-      if (!res.ok) throw new Error(`No se pudo guardar (${res.status})`)
+      if (datos?.demo) {
+        // La demostracion no guarda la firma: solo la pausa de "Guardando…".
+        await new Promise(r => setTimeout(r, 600))
+      } else {
+        const res = await fetch(`/api/supabase?table=cotizaciones&id=eq.${encodeURIComponent(cotiz.id)}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ estado: ESTADOS_COTIZACION.APROBADA, firma_aprobacion: firmaDataUrl, aprobada_en: ahora }),
+        })
+        if (!res.ok) throw new Error(`No se pudo guardar (${res.status})`)
+      }
       setDatos(d => ({
         ...d,
         cotizaciones: (d.cotizaciones || []).map(c =>
@@ -864,7 +890,11 @@ export default function PortalCliente() {
   const cabCliente = tituloCliente(datos.trabajos[0]?.cliente || cotizaciones[0]?.cliente)
   // 57 = Colombia. wa.me quiere el numero sin espacios ni signos.
   const telPlano = TALLER.celular.replace(/\D/g, '')
-  const waHref = `https://wa.me/57${telPlano}?text=${encodeURIComponent(`Hola, soy ${cabCliente}. Escribo por mi vehiculo.`)}`
+  // En la demostracion quien escribe no es Laura Gomez: es alguien que la vio.
+  const waTexto = datos.demo
+    ? 'Hola, vi la demostración del portal y quiero más información.'
+    : `Hola, soy ${cabCliente}. Escribo por mi vehiculo.`
+  const waHref = `https://wa.me/57${telPlano}?text=${encodeURIComponent(waTexto)}`
   const cabVeh = trabajoActivo
     ? (esSinVehiculo(trabajoActivo) ? 'Servicio en el taller'
        : ([trabajoActivo.marca, trabajoActivo.modelo].filter(Boolean).join(' ') || 'Su vehículo'))
@@ -875,6 +905,12 @@ export default function PortalCliente() {
        la pagina terminaba a media altura y el pie quedaba flotando con medio
        monitor gris debajo. Ahora el contenido crece y el pie se apoya abajo. */
     <div className="pc-shell">
+    {datos.demo && (
+      <div className="pc-demo" role="note">
+        <span className="pc-demo__tag">Demostración</span>
+        <span>Datos de ejemplo: nada de lo que hagas aquí se guarda.</span>
+      </div>
+    )}
     <header className="pc-top">
       <div className="pc-top__in">
         <div className="pc-top__r">
@@ -1008,6 +1044,7 @@ export default function PortalCliente() {
               </div>
             )})}
           </div>
+          {avisoDemo && <div className="pc-demo-aviso" role="status">{avisoDemo}</div>}
         </div>
       )}
 

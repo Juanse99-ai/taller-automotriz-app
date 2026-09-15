@@ -46,8 +46,11 @@ async function servirPortal(req, res) {
   catch { res.status(302).setHeader('Location', '/index.html'); res.end(); return }
 
   const ced = (req.query.c || '').toString().replace(/[.\-\s]/g, '')
+  // El link de la demostracion (src/demo/portalDemo.js) se comparte por WhatsApp
+  // con gente que aun no es cliente: su vista previa dice que es una demo.
+  const demo = ced.toLowerCase() === 'demo'
   let nombre = ''
-  if (ced) {
+  if (ced && !demo) {
     try {
       const r = await fetch(`${SUPABASE_URL}/rest/v1/clientes?identificacion=eq.${encodeURIComponent(ced)}&select=nombre&limit=1`,
         { headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` } })
@@ -55,10 +58,13 @@ async function servirPortal(req, res) {
     } catch { /* sin nombre → título genérico */ }
   }
 
-  const titulo = nombre ? `Portal del Vehículo — ${nombre}` : 'Portal del Vehículo — Multidiagnósticos AS'
-  const desc = nombre
-    ? `${nombre}, consulta aquí el estado de tu vehículo en Multidiagnósticos AS.`
-    : 'Consulta el estado de tu vehículo en Multidiagnósticos AS.'
+  const titulo = demo ? 'Portal del Vehículo — Demostración'
+    : nombre ? `Portal del Vehículo — ${nombre}` : 'Portal del Vehículo — Multidiagnósticos AS'
+  const desc = demo
+    ? 'Así sigue un cliente de Multidiagnósticos AS su vehículo: el avance, las fotos y videos, las cotizaciones y las facturas.'
+    : nombre
+      ? `${nombre}, consulta aquí el estado de tu vehículo en Multidiagnósticos AS.`
+      : 'Consulta el estado de tu vehículo en Multidiagnósticos AS.'
   const img = `${base}/logo.png`
   const meta = [
     `<meta property="og:title" content="${escHtml(titulo)}">`,
