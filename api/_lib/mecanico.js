@@ -239,9 +239,10 @@ export const cuenttiPermitidoMecanico = (method, pathSolo) =>
   method === 'GET' && CUENTTI_INVENTARIO.some(p => String(pathSolo || '').startsWith(p))
 
 // El listado "Movil" trae el costo de compra de cada producto. El mecanico ve el
-// precio de venta de lo que carga, no el costo ni el margen. Mismo criterio que
-// extraerCostoBase en src/services/cuentti.js: cualquier campo de costo/compra,
-// menos los ids (id_centro_costo y parecidos).
+// precio de venta de lo que carga, no el costo ni el margen. Para TAPAR se usa un
+// criterio mas ancho que el que lee el costo (src/utils/costos.js): cualquier
+// campo de costo/compra, menos los ids (id_centro_costo y parecidos). Aqui
+// sobrar no hace dano.
 const esCampoCosto = (k) => /costo|compra/i.test(k) && !/centro|id_|_id/i.test(k)
 export function quitarCostosCuentti(dato, profundidad = 0) {
   if (profundidad > 4 || dato == null || typeof dato !== 'object') return dato

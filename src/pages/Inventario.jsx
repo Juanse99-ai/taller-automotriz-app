@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { fmt, fmtCompact } from '../utils/helpers'
 import { TALLER } from '../utils/constants'
+import { margenSobreVenta, MARGEN_MINIMO_CREIBLE } from '../utils/costos'
 import { useInventario } from '../hooks/useInventario'
 import { Button, Badge } from '../components/ui'
 
@@ -323,11 +324,12 @@ export default function Inventario({ notify }) {
                   const baseCosto = parseFloat(p.costoBase) || 0
                   const costoIva = baseCosto > 0 ? baseCosto * (1 + (p.iva || 0) / 100) : 0
                   // Utilidad = MARGEN sobre el precio de venta (como Cuentti): (precio − costo) / precio, sin IVA.
-                  const util = (baseCosto > 0 && p.precioBase > 0) ? ((p.precioBase - baseCosto) / p.precioBase) * 100 : null
+                  // Es la misma cuenta del MCP de Cuentti (utils/costos.js).
+                  const util = margenSobreVenta(p.precioBase, baseCosto)
                   // Un margen bajo -100% no existe: significa que el costo o el precio
                   // estan mal en Cuentti (ej. "Bolsa": costo $63.865 y precio $20 daba
                   // -383.093%). Mostrar ese numero lo hace pasar por dato bueno.
-                  const utilRota = util != null && util < -100
+                  const utilRota = util != null && util < MARGEN_MINIMO_CREIBLE
                   return (
                     <tr key={p.id || p.codigo}>
                       <td className="c-mono td-ref" data-label="Referencia" style={{ color: 'var(--text-3)', fontSize: 11.5 }}>{p.codigo}</td>

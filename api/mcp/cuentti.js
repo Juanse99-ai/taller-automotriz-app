@@ -12,6 +12,7 @@
 import { handleMcp } from '../_mcp/shared.js'
 import { enviarGasto, desglosarIva, inferirTipoPersona, TIPO_PERSONA_JURIDICA } from '../_lib/gasto.js'
 import { ESTADOS_COTIZACION } from '../../src/utils/estados.js'
+import { costoDeProducto, margenSobreVenta, MARGEN_MINIMO_CREIBLE } from '../../src/utils/costos.js'
 import { SIN_BORRADAS } from '../_mcp/trabajos.js'
 
 const CONFIG = {
@@ -242,6 +243,49 @@ function fmtCOP(n) {
 function fmtFecha(iso) {
   if (!iso) return '—'
   try { return new Date(iso).toLocaleString('es-CO') } catch { return String(iso) }
+}
+
+// ---------- Costo y margen del inventario ----------
+// La cuenta vive en src/utils/costos.js, la misma de la columna Utilidad del
+// inventario de la app; aqui solo se decide como se lee. Precio y costo de
+// Cuentti vienen SIN IVA; el costo con IVA usa el IVA de venta, como la app.
+function costosDeProducto(p) {
+  const iva = parseFloat(p.valor_impuesto || 0)
+  const precio = parseFloat(p.precio_venta || 0)
+  const costo = costoDeProducto(p)
+  return {
+    iva, precio, costo,
+    conIva: (v) => v * (1 + iva / 100),
+    esServicio: Number(p.es_servicio) === 1,
+    margen: margenSobreVenta(precio, costo),
+  }
+}
+const pct = (m) => `${(Math.round(m) || 0).toLocaleString('es-CO')}%`
+
+// Celda corta para las tablas. Un hueco dice por que esta vacio: "sin costo" es
+// un dato que falta cargar en Cuentti; un servicio no tiene costo que cargar.
+function celdaMargen(c) {
+  if (!(c.costo > 0)) return c.esServicio ? 'servicio' : 'sin costo'
+  if (c.margen == null) return 'sin precio'
+  if (c.margen < MARGEN_MINIMO_CREIBLE) return 'revisar'
+  return c.margen < 0 ? `⚠️ ${pct(c.margen)}` : pct(c.margen)
+}
+
+// La misma lectura, con palabras, para la ficha de un producto.
+function detalleMargen(c) {
+  if (!(c.costo > 0)) {
+    return c.esServicio
+      ? 'no aplica: es un servicio sin costo'
+      : 'no se puede calcular: el producto no tiene costo registrado en Cuentti'
+  }
+  if (c.margen == null) return 'no se puede calcular: el producto no tiene precio de venta'
+  if (c.margen < MARGEN_MINIMO_CREIBLE) {
+    return `revisar: con costo ${fmtCOP(c.costo)} y precio ${fmtCOP(c.precio)} sin IVA sale ${pct(c.margen)}, así que uno de los dos está mal en Cuentti`
+  }
+  const utilidad = c.precio - c.costo
+  return c.margen < 0
+    ? `⚠️ ${pct(c.margen)}: se vende por debajo del costo (pierde ${fmtCOP(-utilidad)} por unidad, sin IVA)`
+    : `${pct(c.margen)} (utilidad de ${fmtCOP(utilidad)} por unidad, sin IVA)`
 }
 
 // ---------- Acceso a Supabase del taller (lectura de OT/cotizacion + writeback) ----------
@@ -750,7 +794,7 @@ const tools = [
   },
   {
     name: 'listar_inventario_cuentti',
-    description: 'Lista o busca productos del inventario de Cuentti. Con filtro busca el texto en nombre, SKU y código de barras de todo el inventario y devuelve solo las coincidencias; sin filtro devuelve una página (Cuentti pagina de a 1000) e indica si quedan más. Cada fila trae SKU, nombre, precio con IVA, existencias y porcentaje de IVA. Para un SKU o código de barras exacto usa buscar_producto_sku_cuentti.',
+    description: 'Lista o busca productos del inventario de Cuentti. Con filtro busca el texto en nombre, SKU y código de barras de todo el inventario y devuelve solo las coincidencias; sin filtro devuelve una página (Cuentti pagina de a 1000) e indica si quedan más. Cada fila trae SKU, nombre, precio y costo con IVA, margen, existencias y porcentaje de IVA. El margen es sobre el precio de venta y sin IVA, (precio − costo) / precio, el mismo de la columna Utilidad del inventario de la app; sin costo registrado en Cuentti no se calcula, y "revisar" marca un costo o un precio que no cuadran. Para un SKU o código de barras exacto usa buscar_producto_sku_cuentti.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -768,13 +812,21 @@ const tools = [
         const data = await cuenttiRequest(path)
         return Array.isArray(data) ? data : (data?.data || [])
       }
+      // Precio y costo van CON IVA para poder compararlos en la misma fila, como
+      // en la app; el margen es el mismo con IVA o sin el, porque los dos llevan
+      // el mismo porcentaje.
       const fila = (p) => {
-        const precioSinIva = parseFloat(p.precio_venta || 0)
-        const iva = parseFloat(p.valor_impuesto || 0)
-        const precioFinal = precioSinIva * (1 + iva / 100)
-        return `| ${p.sku || '—'} | ${(p.nombre || '').slice(0, 60)} | ${fmtCOP(precioFinal)} | ${parseFloat(p.existencias || 0)} | ${iva}% |`
+        const c = costosDeProducto(p)
+        const costo = c.costo > 0 ? fmtCOP(c.conIva(c.costo)) : '—'
+        return `| ${p.sku || '—'} | ${(p.nombre || '').slice(0, 60)} | ${fmtCOP(c.conIva(c.precio))} | ${costo} | ${celdaMargen(c)} | ${parseFloat(p.existencias || 0)} | ${c.iva}% |`
       }
-      const CABECERA = [`| SKU | Nombre | Precio | Stock | IVA |`, `|---|---|---|---|---|`]
+      const CABECERA = [`| SKU | Nombre | Precio c/IVA | Costo c/IVA | Margen | Stock | IVA |`, `|---|---|---|---|---|---|---|`]
+      // Cuantas filas mostradas no tienen margen porque falta el costo en Cuentti:
+      // sin esto, una tabla con muchos huecos parece un inventario completo.
+      const avisoSinCosto = (filas) => {
+        const n = filas.filter(p => { const c = costosDeProducto(p); return !(c.costo > 0) && !c.esServicio }).length
+        return n ? `_${n} de ${filas.length} sin costo registrado en Cuentti: su margen no se puede calcular._` : ''
+      }
       const filtroLow = (filtro || '').trim().toLowerCase()
 
       // ---- CON filtro: recorre TODO el inventario ----
@@ -801,6 +853,7 @@ const tools = [
           `## Inventario Cuentti — busqueda "${filtro}"`,
           `**${encontrados.length}** coincidencia(s) en ${escaneados} productos (${paginas} pagina(s) revisadas) · Mostrando: ${slice.length}`,
           encontrados.length > slice.length ? `_Hay ${encontrados.length - slice.length} mas: sube \`limit\` para verlas._` : '',
+          avisoSinCosto(slice),
           ``,
           ...CABECERA,
           ...slice.map(fila),
@@ -820,6 +873,7 @@ const tools = [
         hayMas
           ? `⚠️ **Hay mas paginas.** Esta vino llena (${PAGE_SIZE}): pide \`pagina: ${pagina + 1}\`. Para BUSCAR algo puntual usa \`filtro\`, que revisa el inventario completo de una.`
           : `✅ Ultima pagina (vino con menos de ${PAGE_SIZE}).`,
+        ...[avisoSinCosto(slice)].filter(Boolean),
         ``,
         ...CABECERA,
         ...slice.map(fila),
@@ -828,7 +882,7 @@ const tools = [
   },
   {
     name: 'buscar_producto_sku_cuentti',
-    description: 'Busca un producto en Cuentti por SKU o código de barras exacto. Devuelve id_producto, SKU, código de barras, nombre, precio sin IVA, porcentaje de IVA, precio final y existencias. Para buscar por nombre o por parte del código usa listar_inventario_cuentti con filtro.',
+    description: 'Busca un producto en Cuentti por SKU o código de barras exacto. Devuelve id_producto, SKU, código de barras, nombre, precio y costo con y sin IVA, porcentaje de IVA, margen y existencias. El margen es sobre el precio de venta y sin IVA, (precio − costo) / precio, con la utilidad en pesos por unidad; sin costo registrado en Cuentti no se calcula. Para buscar por nombre o por parte del código usa listar_inventario_cuentti con filtro.',
     inputSchema: {
       type: 'object',
       properties: { sku: { type: 'string', description: 'SKU o codigo de barras' } },
@@ -842,9 +896,7 @@ const tools = [
       if (!data || data.message) return `No se encontro producto con SKU **${s}**.`
       const p = Array.isArray(data) ? data[0] : data
       if (!p || !p.id_producto) return `No se encontro producto con SKU **${s}**.`
-      const precioSinIva = parseFloat(p.precio_venta || 0)
-      const iva = parseFloat(p.valor_impuesto || 0)
-      const precioFinal = precioSinIva * (1 + iva / 100)
+      const c = costosDeProducto(p)
       return [
         `## Producto encontrado`,
         ``,
@@ -854,9 +906,12 @@ const tools = [
         `| **SKU** | ${p.sku || '—'} |`,
         `| **Codigo barras** | ${p.codigo_barras || '—'} |`,
         `| **Nombre** | ${p.nombre || '—'} |`,
-        `| **Precio sin IVA** | ${fmtCOP(precioSinIva)} |`,
-        `| **IVA** | ${iva}% |`,
-        `| **Precio final** | ${fmtCOP(precioFinal)} |`,
+        `| **Precio sin IVA** | ${fmtCOP(c.precio)} |`,
+        `| **IVA** | ${c.iva}% |`,
+        `| **Precio final** | ${fmtCOP(c.conIva(c.precio))} |`,
+        `| **Costo sin IVA** | ${c.costo > 0 ? fmtCOP(c.costo) : 'sin costo registrado'} |`,
+        `| **Costo con IVA** | ${c.costo > 0 ? fmtCOP(c.conIva(c.costo)) : '—'} |`,
+        `| **Margen** | ${detalleMargen(c)} |`,
         `| **Stock** | ${parseFloat(p.existencias || 0)} |`,
       ].join('\n')
     },
