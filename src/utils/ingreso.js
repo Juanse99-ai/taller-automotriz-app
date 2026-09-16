@@ -28,7 +28,12 @@ export const labelInventario = (key) => BY_KEY[key] || key
 
 // Nivel de combustible en octavos (0..8), como un tablero real.
 export const NIVEL_COMBUSTIBLE = ['Vacío', '1/8', '1/4', '3/8', '1/2', '5/8', '3/4', '7/8', 'Lleno']
-export const etiquetaCombustible = (n) => (n == null ? '—' : NIVEL_COMBUSTIBLE[Math.max(0, Math.min(8, n))])
+// Redondea a proposito: un valor a medias (0,5 de una version vieja del
+// formulario) devolvia undefined y en el PDF de la OT salia "Combustible:
+// undefined" delante del cliente.
+export const etiquetaCombustible = (n) => (n == null || Number.isNaN(Number(n))
+  ? '—'
+  : NIVEL_COMBUSTIBLE[Math.round(Math.max(0, Math.min(8, Number(n))))])
 
 export const ingresoVacio = () => ({ inventario: [], combustible: null, estado: '' })
 

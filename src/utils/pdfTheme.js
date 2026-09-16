@@ -387,7 +387,31 @@ export function drawSignatures(doc, opts) {
   doc.setFont(undefined, 'normal')
 }
 
+// ----- ESPACIO EN LA HOJA --------------------------------------------
+// ¿Cabe un bloque de `alto` mm en lo que queda de esta hoja? Si no cabe, abre
+// la siguiente y devuelve el y de arriba. Sin esto la caja del TOTAL de una OT
+// larga se dibujaba encima del borde de abajo y salía cortada (OT-0227, 25
+// líneas): jsPDF no corta, dibuja fuera de la hoja.
+export function espacioParaBloque(doc, y, alto, { margenInferior = 26 } = {}) {
+  if (y + alto <= PDF_LAYOUT.PAGE_H - margenInferior) return y
+  doc.addPage()
+  return PDF_LAYOUT.MARGIN + 6
+}
+
 // ----- FOOTER ---------------------------------------------------------
+// El pie en TODAS las hojas, con su numeración real. Se llama al final, cuando
+// ya se sabe cuántas hay: antes se dibujaba solo en la última y decía "Página 1
+// de 1" aunque el documento tuviera dos.
+export function drawFooterTodas(doc, { leftText = '' } = {}) {
+  const total = doc.getNumberOfPages()
+  const actual = doc.getCurrentPageInfo ? doc.getCurrentPageInfo().pageNumber : total
+  for (let p = 1; p <= total; p++) {
+    doc.setPage(p)
+    drawFooter(doc, { page: p, total, leftText })
+  }
+  doc.setPage(actual)
+}
+
 export function drawFooter(doc, { page = 1, total = 1, leftText = '' } = {}) {
   const { SLATE_300, SLATE_400 } = PDF_COLORS
   const { MARGIN, CONTENT_W, PAGE_H } = PDF_LAYOUT

@@ -2,7 +2,7 @@ import { useState, useMemo, useCallback, useEffect, useRef } from 'react'
 import { cargarPdf } from '../utils/pdfLazy'
 import { fmt, fmtDate, uid, hoyISO, normalizarDoc, normalizarNombre, fmtTelefono, cantidadItem, cantidadEscrita, fmtCant } from '../utils/helpers'
 import { TECNICOS, IVA_DEFAULT, TALLER, ESTADOS_COTIZACION as ESTADO_COT } from '../utils/constants'
-import { loadLogo as loadPdfLogo, drawHeader, drawSectionHeader, drawDataBlock, drawTotalsBox, drawSignatures, drawFooter, tableStylesItems, PDF_LAYOUT, PDF_COLORS } from '../utils/pdfTheme'
+import { loadLogo as loadPdfLogo, drawHeader, drawSectionHeader, drawDataBlock, drawTotalsBox, drawSignatures, drawFooterTodas, espacioParaBloque, tableStylesItems, PDF_LAYOUT, PDF_COLORS } from '../utils/pdfTheme'
 import { MARCAS, getModelos, CILINDRAJES } from '../utils/vehiculos'
 import MoneyInput from '../components/MoneyInput'
 import ConfirmDialog from '../components/ConfirmDialog'
@@ -145,7 +145,8 @@ export default function Cotizaciones({ notify, trabajos = [], onCrearTrabajo, co
         ...tableStylesItems,
         styles: { ...tableStylesItems.styles, cellPadding: { top: 3, right: 3, bottom: hasSkus ? 7 : 3, left: 3 } },
         columnStyles: {
-          0: { halign: 'center', cellWidth: 8, textColor: SLATE_400 },
+          // 12mm: con 8 no cabian dos digitos y el "20" salia partido en dos renglones.
+          0: { halign: 'center', cellWidth: 12, textColor: SLATE_400 },
           1: { cellWidth: 'auto', fontStyle: 'bold' },
           2: { halign: 'center', cellWidth: 16 },
           3: { halign: 'right', cellWidth: 24 },
@@ -175,10 +176,15 @@ export default function Cotizaciones({ notify, trabajos = [], onCrearTrabajo, co
 
       // OBSERVACIONES (izquierda) — misma cabecera de sección liviana que el resto
       const obsText = c.observaciones || 'Precios sujetos a disponibilidad de inventario al momento de la aprobación. Tiempo estimado de entrega: 1 día hábil. Incluye garantía de 90 días en repuestos originales y mano de obra. Esta cotización no genera obligación de compra ni reserva de inventario.'
-      drawSectionHeader(doc, 'Observaciones', cursorY, 104)
-
       const obsLines = doc.splitTextToSize(obsText, 96)
       const obsHeight = Math.max(40, obsLines.length * 3.8 + 6)
+      // El bloque entero (observaciones a la izquierda, totales y aprobación a la
+      // derecha) se mide antes: si no cabe en lo que queda de hoja, pasa a la
+      // siguiente. Si no, el total se dibujaba encima del borde y salía cortado.
+      const filasTotales = 1 + ((c.iva || 0) > 0 ? 1 : 0)
+      cursorY = espacioParaBloque(doc, cursorY, Math.max(obsHeight + 6, 4 + filasTotales * 6 + 12 + 19))
+
+      drawSectionHeader(doc, 'Observaciones', cursorY, 104)
       doc.setDrawColor(...SLATE_300)
       doc.setLineWidth(0.2)
       doc.rect(MARGIN, cursorY + 5.4, 104, obsHeight)
@@ -223,7 +229,7 @@ export default function Cotizaciones({ notify, trabajos = [], onCrearTrabajo, co
     }
 
     // ============= FIRMAS =============
-    const firmaY = Math.max(cursorY + 16, 250)
+    const firmaY = espacioParaBloque(doc, Math.max(cursorY + 16, 250), 14, { margenInferior: 16 })
     drawSignatures(doc, {
       y: firmaY,
       blocks: [
@@ -232,7 +238,7 @@ export default function Cotizaciones({ notify, trabajos = [], onCrearTrabajo, co
       ],
     })
 
-    drawFooter(doc, { page: 1, total: 1, leftText: `${TALLER.razonSocial || TALLER.nombre} · NIT ${TALLER.nit}` })
+    drawFooterTodas(doc, { leftText: `${TALLER.razonSocial || TALLER.nombre} · NIT ${TALLER.nit}` })
     doc.save(`${c.id || 'Cotizacion'}.pdf`)
   }
 

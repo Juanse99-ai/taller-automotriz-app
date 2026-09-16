@@ -23,7 +23,7 @@ function bloqueFecha(f) {
 import { cargarPdf } from '../utils/pdfLazy'
 import { fmt, fmtDate, fmtTelefono, cantidadItem, fmtCant } from '../utils/helpers'
 import { TECNICOS, ESTADOS, DIAS_ESTANCADO, TALLER, SIN_FACTURA, rotuloEstado } from '../utils/constants'
-import { loadLogo as loadPdfLogo, drawHeader, drawSectionHeader, drawDataBlock, drawTotalsBox, drawSignatures, drawFooter, tableStylesItems, PDF_LAYOUT, PDF_COLORS } from '../utils/pdfTheme'
+import { loadLogo as loadPdfLogo, drawHeader, drawSectionHeader, drawDataBlock, drawTotalsBox, drawSignatures, drawFooterTodas, espacioParaBloque, tableStylesItems, PDF_LAYOUT, PDF_COLORS } from '../utils/pdfTheme'
 import FichaTecnico from '../components/FichaTecnico'
 import { labelInventario, etiquetaCombustible, ingresoTieneAlgo } from '../utils/ingreso'
 import { exportarFichasTecnico } from '../utils/fichaPdf'
@@ -560,7 +560,9 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
         ...tableStylesItems,
         styles: { ...tableStylesItems.styles, cellPadding: { top: 3, right: 3, bottom: hasSkus ? 7 : 3, left: 3 } },
         columnStyles: {
-          0: { halign: 'center', cellWidth: 8, textColor: SLATE_400 },
+          // 12mm: con 8 y 3 de relleno a cada lado quedaban 2mm utiles y el "20"
+          // de una OT de 25 lineas se partia en dos renglones (2 arriba, 0 abajo).
+          0: { halign: 'center', cellWidth: 12, textColor: SLATE_400 },
           1: { cellWidth: 'auto', fontStyle: 'bold' },
           2: { halign: 'center', cellWidth: 16 },
           3: { halign: 'right', cellWidth: 24 },
@@ -607,10 +609,23 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
       repuestos = Math.round(repuestos)
 
       const obsIngresoReal = t.observacionesIngreso || t.estadoIngreso || ''
-      let leftBlockH = 0
-      if (obsIngresoReal && obsIngresoReal.trim().length > 0) {
-        const lines = doc.splitTextToSize(obsIngresoReal, 100)
-        leftBlockH = Math.max(40, lines.length * 4 + 10)
+      const obsIngresoLines = obsIngresoReal.trim() ? doc.splitTextToSize(obsIngresoReal, 100) : null
+      const leftBlockH = obsIngresoLines ? Math.max(40, obsIngresoLines.length * 4 + 10) : 0
+
+      const rows = [
+        { lbl: 'Mano de obra', val: fmt(manoObra) },
+        { lbl: 'Repuestos', val: fmt(repuestos) },
+        { lbl: 'Subtotal', val: fmt(subtotal) },
+      ]
+      if (iva > 0) rows.push({ lbl: 'IVA (19%)', val: fmt(iva) })
+
+      // Primero se mide, después se dibuja: si el bloque no cabe en lo que queda
+      // de hoja, se pasa entero a la siguiente. Antes el TOTAL A PAGAR de una OT
+      // larga salía cortado por el borde de abajo.
+      const altoTotales = 4 + rows.length * 6 + 12
+      cursorY = espacioParaBloque(doc, cursorY, Math.max(leftBlockH, altoTotales))
+
+      if (obsIngresoLines) {
         doc.setDrawColor(...SLATE_300)
         doc.rect(MARGIN, cursorY, 104, leftBlockH)
         doc.setFontSize(7)
@@ -620,16 +635,10 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
         doc.setFontSize(8)
         doc.setTextColor(...NAVY)
         doc.setFont(undefined, 'normal')
-        doc.text(lines, MARGIN + 3, cursorY + 9)
+        doc.text(obsIngresoLines, MARGIN + 3, cursorY + 9)
       }
 
       // Caja de totales (usa helper unificado)
-      const rows = [
-        { lbl: 'Mano de obra', val: fmt(manoObra) },
-        { lbl: 'Repuestos', val: fmt(repuestos) },
-        { lbl: 'Subtotal', val: fmt(subtotal) },
-      ]
-      if (iva > 0) rows.push({ lbl: 'IVA (19%)', val: fmt(iva) })
       const boxEndY = drawTotalsBox(doc, {
         y: cursorY, x: 122, w: 74,
         rows,
@@ -641,7 +650,9 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
     }
 
     // ============= FIRMAS (altura fija para no flotar) =============
-    const firmaY = Math.max(cursorY + 16, 250)
+    // 250 es su sitio de siempre; si el contenido llegó más abajo, se corre, y si
+    // ya no cabe en la hoja se van a la siguiente con las líneas completas.
+    const firmaY = espacioParaBloque(doc, Math.max(cursorY + 16, 250), 14, { margenInferior: 16 })
     drawSignatures(doc, {
       y: firmaY,
       blocks: [
@@ -660,7 +671,7 @@ export default function Trabajos({ hook, vehiculosHook, clientesHook, notify, on
       } catch { /* firma inválida: se ignora */ }
     }
 
-    drawFooter(doc, { page: 1, total: 1, leftText: `${TALLER.razonSocial || TALLER.nombre} · NIT ${TALLER.nit}` })
+    drawFooterTodas(doc, { leftText: `${TALLER.razonSocial || TALLER.nombre} · NIT ${TALLER.nit}` })
     doc.save(`${t.otCodigo || 'OT'}.pdf`)
   }
 
