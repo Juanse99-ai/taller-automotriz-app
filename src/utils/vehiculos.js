@@ -22,7 +22,7 @@ export const MARCAS_MODELOS = {
   'Jeep': ['Renegade', 'Compass', 'Cherokee', 'Grand Cherokee', 'Wrangler', 'Gladiator'],
   'Dodge': ['Journey', 'Durango', 'Charger', 'Challenger', 'Ram 1500', 'Ram 2500'],
   'Chery': ['QQ', 'Tiggo 2', 'Tiggo 3', 'Tiggo 4', 'Tiggo 5X', 'Tiggo 7', 'Tiggo 8', 'Arrizo 5'],
-  'JAC': ['S1', 'S2', 'S3', 'S4', 'S7', 'J4', 'Refine', 'X200', 'Sunray'],
+  'JAC': ['S1', 'S2', 'S3', 'S4', 'S7', 'T6', 'T8', 'J4', 'Refine', 'X200', 'Sunray'],
   'Great Wall': ['Haval H2', 'Haval H6', 'Haval Jolion', 'Haval Dargo', 'Wingle 5', 'Wingle 7', 'Poer'],
   'BAIC': ['X25', 'X35', 'X55', 'X65', 'D20', 'Senova'],
   'Foton': ['Tunland', 'Toano', 'Gratour', 'Aumark'],

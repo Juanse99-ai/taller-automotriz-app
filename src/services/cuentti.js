@@ -43,6 +43,12 @@ const CONFIG = {
       grabarGasto: '/jServerj4ErpPro/com/j4ErpPro/server/transacion/grabardocumentosTransacion_desconectado',
       emitirFE: '/jServerj4ErpPro/com/j4ErpPro/server/transacion/generarFacturaElectronica/{id_transacion}/true/true/',
       agregarPago: '/jServerj4ErpPro/com/j4ErpPro/server/transacion/agregarPagoTransacion',
+      // Cuentas por pagar de un proveedor y su abono. Son los dos endpoints que
+      // usa la pantalla "Pago de múltiples documentos" de Cuentti (leídos de su
+      // propio código: compilado/app19.js y el modelo de multiples_pagos).
+      // tipoDocumento 7 = compras/gastos; 1 = ventas.
+      porPagarProveedor: '/jServerj4ErpPro/com/j4ErpPro/server/transacion/consultarCuentasPorPagarPendientesCliente2/{tipo}/{id_cliente}',
+      pagarVarias: '/jServerj4ErpPro/com/j4ErpPro/server/transacion/agregarPagoVariasTransaciones',
       anular: '/jServerj4ErpPro/com/j4ErpPro/server/transacion/anularTransacion',
       urlDocumento: '/jServerj4ErpPro/com/j4ErpPro/server/transacion/buscarQrId_transacion/{id_transacion}',
     },
@@ -905,6 +911,92 @@ export async function agregarPagoTransacion(pago) {
     throw e
   }
   return resp
+}
+
+// ---------- CUENTAS POR PAGAR (compras y gastos de un proveedor) ----------
+//
+// Cuentti crea solo algunas compras cada mes (el arriendo del local, sin ir más
+// lejos) y quedan "Pendiente x Pagar" hasta que alguien registre el pago ALLÁ.
+// Con esto la app puede pagar esa compra al confirmar el gasto, en vez de crear
+// un egreso nuevo que la duplicaría.
+//
+// tipoDocumento 7 = compras y gastos. Cada fila trae total_deuda y total_abono:
+// lo que falta es la resta (la misma regla del estado de pago de una factura).
+const DOC_COMPRA = 7
+
+/** Compras y gastos de un proveedor con saldo, más viejo primero. */
+export async function comprasPendientesProveedor(idCliente) {
+  const id = parseInt(idCliente, 10)
+  if (!(id > 0)) return []
+  const path = CONFIG.paths.facturas.porPagarProveedor.replace('{tipo}', DOC_COMPRA).replace('{id_cliente}', id)
+  const data = await cuenttiRequest(path)
+  const err = errorDeCuentti(data)
+  if (err) throw new Error(err)
+  const filas = Array.isArray(data) ? data : (data?.data || [])
+  return filas
+    .filter(f => f && f.id_transacion && !f.compraRemision)
+    .map(f => {
+      const deuda = parseFloat(f.total_deuda) || 0
+      const abonado = parseFloat(f.total_abono) || 0
+      return {
+        id: f.id_transacion,
+        numero: f.n_transacion ?? f.nFactura ?? f.id_transacion,
+        factura: f.nFactura || '',
+        fecha: f.fecha_registro || null,
+        deuda,
+        abonado,
+        saldo: Math.round(deuda - abonado),
+      }
+    })
+    .filter(f => f.saldo > 0)
+    .sort((a, b) => new Date(a.fecha || 0) - new Date(b.fecha || 0))
+}
+
+/**
+ * Abona una o varias compras de un proveedor (el "recibo de egreso" de Cuentti).
+ * Devuelve { ok, saldoDespues } tras volver a preguntarle a Cuentti: su API
+ * responde los errores con HTTP 200, así que el único dato que vale es que la
+ * deuda haya bajado.
+ */
+export async function pagarComprasCuentti({ idCliente, documentos, idMedioPago = 1, idBanco = 1, nota = '' }) {
+  const id = parseInt(idCliente, 10)
+  const lista = (documentos || []).filter(d => d?.id && parseFloat(d.valor) > 0)
+  if (!(id > 0)) throw new Error('Falta el proveedor en Cuentti')
+  if (!lista.length) throw new Error('No hay ninguna compra que abonar')
+  const total = lista.reduce((s, d) => s + Math.round(parseFloat(d.valor) || 0), 0)
+  const body = {
+    id_cliente: id,
+    valor: total,
+    fecha_registro: new Date().toISOString(),
+    id_empleado: parseInt(CONFIG.employeeId),
+    nota,
+    id_sucursal: parseInt(CONFIG.branchId),
+    id_banco: idBanco,
+    id_medio_pago: idMedioPago,
+    boucher: '',
+    digitos: '',
+    // 0 = sale plata (pago a un proveedor). 1 sería un recibo de caja de venta.
+    es_ingreso: 0,
+    objTransacionComprobante_caja_varios_documentos: lista.map(d => ({
+      tipoDocumento: DOC_COMPRA,
+      id_transacion: d.id,
+      valor: Math.round(parseFloat(d.valor) || 0),
+      objDetalle_retenciones: [],
+    })),
+  }
+  const resp = await cuenttiRequest(CONFIG.paths.facturas.pagarVarias, 'POST', body)
+  const err = errorDeCuentti(resp)
+  if (err) throw new Error(`Cuentti no registró el pago: ${err}`)
+  // Comprobación: la compra tiene que quedar con menos saldo del que tenía.
+  let saldoDespues = null
+  try {
+    const despues = await comprasPendientesProveedor(id)
+    saldoDespues = lista.reduce((s, d) => {
+      const f = despues.find(x => String(x.id) === String(d.id))
+      return s + (f ? f.saldo : 0)
+    }, 0)
+  } catch { /* si la relectura falla, se devuelve sin comprobar */ }
+  return { ok: true, respuesta: resp, saldoDespues, total }
 }
 
 // Obtener URL del documento/factura (QR/PDF)

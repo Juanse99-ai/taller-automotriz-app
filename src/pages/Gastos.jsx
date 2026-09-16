@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { fmt, fmtDate } from '../utils/helpers'
 import { fetchGastos, crearGasto, actualizarGasto, borrarGasto, fetchCuentasUsadas } from '../services/supabase'
-import { registrarGastoCuentti } from '../services/cuentti'
+import { registrarGastoCuentti, buscarClientePorCedula, comprasPendientesProveedor, pagarComprasCuentti } from '../services/cuentti'
 import {
   CATEGORIAS_GASTO, METODOS_GASTO, CUENTAS_CONOCIDAS, nombreCategoria, hoyTaller, periodoDe,
   sumarMeses, nombreMes, fijosDelMes, sueltosDelMes, totalesDelMes, claveCuentti,
@@ -53,6 +53,8 @@ export default function Gastos({ notify, trabajos = [] }) {
   const [guardando, setGuardando] = useState(false)
   const [enCuentti, setEnCuentti] = useState(null) // id de la fila que se esta registrando
   const [verApagados, setVerApagados] = useState(false)
+  // Compras del proveedor que Cuentti ya tiene pendientes (el arriendo del local).
+  const [compras, setCompras] = useState({ estado: 'sin', lista: [], idCliente: null, error: '' })
   const [confirmCfg, setConfirmCfg] = useState(null)
 
   const cargar = useCallback(async () => {
@@ -69,6 +71,29 @@ export default function Gastos({ notify, trabajos = [] }) {
     cargar()
     fetchCuentasUsadas().then(setCuentas).catch(() => setCuentas([]))
   }, [cargar])
+
+  // Al abrir el pago de un gasto fijo con NIT, se mira si Cuentti ya tiene esa
+  // compra pendiente: si la tiene, se abona en vez de crear un egreso nuevo.
+  const nitDelPago = pago?.item?.fijo?.proveedor_nit || ''
+  useEffect(() => {
+    if (!nitDelPago) { setCompras({ estado: 'sin', lista: [], idCliente: null, error: '' }); return }
+    let vivo = true
+    setCompras({ estado: 'cargando', lista: [], idCliente: null, error: '' })
+    ;(async () => {
+      try {
+        const cli = await buscarClientePorCedula(nitDelPago)
+        if (!cli?.id) throw new Error(`En Cuentti no hay un proveedor con el NIT ${nitDelPago}`)
+        const lista = await comprasPendientesProveedor(cli.id)
+        if (!vivo) return
+        setCompras({ estado: 'listo', lista, idCliente: cli.id, error: '' })
+        const delMes = lista.find(c => periodoDe(c.fecha) === periodo) || lista[0]
+        if (delMes) setPago(p => (p ? { ...p, form: { ...p.form, abonarCompra: true, cuenttiAl: false, compraId: String(delMes.id) } } : p))
+      } catch (e) {
+        if (vivo) setCompras({ estado: 'error', lista: [], idCliente: null, error: e.message || 'No se pudo consultar Cuentti' })
+      }
+    })()
+    return () => { vivo = false }
+  }, [nitDelPago, periodo])
 
   const fijos = useMemo(() => fijosDelMes(filas || [], periodo, hoy), [filas, periodo, hoy])
   const sueltos = useMemo(() => sueltosDelMes(filas || [], periodo), [filas, periodo])
@@ -116,6 +141,33 @@ export default function Gastos({ notify, trabajos = [] }) {
     }
   }
 
+  // ── Abonar en Cuentti una compra que ya existe allá ─────────────────────
+  // Cuentti crea solo la compra del arriendo cada mes y queda "Pendiente x
+  // Pagar". Registrar aquí un egreso nuevo la duplicaría: lo que corresponde es
+  // abonar ESA compra, que es justo lo que hace la pantalla de pagos de Cuentti.
+  const abonarCompra = async (fila, compra, monto, metodoPago) => {
+    setEnCuentti(fila.id)
+    try {
+      const r = await pagarComprasCuentti({
+        idCliente: compras.idCliente,
+        documentos: [{ id: compra.id, valor: Math.min(monto, compra.saldo) }],
+        idMedioPago: metodoPago === 'transferencia' ? 7 : 1,
+        idBanco: metodoPago === 'transferencia' ? 2 : 1,
+        nota: `${fila.concepto} · ${nombreMes(fila.periodo || periodo)}`,
+      })
+      await actualizarGasto(fila.id, { cuentti_ref: `Compra ${compra.numero}` })
+      notify(r.saldoDespues === 0
+        ? `Compra ${compra.numero} pagada en Cuentti.`
+        : `Abonado en Cuentti a la compra ${compra.numero}${r.saldoDespues != null ? `; le quedan ${fmt(r.saldoDespues)}` : ''}.`, 'success')
+    } catch (e) {
+      notify(`El pago quedó en la app, pero no en Cuentti: ${e.message}`, 'error')
+    } finally {
+      setEnCuentti(null)
+      setCompras(c => ({ ...c, estado: 'sin', lista: [] }))
+      cargar()
+    }
+  }
+
   // ── Confirmar el pago de un gasto fijo ──────────────────────────────────
   const abrirPago = (item) => {
     const { fijo } = item
@@ -129,6 +181,8 @@ export default function Gastos({ notify, trabajos = [] }) {
         metodo_pago: fijo.metodo_pago || '',
         nota: '',
         cuenttiAl: cuenttiPorDefecto(fijo.categoria) && faltaParaCuentti(fijo).length === 0,
+        abonarCompra: false,
+        compraId: '',
       },
     })
   }
@@ -139,6 +193,7 @@ export default function Gastos({ notify, trabajos = [] }) {
     const f = pago.form
     if (!(Number(f.monto) > 0)) { notify('El monto debe ser mayor a 0', 'error'); return }
     if (f.cuenttiAl && !f.metodo_pago) { notify('Para registrarlo en Cuentti di si fue efectivo o transferencia', 'error'); return }
+    if (f.abonarCompra && !f.metodo_pago) { notify('Para abonar la compra en Cuentti di si fue efectivo o transferencia', 'error'); return }
     setGuardando(true)
     try {
       const fila = await crearGasto({
@@ -147,9 +202,11 @@ export default function Gastos({ notify, trabajos = [] }) {
         proveedor_nit: fijo.proveedor_nit || null, id_plan_cuentas: fijo.id_plan_cuentas || null,
         nota: texto(f.nota) || null, gasto_fijo_id: fijo.id, periodo,
       })
+      const compra = f.abonarCompra ? compras.lista.find(c => String(c.id) === String(f.compraId)) : null
       setPago(null)
       notify(`${fijo.concepto} de ${mesCorto}: pagado`, 'success')
-      if (f.cuenttiAl && fila) await registrarEnCuentti(fila)
+      if (compra && fila) await abonarCompra(fila, compra, Math.round(Number(f.monto)), f.metodo_pago)
+      else if (f.cuenttiAl && fila) await registrarEnCuentti(fila)
       else cargar()
     } catch (err) {
       if (err.code === 'YA_PAGADO') {
@@ -273,6 +330,9 @@ export default function Gastos({ notify, trabajos = [] }) {
   const aviso = editor ? avisoCuentti(editor.form.categoria) : ''
   const avisoPago = pago ? avisoCuentti(pago.item.fijo.categoria) : ''
   const faltanPago = pago ? faltaParaCuentti(pago.item.fijo) : []
+  // Del proveedor se ofrecen sus compras pendientes, la del mes primero.
+  const comprasVisibles = compras.estado === 'listo' ? compras.lista : []
+  const compraElegida = comprasVisibles.find(c => String(c.id) === String(pago?.form?.compraId)) || null
 
   return (
     <div className="gst-pg">
@@ -520,17 +580,52 @@ export default function Gastos({ notify, trabajos = [] }) {
                   <label>Nota <span className="gst-form__opc">opcional</span></label>
                   <input className="input" value={pago.form.nota} onChange={e => setPago(p => ({ ...p, form: { ...p.form, nota: e.target.value } }))} placeholder="Ej: recibo 0452" />
                 </div>
-                <label className={`gst-check${faltanPago.length ? ' gst-check--off' : ''}`}>
-                  <input type="checkbox" checked={pago.form.cuenttiAl} disabled={faltanPago.length > 0}
-                    onChange={e => setPago(p => ({ ...p, form: { ...p.form, cuenttiAl: e.target.checked } }))} />
-                  <span>
-                    Registrar también en Cuentti
-                    <small>{faltanPago.length
-                      ? `Falta ${faltanPago.join(' y ')}: complétalo en el gasto fijo para poder registrarlo.`
-                      : `Egreso contra la cuenta ${pago.item.fijo.id_plan_cuentas}, a nombre de ${pago.item.fijo.proveedor || `NIT ${pago.item.fijo.proveedor_nit}`}.`}</small>
-                  </span>
-                </label>
-                {avisoPago && <p className="gst-aviso">{avisoPago}</p>}
+                {compras.estado === 'cargando' && <p className="gst-aviso" role="status">Mirando en Cuentti si esa compra ya está…</p>}
+                {compras.estado === 'error' && <p className="gst-aviso" role="status">No se pudo mirar en Cuentti: {compras.error}</p>}
+                {compras.estado === 'listo' && compras.lista.length === 0 && (
+                  <p className="gst-aviso" role="status">En Cuentti este proveedor no tiene compras pendientes.</p>
+                )}
+                {comprasVisibles.length > 0 && (
+                  <>
+                    <label className="gst-check">
+                      <input type="checkbox" checked={!!pago.form.abonarCompra}
+                        onChange={e => setPago(p => ({ ...p, form: { ...p.form, abonarCompra: e.target.checked, cuenttiAl: false } }))} />
+                      <span>
+                        Abonar la compra que Cuentti ya tiene
+                        <small>Cuentti crea esta compra cada mes y queda pendiente de pago. Abonarla es lo que la salda; registrar un gasto nuevo la duplicaría.</small>
+                      </span>
+                    </label>
+                    {pago.form.abonarCompra && (
+                      <div className="field">
+                        <label htmlFor="gst-compra">Compra por pagar</label>
+                        <select id="gst-compra" className="input" value={pago.form.compraId}
+                          onChange={e => setPago(p => ({ ...p, form: { ...p.form, compraId: e.target.value } }))}>
+                          {comprasVisibles.map(c => (
+                            <option key={c.id} value={String(c.id)}>
+                              {`#${c.numero} · ${fmtDate(c.fecha)} · faltan ${fmt(c.saldo)}`}
+                            </option>
+                          ))}
+                        </select>
+                        {compraElegida && Number(pago.form.monto) > compraElegida.saldo && (
+                          <small className="gst-form__opc">A la compra solo le faltan {fmt(compraElegida.saldo)}: se abona eso.</small>
+                        )}
+                      </div>
+                    )}
+                  </>
+                )}
+                {!pago.form.abonarCompra && (
+                  <label className={`gst-check${faltanPago.length ? ' gst-check--off' : ''}`}>
+                    <input type="checkbox" checked={pago.form.cuenttiAl} disabled={faltanPago.length > 0}
+                      onChange={e => setPago(p => ({ ...p, form: { ...p.form, cuenttiAl: e.target.checked } }))} />
+                    <span>
+                      Registrar también en Cuentti
+                      <small>{faltanPago.length
+                        ? `Falta ${faltanPago.join(' y ')}: complétalo en el gasto fijo para poder registrarlo.`
+                        : `Egreso contra la cuenta ${pago.item.fijo.id_plan_cuentas}, a nombre de ${pago.item.fijo.proveedor || `NIT ${pago.item.fijo.proveedor_nit}`}.`}</small>
+                    </span>
+                  </label>
+                )}
+                {avisoPago && !pago.form.abonarCompra && <p className="gst-aviso">{avisoPago}</p>}
               </div>
               <div className="modal__f">
                 <Button type="button" variant="outline" onClick={() => setPago(null)} disabled={guardando}>Cancelar</Button>
